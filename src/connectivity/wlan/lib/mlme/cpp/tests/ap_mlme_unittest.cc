@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <ddk/hw/wlan/ieee80211.h>
-#include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
 #include <wlan/mlme/ap/ap_mlme.h>
 #include <wlan/mlme/ap/beacon_sender.h>

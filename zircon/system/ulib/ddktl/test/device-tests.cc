@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 //#define TEST_WILL_NOT_COMPILE 1
@@ -79,7 +80,7 @@ static bool do_test() {
   BEGIN_TEST;
 
   fbl::AllocChecker ac;
-  auto dev = fbl::unique_ptr<T>(new (&ac) T);
+  auto dev = std::unique_ptr<T>(new (&ac) T);
   ASSERT_TRUE(ac.check(), "");
 
   END_TEST;
@@ -157,7 +158,7 @@ static bool test_dispatch() {
   BEGIN_TEST;
 
   fbl::AllocChecker ac;
-  auto dev = fbl::unique_ptr<TestDispatch>(new (&ac) TestDispatch);
+  auto dev = std::unique_ptr<TestDispatch>(new (&ac) TestDispatch);
   ASSERT_TRUE(ac.check(), "");
 
   // Since we're not adding the device to devmgr, we don't have a valid zx_device_t.

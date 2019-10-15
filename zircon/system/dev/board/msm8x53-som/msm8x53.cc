@@ -12,7 +12,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/bus.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 
 namespace board_msm8x53 {
 

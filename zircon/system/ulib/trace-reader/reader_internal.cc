@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/string_printf.h>
@@ -13,7 +14,7 @@ namespace trace {
 namespace internal {
 
 fbl::String BufferHeaderReader::Create(const void* header, size_t buffer_size,
-                                       fbl::unique_ptr<BufferHeaderReader>* out_reader) {
+                                       std::unique_ptr<BufferHeaderReader>* out_reader) {
   if (buffer_size < sizeof(trace_buffer_header)) {
     return "buffer too small for header";
   }
@@ -22,7 +23,7 @@ fbl::String BufferHeaderReader::Create(const void* header, size_t buffer_size,
   if (error != "") {
     return error;
   }
-  *out_reader = fbl::unique_ptr<BufferHeaderReader>(new BufferHeaderReader(hdr));
+  *out_reader = std::unique_ptr<BufferHeaderReader>(new BufferHeaderReader(hdr));
   return "";
 }
 
@@ -105,7 +106,7 @@ TraceBufferReader::TraceBufferReader(ChunkConsumer chunk_consumer, ErrorHandler 
     : chunk_consumer_(std::move(chunk_consumer)), error_handler_(std::move(error_handler)) {}
 
 bool TraceBufferReader::ReadChunks(const void* buffer, size_t buffer_size) {
-  fbl::unique_ptr<BufferHeaderReader> header;
+  std::unique_ptr<BufferHeaderReader> header;
   auto error = BufferHeaderReader::Create(buffer, buffer_size, &header);
   if (error != "") {
     error_handler_(error);

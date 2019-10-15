@@ -14,7 +14,6 @@
 
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs-test-utils/perftest.h>
 
 namespace fs_test_utils {

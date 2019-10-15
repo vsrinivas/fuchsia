@@ -18,7 +18,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 
 namespace hikey_usb {
 

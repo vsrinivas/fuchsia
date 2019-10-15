@@ -7,15 +7,16 @@
 
 #include <stdint.h>
 
+#include <memory>
+
 #include <fbl/intrusive_double_list.h>
-#include <fbl/unique_ptr.h>
 
 namespace devmgr {
 
 struct Metadata {
-  fbl::DoublyLinkedListNodeState<fbl::unique_ptr<Metadata>> node;
+  fbl::DoublyLinkedListNodeState<std::unique_ptr<Metadata>> node;
   struct Node {
-    static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<Metadata>>& node_state(Metadata& obj) {
+    static fbl::DoublyLinkedListNodeState<std::unique_ptr<Metadata>>& node_state(Metadata& obj) {
       return obj.node;
     }
   };
@@ -28,7 +29,7 @@ struct Metadata {
 
   const char* Data() const { return reinterpret_cast<const char*>(this + 1); }
 
-  static zx_status_t Create(size_t data_len, fbl::unique_ptr<Metadata>* out) {
+  static zx_status_t Create(size_t data_len, std::unique_ptr<Metadata>* out) {
     uint8_t* buf = new uint8_t[sizeof(Metadata) + data_len];
     if (!buf) {
       return ZX_ERR_NO_MEMORY;

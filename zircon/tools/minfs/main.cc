@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <string.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -352,7 +353,7 @@ zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
 
 zx_status_t MinfsCreator::Mkfs() {
   zx_status_t status;
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
 
   // Create the bcache.
   if ((status = GenerateBcache(&bc)) != ZX_OK) {
@@ -376,7 +377,7 @@ zx_status_t MinfsCreator::Mkfs() {
 
 zx_status_t MinfsCreator::Fsck() {
   zx_status_t status;
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   if ((status = GenerateBcache(&bc)) != ZX_OK) {
     return status;
   }
@@ -386,7 +387,7 @@ zx_status_t MinfsCreator::Fsck() {
 zx_status_t MinfsCreator::UsedDataSize() {
   zx_status_t status;
   uint64_t size;
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   if ((status = GenerateBcache(&bc)) != ZX_OK) {
     return status;
   }
@@ -401,7 +402,7 @@ zx_status_t MinfsCreator::UsedDataSize() {
 zx_status_t MinfsCreator::UsedInodes() {
   zx_status_t status;
   uint64_t used_inodes;
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   if ((status = GenerateBcache(&bc)) != ZX_OK) {
     return status;
   }
@@ -416,7 +417,7 @@ zx_status_t MinfsCreator::UsedInodes() {
 zx_status_t MinfsCreator::UsedSize() {
   zx_status_t status;
   uint64_t size;
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   if ((status = GenerateBcache(&bc)) != ZX_OK) {
     return status;
   }
@@ -695,13 +696,13 @@ zx_status_t MinfsCreator::ProcessBlocks(off_t file_size) {
   return ZX_OK;
 }
 
-zx_status_t MinfsCreator::GenerateBcache(fbl::unique_ptr<minfs::Bcache>* out) {
+zx_status_t MinfsCreator::GenerateBcache(std::unique_ptr<minfs::Bcache>* out) {
   uint32_t block_count = static_cast<uint32_t>(GetLength() / minfs::kMinfsBlockSize);
 
   // Duplicate the fd so that we can re-open the minfs partition if we need to.
   int dupfd = dup(fd_.get());
 
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   if (minfs::Bcache::Create(std::move(fd_), block_count, &bc) != ZX_OK) {
     fprintf(stderr, "error: cannot create block cache\n");
     return ZX_ERR_IO;
@@ -720,7 +721,7 @@ zx_status_t MinfsCreator::MountMinfs() {
   }
 
   zx_status_t status;
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   if ((status = GenerateBcache(&bc)) != ZX_OK) {
     return status;
   }

@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 
 #include <atomic>
+#include <memory>
 
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
@@ -34,7 +35,7 @@ class ScsiDevice : public Device, public scsi::Controller {
     REQUEST = 2,
   };
 
-  ScsiDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+  ScsiDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend)
       : Device(device, std::move(bti), std::move(backend)) {}
 
   // virtio::Device overrides

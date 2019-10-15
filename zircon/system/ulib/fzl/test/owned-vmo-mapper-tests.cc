@@ -4,10 +4,10 @@
 
 #include <lib/fzl/owned-vmo-mapper.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 // Note: these tests focus on the added functionality of the owned VMO
@@ -43,7 +43,7 @@ bool ValidateCreateHelper(const fzl::OwnedVmoMapper& mapper, uint64_t size) {
 }
 
 template <bool NON_ROOT_VMAR>
-bool UncheckedCreateHelper(fbl::unique_ptr<fzl::OwnedVmoMapper>* out_mapper, uint64_t size,
+bool UncheckedCreateHelper(std::unique_ptr<fzl::OwnedVmoMapper>* out_mapper, uint64_t size,
                            const char* name,
                            zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                            uint32_t cache_policy = 0) {
@@ -64,7 +64,7 @@ bool UncheckedCreateHelper(fbl::unique_ptr<fzl::OwnedVmoMapper>* out_mapper, uin
 }
 
 template <bool NON_ROOT_VMAR>
-bool CreateHelper(fbl::unique_ptr<fzl::OwnedVmoMapper>* out_mapper, uint64_t size, const char* name,
+bool CreateHelper(std::unique_ptr<fzl::OwnedVmoMapper>* out_mapper, uint64_t size, const char* name,
                   zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                   uint32_t cache_policy = 0) {
   BEGIN_HELPER;
@@ -122,7 +122,7 @@ template <bool NON_ROOT_VMAR>
 bool CreateTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+  std::unique_ptr<fzl::OwnedVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, vmo_name));
 
   END_TEST;
@@ -212,7 +212,7 @@ template <bool NON_ROOT_VMAR>
 bool ReadTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+  std::unique_ptr<fzl::OwnedVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, vmo_name));
 
   uint8_t bytes[ZX_PAGE_SIZE];
@@ -232,7 +232,7 @@ template <bool NON_ROOT_VMAR>
 bool WriteMappingTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+  std::unique_ptr<fzl::OwnedVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, vmo_name));
 
   auto data = static_cast<uint8_t*>(mapper->start());
@@ -253,7 +253,7 @@ template <bool NON_ROOT_VMAR>
 bool ReadMappingTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+  std::unique_ptr<fzl::OwnedVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, vmo_name));
 
   uint8_t bytes[ZX_PAGE_SIZE];
@@ -273,7 +273,7 @@ template <bool NON_ROOT_VMAR>
 bool EmptyNameTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+  std::unique_ptr<fzl::OwnedVmoMapper> mapper;
   ASSERT_TRUE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, ""));
   ASSERT_NONNULL(mapper);
 
@@ -291,7 +291,7 @@ template <bool NON_ROOT_VMAR>
 bool NullptrNameTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+  std::unique_ptr<fzl::OwnedVmoMapper> mapper;
   ASSERT_TRUE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, nullptr));
   ASSERT_NONNULL(mapper);
 
@@ -313,7 +313,7 @@ bool LongNameTest() {
   memset(long_name, 'x', ZX_PAGE_SIZE);
   long_name[ZX_PAGE_SIZE - 1] = 0;
 
-  fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+  std::unique_ptr<fzl::OwnedVmoMapper> mapper;
   ASSERT_TRUE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, long_name));
   ASSERT_NONNULL(mapper);
 
@@ -340,7 +340,7 @@ bool GoodSizesTest() {
   };
 
   for (size_t size : sizes) {
-    fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+    std::unique_ptr<fzl::OwnedVmoMapper> mapper;
     ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
   }
 
@@ -352,7 +352,7 @@ bool BadSizesTest() {
   BEGIN_TEST;
 
   // Size 0 should fail.
-  fbl::unique_ptr<fzl::OwnedVmoMapper> mapper;
+  std::unique_ptr<fzl::OwnedVmoMapper> mapper;
   ASSERT_TRUE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, 0, vmo_name));
   ASSERT_NULL(mapper);
 

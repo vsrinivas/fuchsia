@@ -9,6 +9,8 @@
 #include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fvm/format.h>
@@ -146,7 +148,7 @@ bool EmptyPartitionRecoveryTest() {
   BEGIN_TEST;
 
   char fvm_block_path[PATH_MAX];
-  fbl::unique_ptr<FsRecoveryTest> recovery(new FsRecoveryTest());
+  std::unique_ptr<FsRecoveryTest> recovery(new FsRecoveryTest());
   ASSERT_TRUE(recovery->Initialize());
   // Creates an FVM partition under an isolated devmgr. It creates, but does
   // not properly format the data partition.

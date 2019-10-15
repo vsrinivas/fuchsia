@@ -118,7 +118,7 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
   return status;
 }
 
-BlobfsChecker::BlobfsChecker(fbl::unique_ptr<Blobfs> blobfs)
+BlobfsChecker::BlobfsChecker(std::unique_ptr<Blobfs> blobfs)
     : blobfs_(std::move(blobfs)),
       alloc_inodes_(0),
       alloc_blocks_(0),

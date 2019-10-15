@@ -11,13 +11,13 @@
 #include <lib/zx/vmo.h>
 #include <limits.h>
 
+#include <memory>
 #include <utility>
 
 #include <cobalt-client/cpp/collector-internal.h>
 #include <cobalt-client/cpp/types-internal.h>
 #include <fbl/algorithm.h>
 #include <fbl/type_info.h>
-#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 namespace cobalt_client {
@@ -220,7 +220,7 @@ class CobaltLoggerTestBase {
     BEGIN_TEST;
     Context context;
     context.return_values.service_connect = ZX_ERR_NOT_DIR;
-    fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+    std::unique_ptr<CobaltLogger> logger = context.MakeLogger();
     ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
     ASSERT_FALSE(logger->IsListeningForReply());
     END_TEST;
@@ -231,7 +231,7 @@ class CobaltLoggerTestBase {
     BEGIN_TEST;
     Context context;
     context.return_values.config_reader = false;
-    fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+    std::unique_ptr<CobaltLogger> logger = context.MakeLogger();
     ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
     ASSERT_FALSE(logger->IsListeningForReply());
     END_TEST;
@@ -242,7 +242,7 @@ class CobaltLoggerTestBase {
   static bool ServiceConnectedWaitsForReply() {
     BEGIN_TEST;
     Context context;
-    fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+    std::unique_ptr<CobaltLogger> logger = context.MakeLogger();
     // In order to capture the other endpoint of the channel, we need to attempt to
     // connect first. This will set |Context::channels::factory| to the other endpoint.
     ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
@@ -257,7 +257,7 @@ class CobaltLoggerTestBase {
   static bool ServiceReplied() {
     BEGIN_TEST;
     Context context;
-    fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+    std::unique_ptr<CobaltLogger> logger = context.MakeLogger();
     // In order to capture the other endpoint of the channel, we need to attempt to
     // connect first. This will set |Context::channels::factory| to the other endpoint.
     ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
@@ -281,7 +281,7 @@ class CobaltLoggerTestBase {
     BEGIN_TEST;
     Context context;
     context.return_values.project_name = kProjectName;
-    fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+    std::unique_ptr<CobaltLogger> logger = context.MakeLogger();
     // In order to capture the other endpoint of the channel, we need to attempt to
     // connect first. This will set |Context::channels::factory| to the other endpoint.
     ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
@@ -302,7 +302,7 @@ class CobaltLoggerTestBase {
   static bool RetryOnFactoryPeerClosed() {
     BEGIN_TEST;
     Context context;
-    fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+    std::unique_ptr<CobaltLogger> logger = context.MakeLogger();
     // In order to capture the other endpoint of the channel, we need to attempt to
     // connect first. This will set |Context::channels::factory| to the other endpoint.
     ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
@@ -328,7 +328,7 @@ class CobaltLoggerTestBase {
   static bool RetryOnLoggerPeerClosed() {
     BEGIN_TEST;
     Context context;
-    fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+    std::unique_ptr<CobaltLogger> logger = context.MakeLogger();
     // Return OK, and the closing channel can be interpreted as something going
     // wrong after we set up the connection.
     context.services.factory.set_logger_create_status(fuchsia_cobalt_Status_OK);
@@ -352,7 +352,7 @@ class CobaltLoggerTestBase {
   static bool LogSuccessfully() {
     BEGIN_TEST;
     Context context;
-    fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+    std::unique_ptr<CobaltLogger> logger = context.MakeLogger();
     // When requesting a LoggerSimple from the factory, bind it to the channel.
     context.EnableLoggerService();
     // Now that we are binding a logger, return OK.
@@ -395,7 +395,7 @@ class CobaltLoggerTestBase {
         END_HELPER;
       }
 
-      fbl::unique_ptr<async::Loop> loop;
+      std::unique_ptr<async::Loop> loop;
       FakeLoggerFactory factory;
       FakeSimpleLogger logger;
       bool factory_close_channel_on_logger_create;
@@ -405,7 +405,7 @@ class CobaltLoggerTestBase {
       zx::channel factory;
     };
 
-    fbl::unique_ptr<CobaltLogger> MakeLogger() {
+    std::unique_ptr<CobaltLogger> MakeLogger() {
       CobaltOptions options;
       if (return_values.project_name.empty()) {
         options = MakeOptions(return_values.config_reader, &channels.factory,
@@ -414,7 +414,7 @@ class CobaltLoggerTestBase {
         options = MakeOptions(return_values.project_name, &channels.factory,
                               return_values.service_connect);
       }
-      fbl::unique_ptr<CobaltLogger> logger = std::make_unique<CobaltLogger>(std::move(options));
+      std::unique_ptr<CobaltLogger> logger = std::make_unique<CobaltLogger>(std::move(options));
       services.loop->StartThread("FactoryServiceThread");
       return logger;
     }

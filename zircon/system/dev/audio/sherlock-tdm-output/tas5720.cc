@@ -7,7 +7,10 @@
 #include <lib/device-protocol/i2c.h>
 #include <string.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 
 namespace audio {
 
@@ -25,7 +28,7 @@ constexpr uint8_t kRegDigitalClipper1     = 0x11;
 // clang-format on
 
 // static
-fbl::unique_ptr<Tas5720> Tas5720::Create(ddk::I2cChannel i2c) {
+std::unique_ptr<Tas5720> Tas5720::Create(ddk::I2cChannel i2c) {
   fbl::AllocChecker ac;
   auto ptr = fbl::make_unique_checked<Tas5720>(&ac, i2c);
   if (!ac.check()) {

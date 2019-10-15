@@ -21,6 +21,7 @@
 #include <libgen.h>
 #include <zircon/status.h>
 
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -78,8 +79,8 @@ constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
 
 // Helper function to auto-deduce type.
 template <typename T>
-fbl::unique_ptr<T> WrapUnique(T* ptr) {
-  return fbl::unique_ptr<T>(ptr);
+std::unique_ptr<T> WrapUnique(T* ptr) {
+  return std::unique_ptr<T>(ptr);
 }
 
 zx_status_t OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
@@ -348,7 +349,7 @@ const char* PartitionName(Partition type) {
   }
 }
 
-fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
+std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
                                                              zx::channel svc_root, Arch arch,
                                                              zx::channel block_device) {
   std::optional<fbl::unique_fd> block_dev;
@@ -365,7 +366,7 @@ fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
     block_dev.emplace(fd);
     block_dev_dup = block_dev->duplicate();
   }
-  fbl::unique_ptr<DevicePartitioner> device_partitioner;
+  std::unique_ptr<DevicePartitioner> device_partitioner;
   if ((SkipBlockDevicePartitioner::Initialize(devfs_root.duplicate(), std::move(svc_root),
                                               &device_partitioner) == ZX_OK) ||
       (CrosDevicePartitioner::Initialize(devfs_root.duplicate(), arch, std::move(block_dev_dup),
@@ -443,7 +444,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
 
 zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
     fbl::unique_fd devfs_root, fbl::unique_fd gpt_device,
-    fbl::unique_ptr<GptDevicePartitioner>* gpt_out) {
+    std::unique_ptr<GptDevicePartitioner>* gpt_out) {
   fzl::UnownedFdioCaller caller(gpt_device.get());
   auto result = block::Block::Call::GetInfo(caller.channel());
   if (!result.ok()) {
@@ -456,7 +457,7 @@ zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
     return response.status;
   }
 
-  fbl::unique_ptr<GptDevice> gpt;
+  std::unique_ptr<GptDevice> gpt;
   if (GptDevice::Create(gpt_device.get(), response.info->block_size, response.info->block_count,
                         &gpt) != ZX_OK) {
     ERROR("Failed to get GPT info\n");
@@ -487,7 +488,7 @@ zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
 
 zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root, Arch arch,
                                                 std::optional<fbl::unique_fd> block_device,
-                                                fbl::unique_ptr<GptDevicePartitioner>* gpt_out) {
+                                                std::unique_ptr<GptDevicePartitioner>* gpt_out) {
   if (arch != Arch::kX64) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -518,7 +519,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root, Arch 
       return response.status;
     }
 
-    fbl::unique_ptr<GptDevice> gpt;
+    std::unique_ptr<GptDevice> gpt;
     if (GptDevice::Create(gpt_device.get(), response.info->block_size, response.info->block_count,
                           &gpt) != ZX_OK) {
       ERROR("Failed to get GPT info\n");
@@ -778,8 +779,8 @@ zx_status_t GptDevicePartitioner::WipePartitionTables() const {
 
 zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
                                              std::optional<fbl::unique_fd> block_device,
-                                             fbl::unique_ptr<DevicePartitioner>* partitioner) {
-  fbl::unique_ptr<GptDevicePartitioner> gpt;
+                                             std::unique_ptr<DevicePartitioner>* partitioner) {
+  std::unique_ptr<GptDevicePartitioner> gpt;
   zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), arch,
                                                            std::move(block_device), &gpt);
   if (status != ZX_OK) {
@@ -893,8 +894,8 @@ zx_status_t EfiDevicePartitioner::WipePartitionTables() const {
 
 zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
                                               std::optional<fbl::unique_fd> block_device,
-                                              fbl::unique_ptr<DevicePartitioner>* partitioner) {
-  fbl::unique_ptr<GptDevicePartitioner> gpt_partitioner;
+                                              std::unique_ptr<DevicePartitioner>* partitioner) {
+  std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
   zx_status_t status = GptDevicePartitioner::InitializeGpt(
       std::move(devfs_root), arch, std::move(block_device), &gpt_partitioner);
   if (status != ZX_OK) {
@@ -1071,7 +1072,7 @@ zx_status_t CrosDevicePartitioner::WipePartitionTables() const {
  *====================================================*/
 
 zx_status_t FixedDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
-                                               fbl::unique_ptr<DevicePartitioner>* partitioner) {
+                                               std::unique_ptr<DevicePartitioner>* partitioner) {
   if (HasSkipBlockDevice(devfs_root)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -1161,7 +1162,7 @@ zx_status_t FixedDevicePartitioner::WipePartitionTables() const { return ZX_ERR_
 
 zx_status_t SkipBlockDevicePartitioner::Initialize(
     fbl::unique_fd devfs_root, zx::channel svc_root,
-    fbl::unique_ptr<DevicePartitioner>* partitioner) {
+    std::unique_ptr<DevicePartitioner>* partitioner) {
   if (!HasSkipBlockDevice(devfs_root)) {
     return ZX_ERR_NOT_SUPPORTED;
   }

@@ -9,7 +9,6 @@
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 

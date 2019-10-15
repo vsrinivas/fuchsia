@@ -15,6 +15,8 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -47,7 +49,7 @@ class DwI2cTester {
     ASSERT_TRUE(ac.check());
     ASSERT_OK(dw_i2c_bus->Init());
 
-    fbl::Vector<fbl::unique_ptr<DwI2cBus>> bus_list;
+    fbl::Vector<std::unique_ptr<DwI2cBus>> bus_list;
     bus_list.push_back(std::move(dw_i2c_bus), &ac);
     ASSERT_TRUE(ac.check());
 
@@ -74,7 +76,7 @@ class DwI2cTester {
   static constexpr uint32_t kRegSize = sizeof(uint32_t);
   static constexpr uint32_t kRegBytes = 0x100;
   static constexpr uint32_t kRegCount = kRegBytes / kRegSize;
-  fbl::unique_ptr<DwI2c> dw_i2c_;
+  std::unique_ptr<DwI2c> dw_i2c_;
   ddk_mock::MockMmioReg i2c_reg_array_[kRegCount];
   ddk_mock::MockMmioRegRegion mock_i2c_regs_;
   ddk::MmioBuffer mmio_buffer_;

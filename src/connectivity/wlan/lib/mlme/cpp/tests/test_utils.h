@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <memory>
 #include <vector>
 
 #include <ddk/hw/wlan/wlaninfo.h>
@@ -55,7 +56,7 @@ struct RangeWrapper {
   }
 };
 
-static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::initializer_list<uint8_t> bytes) {
+static inline std::unique_ptr<Packet> MakeWlanPacket(std::initializer_list<uint8_t> bytes) {
   auto packet = GetWlanPacket(bytes.size());
   ZX_ASSERT(packet != nullptr);
 
@@ -64,7 +65,7 @@ static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::initializer_list<uint8
   return packet;
 }
 
-static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::vector<uint8_t> bytes) {
+static inline std::unique_ptr<Packet> MakeWlanPacket(std::vector<uint8_t> bytes) {
   auto packet = GetWlanPacket(bytes.size());
   ZX_ASSERT(packet != nullptr);
 
@@ -73,7 +74,7 @@ static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::vector<uint8_t> bytes)
   return packet;
 }
 
-static inline fbl::unique_ptr<Packet> MakeEthPacket(const common::MacAddr& dest_addr,
+static inline std::unique_ptr<Packet> MakeEthPacket(const common::MacAddr& dest_addr,
                                                     const common::MacAddr& src_addr,
                                                     std::initializer_list<uint8_t> payload) {
   auto packet = GetEthPacket(sizeof(EthernetII) + payload.size());

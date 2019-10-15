@@ -6,6 +6,8 @@
 
 #include <lib/async/default.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <trace-engine/fields.h>
 #include <trace-provider/provider.h>
@@ -356,7 +358,7 @@ TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
     return TransferStatus::kProviderError;
   }
 
-  fbl::unique_ptr<trace::internal::BufferHeaderReader> header;
+  std::unique_ptr<trace::internal::BufferHeaderReader> header;
   auto error =
       trace::internal::BufferHeaderReader::Create(&header_buffer, buffer_vmo_size_, &header);
   if (error != "") {
@@ -487,7 +489,7 @@ bool Tracee::DoTransferBuffer(const zx::socket& socket, uint32_t wrapped_count,
     return false;
   }
 
-  fbl::unique_ptr<trace::internal::BufferHeaderReader> header;
+  std::unique_ptr<trace::internal::BufferHeaderReader> header;
   auto error =
       trace::internal::BufferHeaderReader::Create(&header_buffer, buffer_vmo_size_, &header);
   if (error != "") {

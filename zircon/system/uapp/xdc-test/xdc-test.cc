@@ -9,13 +9,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 #include "xdc-init.h"
 
@@ -85,7 +86,7 @@ static zx_status_t write_file_header(const fbl::unique_fd& file_fd, fbl::unique_
 static zx_status_t transfer(fbl::unique_fd& src_fd, off_t src_len, fbl::unique_fd& dest_fd) {
   printf("Transferring file of size %jd bytes.\n", (uintmax_t)src_len);
 
-  fbl::unique_ptr<unsigned char*[]> buf(new unsigned char*[BUFFER_SIZE]);
+  std::unique_ptr<unsigned char*[]> buf(new unsigned char*[BUFFER_SIZE]);
   ssize_t res;
   off_t total_read = 0;
   while ((total_read < src_len) && ((res = read(src_fd.get(), buf.get(), BUFFER_SIZE)) != 0)) {

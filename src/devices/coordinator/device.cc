@@ -9,6 +9,8 @@
 #include <lib/fidl/coding.h>
 #include <lib/zx/clock.h>
 
+#include <memory>
+
 #include <ddk/driver.h>
 #include <fbl/auto_call.h>
 
@@ -49,7 +51,7 @@ Device::~Device() {
   // Drop our reference to our devhost if we still have it
   set_host(nullptr);
 
-  fbl::unique_ptr<Metadata> md;
+  std::unique_ptr<Metadata> md;
   while ((md = metadata_.pop_front()) != nullptr) {
     if (md->has_path) {
       // return to published_metadata list

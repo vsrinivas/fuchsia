@@ -13,7 +13,6 @@
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
-#include <fbl/unique_ptr.h>
 
 namespace fidl {
 
@@ -21,7 +20,7 @@ namespace fuchsia = ::llcpp::fuchsia;
 
 zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<DdkFidlDevice> test_dev(new (&ac) DdkFidlDevice(dev));
+  std::unique_ptr<DdkFidlDevice> test_dev(new (&ac) DdkFidlDevice(dev));
 
   if (!ac.check()) {
     zxlogf(ERROR, "DdkFidlDevice::Create: no memory to allocate device!\n");

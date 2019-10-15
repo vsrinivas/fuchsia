@@ -6,6 +6,7 @@
 #include <zircon/types.h>
 
 #include <limits>
+#include <memory>
 
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-stream.h>
@@ -19,17 +20,17 @@ static constexpr zx_duration_t CHUNK_TIME = ZX_MSEC(100);
 static constexpr float MIN_DURATION = 0.100f;
 static constexpr float MAX_DURATION = 86400.0f;
 
-fbl::unique_ptr<AudioInput> AudioInput::Create(uint32_t dev_id) {
+std::unique_ptr<AudioInput> AudioInput::Create(uint32_t dev_id) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_id));
+  std::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_id));
   if (!ac.check())
     return nullptr;
   return res;
 }
 
-fbl::unique_ptr<AudioInput> AudioInput::Create(const char* dev_path) {
+std::unique_ptr<AudioInput> AudioInput::Create(const char* dev_path) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_path));
+  std::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_path));
   if (!ac.check())
     return nullptr;
   return res;

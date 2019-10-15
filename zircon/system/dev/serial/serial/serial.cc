@@ -11,11 +11,12 @@
 #include <zircon/status.h>
 #include <zircon/threads.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
-#include <fbl/unique_ptr.h>
 
 namespace serial {
 
@@ -374,7 +375,7 @@ void SerialDevice::DdkRelease() {
 
 zx_status_t SerialDevice::Create(void* ctx, zx_device_t* dev) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<SerialDevice> sdev(new (&ac) SerialDevice(dev));
+  std::unique_ptr<SerialDevice> sdev(new (&ac) SerialDevice(dev));
 
   if (!ac.check()) {
     zxlogf(ERROR, "SerialDevice::Create: no memory to allocate serial device!\n");

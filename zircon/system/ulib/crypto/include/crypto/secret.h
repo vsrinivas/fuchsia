@@ -9,9 +9,10 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <crypto/bytes.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 // |crypto::Secret| is a small helper class that simply wraps a buffer.  It saves on some
 // boilerplate when allocating a buffer.  More importantly, when going out of scope, the destructor
@@ -44,7 +45,7 @@ class __EXPORT Secret final {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Secret);
 
   // The underlying buffer.  The destructor is guaranteed to zero this buffer if allocated.
-  fbl::unique_ptr<uint8_t[]> buf_;
+  std::unique_ptr<uint8_t[]> buf_;
   // Length in bytes of memory currently allocated to the underlying buffer.
   size_t len_;
 };

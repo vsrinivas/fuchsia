@@ -9,7 +9,6 @@
 
 #include <ddk/protocol/pci.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <virtio/virtio.h>
 
 // Each backend will implement their own method for initialization / binding

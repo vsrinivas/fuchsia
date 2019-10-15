@@ -10,8 +10,9 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 class StressTest {
@@ -81,6 +82,6 @@ class StressTest {
 };
 
 // factories for local tests
-fbl::unique_ptr<StressTest> CreateVmStressTest();
+std::unique_ptr<StressTest> CreateVmStressTest();
 
 #endif  // ZIRCON_SYSTEM_UAPP_KSTRESS_STRESS_TEST_H_

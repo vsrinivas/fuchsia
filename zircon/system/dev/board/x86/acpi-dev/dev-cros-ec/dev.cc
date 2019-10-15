@@ -9,6 +9,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <acpica/acpi.h>
@@ -18,7 +19,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 #include "../../include/dev.h"
 #include "../../include/errors.h"
@@ -74,7 +74,7 @@ zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   if (ec->supports_motion_sense()) {
     zxlogf(TRACE, "acpi-cros-ec-motion: init\n");
     // Set up motion device
-    fbl::unique_ptr<AcpiCrOsEcMotionDevice> motion_dev;
+    std::unique_ptr<AcpiCrOsEcMotionDevice> motion_dev;
     status = AcpiCrOsEcMotionDevice::Create(ec, parent, acpi_handle, &motion_dev);
     if (status == ZX_OK) {
       status = motion_dev->DdkAdd("acpi-cros-ec-motion");

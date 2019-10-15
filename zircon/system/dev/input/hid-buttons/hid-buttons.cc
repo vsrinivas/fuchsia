@@ -24,8 +24,8 @@
 #include <ddk/protocol/buttons.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <hid/descriptor.h>
 
 namespace buttons {

@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <ddk/device.h>
@@ -144,7 +145,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
   state_->set_address(common::MacAddr(wlanmac_info_.ifc_info.mac_addr));
 
-  fbl::unique_ptr<Mlme> mlme;
+  std::unique_ptr<Mlme> mlme;
 
   // mac_role is a bitfield, but only a single value is supported for an
   // interface
@@ -227,14 +228,14 @@ zx_status_t Device::AddEthDevice() {
   return device_add(parent_, &args, &ethdev_);
 }
 
-fbl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length, Packet::Peer peer) {
-  fbl::unique_ptr<Buffer> buffer = GetBuffer(length);
+std::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length, Packet::Peer peer) {
+  std::unique_ptr<Buffer> buffer = GetBuffer(length);
   if (buffer == nullptr) {
     errorf("could not get buffer for packet of length %zu\n", length);
     return nullptr;
   }
 
-  auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), length));
+  auto packet = std::unique_ptr<Packet>(new Packet(std::move(buffer), length));
   packet->set_peer(peer);
   zx_status_t status = packet->CopyFrom(data, length, 0);
   if (status != ZX_OK) {
@@ -244,7 +245,7 @@ fbl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length, P
   return packet;
 }
 
-zx_status_t Device::QueuePacket(fbl::unique_ptr<Packet> packet) {
+zx_status_t Device::QueuePacket(std::unique_ptr<Packet> packet) {
   if (packet == nullptr) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -454,7 +455,7 @@ void Device::WlanmacHwScanComplete(const wlan_hw_scan_result_t* result) {
 // MLME already holds the necessary lock to access the channel exclusively.
 zx_handle_t Device::GetSmeChannelRef() __TA_NO_THREAD_SAFETY_ANALYSIS { return channel_.get(); }
 
-zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
+zx_status_t Device::GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) {
   ZX_DEBUG_ASSERT(timer != nullptr);
   ZX_DEBUG_ASSERT(timer->get() == nullptr);
   ZX_DEBUG_ASSERT(port_.is_valid());
@@ -482,8 +483,8 @@ zx_status_t Device::DeliverEthernet(fbl::Span<const uint8_t> eth_frame) {
   return ZX_OK;
 }
 
-TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
-                     const fbl::unique_ptr<Packet>& packet, uint32_t flags) {
+TxVector GetTxVector(const std::unique_ptr<MinstrelRateSelector>& minstrel,
+                     const std::unique_ptr<Packet>& packet, uint32_t flags) {
   const auto fc = packet->field<FrameControl>(0);
 
   constexpr size_t kAddr1Offset = 4;
@@ -514,7 +515,7 @@ TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
   }
 }
 
-wlan_tx_info_t MakeTxInfo(const fbl::unique_ptr<Packet>& packet, const TxVector& tv,
+wlan_tx_info_t MakeTxInfo(const std::unique_ptr<Packet>& packet, const TxVector& tv,
                           bool has_minstrel, uint32_t flags) {
   tx_vec_idx_t idx;
   zx_status_t status = tv.ToIdx(&idx);
@@ -541,7 +542,7 @@ wlan_tx_info_t MakeTxInfo(const fbl::unique_ptr<Packet>& packet, const TxVector&
   };
 }
 
-zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) {
+zx_status_t Device::SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) {
   ZX_DEBUG_ASSERT(packet->len() <= std::numeric_limits<uint16_t>::max());
   ZX_DEBUG_ASSERT(ValidateFrame("Transmitting a malformed frame", *packet));
 
@@ -627,7 +628,7 @@ zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
   return wlanmac_proxy_.EnableBeaconing(0u, bcn_cfg);
 }
 
-zx_status_t Device::ConfigureBeacon(fbl::unique_ptr<Packet> beacon) {
+zx_status_t Device::ConfigureBeacon(std::unique_ptr<Packet> beacon) {
   ZX_DEBUG_ASSERT(beacon.get() != nullptr);
   if (beacon.get() == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -890,7 +891,7 @@ bool Device::ShouldEnableMinstrel() {
 
 zx_status_t Device::CreateMinstrel(uint32_t features) {
   debugfn();
-  fbl::unique_ptr<Timer> timer;
+  std::unique_ptr<Timer> timer;
   ObjectId timer_id;
   timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   timer_id.set_target(to_enum_type(ObjectTarget::kMinstrel));

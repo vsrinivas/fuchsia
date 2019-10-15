@@ -10,9 +10,10 @@
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
 
+#include <memory>
+
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/sysmem.h>
-#include <fbl/unique_ptr.h>
 
 #include "device.h"
 #include "ring.h"
@@ -24,7 +25,7 @@ class Ring;
 
 class GpuDevice : public Device {
  public:
-  GpuDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
+  GpuDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   virtual ~GpuDevice();
 
   zx_status_t Init() override;

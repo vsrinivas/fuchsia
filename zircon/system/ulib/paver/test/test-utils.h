@@ -1,15 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #ifndef ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_
 #define ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
 
+#include <memory>
+
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <ramdevice-client/ramdisk.h>
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
@@ -26,10 +26,10 @@ constexpr uint32_t kNumBlocks = 40;
 class BlockDevice {
  public:
   static void Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
-                     fbl::unique_ptr<BlockDevice>* device);
+                     std::unique_ptr<BlockDevice>* device);
 
   static void Create(const fbl::unique_fd& devfs_root, const uint8_t* guid, uint64_t block_count,
-                     fbl::unique_ptr<BlockDevice>* device);
+                     std::unique_ptr<BlockDevice>* device);
 
   ~BlockDevice() { ramdisk_destroy(client_); }
 
@@ -45,7 +45,7 @@ class BlockDevice {
 class SkipBlockDevice {
  public:
   static void Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
-                     fbl::unique_ptr<SkipBlockDevice>* device);
+                     std::unique_ptr<SkipBlockDevice>* device);
 
   fbl::unique_fd devfs_root() { return ctl_->devfs_root().duplicate(); }
 

@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -27,7 +28,6 @@
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlanphyimpl.h>
-#include <fbl/unique_ptr.h>
 #include <usb/usb.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/mac.h>
@@ -304,7 +304,7 @@ class Device {
     IFC_RUNNING,
     IFC_DESTROYING
   } iface_state_ __TA_GUARDED(lock_) = IFC_NONE;
-  fbl::unique_ptr<WlanmacIfcClient> wlanmac_proxy_ __TA_GUARDED(lock_);
+  std::unique_ptr<WlanmacIfcClient> wlanmac_proxy_ __TA_GUARDED(lock_);
 
   constexpr static size_t kEepromSize = 0x0100;
   std::array<uint16_t, kEepromSize> eeprom_ = {};

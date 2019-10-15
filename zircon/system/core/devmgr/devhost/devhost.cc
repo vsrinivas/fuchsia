@@ -32,6 +32,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
+#include <memory>
 #include <new>
 #include <utility>
 #include <vector>
@@ -446,7 +447,7 @@ zx_status_t DevhostControllerConnection::HandleRead() {
 
 // handles devcoordinator rpc
 
-void DevhostControllerConnection::HandleRpc(fbl::unique_ptr<DevhostControllerConnection> conn,
+void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerConnection> conn,
                                             async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -472,7 +473,7 @@ void DevhostControllerConnection::HandleRpc(fbl::unique_ptr<DevhostControllerCon
 }
 
 // handles remoteio rpc
-void DevfsConnection::HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
+void DevfsConnection::HandleRpc(std::unique_ptr<DevfsConnection> conn,
                                 async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                 zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -1072,7 +1073,7 @@ zx_status_t devhost_schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*ca
   return ZX_OK;
 }
 
-zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> conn, zx::channel h) {
+zx_status_t devhost_start_connection(std::unique_ptr<DevfsConnection> conn, zx::channel h) {
   conn->set_channel(std::move(h));
   return DevfsConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
 }

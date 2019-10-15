@@ -12,6 +12,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
 #include <optional>
 
 #include <audio-proto/audio-proto.h>
@@ -51,7 +52,7 @@ class SherlockAudioStreamIn : public SimpleAudioStream {
   std::optional<ddk::PDev> pdev_ TA_GUARDED(domain_token());
   zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
   fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_token());
-  fbl::unique_ptr<AmlPdmDevice> pdm_;
+  std::unique_ptr<AmlPdmDevice> pdm_;
   zx::bti bti_ TA_GUARDED(domain_token());
 };
 }  // namespace sherlock

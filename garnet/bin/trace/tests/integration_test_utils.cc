@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 
 #include <fstream>
+#include <memory>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>

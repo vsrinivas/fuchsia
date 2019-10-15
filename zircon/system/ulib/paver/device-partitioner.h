@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -19,7 +20,6 @@
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <gpt/gpt.h>
 
 #include "abr.h"
@@ -59,7 +59,7 @@ class DevicePartitioner {
   // implementation. Returns nullptr on failure.
   // |block_device| is root block device whichs contains the logical partitions we wish to operate
   // against. It's only meaningful for EFI and CROS devices which may have multiple storage devices.
-  static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, zx::channel svc_root,
+  static std::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, zx::channel svc_root,
                                                    Arch arch,
                                                    zx::channel block_device = zx::channel());
 
@@ -109,7 +109,7 @@ class GptDevicePartitioner {
   // FVM entries are found, an error is returned.
   static zx_status_t InitializeGpt(fbl::unique_fd devfs_root, Arch arch,
                                    std::optional<fbl::unique_fd> block_device,
-                                   fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
+                                   std::unique_ptr<GptDevicePartitioner>* gpt_out);
 
   // Returns block info for a specified block device.
   zx_status_t GetBlockInfo(::llcpp::fuchsia::hardware::block::BlockInfo* block_info) const {
@@ -156,9 +156,9 @@ class GptDevicePartitioner {
   // valid GPT, it will initialize it with a valid one.
   static zx_status_t InitializeProvidedGptDevice(fbl::unique_fd devfs_root,
                                                  fbl::unique_fd gpt_device,
-                                                 fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
+                                                 std::unique_ptr<GptDevicePartitioner>* gpt_out);
 
-  GptDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd fd, fbl::unique_ptr<GptDevice> gpt,
+  GptDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd fd, std::unique_ptr<GptDevice> gpt,
                        ::llcpp::fuchsia::hardware::block::BlockInfo block_info)
       : devfs_root_(std::move(devfs_root)),
         caller_(std::move(fd)),
@@ -173,7 +173,7 @@ class GptDevicePartitioner {
 
   fbl::unique_fd devfs_root_;
   fzl::FdioCaller caller_;
-  mutable fbl::unique_ptr<GptDevice> gpt_;
+  mutable std::unique_ptr<GptDevice> gpt_;
   ::llcpp::fuchsia::hardware::block::BlockInfo block_info_;
 };
 
@@ -182,7 +182,7 @@ class EfiDevicePartitioner : public DevicePartitioner {
  public:
   static zx_status_t Initialize(fbl::unique_fd devfs_root, Arch arch,
                                 std::optional<fbl::unique_fd> block_device,
-                                fbl::unique_ptr<DevicePartitioner>* partitioner);
+                                std::unique_ptr<DevicePartitioner>* partitioner);
 
   bool IsFvmWithinFtl() const override { return false; }
 
@@ -205,9 +205,9 @@ class EfiDevicePartitioner : public DevicePartitioner {
   }
 
  private:
-  EfiDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
+  EfiDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
-  fbl::unique_ptr<GptDevicePartitioner> gpt_;
+  std::unique_ptr<GptDevicePartitioner> gpt_;
 };
 
 // DevicePartitioner implementation for ChromeOS devices.
@@ -215,7 +215,7 @@ class CrosDevicePartitioner : public DevicePartitioner {
  public:
   static zx_status_t Initialize(fbl::unique_fd devfs_root, Arch arch,
                                 std::optional<fbl::unique_fd> block_device,
-                                fbl::unique_ptr<DevicePartitioner>* partitioner);
+                                std::unique_ptr<DevicePartitioner>* partitioner);
 
   bool IsFvmWithinFtl() const override { return false; }
 
@@ -238,9 +238,9 @@ class CrosDevicePartitioner : public DevicePartitioner {
   }
 
  private:
-  CrosDevicePartitioner(fbl::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
+  CrosDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
-  fbl::unique_ptr<GptDevicePartitioner> gpt_;
+  std::unique_ptr<GptDevicePartitioner> gpt_;
 };
 
 // DevicePartitioner implementation for devices which have fixed partition maps (e.g. ARM
@@ -250,7 +250,7 @@ class CrosDevicePartitioner : public DevicePartitioner {
 class FixedDevicePartitioner : public DevicePartitioner {
  public:
   static zx_status_t Initialize(fbl::unique_fd devfs_root,
-                                fbl::unique_ptr<DevicePartitioner>* partitioner);
+                                std::unique_ptr<DevicePartitioner>* partitioner);
 
   bool IsFvmWithinFtl() const override { return false; }
 
@@ -286,7 +286,7 @@ class FixedDevicePartitioner : public DevicePartitioner {
 class SkipBlockDevicePartitioner : public DevicePartitioner {
  public:
   static zx_status_t Initialize(fbl::unique_fd devfs_root, zx::channel svc_root,
-                                fbl::unique_ptr<DevicePartitioner>* partitioner);
+                                std::unique_ptr<DevicePartitioner>* partitioner);
 
   bool IsFvmWithinFtl() const override { return true; }
 

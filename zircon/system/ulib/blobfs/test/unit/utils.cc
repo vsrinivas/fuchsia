@@ -4,6 +4,8 @@
 
 #include "utils.h"
 
+#include <memory>
+
 #include <fbl/auto_call.h>
 #include <safemath/checked_math.h>
 #include <zxtest/zxtest.h>
@@ -105,7 +107,7 @@ zx_status_t MockTransactionManager::DetachVmo(vmoid_t vmoid) {
 // Create a block and node map of the requested size, update the superblock of
 // the |space_manager|, and create an allocator from this provided info.
 void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_manager,
-                         fbl::unique_ptr<Allocator>* out) {
+                         std::unique_ptr<Allocator>* out) {
   RawBitmap block_map;
   ASSERT_OK(block_map.Reset(blocks));
   fzl::ResizeableVmoMapper node_map;

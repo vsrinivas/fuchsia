@@ -14,6 +14,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -23,7 +24,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <pretty/hexdump.h>
 #include <virtio/net.h>
 #include <virtio/virtio.h>
@@ -67,7 +67,7 @@ void virtio_net_unbind(void* ctx) {
 }
 
 void virtio_net_release(void* ctx) {
-  fbl::unique_ptr<virtio::EthernetDevice> eth(static_cast<virtio::EthernetDevice*>(ctx));
+  std::unique_ptr<virtio::EthernetDevice> eth(static_cast<virtio::EthernetDevice*>(ctx));
   eth->Release();
 }
 
@@ -116,10 +116,10 @@ ethernet_impl_protocol_ops_t kProtoOps = {
 };
 
 // I/O buffer helpers
-zx_status_t InitBuffers(const zx::bti& bti, fbl::unique_ptr<io_buffer_t[]>* out) {
+zx_status_t InitBuffers(const zx::bti& bti, std::unique_ptr<io_buffer_t[]>* out) {
   zx_status_t rc;
   fbl::AllocChecker ac;
-  fbl::unique_ptr<io_buffer_t[]> bufs(new (&ac) io_buffer_t[kNumIoBufs]);
+  std::unique_ptr<io_buffer_t[]> bufs(new (&ac) io_buffer_t[kNumIoBufs]);
   if (!ac.check()) {
     zxlogf(ERROR, "out of memory!\n");
     return ZX_ERR_NO_MEMORY;
@@ -137,7 +137,7 @@ zx_status_t InitBuffers(const zx::bti& bti, fbl::unique_ptr<io_buffer_t[]>* out)
   return ZX_OK;
 }
 
-void ReleaseBuffers(fbl::unique_ptr<io_buffer_t[]> bufs) {
+void ReleaseBuffers(std::unique_ptr<io_buffer_t[]> bufs) {
   if (!bufs) {
     return;
   }
@@ -178,7 +178,7 @@ uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id, siz
 }  // namespace
 
 EthernetDevice::EthernetDevice(zx_device_t* bus_device, zx::bti bti,
-                               fbl::unique_ptr<Backend> backend)
+                               std::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)),
       rx_(this),
       tx_(this),

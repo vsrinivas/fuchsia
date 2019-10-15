@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 
 #include <algorithm>
+#include <memory>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -224,7 +225,7 @@ zx_status_t BlobfsCreator::Mkfs() {
 
 zx_status_t BlobfsCreator::Fsck() {
   zx_status_t status;
-  fbl::unique_ptr<blobfs::Blobfs> vn;
+  std::unique_ptr<blobfs::Blobfs> vn;
   if ((status = blobfs::blobfs_create(&vn, std::move(fd_))) < 0) {
     return status;
   }
@@ -273,7 +274,7 @@ zx_status_t BlobfsCreator::Add() {
   }
 
   zx_status_t status = ZX_OK;
-  fbl::unique_ptr<blobfs::Blobfs> blobfs;
+  std::unique_ptr<blobfs::Blobfs> blobfs;
   if ((status = blobfs_create(&blobfs, std::move(fd_))) != ZX_OK) {
     return status;
   }

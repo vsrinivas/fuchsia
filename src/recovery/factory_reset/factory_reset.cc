@@ -22,7 +22,6 @@
 
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <fbl/unique_ptr.h>
 #include <fs-management/mount.h>
 
 namespace factory_reset {

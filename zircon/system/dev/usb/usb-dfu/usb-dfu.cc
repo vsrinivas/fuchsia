@@ -14,7 +14,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 
 namespace {
 

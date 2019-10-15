@@ -11,7 +11,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <wlan/common/element.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/logging.h>

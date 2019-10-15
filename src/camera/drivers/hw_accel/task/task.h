@@ -15,7 +15,6 @@
 #include <ddktl/protocol/gdc.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 namespace generictask {
 // The |Task| class store all the information pertaining to

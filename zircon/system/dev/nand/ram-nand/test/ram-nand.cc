@@ -12,11 +12,11 @@
 #include <zircon/process.h>
 
 #include <atomic>
+#include <memory>
 #include <utility>
 
 #include <ddk/metadata/nand.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -144,7 +144,7 @@ TEST(RamNandTest, ExportPartitionMap) {
 
   // Expect only two partitions on the result.
   size_t expected_size = sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t);
-  fbl::unique_ptr<char[]> buffer(new char[expected_size]);
+  std::unique_ptr<char[]> buffer(new char[expected_size]);
   memset(buffer.get(), 0, expected_size);
   zbi_partition_map_t* expected = reinterpret_cast<zbi_partition_map_t*>(buffer.get());
 
@@ -194,10 +194,10 @@ TEST(RamNandTest, AddMetadata) {
   EXPECT_EQ(sizeof(nand_config_t) + sizeof(zbi_partition_map_t), length);
 }
 
-fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
+std::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
   NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, kOobSize);  // 6 bits of ECC.
   fbl::AllocChecker checker;
-  fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params));
+  std::unique_ptr<NandDevice> device(new (&checker) NandDevice(params));
   if (!checker.check()) {
     return nullptr;
   }
@@ -229,7 +229,7 @@ TEST(RamNandTest, BasicDeviceProtocol) {
 }
 
 TEST(RamNandTest, Unlink) {
-  fbl::unique_ptr<NandDevice> device = CreateDevice(nullptr);
+  std::unique_ptr<NandDevice> device = CreateDevice(nullptr);
   ASSERT_TRUE(device);
 
   ASSERT_OK(device->Unlink());
@@ -295,7 +295,7 @@ class Operation {
   zx_status_t status_ = ZX_ERR_ACCESS_DENIED;
   bool completed_ = false;
   static constexpr size_t buffer_size_ = (kPageSize + kOobSize) * kNumPages;
-  fbl::unique_ptr<char[]> raw_buffer_;
+  std::unique_ptr<char[]> raw_buffer_;
   DISALLOW_COPY_ASSIGN_AND_MOVE(Operation);
 };
 
@@ -395,7 +395,7 @@ class NandTest : public zxtest::Test {
 // Tests trivial attempts to queue one operation.
 TEST_F(NandTest, QueueOne) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
   Operation operation(op_size, this);
@@ -456,7 +456,7 @@ void SetForRead(int offset, int num_pages, Operation* operation) {
 
 TEST_F(NandTest, ReadWrite) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
   Operation operation(op_size, this);
@@ -486,7 +486,7 @@ TEST_F(NandTest, ReadWrite) {
 // Tests that a new device is filled with 0xff (as a new nand chip).
 TEST_F(NandTest, NewChip) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
   Operation operation(op_size, this);
@@ -516,10 +516,10 @@ TEST_F(NandTest, NewChip) {
 // Tests serialization of multiple reads and writes.
 TEST_F(NandTest, QueueMultiple) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
-  fbl::unique_ptr<Operation> operations[10];
+  std::unique_ptr<Operation> operations[10];
   for (int i = 0; i < 10; i++) {
     fbl::AllocChecker checker;
     operations[i].reset(new (&checker) Operation(op_size, this));
@@ -570,7 +570,7 @@ TEST_F(NandTest, QueueMultiple) {
 
 TEST_F(NandTest, OobLimits) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
   Operation operation(op_size, this);
@@ -606,7 +606,7 @@ TEST_F(NandTest, OobLimits) {
 
 TEST_F(NandTest, ReadWriteOob) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
   Operation operation(op_size, this);
@@ -641,7 +641,7 @@ TEST_F(NandTest, ReadWriteOob) {
 
 TEST_F(NandTest, ReadWriteDataAndOob) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
   Operation operation(op_size, this);
@@ -680,7 +680,7 @@ TEST_F(NandTest, ReadWriteDataAndOob) {
 
 TEST_F(NandTest, EraseLimits) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
   Operation operation(op_size, this);
@@ -708,7 +708,7 @@ TEST_F(NandTest, EraseLimits) {
 
 TEST_F(NandTest, Erase) {
   size_t op_size;
-  fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
   ASSERT_TRUE(device);
 
   Operation operation(op_size, this);

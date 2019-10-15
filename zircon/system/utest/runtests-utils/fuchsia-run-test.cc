@@ -16,7 +16,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/runtests-utils.h>

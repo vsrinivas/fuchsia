@@ -12,7 +12,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 namespace fbl {
@@ -135,15 +134,14 @@ class RefedTestObj : public TestObj<ContainerTraits>,
   explicit RefedTestObj(size_t val) : TestObj<ContainerTraits>(val) {}
 };
 
-// Basic pointer type definitions for the 5 types of currently support pointers
+// Basic pointer type definitions for the 4 types of currently support pointers
 //
 // Used by the macros which generate the various test environmements
 //
 // 1) Foo* (unmanaged/raw)
-// 2) fbl::unique_ptr<Foo>
-// 3) std::unique_ptr<Foo>
-// 4) std::unique_ptr<Foo, CustomDeleter>
-// 5) fbl::RefPtr<Foo>
+// 2) std::unique_ptr<Foo>
+// 3) std::unique_ptr<Foo, CustomDeleter>
+// 4) fbl::RefPtr<Foo>
 //
 namespace ptr_type {
 
@@ -153,17 +151,12 @@ struct Unmanaged {
 };
 
 template <typename _ObjType>
-struct UniquePtr {
-  using type = ::fbl::unique_ptr<_ObjType>;
-};
-
-template <typename _ObjType>
-struct StdUniquePtrDefaultDeleter {
+struct UniquePtrDefaultDeleter {
   using type = ::std::unique_ptr<_ObjType>;
 };
 
 template <typename _ObjType>
-struct StdUniquePtrCustomDeleter {
+struct UniquePtrCustomDeleter {
   using type = ::std::unique_ptr<_ObjType, TestCustomDeleter<_ObjType>>;
 };
 
@@ -217,9 +210,9 @@ struct UnmanagedTestTraits {
 };
 
 template <typename _ObjType>
-struct UniquePtrTestTraits {
+struct UniquePtrDefaultDeleterTestTraits {
   using ObjType = _ObjType;
-  using PtrType = typename ptr_type::UniquePtr<ObjType>::type;
+  using PtrType = typename ptr_type::UniquePtrDefaultDeleter<ObjType>::type;
   using ConstPtrType = const PtrType;
   using ContainerType = typename ObjType::ContainerTraits::ContainerType;
 
@@ -241,33 +234,9 @@ struct UniquePtrTestTraits {
 };
 
 template <typename _ObjType>
-struct StdUniquePtrDefaultDeleterTestTraits {
+struct UniquePtrCustomDeleterTestTraits {
   using ObjType = _ObjType;
-  using PtrType = typename ptr_type::StdUniquePtrDefaultDeleter<ObjType>::type;
-  using ConstPtrType = const PtrType;
-  using ContainerType = typename ObjType::ContainerTraits::ContainerType;
-
-  static PtrType CreateObject(size_t value) {
-    AllocChecker ac;
-    auto r = new (&ac) ObjType(value);
-    return PtrType(ac.check() ? r : nullptr);
-  }
-
-  static void ReleaseObject(PtrType& ptr) { ptr = nullptr; }
-
-  static void CheckCustomDeleteInvocations(size_t expected) {}
-  static void ResetCustomDeleter() {}
-
-  // Unique pointers always get cleared when being moved or transferred.
-  static inline PtrType&& Transfer(PtrType& ptr) { return std::move(ptr); }
-  static bool WasTransferred(const ConstPtrType& ptr) { return ptr == nullptr; }
-  static bool WasMoved(const ConstPtrType& ptr) { return ptr == nullptr; }
-};
-
-template <typename _ObjType>
-struct StdUniquePtrCustomDeleterTestTraits {
-  using ObjType = _ObjType;
-  using PtrType = typename ptr_type::StdUniquePtrCustomDeleter<ObjType>::type;
+  using PtrType = typename ptr_type::UniquePtrCustomDeleter<ObjType>::type;
   using ConstPtrType = const PtrType;
   using ContainerType = typename ObjType::ContainerTraits::ContainerType;
 

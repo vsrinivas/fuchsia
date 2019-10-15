@@ -7,6 +7,7 @@
 
 #include <zircon/hw/usb/audio.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/array.h>
@@ -310,7 +311,7 @@ class FeatureUnit : public AudioUnit {
   FeatureUnit(fbl::RefPtr<DescriptorListMemory> desc_list,
               const usb_audio_ac_feature_unit_desc_0* desc_0,
               const usb_audio_ac_feature_unit_desc_1* desc_1,
-              fbl::unique_ptr<Features[]> feature_mem, size_t feature_len, uint8_t iid)
+              std::unique_ptr<Features[]> feature_mem, size_t feature_len, uint8_t iid)
       : AudioUnit(std::move(desc_list), reinterpret_cast<const usb_audio_ac_ut_desc*>(desc_0), iid),
         feature_desc_1_(desc_1),
         features_(feature_mem.release(), feature_len) {}

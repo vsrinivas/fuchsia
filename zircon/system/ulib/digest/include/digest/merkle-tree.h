@@ -11,11 +11,12 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <digest/digest.h>
 #include <digest/hash-list.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 namespace digest {
 namespace internal {
@@ -60,7 +61,7 @@ class MerkleTree {
   // data to produce a list of digests, which in turn becomes the data for the |hash_list_| in the
   // |next_| layer of the tree, until the last layer, which produces the root digest.
   HL hash_list_;
-  fbl::unique_ptr<MT> next_;
+  std::unique_ptr<MT> next_;
 };
 
 }  // namespace internal
@@ -80,7 +81,7 @@ class MerkleTreeCreator
  public:
   // Convenience method to create and return a Merkle tree for the given |data| via |out_tree| and
   // |out_root|.
-  static zx_status_t Create(const void *data, size_t data_len, fbl::unique_ptr<uint8_t[]> *out_tree,
+  static zx_status_t Create(const void *data, size_t data_len, std::unique_ptr<uint8_t[]> *out_tree,
                             size_t *out_tree_len, Digest *out_root);
 
   // Reads |buf_len| bytes of data from |buf| and appends digests to the hash |list|.

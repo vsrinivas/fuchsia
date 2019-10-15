@@ -5,16 +5,17 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TAS57XX_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TAS57XX_H_
 
+#include <memory>
+
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c.h>
-#include <fbl/unique_ptr.h>
 
 namespace audio {
 namespace gauss {
 
-class Tas57xx : public fbl::unique_ptr<Tas57xx> {
+class Tas57xx : public std::unique_ptr<Tas57xx> {
  public:
-  static fbl::unique_ptr<Tas57xx> Create(i2c_protocol_t *i2c, uint32_t index);
+  static std::unique_ptr<Tas57xx> Create(i2c_protocol_t *i2c, uint32_t index);
   bool ValidGain(float gain);
   zx_status_t SetGain(float gain);
   zx_status_t GetGain(float *gain);

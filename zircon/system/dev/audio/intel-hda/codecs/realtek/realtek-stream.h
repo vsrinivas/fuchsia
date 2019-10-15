@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CODECS_REALTEK_REALTEK_STREAM_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CODECS_REALTEK_REALTEK_STREAM_H_
 
+#include <memory>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
@@ -85,11 +87,11 @@ class RealtekStream : public IntelHDAStreamBase {
   // our friend in order to see the definition of the PendingCommand private
   // inner class.
   class PendingCommand;
-  using PCAT = fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<PendingCommand>, 4096>;
+  using PCAT = fbl::StaticSlabAllocatorTraits<std::unique_ptr<PendingCommand>, 4096>;
   using PendingCommandAllocator = fbl::SlabAllocator<PCAT>;
   friend PendingCommandAllocator;
 
-  class PendingCommand : public fbl::DoublyLinkedListable<fbl::unique_ptr<PendingCommand>>,
+  class PendingCommand : public fbl::DoublyLinkedListable<std::unique_ptr<PendingCommand>>,
                          public fbl::SlabAllocated<PCAT> {
    public:
     const Command& cmd() const { return cmd_; }
@@ -111,11 +113,11 @@ class RealtekStream : public IntelHDAStreamBase {
   // TODO(johngro) : Elminiate this complexity if/when we get to the point
   // that audio streams have a 1:1 relationship with their clients (instead of
   // 1:many)
-  struct NotifyTarget : fbl::DoublyLinkedListable<fbl::unique_ptr<NotifyTarget>> {
+  struct NotifyTarget : fbl::DoublyLinkedListable<std::unique_ptr<NotifyTarget>> {
     explicit NotifyTarget(fbl::RefPtr<dispatcher::Channel>&& ch) : channel(ch) {}
     fbl::RefPtr<dispatcher::Channel> channel;
   };
-  using NotifyTargetList = fbl::DoublyLinkedList<fbl::unique_ptr<NotifyTarget>>;
+  using NotifyTargetList = fbl::DoublyLinkedList<std::unique_ptr<NotifyTarget>>;
 
   // Bits used to track setup state machine progress.
   static constexpr uint32_t PIN_COMPLEX_SETUP_COMPLETE = (1u << 0);
@@ -161,7 +163,7 @@ class RealtekStream : public IntelHDAStreamBase {
   }
 
   const StreamProperties props_;
-  fbl::DoublyLinkedList<fbl::unique_ptr<PendingCommand>> pending_cmds_ __TA_GUARDED(obj_lock());
+  fbl::DoublyLinkedList<std::unique_ptr<PendingCommand>> pending_cmds_ __TA_GUARDED(obj_lock());
 
   // Setup state machine progress.
   uint32_t setup_progress_ __TA_GUARDED(obj_lock()) = 0;

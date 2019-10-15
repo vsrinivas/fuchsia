@@ -5,9 +5,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <memory>
+
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <ramdevice-client/ramdisk.h>
 
 #include "keysafe/keysafe.h"
@@ -55,16 +56,16 @@ class ScopedTeecContext {
     return result;
   }
 
-  fbl::unique_ptr<ScopedTeecSession> openSession() {
+  std::unique_ptr<ScopedTeecSession> openSession() {
     TEEC_Session session = {0, 0};
     TEEC_Result result = TEEC_OpenSession(&context_, &session, &kKeysafeTaUuid, TEEC_LOGIN_PUBLIC,
                                           0 /* connectionData*/, nullptr /* operation */,
                                           nullptr /* returnOrigin */);
     if (result != TEEC_SUCCESS) {
       fprintf(stderr, "TEE Unable to open session. Error: %X\n", result);
-      return fbl::unique_ptr<ScopedTeecSession>();
+      return std::unique_ptr<ScopedTeecSession>();
     }
-    fbl::unique_ptr<ScopedTeecSession> session_ptr = std::make_unique<ScopedTeecSession>(session);
+    std::unique_ptr<ScopedTeecSession> session_ptr = std::make_unique<ScopedTeecSession>(session);
     return session_ptr;
   }
 
@@ -91,7 +92,7 @@ bool GetKeyFromTeeDevice(const char* device_path, uint8_t* key_info, size_t key_
     fprintf(stderr, "Failed to initialize TEE context: %X\n", result);
     return false;
   }
-  fbl::unique_ptr<ScopedTeecSession> session_ptr = scoped_teec_context.openSession();
+  std::unique_ptr<ScopedTeecSession> session_ptr = scoped_teec_context.openSession();
   if (!session_ptr.get()) {
     fprintf(stderr, "Failed to open TEE Session to Keysafe!\n");
     return false;
@@ -139,7 +140,7 @@ zx_status_t WatchTee(int dirfd, int event, const char* filename, void* cookie) {
   fbl::StringBuffer<kMaxPathLen> device_path;
   device_path.Append(kDeviceClass).Append("/").Append(filename);
   // Hardware derived key is expected to be 128-bit AES key.
-  fbl::unique_ptr<uint8_t[]> key_buffer(new uint8_t[kDerivedKeySize]);
+  std::unique_ptr<uint8_t[]> key_buffer(new uint8_t[kDerivedKeySize]);
   size_t key_size = 0;
   WatchTeeArgs* args = reinterpret_cast<WatchTeeArgs*>(cookie);
   if (!GetKeyFromTeeDevice(device_path.c_str(), std::move(args->key_info), args->key_info_size,

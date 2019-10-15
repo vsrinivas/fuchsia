@@ -10,11 +10,11 @@
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 namespace fzl {
 
@@ -54,7 +54,7 @@ class PinnedVmo {
   void UnpinInternal();
 
   zx::pmt pmt_;
-  fbl::unique_ptr<Region[]> regions_;
+  std::unique_ptr<Region[]> regions_;
   uint32_t region_count_ = 0;
 };
 

@@ -21,7 +21,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <soc/mt8167/mt8167-usb-phy.h>
 #include <soc/mt8167/mt8167-usb.h>

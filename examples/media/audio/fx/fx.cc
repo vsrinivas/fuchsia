@@ -26,11 +26,11 @@
 #include <zircon/types.h>
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <audio-utils/audio-input.h>
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
@@ -83,7 +83,7 @@ using audio::utils::AudioInput;
 
 class FxProcessor {
  public:
-  FxProcessor(fbl::unique_ptr<AudioInput> input, fit::closure quit_callback)
+  FxProcessor(std::unique_ptr<AudioInput> input, fit::closure quit_callback)
       : input_(std::move(input)), quit_callback_(std::move(quit_callback)) {
     FXL_DCHECK(quit_callback_);
   }
@@ -148,7 +148,7 @@ class FxProcessor {
   float preamp_gain_ = DEFAULT_PREAMP_GAIN;
   uint16_t preamp_gain_fixed_;
 
-  fbl::unique_ptr<AudioInput> input_;
+  std::unique_ptr<AudioInput> input_;
   fit::closure quit_callback_;
   uint32_t input_buffer_frames_ = 0;
   fuchsia::media::AudioRendererPtr audio_renderer_;

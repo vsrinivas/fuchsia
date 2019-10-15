@@ -12,17 +12,17 @@
 #include <lib/zx/socket.h>
 #include <stdint.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 namespace logger {
 
-class LoggerImpl : public fbl::SinglyLinkedListable<fbl::unique_ptr<LoggerImpl>> {
+class LoggerImpl : public fbl::SinglyLinkedListable<std::unique_ptr<LoggerImpl>> {
  public:
   using ErrorCallback = fbl::Function<void(zx_status_t)>;
 

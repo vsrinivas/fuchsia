@@ -5,8 +5,9 @@
 #ifndef MINFS_SUPERBLOCK_H_
 #define MINFS_SUPERBLOCK_H_
 
+#include <memory>
+
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
@@ -41,7 +42,7 @@ class SuperblockManager {
 
   static zx_status_t Create(block_client::BlockDevice* device, const Superblock* info,
                             uint32_t max_blocks, IntegrityCheck checks,
-                            fbl::unique_ptr<SuperblockManager>* out);
+                            std::unique_ptr<SuperblockManager>* out);
 
   const Superblock& Info() const { return *reinterpret_cast<const Superblock*>(mapping_.start()); }
 
@@ -69,7 +70,7 @@ class SuperblockManager {
   DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
 
   static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
-                            fbl::unique_ptr<SuperblockManager>* out);
+                            std::unique_ptr<SuperblockManager>* out);
 
   const Superblock& Info() const { return *reinterpret_cast<const Superblock*>(&info_blk_[0]); }
 

@@ -6,7 +6,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <fbl/unique_ptr.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"

@@ -5,9 +5,10 @@
 #ifndef ZXCRYPT_DDK_VOLUME_H_
 #define ZXCRYPT_DDK_VOLUME_H_
 
+#include <memory>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <fbl/unique_ptr.h>
 #include <zxcrypt/volume.h>
 
 namespace zxcrypt {
@@ -19,7 +20,7 @@ class DdkVolume final : public Volume {
   // Unlocks a zxcrypt volume on the block device described by |dev| using the |key| corresponding
   // to given key |slot|.
   static zx_status_t Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot_t slot,
-                            fbl::unique_ptr<DdkVolume>* out);
+                            std::unique_ptr<DdkVolume>* out);
 
   // Uses the data key material to initialize |cipher| for the given |direction|.
   zx_status_t Bind(crypto::Cipher::Direction direction, crypto::Cipher* cipher) const;

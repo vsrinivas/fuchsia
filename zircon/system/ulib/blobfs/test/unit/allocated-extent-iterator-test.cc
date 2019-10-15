@@ -4,6 +4,8 @@
 
 #include "iterator/allocated-extent-iterator.h"
 
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 #include "iterator/block-iterator.h"
@@ -17,7 +19,7 @@ namespace {
 //
 // Returns the allocator, the extents, and nodes used.
 void TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
-               MockSpaceManager* space_manager, fbl::unique_ptr<Allocator>* out_allocator,
+               MockSpaceManager* space_manager, std::unique_ptr<Allocator>* out_allocator,
                fbl::Vector<Extent>* out_extents, fbl::Vector<uint32_t>* out_nodes) {
   // Block count is large enough to allow for both fragmentation and the
   // allocation of |allocated_blocks| extents.
@@ -54,7 +56,7 @@ void TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
 // Iterate over the null blob.
 TEST(AllocatedExtentIteratorTest, Null) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   fbl::Vector<Extent> allocated_extents;
   fbl::Vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = 0;
@@ -78,7 +80,7 @@ TEST(AllocatedExtentIteratorTest, Null) {
 // Iterate over a blob with inline extents.
 TEST(AllocatedExtentIteratorTest, InlineNode) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   fbl::Vector<Extent> allocated_extents;
   fbl::Vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = kInlineMaxExtents;
@@ -117,7 +119,7 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
 // Iterate over a blob with multiple nodes.
 TEST(AllocatedExtentIteratorTest, MultiNode) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   fbl::Vector<Extent> allocated_extents;
   fbl::Vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
@@ -164,7 +166,7 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
 // nodes.
 TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   fbl::Vector<Extent> allocated_extents;
   fbl::Vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
@@ -233,7 +235,7 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
 // while the underlying storage is maximally fragmented.
 TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   fbl::Vector<Extent> allocated_extents;
   fbl::Vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
@@ -278,7 +280,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
 // while the underlying storage is unfragmented.
 TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   fbl::Vector<Extent> allocated_extents;
   fbl::Vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedBlocks = 100;

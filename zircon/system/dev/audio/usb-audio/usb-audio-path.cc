@@ -4,6 +4,7 @@
 
 #include "usb-audio-path.h"
 
+#include <memory>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
@@ -13,16 +14,16 @@
 namespace audio {
 namespace usb {
 
-fbl::unique_ptr<AudioPath> AudioPath::Create(uint32_t unit_count) {
+std::unique_ptr<AudioPath> AudioPath::Create(uint32_t unit_count) {
   fbl::AllocChecker ac;
 
-  fbl::unique_ptr<fbl::RefPtr<AudioUnit>[]> units(new (&ac) fbl::RefPtr<AudioUnit>[unit_count]);
+  std::unique_ptr<fbl::RefPtr<AudioUnit>[]> units(new (&ac) fbl::RefPtr<AudioUnit>[unit_count]);
   if (!ac.check()) {
     GLOBAL_LOG(ERROR, "Failed to allocate %u units for AudioPath!", unit_count);
     return nullptr;
   }
 
-  fbl::unique_ptr<AudioPath> ret(new (&ac) AudioPath(std::move(units), unit_count));
+  std::unique_ptr<AudioPath> ret(new (&ac) AudioPath(std::move(units), unit_count));
   if (!ac.check()) {
     GLOBAL_LOG(ERROR, "Failed to allocate AudioPath!");
     return nullptr;

@@ -10,6 +10,7 @@
 #include <lib/zx/vmar.h>
 #include <string.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -116,7 +117,7 @@ TransferDescriptor* TransferQueue::Dequeue() {
 
 bool TransferQueue::IsEmpty() const { return queue_.is_empty(); }
 
-ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)) {}
 
 ConsoleDevice::~ConsoleDevice() {}

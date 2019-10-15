@@ -97,11 +97,10 @@ static_assert(
 // Generate all of the standard tests.
 // clang-format off
 DEFINE_TEST_OBJECTS(WAVL);
-using UMTE    = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, Unmanaged);
-using UPTE    = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtr);
-using SUPDDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, StdUniquePtrDefaultDeleter);
-using SUPCDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, StdUniquePtrCustomDeleter);
-using RPTE    = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, RefPtr);
+using UMTE   = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, Unmanaged);
+using UPDDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtrDefaultDeleter);
+using UPCDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtrCustomDeleter);
+using RPTE   = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, RefPtr);
 // clang-format on
 
 // WAVLBalanceTestObserver
@@ -252,7 +251,7 @@ WAVLBalanceTestObserver::OpCounts WAVLBalanceTestObserver::op_counts_;
 class BalanceTestObj;
 
 using BalanceTestKeyType = uint64_t;
-using BalanceTestObjPtr = unique_ptr<BalanceTestObj>;
+using BalanceTestObjPtr = std::unique_ptr<BalanceTestObj>;
 using BalanceTestTree = WAVLTree<BalanceTestKeyType, BalanceTestObjPtr,
                                  DefaultKeyedObjectTraits<BalanceTestKeyType, BalanceTestObj>,
                                  DefaultWAVLTreeTraits<BalanceTestObjPtr, int32_t>,
@@ -318,7 +317,7 @@ static void DoBalanceTestErase(BalanceTestTree& tree, BalanceTestObj* ptr) {
   ASSERT_NO_FAILURES(WAVLTreeChecker::SanityCheck(tree));
 }
 
-static void ShuffleEraseDeck(const unique_ptr<BalanceTestObj[]>& objects,
+static void ShuffleEraseDeck(const std::unique_ptr<BalanceTestObj[]>& objects,
                              Lfsr<BalanceTestKeyType>& rng) {
   // Note: shuffle algorithm is a Fisher-Yates (aka Knuth) shuffle.
   static_assert(kBalanceTestSize > 0, "Test size must be positive!");
@@ -334,172 +333,146 @@ static void ShuffleEraseDeck(const unique_ptr<BalanceTestObj[]>& objects,
 // General container specific tests.
 //////////////////////////////////////////
 RUN_ZXTEST(WavlTreeTest, UMTE,     Clear)
-RUN_ZXTEST(WavlTreeTest, UPTE,     Clear)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  Clear)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  Clear)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   Clear)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   Clear)
 RUN_ZXTEST(WavlTreeTest, RPTE,     Clear)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(WavlTreeTest, UPTE,     ClearUnsafe)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  ClearUnsafe)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  ClearUnsafe)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   ClearUnsafe)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   ClearUnsafe)
 RUN_ZXTEST(WavlTreeTest, RPTE,     ClearUnsafe)
 #endif
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     IsEmpty)
-RUN_ZXTEST(WavlTreeTest, UPTE,     IsEmpty)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  IsEmpty)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  IsEmpty)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   IsEmpty)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   IsEmpty)
 RUN_ZXTEST(WavlTreeTest, RPTE,     IsEmpty)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     Iterate)
-RUN_ZXTEST(WavlTreeTest, UPTE,     Iterate)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  Iterate)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  Iterate)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   Iterate)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   Iterate)
 RUN_ZXTEST(WavlTreeTest, RPTE,     Iterate)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     IterErase)
-RUN_ZXTEST(WavlTreeTest, UPTE,     IterErase)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  IterErase)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  IterErase)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   IterErase)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   IterErase)
 RUN_ZXTEST(WavlTreeTest, RPTE,     IterErase)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     DirectErase)
-RUN_ZXTEST(WavlTreeTest, UPTE,     DirectErase)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  DirectErase)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  DirectErase)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   DirectErase)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   DirectErase)
 RUN_ZXTEST(WavlTreeTest, RPTE,     DirectErase)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     MakeIterator)
-RUN_ZXTEST(WavlTreeTest, UPTE,     MakeIterator)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  MakeIterator)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  MakeIterator)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   MakeIterator)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   MakeIterator)
 RUN_ZXTEST(WavlTreeTest, RPTE,     MakeIterator)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     ReverseIterErase)
-RUN_ZXTEST(WavlTreeTest, UPTE,     ReverseIterErase)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  ReverseIterErase)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  ReverseIterErase)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   ReverseIterErase)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   ReverseIterErase)
 RUN_ZXTEST(WavlTreeTest, RPTE,     ReverseIterErase)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     ReverseIterate)
-RUN_ZXTEST(WavlTreeTest, UPTE,     ReverseIterate)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  ReverseIterate)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  ReverseIterate)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   ReverseIterate)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   ReverseIterate)
 RUN_ZXTEST(WavlTreeTest, RPTE,     ReverseIterate)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     Swap)
-RUN_ZXTEST(WavlTreeTest, UPTE,     Swap)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  Swap)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  Swap)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   Swap)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   Swap)
 RUN_ZXTEST(WavlTreeTest, RPTE,     Swap)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     RvalueOps)
-RUN_ZXTEST(WavlTreeTest, UPTE,     RvalueOps)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  RvalueOps)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  RvalueOps)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   RvalueOps)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   RvalueOps)
 RUN_ZXTEST(WavlTreeTest, RPTE,     RvalueOps)
 
-RUN_ZXTEST(WavlTreeTest, UPTE,     Scope)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  Scope)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  Scope)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   Scope)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   Scope)
 RUN_ZXTEST(WavlTreeTest, RPTE,     Scope)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     TwoContainer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(WavlTreeTest, UPTE,     TwoContainer)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  TwoContainer)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  TwoContainer)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   TwoContainer)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   TwoContainer)
 #endif
 RUN_ZXTEST(WavlTreeTest, RPTE,     TwoContainer)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     ThreeContainerHelper)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(WavlTreeTest, UPTE,     ThreeContainerHelper)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  ThreeContainerHelper)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  ThreeContainerHelper)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   ThreeContainerHelper)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   ThreeContainerHelper)
 #endif
 RUN_ZXTEST(WavlTreeTest, RPTE,     ThreeContainerHelper)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     IterCopyPointer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(WavlTreeTest, UPTE,     IterCopyPointer)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  IterCopyPointer)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  IterCopyPointer)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   IterCopyPointer)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   IterCopyPointer)
 #endif
 RUN_ZXTEST(WavlTreeTest, RPTE,     IterCopyPointer)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     EraseIf)
-RUN_ZXTEST(WavlTreeTest, UPTE,     EraseIf)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  EraseIf)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  EraseIf)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   EraseIf)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   EraseIf)
 RUN_ZXTEST(WavlTreeTest, RPTE,     EraseIf)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     FindIf)
-RUN_ZXTEST(WavlTreeTest, UPTE,     FindIf)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  FindIf)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  FindIf)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   FindIf)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   FindIf)
 RUN_ZXTEST(WavlTreeTest, RPTE,     FindIf)
 
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
 RUN_ZXTEST(WavlTreeTest, UMTE,     InsertByKey)
-RUN_ZXTEST(WavlTreeTest, UPTE,     InsertByKey)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  InsertByKey)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  InsertByKey)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   InsertByKey)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   InsertByKey)
 RUN_ZXTEST(WavlTreeTest, RPTE,     InsertByKey)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     FindByKey)
-RUN_ZXTEST(WavlTreeTest, UPTE,     FindByKey)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  FindByKey)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  FindByKey)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   FindByKey)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   FindByKey)
 RUN_ZXTEST(WavlTreeTest, RPTE,     FindByKey)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     EraseByKey)
-RUN_ZXTEST(WavlTreeTest, UPTE,     EraseByKey)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  EraseByKey)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  EraseByKey)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   EraseByKey)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   EraseByKey)
 RUN_ZXTEST(WavlTreeTest, RPTE,     EraseByKey)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     InsertOrFind)
-RUN_ZXTEST(WavlTreeTest, UPTE,     InsertOrFind)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  InsertOrFind)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  InsertOrFind)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   InsertOrFind)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   InsertOrFind)
 RUN_ZXTEST(WavlTreeTest, RPTE,     InsertOrFind)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     InsertOrReplace)
-RUN_ZXTEST(WavlTreeTest, UPTE,     InsertOrReplace)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE,  InsertOrReplace)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE,  InsertOrReplace)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,   InsertOrReplace)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,   InsertOrReplace)
 RUN_ZXTEST(WavlTreeTest, RPTE,     InsertOrReplace)
 
 ////////////////////////////////////////////////
 // OrderedAssociative container specific tests.
 ////////////////////////////////////////////////
 RUN_ZXTEST(WavlTreeTest, UMTE, OrderedIter)
-RUN_ZXTEST(WavlTreeTest, UPTE, OrderedIter)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE, OrderedIter)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE, OrderedIter)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,  OrderedIter)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,  OrderedIter)
 RUN_ZXTEST(WavlTreeTest, RPTE, OrderedIter)
 
 RUN_ZXTEST(WavlTreeTest, UMTE, OrderedReverseIter)
-RUN_ZXTEST(WavlTreeTest, UPTE, OrderedReverseIter)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE, OrderedReverseIter)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE, OrderedReverseIter)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,  OrderedReverseIter)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,  OrderedReverseIter)
 RUN_ZXTEST(WavlTreeTest, RPTE, OrderedReverseIter)
 
 RUN_ZXTEST(WavlTreeTest, UMTE, UpperBound)
-RUN_ZXTEST(WavlTreeTest, UPTE, UpperBound)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE, UpperBound)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE, UpperBound)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,  UpperBound)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,  UpperBound)
 RUN_ZXTEST(WavlTreeTest, RPTE, UpperBound)
 
 RUN_ZXTEST(WavlTreeTest, UMTE, LowerBound)
-RUN_ZXTEST(WavlTreeTest, UPTE, LowerBound)
-RUN_ZXTEST(WavlTreeTest, SUPDDTE, LowerBound)
-RUN_ZXTEST(WavlTreeTest, SUPCDTE, LowerBound)
+RUN_ZXTEST(WavlTreeTest, UPDDTE,  LowerBound)
+RUN_ZXTEST(WavlTreeTest, UPCDTE,  LowerBound)
 RUN_ZXTEST(WavlTreeTest, RPTE, LowerBound)
 
 // The balance test is a pretty heavy test.  Only enable it when asked to do so.
@@ -510,7 +483,7 @@ TEST(WavlTreeTest, Balance) {
   // Declare these in a specific order (object pointer first) so that the tree
   // has a chance to clean up before the memory backing the objects gets
   // cleaned up.
-  unique_ptr<BalanceTestObj[]> objects;
+  std::unique_ptr<BalanceTestObj[]> objects;
   BalanceTestTree tree;
 
   // We will run this test 3 times with 3 different (constant) seeds.  During

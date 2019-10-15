@@ -4,9 +4,11 @@
 
 #include "message.h"
 
+#include <memory>
+
 #include "server.h"
 
-zx_status_t Message::Create(size_t block_op_size, fbl::unique_ptr<Message>* out) {
+zx_status_t Message::Create(size_t block_op_size, std::unique_ptr<Message>* out) {
   Message* msg = new (block_op_size) Message();
   if (msg == nullptr) {
     return ZX_ERR_NO_MEMORY;
@@ -14,7 +16,7 @@ zx_status_t Message::Create(size_t block_op_size, fbl::unique_ptr<Message>* out)
   msg->iobuf_ = nullptr;
   msg->server_ = nullptr;
   msg->op_size_ = block_op_size;
-  *out = fbl::unique_ptr<Message>(msg);
+  *out = std::unique_ptr<Message>(msg);
   return ZX_OK;
 }
 

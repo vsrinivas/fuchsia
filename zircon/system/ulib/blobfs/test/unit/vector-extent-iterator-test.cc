@@ -4,6 +4,8 @@
 
 #include "iterator/vector-extent-iterator.h"
 
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 #include "iterator/block-iterator.h"
@@ -16,7 +18,7 @@ namespace {
 //
 // Returns the allocator, the extents, and nodes used.
 void TestSetup(size_t blocks, size_t nodes, bool fragmented, MockSpaceManager* space_manager,
-               fbl::unique_ptr<Allocator>* out_allocator) {
+               std::unique_ptr<Allocator>* out_allocator) {
   // Block count is large enough to allow for both fragmentation and the
   // allocation of |blocks| extents.
   const size_t block_count = 3 * blocks;
@@ -29,7 +31,7 @@ void TestSetup(size_t blocks, size_t nodes, bool fragmented, MockSpaceManager* s
 // Iterate over the null blob.
 TEST(VectorExtentIteratorTest, Null) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   fbl::Vector<Extent> allocated_extents;
   fbl::Vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = 0;
@@ -51,7 +53,7 @@ TEST(VectorExtentIteratorTest, Null) {
 // Iterate over a blob with some extents.
 TEST(VectorExtentIteratorTest, MultiExtent) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   fbl::Vector<Extent> allocated_extents;
   fbl::Vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = 10;
@@ -83,7 +85,7 @@ TEST(VectorExtentIteratorTest, MultiExtent) {
 // Test the usage of the BlockIterator over the vector extent iterator.
 TEST(VectorExtentIteratorTest, BlockIterator) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kAllocatedExtents = 10;
   constexpr size_t kAllocatedNodes = 1;
 
@@ -137,7 +139,7 @@ void ValidateStreamBlocks(fbl::Vector<ReservedExtent> extents, uint32_t block_co
 // Test streaming blocks from a fragmented iterator.
 TEST(VectorExtentIteratorTest, StreamBlocksFragmented) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kAllocatedExtents = 10;
   constexpr size_t kAllocatedBlocks = kAllocatedExtents;
   constexpr size_t kAllocatedNodes = 1;
@@ -155,7 +157,7 @@ TEST(VectorExtentIteratorTest, StreamBlocksFragmented) {
 // Test streaming blocks from a contiguous iterator.
 TEST(VectorExtentIteratorTest, StreamBlocksContiguous) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kAllocatedExtents = 1;
   constexpr size_t kAllocatedBlocks = 10;
   constexpr size_t kAllocatedNodes = 1;
@@ -173,7 +175,7 @@ TEST(VectorExtentIteratorTest, StreamBlocksContiguous) {
 // Test streaming too many blocks using the vector iterator.
 TEST(VectorExtentIteratorTest, StreamBlocksInvalidLength) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kAllocatedExtents = 10;
   constexpr size_t kAllocatedBlocks = 10;
   constexpr size_t kAllocatedNodes = 1;

@@ -11,6 +11,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
+#include <memory>
+
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in-memory-logger.h>
 #include <fbl/algorithm.h>
@@ -71,7 +73,7 @@ TEST(FsManagerTestCase, WatchExit) {
   ASSERT_OK(zx::event::create(0u, &event));
   ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
-  fbl::unique_ptr<devmgr::FsManager> manager;
+  std::unique_ptr<devmgr::FsManager> manager;
   zx_status_t status =
       devmgr::FsManager::Create(std::move(event), devmgr::FsHostMetrics(MakeCollector()), &manager);
   ASSERT_OK(status);

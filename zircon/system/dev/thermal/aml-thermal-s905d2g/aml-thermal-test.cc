@@ -12,12 +12,12 @@
 #include <zircon/types.h>
 
 #include <cstddef>
+#include <memory>
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <fbl/unique_ptr.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
@@ -43,124 +43,117 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
   };
 }
 
-static fuchsia_hardware_thermal_ThermalDeviceInfo
-    fake_thermal_config =
-        {
-            .active_cooling = false,
-            .passive_cooling = true,
-            .gpu_throttling = true,
-            .num_trip_points = 6,
-            .big_little = true,
-            .critical_temp_celsius = 102.0f,
-            .trip_point_info =
-                {
-                    TripPoint(55.0f, 9, 10, 4),
-                    TripPoint(75.0f, 8, 9, 4),
-                    TripPoint(80.0f, 7, 8, 3),
-                    TripPoint(90.0f, 6, 7, 3),
-                    TripPoint(95.0f, 5, 6, 3),
-                    TripPoint(100.0f, 4, 5, 2),
-                    TripPoint(-273.15f, 0, 0, 0),   // 0 Kelvin is impossible, marks end of TripPoints
-                },
-            .opps =
-                {
-                    [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-                        {
-                            .opp =
-                                {
-                                    [0] = {.freq_hz = 100000000, .volt_uv = 751000},
-                                    [1] = {.freq_hz = 250000000, .volt_uv = 751000},
-                                    [2] = {.freq_hz = 500000000, .volt_uv = 751000},
-                                    [3] = {.freq_hz = 667000000, .volt_uv = 751000},
-                                    [4] = {.freq_hz = 1000000000, .volt_uv = 771000},
-                                    [5] = {.freq_hz = 1200000000, .volt_uv = 771000},
-                                    [6] = {.freq_hz = 1398000000, .volt_uv = 791000},
-                                    [7] = {.freq_hz = 1512000000, .volt_uv = 821000},
-                                    [8] = {.freq_hz = 1608000000, .volt_uv = 861000},
-                                    [9] = {.freq_hz = 1704000000, .volt_uv = 891000},
-                                    [10] = {.freq_hz = 1704000000, .volt_uv = 891000},
-                                },
-                            .latency = 0,
-                            .count = 11,
-                        },
-                    [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
-                        {
-                            .opp =
-                                {
-                                    [0] = {.freq_hz = 100000000, .volt_uv = 731000},
-                                    [1] = {.freq_hz = 250000000, .volt_uv = 731000},
-                                    [2] = {.freq_hz = 500000000, .volt_uv = 731000},
-                                    [3] = {.freq_hz = 667000000, .volt_uv = 731000},
-                                    [4] = {.freq_hz = 1000000000, .volt_uv = 731000},
-                                    [5] = {.freq_hz = 1200000000, .volt_uv = 731000},
-                                    [6] = {.freq_hz = 1398000000, .volt_uv = 761000},
-                                    [7] = {.freq_hz = 1512000000, .volt_uv = 791000},
-                                    [8] = {.freq_hz = 1608000000, .volt_uv = 831000},
-                                    [9] = {.freq_hz = 1704000000, .volt_uv = 861000},
-                                    [10] = {.freq_hz = 1896000000, .volt_uv = 1011000},
-                                },
-                            .latency = 0,
-                            .count = 11,
-                        },
-                },
+static fuchsia_hardware_thermal_ThermalDeviceInfo fake_thermal_config =
+    {
+        .active_cooling = false,
+        .passive_cooling = true,
+        .gpu_throttling = true,
+        .num_trip_points = 6,
+        .big_little = true,
+        .critical_temp_celsius = 102.0f,
+        .trip_point_info =
+            {
+                TripPoint(55.0f, 9, 10, 4), TripPoint(75.0f, 8, 9, 4), TripPoint(80.0f, 7, 8, 3),
+                TripPoint(90.0f, 6, 7, 3), TripPoint(95.0f, 5, 6, 3), TripPoint(100.0f, 4, 5, 2),
+                TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
+            },
+        .opps =
+            {
+                [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+                    {
+                        .opp =
+                            {
+                                [0] = {.freq_hz = 100000000, .volt_uv = 751000},
+                                [1] = {.freq_hz = 250000000, .volt_uv = 751000},
+                                [2] = {.freq_hz = 500000000, .volt_uv = 751000},
+                                [3] = {.freq_hz = 667000000, .volt_uv = 751000},
+                                [4] = {.freq_hz = 1000000000, .volt_uv = 771000},
+                                [5] = {.freq_hz = 1200000000, .volt_uv = 771000},
+                                [6] = {.freq_hz = 1398000000, .volt_uv = 791000},
+                                [7] = {.freq_hz = 1512000000, .volt_uv = 821000},
+                                [8] = {.freq_hz = 1608000000, .volt_uv = 861000},
+                                [9] = {.freq_hz = 1704000000, .volt_uv = 891000},
+                                [10] = {.freq_hz = 1704000000, .volt_uv = 891000},
+                            },
+                        .latency = 0,
+                        .count = 11,
+                    },
+                [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
+                    {
+                        .opp =
+                            {
+                                [0] = {.freq_hz = 100000000, .volt_uv = 731000},
+                                [1] = {.freq_hz = 250000000, .volt_uv = 731000},
+                                [2] = {.freq_hz = 500000000, .volt_uv = 731000},
+                                [3] = {.freq_hz = 667000000, .volt_uv = 731000},
+                                [4] = {.freq_hz = 1000000000, .volt_uv = 731000},
+                                [5] = {.freq_hz = 1200000000, .volt_uv = 731000},
+                                [6] = {.freq_hz = 1398000000, .volt_uv = 761000},
+                                [7] = {.freq_hz = 1512000000, .volt_uv = 791000},
+                                [8] = {.freq_hz = 1608000000, .volt_uv = 831000},
+                                [9] = {.freq_hz = 1704000000, .volt_uv = 861000},
+                                [10] = {.freq_hz = 1896000000, .volt_uv = 1011000},
+                            },
+                        .latency = 0,
+                        .count = 11,
+                    },
+            },
 };
 
-static fuchsia_hardware_thermal_ThermalDeviceInfo
-    fake_thermal_config_less =
-        {
-            .active_cooling = false,
-            .passive_cooling = true,
-            .gpu_throttling = true,
-            .num_trip_points = 2,
-            .big_little = true,
-            .critical_temp_celsius = 102.0f,
-            .trip_point_info =
-                {
-                    TripPoint(55.0f, 9, 10, 4),
-                    TripPoint(75.0f, 8, 9, 4),
-                    TripPoint(-273.15f, 0, 0, 0),   // 0 Kelvin is impossible, marks end of TripPoints
-                },
-            .opps =
-                {
-                    [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-                        {
-                            .opp =
-                                {
-                                    [0] = {.freq_hz = 100000000, .volt_uv = 751000},
-                                    [1] = {.freq_hz = 250000000, .volt_uv = 751000},
-                                    [2] = {.freq_hz = 500000000, .volt_uv = 751000},
-                                    [3] = {.freq_hz = 667000000, .volt_uv = 751000},
-                                    [4] = {.freq_hz = 1000000000, .volt_uv = 771000},
-                                    [5] = {.freq_hz = 1200000000, .volt_uv = 771000},
-                                    [6] = {.freq_hz = 1398000000, .volt_uv = 791000},
-                                    [7] = {.freq_hz = 1512000000, .volt_uv = 821000},
-                                    [8] = {.freq_hz = 1608000000, .volt_uv = 861000},
-                                    [9] = {.freq_hz = 1704000000, .volt_uv = 891000},
-                                    [10] = {.freq_hz = 1704000000, .volt_uv = 891000},
-                                },
-                            .latency = 0,
-                            .count = 11,
-                        },
-                    [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
-                        {
-                            .opp =
-                                {
-                                    [0] = {.freq_hz = 100000000, .volt_uv = 731000},
-                                    [1] = {.freq_hz = 250000000, .volt_uv = 731000},
-                                    [2] = {.freq_hz = 500000000, .volt_uv = 731000},
-                                    [3] = {.freq_hz = 667000000, .volt_uv = 731000},
-                                    [4] = {.freq_hz = 1000000000, .volt_uv = 731000},
-                                    [5] = {.freq_hz = 1200000000, .volt_uv = 731000},
-                                    [6] = {.freq_hz = 1398000000, .volt_uv = 761000},
-                                    [7] = {.freq_hz = 1512000000, .volt_uv = 791000},
-                                    [8] = {.freq_hz = 1608000000, .volt_uv = 831000},
-                                    [9] = {.freq_hz = 1704000000, .volt_uv = 861000},
-                                    [10] = {.freq_hz = 1896000000, .volt_uv = 1011000},
-                                },
-                            .latency = 0,
-                            .count = 11,
-                        },
-                },
+static fuchsia_hardware_thermal_ThermalDeviceInfo fake_thermal_config_less =
+    {
+        .active_cooling = false,
+        .passive_cooling = true,
+        .gpu_throttling = true,
+        .num_trip_points = 2,
+        .big_little = true,
+        .critical_temp_celsius = 102.0f,
+        .trip_point_info =
+            {
+                TripPoint(55.0f, 9, 10, 4), TripPoint(75.0f, 8, 9, 4),
+                TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
+            },
+        .opps =
+            {
+                [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+                    {
+                        .opp =
+                            {
+                                [0] = {.freq_hz = 100000000, .volt_uv = 751000},
+                                [1] = {.freq_hz = 250000000, .volt_uv = 751000},
+                                [2] = {.freq_hz = 500000000, .volt_uv = 751000},
+                                [3] = {.freq_hz = 667000000, .volt_uv = 751000},
+                                [4] = {.freq_hz = 1000000000, .volt_uv = 771000},
+                                [5] = {.freq_hz = 1200000000, .volt_uv = 771000},
+                                [6] = {.freq_hz = 1398000000, .volt_uv = 791000},
+                                [7] = {.freq_hz = 1512000000, .volt_uv = 821000},
+                                [8] = {.freq_hz = 1608000000, .volt_uv = 861000},
+                                [9] = {.freq_hz = 1704000000, .volt_uv = 891000},
+                                [10] = {.freq_hz = 1704000000, .volt_uv = 891000},
+                            },
+                        .latency = 0,
+                        .count = 11,
+                    },
+                [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
+                    {
+                        .opp =
+                            {
+                                [0] = {.freq_hz = 100000000, .volt_uv = 731000},
+                                [1] = {.freq_hz = 250000000, .volt_uv = 731000},
+                                [2] = {.freq_hz = 500000000, .volt_uv = 731000},
+                                [3] = {.freq_hz = 667000000, .volt_uv = 731000},
+                                [4] = {.freq_hz = 1000000000, .volt_uv = 731000},
+                                [5] = {.freq_hz = 1200000000, .volt_uv = 731000},
+                                [6] = {.freq_hz = 1398000000, .volt_uv = 761000},
+                                [7] = {.freq_hz = 1512000000, .volt_uv = 791000},
+                                [8] = {.freq_hz = 1608000000, .volt_uv = 831000},
+                                [9] = {.freq_hz = 1704000000, .volt_uv = 861000},
+                                [10] = {.freq_hz = 1896000000, .volt_uv = 1011000},
+                            },
+                        .latency = 0,
+                        .count = 11,
+                    },
+            },
 };
 
 // Voltage Regulator
@@ -184,7 +177,7 @@ namespace thermal {
 // Temperature Sensor
 class FakeAmlTSensor : public AmlTSensor {
  public:
-  static fbl::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer ao_mmio,
+  static std::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer ao_mmio,
                                                 ddk::MmioBuffer hiu_mmio, bool less) {
     fbl::AllocChecker ac;
 
@@ -302,7 +295,8 @@ class AmlTSensorTest : public zxtest::Test {
     ddk::MmioBuffer pll_mmio(mock_pll_mmio_->GetMmioBuffer());
     ddk::MmioBuffer ao_mmio(mock_ao_mmio_->GetMmioBuffer());
     ddk::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
-    tsensor_ = FakeAmlTSensor::Create(std::move(pll_mmio), std::move(ao_mmio), std::move(hiu_mmio), less);
+    tsensor_ =
+        FakeAmlTSensor::Create(std::move(pll_mmio), std::move(ao_mmio), std::move(hiu_mmio), less);
     ASSERT_TRUE(tsensor_ != nullptr);
   }
 
@@ -314,15 +308,15 @@ class AmlTSensorTest : public zxtest::Test {
   }
 
  protected:
-  fbl::unique_ptr<FakeAmlTSensor> tsensor_;
+  std::unique_ptr<FakeAmlTSensor> tsensor_;
 
   // Mmio Regs and Regions
   fbl::Array<ddk_mock::MockMmioReg> pll_regs_;
   fbl::Array<ddk_mock::MockMmioReg> ao_regs_;
   fbl::Array<ddk_mock::MockMmioReg> hiu_regs_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pll_mmio_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> mock_ao_mmio_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> mock_hiu_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pll_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_ao_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_hiu_mmio_;
 };
 
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest0) {
@@ -373,14 +367,12 @@ TEST_F(AmlTSensorTest, GetStateChangePortTest) {
   EXPECT_OK(tsensor_->GetStateChangePort(&port));
 }
 
-TEST_F(AmlTSensorTest, LessTripPointsTest) {
-  Create(true);
-}
+TEST_F(AmlTSensorTest, LessTripPointsTest) { Create(true); }
 
 // PWM
 class FakeAmlPwm : public AmlPwm {
  public:
-  static fbl::unique_ptr<FakeAmlPwm> Create(ddk::MmioBuffer pwm_mmio, uint32_t period,
+  static std::unique_ptr<FakeAmlPwm> Create(ddk::MmioBuffer pwm_mmio, uint32_t period,
                                             uint32_t hwpwm) {
     fbl::AllocChecker ac;
 
@@ -426,11 +418,11 @@ class AmlPwmTest : public zxtest::Test {
   }
 
  protected:
-  fbl::unique_ptr<FakeAmlPwm> pwm_;
+  std::unique_ptr<FakeAmlPwm> pwm_;
 
   // Mmio Regs and Regions
   fbl::Array<ddk_mock::MockMmioReg> pwm_regs_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_mmio_;
 };
 
 TEST_F(AmlPwmTest, ConfigureFail) {
@@ -465,7 +457,7 @@ TEST_F(AmlPwmTest, Configure1of1) {
 // Voltage Regulator
 class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
  public:
-  static fbl::unique_ptr<FakeAmlVoltageRegulator> Create(ddk::MmioBuffer pwm_AO_D_mmio,
+  static std::unique_ptr<FakeAmlVoltageRegulator> Create(ddk::MmioBuffer pwm_AO_D_mmio,
                                                          ddk::MmioBuffer pwm_A_mmio, uint32_t pid) {
     fbl::AllocChecker ac;
 
@@ -548,13 +540,13 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
   }
 
  protected:
-  fbl::unique_ptr<FakeAmlVoltageRegulator> voltage_regulator_;
+  std::unique_ptr<FakeAmlVoltageRegulator> voltage_regulator_;
 
   // Mmio Regs and Regions
   fbl::Array<ddk_mock::MockMmioReg> pwm_AO_D_regs_;
   fbl::Array<ddk_mock::MockMmioReg> pwm_A_regs_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_AO_D_mmio_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_A_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_AO_D_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_A_mmio_;
 };
 
 TEST_F(AmlVoltageRegulatorTest, SherlockGetVoltageTest) {
@@ -631,7 +623,7 @@ TEST_F(AmlVoltageRegulatorTest, AstroSetVoltageTest) {
 // CPU Frequency and Scaling
 class FakeAmlCpuFrequency : public AmlCpuFrequency {
  public:
-  static fbl::unique_ptr<FakeAmlCpuFrequency> Create(ddk::MmioBuffer hiu_mmio,
+  static std::unique_ptr<FakeAmlCpuFrequency> Create(ddk::MmioBuffer hiu_mmio,
                                                      mmio_buffer_t mock_hiu_internal_mmio,
                                                      uint32_t pid) {
     fbl::AllocChecker ac;
@@ -721,12 +713,12 @@ class AmlCpuFrequencyTest : public zxtest::Test {
   }
 
  protected:
-  fbl::unique_ptr<FakeAmlCpuFrequency> cpufreq_scaling_;
+  std::unique_ptr<FakeAmlCpuFrequency> cpufreq_scaling_;
 
   // Mmio Regs and Regions
   fbl::Array<ddk_mock::MockMmioReg> hiu_regs_;
   fbl::Array<uint32_t> hiu_internal_mmio_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> mock_hiu_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_hiu_mmio_;
   mmio_buffer_t mock_hiu_internal_mmio_;
 };
 
@@ -844,7 +836,7 @@ TEST_F(AmlCpuFrequencyTest, AstroSetFrequencyTest1) {
 // Thermal
 class FakeAmlThermal : public AmlThermal {
  public:
-  static fbl::unique_ptr<FakeAmlThermal> Create(
+  static std::unique_ptr<FakeAmlThermal> Create(
       ddk::MmioBuffer tsensor_pll_mmio, ddk::MmioBuffer tsensor_ao_mmio,
       ddk::MmioBuffer tsensor_hiu_mmio, ddk::MmioBuffer voltage_regulator_pwm_AO_D_mmio,
       ddk::MmioBuffer voltage_regulator_pwm_A_mmio, ddk::MmioBuffer cpufreq_scaling_hiu_mmio,
@@ -907,9 +899,9 @@ class FakeAmlThermal : public AmlThermal {
   void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
-  FakeAmlThermal(fbl::unique_ptr<thermal::AmlTSensor> tsensor,
-                 fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
-                 fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling)
+  FakeAmlThermal(std::unique_ptr<thermal::AmlTSensor> tsensor,
+                 std::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
+                 std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling)
       : AmlThermal(nullptr, std::move(tsensor), std::move(voltage_regulator),
                    std::move(cpufreq_scaling), std::move(fake_thermal_config)) {}
 };
@@ -1139,26 +1131,26 @@ class AmlThermalTest : public zxtest::Test {
   }
 
  protected:
-  fbl::unique_ptr<FakeAmlThermal> thermal_device_;
+  std::unique_ptr<FakeAmlThermal> thermal_device_;
 
   // Temperature Sensor
   fbl::Array<ddk_mock::MockMmioReg> tsensor_pll_regs_;
   fbl::Array<ddk_mock::MockMmioReg> tsensor_ao_regs_;
   fbl::Array<ddk_mock::MockMmioReg> tsensor_hiu_regs_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> tsensor_mock_pll_mmio_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> tsensor_mock_ao_mmio_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> tsensor_mock_hiu_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> tsensor_mock_pll_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> tsensor_mock_ao_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> tsensor_mock_hiu_mmio_;
 
   // Voltage Regulator
   fbl::Array<ddk_mock::MockMmioReg> voltage_regulator_pwm_AO_D_regs_;
   fbl::Array<ddk_mock::MockMmioReg> voltage_regulator_pwm_A_regs_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> voltage_regulator_mock_pwm_AO_D_mmio_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> voltage_regulator_mock_pwm_A_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> voltage_regulator_mock_pwm_AO_D_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> voltage_regulator_mock_pwm_A_mmio_;
 
   // CPU Frequency and Scaling
   fbl::Array<ddk_mock::MockMmioReg> cpufreq_scaling_hiu_regs_;
   fbl::Array<uint32_t> cpufreq_scaling_hiu_internal_mmio_;
-  fbl::unique_ptr<ddk_mock::MockMmioRegRegion> cpufreq_scaling_mock_hiu_mmio_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> cpufreq_scaling_mock_hiu_mmio_;
   mmio_buffer_t cpufreq_scaling_mock_hiu_internal_mmio_;
 };
 

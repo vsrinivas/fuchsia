@@ -7,6 +7,7 @@
 #include <math.h>
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -270,7 +271,7 @@ fbl::RefPtr<FeatureUnit> FeatureUnit::Create(const DescriptorListMemory::Iterato
       // Allocate memory for our Features capability array.
       fbl::AllocChecker ac;
       size_t feat_len = ctrl_array_bytes / hdr0->bControlSize;
-      auto feat_mem = fbl::unique_ptr<Features[]>(new (&ac) Features[feat_len]);
+      auto feat_mem = std::unique_ptr<Features[]>(new (&ac) Features[feat_len]);
 
       if (ac.check()) {
         // We just made sure that this fits, there should be no way for us

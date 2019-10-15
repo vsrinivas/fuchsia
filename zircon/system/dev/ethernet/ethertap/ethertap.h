@@ -16,7 +16,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 namespace eth {
 

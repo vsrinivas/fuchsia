@@ -15,7 +15,6 @@
 #include <ddk/metadata/gpio.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 
 namespace gpio {
 

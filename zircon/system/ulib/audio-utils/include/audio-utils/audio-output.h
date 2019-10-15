@@ -7,6 +7,8 @@
 
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <audio-utils/audio-device-stream.h>
 
 namespace audio {
@@ -16,8 +18,8 @@ class AudioSource;
 
 class AudioOutput : public AudioDeviceStream {
  public:
-  static fbl::unique_ptr<AudioOutput> Create(uint32_t dev_id);
-  static fbl::unique_ptr<AudioOutput> Create(const char* dev_path);
+  static std::unique_ptr<AudioOutput> Create(uint32_t dev_id);
+  static std::unique_ptr<AudioOutput> Create(const char* dev_path);
   zx_status_t Play(AudioSource& source);
 
  private:

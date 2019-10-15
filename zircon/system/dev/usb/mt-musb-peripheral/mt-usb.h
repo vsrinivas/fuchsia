@@ -16,7 +16,6 @@
 #include <ddktl/protocol/usb/dci.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <usb/request-cpp.h>
 
 namespace mt_usb {

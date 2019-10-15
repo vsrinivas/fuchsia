@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <zircon/boot/image.h>
 
+#include <memory>
 #include <optional>
 
 #include <fbl/string.h>
@@ -43,7 +44,7 @@ void CreateBadBlockMap(void* buffer) {
 }  // namespace
 
 void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
-                         fbl::unique_ptr<BlockDevice>* device) {
+                         std::unique_ptr<BlockDevice>* device) {
   ramdisk_client_t* client;
   ASSERT_OK(ramdisk_create_at_with_guid(devfs_root.get(), kBlockSize, kBlockCount, guid,
                                         ZBI_PARTITION_GUID_LEN, &client));
@@ -51,7 +52,7 @@ void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
 }
 
 void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
-                         uint64_t block_count, fbl::unique_ptr<BlockDevice>* device) {
+                         uint64_t block_count, std::unique_ptr<BlockDevice>* device) {
   ramdisk_client_t* client;
   ASSERT_OK(ramdisk_create_at_with_guid(devfs_root.get(), kBlockSize, block_count, guid,
                                         ZBI_PARTITION_GUID_LEN, &client));
@@ -59,7 +60,7 @@ void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
 }
 
 void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
-                             fbl::unique_ptr<SkipBlockDevice>* device) {
+                             std::unique_ptr<SkipBlockDevice>* device) {
   fzl::VmoMapper mapper;
   zx::vmo vmo;
   ASSERT_OK(mapper.CreateAndMap((kPageSize + kOobSize) * kPagesPerBlock * kNumBlocks,

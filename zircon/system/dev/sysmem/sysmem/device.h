@@ -21,7 +21,6 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 
@@ -76,7 +75,7 @@ class Device final : public MemoryAllocator::Owner {
 
   class SecureMemConnection {
    public:
-    SecureMemConnection(zx::channel connection, fbl::unique_ptr<async::Wait> wait_for_close);
+    SecureMemConnection(zx::channel connection, std::unique_ptr<async::Wait> wait_for_close);
     zx_handle_t channel();
 
    private:
@@ -105,7 +104,7 @@ class Device final : public MemoryAllocator::Owner {
   std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
 
   // This map contains all registered memory allocators.
-  std::map<fuchsia_sysmem_HeapType, fbl::unique_ptr<MemoryAllocator>> allocators_;
+  std::map<fuchsia_sysmem_HeapType, std::unique_ptr<MemoryAllocator>> allocators_;
 
   // This map contains only the secure allocators, if any.  The pointers are owned by allocators_.
   //

@@ -9,6 +9,7 @@
 #include <lib/sync/completion.h>
 
 #include <atomic>
+#include <memory>
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -29,7 +30,7 @@ bool TestConnectionRights() {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  fbl::unique_ptr<fs::ManagedVfs> vfs = std::make_unique<fs::ManagedVfs>(loop.dispatcher());
+  std::unique_ptr<fs::ManagedVfs> vfs = std::make_unique<fs::ManagedVfs>(loop.dispatcher());
 
   // Set up a vnode for the root directory
   class TestVNode : public fs::Vnode {

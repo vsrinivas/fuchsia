@@ -19,6 +19,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <acpica/acpi.h>
@@ -29,7 +30,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <hid/descriptor.h>
 
 #include "../../include/errors.h"
@@ -465,13 +465,13 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_da
 
 zx_status_t AcpiCrOsEcMotionDevice::Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
                                            ACPI_HANDLE acpi_handle,
-                                           fbl::unique_ptr<AcpiCrOsEcMotionDevice>* out) {
+                                           std::unique_ptr<AcpiCrOsEcMotionDevice>* out) {
   if (!ec->supports_motion_sense() || !ec->supports_motion_sense_fifo()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AcpiCrOsEcMotionDevice> dev(
+  std::unique_ptr<AcpiCrOsEcMotionDevice> dev(
       new (&ac) AcpiCrOsEcMotionDevice(std::move(ec), parent, acpi_handle));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -736,7 +736,7 @@ zx_status_t AcpiCrOsEcMotionDevice::BuildHidDescriptor() {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> desc(new (&ac) uint8_t[total_size]);
+  std::unique_ptr<uint8_t[]> desc(new (&ac) uint8_t[total_size]);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

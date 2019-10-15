@@ -10,6 +10,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/vmo.h>
@@ -20,7 +21,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 #include "fvm/format.h"
 

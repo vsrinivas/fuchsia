@@ -15,7 +15,6 @@
 
 #include <fbl/array.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 namespace fzl {

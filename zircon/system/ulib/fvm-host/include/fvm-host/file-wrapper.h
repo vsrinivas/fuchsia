@@ -9,11 +9,11 @@
 #include <unistd.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 // Namespace these classes to prevent collisions with minfs's FileWrapper.
 namespace fvm::host {
@@ -66,7 +66,7 @@ class FdWrapper : public FileWrapper {
 class UniqueFdWrapper : public FileWrapper {
  public:
   static zx_status_t Open(const char* path, int flags, mode_t mode,
-                          fbl::unique_ptr<UniqueFdWrapper>* out);
+                          std::unique_ptr<UniqueFdWrapper>* out);
   UniqueFdWrapper(fbl::unique_fd fd) : fd_(std::move(fd)) {}
 
   ssize_t Read(void* buffer, size_t count) override;

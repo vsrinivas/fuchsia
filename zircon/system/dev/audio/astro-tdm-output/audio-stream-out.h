@@ -11,6 +11,8 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <audio-proto/audio-proto.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/i2c.h>
@@ -58,12 +60,12 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
   ddk::PDev pdev_;
 
-  fbl::unique_ptr<Tas27xx> codec_;
+  std::unique_ptr<Tas27xx> codec_;
 
   zx::vmo ring_buffer_vmo_;
   fzl::PinnedVmo pinned_ring_buffer_;
 
-  fbl::unique_ptr<AmlTdmDevice> aml_audio_;
+  std::unique_ptr<AmlTdmDevice> aml_audio_;
   ddk::GpioProtocolClient audio_en_;
   ddk::GpioProtocolClient audio_fault_;
 

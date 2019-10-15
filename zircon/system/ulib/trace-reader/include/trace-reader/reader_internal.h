@@ -7,8 +7,9 @@
 
 #include <zircon/assert.h>
 
+#include <memory>
+
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 #include <trace-engine/buffer_internal.h>
 #include <trace-reader/reader.h>
 
@@ -27,7 +28,7 @@ class BufferHeaderReader {
   // Returns "" on success or an error message.
   // |header| must be suitably aligned to point to a header.
   static fbl::String Create(const void* header, size_t buffer_size,
-                            fbl::unique_ptr<BufferHeaderReader>* out_reader);
+                            std::unique_ptr<BufferHeaderReader>* out_reader);
 
   static int GetBufferNumber(uint32_t wrapped_count) {
     static_assert(fbl::count_of(trace_buffer_header{}.rolling_data_end) == 2, "");
@@ -132,7 +133,7 @@ class TraceBufferReader {
  private:
   void CallChunkConsumerIfNonEmpty(const void* chunk, size_t size);
 
-  fbl::unique_ptr<BufferHeaderReader> const header_;
+  std::unique_ptr<BufferHeaderReader> const header_;
   ChunkConsumer chunk_consumer_;
   ErrorHandler error_handler_;
 

@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
+#include <memory>
 
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
@@ -4311,7 +4312,7 @@ zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* b
     errorf("Beacon exceeds limit of %zu bytes: %zu\n", kMaxBeaconSizeByte, req_len);
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  auto buf = fbl::unique_ptr<uint8_t[]>(new uint8_t[req_len]);
+  auto buf = std::unique_ptr<uint8_t[]>(new uint8_t[req_len]);
   auto aggr = reinterpret_cast<BulkoutAggregation*>(buf.get());
   auto status = FillAggregation(aggr, bcn_pkt, kInvalidTxPacketId, aggr_payload_len);
   if (status != ZX_OK) {

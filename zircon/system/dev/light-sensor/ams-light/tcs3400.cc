@@ -20,7 +20,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <hid/descriptor.h>
 
 #include "tcs3400-regs.h"

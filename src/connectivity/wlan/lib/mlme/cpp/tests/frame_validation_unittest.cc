@@ -45,7 +45,7 @@ struct DynamicTestHdr {
   constexpr size_t len() const { return is_large ? kLargeLength : sizeof(*this); }
 } __PACKED;
 
-static fbl::unique_ptr<Packet> GetPacket(size_t len) {
+static std::unique_ptr<Packet> GetPacket(size_t len) {
   auto buffer = GetBuffer(len);
   auto pkt = std::make_unique<Packet>(std::move(buffer), len);
   pkt->clear();

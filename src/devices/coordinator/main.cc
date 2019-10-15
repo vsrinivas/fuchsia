@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 
 #include "boot-args.h"
 #include "coordinator.h"
@@ -367,7 +368,7 @@ int main(int argc, char** argv) {
   }
   thrd_detach(t);
 
-  fbl::unique_ptr<devmgr::DevhostLoaderService> loader_service;
+  std::unique_ptr<devmgr::DevhostLoaderService> loader_service;
   if (boot_args.GetBool("devmgr.devhost.strict-linking", false)) {
     status =
         devmgr::DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);

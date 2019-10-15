@@ -4,6 +4,8 @@
 
 #include <zircon/status.h>
 
+#include <memory>
+
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/ap_mlme.h>
 #include <wlan/mlme/service.h>
@@ -52,7 +54,7 @@ zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   return bss_->HandleMlmeMsg(msg);
 }
 
-zx_status_t ApMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
+zx_status_t ApMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
   if (bss_ != nullptr) {
     bss_->HandleAnyFrame(std::move(pkt));
   }
@@ -73,7 +75,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& r
   ObjectId timer_id;
   timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   timer_id.set_target(to_enum_type(ObjectTarget::kBss));
-  fbl::unique_ptr<Timer> timer;
+  std::unique_ptr<Timer> timer;
   zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
   if (status != ZX_OK) {
     errorf("Could not create bss timer: %s\n", zx_status_get_string(status));

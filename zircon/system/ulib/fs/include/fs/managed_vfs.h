@@ -12,11 +12,11 @@
 #include <lib/async/cpp/task.h>
 
 #include <atomic>
+#include <memory>
 
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <fs/connection.h>
 #include <fs/vfs.h>
 

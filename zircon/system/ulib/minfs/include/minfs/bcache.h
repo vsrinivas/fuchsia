@@ -17,7 +17,6 @@
 #include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>

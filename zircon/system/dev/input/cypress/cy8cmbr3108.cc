@@ -12,8 +12,8 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <hid/visalia-touch.h>
 
 namespace {

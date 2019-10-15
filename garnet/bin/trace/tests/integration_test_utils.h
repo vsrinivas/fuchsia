@@ -10,6 +10,7 @@
 #include <lib/zx/time.h>
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 
 #include <trace-provider/provider.h>
@@ -86,14 +87,12 @@ bool IsWriteTestEvent(const trace::Record& record);
 // Verify a trace generated with |WriteTestEvents()| in json format.
 // Returns a boolean indicating success.
 // On success returns the number of events found in |*out_num_events|.
-bool VerifyTestEventsFromJson(const std::string& test_output_file,
-                              size_t* out_num_events);
+bool VerifyTestEventsFromJson(const std::string& test_output_file, size_t* out_num_events);
 
 // Verify a trace generated with |WriteTestEvents()| in binary fxt format.
 // Returns a boolean indicating success.
-bool VerifyTestEventsFromFxt(
-    const std::string& test_output_file,
-    trace::TraceReader::RecordConsumer record_consumer);
+bool VerifyTestEventsFromFxt(const std::string& test_output_file,
+                             trace::TraceReader::RecordConsumer record_consumer);
 
 // Write as many records as we can to ensure a buffer of size
 // |buffer_size_in_mb| is full, and fill it |num_times|.

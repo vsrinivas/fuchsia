@@ -5,6 +5,7 @@
 #include "pinned-buffer.h"
 
 #include <climits>
+#include <memory>
 #include <utility>
 
 fbl::RefPtr<PinnedBuffer> PinnedBuffer::Create(size_t size, const zx::bti& bti,
@@ -39,7 +40,7 @@ fbl::RefPtr<PinnedBuffer> PinnedBuffer::Create(size_t size, const zx::bti& bti,
 
   uint32_t page_count = static_cast<uint32_t>(size / PAGE_SIZE);
 
-  fbl::unique_ptr<zx_paddr_t[]> addrs(new (&ac) zx_paddr_t[page_count]);
+  std::unique_ptr<zx_paddr_t[]> addrs(new (&ac) zx_paddr_t[page_count]);
   if (!ac.check()) {
     return nullptr;
   }

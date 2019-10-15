@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <mutex>
 #include <optional>
 
@@ -51,7 +52,7 @@ struct MerkleInfo {
   uint64_t length = 0;
 
   // Compressed blob data, if the blob is compressible.
-  fbl::unique_ptr<uint8_t[]> compressed_data;
+  std::unique_ptr<uint8_t[]> compressed_data;
   uint64_t compressed_length = 0;
   bool compressed = false;
 
@@ -130,19 +131,19 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   // Creates an instance of Blobfs from the file at |blockfd|.
   // The blobfs partition is expected to start at |offset| bytes into the file.
   static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
-                            const fbl::Array<size_t>& extent_lengths, fbl::unique_ptr<Blobfs>* out);
+                            const fbl::Array<size_t>& extent_lengths, std::unique_ptr<Blobfs>* out);
 
   ~Blobfs() {}
 
   // Checks to see if a blob already exists, and if not allocates a new node
-  zx_status_t NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* out);
+  zx_status_t NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* out);
 
   // Allocate |nblocks| starting at |*blkno_out| in memory
   zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
 
   zx_status_t WriteData(Inode* inode, const void* merkle_data, const void* blob_data);
   zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
-  zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
+  zx_status_t WriteNode(std::unique_ptr<InodeBlock> ino_block);
   zx_status_t WriteInfo();
 
   // Access the |node_index|-th inode
@@ -244,7 +245,7 @@ zx_status_t UsedInodes(const fbl::unique_fd& fd, uint64_t* out_inodes, off_t sta
 zx_status_t UsedSize(const fbl::unique_fd& fd, uint64_t* out_size, off_t start = 0,
                      std::optional<off_t> end = std::nullopt);
 
-zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
+zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
 
 // Pre-process a blob by creating a merkle tree and digest from the supplied file.
 // Also return the length of the file. If |compress| is true and we decide to compress the file,
@@ -267,7 +268,7 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 // |end| indicates the end of the blobfs partition (in bytes)
 // |extent_lengths| contains the length (in bytes) of each blobfs extent: currently this includes
 // the superblock, block bitmap, inode table, and data blocks.
-zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
+zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
                                  off_t end, const fbl::Vector<size_t>& extent_lengths);
 }  // namespace blobfs
 

@@ -8,6 +8,8 @@
 #include <lib/fzl/fdio.h>
 #include <zircon/assert.h>
 
+#include <memory>
+
 #include <fbl/auto_call.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
@@ -236,7 +238,7 @@ bool TestWrapper(void) {
 
 bool LibGptTest::Reset() {
   BEGIN_HELPER;
-  fbl::unique_ptr<GptDevice> gpt;
+  std::unique_ptr<GptDevice> gpt;
 
   // explicitly close the fd, if open, before we attempt to reopen it.
   fd_.reset();

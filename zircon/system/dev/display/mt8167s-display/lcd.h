@@ -10,7 +10,6 @@
 
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/gpio.h>
-#include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 
 namespace mt8167s_display {

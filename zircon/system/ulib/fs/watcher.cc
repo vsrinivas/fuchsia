@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <memory>
+
 #ifdef __Fuchsia__
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>

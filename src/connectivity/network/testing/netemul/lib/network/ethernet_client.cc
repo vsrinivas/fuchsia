@@ -18,10 +18,10 @@
 #include <zircon/status.h>
 
 #include <iostream>
+#include <memory>
 #include <sstream>
 
 #include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 
 namespace netemul {
 using ZDevice = fuchsia::hardware::ethernet::Device;
@@ -40,7 +40,7 @@ struct WatchCbArgs {
 
 class FifoHolder {
  public:
-  struct LLFifoEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<LLFifoEntry>> {
+  struct LLFifoEntry : public fbl::SinglyLinkedListable<std::unique_ptr<LLFifoEntry>> {
     ZFifoEntry e;
   };
 
@@ -108,7 +108,7 @@ class FifoHolder {
           }
 
           for (; idx < 2 * buf_config_.nbufs; idx++) {
-            auto entry = fbl::unique_ptr<LLFifoEntry>(new LLFifoEntry);
+            auto entry = std::unique_ptr<LLFifoEntry>(new LLFifoEntry);
             entry->e.offset = idx * buf_config_.buff_size;
             entry->e.length = buf_config_.buff_size;
             entry->e.flags = 0;
@@ -234,8 +234,8 @@ class FifoHolder {
   fit::closure link_signal_callback_;
   fzl::fifo<ZFifoEntry> tx_;
   fzl::fifo<ZFifoEntry> rx_;
-  fbl::SinglyLinkedList<fbl::unique_ptr<LLFifoEntry>> tx_available_;
-  fbl::SinglyLinkedList<fbl::unique_ptr<LLFifoEntry>> tx_pending_;
+  fbl::SinglyLinkedList<std::unique_ptr<LLFifoEntry>> tx_available_;
+  fbl::SinglyLinkedList<std::unique_ptr<LLFifoEntry>> tx_pending_;
   async::WaitMethod<FifoHolder, &FifoHolder::OnRxData> fifo_data_wait_{this};
 };
 

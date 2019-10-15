@@ -14,6 +14,8 @@
 #include <zircon/assert.h>
 #include <zircon/device/sysmem.h>
 
+#include <memory>
+
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
@@ -92,7 +94,7 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
 
 class ExternalMemoryAllocator : public MemoryAllocator {
  public:
-  ExternalMemoryAllocator(zx::channel connection, fbl::unique_ptr<async::Wait> wait_for_close)
+  ExternalMemoryAllocator(zx::channel connection, std::unique_ptr<async::Wait> wait_for_close)
       : connection_(std::move(connection)), wait_for_close_(std::move(wait_for_close)) {}
 
   zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override {
@@ -160,7 +162,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
 
  private:
   zx::channel connection_;
-  fbl::unique_ptr<async::Wait> wait_for_close_;
+  std::unique_ptr<async::Wait> wait_for_close_;
   // From parent vmo handle to ID.
   std::map<zx_handle_t, uint64_t> allocations_;
 };
@@ -571,7 +573,7 @@ MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem_BufferMemorySettings*
 void Device::Post(fit::closure to_run) { closure_queue_.Enqueue(std::move(to_run)); }
 
 Device::SecureMemConnection::SecureMemConnection(zx::channel connection,
-                                                 fbl::unique_ptr<async::Wait> wait_for_close)
+                                                 std::unique_ptr<async::Wait> wait_for_close)
     : connection_(std::move(connection)), wait_for_close_(std::move(wait_for_close)) {
   // nothing else to do here
 }

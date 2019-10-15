@@ -7,6 +7,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -51,7 +53,7 @@ TEST_F(LoggerTest, CreateWithInvalidChannel) {
 // Waits for a FIDL message on the channel and populates |out_data| with a pointer to the
 // decoded data.
 void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl_type_t* want_type,
-                   fbl::unique_ptr<uint8_t[]>* out_data, uint32_t* out_data_size) {
+                   std::unique_ptr<uint8_t[]>* out_data, uint32_t* out_data_size) {
   // Verify we receive the expected signal on the channel.
   zx_signals_t pending;
   const zx_signals_t wait = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
@@ -61,7 +63,7 @@ void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl
 
   // Create the data buffer and copy the data into it.
   const uint32_t buf_size = kMaxFidlMsgSize;
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[buf_size]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[buf_size]);
   fidl_msg_t fidl_msg = {
       .bytes = buf.get(),
       .handles = nullptr,
@@ -85,7 +87,7 @@ void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl
 TEST_F(LoggerTest, LogMessage) {
   ASSERT_OK(driver_unit_test::Logger::SendLogMessage(kLogMessage));
 
-  fbl::unique_ptr<uint8_t[]> data_buf;
+  std::unique_ptr<uint8_t[]> data_buf;
   uint32_t data_size;
   ASSERT_NO_FATAL_FAILURES(
       DecodeMessage(local_, fuchsia_driver_test_LoggerLogMessageOrdinal,
@@ -101,7 +103,7 @@ TEST_F(LoggerTest, LogMessage) {
 // Read and decode the FIDL message from the channel and check that it equals the wanted result.
 void ValidateReceivedTestCase(const zx::channel& log_ch,
                               const fuchsia_driver_test_TestCaseResult& want) {
-  fbl::unique_ptr<uint8_t[]> data_buf;
+  std::unique_ptr<uint8_t[]> data_buf;
   uint32_t data_size;
   ASSERT_NO_FATAL_FAILURES(
       DecodeMessage(log_ch, fuchsia_driver_test_LoggerLogTestCaseOrdinal,

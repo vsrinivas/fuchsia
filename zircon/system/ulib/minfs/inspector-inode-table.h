@@ -7,7 +7,6 @@
 
 #include <lib/disk-inspector/common-types.h>
 
-#include <fbl/unique_ptr.h>
 #include <fs/journal/format.h>
 #include <minfs/format.h>
 

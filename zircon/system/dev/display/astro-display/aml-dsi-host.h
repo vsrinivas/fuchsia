@@ -8,13 +8,13 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/protocol/dsiimpl.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/dsiimpl.h>
-#include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 
 #include "aml-mipi-phy.h"
@@ -69,8 +69,8 @@ class AmlDsiHost {
   bool initialized_ = false;
   bool host_on_ = false;
 
-  fbl::unique_ptr<Lcd> lcd_;
-  fbl::unique_ptr<AmlMipiPhy> phy_;
+  std::unique_ptr<Lcd> lcd_;
+  std::unique_ptr<AmlMipiPhy> phy_;
 };
 
 }  // namespace astro_display

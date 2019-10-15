@@ -25,6 +25,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/binding.h>
@@ -238,7 +239,7 @@ class EthDev : public EthDevType,
   // io buffer.
   zx::vmo io_vmo_;
   fzl::VmoMapper io_buffer_;
-  fbl::unique_ptr<zx_paddr_t[]> paddr_map_ = nullptr;
+  std::unique_ptr<zx_paddr_t[]> paddr_map_ = nullptr;
   zx::pmt pmt_;
 
   TransmitBufferPool free_transmit_buffers_;

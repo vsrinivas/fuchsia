@@ -11,7 +11,6 @@
 #include <digest/merkle-tree.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 
 namespace fs_test_utils {
@@ -44,7 +43,7 @@ bool GenerateBlob(BlobSrcFunction sourceCb, fbl::String mount_path, size_t size_
   std::unique_ptr<uint8_t[]> tree;
   zx_status_t status = MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree,
                                                  &info->size_merkle, &digest);
-  info->merkle.reset(reinterpret_cast<char *>(tree.release()));
+  info->merkle.reset(reinterpret_cast<char*>(tree.release()));
   if (status != ZX_OK) {
     printf("Couldn't create Merkle Tree\n");
     return false;

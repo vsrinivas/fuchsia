@@ -7,6 +7,8 @@
 
 #include <lib/operation/operation.h>
 
+#include <memory>
+
 #include <ddk/protocol/nand.h>
 
 // namespace nand is used because this library will inevitably move to
@@ -103,12 +105,12 @@ struct OperationTraits {
 
   static OperationType* Alloc(size_t op_size) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> raw;
+    std::unique_ptr<uint8_t[]> raw;
     if constexpr (alignof(OperationType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-      raw = fbl::unique_ptr<uint8_t[]>(
+      raw = std::unique_ptr<uint8_t[]>(
           new (static_cast<std::align_val_t>(alignof(OperationType)), &ac) uint8_t[op_size]);
     } else {
-      raw = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[op_size]);
+      raw = std::unique_ptr<uint8_t[]>(new (&ac) uint8_t[op_size]);
     }
     if (!ac.check()) {
       return nullptr;

@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <memory>
 #include <new>
 #include <optional>
 #include <utility>
@@ -24,7 +25,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <fs-host/common.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
@@ -91,7 +91,7 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
   }
 
   zx_status_t status;
-  fbl::unique_ptr<HostCompressor> compressor;
+  std::unique_ptr<HostCompressor> compressor;
   if ((status = HostCompressor::Create(mapping.length(), out_info->compressed_data.get(), max,
                                        &compressor)) != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialize blobfs compressor: %d\n", status);
@@ -133,7 +133,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
   // blob to the filesystem itself.
   static std::mutex add_blob_mutex_;
   std::lock_guard<std::mutex> lock(add_blob_mutex_);
-  fbl::unique_ptr<InodeBlock> inode_block;
+  std::unique_ptr<InodeBlock> inode_block;
   zx_status_t status;
   if ((status = bs->NewBlob(info.digest, &inode_block)) != ZX_OK) {
     FS_TRACE_ERROR("error: Failed to allocate a new blob\n");
@@ -379,7 +379,7 @@ zx_status_t UsedSize(const fbl::unique_fd& fd, uint64_t* out_size, off_t start,
   return ZX_OK;
 }
 
-zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
+zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
   info_block_t info_block;
   zx_status_t status;
 
@@ -403,7 +403,7 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
   return ZX_OK;
 }
 
-zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
+zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
                                  off_t end, const fbl::Vector<size_t>& extent_vector) {
   if (start >= end) {
     FS_TRACE_ERROR("blobfs: Insufficient space allocated\n");
@@ -485,7 +485,7 @@ zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recor
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
                         const fbl::Vector<size_t>& extent_lengths) {
-  fbl::unique_ptr<Blobfs> blob;
+  std::unique_ptr<Blobfs> blob;
   zx_status_t status;
   if ((status = blobfs_create_sparse(&blob, std::move(fd), start, end, extent_lengths)) != ZX_OK) {
     return status;
@@ -515,7 +515,7 @@ Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
 }
 
 zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_block_t& info_block,
-                           const fbl::Array<size_t>& extent_lengths, fbl::unique_ptr<Blobfs>* out) {
+                           const fbl::Array<size_t>& extent_lengths, std::unique_ptr<Blobfs>* out) {
   zx_status_t status = CheckSuperblock(&info_block.info, TotalBlocks(info_block.info));
   if (status < 0) {
     FS_TRACE_ERROR("blobfs: Check info failure\n");
@@ -531,7 +531,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_blo
   }
 
   auto fs =
-      fbl::unique_ptr<Blobfs>(new Blobfs(std::move(blockfd_), offset, info_block, extent_lengths));
+      std::unique_ptr<Blobfs>(new Blobfs(std::move(blockfd_), offset, info_block, extent_lengths));
 
   if ((status = fs->LoadBitmap()) < 0) {
     FS_TRACE_ERROR("blobfs: Failed to load bitmaps\n");
@@ -565,7 +565,7 @@ zx_status_t Blobfs::LoadBitmap() {
   return ZX_OK;
 }
 
-zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* out) {
+zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* out) {
   size_t ino = info_.inode_count;
 
   for (size_t i = 0; i < info_.inode_count; ++i) {
@@ -602,7 +602,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* o
 
   Inode* inodes = reinterpret_cast<Inode*>(cache_.blk);
 
-  fbl::unique_ptr<InodeBlock> ino_block(
+  std::unique_ptr<InodeBlock> ino_block(
       new InodeBlock(bno, &inodes[ino % kBlobfsInodesPerBlock], digest));
 
   dirty_ = true;
@@ -640,7 +640,7 @@ zx_status_t Blobfs::WriteBitmap(size_t nblocks, size_t start_block) {
   return ZX_OK;
 }
 
-zx_status_t Blobfs::WriteNode(fbl::unique_ptr<InodeBlock> ino_block) {
+zx_status_t Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
   if (ino_block->GetBno() != cache_.bno) {
     return ZX_ERR_ACCESS_DENIED;
   }
@@ -748,7 +748,7 @@ zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
   }
 
   // Create data buffer.
-  fbl::unique_ptr<uint8_t[]> data(new uint8_t[target_size]);
+  std::unique_ptr<uint8_t[]> data(new uint8_t[target_size]);
   if (inode.header.flags & kBlobFlagCompressed) {
     // Read in uncompressed merkle blocks.
     for (unsigned i = 0; i < merkle_blocks; i++) {
@@ -765,7 +765,7 @@ zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
     }
 
     // Create compressed data buffer.
-    fbl::unique_ptr<uint8_t[]> compressed_data(new uint8_t[compressed_size]);
+    std::unique_ptr<uint8_t[]> compressed_data(new uint8_t[compressed_size]);
 
     // Read in all compressed blob data.
     for (unsigned i = 0; i < compressed_blocks; i++) {

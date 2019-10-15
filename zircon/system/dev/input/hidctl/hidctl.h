@@ -16,7 +16,6 @@
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 namespace hidctl {
 

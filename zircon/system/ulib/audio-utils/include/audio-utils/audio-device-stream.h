@@ -12,7 +12,6 @@
 
 #include <functional>
 
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 namespace audio {

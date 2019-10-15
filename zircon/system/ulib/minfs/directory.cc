@@ -14,6 +14,8 @@
 #include <zircon/device/vfs.h>
 #include <zircon/time.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
@@ -617,7 +619,7 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
   ZX_DEBUG_ASSERT(reserve_blocks <= fs_->Limits().GetMaximumMetaDataBlocks());
 
   // In addition to reserve_blocks, reserve 1 inode for the vnode to be created.
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   if ((status = fs_->BeginTransaction(1, reserve_blocks, &transaction)) != ZX_OK) {
     return status;
   }
@@ -666,7 +668,7 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
       [&ticker, &success, this]() { fs_->UpdateUnlinkMetrics(success, ticker.End()); });
 
   zx_status_t status;
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
     return status;
   }
@@ -776,7 +778,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
     return status;
   }
 
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   if ((status = fs_->BeginTransaction(0, reserved_blocks, &transaction)) != ZX_OK) {
     return status;
   }
@@ -867,7 +869,7 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
     return status;
   }
 
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   if ((status = fs_->BeginTransaction(0, reserved_blocks, &transaction)) != ZX_OK) {
     return status;
   }

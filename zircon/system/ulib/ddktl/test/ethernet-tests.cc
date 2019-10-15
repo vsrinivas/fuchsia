@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -146,7 +147,7 @@ class TestEthernetImplProtocol
   bool queue_tx_called_ = false;
   bool set_param_called_ = false;
 
-  fbl::unique_ptr<ddk::EthernetIfcProtocolClient> client_;
+  std::unique_ptr<ddk::EthernetIfcProtocolClient> client_;
 };
 
 static bool test_ethernet_ifc() {

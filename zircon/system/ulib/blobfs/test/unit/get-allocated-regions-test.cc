@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <id_allocator/id_allocator.h>
 #include <zxtest/zxtest.h>
 
@@ -24,7 +26,7 @@ void MakeBitmapFrom(const fbl::Vector<uint8_t>& bit_vector, RawBitmap* out_bitma
 
 TEST(GetAllocatedRegionsTest, Empty) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
   // GetAllocatedRegions should return an empty vector

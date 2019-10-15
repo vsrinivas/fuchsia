@@ -15,6 +15,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -22,6 +23,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddktl/protocol/display/controller.h>
+#include <fbl/alloc_checker.h>
 #include <hw/pci.h>
 
 // implement display controller protocol
@@ -160,7 +162,7 @@ void SimpleDisplay::DdkRelease() { delete this; }
 
 // implement driver object:
 
-zx_status_t SimpleDisplay::Bind(const char* name, fbl::unique_ptr<SimpleDisplay>* vbe_ptr) {
+zx_status_t SimpleDisplay::Bind(const char* name, std::unique_ptr<SimpleDisplay>* vbe_ptr) {
   zx_info_handle_basic_t framebuffer_info;
   size_t actual, avail;
   zx_status_t status = framebuffer_mmio_.get_vmo()->get_info(
@@ -226,7 +228,7 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
   ddk::MmioBuffer framebuffer_mmio(mmio);
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<SimpleDisplay> display(
+  std::unique_ptr<SimpleDisplay> display(
       new (&ac) SimpleDisplay(dev, std::move(framebuffer_mmio), width, height, stride, format));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;

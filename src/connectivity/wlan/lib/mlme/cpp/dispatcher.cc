@@ -11,10 +11,10 @@
 #include <atomic>
 #include <cinttypes>
 #include <cstring>
+#include <memory>
 #include <sstream>
 
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <fbl/unique_ptr.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/mac_frame.h>
@@ -36,7 +36,7 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
-Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme)
+Dispatcher::Dispatcher(DeviceInterface* device, std::unique_ptr<Mlme> mlme)
     : device_(device), mlme_(std::move(mlme)) {
   debugfn();
   ZX_ASSERT(mlme_ != nullptr);
@@ -44,7 +44,7 @@ Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme)
 
 Dispatcher::~Dispatcher() {}
 
-zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
+zx_status_t Dispatcher::HandlePacket(std::unique_ptr<Packet> packet) {
   debugfn();
 
   ZX_DEBUG_ASSERT(packet != nullptr);

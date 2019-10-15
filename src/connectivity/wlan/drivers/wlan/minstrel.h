@@ -9,10 +9,10 @@
 #include <lib/zx/time.h>
 
 #include <array>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 
-#include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/client/station.h>
@@ -84,7 +84,7 @@ struct Peer {
 
 class MinstrelRateSelector {
  public:
-  MinstrelRateSelector(fbl::unique_ptr<Timer>&& timer, ProbeSequence&& probe_sequence,
+  MinstrelRateSelector(std::unique_ptr<Timer>&& timer, ProbeSequence&& probe_sequence,
                        zx::duration update_interval);
   void AddPeer(const wlan_assoc_ctx_t& assoc_ctx);
   void RemovePeer(const common::MacAddr& addr);

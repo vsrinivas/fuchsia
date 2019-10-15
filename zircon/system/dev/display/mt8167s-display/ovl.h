@@ -11,11 +11,11 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <fbl/unique_ptr.h>
 
 #include "common.h"
 #include "registers-ovl.h"
@@ -110,7 +110,7 @@ class Ovl {
   // TODO(payam): ZX_PIXEL_FORMAT_BYTES returns 4 for x888. We need three
   uint32_t GetBytesPerPixel(zx_pixel_format_t format);
 
-  fbl::unique_ptr<ddk::MmioBuffer> ovl_mmio_;
+  std::unique_ptr<ddk::MmioBuffer> ovl_mmio_;
   pdev_protocol_t pdev_ = {nullptr, nullptr};
   zx::bti bti_;
 

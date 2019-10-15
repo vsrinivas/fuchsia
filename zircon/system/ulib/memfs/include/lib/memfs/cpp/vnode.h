@@ -19,7 +19,6 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/managed_vfs.h>
 #include <fs/remote.h>
 #include <fs/vfs.h>

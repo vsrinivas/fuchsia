@@ -5,7 +5,6 @@
 #define ZIRCON_SYSTEM_ULIB_PAVER_FVM_H_
 
 #include <block-client/cpp/client.h>
-#include <fbl/unique_ptr.h>
 #include <fvm/sparse-reader.h>
 
 #include "fvm/fvm-sparse.h"

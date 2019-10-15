@@ -20,7 +20,6 @@
 #include <new>
 
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
 

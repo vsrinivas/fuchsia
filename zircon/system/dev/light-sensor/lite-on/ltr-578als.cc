@@ -6,11 +6,13 @@
 
 #include <endian.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 
@@ -104,7 +106,7 @@ zx_status_t Ltr578Als::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Ltr578Als> device(new (&ac) Ltr578Als(parent, &i2c, std::move(port)));
+  std::unique_ptr<Ltr578Als> device(new (&ac) Ltr578Als(parent, &i2c, std::move(port)));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Ltr578Als alloc failed\n", __FILE__);
     return ZX_ERR_NO_MEMORY;

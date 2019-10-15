@@ -9,7 +9,6 @@
 #error Fuchsia-only Header
 #endif
 
-#include <fbl/unique_ptr.h>
 #include <fs/journal/journal.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vnode.h>

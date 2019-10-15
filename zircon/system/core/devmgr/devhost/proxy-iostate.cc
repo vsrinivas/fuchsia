@@ -4,6 +4,8 @@
 
 #include "proxy-iostate.h"
 
+#include <memory>
+
 #include <fbl/auto_lock.h>
 
 #include "../shared/log.h"
@@ -18,7 +20,7 @@ ProxyIostate::~ProxyIostate() {
 }
 
 // Handling RPC From Proxy Devices to BusDevs
-void ProxyIostate::HandleRpc(fbl::unique_ptr<ProxyIostate> conn, async_dispatcher_t* dispatcher,
+void ProxyIostate::HandleRpc(std::unique_ptr<ProxyIostate> conn, async_dispatcher_t* dispatcher,
                              async::WaitBase* wait, zx_status_t status,
                              const zx_packet_signal_t* signal) {
   auto handle_destroy = [&conn]() {

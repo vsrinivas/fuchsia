@@ -12,6 +12,8 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <audio-proto/audio-proto.h>
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
@@ -57,10 +59,10 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
       notify_timer_ TA_GUARDED(domain_token()){this};
   ddk::PDev pdev_ TA_GUARDED(domain_token());
   metadata::Codec codecs_types_ TA_GUARDED(domain_token());
-  fbl::Array<fbl::unique_ptr<Tas5720>> codecs_ TA_GUARDED(domain_token());
+  fbl::Array<std::unique_ptr<Tas5720>> codecs_ TA_GUARDED(domain_token());
   zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
   fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_token());
-  fbl::unique_ptr<AmlTdmDevice> aml_audio_;
+  std::unique_ptr<AmlTdmDevice> aml_audio_;
   ddk::GpioProtocolClient audio_en_ TA_GUARDED(domain_token());
   ddk::GpioProtocolClient audio_fault_ TA_GUARDED(domain_token());
   zx::bti bti_ TA_GUARDED(domain_token());

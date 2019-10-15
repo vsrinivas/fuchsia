@@ -4,6 +4,7 @@
 
 #include "usb-audio-stream-interface.h"
 
+#include <memory>
 #include <utility>
 
 #include <audio-proto-utils/format-utils.h>
@@ -20,7 +21,7 @@ namespace usb {
 // We use our parent's log prefix
 const char* UsbAudioStreamInterface::log_prefix() const { return parent_.log_prefix(); }
 
-fbl::unique_ptr<UsbAudioStreamInterface> UsbAudioStreamInterface::Create(
+std::unique_ptr<UsbAudioStreamInterface> UsbAudioStreamInterface::Create(
     UsbAudioDevice* parent, DescriptorListMemory::Iterator* iter) {
   ZX_DEBUG_ASSERT(parent != nullptr);
   ZX_DEBUG_ASSERT(iter != nullptr);
@@ -30,7 +31,7 @@ fbl::unique_ptr<UsbAudioStreamInterface> UsbAudioStreamInterface::Create(
   uint8_t iid = ihdr->bInterfaceNumber;
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<UsbAudioStreamInterface> ret(
+  std::unique_ptr<UsbAudioStreamInterface> ret(
       new (&ac) UsbAudioStreamInterface(parent, iter->desc_list(), iid));
   if (ac.check()) {
     zx_status_t res = ret->AddInterface(iter);
@@ -399,7 +400,7 @@ zx_status_t UsbAudioStreamInterface::ActivateIdleFormat() {
   return usb_set_interface(&parent_.usb_proto(), iid(), idle_hdr_->bAlternateSetting);
 }
 
-void UsbAudioStreamInterface::LinkPath(fbl::unique_ptr<AudioPath> path) {
+void UsbAudioStreamInterface::LinkPath(std::unique_ptr<AudioPath> path) {
   ZX_DEBUG_ASSERT(path != nullptr);
   ZX_DEBUG_ASSERT(path_ == nullptr);
   ZX_DEBUG_ASSERT(direction() == path->direction());

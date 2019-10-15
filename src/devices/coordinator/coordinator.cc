@@ -37,12 +37,12 @@
 #include <zircon/syscalls/system.h>
 
 #include <cstdint>
+#include <memory>
 #include <utility>
 
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <inspector/inspector.h>
 #include <libzbi/zbi-cpp.h>
 
@@ -155,8 +155,8 @@ const Driver* Coordinator::LibnameToDriver(const fbl::String& libname) const {
 
 static zx_status_t load_vmo(const fbl::String& libname, zx::vmo* out_vmo) {
   int fd = -1;
-  zx_status_t r = fdio_open_fd(libname.data(), fuchsia_io_OPEN_RIGHT_READABLE |
-                               fuchsia_io_OPEN_RIGHT_EXECUTABLE, &fd);
+  zx_status_t r = fdio_open_fd(
+      libname.data(), fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_EXECUTABLE, &fd);
   if (r != ZX_OK) {
     log(ERROR, "devcoordinator: cannot open driver '%s'\n", libname.data());
     return ZX_ERR_IO;
@@ -940,7 +940,7 @@ zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
 
 zx_status_t Coordinator::AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t type,
                                      const void* data, uint32_t length) {
-  fbl::unique_ptr<Metadata> md;
+  std::unique_ptr<Metadata> md;
   zx_status_t status = Metadata::Create(length, &md);
   if (status != ZX_OK) {
     return status;
@@ -979,7 +979,7 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
     }
   }
 
-  fbl::unique_ptr<Metadata> md;
+  std::unique_ptr<Metadata> md;
   status = Metadata::Create(length + strlen(path) + 1, &md);
   if (status != ZX_OK) {
     return status;
@@ -1248,22 +1248,23 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
   suspend_context().set_task(std::move(task));
 
-  auto status = async::PostDelayedTask(dispatcher(),
-                                       [this, callback] {
-                                         if (!InSuspend()) {
-                                           return;  // Suspend failed to complete.
-                                         }
-                                         auto& ctx = suspend_context();
-                                         log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
-                                         log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
-                                         dump_suspend_task_dependencies(ctx.task());
-                                         if (suspend_fallback()) {
-                                           ::suspend_fallback(root_resource(), ctx.sflags());
-                                           // Unless in test env, we should not reach here.
-                                           callback(ZX_ERR_TIMED_OUT);
-                                         }
-                                       },
-                                       zx::sec(30));
+  auto status = async::PostDelayedTask(
+      dispatcher(),
+      [this, callback] {
+        if (!InSuspend()) {
+          return;  // Suspend failed to complete.
+        }
+        auto& ctx = suspend_context();
+        log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
+        log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
+        dump_suspend_task_dependencies(ctx.task());
+        if (suspend_fallback()) {
+          ::suspend_fallback(root_resource(), ctx.sflags());
+          // Unless in test env, we should not reach here.
+          callback(ZX_ERR_TIMED_OUT);
+        }
+      },
+      zx::sec(30));
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: Failed to create suspend timeout watchdog\n");
   }
@@ -1307,7 +1308,7 @@ void Coordinator::Resume(SystemPowerState target_state) {
   Resume(ResumeContext(ResumeContext::Flags::kResume, target_state), [](zx_status_t) {});
 }
 
-fbl::unique_ptr<Driver> Coordinator::ValidateDriver(fbl::unique_ptr<Driver> drv) {
+std::unique_ptr<Driver> Coordinator::ValidateDriver(std::unique_ptr<Driver> drv) {
   if ((drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !config_.asan_drivers) {
     if (launched_first_devhost_) {
       log(ERROR,
@@ -1325,7 +1326,7 @@ fbl::unique_ptr<Driver> Coordinator::ValidateDriver(fbl::unique_ptr<Driver> drv)
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 void Coordinator::DriverAdded(Driver* drv, const char* version) {
-  auto driver = ValidateDriver(fbl::unique_ptr<Driver>(drv));
+  auto driver = ValidateDriver(std::unique_ptr<Driver>(drv));
   if (!driver) {
     return;
   }
@@ -1345,7 +1346,7 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
 //
 // TODO: fancier priorities
 void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
-  auto driver = ValidateDriver(fbl::unique_ptr<Driver>(drv));
+  auto driver = ValidateDriver(std::unique_ptr<Driver>(drv));
   if (!driver) {
     return;
   }
@@ -1374,7 +1375,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 //
 // TODO: fancier priority management
 void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
-  auto driver = ValidateDriver(fbl::unique_ptr<Driver>(drv));
+  auto driver = ValidateDriver(std::unique_ptr<Driver>(drv));
   if (!driver) {
     return;
   }

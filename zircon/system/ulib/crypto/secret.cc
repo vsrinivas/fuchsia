@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -14,8 +15,8 @@
 #include <crypto/secret.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 // See note in //zircon/third_party/ulib/uboringssl/rules.mk
 #define BORINGSSL_NO_CXX

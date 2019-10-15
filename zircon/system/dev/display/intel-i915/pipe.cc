@@ -8,6 +8,8 @@
 #include <lib/zx/vmo.h>
 #include <math.h>
 
+#include <memory>
+
 #include "display-device.h"
 #include "intel-i915.h"
 #include "macros.h"
@@ -289,7 +291,7 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
 
   const image_t* image = &primary->image;
 
-  const fbl::unique_ptr<GttRegion>& region = controller_->GetGttRegion(image->handle);
+  const std::unique_ptr<GttRegion>& region = controller_->GetGttRegion(image->handle);
   region->SetRotation(primary->transform_mode, *image);
 
   uint32_t plane_width;

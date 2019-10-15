@@ -11,6 +11,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -19,7 +21,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 namespace dispatcher {
 
@@ -43,9 +44,9 @@ class ThreadPool : public fbl::RefCounted<ThreadPool>,
  private:
   friend class fbl::RefPtr<ThreadPool>;
 
-  class Thread : public fbl::DoublyLinkedListable<fbl::unique_ptr<Thread>> {
+  class Thread : public fbl::DoublyLinkedListable<std::unique_ptr<Thread>> {
    public:
-    static fbl::unique_ptr<Thread> Create(fbl::RefPtr<ThreadPool> pool, uint32_t id);
+    static std::unique_ptr<Thread> Create(fbl::RefPtr<ThreadPool> pool, uint32_t id);
     zx_status_t Start();
     void Join();
 
@@ -92,7 +93,7 @@ class ThreadPool : public fbl::RefCounted<ThreadPool>,
   fbl::DoublyLinkedList<fbl::RefPtr<ExecutionDomain>, ExecutionDomain::ThreadPoolListTraits>
       active_domains_ __TA_GUARDED(pool_lock_);
 
-  fbl::DoublyLinkedList<fbl::unique_ptr<Thread>> active_threads_ __TA_GUARDED(pool_lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<Thread>> active_threads_ __TA_GUARDED(pool_lock_);
 };
 
 }  // namespace dispatcher

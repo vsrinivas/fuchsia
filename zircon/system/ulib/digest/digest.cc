@@ -9,10 +9,11 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <memory>
+
 #include <digest/digest.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 
 // See note in //zircon/third_party/ulib/uboringssl/rules.mk
 #define BORINGSSL_NO_CXX

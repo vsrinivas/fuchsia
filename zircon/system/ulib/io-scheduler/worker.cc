@@ -6,14 +6,16 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <io-scheduler/io-scheduler.h>
 #include <io-scheduler/worker.h>
 
 namespace ioscheduler {
 
-zx_status_t Worker::Create(Scheduler* sched, uint32_t id, fbl::unique_ptr<Worker>* out) {
+zx_status_t Worker::Create(Scheduler* sched, uint32_t id, std::unique_ptr<Worker>* out) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Worker> worker(new (&ac) Worker(sched, id));
+  std::unique_ptr<Worker> worker(new (&ac) Worker(sched, id));
   if (!ac.check()) {
     fprintf(stderr, "Failed to allocate worker.\n");
     return ZX_ERR_NO_MEMORY;

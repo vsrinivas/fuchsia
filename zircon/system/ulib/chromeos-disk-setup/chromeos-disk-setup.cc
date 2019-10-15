@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>

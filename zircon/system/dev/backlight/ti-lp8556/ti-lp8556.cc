@@ -14,7 +14,6 @@
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 namespace ti {
 

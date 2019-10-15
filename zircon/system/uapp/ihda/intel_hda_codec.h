@@ -5,9 +5,10 @@
 #ifndef ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CODEC_H_
 #define ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CODEC_H_
 
+#include <memory>
+
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 #include <intel-hda/utils/codec-commands.h>
 
 #include "codec_state.h"
@@ -19,9 +20,9 @@ namespace intel_hda {
 struct CodecVerb;
 struct CodecResponse;
 
-class IntelHDACodec : public fbl::WAVLTreeContainable<fbl::unique_ptr<IntelHDACodec>> {
+class IntelHDACodec : public fbl::WAVLTreeContainable<std::unique_ptr<IntelHDACodec>> {
  public:
-  using CodecTree = fbl::WAVLTree<uint32_t, fbl::unique_ptr<IntelHDACodec>>;
+  using CodecTree = fbl::WAVLTree<uint32_t, std::unique_ptr<IntelHDACodec>>;
 
   template <typename TARGET_TYPE>
   struct CommandListEntry {

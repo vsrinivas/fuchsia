@@ -24,9 +24,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <gpt/c/gpt.h>
 #include <pretty/hexdump.h>
 #include <storage-metrics/block-metrics.h>
@@ -285,7 +286,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
   }
 
   // read the data
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[count]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[count]);
   if (offset) {
     off_t rc = lseek(fd.get(), offset, SEEK_SET);
     if (rc < 0) {

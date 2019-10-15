@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/intelhda/codec.h>
@@ -19,7 +21,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -49,7 +50,7 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
   static fbl::RefPtr<CodecConnection> Create(IntelHDAController& controller, uint8_t codec_id);
 
   zx_status_t Startup();
-  void ProcessSolicitedResponse(const CodecResponse& resp, fbl::unique_ptr<CodecCmdJob>&& job);
+  void ProcessSolicitedResponse(const CodecResponse& resp, std::unique_ptr<CodecCmdJob>&& job);
   void ProcessUnsolicitedResponse(const CodecResponse& resp);
   void ProcessWakeupEvt();
 

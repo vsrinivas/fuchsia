@@ -19,8 +19,9 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <ddk/device.h>
-#include <fbl/unique_ptr.h>
 #include <libzbi/zbi-cpp.h>
 
 namespace {
@@ -110,7 +111,7 @@ zx_status_t PerformMexec(void* ctx_raw, zx_handle_t raw_kernel, zx_handle_t raw_
 
   uint8_t* buffer = new uint8_t[kBootdataExtraSz];
   memset(buffer, 0, kBootdataExtraSz);
-  fbl::unique_ptr<uint8_t[]> deleter;
+  std::unique_ptr<uint8_t[]> deleter;
   deleter.reset(buffer);
 
   size_t original_size;

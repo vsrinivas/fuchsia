@@ -15,6 +15,8 @@
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fs/locking.h>
 #include <fs/vfs_types.h>
 
@@ -40,7 +42,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
-#include <fbl/unique_ptr.h>
 
 namespace fs {
 

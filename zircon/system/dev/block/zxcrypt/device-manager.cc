@@ -9,6 +9,8 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <memory>
+
 #include <crypto/secret.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -19,7 +21,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <zxcrypt/ddk-volume.h>
 #include <zxcrypt/volume.h>
 
@@ -132,7 +133,7 @@ zx_status_t DeviceManager::UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_
     return rc;
   }
   memcpy(buf, ikm, key.len());
-  fbl::unique_ptr<DdkVolume> volume;
+  std::unique_ptr<DdkVolume> volume;
   if ((rc = DdkVolume::Unlock(parent(), key, slot, &volume)) != ZX_OK) {
     zxlogf(ERROR, "failed to unseal volume: %s\n", zx_status_get_string(rc));
     return rc;

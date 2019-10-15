@@ -9,8 +9,9 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 
+#include <memory>
+
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 
@@ -35,7 +36,7 @@ struct ProxyIostate : AsyncLoopOwnedRpcHandler<ProxyIostate> {
   // and Clang cannot reason about the aliasing involved.
   void CancelLocked(async_dispatcher_t* dispatcher) TA_NO_THREAD_SAFETY_ANALYSIS;
 
-  static void HandleRpc(fbl::unique_ptr<ProxyIostate> conn, async_dispatcher_t* dispatcher,
+  static void HandleRpc(std::unique_ptr<ProxyIostate> conn, async_dispatcher_t* dispatcher,
                         async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
 

@@ -8,8 +8,9 @@
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+#include <memory>
+
 #include <ddk/device.h>
-#include <fbl/unique_ptr.h>
 
 namespace virtual_audio {
 
@@ -61,9 +62,9 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   bool enabled_ = true;
 
   fidl::BindingSet<fuchsia::virtualaudio::Control> bindings_;
-  fidl::BindingSet<fuchsia::virtualaudio::Input, fbl::unique_ptr<VirtualAudioDeviceImpl>>
+  fidl::BindingSet<fuchsia::virtualaudio::Input, std::unique_ptr<VirtualAudioDeviceImpl>>
       input_bindings_;
-  fidl::BindingSet<fuchsia::virtualaudio::Output, fbl::unique_ptr<VirtualAudioDeviceImpl>>
+  fidl::BindingSet<fuchsia::virtualaudio::Output, std::unique_ptr<VirtualAudioDeviceImpl>>
       output_bindings_;
 };
 

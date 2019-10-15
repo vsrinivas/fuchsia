@@ -21,12 +21,12 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 

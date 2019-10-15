@@ -5,6 +5,8 @@
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
+#include <memory>
+
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"

@@ -6,6 +6,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/vmo.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -13,7 +14,7 @@
 
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/block/volume.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 #include <zxcrypt/ddk-volume.h>
 #include <zxcrypt/volume.h>
 
@@ -122,7 +123,7 @@ zx_status_t DdkVolume::Bind(crypto::Cipher::Direction direction, crypto::Cipher*
 }
 
 zx_status_t DdkVolume::Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot_t slot,
-                              fbl::unique_ptr<DdkVolume>* out) {
+                              std::unique_ptr<DdkVolume>* out) {
   zx_status_t rc;
 
   if (!dev || !out) {
@@ -130,7 +131,7 @@ zx_status_t DdkVolume::Unlock(zx_device_t* dev, const crypto::Secret& key, key_s
     return ZX_ERR_INVALID_ARGS;
   }
   fbl::AllocChecker ac;
-  fbl::unique_ptr<DdkVolume> volume(new (&ac) DdkVolume(dev));
+  std::unique_ptr<DdkVolume> volume(new (&ac) DdkVolume(dev));
   if (!ac.check()) {
     xprintf("allocation failed: %zu bytes\n", sizeof(DdkVolume));
     return ZX_ERR_NO_MEMORY;

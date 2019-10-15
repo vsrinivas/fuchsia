@@ -12,6 +12,7 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <string>
 
@@ -51,14 +52,14 @@ void CheckBasicStreamInfo(AudioDeviceStream* stream) {
 TEST(IntelHda, BasicStreamInfo) {
   // Check outputs.
   for (const auto& path : GetSystemAudioDevices().outputs) {
-    fbl::unique_ptr<AudioDeviceStream> stream = CreateAndOpenOutputStream(path.c_str());
+    std::unique_ptr<AudioDeviceStream> stream = CreateAndOpenOutputStream(path.c_str());
     ASSERT_NOT_NULL(stream.get());
     CheckBasicStreamInfo(stream.get());
   }
 
   // Check inputs.
   for (const auto& path : GetSystemAudioDevices().inputs) {
-    fbl::unique_ptr<AudioDeviceStream> stream = CreateAndOpenInputStream(path.c_str());
+    std::unique_ptr<AudioDeviceStream> stream = CreateAndOpenInputStream(path.c_str());
     ASSERT_NOT_NULL(stream.get());
     CheckBasicStreamInfo(stream.get());
   }
@@ -68,7 +69,7 @@ TEST(IntelHda, PlaySilence) {
   for (const auto& path : GetSystemAudioDevices().outputs) {
     // Open the stream.
     std::cerr << "Playing silence on device '" << path.c_str() << "'\n";
-    fbl::unique_ptr<audio::utils::AudioOutput> output = CreateAndOpenOutputStream(path.c_str());
+    std::unique_ptr<audio::utils::AudioOutput> output = CreateAndOpenOutputStream(path.c_str());
 
     // Set the output stream format.
     audio::utils::AudioStream::Format format;
@@ -110,7 +111,7 @@ TEST(IntelHda, RecordData) {
   for (const auto& path : GetSystemAudioDevices().inputs) {
     // Open the stream.
     std::cerr << "Recording input from device '" << path.c_str() << "'\n";
-    fbl::unique_ptr<audio::utils::AudioInput> input = CreateAndOpenInputStream(path.c_str());
+    std::unique_ptr<audio::utils::AudioInput> input = CreateAndOpenInputStream(path.c_str());
     TestAudioInputRecord(input.get());
   }
 }

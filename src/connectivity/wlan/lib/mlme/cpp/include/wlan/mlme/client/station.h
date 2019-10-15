@@ -9,11 +9,11 @@
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 #include <vector>
 
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/moving_average.h>
 #include <wlan/common/stats.h>
@@ -54,7 +54,7 @@ class Station : public ClientInterface {
   };
 
   zx_status_t HandleEthFrame(EthFrame&&) override;
-  zx_status_t HandleWlanFrame(fbl::unique_ptr<Packet>) override;
+  zx_status_t HandleWlanFrame(std::unique_ptr<Packet>) override;
   zx_status_t HandleTimeout() override;
   zx_status_t Authenticate(::fuchsia::wlan::mlme::AuthenticationTypes auth_type,
                            uint32_t timeout) override;
@@ -97,12 +97,12 @@ class Station : public ClientInterface {
 
   zx_status_t SendAddBaRequestFrame();
 
-  zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet);
-  zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet);
-  zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet, uint32_t flags = 0);
+  zx_status_t SendCtrlFrame(std::unique_ptr<Packet> packet);
+  zx_status_t SendMgmtFrame(std::unique_ptr<Packet> packet);
+  zx_status_t SendDataFrame(std::unique_ptr<Packet> packet, uint32_t flags = 0);
   zx_status_t SetPowerManagementMode(bool ps_mode);
   zx_status_t SendPsPoll();
-  zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags = 0);
+  zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags = 0);
   void DumpDataFrame(const DataFrameView<>&);
 
   zx::time deadline_after_bcn_period(size_t bcn_count);

@@ -6,6 +6,7 @@
 
 #include <string.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -137,8 +138,8 @@ void UsbAudioDevice::Probe() {
   // stream interfaces that we discover during probing.  We will need at least
   // one control interface and one or more usable streaming audio interface if
   // we want to publish *any* audio streams.
-  fbl::unique_ptr<UsbAudioControlInterface> control_ifc;
-  fbl::DoublyLinkedList<fbl::unique_ptr<UsbAudioStreamInterface>> aud_stream_ifcs;
+  std::unique_ptr<UsbAudioControlInterface> control_ifc;
+  fbl::DoublyLinkedList<std::unique_ptr<UsbAudioStreamInterface>> aud_stream_ifcs;
 
   // Go over our descriptor list.  Right now, we are looking for only three
   // things; The Audio Control interface, and the various Audio/MIDI Streaming

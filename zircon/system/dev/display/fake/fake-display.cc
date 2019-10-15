@@ -8,6 +8,7 @@
 
 #include <ddk/protocol/composite.h>
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
 namespace fake_display {

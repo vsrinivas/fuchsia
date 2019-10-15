@@ -15,9 +15,10 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
-#include <fbl/unique_ptr.h>
 
 class SimpleDisplay;
 using DeviceType = ddk::Device<SimpleDisplay, ddk::UnbindableNew>;
@@ -31,7 +32,7 @@ class SimpleDisplay : public DeviceType,
 
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t Bind(const char* name, fbl::unique_ptr<SimpleDisplay>* controller_ptr);
+  zx_status_t Bind(const char* name, std::unique_ptr<SimpleDisplay>* controller_ptr);
 
   void DisplayControllerImplSetDisplayControllerInterface(
       const display_controller_interface_protocol_t* intf);

@@ -17,6 +17,7 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <string>
 
@@ -54,7 +55,7 @@ TEST(PixelbookEveAudio, Topology) {
 
   // Ensure we have a microphone.
   {
-    fbl::unique_ptr<AudioInput> input = AudioInput::Create(devices.inputs.at(0).c_str());
+    std::unique_ptr<AudioInput> input = AudioInput::Create(devices.inputs.at(0).c_str());
     ASSERT_OK(input->Open());
     ASSERT_NOT_NULL(input.get());
     ASSERT_EQ(GetDeviceName(input.get()), "Builtin Microphone");
@@ -62,7 +63,7 @@ TEST(PixelbookEveAudio, Topology) {
 
   // Ensure we have speakers.
   {
-    fbl::unique_ptr<AudioOutput> output = AudioOutput::Create(devices.outputs.at(0).c_str());
+    std::unique_ptr<AudioOutput> output = AudioOutput::Create(devices.outputs.at(0).c_str());
     ASSERT_OK(output->Open());
     ASSERT_NOT_NULL(output.get());
     ASSERT_EQ(GetDeviceName(output.get()), "Builtin Speakers");
@@ -70,7 +71,7 @@ TEST(PixelbookEveAudio, Topology) {
 
   // Ensure we have headphone output.
   {
-    fbl::unique_ptr<AudioOutput> output = AudioOutput::Create(devices.outputs.at(1).c_str());
+    std::unique_ptr<AudioOutput> output = AudioOutput::Create(devices.outputs.at(1).c_str());
     ASSERT_OK(output->Open());
     ASSERT_NOT_NULL(output.get());
     ASSERT_EQ(GetDeviceName(output.get()), "Builtin Headphone Jack");

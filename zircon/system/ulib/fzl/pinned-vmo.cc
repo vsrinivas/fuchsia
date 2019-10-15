@@ -6,6 +6,7 @@
 
 #include <climits>
 #include <limits>
+#include <memory>
 
 #include <fbl/auto_call.h>
 
@@ -44,7 +45,7 @@ zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t opti
     page_count = 1;
   }
 
-  fbl::unique_ptr<zx_paddr_t[]> addrs(new (&ac) zx_paddr_t[page_count]);
+  std::unique_ptr<zx_paddr_t[]> addrs(new (&ac) zx_paddr_t[page_count]);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

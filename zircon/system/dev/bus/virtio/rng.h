@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <zircon/compiler.h>
 
+#include <memory>
+
 #include <ddk/io-buffer.h>
 
 #include "device.h"
@@ -18,7 +20,7 @@ class Ring;
 
 class RngDevice : public Device {
  public:
-  RngDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend);
+  RngDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend);
   virtual ~RngDevice();
 
   zx_status_t Init() override;

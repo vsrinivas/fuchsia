@@ -18,6 +18,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -26,7 +27,6 @@
 #include <ddk/protocol/intelgpucore.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sysmem.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hw/inout.h>
 
@@ -209,7 +209,7 @@ void Controller::EnableBacklight(bool enable) {
 
 void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
   LOG_TRACE("Hotplug detected on ddi %d (long_pulse=%d)\n", ddi, long_pulse);
-  fbl::unique_ptr<DisplayDevice> device = nullptr;
+  std::unique_ptr<DisplayDevice> device = nullptr;
   DisplayDevice* added_device = nullptr;
   uint64_t display_removed = INVALID_DISPLAY_ID;
 
@@ -231,7 +231,7 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
     // Make sure the display's resources get freed before reallocating the pipe buffers
     device.reset();
   } else {  // New device was plugged in
-    fbl::unique_ptr<DisplayDevice> device = QueryDisplay(ddi);
+    std::unique_ptr<DisplayDevice> device = QueryDisplay(ddi);
     if (!device || !device->Init()) {
       LOG_INFO("failed to init hotplug display\n");
     } else {
@@ -561,7 +561,7 @@ const dpll_state_t* Controller::GetDpllState(registers::Dpll dpll) {
   return nullptr;
 }
 
-fbl::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
+std::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
   fbl::AllocChecker ac;
   if (igd_opregion_.SupportsDp(ddi)) {
     LOG_SPEW("Checking for displayport monitor\n");
@@ -736,7 +736,7 @@ void Controller::InitDisplays() {
   }
 }
 
-zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
+zx_status_t Controller::AddDisplay(std::unique_ptr<DisplayDevice>&& display) {
   fbl::AllocChecker ac;
   display_devices_.reserve(display_devices_.size() + 1, &ac);
 
@@ -744,7 +744,7 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
     display_devices_.push_back(std::move(display), &ac);
     assert(ac.check());
 
-    fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[display_devices_.size() - 1];
+    std::unique_ptr<DisplayDevice>& new_device = display_devices_[display_devices_.size() - 1];
     LOG_INFO("Display %ld connected\n", new_device->id());
   } else {
     LOG_WARN("Failed to add display device\n");
@@ -823,7 +823,7 @@ zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx::
   } else {
     align = registers::PlaneSurface::kYTilingAlignment;
   }
-  fbl::unique_ptr<GttRegion> gtt_region;
+  std::unique_ptr<GttRegion> gtt_region;
   zx_status_t status = gtt_.AllocRegion(length, align, &gtt_region);
   if (status != ZX_OK) {
     return status;
@@ -831,7 +831,7 @@ zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx::
 
   // The vsync logic requires that images not have base == 0
   if (gtt_region->base() == 0) {
-    fbl::unique_ptr<GttRegion> alt_gtt_region;
+    std::unique_ptr<GttRegion> alt_gtt_region;
     zx_status_t status = gtt_.AllocRegion(length, align, &alt_gtt_region);
     if (status != ZX_OK) {
       return status;
@@ -947,7 +947,7 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
   } else {
     align = registers::PlaneSurface::kYTilingAlignment;
   }
-  fbl::unique_ptr<GttRegion> gtt_region;
+  std::unique_ptr<GttRegion> gtt_region;
   status = gtt_.AllocRegion(length, align, &gtt_region);
   if (status != ZX_OK) {
     return status;
@@ -955,7 +955,7 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
 
   // The vsync logic requires that images not have base == 0
   if (gtt_region->base() == 0) {
-    fbl::unique_ptr<GttRegion> alt_gtt_region;
+    std::unique_ptr<GttRegion> alt_gtt_region;
     zx_status_t status = gtt_.AllocRegion(length, align, &alt_gtt_region);
     if (status != ZX_OK) {
       return status;
@@ -983,7 +983,7 @@ void Controller::DisplayControllerImplReleaseImage(image_t* image) {
   }
 }
 
-const fbl::unique_ptr<GttRegion>& Controller::GetGttRegion(uint64_t handle) {
+const std::unique_ptr<GttRegion>& Controller::GetGttRegion(uint64_t handle) {
   fbl::AutoLock lock(&gtt_lock_);
   for (auto& region : imported_images_) {
     if (region->base() == handle) {
@@ -1881,7 +1881,7 @@ zx_status_t Controller::GttAlloc(uint64_t page_count, uint64_t* addr_out) {
   if (length > gtt_.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
-  fbl::unique_ptr<GttRegion> region;
+  std::unique_ptr<GttRegion> region;
   zx_status_t status =
       gtt_.AllocRegion(static_cast<uint32_t>(page_count * PAGE_SIZE), PAGE_SIZE, &region);
   if (status != ZX_OK) {
@@ -2131,7 +2131,7 @@ void Controller::FinishInit() {
   LOG_TRACE("i915: initialization done\n");
 }
 
-zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) {
+zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) {
   LOG_TRACE("Binding to display controller\n");
 
   zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_SYSMEM, &sysmem_);
@@ -2286,7 +2286,7 @@ Controller::~Controller() {
 
 zx_status_t intel_i915_bind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<i915::Controller> controller(new (&ac) i915::Controller(parent));
+  std::unique_ptr<i915::Controller> controller(new (&ac) i915::Controller(parent));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

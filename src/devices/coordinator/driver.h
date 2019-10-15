@@ -8,10 +8,11 @@
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 
 namespace devmgr {
 
@@ -19,7 +20,7 @@ struct Driver {
   Driver() = default;
 
   fbl::String name;
-  fbl::unique_ptr<const zx_bind_inst_t[]> binding;
+  std::unique_ptr<const zx_bind_inst_t[]> binding;
   // Binding size in number of bytes, not number of entries
   // TODO: Change it to number of entries
   uint32_t binding_size = 0;

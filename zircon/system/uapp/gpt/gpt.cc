@@ -113,7 +113,7 @@ char* FlagsToCString(char* dst, size_t dst_len, const uint8_t* guid, uint64_t fl
   return dst;
 }
 
-fbl::unique_ptr<GptDevice> Init(const char* dev) {
+std::unique_ptr<GptDevice> Init(const char* dev) {
   fbl::unique_fd fd(open(dev, O_RDWR));
   if (!fd.is_valid()) {
     fprintf(stderr, "error opening %s\n", dev);
@@ -132,7 +132,7 @@ fbl::unique_ptr<GptDevice> Init(const char* dev) {
 
   printf("blocksize=0x%X blocks=%" PRIu64 "\n", info.block_size, info.block_count);
 
-  fbl::unique_ptr<GptDevice> gpt;
+  std::unique_ptr<GptDevice> gpt;
   status = GptDevice::Create(fd.get(), info.block_size, info.block_count, &gpt);
   if (status != ZX_OK) {
     fprintf(stderr, "error initializing GPT\n");
@@ -203,7 +203,7 @@ void Dump(const GptDevice* gpt, int* count) {
 }
 
 void DumpPartitions(const char* dev) {
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
+  std::unique_ptr<GptDevice> gpt = Init(dev);
   if (!gpt)
     return;
 
@@ -275,7 +275,7 @@ zx_status_t Commit(GptDevice* gpt, const char* dev) {
 }
 
 zx_status_t InitGpt(const char* dev) {
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
+  std::unique_ptr<GptDevice> gpt = Init(dev);
   if (!gpt) {
     return ZX_ERR_INTERNAL;
   }
@@ -293,7 +293,7 @@ zx_status_t AddPartition(const char* dev, uint64_t start, uint64_t end, const ch
   uint8_t guid[GPT_GUID_LEN];
   zx_cprng_draw(guid, GPT_GUID_LEN);
 
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
+  std::unique_ptr<GptDevice> gpt = Init(dev);
   if (!gpt) {
     return ZX_ERR_INTERNAL;
   }
@@ -393,7 +393,7 @@ bool ParseGuid(const char* guid, uint8_t* bytes_out) {
 }
 
 zx_status_t RemovePartition(const char* dev, uint32_t n) {
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
+  std::unique_ptr<GptDevice> gpt = Init(dev);
   if (!gpt) {
     return ZX_ERR_INTERNAL;
   }
@@ -418,7 +418,7 @@ zx_status_t RemovePartition(const char* dev, uint32_t n) {
 zx_status_t AdjustPartition(const char* dev, uint32_t idx_part, uint64_t start, uint64_t end) {
   zx_status_t rc;
 
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
+  std::unique_ptr<GptDevice> gpt = Init(dev);
   if (!gpt) {
     return ZX_ERR_INTERNAL;
   }
@@ -447,7 +447,7 @@ zx_status_t AdjustPartition(const char* dev, uint32_t idx_part, uint64_t start, 
 zx_status_t EditPartition(const char* dev, uint32_t idx_part, char* type_or_id, char* guid_name) {
   zx_status_t rc;
 
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
+  std::unique_ptr<GptDevice> gpt = Init(dev);
   if (!gpt) {
     return ZX_ERR_INTERNAL;
   }
@@ -561,7 +561,7 @@ zx_status_t EditCrosPartition(char* const* argv, int argc) {
     return ret;
   }
 
-  fbl::unique_ptr<GptDevice> gpt = Init(args.dev);
+  std::unique_ptr<GptDevice> gpt = Init(args.dev);
   if (!gpt) {
     return ZX_ERR_INTERNAL;
   }
@@ -616,7 +616,7 @@ zx_status_t EditCrosPartition(char* const* argv, int argc) {
  * partition.
  */
 zx_status_t SetVisibility(char* dev, uint32_t idx_part, bool visible) {
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
+  std::unique_ptr<GptDevice> gpt = Init(dev);
   if (!gpt) {
     return ZX_ERR_INTERNAL;
   }
@@ -685,7 +685,7 @@ uint64_t Align(uint64_t base, uint64_t logical, uint64_t physical) {
 zx_status_t Repartition(int argc, char** argv) {
   const char* dev = argv[0];
   uint64_t logical, free_space;
-  fbl::unique_ptr<GptDevice> gpt = Init(dev);
+  std::unique_ptr<GptDevice> gpt = Init(dev);
   if (gpt == NULL) {
     return ZX_ERR_INTERNAL;
   }

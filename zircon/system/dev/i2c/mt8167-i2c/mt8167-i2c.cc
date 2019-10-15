@@ -18,7 +18,6 @@
 #include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 
 //#define TEST_USB_REGS_READ
 

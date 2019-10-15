@@ -23,11 +23,11 @@
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <variant>
 
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 
@@ -175,7 +175,7 @@ zx_status_t read_firmware(fbl::unique_fd& file_fd, zx::vmo& vmo, size_t* out_fw_
     return status;
   }
 
-  fbl::unique_ptr<unsigned char[]> buf(new unsigned char[kBufferSize]);
+  std::unique_ptr<unsigned char[]> buf(new unsigned char[kBufferSize]);
   ssize_t res;
   off_t total_read = 0;
   while ((total_read < s.st_size) && ((res = read(file_fd.get(), buf.get(), kBufferSize)) != 0)) {

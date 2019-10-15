@@ -15,7 +15,6 @@
 
 #include <ddk/debug.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 
 #include "aml-tsensor-regs.h"
@@ -154,7 +153,8 @@ int AmlTSensor::TripPointIrqHandler() {
 }
 
 zx_status_t AmlTSensor::InitTripPoints() {
-  if (thermal_config_.trip_point_info[thermal_config_.num_trip_points].up_temp_celsius != (-273.15f + 2.0f)) {
+  if (thermal_config_.trip_point_info[thermal_config_.num_trip_points].up_temp_celsius !=
+      (-273.15f + 2.0f)) {
     return ZX_ERR_INTERNAL;
   }
 

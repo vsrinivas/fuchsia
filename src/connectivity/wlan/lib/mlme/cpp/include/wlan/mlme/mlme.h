@@ -8,6 +8,8 @@
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <wlan/common/bitfield.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/protocol/mac.h>
@@ -54,7 +56,7 @@ class Mlme {
   virtual zx_status_t Init() = 0;
 
   virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) = 0;
-  virtual zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) = 0;
+  virtual zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) = 0;
   virtual zx_status_t HandleTimeout(const ObjectId id) = 0;
   // Called when the hardware reports an indication such as Pre-TBTT.
   virtual void HwIndication(uint32_t ind) {}

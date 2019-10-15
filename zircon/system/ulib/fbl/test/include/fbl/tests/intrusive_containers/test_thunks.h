@@ -89,19 +89,18 @@ struct TestThunks {
 // Macro which declare static storage for things like custom deleters for each
 // tested container type.  If new static storage is needed for testing custom
 // pointer type or custom deleters, it should be declared here.
-#define DECLARE_TEST_STORAGE(_container_type)                                                 \
-  template <>                                                                                 \
-  std::atomic<size_t>                                                                         \
-      TestCustomDeleter<StdUniquePtrCustomDeleter##_container_type##TestObj>::delete_count_ { \
-    0                                                                                         \
+#define DECLARE_TEST_STORAGE(_container_type)                                              \
+  template <>                                                                              \
+  std::atomic<size_t>                                                                      \
+      TestCustomDeleter<UniquePtrCustomDeleter##_container_type##TestObj>::delete_count_ { \
+    0                                                                                      \
   }
 
-#define DEFINE_TEST_OBJECTS(_container_type)                                \
-  DEFINE_TEST_OBJECT(_container_type, Unmanaged, TestObj);                  \
-  DEFINE_TEST_OBJECT(_container_type, UniquePtr, TestObj);                  \
-  DEFINE_TEST_OBJECT(_container_type, StdUniquePtrDefaultDeleter, TestObj); \
-  DEFINE_TEST_OBJECT(_container_type, StdUniquePtrCustomDeleter, TestObj);  \
-  DEFINE_TEST_OBJECT(_container_type, RefPtr, RefedTestObj);                \
+#define DEFINE_TEST_OBJECTS(_container_type)                             \
+  DEFINE_TEST_OBJECT(_container_type, Unmanaged, TestObj);               \
+  DEFINE_TEST_OBJECT(_container_type, UniquePtrDefaultDeleter, TestObj); \
+  DEFINE_TEST_OBJECT(_container_type, UniquePtrCustomDeleter, TestObj);  \
+  DEFINE_TEST_OBJECT(_container_type, RefPtr, RefedTestObj);             \
   DECLARE_TEST_STORAGE(_container_type)
 
 #define DEFINE_TEST_THUNK(_env_type, _container_type, _ptr_type) \

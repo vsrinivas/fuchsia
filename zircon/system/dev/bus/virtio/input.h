@@ -7,6 +7,8 @@
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <stdlib.h>
 
+#include <memory>
+
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/hidbus.h>
 #include <hid/boot.h>
@@ -21,7 +23,7 @@ namespace virtio {
 
 class InputDevice : public Device {
  public:
-  InputDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
+  InputDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   virtual ~InputDevice();
 
   zx_status_t Init() override;

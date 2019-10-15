@@ -20,8 +20,9 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/threads.h>
 
+#include <memory>
+
 #include <crashsvc/crashsvc.h>
-#include <fbl/unique_ptr.h>
 #include <inspector/inspector.h>
 
 namespace {
@@ -119,7 +120,7 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
 }
 
 int crash_svc(void* arg) {
-  auto ctx = fbl::unique_ptr<crash_ctx>(reinterpret_cast<crash_ctx*>(arg));
+  auto ctx = std::unique_ptr<crash_ctx>(reinterpret_cast<crash_ctx*>(arg));
 
   for (;;) {
     zx_signals_t signals = 0;

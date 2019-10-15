@@ -9,6 +9,7 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -22,7 +23,7 @@
 namespace hidctl {
 
 zx_status_t HidCtl::Create(void* ctx, zx_device_t* parent) {
-  auto dev = fbl::unique_ptr<HidCtl>(new HidCtl(parent));
+  auto dev = std::unique_ptr<HidCtl>(new HidCtl(parent));
   zx_status_t status = dev->DdkAdd("hidctl");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
@@ -49,7 +50,7 @@ zx_status_t HidCtl::FidlMakeHidDevice(void* ctx, const fuchsia_hardware_hidctl_H
   uint8_t* report_desc_data = new uint8_t[rpt_desc_count];
   memcpy(report_desc_data, rpt_desc_data, rpt_desc_count);
   fbl::Array<const uint8_t> report_desc(report_desc_data, rpt_desc_count);
-  auto hiddev = fbl::unique_ptr<hidctl::HidDevice>(
+  auto hiddev = std::unique_ptr<hidctl::HidDevice>(
       new hidctl::HidDevice(hidctl->zxdev(), config, std::move(report_desc), std::move(local)));
 
   status = hiddev->DdkAdd("hidctl-dev");
@@ -209,7 +210,7 @@ zx_status_t HidDevice::HidbusSetProtocol(uint8_t protocol) {
 int HidDevice::Thread() {
   zxlogf(TRACE, "hidctl: starting main thread\n");
   zx_signals_t pending;
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
 
   zx_status_t status = ZX_OK;
   const zx_signals_t wait = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | HID_SHUTDOWN;

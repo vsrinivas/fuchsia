@@ -39,6 +39,7 @@
 
 #include <climits>
 #include <limits>
+#include <memory>
 #include <new>
 #include <utility>
 
@@ -50,7 +51,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -174,7 +174,7 @@ void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
   zx_status_t status;
 
   status = fuchsia_device_ControllerBind(disk_caller.borrow_channel(), FVM_DRIVER_LIB,
-                                          STRLEN(FVM_DRIVER_LIB), &call_status);
+                                         STRLEN(FVM_DRIVER_LIB), &call_status);
   // TODO(fxb/39460) Prevent ALREADY_BOUND from being an option
   if (!(status == ZX_OK || status == ZX_ERR_ALREADY_BOUND)) {
     ASSERT_TRUE(false, "Could not bind disk to FVM driver (or failed to find existing bind)");
@@ -296,8 +296,8 @@ class VmoClient : public fbl::RefCounted<VmoClient> {
 
 class VmoBuf {
  public:
-  static void Create(fbl::RefPtr<VmoClient> client, size_t size, fbl::unique_ptr<VmoBuf>* out) {
-    fbl::unique_ptr<uint8_t[]> buf(new uint8_t[size]);
+  static void Create(fbl::RefPtr<VmoClient> client, size_t size, std::unique_ptr<VmoBuf>* out) {
+    std::unique_ptr<uint8_t[]> buf(new uint8_t[size]);
 
     zx::vmo vmo;
     ASSERT_EQ(zx::vmo::create(size, 0, &vmo), ZX_OK);
@@ -313,7 +313,7 @@ class VmoBuf {
         ZX_OK);
     ASSERT_EQ(status, ZX_OK);
 
-    fbl::unique_ptr<VmoBuf> vb(
+    std::unique_ptr<VmoBuf> vb(
         new VmoBuf(std::move(client), std::move(vmo), std::move(buf), vmoid));
     *out = std::move(vb);
   }
@@ -331,13 +331,13 @@ class VmoBuf {
  private:
   friend VmoClient;
 
-  VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo, fbl::unique_ptr<uint8_t[]> buf,
+  VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo, std::unique_ptr<uint8_t[]> buf,
          fuchsia_hardware_block_VmoID vmoid)
       : client_(std::move(client)), vmo_(std::move(vmo)), buf_(std::move(buf)), vmoid_(vmoid) {}
 
   fbl::RefPtr<VmoClient> client_;
   zx::vmo vmo_;
-  fbl::unique_ptr<uint8_t[]> buf_;
+  std::unique_ptr<uint8_t[]> buf_;
   fuchsia_hardware_block_VmoID vmoid_;
 };
 
@@ -393,7 +393,7 @@ void VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t 
 void VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len) {
   // Create a comparison buffer
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
+  std::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
   ASSERT_TRUE(ac.check());
   memset(out.get(), 0, len);
 
@@ -426,7 +426,7 @@ void CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
 
 void CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
+  std::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
   ASSERT_TRUE(ac.check());
   memset(out.get(), 0, len);
   ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
@@ -436,7 +436,7 @@ void CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
 
 void CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
+  std::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
   ASSERT_TRUE(ac.check());
   memset(buf.get(), color, len);
   ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
@@ -445,7 +445,7 @@ void CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
 
 void CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
+  std::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
   ASSERT_TRUE(ac.check());
   ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
   ASSERT_EQ(read(fd, buf.get(), len), static_cast<ssize_t>(len));
@@ -464,7 +464,7 @@ void CheckWriteReadBlock(int fd, size_t block, size_t count) {
   ASSERT_EQ(status, ZX_OK);
   size_t len = block_info.block_size * count;
   size_t off = block_info.block_size * block;
-  fbl::unique_ptr<uint8_t[]> in(new uint8_t[len]);
+  std::unique_ptr<uint8_t[]> in(new uint8_t[len]);
   CheckWrite(fd, off, len, in.get());
   CheckRead(fd, off, len, in.get());
 }
@@ -477,7 +477,7 @@ void CheckNoAccessBlock(int fd, size_t block, size_t count) {
       fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(), &status, &block_info),
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * count]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * count]);
   size_t len = block_info.block_size * count;
   size_t off = block_info.block_size * block;
   for (size_t i = 0; i < len; i++)
@@ -491,7 +491,7 @@ void CheckNoAccessBlock(int fd, size_t block, size_t count) {
 void CheckDeadBlock(int fd) {
   fbl::AllocChecker ac;
   constexpr size_t kBlocksize = 8192;
-  fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBlocksize]);
+  std::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBlocksize]);
   ASSERT_TRUE(ac.check());
   ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
   ASSERT_EQ(write(fd, buf.get(), kBlocksize), -1);
@@ -1328,7 +1328,7 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   {
     fbl::RefPtr<VmoClient> vc;
     VmoClient::Create(vp_fd.get(), &vc);
-    fbl::unique_ptr<VmoBuf> vb;
+    std::unique_ptr<VmoBuf> vb;
     VmoBuf::Create(vc, block_info.block_size * 2, &vb);
     vc->CheckWrite(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
     vc->CheckRead(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
@@ -1397,7 +1397,7 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   {
     fbl::RefPtr<VmoClient> vc;
     VmoClient::Create(vp_fd.get(), &vc);
-    fbl::unique_ptr<VmoBuf> vb;
+    std::unique_ptr<VmoBuf> vb;
     VmoBuf::Create(vc, kSliceSize * 3, &vb);
 
     // Access the first slice
@@ -1498,7 +1498,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     size_t last_block = (vparts[i].slices_used * (kSliceSize / block_info.block_size)) - 1;
     fbl::RefPtr<VmoClient> vc;
     VmoClient::Create(vfd, &vc);
-    fbl::unique_ptr<VmoBuf> vb;
+    std::unique_ptr<VmoBuf> vb;
     VmoBuf::Create(vc, block_info.block_size * 2, &vb);
 
     vc->CheckWrite(vb.get(), 0, block_info.block_size * last_block, block_info.block_size);
@@ -1542,7 +1542,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     {
       fbl::RefPtr<VmoClient> vc;
       VmoClient::Create(vparts[i].fd.get(), &vc);
-      fbl::unique_ptr<VmoBuf> vb;
+      std::unique_ptr<VmoBuf> vb;
       VmoBuf::Create(vc, kSliceSize * 4, &vb);
 
       // Try accessing 3 noncontiguous slices at once, with the
@@ -1725,7 +1725,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(partition_channel->get(), &status, &block_info),
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * 2]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[block_info.block_size * 2]);
 
   // Check that we can read from / write to it
   CheckWrite(vp_fd.get(), 0, block_info.block_size, buf.get());

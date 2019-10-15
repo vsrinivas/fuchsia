@@ -8,9 +8,9 @@
 #include <assert.h>
 #include <lib/mmio/mmio.h>
 
+#include <memory>
 #include <utility>
 
-#include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-audio-regs.h>
 
 class AmlTdmDevice {
@@ -21,7 +21,7 @@ class AmlTdmDevice {
   static constexpr int32_t kSclkDivBits = 10;
   static constexpr int32_t kLRclkDivBits = 10;
 
-  static fbl::unique_ptr<AmlTdmDevice> Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
+  static std::unique_ptr<AmlTdmDevice> Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
                                               aml_tdm_out_t tdm_dev, aml_frddr_t frddr_dev,
                                               aml_tdm_mclk_t mclk);
 

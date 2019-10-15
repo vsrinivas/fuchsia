@@ -14,12 +14,13 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -102,7 +103,7 @@ bool TestPersistWithData(void) {
       "::def",
       "::and-another-file-filled-with-data",
   };
-  fbl::unique_ptr<uint8_t[]> buffers[fbl::count_of(files)];
+  std::unique_ptr<uint8_t[]> buffers[fbl::count_of(files)];
   unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
   unittest_printf("Persistent data test using seed: %u\n", seed);
   fbl::AllocChecker ac;
@@ -123,7 +124,7 @@ bool TestPersistWithData(void) {
 
   // Read files
   for (size_t i = 0; i < fbl::count_of(files); i++) {
-    fbl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[BufferSize]);
+    std::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[BufferSize]);
     ASSERT_TRUE(ac.check());
     fbl::unique_fd fd(open(files[i], O_RDONLY, 0644));
     ASSERT_TRUE(fd);

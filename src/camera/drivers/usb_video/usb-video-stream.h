@@ -12,6 +12,8 @@
 #include <lib/fzl/vmo-pool.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -202,11 +204,11 @@ class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_P
   fbl::Mutex lock_;
 
   // CameraStream FIDL interface
-  fbl::unique_ptr<camera::ControlImpl> camera_control_ __TA_GUARDED(lock_) = nullptr;
+  std::unique_ptr<camera::ControlImpl> camera_control_ __TA_GUARDED(lock_) = nullptr;
 
   static const fuchsia_hardware_camera_Device_ops_t CAMERA_FIDL_THUNKS;
   // Loop used to run the FIDL server
-  static fbl::unique_ptr<async::Loop> fidl_dispatch_loop_;
+  static std::unique_ptr<async::Loop> fidl_dispatch_loop_;
 
   fzl::VmoPool buffers_;
   fzl::VmoPool::Buffer current_buffer_;

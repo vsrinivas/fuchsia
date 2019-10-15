@@ -19,11 +19,12 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <block-client/cpp/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fvm/format.h>
@@ -368,7 +369,7 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
   // TODO(security): ZX-1864. The created volume must marked as needing key rotation.
 
   fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
-  fbl::unique_ptr<zxcrypt::FdioVolume> volume;
+  std::unique_ptr<zxcrypt::FdioVolume> volume;
   if ((status = zxcrypt::FdioVolume::CreateWithDeviceKey(
            std::move(part->new_part), std::move(devfs_root), &volume)) != ZX_OK) {
     ERROR("Could not create zxcrypt volume\n");
@@ -483,7 +484,7 @@ zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uin
 //
 // Parses the information from the |reader| into |parts|.
 zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
-                                 const fbl::unique_ptr<fvm::SparseReader>& reader,
+                                 const std::unique_ptr<fvm::SparseReader>& reader,
                                  const fbl::Array<PartitionInfo>& parts,
                                  size_t* out_requested_slices) {
   fvm::partition_descriptor_t* part = reader->Partitions();
@@ -607,7 +608,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
 
 zx_status_t FvmStreamPartitions(std::unique_ptr<PartitionClient> partition_client,
                                 std::unique_ptr<fvm::ReaderInterface> payload) {
-  fbl::unique_ptr<fvm::SparseReader> reader;
+  std::unique_ptr<fvm::SparseReader> reader;
   zx_status_t status;
   if ((status = fvm::SparseReader::Create(std::move(payload), &reader)) != ZX_OK) {
     return status;

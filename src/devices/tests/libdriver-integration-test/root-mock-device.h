@@ -14,7 +14,6 @@
 #include <string>
 #include <utility>
 
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "mock-device-hooks.h"

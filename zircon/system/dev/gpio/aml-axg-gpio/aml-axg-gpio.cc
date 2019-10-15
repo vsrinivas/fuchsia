@@ -7,12 +7,12 @@
 #include <lib/device-protocol/platform-device.h>
 
 #include <cstdint>
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "a113-blocks.h"
 #include "s905d2-blocks.h"
@@ -110,7 +110,7 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
     irq_info[i] = kMaxGpioIndex + 1;
   }  // initialize irq_info
 
-  fbl::unique_ptr<AmlAxgGpio> device(new (&ac) AmlAxgGpio(
+  std::unique_ptr<AmlAxgGpio> device(new (&ac) AmlAxgGpio(
       parent, *std::move(mmio_gpio), *std::move(mmio_gpio_a0), *std::move(mmio_interrupt),
       gpio_blocks, gpio_interrupt, block_count, std::move(info), std::move(irq_info)));
   if (!ac.check()) {

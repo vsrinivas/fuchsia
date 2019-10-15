@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/auto_call.h>
@@ -135,12 +136,12 @@ fbl::Vector<KeySource> ComputeEffectiveUnsealPolicy(KeySourcePolicy ksp) {
 __EXPORT
 zx_status_t TryWithKeysFrom(
     const fbl::Vector<KeySource>& ordered_key_sources, Activity activity,
-    fbl::Function<zx_status_t(fbl::unique_ptr<uint8_t[]>, size_t)> callback) {
+    fbl::Function<zx_status_t(std::unique_ptr<uint8_t[]>, size_t)> callback) {
   zx_status_t rc = ZX_ERR_INTERNAL;
   for (auto& key_source : ordered_key_sources) {
     switch (key_source) {
       case kNullSource: {
-        auto key_buf = fbl::unique_ptr<uint8_t[]>(new uint8_t[kKeyLength]);
+        auto key_buf = std::unique_ptr<uint8_t[]>(new uint8_t[kKeyLength]);
         memset(key_buf.get(), 0, kKeyLength);
         rc = callback(std::move(key_buf), kKeyLength);
       } break;
@@ -150,12 +151,12 @@ zx_status_t TryWithKeysFrom(
         memcpy(key_info, kHardwareKeyInfo, sizeof(kHardwareKeyInfo));
         // make names for these so the callback to kms_stateless can
         // copy them out later
-        fbl::unique_ptr<uint8_t[]> key_buf;
+        std::unique_ptr<uint8_t[]> key_buf;
         size_t key_size;
         zx_status_t kms_rc = kms_stateless::GetHardwareDerivedKey(
-            [&](fbl::unique_ptr<uint8_t[]> cb_key_buffer, size_t cb_key_size) {
+            [&](std::unique_ptr<uint8_t[]> cb_key_buffer, size_t cb_key_size) {
               key_size = cb_key_size;
-              key_buf = fbl::unique_ptr<uint8_t[]>(new uint8_t[cb_key_size]);
+              key_buf = std::unique_ptr<uint8_t[]>(new uint8_t[cb_key_size]);
               memcpy(key_buf.get(), cb_key_buffer.get(), cb_key_size);
               return ZX_OK;
             },
@@ -207,7 +208,7 @@ zx_status_t FdioVolumeManager::UnsealWithDeviceKey(uint8_t slot) {
   auto ordered_key_sources = ComputeEffectiveUnsealPolicy(source);
 
   return TryWithKeysFrom(ordered_key_sources, Activity::Unseal,
-                         [&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
+                         [&](std::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
                            return Unseal(key_buffer.release(), key_size, slot);
                          });
 }
@@ -229,7 +230,7 @@ FdioVolume::FdioVolume(fbl::unique_fd&& block_dev_fd, fbl::unique_fd&& devfs_roo
     : Volume(), block_dev_fd_(std::move(block_dev_fd)), devfs_root_fd_(std::move(devfs_root_fd)) {}
 
 zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs_root_fd,
-                             fbl::unique_ptr<FdioVolume>* out) {
+                             std::unique_ptr<FdioVolume>* out) {
   zx_status_t rc;
 
   if (!block_dev_fd || !devfs_root_fd || !out) {
@@ -239,7 +240,7 @@ zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs_r
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<FdioVolume> volume(
+  std::unique_ptr<FdioVolume> volume(
       new (&ac) FdioVolume(std::move(block_dev_fd), std::move(devfs_root_fd)));
   if (!ac.check()) {
     xprintf("allocation failed: %zu bytes\n", sizeof(FdioVolume));
@@ -255,10 +256,10 @@ zx_status_t FdioVolume::Init(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs_r
 }
 
 zx_status_t FdioVolume::Create(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs_root_fd,
-                               const crypto::Secret& key, fbl::unique_ptr<FdioVolume>* out) {
+                               const crypto::Secret& key, std::unique_ptr<FdioVolume>* out) {
   zx_status_t rc;
 
-  fbl::unique_ptr<FdioVolume> volume;
+  std::unique_ptr<FdioVolume> volume;
 
   if ((rc = FdioVolume::Init(std::move(block_dev_fd), std::move(devfs_root_fd), &volume)) !=
       ZX_OK) {
@@ -286,7 +287,7 @@ zx_status_t FdioVolume::Create(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs
 
 zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& block_dev_fd,
                                             fbl::unique_fd&& devfs_root_fd,
-                                            fbl::unique_ptr<FdioVolume>* out) {
+                                            std::unique_ptr<FdioVolume>* out) {
   KeySourcePolicy source;
   zx_status_t rc;
   rc = SelectKeySourcePolicy(&source);
@@ -298,7 +299,7 @@ zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& block_dev_fd,
   // policy and context we're using this key in
   auto ordered_key_sources = ComputeEffectiveCreatePolicy(source);
   return TryWithKeysFrom(ordered_key_sources, Activity::Create,
-                         [&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
+                         [&](std::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
                            crypto::Secret secret;
                            zx_status_t rc;
                            uint8_t* inner;
@@ -316,10 +317,10 @@ zx_status_t FdioVolume::CreateWithDeviceKey(fbl::unique_fd&& block_dev_fd,
 
 zx_status_t FdioVolume::Unlock(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs_root_fd,
                                const crypto::Secret& key, key_slot_t slot,
-                               fbl::unique_ptr<FdioVolume>* out) {
+                               std::unique_ptr<FdioVolume>* out) {
   zx_status_t rc;
 
-  fbl::unique_ptr<FdioVolume> volume;
+  std::unique_ptr<FdioVolume> volume;
   if ((rc = FdioVolume::Init(std::move(block_dev_fd), std::move(devfs_root_fd), &volume)) !=
       ZX_OK) {
     xprintf("Init failed: %s\n", zx_status_get_string(rc));
@@ -336,7 +337,7 @@ zx_status_t FdioVolume::Unlock(fbl::unique_fd block_dev_fd, fbl::unique_fd devfs
 
 zx_status_t FdioVolume::UnlockWithDeviceKey(fbl::unique_fd block_dev_fd,
                                             fbl::unique_fd devfs_root_fd, key_slot_t slot,
-                                            fbl::unique_ptr<FdioVolume>* out) {
+                                            std::unique_ptr<FdioVolume>* out) {
   KeySourcePolicy source;
   zx_status_t rc;
   rc = SelectKeySourcePolicy(&source);
@@ -346,7 +347,7 @@ zx_status_t FdioVolume::UnlockWithDeviceKey(fbl::unique_fd block_dev_fd,
 
   auto ordered_key_sources = ComputeEffectiveUnsealPolicy(source);
   return TryWithKeysFrom(ordered_key_sources, Activity::Unseal,
-                         [&](fbl::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
+                         [&](std::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
                            crypto::Secret secret;
                            zx_status_t rc;
                            uint8_t* inner;

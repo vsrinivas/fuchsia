@@ -12,6 +12,7 @@
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -25,7 +26,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 namespace nand {
 
@@ -157,7 +157,7 @@ zx_status_t SkipBlockDevice::Create(void*, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<SkipBlockDevice> device(new (&ac)
+  std::unique_ptr<SkipBlockDevice> device(new (&ac)
                                               SkipBlockDevice(parent, nand, bad_block, copy_count));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -184,7 +184,7 @@ zx_status_t SkipBlockDevice::GetBadBlockList(fbl::Array<uint32_t>* bad_blocks) {
     return ZX_OK;
   }
   const size_t bad_block_list_len = bad_block_count;
-  fbl::unique_ptr<uint32_t[]> bad_block_list(new uint32_t[bad_block_count]);
+  std::unique_ptr<uint32_t[]> bad_block_list(new uint32_t[bad_block_count]);
   memset(bad_block_list.get(), 0, sizeof(uint32_t) * bad_block_count);
   status = bad_block_.GetBadBlockList(bad_block_list.get(), bad_block_list_len, &bad_block_count);
   if (status != ZX_OK) {

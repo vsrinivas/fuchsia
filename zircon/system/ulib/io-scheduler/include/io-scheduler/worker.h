@@ -9,8 +9,9 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 namespace ioscheduler {
 
@@ -23,7 +24,7 @@ class Worker {
 
   // Create a worker object and launch a new thread.
   // |sched| is retained for the lifetime of the worker object.
-  static zx_status_t Create(Scheduler* sched, uint32_t id, fbl::unique_ptr<Worker>* out);
+  static zx_status_t Create(Scheduler* sched, uint32_t id, std::unique_ptr<Worker>* out);
 
  private:
   Worker(Scheduler* sched, uint32_t id);

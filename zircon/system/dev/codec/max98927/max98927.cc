@@ -10,6 +10,8 @@
 #include <lib/fidl-utils/bind.h>
 #include <zircon/assert.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -229,7 +231,7 @@ zx_status_t Max98927Device::Bind() {
 
 zx_status_t Max98927Device::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Max98927Device> dev(new (&ac) Max98927Device(parent));
+  std::unique_ptr<Max98927Device> dev(new (&ac) Max98927Device(parent));
   if (!ac.check()) {
     zxlogf(ERROR, "max98927: out of memory attempting to allocate device\n");
     return ZX_ERR_NO_MEMORY;

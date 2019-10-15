@@ -18,10 +18,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <gpt/gpt.h>
 #include <zxtest/zxtest.h>
 
@@ -152,10 +152,10 @@ class EfiPartitionerTests : public zxtest::Test {
 };
 
 TEST_F(EfiPartitionerTests, InitializeWithoutGptFails) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_NE(
       paver::EfiDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), paver::Arch::kX64,
                                               std::nullopt, &partitioner),
@@ -163,15 +163,15 @@ TEST_F(EfiPartitionerTests, InitializeWithoutGptFails) {
 }
 
 TEST_F(EfiPartitionerTests, InitializeWithoutFvmFails) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev));
 
   // Set up a valid GPT.
-  fbl::unique_ptr<gpt::GptDevice> gpt;
+  std::unique_ptr<gpt::GptDevice> gpt;
   ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
   ASSERT_OK(gpt->Sync());
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_NE(
       paver::EfiDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), paver::Arch::kX64,
                                               std::nullopt, &partitioner),
@@ -179,13 +179,13 @@ TEST_F(EfiPartitionerTests, InitializeWithoutFvmFails) {
 }
 
 TEST_F(EfiPartitionerTests, AddPartitionZirconB) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
       devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
 
@@ -193,13 +193,13 @@ TEST_F(EfiPartitionerTests, AddPartitionZirconB) {
 }
 
 TEST_F(EfiPartitionerTests, AddPartitionFvm) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
       devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
 
@@ -207,11 +207,11 @@ TEST_F(EfiPartitionerTests, AddPartitionFvm) {
 }
 
 TEST_F(EfiPartitionerTests, AddPartitionTooSmall) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
       devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
 
@@ -219,13 +219,13 @@ TEST_F(EfiPartitionerTests, AddPartitionTooSmall) {
 }
 
 TEST_F(EfiPartitionerTests, AddedPartitionIsFindable) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
       devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
 
@@ -235,13 +235,13 @@ TEST_F(EfiPartitionerTests, AddedPartitionIsFindable) {
 }
 
 TEST_F(EfiPartitionerTests, InitializePartitionsWithoutExplicitDevice) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
       devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
 
@@ -255,13 +255,13 @@ TEST_F(EfiPartitionerTests, InitializePartitionsWithoutExplicitDevice) {
 }
 
 TEST_F(EfiPartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithoutExplicitDevice) {
-  fbl::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
+  std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev1));
   fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
       devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
 
@@ -286,13 +286,13 @@ TEST_F(EfiPartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithoutExpli
 }
 
 TEST_F(EfiPartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne) {
-  fbl::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
+  std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev1));
   fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
       devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
 
@@ -317,13 +317,13 @@ TEST_F(EfiPartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne
 }
 
 TEST_F(EfiPartitionerTests, AddedPartitionRemovedAfterWipePartitions) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(paver::EfiDevicePartitioner::Initialize(
       devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
 
@@ -351,28 +351,28 @@ class FixedDevicePartitionerTests : public zxtest::Test {
 };
 
 TEST_F(FixedDevicePartitionerTests, UseBlockInterfaceTest) {
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(
       paver::FixedDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner));
   ASSERT_FALSE(partitioner->IsFvmWithinFtl());
 }
 
 TEST_F(FixedDevicePartitionerTests, AddPartitionTest) {
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(
       paver::FixedDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner));
   ASSERT_EQ(partitioner->AddPartition(paver::Partition::kZirconB, nullptr), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(FixedDevicePartitionerTests, WipeFvmTest) {
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(
       paver::FixedDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner));
   ASSERT_OK(partitioner->WipeFvm());
 }
 
 TEST_F(FixedDevicePartitionerTests, FinalizePartitionTest) {
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_OK(
       paver::FixedDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner));
 
@@ -385,7 +385,7 @@ TEST_F(FixedDevicePartitionerTests, FinalizePartitionTest) {
 }
 
 TEST_F(FixedDevicePartitionerTests, FindPartitionTest) {
-  fbl::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b, vbmeta_r;
+  std::unique_ptr<BlockDevice> fvm, zircon_a, zircon_b, zircon_r, vbmeta_a, vbmeta_b, vbmeta_r;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconAType, &zircon_a));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconBType, &zircon_b));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kZirconRType, &zircon_r));
@@ -409,10 +409,10 @@ TEST_F(FixedDevicePartitionerTests, FindPartitionTest) {
 }
 
 TEST(SkipBlockDevicePartitionerTests, IsFvmWithinFtl) {
-  fbl::unique_ptr<SkipBlockDevice> device;
+  std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), zx::channel(),
                                                           &partitioner),
             ZX_OK);
@@ -420,10 +420,10 @@ TEST(SkipBlockDevicePartitionerTests, IsFvmWithinFtl) {
 }
 
 TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
-  fbl::unique_ptr<SkipBlockDevice> device;
+  std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
   auto devfs_root = device->devfs_root();
-  fbl::unique_ptr<BlockDevice> zircon_a;
+  std::unique_ptr<BlockDevice> zircon_a;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kZirconAType, &zircon_a));
 
   auto partitioner =
@@ -433,10 +433,10 @@ TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
 }
 
 TEST(SkipBlockDevicePartitionerTests, AddPartitionTest) {
-  fbl::unique_ptr<SkipBlockDevice> device;
+  std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), zx::channel(),
                                                           &partitioner),
             ZX_OK);
@@ -444,10 +444,10 @@ TEST(SkipBlockDevicePartitionerTests, AddPartitionTest) {
 }
 
 TEST(SkipBlockDevicePartitionerTests, WipeFvmTest) {
-  fbl::unique_ptr<SkipBlockDevice> device;
+  std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), zx::channel(),
                                                           &partitioner),
             ZX_OK);
@@ -455,10 +455,10 @@ TEST(SkipBlockDevicePartitionerTests, WipeFvmTest) {
 }
 
 TEST(SkipBlockDevicePartitionerTests, FinalizePartitionTest) {
-  fbl::unique_ptr<SkipBlockDevice> device;
+  std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), zx::channel(),
                                                           &partitioner),
             ZX_OK);
@@ -472,13 +472,13 @@ TEST(SkipBlockDevicePartitionerTests, FinalizePartitionTest) {
 }
 
 TEST(SkipBlockDevicePartitionerTests, FindPartitionTest) {
-  fbl::unique_ptr<SkipBlockDevice> device;
+  std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
   auto devfs_root = device->devfs_root();
-  fbl::unique_ptr<BlockDevice> fvm;
+  std::unique_ptr<BlockDevice> fvm;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kFvmType, &fvm));
 
-  fbl::unique_ptr<paver::DevicePartitioner> partitioner;
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(std::move(devfs_root), zx::channel(),
                                                           &partitioner),
             ZX_OK);

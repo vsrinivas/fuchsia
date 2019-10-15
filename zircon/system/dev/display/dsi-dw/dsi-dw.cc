@@ -10,6 +10,7 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
 #include "dw-mipi-dsi-reg.h"

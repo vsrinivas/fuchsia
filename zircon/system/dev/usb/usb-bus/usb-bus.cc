@@ -11,7 +11,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "usb-device.h"
 

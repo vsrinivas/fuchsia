@@ -1,4 +1,7 @@
 #include "base.h"
+
+#include <memory>
+
 #include "../../fake/fake-display.h"
 #include "../controller.h"
 
@@ -16,7 +19,7 @@ void TestBase::SetUp() {
   ASSERT_OK(display->Bind(false));
   ddk_.SetDisplay(display);
 
-  fbl::unique_ptr<display::Controller> c(new Controller(dc_parent()));
+  std::unique_ptr<display::Controller> c(new Controller(dc_parent()));
   // Save a copy for test cases.
   controller_ = c.get();
   ASSERT_OK(c->Bind(&c));

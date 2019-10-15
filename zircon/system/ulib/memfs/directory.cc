@@ -12,13 +12,13 @@
 #include <sys/stat.h>
 #include <zircon/device/vfs.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 
@@ -232,7 +232,7 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
   // Allocate the new name for the dnode, either by
   // (1) Stealing it from the previous dnode, if it used the same name, or
   // (2) Allocating a new name, if creating a new name.
-  fbl::unique_ptr<char[]> namebuffer(nullptr);
+  std::unique_ptr<char[]> namebuffer(nullptr);
   if (target_exists) {
     namebuffer = targetdn->TakeName();
     targetdn->Detach();

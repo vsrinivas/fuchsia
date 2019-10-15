@@ -9,6 +9,7 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <memory>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -17,7 +18,6 @@
 #include <ddktl/protocol/block/volume.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "slice-extent.h"
 
@@ -35,10 +35,10 @@ class VPartition : public PartitionDeviceType,
                    public ddk::BlockPartitionProtocol<VPartition>,
                    public ddk::BlockVolumeProtocol<VPartition> {
  public:
-  using SliceMap = fbl::WAVLTree<uint64_t, fbl::unique_ptr<SliceExtent>>;
+  using SliceMap = fbl::WAVLTree<uint64_t, std::unique_ptr<SliceExtent>>;
 
   static zx_status_t Create(VPartitionManager* vpm, size_t entry_index,
-                            fbl::unique_ptr<VPartition>* out);
+                            std::unique_ptr<VPartition>* out);
   // Device Protocol
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_off_t DdkGetSize();

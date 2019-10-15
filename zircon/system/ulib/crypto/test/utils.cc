@@ -6,6 +6,7 @@
 
 #include <limits.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <crypto/aead.h>

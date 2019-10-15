@@ -10,6 +10,7 @@
 
 #include <inttypes.h>
 
+#include <memory>
 #include <utility>
 
 #ifdef __Fuchsia__
@@ -34,7 +35,6 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/locking.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
@@ -146,10 +146,10 @@ class TransactionalFs {
 
   // Begin a transaction with |reserve_inodes| inodes and |reserve_blocks| blocks reserved.
   virtual zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                                       fbl::unique_ptr<Transaction>* transaction_out) = 0;
+                                       std::unique_ptr<Transaction>* transaction_out) = 0;
 
   // Enqueues a metadata transaction by persisting its contents to disk.
-  virtual void CommitTransaction(fbl::unique_ptr<Transaction> transaction) = 0;
+  virtual void CommitTransaction(std::unique_ptr<Transaction> transaction) = 0;
 
   virtual Bcache* GetMutableBcache() = 0;
 };
@@ -261,17 +261,17 @@ class Minfs :
   }
 
   zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                               fbl::unique_ptr<Transaction>* transaction) final
+                               std::unique_ptr<Transaction>* transaction) final
       __WARN_UNUSED_RESULT;
 
 #ifdef __Fuchsia__
   void EnqueueCallback(SyncCallback callback) final;
 #endif
 
-  void EnqueueAllocation(fbl::unique_ptr<PendingWork> transaction);
+  void EnqueueAllocation(std::unique_ptr<PendingWork> transaction);
 
   // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
-  void CommitTransaction(fbl::unique_ptr<Transaction> transaction) final;
+  void CommitTransaction(std::unique_ptr<Transaction> transaction) final;
 
 #ifdef __Fuchsia__
   // Returns the capacity of the writeback buffer, in blocks.
@@ -373,18 +373,18 @@ class Minfs :
   Bcache* GetMutableBcache() final { return bc_.get(); }
 
   // TODO(rvargas): Make private.
-  fbl::unique_ptr<Bcache> bc_;
+  std::unique_ptr<Bcache> bc_;
 
  private:
   using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
 #ifdef __Fuchsia__
-  Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
-        fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
+  Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
+        std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
         uint64_t fs_id);
 #else
-  Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
-        fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
+  Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
+        std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
         BlockOffsets offsets);
 #endif
 
@@ -426,9 +426,9 @@ class Minfs :
   // while any metadata fields are modified until the time they are enqueued for writeback. This
   // is to avoid modifications from other threads potentially jeopardizing the metadata integrity
   // before it is safely persisted to disk.
-  fbl::unique_ptr<SuperblockManager> sb_;
-  fbl::unique_ptr<Allocator> block_allocator_;
-  fbl::unique_ptr<InodeManager> inodes_;
+  std::unique_ptr<SuperblockManager> sb_;
+  std::unique_ptr<Allocator> block_allocator_;
+  std::unique_ptr<InodeManager> inodes_;
 
 #ifdef __Fuchsia__
   mutable fbl::Mutex txn_lock_;  // Lock required to start a new Transaction.
@@ -441,7 +441,7 @@ class Minfs :
 #ifdef __Fuchsia__
   fbl::Closure on_unmount_{};
   MinfsMetrics metrics_ = {};
-  fbl::unique_ptr<fs::Journal> journal_;
+  std::unique_ptr<fs::Journal> journal_;
   uint64_t fs_id_ = 0;
 #else
   // Store start block + length for all extents. These may differ from info block for
@@ -508,7 +508,7 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 // Given an input bcache, initialize the filesystem and return a reference to the
 // root node.
-zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
+zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
                   fbl::RefPtr<VnodeMinfs>* root_out);
 }  // namespace minfs
 

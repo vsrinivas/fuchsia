@@ -9,6 +9,7 @@
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -17,7 +18,6 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "backends/pci.h"
 #include "block.h"
@@ -60,7 +60,7 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
   // transitional devices we need to check whether modern capabilities exist.
   // If no vendor capabilities are found then we will default to the legacy
   // interface.
-  fbl::unique_ptr<virtio::Backend> backend = nullptr;
+  std::unique_ptr<virtio::Backend> backend = nullptr;
   uint8_t offset;
   if (pci_get_first_capability(&pci, PCI_CAP_ID_VENDOR, &offset) == ZX_OK) {
     zxlogf(SPEW, "virtio %02x:%02x.%1x using modern PCI backend\n", info.bus_id, info.dev_id,
@@ -79,7 +79,7 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
 
   // Now that the backend for this device has been initialized we can
   // compose a device based on the PCI device id
-  fbl::unique_ptr<virtio::Device> virtio_device = nullptr;
+  std::unique_ptr<virtio::Device> virtio_device = nullptr;
   switch (info.device_id) {
     case VIRTIO_DEV_TYPE_NETWORK:
     case VIRTIO_DEV_TYPE_T_NETWORK:

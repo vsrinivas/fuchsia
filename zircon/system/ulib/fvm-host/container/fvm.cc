@@ -7,6 +7,7 @@
 #include <lib/fit/defer.h>
 #include <sys/ioctl.h>
 
+#include <memory>
 #include <utility>
 
 #include <fvm/format.h>
@@ -25,8 +26,8 @@
 #endif
 
 zx_status_t FvmContainer::CreateNew(const char* path, size_t slice_size, off_t offset, off_t length,
-                                    fbl::unique_ptr<FvmContainer>* out) {
-  fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset, length));
+                                    std::unique_ptr<FvmContainer>* out) {
+  std::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset, length));
 
   zx_status_t status;
   if ((status = fvmContainer->InitNew()) != ZX_OK) {
@@ -38,8 +39,8 @@ zx_status_t FvmContainer::CreateNew(const char* path, size_t slice_size, off_t o
 }
 
 zx_status_t FvmContainer::CreateExisting(const char* path, off_t offset,
-                                         fbl::unique_ptr<FvmContainer>* out) {
-  fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, 0, offset, 0));
+                                         std::unique_ptr<FvmContainer>* out) {
+  std::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, 0, offset, 0));
 
   zx_status_t status;
   if ((status = fvmContainer->InitExisting()) != ZX_OK) {
@@ -429,7 +430,7 @@ size_t FvmContainer::SliceSize() const {
 zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
                                        FvmReservation* reserve) {
   info_.CheckValid();
-  fbl::unique_ptr<Format> format;
+  std::unique_ptr<Format> format;
   zx_status_t status;
   if ((status = Format::Create(path, type_name, &format)) != ZX_OK) {
     fprintf(stderr, "Failed to initialize partition\n");

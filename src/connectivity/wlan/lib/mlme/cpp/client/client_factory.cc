@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <wlan/mlme/client/client_factory.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/timer.h>
@@ -9,9 +11,9 @@
 
 namespace wlan {
 
-fbl::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, JoinContext* join_ctx,
+std::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, JoinContext* join_ctx,
                                                      ChannelScheduler* chan_scheduler) {
-  fbl::unique_ptr<Timer> timer;
+  std::unique_ptr<Timer> timer;
   ObjectId timer_id;
   timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   timer_id.set_target(to_enum_type(ObjectTarget::kStation));

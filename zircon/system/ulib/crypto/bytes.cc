@@ -6,17 +6,20 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <crypto/bytes.h>
 #include <crypto/secret.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 // See note in //zircon/third_party/ulib/uboringssl/rules.mk
 #define BORINGSSL_NO_CXX
@@ -55,7 +58,7 @@ zx_status_t Bytes::Resize(size_t size, uint8_t fill) {
 
   // Allocate new memory
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> tmp(new (&ac) uint8_t[size]);
+  std::unique_ptr<uint8_t[]> tmp(new (&ac) uint8_t[size]);
   if (!ac.check()) {
     xprintf("allocation failed: %zu bytes\n", size);
     return ZX_ERR_NO_MEMORY;

@@ -4,6 +4,8 @@
 
 #include <zircon/status.h>
 
+#include <memory>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
@@ -74,7 +76,7 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* devi
   return BuildBeacon(c, buffer, tim_ele_offset);
 }
 
-MeshMlme::MeshState::MeshState(fbl::unique_ptr<Timer> timer)
+MeshMlme::MeshState::MeshState(std::unique_ptr<Timer> timer)
     : hwmp(std::move(timer)), deduplicator(kMaxReceivedFrameCacheSize) {}
 
 MeshMlme::MeshMlme(DeviceInterface* device) : device_(device), seq_mgr_(NewSequenceManager()) {}
@@ -128,7 +130,7 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
     return wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED;
   }
 
-  fbl::unique_ptr<Timer> timer;
+  std::unique_ptr<Timer> timer;
   ObjectId timer_id;
   timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   timer_id.set_target(to_enum_type(ObjectTarget::kHwmp));
@@ -227,7 +229,7 @@ void MeshMlme::ConfigurePeering(const MlmeMsg<wlan_mlme::MeshPeeringParams>& req
   }
 }
 
-void MeshMlme::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
+void MeshMlme::SendMgmtFrame(std::unique_ptr<Packet> packet) {
   zx_status_t status = device_->SendWlan(std::move(packet));
   if (status != ZX_OK) {
     errorf("[mesh-mlme] failed to send a mgmt frame: %s\n", zx_status_get_string(status));
@@ -240,7 +242,7 @@ void MeshMlme::SendMgmtFrames(PacketQueue packets) {
   }
 }
 
-void MeshMlme::SendDataFrame(fbl::unique_ptr<Packet> packet) {
+void MeshMlme::SendDataFrame(std::unique_ptr<Packet> packet) {
   // TODO(gbonik): select appropriate CBW and PHY per peer.
   // For ath10k, this probably doesn't matter since the driver/firmware should
   // pick the appropriate settings automatically based on the configure_assoc
@@ -251,7 +253,7 @@ void MeshMlme::SendDataFrame(fbl::unique_ptr<Packet> packet) {
   }
 }
 
-zx_status_t MeshMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
+zx_status_t MeshMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
   switch (pkt->peer()) {
     case Packet::Peer::kEthernet:
       if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
@@ -323,7 +325,7 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
   SendDataFrame(std::move(packet));
 }
 
-zx_status_t MeshMlme::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
+zx_status_t MeshMlme::HandleAnyWlanFrame(std::unique_ptr<Packet> pkt) {
   if (!state_) {
     return ZX_OK;
   }
@@ -498,7 +500,7 @@ static const common::MacAddr& GetSrcAddr(const common::ParsedMeshDataHeader& hea
   }
 }
 
-void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
+void MeshMlme::HandleDataFrame(std::unique_ptr<Packet> packet) {
   BufferReader r(*packet);
 
   auto header = common::ParseMeshDataHeader(&r);
@@ -603,7 +605,7 @@ std::optional<common::MacAddr> MeshMlme::GetNextHopForForwarding(
 }
 
 void MeshMlme::ForwardData(const common::ParsedMeshDataHeader& header,
-                           fbl::unique_ptr<Packet> packet, const common::MacAddr& next_hop) {
+                           std::unique_ptr<Packet> packet, const common::MacAddr& next_hop) {
   // const_cast is safe because we have a mutable pointer to data in `packet`
   auto mac_header = const_cast<DataFrameHeader*>(header.mac_header.fixed);
   mac_header->addr1 = next_hop;

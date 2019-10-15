@@ -8,13 +8,13 @@
 #include <stddef.h>
 #include <zircon/assert.h>
 
+#include <memory>
 #include <new>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 namespace fbl {
 namespace internal {
@@ -124,7 +124,7 @@ class HeapFunctionTarget final : public FunctionTarget<Result, Args...> {
   void MoveInitializeTo(void* ptr) final { new (ptr) HeapFunctionTarget(std::move(*this)); }
 
  private:
-  fbl::unique_ptr<Callable> target_ptr_;
+  std::unique_ptr<Callable> target_ptr_;
 };
 
 // Holds a function target.

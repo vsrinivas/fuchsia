@@ -20,7 +20,6 @@
 #include <ddktl/protocol/display/controller.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 namespace fake_display {
 
@@ -67,6 +66,7 @@ class FakeDisplay : public DeviceType,
 
   const display_controller_impl_protocol_t* dcimpl_proto() const { return &dcimpl_proto_; }
   void SendVsync();
+
  private:
   enum {
     COMPONENT_PDEV,

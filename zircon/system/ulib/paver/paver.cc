@@ -18,11 +18,11 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <zxcrypt/fdio-volume.h>
@@ -187,7 +187,7 @@ zx_status_t GetFvmPartition(const DevicePartitioner& partitioner,
 }
 
 zx_status_t FvmPave(const DevicePartitioner& partitioner,
-                    fbl::unique_ptr<fvm::ReaderInterface> payload) {
+                    std::unique_ptr<fvm::ReaderInterface> payload) {
   LOG("Paving FVM partition.\n");
   std::unique_ptr<PartitionClient> partition;
   zx_status_t status = GetFvmPartition(partitioner, &partition);
@@ -504,7 +504,7 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
       break;
 
     case DISK_FORMAT_ZXCRYPT: {
-      fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
+      std::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
       uint8_t slot = 0;
       if ((status = zxcrypt::FdioVolume::UnlockWithDeviceKey(
                std::move(part_fd), devfs_root_.duplicate(), static_cast<zxcrypt::key_slot_t>(slot),

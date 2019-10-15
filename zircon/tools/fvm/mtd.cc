@@ -13,7 +13,7 @@
 #include <memory>
 
 zx_status_t CreateFileWrapperFromMtd(const char* path, uint32_t offset, uint32_t max_bad_blocks,
-                                     fbl::unique_ptr<fvm::host::FileWrapper>* wrapper) {
+                                     std::unique_ptr<fvm::host::FileWrapper>* wrapper) {
   std::unique_ptr<mtd::MtdInterface> interface = mtd::MtdInterface::Create(path);
   if (!interface) {
     fprintf(stderr, "Failed to create MTD interface at %s\n", path);

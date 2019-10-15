@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COORDINATOR_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COORDINATOR_H_
+#ifndef SRC_DEVICES_COORDINATOR_COORDINATOR_H_
+#define SRC_DEVICES_COORDINATOR_COORDINATOR_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/svc/outgoing.h>
@@ -13,13 +13,13 @@
 #include <lib/zx/process.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "boot-args.h"
@@ -262,7 +262,7 @@ class Coordinator {
     return devices_;
   }
 
-  void AppendPublishedMetadata(fbl::unique_ptr<Metadata> metadata) {
+  void AppendPublishedMetadata(std::unique_ptr<Metadata> metadata) {
     published_metadata_.push_back(std::move(metadata));
   }
 
@@ -332,7 +332,7 @@ class Coordinator {
                   const zx_packet_signal_t* signal);
   async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
 
-  fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
+  fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
 
   // Once the special component driver is loaded, this will refer to it.  This
   // driver is used for binding against components of composite devices
@@ -347,7 +347,7 @@ class Coordinator {
   void Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback);
   void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);
 
-  fbl::unique_ptr<Driver> ValidateDriver(fbl::unique_ptr<Driver> drv);
+  std::unique_ptr<Driver> ValidateDriver(std::unique_ptr<Driver> drv);
 
   zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
 
@@ -374,4 +374,4 @@ zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_h
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COORDINATOR_H_
+#endif  // SRC_DEVICES_COORDINATOR_COORDINATOR_H_

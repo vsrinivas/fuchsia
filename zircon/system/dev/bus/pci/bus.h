@@ -5,6 +5,7 @@
 #define ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
 
 #include <list>
+#include <memory>
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
@@ -82,7 +83,7 @@ class Bus : public PciBusType, public BusLinkInterface {
   ddk::PcirootProtocolClient pciroot_;
   pci_platform_info_t info_;
   std::optional<ddk::MmioBuffer> ecam_;
-  fbl::unique_ptr<PciRoot> root_;
+  std::unique_ptr<PciRoot> root_;
   mutable fbl::Mutex dev_list_lock_;
 
   // All devices downstream of this bus are held here. Devices are keyed by

@@ -14,6 +14,8 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -632,7 +634,7 @@ zx_status_t DwI2c::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::Vector<fbl::unique_ptr<DwI2cBus>> bus_list;
+  fbl::Vector<std::unique_ptr<DwI2cBus>> bus_list;
 
   for (uint32_t i = 0; i < info.mmio_count; i++) {
     std::optional<ddk::MmioBuffer> mmio;

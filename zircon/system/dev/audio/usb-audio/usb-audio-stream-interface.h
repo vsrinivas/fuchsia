@@ -8,6 +8,7 @@
 #include <zircon/device/audio.h>
 #include <zircon/hw/usb/audio.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/intrusive_double_list.h>
@@ -23,7 +24,7 @@ class UsbAudioDevice;
 class AudioPath;
 
 class UsbAudioStreamInterface
-    : public fbl::DoublyLinkedListable<fbl::unique_ptr<UsbAudioStreamInterface>> {
+    : public fbl::DoublyLinkedListable<std::unique_ptr<UsbAudioStreamInterface>> {
  public:
   // A small helper struct which maps from a Fuchsia format range to the
   // alternate interface ID which supports that range.
@@ -53,7 +54,7 @@ class UsbAudioStreamInterface
   // valid interface header with class == audio and subclass == streaming
   // interface.  The interface ID encountered in this first header will become
   // the interface ID of this StreamInterface object.
-  static fbl::unique_ptr<UsbAudioStreamInterface> Create(UsbAudioDevice* parent,
+  static std::unique_ptr<UsbAudioStreamInterface> Create(UsbAudioDevice* parent,
                                                          DescriptorListMemory::Iterator* iter);
 
   // Called to add a new alternate streaming interface to this StreamInterface
@@ -85,11 +86,11 @@ class UsbAudioStreamInterface
 
   // Called at the end of device probing to link a discovered audio path to
   // this stream interface.
-  void LinkPath(fbl::unique_ptr<AudioPath> path);
+  void LinkPath(std::unique_ptr<AudioPath> path);
 
   uint8_t iid() const { return iid_; }
   uint16_t max_req_size() const { return max_req_size_; }
-  const fbl::unique_ptr<AudioPath>& path() { return path_; }
+  const std::unique_ptr<AudioPath>& path() { return path_; }
   const fbl::Vector<FormatMapEntry>& formats() { return format_map_; }
 
   // Properties shared by all formats of this stream interface.
@@ -113,7 +114,7 @@ class UsbAudioStreamInterface
 
   // An internal helper class which contains all of the information we need to
   // support an alternate interface setting which supports a given format.
-  class Format : public fbl::DoublyLinkedListable<fbl::unique_ptr<Format>> {
+  class Format : public fbl::DoublyLinkedListable<std::unique_ptr<Format>> {
    public:
     Format(const UsbAudioStreamInterface* parent, fbl::RefPtr<DescriptorListMemory> desc_list,
            const usb_interface_descriptor_t* interface_hdr,
@@ -230,11 +231,11 @@ class UsbAudioStreamInterface
 
   // A list of the formats (generic descriptors followed by a class specific
   // interface descriptor) we have discovered.
-  fbl::DoublyLinkedList<fbl::unique_ptr<Format>> formats_;
+  fbl::DoublyLinkedList<std::unique_ptr<Format>> formats_;
 
   // The path through the control interface's terminal/unit graph that this
   // streaming interface is linked to.
-  fbl::unique_ptr<AudioPath> path_;
+  std::unique_ptr<AudioPath> path_;
 
   // A vector which contains the mappings from Fuchsia format ranges to the
   // alternate interface ID of the interface which supports that format range.

@@ -19,7 +19,6 @@
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 #include "device.h"
 #include "driver.h"

@@ -6,10 +6,11 @@
 #include <fuchsia/logger/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/logger/logger.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/logger/logger.h>
 #include <lib/syslog/global.h>
 
+#include <memory>
 #include <utility>
 
 #include <unittest/unittest.h>
@@ -112,7 +113,7 @@ class Fixture {
   char buf_[4096];  // should be enough for logs
   async::Loop loop_;
   zx_status_t error_status_;
-  fbl::unique_ptr<logger::LoggerImpl> logger_;
+  std::unique_ptr<logger::LoggerImpl> logger_;
   zx::channel logger_handle_;
   zx::socket socket_;
   int pipefd_[2];

@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include <atomic>
+#include <memory>
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>
@@ -27,7 +28,6 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
@@ -276,7 +276,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
     std::optional<BlobCompressor> compressor;
   };
 
-  fbl::unique_ptr<WritebackInfo> write_info_ = {};
+  std::unique_ptr<WritebackInfo> write_info_ = {};
 };
 
 }  // namespace blobfs

@@ -4,10 +4,12 @@
 
 #include "fvm-host/sparse-paver.h"
 
-zx_status_t SparsePaver::Create(fbl::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size,
+#include <memory>
+
+zx_status_t SparsePaver::Create(std::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size,
                                 size_t disk_offset, size_t disk_size,
-                                fbl::unique_ptr<SparsePaver>* out) {
-  fbl::unique_ptr<SparsePaver> paver(new SparsePaver(disk_offset, disk_size));
+                                std::unique_ptr<SparsePaver>* out) {
+  std::unique_ptr<SparsePaver> paver(new SparsePaver(disk_offset, disk_size));
 
   zx_status_t status = paver->Init(std::move(wrapper), slice_size);
 
@@ -68,7 +70,7 @@ zx_status_t SparsePaver::Commit() {
   return ZX_OK;
 }
 
-zx_status_t SparsePaver::Init(fbl::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size) {
+zx_status_t SparsePaver::Init(std::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size) {
   file_ = std::move(wrapper);
   zx_status_t status = info_.Reset(disk_size_, slice_size);
   if (status != ZX_OK) {

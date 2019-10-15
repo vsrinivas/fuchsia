@@ -7,6 +7,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <acpica/acpi.h>
@@ -16,7 +17,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "dev.h"
 #include "errors.h"
@@ -30,7 +30,7 @@ class AcpiTbmcDevice : public DeviceType,
                        public ddk::HidbusProtocol<AcpiTbmcDevice, ddk::base_protocol> {
  public:
   static zx_status_t Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
-                            fbl::unique_ptr<AcpiTbmcDevice>* out);
+                            std::unique_ptr<AcpiTbmcDevice>* out);
 
   // hidbus protocol implementation
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
@@ -246,9 +246,9 @@ void AcpiTbmcDevice::DdkRelease() {
 }
 
 zx_status_t AcpiTbmcDevice::Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
-                                   fbl::unique_ptr<AcpiTbmcDevice>* out) {
+                                   std::unique_ptr<AcpiTbmcDevice>* out) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AcpiTbmcDevice> dev(new (&ac) AcpiTbmcDevice(parent, acpi_handle));
+  std::unique_ptr<AcpiTbmcDevice> dev(new (&ac) AcpiTbmcDevice(parent, acpi_handle));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -271,7 +271,7 @@ zx_status_t AcpiTbmcDevice::Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
 zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   zxlogf(TRACE, "acpi-tbmc: init\n");
 
-  fbl::unique_ptr<AcpiTbmcDevice> dev;
+  std::unique_ptr<AcpiTbmcDevice> dev;
   zx_status_t status = AcpiTbmcDevice::Create(parent, acpi_handle, &dev);
   if (status != ZX_OK) {
     return status;

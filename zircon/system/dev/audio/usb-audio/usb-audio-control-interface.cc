@@ -4,6 +4,7 @@
 
 #include "usb-audio-control-interface.h"
 
+#include <memory>
 #include <utility>
 
 #include <fbl/auto_call.h>
@@ -24,14 +25,14 @@ UsbAudioControlInterface::UsbAudioControlInterface(UsbAudioDevice* parent) : par
 
 UsbAudioControlInterface::~UsbAudioControlInterface() {}
 
-fbl::unique_ptr<UsbAudioControlInterface> UsbAudioControlInterface::Create(UsbAudioDevice* parent) {
+std::unique_ptr<UsbAudioControlInterface> UsbAudioControlInterface::Create(UsbAudioDevice* parent) {
   if (parent == nullptr) {
     GLOBAL_LOG(ERROR, "null parent passed to %s\n", __PRETTY_FUNCTION__);
     return nullptr;
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<UsbAudioControlInterface> ret(new (&ac) UsbAudioControlInterface(parent));
+  std::unique_ptr<UsbAudioControlInterface> ret(new (&ac) UsbAudioControlInterface(parent));
   if (ac.check()) {
     return ret;
   }
@@ -180,7 +181,7 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
   return ZX_OK;
 }
 
-fbl::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTerminal& out_term,
+std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTerminal& out_term,
                                                                const UnitMap::iterator& current,
                                                                uint32_t level) {
   // Flag the current node as having been visited and setup a cleanup task to

@@ -17,7 +17,6 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 namespace usb_virtual_bus {
 

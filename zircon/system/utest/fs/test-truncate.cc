@@ -12,10 +12,11 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -92,7 +93,7 @@ bool TestTruncateSmall(void) {
 bool fill_file(int fd, uint8_t* u8, ssize_t new_len, ssize_t old_len) {
   BEGIN_HELPER;
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> readbuf(new (&ac) uint8_t[new_len]);
+  std::unique_ptr<uint8_t[]> readbuf(new (&ac) uint8_t[new_len]);
   ASSERT_TRUE(ac.check());
   if (new_len > old_len) {  // Expanded the file
     // Verify that the file is unchanged up to old_len
@@ -187,7 +188,7 @@ bool TestTruncateLarge(void) {
 
   // Fill a test buffer with data
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[BufSize]);
+  std::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[BufSize]);
   ASSERT_TRUE(ac.check());
 
   unsigned seed = static_cast<unsigned>(zx_ticks_get());

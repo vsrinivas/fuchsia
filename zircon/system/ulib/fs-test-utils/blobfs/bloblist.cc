@@ -6,12 +6,13 @@
 #include <fcntl.h>
 #include <lib/fdio/io.h>
 
+#include <memory>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 #include <fs-test-utils/blobfs/bloblist.h>
 #include <unittest/unittest.h>
@@ -25,11 +26,11 @@ bool BlobList::CreateBlob(unsigned* seed, size_t writes_remaining) {
   BEGIN_HELPER;
   ASSERT_EQ(list_state_, BlobListState::kOpen);
 
-  fbl::unique_ptr<BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   ASSERT_TRUE(GenerateRandomBlob(mount_path_, 1 + (rand_r(seed) % (1 << 16)), &info));
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<BlobState> state(new (&ac) BlobState(std::move(info), writes_remaining));
+  std::unique_ptr<BlobState> state(new (&ac) BlobState(std::move(info), writes_remaining));
   ASSERT_EQ(ac.check(), true);
 
   {
@@ -53,7 +54,7 @@ bool BlobList::ConfigBlob() {
   BEGIN_HELPER;
   ASSERT_EQ(list_state_, BlobListState::kOpen);
 
-  fbl::unique_ptr<BlobState> state;
+  std::unique_ptr<BlobState> state;
   {
     fbl::AutoLock al(&list_lock_);
     state = list_.pop_back();
@@ -83,7 +84,7 @@ bool BlobList::WriteData() {
   BEGIN_HELPER;
   ASSERT_EQ(list_state_, BlobListState::kOpen);
 
-  fbl::unique_ptr<BlobState> state;
+  std::unique_ptr<BlobState> state;
   {
     fbl::AutoLock al(&list_lock_);
     state = list_.pop_back();
@@ -115,7 +116,7 @@ bool BlobList::ReadData() {
   BEGIN_HELPER;
   ASSERT_EQ(list_state_, BlobListState::kOpen);
 
-  fbl::unique_ptr<BlobState> state;
+  std::unique_ptr<BlobState> state;
   {
     fbl::AutoLock al(&list_lock_);
     state = list_.pop_back();
@@ -137,7 +138,7 @@ bool BlobList::UnlinkBlob() {
   BEGIN_HELPER;
   ASSERT_EQ(list_state_, BlobListState::kOpen);
 
-  fbl::unique_ptr<BlobState> state;
+  std::unique_ptr<BlobState> state;
   {
     fbl::AutoLock al(&list_lock_);
     state = list_.pop_back();
@@ -158,7 +159,7 @@ bool BlobList::ReopenBlob() {
   BEGIN_HELPER;
   ASSERT_EQ(list_state_, BlobListState::kOpen);
 
-  fbl::unique_ptr<BlobState> state;
+  std::unique_ptr<BlobState> state;
   {
     fbl::AutoLock al(&list_lock_);
     state = list_.pop_back();
@@ -201,8 +202,8 @@ bool BlobList::CloseAll() {
   // thread-safe, but we are going to be good citizens anyway.
   fbl::AutoLock al(&list_lock_);
 
-  fbl::DoublyLinkedList<fbl::unique_ptr<BlobState>> readable_list;
-  fbl::unique_ptr<BlobState> state;
+  fbl::DoublyLinkedList<std::unique_ptr<BlobState>> readable_list;
+  std::unique_ptr<BlobState> state;
   while (!list_.is_empty()) {
     state = list_.pop_back();
     ASSERT_EQ(close(state->fd.release()), 0, "Could not close blob");

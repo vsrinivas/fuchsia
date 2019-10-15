@@ -13,6 +13,8 @@
 #include <zircon/hw/gpt.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -22,7 +24,6 @@
 #include <ddk/protocol/badblock.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "nandpart-utils.h"
 
@@ -147,7 +148,7 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<NandPartDevice> device(
+    std::unique_ptr<NandPartDevice> device(
         new (&ac) NandPartDevice(parent, nand_proto, bad_block, parent_op_size, nand_info,
                                  static_cast<uint32_t>(part->first_block)));
     if (!ac.check()) {

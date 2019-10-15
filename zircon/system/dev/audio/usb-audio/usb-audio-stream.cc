@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <audio-proto-utils/format-utils.h>
@@ -44,7 +45,7 @@ static constexpr uint32_t ExtractSampleRate(const usb_audio_as_samp_freq& sr) {
          (static_cast<uint32_t>(sr.freq[2]) << 16);
 }
 
-UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, fbl::unique_ptr<UsbAudioStreamInterface> ifc,
+UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioStreamInterface> ifc,
                                fbl::RefPtr<dispatcher::ExecutionDomain> default_domain)
     : UsbAudioStreamBase(parent->zxdev()),
       AudioStreamProtocol(ifc->direction() == Direction::Input),
@@ -66,7 +67,7 @@ UsbAudioStream::~UsbAudioStream() {
 }
 
 fbl::RefPtr<UsbAudioStream> UsbAudioStream::Create(UsbAudioDevice* parent,
-                                                   fbl::unique_ptr<UsbAudioStreamInterface> ifc) {
+                                                   std::unique_ptr<UsbAudioStreamInterface> ifc) {
   ZX_DEBUG_ASSERT(parent != nullptr);
   ZX_DEBUG_ASSERT(ifc != nullptr);
 

@@ -17,7 +17,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 
 static constexpr uint32_t kDefaultNumThreads = 4;
 static constexpr float kDefaultMinWorkMsec = 5.0f;
@@ -25,7 +24,7 @@ static constexpr float kDefaultMaxWorkMsec = 15.0f;
 static constexpr float kDefaultMinSleepMsec = 1.0f;
 static constexpr float kDefaultMaxSleepMsec = 2.5f;
 
-class LoadGeneratorThread : public fbl::SinglyLinkedListable<fbl::unique_ptr<LoadGeneratorThread>> {
+class LoadGeneratorThread : public fbl::SinglyLinkedListable<std::unique_ptr<LoadGeneratorThread>> {
  public:
   LoadGeneratorThread(unsigned int seed) : seed_(seed) {}
   ~LoadGeneratorThread();
@@ -219,10 +218,10 @@ int main(int argc, char** argv) {
       LoadGeneratorThread::max_work_msec(), LoadGeneratorThread::min_sleep_msec(),
       LoadGeneratorThread::max_sleep_msec(), seed);
 
-  fbl::SinglyLinkedList<fbl::unique_ptr<LoadGeneratorThread>> threads;
+  fbl::SinglyLinkedList<std::unique_ptr<LoadGeneratorThread>> threads;
   for (uint32_t i = 0; i < num_threads; ++i) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<LoadGeneratorThread> t(new (&ac) LoadGeneratorThread(rand_r(&seed)));
+    std::unique_ptr<LoadGeneratorThread> t(new (&ac) LoadGeneratorThread(rand_r(&seed)));
 
     if (!ac.check()) {
       printf("Failed to create thread %u/%u\n", i + 1, num_threads);

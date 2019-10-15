@@ -23,12 +23,12 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/auto_call.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs-management/fvm.h>
 #include <fs/client.h>
 #include <fvm/format.h>
@@ -135,7 +135,7 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
   fvm::FormatInfo format_info =
       fvm::FormatInfo::FromPreallocatedSize(initial_volume_size, max_volume_size, slice_size);
 
-  fbl::unique_ptr<uint8_t[]> mvmo(new uint8_t[format_info.metadata_allocated_size() * 2]);
+  std::unique_ptr<uint8_t[]> mvmo(new uint8_t[format_info.metadata_allocated_size() * 2]);
   // Clear entire primary copy of metadata
   memset(mvmo.get(), 0, format_info.metadata_allocated_size());
 
@@ -224,7 +224,7 @@ zx_status_t fvm_overwrite_impl(const fbl::unique_fd& fd, size_t slice_size) {
   size_t disk_size = block_info.block_count * block_info.block_size;
   size_t metadata_size = fvm::MetadataSize(disk_size, slice_size);
 
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[metadata_size]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[metadata_size]);
 
   memset(buf.get(), 0, metadata_size);
 

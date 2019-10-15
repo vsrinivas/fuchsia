@@ -5,10 +5,11 @@
 #ifndef ZIRCON_TOOLS_FVM_MTD_H_
 #define ZIRCON_TOOLS_FVM_MTD_H_
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <fvm-host/file-wrapper.h>
 
 zx_status_t CreateFileWrapperFromMtd(const char* path, uint32_t offset, uint32_t max_bad_blocks,
-                                     fbl::unique_ptr<fvm::host::FileWrapper>* wrapper);
+                                     std::unique_ptr<fvm::host::FileWrapper>* wrapper);
 
 #endif  // ZIRCON_TOOLS_FVM_MTD_H_

@@ -12,10 +12,10 @@ static_assert(false, "Fuchsia only header");
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <lz4/lz4frame.h>
 #include <zstd/zstd.h>
 
@@ -57,9 +57,9 @@ class BlobCompressor {
   const void* Data() const { return compressed_blob_.start(); }
 
  private:
-  BlobCompressor(fbl::unique_ptr<Compressor> compressor, fzl::OwnedVmoMapper compressed_blob);
+  BlobCompressor(std::unique_ptr<Compressor> compressor, fzl::OwnedVmoMapper compressed_blob);
 
-  fbl::unique_ptr<Compressor> compressor_;
+  std::unique_ptr<Compressor> compressor_;
   fzl::OwnedVmoMapper compressed_blob_;
 };
 

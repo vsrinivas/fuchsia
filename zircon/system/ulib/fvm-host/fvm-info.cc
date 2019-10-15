@@ -4,6 +4,8 @@
 
 #include "fvm-host/fvm-info.h"
 
+#include <memory>
+
 #include "fvm-host/format.h"
 
 zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
@@ -96,7 +98,7 @@ zx_status_t FvmInfo::Load(fvm::host::FileWrapper* file, uint64_t disk_offset, ui
   // Recalculate metadata size.
   size_t old_slice_size = SuperBlock()->slice_size;
   size_t old_metadata_size = fvm::MetadataSize(disk_size, old_slice_size);
-  fbl::unique_ptr<uint8_t[]> old_metadata = std::make_unique<uint8_t[]>(old_metadata_size * 2);
+  std::unique_ptr<uint8_t[]> old_metadata = std::make_unique<uint8_t[]>(old_metadata_size * 2);
 
   // Read remainder of metadata.
   file->Seek(disk_offset, SEEK_SET);
@@ -192,7 +194,7 @@ zx_status_t FvmInfo::Grow(size_t new_size) {
   }
 
   xprintf("Growing metadata from %zu to %zu\n", metadata_size_, new_size);
-  fbl::unique_ptr<uint8_t[]> new_metadata(new uint8_t[new_size * 2]);
+  std::unique_ptr<uint8_t[]> new_metadata(new uint8_t[new_size * 2]);
 
   memcpy(new_metadata.get(), metadata_.get(), metadata_size_);
   memset(new_metadata.get() + metadata_size_, 0, new_size);

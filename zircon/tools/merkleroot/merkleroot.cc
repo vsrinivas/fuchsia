@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -20,7 +21,6 @@
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 

@@ -13,7 +13,6 @@
 #include <zircon/syscalls.h>
 
 #include <ddk/platform-defs.h>
-#include <fbl/unique_ptr.h>
 #include <hid/boot.h>
 #include <zxtest/zxtest.h>
 

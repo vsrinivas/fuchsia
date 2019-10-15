@@ -4,6 +4,7 @@
 
 #include <zircon/status.h>
 
+#include <memory>
 #include <type_traits>
 
 #include <ddk/hw/wlan/wlaninfo.h>
@@ -734,7 +735,7 @@ RemoteClient::~RemoteClient() {
   debugbss("[client] [%s] destroyed\n", addr_.ToString().c_str());
 }
 
-void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
+void RemoteClient::MoveToState(std::unique_ptr<BaseState> to) {
   ZX_DEBUG_ASSERT(to != nullptr);
   auto from_name = state_ == nullptr ? "()" : state_->name();
   if (to == nullptr) {

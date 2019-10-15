@@ -8,6 +8,7 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 #include <queue>
 
@@ -57,7 +58,7 @@ class RemoteClient : public RemoteClientInterface {
   uint8_t GetTid();
   uint8_t GetTid(const EthFrame& frame);
 
-  void MoveToState(fbl::unique_ptr<BaseState> state);
+  void MoveToState(std::unique_ptr<BaseState> state);
   void ReportBuChange(aid_t aid, size_t bu_count);
   void ReportFailedAuth();
   void ReportDeauthentication();
@@ -79,7 +80,7 @@ class RemoteClient : public RemoteClientInterface {
   bool is_qos_ready_;  // Indicate this client supports 11n+ (HT or VHT).
   // Queue which holds buffered ethernet frames while the client is dozing.
   std::queue<EthFrame> bu_queue_;
-  fbl::unique_ptr<BaseState> state_;
+  std::unique_ptr<BaseState> state_;
 };
 
 class BaseState {

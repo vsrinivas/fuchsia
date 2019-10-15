@@ -9,6 +9,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
+#include <memory>
+
 #include <ddk/device.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
@@ -65,7 +67,7 @@ class TransferQueue {
 class ConsoleDevice : public Device,
                       public ::llcpp::fuchsia::hardware::virtioconsole::Device::Interface {
  public:
-  explicit ConsoleDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
+  explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   ~ConsoleDevice() override;
 
   zx_status_t Init() override;

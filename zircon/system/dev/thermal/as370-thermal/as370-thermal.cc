@@ -14,7 +14,6 @@
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "as370-thermal-reg.h"
 

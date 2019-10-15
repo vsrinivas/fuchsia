@@ -55,7 +55,7 @@ TEST(PacketTest, BufferAlloc) {
 
 TEST(PacketTest, BufferMaxOut) {
   constexpr size_t buffer_cnt_max = ::wlan::kHugeSlabs * ::wlan::kHugeBuffers;
-  fbl::unique_ptr<Buffer> buffers[buffer_cnt_max + 1];
+  std::unique_ptr<Buffer> buffers[buffer_cnt_max + 1];
 
   for (uint32_t i = 0; i < buffer_cnt_max; i++) {
     buffers[i] = GetBuffer(kHugeBufferSize);
@@ -67,7 +67,7 @@ TEST(PacketTest, BufferMaxOut) {
 
 TEST(PacketTest, BufferFallback) {
   constexpr size_t buffer_cnt_max = ::wlan::kSmallSlabs * ::wlan::kSmallBuffers;
-  fbl::unique_ptr<Buffer> buffers[buffer_cnt_max + 1];
+  std::unique_ptr<Buffer> buffers[buffer_cnt_max + 1];
 
   for (uint32_t i = 0; i < buffer_cnt_max; i++) {
     buffers[i] = GetBuffer(kSmallBufferSize);

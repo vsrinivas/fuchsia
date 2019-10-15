@@ -9,8 +9,9 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 // |crypto::Bytes| is a small helper class that simply wraps a buffer.  It saves on some boilerplate
 // when allocating a buffer.  More importantly, when going out of scope, the destructor guarantees
@@ -56,7 +57,7 @@ class __EXPORT Bytes final {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Bytes);
 
   // The underlying buffer.
-  fbl::unique_ptr<uint8_t[]> buf_;
+  std::unique_ptr<uint8_t[]> buf_;
   // Length in bytes of memory currently allocated to the underlying buffer.
   size_t len_;
 };

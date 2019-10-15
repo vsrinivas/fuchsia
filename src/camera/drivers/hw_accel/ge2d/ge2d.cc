@@ -19,7 +19,6 @@
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 
 namespace ge2d {

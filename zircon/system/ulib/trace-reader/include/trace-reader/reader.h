@@ -7,6 +7,7 @@
 
 #include <zircon/assert.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -15,7 +16,6 @@
 #include <fbl/macros.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <fbl/unique_ptr.h>
 #include <trace-reader/records.h>
 
 namespace trace {
@@ -99,7 +99,7 @@ class TraceReader {
 
   RecordHeader pending_header_ = 0u;
 
-  struct StringTableEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<StringTableEntry>> {
+  struct StringTableEntry : public fbl::SinglyLinkedListable<std::unique_ptr<StringTableEntry>> {
     StringTableEntry(trace_string_index_t index, fbl::String string)
         : index(index), string(std::move(string)) {}
 
@@ -111,7 +111,7 @@ class TraceReader {
     static size_t GetHash(trace_string_index_t key) { return key; }
   };
 
-  struct ThreadTableEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<ThreadTableEntry>> {
+  struct ThreadTableEntry : public fbl::SinglyLinkedListable<std::unique_ptr<ThreadTableEntry>> {
     ThreadTableEntry(trace_thread_index_t index, const ProcessThread& process_thread)
         : index(index), process_thread(process_thread) {}
 
@@ -123,7 +123,7 @@ class TraceReader {
     static size_t GetHash(trace_thread_index_t key) { return key; }
   };
 
-  struct ProviderInfo : public fbl::SinglyLinkedListable<fbl::unique_ptr<ProviderInfo>> {
+  struct ProviderInfo : public fbl::SinglyLinkedListable<std::unique_ptr<ProviderInfo>> {
     ProviderId id;
     fbl::String name;
 
@@ -131,15 +131,15 @@ class TraceReader {
     // std::unordered_map<> here.  In particular, the table entries are
     // small enough that it doesn't make sense to heap allocate them
     // individually.
-    fbl::HashTable<trace_string_index_t, fbl::unique_ptr<StringTableEntry>> string_table;
-    fbl::HashTable<trace_thread_index_t, fbl::unique_ptr<ThreadTableEntry>> thread_table;
+    fbl::HashTable<trace_string_index_t, std::unique_ptr<StringTableEntry>> string_table;
+    fbl::HashTable<trace_thread_index_t, std::unique_ptr<ThreadTableEntry>> thread_table;
 
     // Used by the hash table.
     ProviderId GetKey() const { return id; }
     static size_t GetHash(ProviderId key) { return key; }
   };
 
-  fbl::HashTable<ProviderId, fbl::unique_ptr<ProviderInfo>> providers_;
+  fbl::HashTable<ProviderId, std::unique_ptr<ProviderInfo>> providers_;
   ProviderInfo* current_provider_ = nullptr;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(TraceReader);

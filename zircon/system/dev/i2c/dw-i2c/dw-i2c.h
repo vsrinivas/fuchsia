@@ -10,12 +10,12 @@
 #include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
 
+#include <memory>
 #include <thread>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/i2cimpl.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "dw-i2c-regs.h"
@@ -29,7 +29,7 @@ using DeviceType = ddk::Device<DwI2c, ddk::UnbindableNew>;
 
 class DwI2c : public DeviceType, public ddk::I2cImplProtocol<DwI2c, ddk::base_protocol> {
  public:
-  explicit DwI2c(zx_device_t* parent, fbl::Vector<fbl::unique_ptr<DwI2cBus>>&& bus_list)
+  explicit DwI2c(zx_device_t* parent, fbl::Vector<std::unique_ptr<DwI2cBus>>&& bus_list)
       : DeviceType(parent), buses_(std::move(bus_list)), bus_count_(buses_.size()) {}
   ~DwI2c() = default;
 
@@ -50,7 +50,7 @@ class DwI2c : public DeviceType, public ddk::I2cImplProtocol<DwI2c, ddk::base_pr
  private:
   int TestThread();
 
-  fbl::Vector<fbl::unique_ptr<DwI2cBus>> buses_;
+  fbl::Vector<std::unique_ptr<DwI2cBus>> buses_;
   size_t bus_count_ = 0;
 };
 

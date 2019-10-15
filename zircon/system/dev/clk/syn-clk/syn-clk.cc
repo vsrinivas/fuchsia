@@ -15,7 +15,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/protocol/platform/bus.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <hwreg/bitfields.h>
 #include <soc/as370/as370-audio-regs.h>
 #include <soc/as370/as370-clk-regs.h>

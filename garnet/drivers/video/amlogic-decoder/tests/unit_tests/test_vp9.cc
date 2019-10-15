@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_ptr.h>
+#include <memory>
 
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
@@ -57,9 +57,7 @@ class FakeOwner : public VideoDecoder::Owner {
     }
     return ZX_OK;
   }
-  fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override {
-    return sysmem_sync_ptr_;
-  }
+  fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override { return sysmem_sync_ptr_; }
 
   bool IsDecoderCurrent(VideoDecoder* decoder) override { return true; }
   zx_status_t SetProtected(ProtectableHardwareUnit unit, bool protect) override {
@@ -84,7 +82,7 @@ constexpr uint32_t kDosbusMemorySize = 0x10000;
 class Vp9UnitTest {
  public:
   static void LoopFilter() {
-    auto dosbus_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    auto dosbus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
     mmio_buffer_t dosbus_mmio = {
         .vaddr = dosbus_memory.get(), .size = kDosbusMemorySize, .vmo = ZX_HANDLE_INVALID};
@@ -97,8 +95,8 @@ class Vp9UnitTest {
   }
 
   static void InitializeMemory() {
-    auto zeroed_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
-    auto dosbus_memory = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    auto zeroed_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    auto dosbus_memory = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memset(zeroed_memory.get(), 0, kDosbusMemorySize);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
     mmio_buffer_t dosbus_mmio = {
@@ -113,7 +111,7 @@ class Vp9UnitTest {
     EXPECT_EQ(ZX_OK, decoder->InitializeHardware());
     EXPECT_NE(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
     EXPECT_TRUE(fake_owner.have_set_protected());
-    auto dosbus_memory_copy = fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
+    auto dosbus_memory_copy = std::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memcpy(dosbus_memory_copy.get(), dosbus_memory.get(), kDosbusMemorySize);
     memset(dosbus_memory.get(), 0, kDosbusMemorySize);
 

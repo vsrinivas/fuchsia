@@ -8,10 +8,11 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/pixelformat.h>
 
+#include <memory>
+
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/protocol/display/controller.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 #include "adv7533.h"
 #include "hi3660-dsi.h"
@@ -82,8 +83,8 @@ class HiDisplay : public DeviceType,
 
   uint32_t width_;
   uint32_t height_;
-  fbl::unique_ptr<hi_display::Adv7533> adv7533_;
-  fbl::unique_ptr<hi_display::HiDsi> dsi_;
+  std::unique_ptr<hi_display::Adv7533> adv7533_;
+  std::unique_ptr<hi_display::HiDsi> dsi_;
 };
 }  // namespace hi_display
 

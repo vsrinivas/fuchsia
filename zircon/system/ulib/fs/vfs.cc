@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <memory>
+
 #include <fbl/auto_call.h>
 #include <fs/debug.h>
 #include <fs/trace.h>

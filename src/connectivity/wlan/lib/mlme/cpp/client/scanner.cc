@@ -7,10 +7,10 @@
 #include <zircon/status.h>
 
 #include <cinttypes>
+#include <memory>
 #include <utility>
 
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <fbl/unique_ptr.h>
 #include <wlan/common/arraysize.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
@@ -66,7 +66,7 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
 // gross. Refactor.
 
 Scanner::Scanner(DeviceInterface* device, ChannelScheduler* chan_sched,
-                 fbl::unique_ptr<Timer> timer)
+                 std::unique_ptr<Timer> timer)
     : off_channel_handler_(this),
       device_(device),
       chan_sched_(chan_sched),
@@ -165,7 +165,7 @@ void Scanner::OffChannelHandlerImpl::BeginOffChannelTime() {
   }
 }
 
-void Scanner::OffChannelHandlerImpl::HandleOffChannelFrame(fbl::unique_ptr<Packet> pkt) {
+void Scanner::OffChannelHandlerImpl::HandleOffChannelFrame(std::unique_ptr<Packet> pkt) {
   if (auto mgmt_frame = MgmtFrameView<>::CheckType(pkt.get()).CheckLength()) {
     if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
       scanner_->HandleBeacon(bcn_frame);

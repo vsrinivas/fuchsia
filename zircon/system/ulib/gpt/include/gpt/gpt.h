@@ -7,8 +7,9 @@
 
 #include <lib/fit/result.h>
 
+#include <memory>
+
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <gpt/c/gpt.h>
 
 namespace gpt {
@@ -115,14 +116,14 @@ bool IsPartitionVisible(const gpt_partition_t* partition);
 class GptDevice {
  public:
   static zx_status_t Create(int fd, uint32_t blocksize, uint64_t blocks,
-                            fbl::unique_ptr<GptDevice>* out_dev);
+                            std::unique_ptr<GptDevice>* out_dev);
 
   // Loads gpt header and gpt entries array from |buffer| of length |size|
   // belonging to "block device" with |blocks| number of blocks and each
   // block of size |blocksize|. On finding valid header and entries, returns
   // pointer to GptDevice in |oput_dev|.
   static zx_status_t Load(const uint8_t* buffer, uint64_t size, uint32_t blocksize, uint64_t blocks,
-                          fbl::unique_ptr<GptDevice>* out_dev);
+                          std::unique_ptr<GptDevice>* out_dev);
 
   // returns true if the partition table on the device is valid
   bool Valid() const { return valid_; }
@@ -227,7 +228,7 @@ class GptDevice {
 
   // read the partition table from the device.
   static zx_status_t Init(int fd, uint32_t blocksize, uint64_t blocks,
-                          fbl::unique_ptr<GptDevice>* out_dev);
+                          std::unique_ptr<GptDevice>* out_dev);
 
   zx_status_t LoadEntries(const uint8_t* buffer, uint64_t buffer_size);
 

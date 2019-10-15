@@ -9,10 +9,11 @@
 #include <limits.h>
 #include <string.h>
 
+#include <memory>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 
@@ -97,15 +98,15 @@ class Dnode {
   bool IsSubdirectory(const Dnode* dn) const;
 
   // Functions to take / steal the allocated dnode name.
-  fbl::unique_ptr<char[]> TakeName();
-  void PutName(fbl::unique_ptr<char[]> name, size_t len);
+  std::unique_ptr<char[]> TakeName();
+  void PutName(std::unique_ptr<char[]> name, size_t len);
 
   bool IsDirectory() const;
 
  private:
   friend struct TypeChildTraits;
 
-  Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags);
+  Dnode(fbl::RefPtr<VnodeMemfs> vn, std::unique_ptr<char[]> name, uint32_t flags);
 
   size_t NameLen() const;
   bool NameMatch(fbl::StringPiece name) const;
@@ -120,7 +121,7 @@ class Dnode {
   size_t ordering_token_;
   ChildList children_;
   uint32_t flags_;
-  fbl::unique_ptr<char[]> name_;
+  std::unique_ptr<char[]> name_;
 };
 
 }  // namespace memfs

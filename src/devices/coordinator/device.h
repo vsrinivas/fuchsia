@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVICE_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVICE_H_
+#ifndef SRC_DEVICES_COORDINATOR_DEVICE_H_
+#define SRC_DEVICES_COORDINATOR_DEVICE_H_
 
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
@@ -12,6 +12,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 
+#include <memory>
 #include <variant>
 
 #include <ddk/device.h>
@@ -375,10 +376,10 @@ class Device : public fbl::RefCounted<Device>,
   Devhost* host() const { return host_; }
   uint64_t local_id() const { return local_id_; }
 
-  const fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node>& metadata() const {
+  const fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node>& metadata() const {
     return metadata_;
   }
-  void AddMetadata(fbl::unique_ptr<Metadata> md) { metadata_.push_front(std::move(md)); }
+  void AddMetadata(std::unique_ptr<Metadata> md) { metadata_.push_front(std::move(md)); }
 
   // Returns the in-progress suspend task if it exists, nullptr otherwise.
   fbl::RefPtr<SuspendTask> GetActiveSuspend() { return active_suspend_; }
@@ -518,7 +519,7 @@ class Device : public fbl::RefCounted<Device>,
   fbl::DoublyLinkedList<Device*, Node> children_;
 
   // Metadata entries associated to this device.
-  fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata_;
+  fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node> metadata_;
 
   // listnode for this device in the all devices list
   fbl::DoublyLinkedListNodeState<Device*> all_devices_node_;
@@ -601,4 +602,4 @@ class Device : public fbl::RefCounted<Device>,
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVICE_H_
+#endif  // SRC_DEVICES_COORDINATOR_DEVICE_H_

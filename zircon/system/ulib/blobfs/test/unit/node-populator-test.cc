@@ -4,6 +4,8 @@
 
 #include "iterator/node-populator.h"
 
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 #include "utils.h"
@@ -29,7 +31,7 @@ TEST(NodePopulatorTest, NodeCount) {
 
 TEST(NodePopulatorTest, Null) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
   fbl::Vector<ReservedExtent> extents;
@@ -55,7 +57,7 @@ TEST(NodePopulatorTest, Null) {
 // Test a single node and a single extent.
 TEST(NodePopulatorTest, WalkOne) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
   fbl::Vector<ReservedNode> nodes;
@@ -107,7 +109,7 @@ TEST(NodePopulatorTest, WalkOne) {
 // Test all the extents in a single node.
 TEST(NodePopulatorTest, WalkAllInlineExtents) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kBlockCount = kInlineMaxExtents * 3;
   ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, 1, &space_manager, &allocator));
   ASSERT_NO_FAILURES(ForceFragmentation(allocator.get(), kBlockCount));
@@ -164,7 +166,7 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
 // Test a node which requires an additional extent container.
 TEST(NodePopulatorTest, WalkManyNodes) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kBlockCount = kInlineMaxExtents * 5;
   constexpr size_t kNodeCount = 2;
   ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, kNodeCount, &space_manager, &allocator));
@@ -234,7 +236,7 @@ TEST(NodePopulatorTest, WalkManyNodes) {
 // Test a node which requires multiple additional extent containers.
 TEST(NodePopulatorTest, WalkManyContainers) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kExpectedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
   constexpr size_t kNodeCount = 3;
   // Block count is large enough to allow for both fragmentation and the
@@ -317,7 +319,7 @@ TEST(NodePopulatorTest, WalkManyContainers) {
 // Test walking when extra nodes are left unused.
 TEST(NodePopulatorTest, WalkExtraNodes) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kAllocatedExtents = kInlineMaxExtents;
   constexpr size_t kAllocatedNodes = 3;
   constexpr size_t kUsedExtents = kAllocatedExtents;
@@ -390,7 +392,7 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
 // example, while compressing a blob).
 TEST(NodePopulatorTest, WalkExtraExtents) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr size_t kAllocatedExtents = kInlineMaxExtents + kContainerMaxExtents + 1;
   constexpr size_t kAllocatedNodes = 3;
   constexpr size_t kUsedExtents = kInlineMaxExtents;

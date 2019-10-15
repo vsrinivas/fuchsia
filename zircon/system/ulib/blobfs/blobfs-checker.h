@@ -11,11 +11,13 @@
 #include <blobfs/host.h>
 #endif
 
+#include <memory>
+
 namespace blobfs {
 
 class BlobfsChecker {
  public:
-  BlobfsChecker(fbl::unique_ptr<Blobfs> blobfs);
+  BlobfsChecker(std::unique_ptr<Blobfs> blobfs);
 
   zx_status_t Initialize(bool apply_journal);
   void TraverseInodeBitmap();
@@ -24,7 +26,7 @@ class BlobfsChecker {
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsChecker);
-  fbl::unique_ptr<Blobfs> blobfs_;
+  std::unique_ptr<Blobfs> blobfs_;
   uint32_t alloc_inodes_ = 0;
   uint32_t alloc_blocks_ = 0;
   uint32_t error_blobs_ = 0;

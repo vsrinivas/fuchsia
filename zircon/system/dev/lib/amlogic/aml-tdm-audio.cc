@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 #include <soc/aml-common/aml-tdm-audio.h>
 
 // static
-fbl::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
+std::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
                                                    aml_tdm_out_t tdm_dev, aml_frddr_t frddr_dev,
                                                    aml_tdm_mclk_t mclk) {
   // FRDDR A has 256 64-bit lines in the FIFO, B and C have 128.
@@ -19,7 +21,7 @@ fbl::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio, ee_audi
   }
 
   fbl::AllocChecker ac;
-  auto tdm = fbl::unique_ptr<AmlTdmDevice>(
+  auto tdm = std::unique_ptr<AmlTdmDevice>(
       new (&ac) AmlTdmDevice(std::move(mmio), src, tdm_dev, frddr_dev, mclk, fifo_depth));
   if (!ac.check()) {
     return nullptr;

@@ -15,10 +15,10 @@
 #include <zircon/assert.h>
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <minfs/format.h>
@@ -99,7 +99,7 @@ struct fakeFs {
     fake_vfs = nullptr;
   }
   fbl::RefPtr<minfs::VnodeMinfs> fake_root = nullptr;
-  fbl::unique_ptr<fs::Vfs> fake_vfs = nullptr;
+  std::unique_ptr<fs::Vfs> fake_vfs = nullptr;
 } fakeFs;
 
 }  // namespace
@@ -119,7 +119,7 @@ int emu_mkfs(const char* path) {
 
   off_t size = s.st_size / minfs::kMinfsBlockSize;
 
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
@@ -137,7 +137,7 @@ static const minfs::MountOptions kDefaultMountOptions = {
     .use_journal = false,
 };
 
-int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
+int emu_mount_bcache(std::unique_ptr<minfs::Bcache> bc) {
   zx_status_t status = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root);
   if (status != ZX_OK) {
     return -1;
@@ -146,7 +146,7 @@ int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
   return 0;
 }
 
-int emu_create_bcache(const char* path, fbl::unique_ptr<minfs::Bcache>* out_bc) {
+int emu_create_bcache(const char* path, std::unique_ptr<minfs::Bcache>* out_bc) {
   fbl::unique_fd fd(open(path, O_RDWR));
   if (!fd) {
     FS_TRACE_ERROR("error: could not open path %s\n", path);
@@ -161,7 +161,7 @@ int emu_create_bcache(const char* path, fbl::unique_ptr<minfs::Bcache>* out_bc) 
 
   off_t size = s.st_size / minfs::kMinfsBlockSize;
 
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
@@ -173,7 +173,7 @@ int emu_create_bcache(const char* path, fbl::unique_ptr<minfs::Bcache>* out_bc) 
 }
 
 int emu_mount(const char* path) {
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   if (emu_create_bcache(path, &bc) != 0) {
     return -1;
   }
@@ -182,7 +182,7 @@ int emu_mount(const char* path) {
 
 int emu_get_used_resources(const char* path, uint64_t* out_data_size, uint64_t* out_inodes,
                            uint64_t* out_used_size) {
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   if (emu_create_bcache(path, &bc) != 0) {
     return -1;
   }

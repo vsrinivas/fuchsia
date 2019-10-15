@@ -4,11 +4,13 @@
 
 #include "stream-reader.h"
 
+#include <memory>
+
 #include "pave-logging.h"
 
 namespace paver {
 
-zx_status_t StreamReader::Create(zx::channel stream, fbl::unique_ptr<StreamReader>* reader) {
+zx_status_t StreamReader::Create(zx::channel stream, std::unique_ptr<StreamReader>* reader) {
   zx::vmo vmo;
   auto status = zx::vmo::create(8192, 0, &vmo);
   if (status != ZX_OK) {

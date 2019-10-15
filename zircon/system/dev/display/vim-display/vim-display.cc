@@ -17,6 +17,8 @@
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -29,7 +31,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 
@@ -101,7 +102,7 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
   zx::vmo vmo(vmo_in);
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<image_info_t> import_info = fbl::make_unique_checked<image_info_t>(&ac);
+  std::unique_ptr<image_info_t> import_info = fbl::make_unique_checked<image_info_t>(&ac);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -227,7 +228,7 @@ zx_status_t vim_import_image(void* ctx, image_t* image, zx_unowned_handle_t hand
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<image_info_t> import_info = fbl::make_unique_checked<image_info_t>(&ac);
+  std::unique_ptr<image_info_t> import_info = fbl::make_unique_checked<image_info_t>(&ac);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

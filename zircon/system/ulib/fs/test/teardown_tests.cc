@@ -12,6 +12,7 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <fs/managed_vfs.h>

@@ -8,6 +8,8 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <wlan/mlme/ap/beacon_sender.h>
 #include <wlan/mlme/ap/infra_bss.h>
 #include <wlan/mlme/mlme.h>
@@ -27,7 +29,7 @@ class ApMlme : public Mlme {
   // Mlme interface methods.
   zx_status_t Init() override;
   zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
-  zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) override;
+  zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) override;
   zx_status_t HandleTimeout(const ObjectId id) override;
   void HwIndication(uint32_t ind) override;
 
@@ -40,7 +42,7 @@ class ApMlme : public Mlme {
   zx_status_t HandleMlmeStopReq(const MlmeMsg<::fuchsia::wlan::mlme::StopRequest>& req);
 
   DeviceInterface* const device_;
-  fbl::unique_ptr<InfraBss> bss_;
+  std::unique_ptr<InfraBss> bss_;
 };
 
 }  // namespace wlan

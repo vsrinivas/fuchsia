@@ -13,7 +13,6 @@
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/bus.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <utf_conversion/utf_conversion.h>
 
 #include "usb-bus.h"

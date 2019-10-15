@@ -4,6 +4,8 @@
 
 #include "mt-dsi-host.h"
 
+#include <memory>
+
 #include <fbl/alloc_checker.h>
 
 namespace mt8167s_display {
@@ -319,7 +321,7 @@ void MtDsiHost::PowerOffMipiTx() {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 }
 
-zx_status_t MtDsiHost::Shutdown(fbl::unique_ptr<MtSysConfig>& syscfg) {
+zx_status_t MtDsiHost::Shutdown(std::unique_ptr<MtSysConfig>& syscfg) {
   ZX_DEBUG_ASSERT(initialized_);
   if (IsHostOn()) {
     if (dsiimpl_.is_valid()) {
@@ -335,7 +337,7 @@ zx_status_t MtDsiHost::Shutdown(fbl::unique_ptr<MtSysConfig>& syscfg) {
   return ZX_OK;
 }
 
-zx_status_t MtDsiHost::PowerOn(fbl::unique_ptr<MtSysConfig>& syscfg) {
+zx_status_t MtDsiHost::PowerOn(std::unique_ptr<MtSysConfig>& syscfg) {
   ZX_DEBUG_ASSERT(initialized_);
   syscfg->PowerOn(MODULE_DSI0);
   lcd_->PowerOn();

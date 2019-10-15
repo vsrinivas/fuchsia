@@ -7,6 +7,7 @@
 
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <new>
 #include <type_traits>
 #include <utility>
@@ -19,7 +20,6 @@
 #include <fbl/null_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_malloc.h>
-#include <fbl/unique_ptr.h>
 
 // Usage Notes:
 //
@@ -89,7 +89,7 @@
 // ** Example **
 //
 // using MyAllocatorTraits =
-//     fbl::SlabAllocatorTraits<fbl::unique_ptr<MyObject>,
+//     fbl::SlabAllocatorTraits<std::unique_ptr<MyObject>,
 //                               fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
 //                               fbl::NullLock,
 //                               true>;
@@ -97,7 +97,7 @@
 //
 // or...
 //
-// fbl::SlabAllocator<UnlockedStaticSlabAllocator<fbl::unique_ptr<MyObject>> allocator;
+// fbl::SlabAllocator<UnlockedStaticSlabAllocator<std::unique_ptr<MyObject>> allocator;
 //
 // :: Object Requirements ::
 //
@@ -145,7 +145,7 @@
 // Given the precondition...
 //
 //   class MyObject;
-//   using SATraits = fbl::StaticAllocatorTraits<fbl::unique_ptr<MyObject>>;
+//   using SATraits = fbl::StaticAllocatorTraits<std::unique_ptr<MyObject>>;
 //
 // The formal syntax for forward declaring the existance of the allocator
 // storage would be...
@@ -345,11 +345,11 @@ struct SlabAllocatorPtrTraits<T*> {
   static constexpr PtrType CreatePtr(ObjType* ptr) { return ptr; }
 };
 
-// Support for unique_ptr
+// Support for std::unique_ptr
 template <typename T>
-struct SlabAllocatorPtrTraits<unique_ptr<T>> {
+struct SlabAllocatorPtrTraits<std::unique_ptr<T>> {
   using ObjType = T;
-  using PtrType = unique_ptr<T>;
+  using PtrType = std::unique_ptr<T>;
 
   static constexpr bool IsManaged = true;
   static constexpr PtrType CreatePtr(ObjType* ptr) { return PtrType(ptr); }
@@ -638,7 +638,7 @@ class SlabAllocator : public SlabAllocatorBase {
 //  The pointer type of the object to be created by the allocator.  Must be one
 //  of the following...
 //  ++ ObjectType*
-//  ++ fbl::unique_ptr<ObjectType>
+//  ++ std::unique_ptr<ObjectType>
 //  ++ fbl::RefPtr<ObjectType>
 //
 // ++ SLAB_SIZE

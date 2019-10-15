@@ -10,7 +10,6 @@
 #include <utility>
 
 #include <dev/pci/designware/dw-pcie.h>
-#include <fbl/unique_ptr.h>
 
 namespace pcie {
 namespace aml {

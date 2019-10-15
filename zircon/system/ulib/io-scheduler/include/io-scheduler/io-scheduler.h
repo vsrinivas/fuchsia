@@ -158,7 +158,7 @@ class Scheduler {
   StreamRefIdMap open_map_ __TA_GUARDED(lock_);
   StreamRefIdMap closed_map_ __TA_GUARDED(lock_);
 
-  fbl::Vector<fbl::unique_ptr<Worker>> workers_;
+  fbl::Vector<std::unique_ptr<Worker>> workers_;
 };
 
 }  // namespace ioscheduler

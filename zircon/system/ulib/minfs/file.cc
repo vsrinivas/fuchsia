@@ -14,6 +14,8 @@
 #include <zircon/device/vfs.h>
 #include <zircon/time.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
@@ -259,7 +261,7 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   if (status != ZX_OK) {
     return status;
   }
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   if ((status = fs_->BeginTransaction(0, reserve_blocks, &transaction)) != ZX_OK) {
     return status;
   }
@@ -298,7 +300,7 @@ zx_status_t File::Truncate(size_t len) {
   auto get_metrics =
       fbl::MakeAutoCall([&ticker, this] { fs_->UpdateTruncateMetrics(ticker.End()); });
 
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   // Due to file copy-on-write, up to 1 new (data) block may be required.
   size_t reserve_blocks = 1;
   zx_status_t status;

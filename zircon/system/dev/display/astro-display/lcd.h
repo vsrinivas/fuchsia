@@ -11,7 +11,6 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/protocol/dsiimpl.h>
-#include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 
 namespace astro_display {

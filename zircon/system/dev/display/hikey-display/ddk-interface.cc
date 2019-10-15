@@ -6,6 +6,8 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 
+#include <fbl/alloc_checker.h>
+
 namespace hi_display {
 
 // List of supported pixel formats

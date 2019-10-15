@@ -12,6 +12,8 @@
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/amlogiccanvas.h>
@@ -25,7 +27,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "aml-dsi-host.h"
 #include "astro-clock.h"
@@ -163,10 +164,10 @@ class AstroDisplay : public DeviceType,
   ddk::DsiImplProtocolClient dsiimpl_ = {};
 
   // Objects
-  fbl::unique_ptr<astro_display::Vpu> vpu_;
-  fbl::unique_ptr<astro_display::Osd> osd_;
-  fbl::unique_ptr<astro_display::AstroDisplayClock> clock_;
-  fbl::unique_ptr<astro_display::AmlDsiHost> dsi_host_;
+  std::unique_ptr<astro_display::Vpu> vpu_;
+  std::unique_ptr<astro_display::Osd> osd_;
+  std::unique_ptr<astro_display::AstroDisplayClock> clock_;
+  std::unique_ptr<astro_display::AmlDsiHost> dsi_host_;
 };
 
 }  // namespace astro_display

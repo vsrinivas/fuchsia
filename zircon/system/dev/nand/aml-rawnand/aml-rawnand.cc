@@ -6,6 +6,8 @@
 
 #include <assert.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 
 namespace amlrawnand {
@@ -734,7 +736,7 @@ zx_status_t AmlRawNand::AmlNandInitFromPage0() {
   NandPage0* page0;
   uint32_t ecc_correct;
 
-  fbl::unique_ptr<char[]> buffer(new char[writesize_]);
+  std::unique_ptr<char[]> buffer(new char[writesize_]);
   char* data = buffer.get();
   // There are 8 copies of page0 spaced apart by 128 pages
   // starting at Page 0. Read the first we can.
@@ -905,7 +907,7 @@ zx_status_t AmlRawNand::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AmlRawNand> device(new (&ac) AmlRawNand(
+  std::unique_ptr<AmlRawNand> device(new (&ac) AmlRawNand(
       parent, *std::move(mmio_nandreg), *std::move(mmio_clockreg), std::move(bti), std::move(irq)));
 
   if (!ac.check()) {

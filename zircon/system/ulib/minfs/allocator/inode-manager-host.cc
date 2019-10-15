@@ -4,6 +4,8 @@
 
 #include <stdlib.h>
 
+#include <memory>
+
 #include "inode-manager.h"
 
 namespace minfs {
@@ -19,7 +21,7 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
   auto grow_cb = [mgr_raw](uint32_t pool_size) { return mgr_raw->Grow(pool_size); };
 
   zx_status_t status;
-  fbl::unique_ptr<PersistentStorage> storage(
+  std::unique_ptr<PersistentStorage> storage(
       new PersistentStorage(sb, kMinfsInodeSize, std::move(grow_cb), std::move(metadata)));
   if ((status = Allocator::Create(txn, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {
     return status;

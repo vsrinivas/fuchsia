@@ -4,7 +4,10 @@
 
 #include "fvm/sparse-reader.h"
 
+#include <zircon/assert.h>
+
 #include <cinttypes>
+#include <memory>
 #include <utility>
 
 namespace fvm {
@@ -74,22 +77,22 @@ void Buffer::Read(uint8_t* target, size_t length, size_t* actual) {
   *actual = cp_sz;
 }
 
-zx_status_t SparseReader::Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out) {
+zx_status_t SparseReader::Create(fbl::unique_fd fd, std::unique_ptr<SparseReader>* out) {
   return SparseReader::CreateHelper(std::make_unique<FileReader>(std::move(fd)), true /* verbose */,
                                     out);
 }
-zx_status_t SparseReader::Create(fbl::unique_ptr<ReaderInterface> reader,
-                                 fbl::unique_ptr<SparseReader>* out) {
+zx_status_t SparseReader::Create(std::unique_ptr<ReaderInterface> reader,
+                                 std::unique_ptr<SparseReader>* out) {
   return SparseReader::CreateHelper(std::move(reader), true /* verbose */, out);
 }
-zx_status_t SparseReader::CreateSilent(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out) {
+zx_status_t SparseReader::CreateSilent(fbl::unique_fd fd, std::unique_ptr<SparseReader>* out) {
   return SparseReader::CreateHelper(std::make_unique<FileReader>(std::move(fd)),
                                     false /* verbose */, out);
 }
 
-zx_status_t SparseReader::CreateHelper(fbl::unique_ptr<ReaderInterface> reader_intf, bool verbose,
-                                       fbl::unique_ptr<SparseReader>* out) {
-  fbl::unique_ptr<SparseReader> reader(new SparseReader(std::move(reader_intf), verbose));
+zx_status_t SparseReader::CreateHelper(std::unique_ptr<ReaderInterface> reader_intf, bool verbose,
+                                       std::unique_ptr<SparseReader>* out) {
+  std::unique_ptr<SparseReader> reader(new SparseReader(std::move(reader_intf), verbose));
 
   zx_status_t status;
   if ((status = reader->ReadMetadata()) != ZX_OK) {
@@ -100,7 +103,7 @@ zx_status_t SparseReader::CreateHelper(fbl::unique_ptr<ReaderInterface> reader_i
   return ZX_OK;
 }
 
-SparseReader::SparseReader(fbl::unique_ptr<ReaderInterface> reader, bool verbose)
+SparseReader::SparseReader(std::unique_ptr<ReaderInterface> reader, bool verbose)
     : compressed_(false), verbose_(verbose), reader_(std::move(reader)) {}
 
 zx_status_t SparseReader::ReadMetadata() {
@@ -153,7 +156,7 @@ zx_status_t SparseReader::ReadMetadata() {
 
     size_t src_sz = 4;
     size_t dst_sz = 0;
-    fbl::unique_ptr<uint8_t[]> inbufptr(new uint8_t[src_sz]);
+    std::unique_ptr<uint8_t[]> inbufptr(new uint8_t[src_sz]);
 
     uint8_t* inbuf = inbufptr.get();
 

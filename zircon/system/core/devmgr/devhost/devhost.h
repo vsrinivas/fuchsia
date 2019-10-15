@@ -17,6 +17,8 @@
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -25,7 +27,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "devhost-context.h"
@@ -120,7 +121,7 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   }
 
  private:
-  friend fbl::unique_ptr<zx_driver> std::make_unique<zx_driver>();
+  friend std::unique_ptr<zx_driver> std::make_unique<zx_driver>();
   zx_driver() = default;
 
   const char* name_ = nullptr;
@@ -201,7 +202,7 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
  public:
   DevhostControllerConnection() = default;
 
-  static void HandleRpc(fbl::unique_ptr<DevhostControllerConnection> conn,
+  static void HandleRpc(std::unique_ptr<DevhostControllerConnection> conn,
                         async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
   zx_status_t HandleRead();
@@ -220,7 +221,7 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
 struct DevfsConnection : AsyncLoopOwnedRpcHandler<DevfsConnection> {
   DevfsConnection() = default;
 
-  static void HandleRpc(fbl::unique_ptr<DevfsConnection> conn, async_dispatcher_t* dispatcher,
+  static void HandleRpc(std::unique_ptr<DevfsConnection> conn, async_dispatcher_t* dispatcher,
                         async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
 
@@ -235,7 +236,7 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
 zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
                                    zx::channel c);
 
-zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> ios, zx::channel h);
+zx_status_t devhost_start_connection(std::unique_ptr<DevfsConnection> ios, zx::channel h);
 
 // routines devhost uses to talk to dev coordinator
 // |client_remote| will only be a valid handle if the device was added with

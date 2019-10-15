@@ -16,7 +16,6 @@
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 namespace goldfish {
 namespace {

@@ -5,12 +5,13 @@
 #ifndef FS_PSEUDO_DIR_H_
 #define FS_PSEUDO_DIR_H_
 
+#include <memory>
+
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 
 #include "vnode.h"
 #include "watcher.h"

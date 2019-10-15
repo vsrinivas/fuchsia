@@ -6,13 +6,14 @@
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <wlan/mlme/packet.h>
 
 namespace wlan {
 
-Packet::Packet(fbl::unique_ptr<Buffer> buffer, size_t len) : buffer_(std::move(buffer)), len_(len) {
+Packet::Packet(std::unique_ptr<Buffer> buffer, size_t len) : buffer_(std::move(buffer)), len_(len) {
   ZX_ASSERT(buffer_.get());
   ZX_DEBUG_ASSERT(len <= buffer_->capacity());
 }
@@ -46,21 +47,21 @@ bool IsBodyAligned(const Packet& pkt) {
   return rx != nullptr && rx->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
 }
 
-mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet) {
+mlme_in_buf_t IntoRustInBuf(std::unique_ptr<Packet> packet) {
   auto* pkt = packet.release();
   return mlme_in_buf_t{
-      .free_buffer = [](void* raw) { fbl::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset(); },
+      .free_buffer = [](void* raw) { std::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset(); },
       .raw = pkt,
       .data = pkt->data(),
       .len = pkt->len(),
   };
 }
 
-fbl::unique_ptr<Packet> FromRustOutBuf(mlme_out_buf_t buf) {
+std::unique_ptr<Packet> FromRustOutBuf(mlme_out_buf_t buf) {
   if (!buf.raw) {
     return {};
   }
-  auto pkt = fbl::unique_ptr<Packet>(static_cast<Packet*>(buf.raw));
+  auto pkt = std::unique_ptr<Packet>(static_cast<Packet*>(buf.raw));
   pkt->set_len(buf.written_bytes);
   return pkt;
 }
@@ -70,8 +71,8 @@ void LogAllocationFail(Buffer::Size size) {
                  kBufferDebugEnabled>::Fail(size);
 }
 
-fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
-  fbl::unique_ptr<Buffer> buffer;
+std::unique_ptr<Buffer> GetBuffer(size_t len) {
+  std::unique_ptr<Buffer> buffer;
 
   if (len <= kSmallBufferSize) {
     buffer = SmallBufferAllocator::New();
@@ -103,7 +104,7 @@ fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
   return nullptr;
 }
 
-fbl::unique_ptr<Packet> GetPacket(size_t len, Packet::Peer peer) {
+std::unique_ptr<Packet> GetPacket(size_t len, Packet::Peer peer) {
   auto buffer = GetBuffer(len);
   if (buffer == nullptr) {
     return nullptr;
@@ -113,11 +114,11 @@ fbl::unique_ptr<Packet> GetPacket(size_t len, Packet::Peer peer) {
   return packet;
 }
 
-fbl::unique_ptr<Packet> GetEthPacket(size_t len) { return GetPacket(len, Packet::Peer::kEthernet); }
+std::unique_ptr<Packet> GetEthPacket(size_t len) { return GetPacket(len, Packet::Peer::kEthernet); }
 
-fbl::unique_ptr<Packet> GetWlanPacket(size_t len) { return GetPacket(len, Packet::Peer::kWlan); }
+std::unique_ptr<Packet> GetWlanPacket(size_t len) { return GetPacket(len, Packet::Peer::kWlan); }
 
-fbl::unique_ptr<Packet> GetSvcPacket(size_t len) { return GetPacket(len, Packet::Peer::kService); }
+std::unique_ptr<Packet> GetSvcPacket(size_t len) { return GetPacket(len, Packet::Peer::kService); }
 
 mlme_buffer_provider_ops_t rust_buffer_provider{
     .get_buffer = [](size_t min_len) -> mlme_in_buf_t {

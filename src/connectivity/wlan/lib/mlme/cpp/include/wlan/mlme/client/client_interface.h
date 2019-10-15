@@ -9,7 +9,8 @@
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <zircon/types.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -23,7 +24,7 @@ class ClientInterface {
   virtual ~ClientInterface() = default;
 
   virtual zx_status_t HandleEthFrame(EthFrame&&) = 0;
-  virtual zx_status_t HandleWlanFrame(fbl::unique_ptr<Packet>) = 0;
+  virtual zx_status_t HandleWlanFrame(std::unique_ptr<Packet>) = 0;
   virtual zx_status_t HandleTimeout() = 0;
   virtual zx_status_t Authenticate(::fuchsia::wlan::mlme::AuthenticationTypes auth_type,
                                    uint32_t timeout) = 0;

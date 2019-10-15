@@ -10,6 +10,7 @@
 #include <zircon/device/block.h>
 
 #include <atomic>
+#include <memory>
 
 #include <ddk/protocol/block.h>
 #include <virtio/block.h>
@@ -34,7 +35,7 @@ class Ring;
 
 class BlockDevice : public Device {
  public:
-  BlockDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
+  BlockDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
 
   virtual zx_status_t Init() override;
   virtual void Release() override;

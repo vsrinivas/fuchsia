@@ -13,7 +13,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 
 namespace mock_device {
 

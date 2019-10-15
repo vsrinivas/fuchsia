@@ -7,13 +7,14 @@
 #include <fuchsia/hardware/clock/c/fidl.h>
 #include <lib/device-protocol/pdev.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-clk.h>
 
@@ -246,7 +247,7 @@ zx_status_t MtkClk::Create(zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<MtkClk> device(new (&ac) MtkClk(parent, *std::move(mmio)));
+  std::unique_ptr<MtkClk> device(new (&ac) MtkClk(parent, *std::move(mmio)));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: MtkClk alloc failed\n", __FILE__);
     return ZX_ERR_NO_MEMORY;

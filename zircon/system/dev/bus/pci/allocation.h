@@ -10,7 +10,6 @@
 
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <region-alloc/region-alloc.h>
 
 #include "allocation.h"

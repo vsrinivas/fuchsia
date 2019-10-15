@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <string_view>
 #include <unordered_map>

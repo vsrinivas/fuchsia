@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
@@ -9,7 +10,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
-#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -139,7 +139,7 @@ struct UnmanagedTestTraits {
 template <typename LockType, bool ENABLE_OBJ_COUNT = false>
 struct UniquePtrTestTraits {
   class ObjType;
-  using PtrType = fbl::unique_ptr<ObjType>;
+  using PtrType = std::unique_ptr<ObjType>;
   using AllocTraits =
       fbl::SlabAllocatorTraits<PtrType, 1024, LockType, fbl::SlabAllocatorFlavor::INSTANCED,
                                ENABLE_OBJ_COUNT>;
@@ -384,7 +384,7 @@ using StaticCountedUnmanagedTestTraits = StaticUnmanagedTestTraits<LockType, tru
 template <typename LockType, bool ENABLE_OBJ_COUNT = false>
 struct StaticUniquePtrTestTraits {
   class ObjType;
-  using PtrType = fbl::unique_ptr<ObjType>;
+  using PtrType = std::unique_ptr<ObjType>;
   using AllocTraits = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, ENABLE_OBJ_COUNT>;
   using AllocatorType = fbl::SlabAllocator<AllocTraits>;
   using RefList = fbl::DoublyLinkedList<PtrType>;

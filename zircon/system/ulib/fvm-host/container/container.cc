@@ -6,12 +6,13 @@
 
 #include <inttypes.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/unique_fd.h>
 
 zx_status_t Container::Create(const char* path, off_t offset, uint32_t flags,
-                              fbl::unique_ptr<Container>* container) {
+                              std::unique_ptr<Container>* container) {
   if ((flags & ~fvm::kSparseFlagAllValid) != 0) {
     fprintf(stderr, "Invalid flags: %08" PRIx32 "\n", flags);
     return -1;
@@ -36,7 +37,7 @@ zx_status_t Container::Create(const char* path, off_t offset, uint32_t flags,
 
   if (!memcmp(data, fvm_magic, sizeof(fvm_magic))) {
     // Found fvm container
-    fbl::unique_ptr<FvmContainer> fvmContainer;
+    std::unique_ptr<FvmContainer> fvmContainer;
     zx_status_t status = FvmContainer::CreateExisting(path, offset, &fvmContainer);
     if (status != ZX_OK) {
       return status;
@@ -54,7 +55,7 @@ zx_status_t Container::Create(const char* path, off_t offset, uint32_t flags,
     }
 
     // Found sparse container
-    fbl::unique_ptr<SparseContainer> sparseContainer;
+    std::unique_ptr<SparseContainer> sparseContainer;
     zx_status_t status = SparseContainer::CreateExisting(path, &sparseContainer);
     if (status != ZX_OK) {
       return status;

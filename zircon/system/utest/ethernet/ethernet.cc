@@ -30,13 +30,13 @@
 #include <zircon/types.h>
 
 #include <functional>
+#include <memory>
 #include <utility>
 
 #include <ddk/protocol/ethernet.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
 
@@ -277,7 +277,7 @@ zx_status_t OpenEthertapDev(zx::channel* svc) {
   }
 }
 
-struct FifoEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<FifoEntry>> {
+struct FifoEntry : public fbl::SinglyLinkedListable<std::unique_ptr<FifoEntry>> {
   eth_fifo_entry_t e;
 };
 
@@ -373,7 +373,7 @@ class EthernetClient {
     }
 
     for (; idx < 2 * nbufs; idx++) {
-      auto entry = fbl::unique_ptr<FifoEntry>(new FifoEntry);
+      auto entry = std::unique_ptr<FifoEntry>(new FifoEntry);
       entry->e.offset = idx * bufsize_;
       entry->e.length = bufsize_;
       entry->e.flags = 0;
@@ -494,7 +494,7 @@ class EthernetClient {
   uint32_t tx_depth_ = 0;
   uint32_t rx_depth_ = 0;
 
-  using FifoEntryPtr = fbl::unique_ptr<FifoEntry>;
+  using FifoEntryPtr = std::unique_ptr<FifoEntry>;
   fbl::SinglyLinkedList<FifoEntryPtr> tx_available_;
   fbl::SinglyLinkedList<FifoEntryPtr> tx_pending_;
 };

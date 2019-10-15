@@ -20,6 +20,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>

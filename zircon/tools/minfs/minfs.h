@@ -4,9 +4,9 @@
 
 #ifndef ZIRCON_TOOLS_MINFS_MINFS_H_
 #define ZIRCON_TOOLS_MINFS_MINFS_H_
+#include <memory>
 #include <utility>
 
-#include <fbl/unique_ptr.h>
 #include <fs-host/common.h>
 #include <minfs/host.h>
 
@@ -58,7 +58,7 @@ class MinfsCreator : public FsCreator {
   zx_status_t ProcessBlocks(off_t data_size);
 
   // Generate a Bcache instance from fd_.
-  zx_status_t GenerateBcache(fbl::unique_ptr<minfs::Bcache>* out);
+  zx_status_t GenerateBcache(std::unique_ptr<minfs::Bcache>* out);
 
   // "Mount" the minfs partition using the host-side emu_ interface.
   zx_status_t MountMinfs();

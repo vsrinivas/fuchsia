@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <memory>
 #include <utility>
 
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
@@ -97,7 +98,7 @@ void Station::Reset() {
   timer_mgr_.CancelAll();
 }
 
-zx_status_t Station::HandleWlanFrame(fbl::unique_ptr<Packet> pkt) {
+zx_status_t Station::HandleWlanFrame(std::unique_ptr<Packet> pkt) {
   ZX_DEBUG_ASSERT(pkt->peer() == Packet::Peer::kWlan);
   WLAN_STATS_INC(rx_frame.in);
   WLAN_STATS_ADD(pkt->len(), rx_frame.in_bytes);
@@ -837,17 +838,17 @@ void Station::BackToMainChannel() {
   }
 }
 
-zx_status_t Station::SendCtrlFrame(fbl::unique_ptr<Packet> packet) {
+zx_status_t Station::SendCtrlFrame(std::unique_ptr<Packet> packet) {
   chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
   return SendWlan(std::move(packet));
 }
 
-zx_status_t Station::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
+zx_status_t Station::SendMgmtFrame(std::unique_ptr<Packet> packet) {
   chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
   return SendWlan(std::move(packet));
 }
 
-zx_status_t Station::SendDataFrame(fbl::unique_ptr<Packet> packet, uint32_t flags) {
+zx_status_t Station::SendDataFrame(std::unique_ptr<Packet> packet, uint32_t flags) {
   return SendWlan(std::move(packet), flags);
 }
 
@@ -900,7 +901,7 @@ zx_status_t Station::SendPsPoll() {
   return ZX_OK;
 }
 
-zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) {
+zx_status_t Station::SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) {
   auto packet_bytes = packet->len();
   zx_status_t status = device_->SendWlan(std::move(packet), flags);
   if (status == ZX_OK) {

@@ -6,15 +6,15 @@
 
 #include <zircon/assert.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
 
 namespace fvm {
 
-fbl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
+std::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
   ZX_DEBUG_ASSERT(start() <= vslice);
   ZX_DEBUG_ASSERT(vslice < end());
 
-  fbl::unique_ptr<SliceExtent> new_extent(new SliceExtent(vslice + 1));
+  std::unique_ptr<SliceExtent> new_extent(new SliceExtent(vslice + 1));
   new_extent->pslices_.reserve(end() - vslice);
 
   for (size_t vs = vslice + 1; vs < end(); vs++) {

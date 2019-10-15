@@ -10,8 +10,6 @@
 
 #include <algorithm>
 
-#include <fbl/unique_ptr.h>
-
 namespace paver {
 
 class VmoReader {

@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <limits>
+#include <memory>
 #include <new>
 #include <utility>
 
@@ -90,7 +91,7 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
   return ZX_OK;
 }
 
-zx_status_t VPartitionManager::AddPartition(fbl::unique_ptr<VPartition> vp) const {
+zx_status_t VPartitionManager::AddPartition(std::unique_ptr<VPartition> vp) const {
   auto ename = reinterpret_cast<const char*>(GetAllocatedVPartEntry(vp->GetEntryIndex())->name);
   char name[fvm::kMaxVPartitionNameLength + 32];
   snprintf(name, sizeof(name), "%.*s-p-%zu", fvm::kMaxVPartitionNameLength, ename,
@@ -319,7 +320,7 @@ zx_status_t VPartitionManager::Load() {
   auto_detach.cancel();
 
   // 0th vpartition is invalid
-  fbl::unique_ptr<VPartition> vpartitions[fvm::kMaxVPartitions] = {};
+  std::unique_ptr<VPartition> vpartitions[fvm::kMaxVPartitions] = {};
 
   // Iterate through FVM Entry table, allocating the VPartitions which
   // claim to have slices.
@@ -643,7 +644,7 @@ zx_status_t VPartitionManager::FIDLAllocatePartition(
   strlcpy(name, name_data, name_size);
 
   zx_status_t status;
-  fbl::unique_ptr<VPartition> vpart;
+  std::unique_ptr<VPartition> vpart;
   {
     fbl::AutoLock lock(&lock_);
     size_t vpart_entry;

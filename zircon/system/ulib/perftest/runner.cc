@@ -10,6 +10,8 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
@@ -258,7 +260,7 @@ class RepeatStateImpl : public RepeatState {
   const char* error_ = nullptr;
   // Array of timestamps for the starts and ends of test runs and of
   // steps within runs.  GetTimestamp() describes the array layout.
-  fbl::unique_ptr<uint64_t[]> timestamps_;
+  std::unique_ptr<uint64_t[]> timestamps_;
   // Number of elements allocated for timestamps_ array.
   uint32_t timestamps_size_ = 0;
   // Whether the first KeepRunning() call has occurred.

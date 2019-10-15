@@ -8,10 +8,10 @@
 #include <limits.h>
 #include <stdint.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
 
@@ -158,7 +158,7 @@ class LibGptTest {
   char disk_path_[PATH_MAX] = {};
 
   // pointer to read GptDevice.
-  fbl::unique_ptr<gpt::GptDevice> gpt_;
+  std::unique_ptr<gpt::GptDevice> gpt_;
 
   // Open file descriptor to block device.
   fbl::unique_fd fd_;

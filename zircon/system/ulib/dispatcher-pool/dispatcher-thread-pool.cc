@@ -7,6 +7,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
+#include <memory>
 #include <utility>
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
@@ -250,7 +251,7 @@ void ThreadPool::InternalShutdown() {
 
   // Synchronize with the threads as they exit.
   while (true) {
-    fbl::unique_ptr<Thread> thread;
+    std::unique_ptr<Thread> thread;
     {
       fbl::AutoLock lock(&pool_lock_);
       if (active_threads_.is_empty())
@@ -264,10 +265,10 @@ void ThreadPool::InternalShutdown() {
 }
 
 // static
-fbl::unique_ptr<ThreadPool::Thread> ThreadPool::Thread::Create(fbl::RefPtr<ThreadPool> pool,
+std::unique_ptr<ThreadPool::Thread> ThreadPool::Thread::Create(fbl::RefPtr<ThreadPool> pool,
                                                                uint32_t id) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Thread> ret(new (&ac) Thread(std::move(pool), id));
+  std::unique_ptr<Thread> ret(new (&ac) Thread(std::move(pool), id));
 
   if (!ac.check())
     return nullptr;

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <fbl/function.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
@@ -10,7 +12,7 @@ namespace {
 
 using Closure = void();
 using BinaryOp = int(int a, int b);
-using MoveOp = fbl::unique_ptr<int>(fbl::unique_ptr<int> value);
+using MoveOp = std::unique_ptr<int>(std::unique_ptr<int> value);
 
 // A big object which causes a function target to be heap allocated.
 struct Big {
@@ -576,8 +578,8 @@ TEST(FunctionTest, InlineFunctionSizeBounds) {
 }
 
 TEST(FunctionTest, MoveOnlyArgumentAndResult) {
-  fbl::unique_ptr<int> arg(new int());
-  fbl::Function<MoveOp> f([](fbl::unique_ptr<int> value) {
+  std::unique_ptr<int> arg(new int());
+  fbl::Function<MoveOp> f([](std::unique_ptr<int> value) {
     *value += 1;
     return value;
   });
@@ -610,7 +612,7 @@ struct Obj {
     return a + b + c;
   }
 
-  fbl::unique_ptr<int> AddAndReturn(fbl::unique_ptr<int> value) {
+  std::unique_ptr<int> AddAndReturn(std::unique_ptr<int> value) {
     (*value)++;
     return value;
   }

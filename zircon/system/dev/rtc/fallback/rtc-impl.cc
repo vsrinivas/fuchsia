@@ -5,6 +5,8 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -12,7 +14,6 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fbl/unique_ptr.h>
 
 namespace fallback_rtc {
 

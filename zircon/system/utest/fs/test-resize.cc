@@ -15,10 +15,10 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <new>
 
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <fvm/format.h>
 #include <minfs/format.h>
 #include <unittest/unittest.h>
@@ -162,7 +162,7 @@ bool TestUseAllData() {
   ASSERT_GT(disk_size, minfs::kMinfsMinimumSlices * max_data_disk.slice_size);
   disk_size -= minfs::kMinfsMinimumSlices * max_data_disk.slice_size;
 
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[kBufSize]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[kBufSize]);
   memset(buf.get(), 0, kBufSize);
 
   size_t f = 0;

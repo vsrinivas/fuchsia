@@ -24,6 +24,7 @@
 #include <lib/zx/vmo.h>
 
 #include <atomic>
+#include <memory>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
@@ -31,7 +32,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "slice-extent.h"
@@ -131,7 +131,7 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t Upgrade(const uint8_t* old_guid, const uint8_t* new_guid) TA_EXCL(lock_);
 
   // Given a VPartition object, add a corresponding ddk device.
-  zx_status_t AddPartition(fbl::unique_ptr<VPartition> vp) const;
+  zx_status_t AddPartition(std::unique_ptr<VPartition> vp) const;
 
   // Update, hash, and write back the current copy of the FVM metadata.
   // Automatically handles alternating writes to primary / backup copy of FVM.

@@ -4,6 +4,7 @@
 
 #include "fvm-host/format.h"
 
+#include <memory>
 #include <utility>
 
 Format::Format() : fvm_ready_(false), vpart_index_(0), flags_(0) {}
@@ -31,7 +32,7 @@ zx_status_t Format::Detect(int fd, off_t offset, disk_format_t* out) {
   return ZX_OK;
 }
 
-zx_status_t Format::Create(const char* path, const char* type, fbl::unique_ptr<Format>* out) {
+zx_status_t Format::Create(const char* path, const char* type, std::unique_ptr<Format>* out) {
   fbl::unique_fd fd(open(path, O_RDONLY));
   if (!fd) {
     fprintf(stderr, "Format::Create: Could not open %s\n", path);
@@ -46,12 +47,12 @@ zx_status_t Format::Create(const char* path, const char* type, fbl::unique_ptr<F
 
   if (part == DISK_FORMAT_MINFS) {
     // Found minfs partition
-    fbl::unique_ptr<Format> minfsFormat(new MinfsFormat(std::move(fd), type));
+    std::unique_ptr<Format> minfsFormat(new MinfsFormat(std::move(fd), type));
     *out = std::move(minfsFormat);
     return ZX_OK;
   } else if (part == DISK_FORMAT_BLOBFS) {
     // Found blobfs partition
-    fbl::unique_ptr<Format> blobfsFormat(new BlobfsFormat(std::move(fd), type));
+    std::unique_ptr<Format> blobfsFormat(new BlobfsFormat(std::move(fd), type));
     *out = std::move(blobfsFormat);
     return ZX_OK;
   }

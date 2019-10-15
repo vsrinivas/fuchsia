@@ -7,7 +7,8 @@
 #include <lib/mock-function/mock-function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
 
@@ -63,7 +64,7 @@ class MtkThermalTest : public MtkThermal {
   }
 
   static bool Create(const fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info, zx::port port,
-                     fbl::unique_ptr<MtkThermalTest>* test) {
+                     std::unique_ptr<MtkThermalTest>* test) {
     mmio_buffer_t dummy_mmio;
     dummy_mmio.vaddr = &dummy_mmio;
     dummy_mmio.size = sizeof(dummy_mmio);
@@ -240,7 +241,7 @@ TEST(ThermalTest, TripPoints) {
   thermal_info.trip_point_info[1] = TripPoint(30.0f, 1);
   thermal_info.trip_point_info[2] = TripPoint(40.0f, 0);
 
-  fbl::unique_ptr<MtkThermalTest> test;
+  std::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
 
   test->mock_SetDvfsOpp().ExpectNoCall();
@@ -282,7 +283,7 @@ TEST(ThermalTest, CriticalTemperature) {
   thermal_info.trip_point_info[1] = TripPoint(30.0f, 1);
   thermal_info.trip_point_info[2] = TripPoint(40.0f, 0);
 
-  fbl::unique_ptr<MtkThermalTest> test;
+  std::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
 
   uint32_t critical_int = TempMonIntStatus::Get().FromValue(0).set_stage_3(1).reg_value();
@@ -310,7 +311,7 @@ TEST(ThermalTest, InitialTripPoint) {
   thermal_info.trip_point_info[1] = TripPoint(30.0f, 1);
   thermal_info.trip_point_info[2] = TripPoint(40.0f, 0);
 
-  fbl::unique_ptr<MtkThermalTest> test;
+  std::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
 
   test->mock_ReadTemperatureSensors().ExpectCall(45.0f);
@@ -332,7 +333,7 @@ TEST(ThermalTest, TripPointJumpMultiple) {
   thermal_info.trip_point_info[3] = TripPoint(50.0f, 1);
   thermal_info.trip_point_info[4] = TripPoint(60.0f, 0);
 
-  fbl::unique_ptr<MtkThermalTest> test;
+  std::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
 
   uint32_t up_int = TempMonIntStatus::Get().FromValue(0).set_hot_0(1).reg_value();
@@ -390,7 +391,7 @@ TEST(ThermalTest, SetTripPoint) {
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
 
-  fbl::unique_ptr<MtkThermalTest> test;
+  std::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, std::move(port), &test));
 
   ASSERT_OK(test->GetPort(&port));
@@ -449,7 +450,7 @@ TEST(ThermalTest, DvfsOpp) {
   thermal_info.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN].opp[2] = {
       1'040'000'000, 1'200'000};
 
-  fbl::unique_ptr<MtkThermalTest> test;
+  std::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
 
   auto voltage_to_step = [](uint32_t volt_uv) -> uint16_t {
@@ -499,7 +500,7 @@ TEST(ThermalTest, DvfsOppVoltageRange) {
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_info;
   thermal_info.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN].count = 1;
 
-  fbl::unique_ptr<MtkThermalTest> test;
+  std::unique_ptr<MtkThermalTest> test;
 
   thermal_info.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN].opp[0] = {
       1'000'000'000, 100'000};
@@ -518,7 +519,7 @@ TEST(ThermalTest, DvfsOppVoltageRange) {
 }
 
 TEST(ThermalTest, PmicWrite) {
-  fbl::unique_ptr<MtkThermalTest> test;
+  std::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create({}, zx::port(), &test));
 
   GetMockReg<PmicReadData>(test->pmic_wrap_regs())

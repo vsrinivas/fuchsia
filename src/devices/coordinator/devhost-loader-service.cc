@@ -4,16 +4,18 @@
 
 #include "devhost-loader-service.h"
 
-#include <fbl/string_printf.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
+#include <stdint.h>
 
 #include <array>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdint.h>
+#include <memory>
+
+#include <fbl/string_printf.h>
 
 #include "coordinator.h"
 #include "fdio.h"
@@ -44,10 +46,9 @@ zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* vmo) {
   auto self = static_cast<devmgr::DevhostLoaderService*>(ctx);
   fbl::String path = fbl::StringPrintf("/boot/lib/%s", name);
   int raw_fd;
-  zx_status_t status = fdio_open_fd_at(self->root().get(), path.c_str(),
-                                       fuchsia_io_OPEN_RIGHT_READABLE |
-                                       fuchsia_io_OPEN_RIGHT_EXECUTABLE,
-                                       &raw_fd);
+  zx_status_t status =
+      fdio_open_fd_at(self->root().get(), path.c_str(),
+                      fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_EXECUTABLE, &raw_fd);
   if (status != ZX_OK) {
     return status;
   }
@@ -89,7 +90,7 @@ namespace devmgr {
 
 zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
                                          SystemInstance* system_instance,
-                                         fbl::unique_ptr<DevhostLoaderService>* out) {
+                                         std::unique_ptr<DevhostLoaderService>* out) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_create(&ns);
   if (status != ZX_OK) {
@@ -107,7 +108,7 @@ zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
     fprintf(stderr, "devcoordinator: failed to open root directory %d\n", errno);
     return ZX_ERR_IO;
   }
-  fbl::unique_ptr<DevhostLoaderService> ldsvc(new DevhostLoaderService);
+  std::unique_ptr<DevhostLoaderService> ldsvc(new DevhostLoaderService);
   status = loader_service_create(dispatcher, &ops_, ldsvc.get(), &ldsvc->svc_);
   if (status != ZX_OK) {
     fprintf(stderr, "devcoordinator: failed to create loader service %d\n", status);

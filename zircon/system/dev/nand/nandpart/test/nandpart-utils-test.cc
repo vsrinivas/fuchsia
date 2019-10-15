@@ -6,7 +6,8 @@
 
 #include <zircon/types.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 namespace nand {
@@ -59,7 +60,7 @@ TEST(NandPartUtilsTest, SanitizeEmptyPartitionMapTest) {
 }
 
 TEST(NandPartUtilsTest, SanitizeSinglePartitionMapTest) {
-  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+  std::unique_ptr<uint8_t[]> pmap_buffer(
       new uint8_t[sizeof(zbi_partition_map_t) + sizeof(zbi_partition_t)]);
   auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
   *pmap = MakePartitionMap(1);
@@ -69,7 +70,7 @@ TEST(NandPartUtilsTest, SanitizeSinglePartitionMapTest) {
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapTest) {
-  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+  std::unique_ptr<uint8_t[]> pmap_buffer(
       new uint8_t[sizeof(zbi_partition_map_t) + 3 * sizeof(zbi_partition_t)]);
   auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
   *pmap = MakePartitionMap(3);
@@ -84,7 +85,7 @@ TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapTest) {
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOutOfOrderTest) {
-  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+  std::unique_ptr<uint8_t[]> pmap_buffer(
       new uint8_t[sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t)]);
   auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
   *pmap = MakePartitionMap(2);
@@ -97,7 +98,7 @@ TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOutOfOrderTest) {
 }
 
 TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOverlappingTest) {
-  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+  std::unique_ptr<uint8_t[]> pmap_buffer(
       new uint8_t[sizeof(zbi_partition_map_t) + 3 * sizeof(zbi_partition_t)]);
   auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
   *pmap = MakePartitionMap(3);
@@ -109,7 +110,7 @@ TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOverlappingTest) {
 }
 
 TEST(NandPartUtilsTest, SanitizePartitionMapBadRangeTest) {
-  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+  std::unique_ptr<uint8_t[]> pmap_buffer(
       new uint8_t[sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t)]);
   auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
   *pmap = MakePartitionMap(2);
@@ -120,7 +121,7 @@ TEST(NandPartUtilsTest, SanitizePartitionMapBadRangeTest) {
 }
 
 TEST(NandPartUtilsTest, SanitizePartitionMapUnalignedTest) {
-  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+  std::unique_ptr<uint8_t[]> pmap_buffer(
       new uint8_t[sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t)]);
   auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
   *pmap = MakePartitionMap(2);
@@ -131,7 +132,7 @@ TEST(NandPartUtilsTest, SanitizePartitionMapUnalignedTest) {
 }
 
 TEST(NandPartUtilsTest, SanitizePartitionMapOutofBoundsTest) {
-  fbl::unique_ptr<uint8_t[]> pmap_buffer(
+  std::unique_ptr<uint8_t[]> pmap_buffer(
       new uint8_t[sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t)]);
   auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
   *pmap = MakePartitionMap(2);

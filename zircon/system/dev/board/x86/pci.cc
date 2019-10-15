@@ -8,13 +8,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <memory>
+
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 #include <acpica/acuuid.h>
 #include <bits/limits.h>
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 
@@ -335,7 +336,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   // If we find _BBN / _SEG we will use those, but if we don't we can fall
   // back on having an ecam from mcfg allocations.
   fbl::AllocChecker ac;
-  auto dev_ctx = fbl::unique_ptr<pciroot_ctx_t>(new (&ac) pciroot_ctx_t());
+  auto dev_ctx = std::unique_ptr<pciroot_ctx_t>(new (&ac) pciroot_ctx_t());
   if (!ac.check()) {
     zxlogf(ERROR, "failed to allocate pciroot ctx: %d!\n", status);
     return ZX_ERR_NO_MEMORY;

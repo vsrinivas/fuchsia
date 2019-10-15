@@ -6,6 +6,7 @@
 #include <zircon/errors.h>
 
 #include <ktl/move.h>
+#include <ktl/unique_ptr.h>
 
 namespace system_topology {
 
@@ -41,7 +42,7 @@ zx_status_t Graph::Initialize(Graph* graph, const zbi_topology_node_t* flat_node
   }
 
   fbl::AllocChecker checker;
-  fbl::unique_ptr<Node[]> nodes(new (&checker) Node[count]{{}});
+  ktl::unique_ptr<Node[]> nodes(new (&checker) Node[count]{{}});
   if (!checker.check()) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 
+#include <memory>
+
 #include <fbl/auto_lock.h>
 #include <io-scheduler/io-scheduler.h>
 
@@ -96,7 +98,7 @@ zx_status_t Scheduler::Serve() {
   const uint32_t num_workers = 1;
 
   for (uint32_t i = 0; i < num_workers; i++) {
-    fbl::unique_ptr<Worker> worker;
+    std::unique_ptr<Worker> worker;
     zx_status_t status = Worker::Create(this, i, &worker);
     if (status != ZX_OK) {
       fprintf(stderr, "Scheduler: Failed to create worker thread\n");

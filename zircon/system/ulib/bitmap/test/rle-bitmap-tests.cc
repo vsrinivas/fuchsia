@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <bitmap/rle-bitmap.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -361,7 +363,7 @@ static bool NoAlloc(void) {
             "set bits with empty freelist");
 
   fbl::AllocChecker ac;
-  free_list.push_back(fbl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
+  free_list.push_back(std::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
   ASSERT_TRUE(ac.check(), "alloc check");
   EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), ZX_OK, "set bits");
   EXPECT_TRUE(bitmap.Get(0, 65536), "get bit after setting");
@@ -370,7 +372,7 @@ static bool NoAlloc(void) {
   EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), ZX_ERR_NO_MEMORY,
             "clear bits with empty freelist and alloc needed");
 
-  free_list.push_back(fbl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
+  free_list.push_back(std::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
   ASSERT_TRUE(ac.check(), "alloc check");
   EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), ZX_OK, "clear bits");
   size_t first_unset = 0;
@@ -378,7 +380,7 @@ static bool NoAlloc(void) {
   EXPECT_EQ(first_unset, 1U, "check first_unset");
   EXPECT_EQ(free_list.size_slow(), 0U, "free list empty after alloc");
 
-  free_list.push_back(fbl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
+  free_list.push_back(std::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
   ASSERT_TRUE(ac.check(), "alloc check");
   EXPECT_EQ(bitmap.SetNoAlloc(1, 65535, &free_list), ZX_OK, "add range back in");
   EXPECT_EQ(free_list.size_slow(), 2U,

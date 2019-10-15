@@ -10,8 +10,9 @@
 
 #include <inttypes.h>
 
+#include <memory>
+
 #include <fbl/array.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
 #include <minfs/bcache.h>
@@ -61,15 +62,15 @@ zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
 
 // On success, returns ZX_OK and copies the number of bytes used by data
 // within the fs.
-zx_status_t UsedDataSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size);
+zx_status_t UsedDataSize(std::unique_ptr<Bcache>& bc, uint64_t* out_size);
 
 // On success, returns ZX_OK and copies the number of allocated
 // inodes within the fs.
-zx_status_t UsedInodes(fbl::unique_ptr<Bcache>& bc, uint64_t* out_inodes);
+zx_status_t UsedInodes(std::unique_ptr<Bcache>& bc, uint64_t* out_inodes);
 
 // On success, returns ZX_OK and copies the number of bytes used by data
 // and bytes reserved for superblock, bitmaps, inodes and journal within the fs.
-zx_status_t UsedSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size);
+zx_status_t UsedSize(std::unique_ptr<Bcache>& bc, uint64_t* out_size);
 
 // Run fsck on an unmounted filesystem backed by |bc|.
 //

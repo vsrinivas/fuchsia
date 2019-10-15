@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <gtest/gtest.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 
@@ -16,7 +18,7 @@ struct ChannelSchedulerTest : public ::testing::Test, public OnChannelHandler {
         wlan_channel_t{.primary = 1, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
   }
 
-  virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) override { str_ += "frame_on,"; }
+  virtual void HandleOnChannelFrame(std::unique_ptr<Packet>) override { str_ += "frame_on,"; }
 
   virtual void PreSwitchOffChannel() override { str_ += "pre_switch,"; }
 
@@ -43,7 +45,7 @@ struct MockOffChannelHandler : OffChannelHandler {
 
   virtual void BeginOffChannelTime() { (*str_) += "begin_off,"; }
 
-  virtual void HandleOffChannelFrame(fbl::unique_ptr<Packet>) { (*str_) += "frame_off,"; }
+  virtual void HandleOffChannelFrame(std::unique_ptr<Packet>) { (*str_) += "frame_off,"; }
 
   virtual bool EndOffChannelTime(bool interrupted, OffChannelRequest* next_req) {
     (*str_) += "end_off(";

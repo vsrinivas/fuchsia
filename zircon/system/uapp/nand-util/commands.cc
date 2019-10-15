@@ -12,7 +12,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 #include "aml.h"
 
@@ -69,7 +68,7 @@ bool ReadCheck(const NandBroker& nand, uint32_t first_block, uint32_t count) {
 
 void ReadBlockByPage(const NandBroker& nand, uint32_t block_num) {
   const auto& info = nand.Info();
-  fbl::unique_ptr<char[]> first_page(new char[info.page_size + info.oob_size]);
+  std::unique_ptr<char[]> first_page(new char[info.page_size + info.oob_size]);
 
   uint32_t last_page_num = (block_num + 1) * info.pages_per_block;
   char* data = nand.data();
@@ -106,7 +105,7 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
 
   uint32_t block_oob_size = nand.Info().pages_per_block * nand.Info().oob_size;
   uint32_t oob_size = count * block_oob_size;
-  fbl::unique_ptr<uint8_t[]> oob(new uint8_t[oob_size]);
+  std::unique_ptr<uint8_t[]> oob(new uint8_t[oob_size]);
 
   uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
   size_t data_size = nand.Info().page_size * nand.Info().pages_per_block;

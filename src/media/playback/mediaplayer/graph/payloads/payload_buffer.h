@@ -14,7 +14,6 @@
 #include <fbl/recycler.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/payloads/fifo_allocator.h"
@@ -77,7 +76,7 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
   // NOTE: Access to these two fields is serialized using the mutex on the
   // owning |VmoPayloadAllocator|.
   bool allocated_ = false;
-  fbl::unique_ptr<FifoAllocator> allocator_;
+  std::unique_ptr<FifoAllocator> allocator_;
 
   friend class VmoPayloadAllocator;
 };

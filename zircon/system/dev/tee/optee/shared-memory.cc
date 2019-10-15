@@ -4,6 +4,8 @@
 
 #include "shared-memory.h"
 
+#include <memory>
+
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -128,7 +129,7 @@ void CodecConnection::SendCORBResponse(const fbl::RefPtr<dispatcher::Channel>& c
 }
 
 void CodecConnection::ProcessSolicitedResponse(const CodecResponse& resp,
-                                               fbl::unique_ptr<CodecCmdJob>&& job) {
+                                               std::unique_ptr<CodecCmdJob>&& job) {
   if (state_ == State::PROBING) {
     // Are we still in the PROBING stage of things?  If so, this job should
     // have no response channel assigned to it, and we should still be

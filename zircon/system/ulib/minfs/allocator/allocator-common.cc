@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
@@ -15,12 +16,12 @@
 namespace minfs {
 
 // Static.
-zx_status_t Allocator::Create(fs::ReadTxn* txn, fbl::unique_ptr<AllocatorStorage> storage,
-                              fbl::unique_ptr<Allocator>* out) FS_TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t Allocator::Create(fs::ReadTxn* txn, std::unique_ptr<AllocatorStorage> storage,
+                              std::unique_ptr<Allocator>* out) FS_TA_NO_THREAD_SAFETY_ANALYSIS {
   // Ignore thread-safety analysis on the |allocator| object; no one has an
   // external reference to it yet.
   zx_status_t status;
-  fbl::unique_ptr<Allocator> allocator(new Allocator(std::move(storage)));
+  std::unique_ptr<Allocator> allocator(new Allocator(std::move(storage)));
 
   blk_t total_blocks = allocator->storage_->PoolTotal();
   blk_t pool_blocks = allocator->storage_->PoolBlocks();

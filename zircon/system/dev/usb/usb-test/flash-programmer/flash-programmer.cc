@@ -9,12 +9,13 @@
 #include <lib/zx/vmo.h>
 
 #include <limits>
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 
 #include "flash-programmer-hw.h"
 
@@ -225,7 +226,7 @@ zx_status_t FlashProgrammer::Create(zx_device_t* parent) {
     return status;
   }
   fbl::AllocChecker ac;
-  fbl::unique_ptr<FlashProgrammer> dev(new (&ac) FlashProgrammer(parent, usb));
+  std::unique_ptr<FlashProgrammer> dev(new (&ac) FlashProgrammer(parent, usb));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

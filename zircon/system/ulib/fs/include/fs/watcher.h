@@ -12,10 +12,11 @@
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
 
+#include <memory>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 
 namespace fs {

@@ -20,7 +20,6 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 
 #include "asix-88179-regs.h"
 

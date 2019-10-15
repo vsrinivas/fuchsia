@@ -8,6 +8,7 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <queue>
 
 #include <wlan/common/macaddr.h>
@@ -30,8 +31,8 @@ class MlmeMsg;
 // MLME.
 class InfraBss : public BssInterface, public RemoteClient::Listener {
  public:
-  InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
-           const common::MacAddr& bssid, fbl::unique_ptr<Timer> timer);
+  InfraBss(DeviceInterface* device, std::unique_ptr<BeaconSender> bcn_sender,
+           const common::MacAddr& bssid, std::unique_ptr<Timer> timer);
   virtual ~InfraBss();
 
   // Starts the BSS. Beacons will be sent and incoming frames are processed.
@@ -42,7 +43,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   bool IsStarted();
 
   // Entry point for ethernet and WLAN frames.
-  void HandleAnyFrame(fbl::unique_ptr<Packet>);
+  void HandleAnyFrame(std::unique_ptr<Packet>);
   // Entry point for MLME messages except START-/STOP.request which are handled
   // in the `ApMlme`.
   zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg);
@@ -76,11 +77,11 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   wlan_channel_t Chan() const override { return chan_; }
 
  private:
-  using ClientMap = std::unordered_map<common::MacAddr, fbl::unique_ptr<RemoteClientInterface>,
+  using ClientMap = std::unordered_map<common::MacAddr, std::unique_ptr<RemoteClientInterface>,
                                        common::MacAddrHasher>;
 
   void HandleEthFrame(EthFrame&&);
-  void HandleAnyWlanFrame(fbl::unique_ptr<Packet>);
+  void HandleAnyWlanFrame(std::unique_ptr<Packet>);
   void HandleAnyMgmtFrame(MgmtFrame<>&&);
   void HandleAnyDataFrame(DataFrame<>&&);
   void HandleAnyCtrlFrame(CtrlFrame<>&&);
@@ -106,19 +107,19 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
 
   // Returns `true` if a frame with the given destination should get buffered.
   bool ShouldBufferFrame(const common::MacAddr& dest) const;
-  zx_status_t BufferFrame(fbl::unique_ptr<Packet> packet);
+  zx_status_t BufferFrame(std::unique_ptr<Packet> packet);
   zx_status_t SendNextBu();
 
   const common::MacAddr bssid_;
   DeviceInterface* device_;
   ApStation rust_ap_;
-  fbl::unique_ptr<BeaconSender> bcn_sender_;
+  std::unique_ptr<BeaconSender> bcn_sender_;
   zx_time_t started_at_;
   ClientMap clients_;
   SequenceManager seq_mgr_;
   // Queue which holds buffered non-GCR-SP frames when at least one client is
   // dozing.
-  std::queue<fbl::unique_ptr<Packet>> bu_queue_;
+  std::queue<std::unique_ptr<Packet>> bu_queue_;
   PsCfg ps_cfg_;
   wlan_channel_t chan_;
   // MLME-START.request holds all information required to correctly configure

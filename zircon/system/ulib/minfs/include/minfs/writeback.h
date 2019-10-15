@@ -5,6 +5,7 @@
 #ifndef MINFS_WRITEBACK_H_
 #define MINFS_WRITEBACK_H_
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -22,7 +23,6 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/queue.h>
 #include <fs/vfs.h>
 #include <minfs/allocator-reservation.h>
@@ -48,7 +48,7 @@ class Transaction final : public PendingWork {
  public:
   static zx_status_t Create(TransactionalFs* minfs, size_t reserve_inodes, size_t reserve_blocks,
                             InodeManager* inode_manager, Allocator* block_allocator,
-                            fbl::unique_ptr<Transaction>* out);
+                            std::unique_ptr<Transaction>* out);
 
   Transaction() = delete;
 

@@ -5,8 +5,9 @@
 #ifndef ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_VOLTAGE_H_
 #define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_VOLTAGE_H_
 
+#include <memory>
+
 #include <ddktl/protocol/composite.h>
-#include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-thermal.h>
 
 #include "aml-pwm.h"
@@ -44,7 +45,7 @@ class AmlVoltageRegulator {
  private:
   uint32_t GetBigClusterVoltage();
   uint32_t GetLittleClusterVoltage();
-  zx_status_t SetClusterVoltage(int* current_voltage_index, fbl::unique_ptr<thermal::AmlPwm>* pwm,
+  zx_status_t SetClusterVoltage(int* current_voltage_index, std::unique_ptr<thermal::AmlPwm>* pwm,
                                 uint32_t microvolt);
   zx_status_t SetBigClusterVoltage(uint32_t microvolt) {
     if (pid_ == PDEV_PID_AMLOGIC_S905D2) {
@@ -62,8 +63,8 @@ class AmlVoltageRegulator {
     return SetClusterVoltage(&current_little_cluster_voltage_index_, &pwm_AO_D_, microvolt);
   }
 
-  fbl::unique_ptr<thermal::AmlPwm> pwm_A_;
-  fbl::unique_ptr<thermal::AmlPwm> pwm_AO_D_;
+  std::unique_ptr<thermal::AmlPwm> pwm_A_;
+  std::unique_ptr<thermal::AmlPwm> pwm_AO_D_;
   aml_voltage_table_info_t voltage_table_info_;
   int current_big_cluster_voltage_index_;
   int current_little_cluster_voltage_index_;

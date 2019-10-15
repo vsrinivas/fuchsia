@@ -21,7 +21,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 // Should a response be sent when we hit ctr?
 constexpr uint32_t kTxnFlagRespond = 0x00000001;

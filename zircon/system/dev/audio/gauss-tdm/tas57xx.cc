@@ -7,6 +7,8 @@
 #include <lib/device-protocol/i2c.h>
 #include <string.h>
 
+#include <memory>
+
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -18,10 +20,10 @@ constexpr float Tas57xx::kMaxGain;
 constexpr float Tas57xx::kMinGain;
 
 // static
-fbl::unique_ptr<Tas57xx> Tas57xx::Create(i2c_protocol_t *i2c, uint32_t index) {
+std::unique_ptr<Tas57xx> Tas57xx::Create(i2c_protocol_t *i2c, uint32_t index) {
   fbl::AllocChecker ac;
 
-  auto ptr = fbl::unique_ptr<Tas57xx>(new (&ac) Tas57xx());
+  auto ptr = std::unique_ptr<Tas57xx>(new (&ac) Tas57xx());
   if (!ac.check()) {
     return nullptr;
   }

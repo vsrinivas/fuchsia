@@ -8,8 +8,9 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_INODE_MANAGER_H_
 #define ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_INODE_MANAGER_H_
 
+#include <memory>
+
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <minfs/format.h>
 
 #ifdef __Fuchsia__
@@ -83,7 +84,7 @@ class InodeManager : public InspectableInodeManager {
 #endif
 
   blk_t start_block_;
-  fbl::unique_ptr<Allocator> inode_allocator_;
+  std::unique_ptr<Allocator> inode_allocator_;
 #ifdef __Fuchsia__
   fzl::ResizeableVmoMapper inode_table_;
 #else

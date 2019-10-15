@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 
+#include <memory>
 #include <utility>
 
 #ifdef __Fuchsia__
@@ -27,7 +28,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/locking.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
@@ -451,7 +451,7 @@ class VnodeMinfs : public fs::Vnode,
   //                                                              by doubly indirect blocks
   // DataBlockAssigner may modify this field asynchronously, so a valid Transaction object must
   // be held before accessing it.
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> vmo_indirect_;
+  std::unique_ptr<fzl::ResizeableVmoMapper> vmo_indirect_;
 
   fuchsia_hardware_block_VmoID vmoid_{};
   fuchsia_hardware_block_VmoID vmoid_indirect_{};

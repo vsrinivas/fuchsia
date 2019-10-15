@@ -6,7 +6,6 @@
 #define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_POWER_H_
 
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 #include "registers-ddi.h"
 #include "registers-pipe.h"

@@ -13,12 +13,12 @@
 #include <unistd.h>
 
 #include <limits>
+#include <memory>
 
 #include <bitmap/raw-bitmap.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <minfs/minfs.h>
@@ -461,7 +461,7 @@ std::unique_ptr<Bcache> Minfs::Destroy(std::unique_ptr<Minfs> minfs) {
 }
 
 zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                                    fbl::unique_ptr<Transaction>* out) {
+                                    std::unique_ptr<Transaction>* out) {
   ZX_DEBUG_ASSERT(reserve_inodes <= TransactionLimits::kMaxInodeBitmapBlocks);
 #ifdef __Fuchsia__
   if (journal_ == nullptr) {
@@ -491,7 +491,7 @@ void Minfs::EnqueueCallback(SyncCallback callback) {
 }
 #endif
 
-void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
+void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
 #ifdef __Fuchsia__
   ZX_DEBUG_ASSERT(journal_ != nullptr);
 
@@ -529,8 +529,8 @@ void Minfs::Sync(SyncCallback closure) {
 #endif
 
 #ifdef __Fuchsia__
-Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
-             fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
+Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
+             std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
              uint64_t fs_id)
     : bc_(std::move(bc)),
       sb_(std::move(sb)),
@@ -539,8 +539,8 @@ Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
       fs_id_(fs_id),
       limits_(sb_->Info()) {}
 #else
-Minfs::Minfs(fbl::unique_ptr<Bcache> bc, fbl::unique_ptr<SuperblockManager> sb,
-             fbl::unique_ptr<Allocator> block_allocator, fbl::unique_ptr<InodeManager> inodes,
+Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
+             std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
              BlockOffsets offsets)
     : bc_(std::move(bc)),
       sb_(std::move(sb)),
@@ -741,7 +741,7 @@ zx_status_t Minfs::PurgeUnlinked() {
   while (next_ino != 0) {
     zx_status_t status;
     fbl::RefPtr<VnodeMinfs> vn;
-    fbl::unique_ptr<Transaction> transaction;
+    std::unique_ptr<Transaction> transaction;
     if ((status = BeginTransaction(0, 0, &transaction)) != ZX_OK) {
       return status;
     }
@@ -1084,8 +1084,8 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
   return ZX_OK;
 }
 
-zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const MountOptions& options,
-                          fbl::unique_ptr<Minfs>* out) {
+zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& options,
+                          std::unique_ptr<Minfs>* out) {
   // To use the journal, it must first be replayed.
   if (!options.repair_filesystem && options.use_journal) {
     FS_TRACE_ERROR("minfs: Journal replay is required to utilize journal");
@@ -1329,7 +1329,7 @@ zx_status_t ReadDataFromDisk(fs::TransactionHandler* transaction_handler,
 
 #ifdef __Fuchsia__
 zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
-                         fbl::unique_ptr<minfs::Bcache>* out) {
+                         std::unique_ptr<minfs::Bcache>* out) {
   fuchsia_hardware_block_BlockInfo info;
   zx_status_t status = device->BlockGetInfo(&info);
   if (status != ZX_OK) {
@@ -1355,11 +1355,11 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 
 #endif
 
-zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
+zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
                   fbl::RefPtr<VnodeMinfs>* root_out) {
   TRACE_DURATION("minfs", "minfs_mount");
 
-  fbl::unique_ptr<Minfs> fs;
+  std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: failed to create filesystem object %d\n", status);
@@ -1688,7 +1688,7 @@ zx_status_t Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_ma
 
 zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
                                const fbl::Vector<size_t>& extent_lengths,
-                               fbl::unique_ptr<minfs::Bcache>* out) {
+                               std::unique_ptr<minfs::Bcache>* out) {
   if (start >= end) {
     fprintf(stderr, "error: Insufficient space allocated\n");
     return ZX_ERR_INVALID_ARGS;
@@ -1712,7 +1712,7 @@ zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
 
   size_t size = (end - start) / minfs::kMinfsBlockSize;
 
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
@@ -1730,7 +1730,7 @@ zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
 
 zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
                        const fbl::Vector<size_t>& extent_lengths) {
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status;
   if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {
     return status;
@@ -1741,7 +1741,7 @@ zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
 
 zx_status_t SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t end,
                                const fbl::Vector<size_t>& extent_lengths, uint64_t* out_size) {
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status;
 
   if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {
@@ -1752,7 +1752,7 @@ zx_status_t SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t end,
 
 zx_status_t SparseUsedInodes(fbl::unique_fd fd, off_t start, off_t end,
                              const fbl::Vector<size_t>& extent_lengths, uint64_t* out_inodes) {
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status;
   if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {
     return status;
@@ -1762,7 +1762,7 @@ zx_status_t SparseUsedInodes(fbl::unique_fd fd, off_t start, off_t end,
 
 zx_status_t SparseUsedSize(fbl::unique_fd fd, off_t start, off_t end,
                            const fbl::Vector<size_t>& extent_lengths, uint64_t* out_size) {
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status;
 
   if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {

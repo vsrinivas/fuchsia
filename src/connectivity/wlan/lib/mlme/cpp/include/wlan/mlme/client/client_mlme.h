@@ -8,6 +8,7 @@
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 
 #include <wlan/mlme/client/channel_scheduler.h>
@@ -34,7 +35,7 @@ class ClientMlme : public Mlme {
   // Mlme interface methods.
   zx_status_t Init() override;
   zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
-  zx_status_t HandleFramePacket(fbl::unique_ptr<Packet> pkt) override;
+  zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) override;
   zx_status_t HandleTimeout(const ObjectId id) override;
   void HwScanComplete(uint8_t code) override final;
   ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const override final;
@@ -49,7 +50,7 @@ class ClientMlme : public Mlme {
 
     explicit OnChannelHandlerImpl(ClientMlme* mlme) : mlme_(mlme) {}
 
-    virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) override;
+    virtual void HandleOnChannelFrame(std::unique_ptr<Packet>) override;
     virtual void PreSwitchOffChannel() override;
     virtual void ReturnedOnChannel() override;
   };
@@ -61,10 +62,10 @@ class ClientMlme : public Mlme {
 
   DeviceInterface* const device_;
   OnChannelHandlerImpl on_channel_handler_;
-  fbl::unique_ptr<ChannelScheduler> chan_sched_;
-  fbl::unique_ptr<Scanner> scanner_;
+  std::unique_ptr<ChannelScheduler> chan_sched_;
+  std::unique_ptr<Scanner> scanner_;
   // TODO(tkilbourn): track other STAs
-  fbl::unique_ptr<ClientInterface> sta_;
+  std::unique_ptr<ClientInterface> sta_;
   // The BSS the MLME synchronized with.
   // The MLME must synchronize to a BSS before it can start the association
   // flow.

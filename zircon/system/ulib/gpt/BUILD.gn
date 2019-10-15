@@ -9,7 +9,6 @@ zx_library("gpt") {
     "guid.cc",
   ]
   public_deps = [
-    # <gpt/gpt.h> has #include <fbl/unique_ptr.h>.
     "$zx/system/ulib/fbl:headers",
   ]
   deps = [

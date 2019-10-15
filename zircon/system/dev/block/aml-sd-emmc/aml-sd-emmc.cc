@@ -28,7 +28,6 @@
 #include <ddk/protocol/sdmmc.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <hw/sdmmc.h>
 #include <soc/aml-common/aml-sd-emmc.h>

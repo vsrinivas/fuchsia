@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CHANNEL_SCHEDULER_H_
 
+#include <memory>
+
 #include <ddk/protocol/wlan/info.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/packet.h>
@@ -22,7 +24,7 @@ struct OffChannelRequest {
 
 struct OffChannelHandler {
   virtual void BeginOffChannelTime() = 0;
-  virtual void HandleOffChannelFrame(fbl::unique_ptr<Packet>) = 0;
+  virtual void HandleOffChannelFrame(std::unique_ptr<Packet>) = 0;
 
   // Invoked to end current off channel time and switch to another channel.
   // (a) If switching to an off-channel, fill |next_req| and return `true` to
@@ -35,7 +37,7 @@ struct OffChannelHandler {
 };
 
 struct OnChannelHandler {
-  virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) = 0;
+  virtual void HandleOnChannelFrame(std::unique_ptr<Packet>) = 0;
   virtual void PreSwitchOffChannel() = 0;
   virtual void ReturnedOnChannel() = 0;
 };
@@ -43,9 +45,9 @@ struct OnChannelHandler {
 class ChannelScheduler {
  public:
   ChannelScheduler(OnChannelHandler* handler, DeviceInterface* device,
-                   fbl::unique_ptr<Timer> timer);
+                   std::unique_ptr<Timer> timer);
 
-  void HandleIncomingFrame(fbl::unique_ptr<Packet>);
+  void HandleIncomingFrame(std::unique_ptr<Packet>);
 
   // Set the 'on' channel. If we are currently on the main channel,
   // switch to the new main channel.
@@ -72,7 +74,7 @@ class ChannelScheduler {
 
   OnChannelHandler* on_channel_handler_;
   DeviceInterface* device_;
-  fbl::unique_ptr<Timer> timer_;
+  std::unique_ptr<Timer> timer_;
 
   wlan_channel_t channel_ = {.primary = 1, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
   bool on_channel_ = true;

@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MESH_HWMP_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MESH_HWMP_H_
 
+#include <memory>
+
 #include <wlan/common/buffer_reader.h>
 #include <wlan/mlme/mac_header_writer.h>
 #include <wlan/mlme/mesh/path_table.h>
@@ -30,7 +32,7 @@ struct HwmpState {
   std::unordered_map<uint64_t, TargetState> state_by_target;
   RateLimiter perr_rate_limiter;
 
-  explicit HwmpState(fbl::unique_ptr<Timer> timer);
+  explicit HwmpState(std::unique_ptr<Timer> timer);
 };
 
 PacketQueue HandleHwmpAction(fbl::Span<const uint8_t> elements,

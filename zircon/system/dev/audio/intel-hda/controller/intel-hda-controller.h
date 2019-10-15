@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <atomic>
+#include <memory>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -24,7 +25,6 @@
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
-#include <fbl/unique_ptr.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -58,7 +58,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   const fbl::RefPtr<dispatcher::ExecutionDomain>& default_domain() const { return default_domain_; }
 
   // CORB/RIRB
-  zx_status_t QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
+  zx_status_t QueueCodecCmd(std::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
 
   // DMA Streams
   fbl::RefPtr<IntelHDAStream> AllocateStream(IntelHDAStream::Type type) TA_EXCL(stream_pool_lock_);
@@ -198,8 +198,8 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   unsigned int rirb_snapshot_cnt_ TA_GUARDED(rirb_lock_) = 0;
   CodecResponse rirb_snapshot_[HDA_RIRB_MAX_ENTRIES] TA_GUARDED(rirb_lock_);
 
-  fbl::DoublyLinkedList<fbl::unique_ptr<CodecCmdJob>> in_flight_corb_jobs_ TA_GUARDED(corb_lock_);
-  fbl::DoublyLinkedList<fbl::unique_ptr<CodecCmdJob>> pending_corb_jobs_ TA_GUARDED(corb_lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<CodecCmdJob>> in_flight_corb_jobs_ TA_GUARDED(corb_lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<CodecCmdJob>> pending_corb_jobs_ TA_GUARDED(corb_lock_);
 
   fbl::Mutex codec_lock_;
   fbl::RefPtr<CodecConnection> codecs_[HDA_MAX_CODECS];

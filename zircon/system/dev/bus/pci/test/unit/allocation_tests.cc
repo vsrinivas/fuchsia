@@ -5,7 +5,6 @@
 #include <zircon/limits.h>
 
 #include <ddktl/protocol/pciroot.h>
-#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 #include "../../allocation.h"

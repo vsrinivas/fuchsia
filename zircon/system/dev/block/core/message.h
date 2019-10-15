@@ -7,6 +7,8 @@
 
 #include <zircon/device/block.h>
 
+#include <memory>
+
 #include <ddk/protocol/block.h>
 #include <fbl/intrusive_double_list.h>
 
@@ -30,7 +32,7 @@ class Message final : public fbl::DoublyLinkedListable<Message*> {
 
   // Allocate a new, uninitialized Message whose block_op begins in a memory region that
   // is block_op_size bytes long.
-  static zx_status_t Create(size_t block_op_size, fbl::unique_ptr<Message>* out);
+  static zx_status_t Create(size_t block_op_size, std::unique_ptr<Message>* out);
 
   // Initialize the contents of this from the supplied args. block_op op_ is cleared.
   void Init(fbl::RefPtr<IoBuffer> iobuf, Server* server, block_fifo_request_t* req);

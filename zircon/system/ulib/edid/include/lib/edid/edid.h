@@ -9,7 +9,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <hwreg/bitfields.h>
 
 #include "lib/edid/timings.h"
@@ -374,7 +375,7 @@ class Edid {
 
   // Contains the edid bytes if they are owned by this object. |bytes_| should generally
   // be used, since this will be null if something else owns the edid bytes.
-  fbl::unique_ptr<uint8_t[]> edid_bytes_;
+  std::unique_ptr<uint8_t[]> edid_bytes_;
 
   char manufacturer_id_[sizeof(Descriptor::Monitor::data) + 1];
   char monitor_name_[sizeof(Descriptor::Monitor::data) + 1];

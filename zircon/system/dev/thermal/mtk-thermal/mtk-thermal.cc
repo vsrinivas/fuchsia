@@ -9,13 +9,14 @@
 #include <zircon/threads.h>
 
 #include <cmath>
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/clock.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 namespace {
@@ -135,7 +136,7 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
+  std::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
       parent, std::move(*mmio), std::move(*pll_mmio), std::move(*pmic_mmio),
       std::move(*infracfg_mmio), composite, pdev, thermal_info, std::move(port), std::move(irq),
       TempCalibration0::Get().ReadFrom(&(*fuse_mmio)),

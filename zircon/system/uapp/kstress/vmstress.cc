@@ -29,6 +29,7 @@
 
 #include <array>
 #include <atomic>
+#include <memory>
 #include <shared_mutex>
 
 #include <fbl/algorithm.h>
@@ -38,7 +39,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 #include "stress_test.h"
 
@@ -834,7 +834,7 @@ int CowCloneTestInstance::op_thread() {
 // Test thread which initializes/tears down TestInstances
 int VmStressTest::test_thread() {
   constexpr uint64_t kMaxInstances = 8;
-  fbl::unique_ptr<TestInstance> test_instances[kMaxInstances] = {};
+  std::unique_ptr<TestInstance> test_instances[kMaxInstances] = {};
 
   const uint64_t free_bytes = kmem_stats_.free_bytes;
   // scale the size of the VMO we create based on the size of memory in the system.

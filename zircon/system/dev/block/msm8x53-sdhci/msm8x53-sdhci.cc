@@ -6,11 +6,12 @@
 
 #include <lib/device-protocol/pdev.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "msm8x53-sdhci-reg.h"
 
@@ -50,7 +51,7 @@ zx_status_t Msm8x53Sdhci::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Msm8x53Sdhci> device(
+  std::unique_ptr<Msm8x53Sdhci> device(
       new (&ac) Msm8x53Sdhci(parent, *std::move(core_mmio), *std::move(hc_mmio), std::move(irq)));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Msm8x53Sdhci alloc failed\n", __FILE__);

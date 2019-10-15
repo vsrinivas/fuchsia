@@ -7,6 +7,7 @@
 #include <lib/zx/vmar.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/protocol/nand.h>
@@ -14,7 +15,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
@@ -44,7 +44,7 @@ using NandPage = uint32_t;
 // incremented based on object creation order.
 //
 // Not threadsafe.
-class TableNode : public fbl::SinglyLinkedListable<fbl::unique_ptr<TableNode>> {
+class TableNode : public fbl::SinglyLinkedListable<std::unique_ptr<TableNode>> {
  public:
   uint32_t id_;
   bool valid_;
@@ -72,7 +72,7 @@ class TableNode : public fbl::SinglyLinkedListable<fbl::unique_ptr<TableNode>> {
 
 uint16_t TableNode::count_ = 0;
 
-using TableEntries = fbl::HashTable<NandPage, fbl::unique_ptr<TableNode>>;
+using TableEntries = fbl::HashTable<NandPage, std::unique_ptr<TableNode>>;
 
 struct Context {
   TableEntries& table_entries;

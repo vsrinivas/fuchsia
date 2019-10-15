@@ -5,6 +5,8 @@
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
+#include <memory>
+
 #include <storage/buffer/ring-buffer.h>
 #include <storage/operation/unbuffered-operations-builder.h>
 #include <zxtest/zxtest.h>
@@ -162,7 +164,7 @@ void CheckOperationInRingBuffer(const zx::vmo& vmo, RingBufferReservation* reser
   }
 }
 
-void ReserveAndCopyRequests(const fbl::unique_ptr<RingBuffer>& buffer,
+void ReserveAndCopyRequests(const std::unique_ptr<RingBuffer>& buffer,
                             fbl::Vector<storage::UnbufferedOperation> requests,
                             RingBufferRequests* out) {
   RingBufferReservation reservation;

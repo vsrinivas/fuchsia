@@ -8,6 +8,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 
+#include <memory>
+
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/trace/tests/integration_test_utils.h"
@@ -18,7 +20,7 @@
 const char kProviderName[] = "provider-destruction";
 
 static bool WriteEvents(async::Loop& loop) {
-  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
   if (!tracing::test::CreateProviderSynchronously(loop, kProviderName, &provider,
                                                   &already_started)) {

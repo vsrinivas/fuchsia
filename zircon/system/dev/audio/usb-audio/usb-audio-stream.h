@@ -10,6 +10,8 @@
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
 
+#include <memory>
+
 #include <audio-proto/audio-proto.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
@@ -47,7 +49,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
                        public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>> {
  public:
   static fbl::RefPtr<UsbAudioStream> Create(UsbAudioDevice* parent,
-                                            fbl::unique_ptr<UsbAudioStreamInterface> ifc);
+                                            std::unique_ptr<UsbAudioStreamInterface> ifc);
   zx_status_t Bind();
 
   const char* log_prefix() const { return log_prefix_; }
@@ -70,7 +72,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
     STARTED,
   };
 
-  UsbAudioStream(UsbAudioDevice* parent, fbl::unique_ptr<UsbAudioStreamInterface> ifc,
+  UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioStreamInterface> ifc,
                  fbl::RefPtr<dispatcher::ExecutionDomain> default_domain);
   virtual ~UsbAudioStream();
 
@@ -127,7 +129,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
 
   UsbAudioDevice& parent_;
-  const fbl::unique_ptr<UsbAudioStreamInterface> ifc_;
+  const std::unique_ptr<UsbAudioStreamInterface> ifc_;
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};
   audio_stream_unique_id_t persistent_unique_id_;
 

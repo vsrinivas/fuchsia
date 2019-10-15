@@ -5,6 +5,8 @@
 
 #include <lib/zx/clock.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"
@@ -15,9 +17,9 @@ class VirtualAudioStreamIn;
 class VirtualAudioStreamOut;
 
 // static
-fbl::unique_ptr<VirtualAudioDeviceImpl> VirtualAudioDeviceImpl::Create(
+std::unique_ptr<VirtualAudioDeviceImpl> VirtualAudioDeviceImpl::Create(
     VirtualAudioControlImpl* owner, bool is_input) {
-  return fbl::unique_ptr<VirtualAudioDeviceImpl>(new VirtualAudioDeviceImpl(owner, is_input));
+  return std::unique_ptr<VirtualAudioDeviceImpl>(new VirtualAudioDeviceImpl(owner, is_input));
 }
 
 // Don't initialize here or in ctor; do it all in Init() so ResetConfiguration has same effect.
@@ -65,7 +67,7 @@ void VirtualAudioDeviceImpl::Init() {
 // ControlImpl has already associated us with the binding: when it closes we will auto-destruct.
 void VirtualAudioDeviceImpl::SetBinding(
     fidl::Binding<fuchsia::virtualaudio::Input,
-                  fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
+                  std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
   ZX_ASSERT(is_input_);
   ZX_DEBUG_ASSERT(output_binding_ == nullptr);
 
@@ -77,7 +79,7 @@ void VirtualAudioDeviceImpl::SetBinding(
 // ControlImpl has already associated us with the binding: when it closes we will auto-destruct.
 void VirtualAudioDeviceImpl::SetBinding(
     fidl::Binding<fuchsia::virtualaudio::Output,
-                  fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
+                  std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
   ZX_ASSERT(!is_input_);
   ZX_DEBUG_ASSERT(input_binding_ == nullptr);
 

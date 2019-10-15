@@ -15,6 +15,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <new>
 #include <utility>
 
@@ -23,7 +24,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
 #include <hw/inout.h>
 #include <pci/pio.h>
 
@@ -53,7 +53,7 @@ ACPI_MODULE_NAME("oszircon")
 
 /* Structures used for implementing AcpiOsExecute and
  * AcpiOsWaitEventsComplete */
-struct AcpiOsTaskCtx : public fbl::DoublyLinkedListable<fbl::unique_ptr<AcpiOsTaskCtx>> {
+struct AcpiOsTaskCtx : public fbl::DoublyLinkedListable<std::unique_ptr<AcpiOsTaskCtx>> {
   ACPI_OSD_EXEC_CALLBACK func;
   void* ctx;
 };
@@ -73,12 +73,12 @@ static struct {
   bool shutdown = false;
   bool idle = true;
 
-  fbl::DoublyLinkedList<fbl::unique_ptr<AcpiOsTaskCtx>> tasks;
+  fbl::DoublyLinkedList<std::unique_ptr<AcpiOsTaskCtx>> tasks;
 } os_execute_state;
 
-class AcpiOsMappingNode : public fbl::SinglyLinkedListable<fbl::unique_ptr<AcpiOsMappingNode>> {
+class AcpiOsMappingNode : public fbl::SinglyLinkedListable<std::unique_ptr<AcpiOsMappingNode>> {
  public:
-  using HashTable = fbl::HashTable<uintptr_t, fbl::unique_ptr<AcpiOsMappingNode>>;
+  using HashTable = fbl::HashTable<uintptr_t, std::unique_ptr<AcpiOsMappingNode>>;
 
   // @param vaddr Virtual address returned to ACPI, used as key to the hashtable.
   // @param vaddr_actual Actual virtual address of the mapping. May be different than
@@ -421,7 +421,7 @@ void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
   }
 
   void* out_addr = (void*)(vaddr + (PhysicalAddress - aligned_address));
-  fbl::unique_ptr<AcpiOsMappingNode> mn(
+  std::unique_ptr<AcpiOsMappingNode> mn(
       new AcpiOsMappingNode(reinterpret_cast<uintptr_t>(out_addr), vaddr, length, vmo));
   os_mapping_tbl.insert(std::move(mn));
 
@@ -438,7 +438,7 @@ void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
  */
 void AcpiOsUnmapMemory(void* LogicalAddress, ACPI_SIZE Length) {
   fbl::AutoLock lock(&os_mapping_lock);
-  fbl::unique_ptr<AcpiOsMappingNode> mn = os_mapping_tbl.erase((uintptr_t)LogicalAddress);
+  std::unique_ptr<AcpiOsMappingNode> mn = os_mapping_tbl.erase((uintptr_t)LogicalAddress);
   if (mn == NULL) {
     printf("AcpiOsUnmapMemory nonexisting mapping %p\n", LogicalAddress);
   }
@@ -473,7 +473,7 @@ ACPI_THREAD_ID AcpiOsGetThreadId() { return (uintptr_t)thrd_current(); }
 
 static int AcpiOsExecuteTask(void* arg) {
   while (1) {
-    fbl::unique_ptr<AcpiOsTaskCtx> task;
+    std::unique_ptr<AcpiOsTaskCtx> task;
 
     mtx_lock(&os_execute_state.lock);
     while ((task = os_execute_state.tasks.pop_front()) == nullptr) {
@@ -536,7 +536,7 @@ ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Functio
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AcpiOsTaskCtx> task(new (&ac) AcpiOsTaskCtx);
+  std::unique_ptr<AcpiOsTaskCtx> task(new (&ac) AcpiOsTaskCtx);
   if (!ac.check()) {
     return AE_NO_MEMORY;
   }
@@ -848,7 +848,7 @@ static int acpi_irq_thread(void* arg) {
   return 0;
 }
 
-static fbl::unique_ptr<AcpiIrqThread> sci_irq;
+static std::unique_ptr<AcpiIrqThread> sci_irq;
 
 /**
  * @brief Install a handler for a hardware interrupt.
@@ -883,7 +883,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptLevel, ACPI_OSD_HANDLE
   assert(InterruptLevel == 0x9);  // SCI
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AcpiIrqThread> arg(new (&ac) AcpiIrqThread());
+  std::unique_ptr<AcpiIrqThread> arg(new (&ac) AcpiIrqThread());
   if (!ac.check()) {
     return AE_NO_MEMORY;
   }

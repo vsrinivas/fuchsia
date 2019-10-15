@@ -7,6 +7,8 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
@@ -68,7 +70,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   if (codecs_types_ == metadata::Codec::Tas5720x3) {
     zxlogf(INFO, "audio: using 3 Tas5720 codecs\n");
     fbl::AllocChecker ac;
-    codecs_ = fbl::Array(new (&ac) fbl::unique_ptr<Tas5720>[3], 3);
+    codecs_ = fbl::Array(new (&ac) std::unique_ptr<Tas5720>[3], 3);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }

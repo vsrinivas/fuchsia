@@ -58,219 +58,186 @@ static_assert(
 
 // clang-format off
 DEFINE_TEST_OBJECTS(DLL);
-using UMTE    = DEFINE_TEST_THUNK(Sequence, DLL, Unmanaged);
-using UPTE    = DEFINE_TEST_THUNK(Sequence, DLL, UniquePtr);
-using SUPDDTE = DEFINE_TEST_THUNK(Sequence, DLL, StdUniquePtrDefaultDeleter);
-using SUPCDTE = DEFINE_TEST_THUNK(Sequence, DLL, StdUniquePtrCustomDeleter);
-using RPTE    = DEFINE_TEST_THUNK(Sequence, DLL, RefPtr);
+using UMTE   = DEFINE_TEST_THUNK(Sequence, DLL, Unmanaged);
+using UPDDTE = DEFINE_TEST_THUNK(Sequence, DLL, UniquePtrDefaultDeleter);
+using UPCDTE = DEFINE_TEST_THUNK(Sequence, DLL, UniquePtrCustomDeleter);
+using RPTE   = DEFINE_TEST_THUNK(Sequence, DLL, RefPtr);
 
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    Clear)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    Clear)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, Clear)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, Clear)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  Clear)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  Clear)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    Clear)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    ClearUnsafe)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, ClearUnsafe)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, ClearUnsafe)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ClearUnsafe)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ClearUnsafe)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ClearUnsafe)
 #endif
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    IsEmpty)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    IsEmpty)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, IsEmpty)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, IsEmpty)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  IsEmpty)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  IsEmpty)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    IsEmpty)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    Iterate)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    Iterate)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, Iterate)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, Iterate)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  Iterate)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  Iterate)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    Iterate)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    IterErase)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    IterErase)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, IterErase)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, IterErase)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  IterErase)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  IterErase)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    IterErase)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    DirectErase)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    DirectErase)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, DirectErase)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, DirectErase)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  DirectErase)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  DirectErase)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    DirectErase)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    MakeIterator)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    MakeIterator)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, MakeIterator)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, MakeIterator)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  MakeIterator)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  MakeIterator)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    MakeIterator)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ReverseIterErase)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    ReverseIterErase)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, ReverseIterErase)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, ReverseIterErase)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ReverseIterErase)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ReverseIterErase)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ReverseIterErase)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ReverseIterate)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    ReverseIterate)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, ReverseIterate)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, ReverseIterate)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ReverseIterate)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ReverseIterate)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ReverseIterate)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    Swap)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    Swap)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, Swap)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, Swap)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  Swap)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  Swap)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    Swap)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    RvalueOps)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    RvalueOps)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, RvalueOps)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, RvalueOps)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  RvalueOps)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  RvalueOps)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    RvalueOps)
 
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    Scope)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, Scope)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, Scope)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  Scope)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  Scope)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    Scope)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    TwoContainer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    TwoContainer)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, TwoContainer)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, TwoContainer)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  TwoContainer)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  TwoContainer)
 #endif
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    TwoContainer)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ThreeContainerHelper)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    ThreeContainerHelper)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, ThreeContainerHelper)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, ThreeContainerHelper)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ThreeContainerHelper)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ThreeContainerHelper)
 #endif
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ThreeContainerHelper)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    IterCopyPointer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    IterCopyPointer)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, IterCopyPointer)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, IterCopyPointer)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  IterCopyPointer)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  IterCopyPointer)
 #endif
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    IterCopyPointer)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    EraseIf)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    EraseIf)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, EraseIf)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, EraseIf)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  EraseIf)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  EraseIf)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    EraseIf)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    FindIf)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    FindIf)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, FindIf)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, FindIf)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  FindIf)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  FindIf)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    FindIf)
 
 //////////////////////////////////////////
 // Sequence container specific tests.
 //////////////////////////////////////////
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    PushFront)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    PushFront)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, PushFront)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, PushFront)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  PushFront)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  PushFront)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    PushFront)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    PopFront)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    PopFront)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, PopFront)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, PopFront)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  PopFront)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  PopFront)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    PopFront)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    PushBack)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    PushBack)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, PushBack)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, PushBack)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  PushBack)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  PushBack)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    PushBack)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    PopBack)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    PopBack)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, PopBack)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, PopBack)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  PopBack)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  PopBack)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    PopBack)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    SeqIterate)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    SeqIterate)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, SeqIterate)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, SeqIterate)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  SeqIterate)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  SeqIterate)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    SeqIterate)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    SeqReverseIterate)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    SeqReverseIterate)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, SeqReverseIterate)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, SeqReverseIterate)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  SeqReverseIterate)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  SeqReverseIterate)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    SeqReverseIterate)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    EraseNext)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    EraseNext)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, EraseNext)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, EraseNext)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  EraseNext)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  EraseNext)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    EraseNext)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    InsertAfter)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    InsertAfter)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, InsertAfter)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, InsertAfter)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  InsertAfter)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  InsertAfter)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    InsertAfter)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    Insert)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    Insert)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, Insert)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, Insert)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  Insert)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  Insert)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    Insert)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    DirectInsert)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    DirectInsert)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, DirectInsert)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, DirectInsert)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  DirectInsert)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  DirectInsert)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    DirectInsert)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    Splice)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    Splice)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, Splice)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, Splice)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  Splice)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  Splice)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    Splice)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ReplaceIfCopy)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    ReplaceIfCopy)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, ReplaceIfCopy)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, ReplaceIfCopy)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ReplaceIfCopy)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ReplaceIfCopy)
 #endif
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ReplaceIfCopy)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ReplaceIfMove)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    ReplaceIfMove)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, ReplaceIfMove)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, ReplaceIfMove)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ReplaceIfMove)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ReplaceIfMove)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ReplaceIfMove)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ReplaceCopy)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    ReplaceCopy)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, ReplaceCopy)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, ReplaceCopy)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ReplaceCopy)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ReplaceCopy)
 #endif
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ReplaceCopy)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ReplaceMove)
-RUN_ZXTEST(DoublyLinkedListTest, UPTE,    ReplaceMove)
-RUN_ZXTEST(DoublyLinkedListTest, SUPDDTE, ReplaceMove)
-RUN_ZXTEST(DoublyLinkedListTest, SUPCDTE, ReplaceMove)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ReplaceMove)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ReplaceMove)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ReplaceMove)
 // clang-format on
 

@@ -10,7 +10,6 @@
 #include <array>
 
 #include <fbl/string_printf.h>
-#include <fbl/unique_ptr.h>
 
 namespace fbl {
 

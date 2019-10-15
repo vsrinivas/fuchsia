@@ -22,7 +22,6 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
 #include <ddk/protocol/test.h>
-#include <fbl/unique_ptr.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 #include "src/connectivity/bluetooth/hci/emulator/peer.h"

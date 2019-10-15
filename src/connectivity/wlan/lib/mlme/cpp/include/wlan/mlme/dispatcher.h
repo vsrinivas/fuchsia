@@ -9,7 +9,8 @@
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <zircon/types.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <wlan/common/stats.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
@@ -23,10 +24,10 @@ namespace wlan {
 
 class Dispatcher {
  public:
-  explicit Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme);
+  explicit Dispatcher(DeviceInterface* device, std::unique_ptr<Mlme> mlme);
   ~Dispatcher();
 
-  zx_status_t HandlePacket(fbl::unique_ptr<Packet>);
+  zx_status_t HandlePacket(std::unique_ptr<Packet>);
   zx_status_t HandlePortPacket(uint64_t key);
   zx_status_t HandleAnyMlmeMessage(fbl::Span<uint8_t> span);
 
@@ -51,7 +52,7 @@ class Dispatcher {
   // The MLME that will handle requests for this dispatcher. This field will be
   // set upon querying the underlying DeviceInterface, based on the role of the
   // device (e.g., Client or AP).
-  fbl::unique_ptr<Mlme> mlme_ = nullptr;
+  std::unique_ptr<Mlme> mlme_ = nullptr;
   common::WlanStats<common::DispatcherStats, ::fuchsia::wlan::stats::DispatcherStats> stats_;
 };
 

@@ -7,11 +7,12 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <digest/digest.h>
 #include <digest/hash-list.h>
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 namespace digest {
 namespace internal {
@@ -80,7 +81,7 @@ template zx_status_t internal::MerkleTree<uint8_t, void *, MerkleTreeCreator,
 
 // static
 zx_status_t MerkleTreeCreator::Create(const void *data, size_t data_len,
-                                      fbl::unique_ptr<uint8_t[]> *out_tree, size_t *out_tree_len,
+                                      std::unique_ptr<uint8_t[]> *out_tree, size_t *out_tree_len,
                                       Digest *out_root) {
   if (out_tree == nullptr || out_tree_len == nullptr || out_root == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -92,7 +93,7 @@ zx_status_t MerkleTreeCreator::Create(const void *data, size_t data_len,
     return rc;
   }
   size_t tree_len = creator.GetTreeLength();
-  fbl::unique_ptr<uint8_t[]> tree(nullptr);
+  std::unique_ptr<uint8_t[]> tree(nullptr);
   if (tree_len > 0) {
     fbl::AllocChecker ac;
     tree.reset(new (&ac) uint8_t[tree_len]);

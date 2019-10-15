@@ -96,69 +96,59 @@ class HTDLLTraits {
 
 // clang-format off
 DEFINE_TEST_OBJECTS(HTDLL);
-using UMTE    = DEFINE_TEST_THUNK(Associative, HTDLL, Unmanaged);
-using UPTE    = DEFINE_TEST_THUNK(Associative, HTDLL, UniquePtr);
-using SUPDDTE = DEFINE_TEST_THUNK(Associative, HTDLL, StdUniquePtrDefaultDeleter);
-using SUPCDTE = DEFINE_TEST_THUNK(Associative, HTDLL, StdUniquePtrCustomDeleter);
-using RPTE    = DEFINE_TEST_THUNK(Associative, HTDLL, RefPtr);
+using UMTE   = DEFINE_TEST_THUNK(Associative, HTDLL, Unmanaged);
+using UPDDTE = DEFINE_TEST_THUNK(Associative, HTDLL, UniquePtrDefaultDeleter);
+using UPCDTE = DEFINE_TEST_THUNK(Associative, HTDLL, UniquePtrCustomDeleter);
+using RPTE   = DEFINE_TEST_THUNK(Associative, HTDLL, RefPtr);
 
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     Clear)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     Clear)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  Clear)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  Clear)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   Clear)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   Clear)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     Clear)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     ClearUnsafe)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  ClearUnsafe)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  ClearUnsafe)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   ClearUnsafe)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   ClearUnsafe)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     ClearUnsafe)
 #endif
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     IsEmpty)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     IsEmpty)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  IsEmpty)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  IsEmpty)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   IsEmpty)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   IsEmpty)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     IsEmpty)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     Iterate)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     Iterate)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  Iterate)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  Iterate)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   Iterate)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   Iterate)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     Iterate)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     IterErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     IterErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  IterErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  IterErase)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   IterErase)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   IterErase)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     IterErase)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     DirectErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     DirectErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  DirectErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  DirectErase)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   DirectErase)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   DirectErase)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     DirectErase)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     MakeIterator)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     MakeIterator)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  MakeIterator)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  MakeIterator)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   MakeIterator)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   MakeIterator)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     MakeIterator)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     ReverseIterErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     ReverseIterErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  ReverseIterErase)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  ReverseIterErase)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   ReverseIterErase)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   ReverseIterErase)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     ReverseIterErase)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     ReverseIterate)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     ReverseIterate)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  ReverseIterate)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  ReverseIterate)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   ReverseIterate)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   ReverseIterate)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     ReverseIterate)
 
 // Hash tables do not support swapping or Rvalue operations (Assignment or
@@ -166,90 +156,77 @@ RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     ReverseIterate)
 // number of buckets in the hashtable)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     Swap)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     Swap)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  Swap)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  Swap)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   Swap)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   Swap)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     Swap)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     RvalueOps)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     RvalueOps)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  RvalueOps)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  RvalueOps)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   RvalueOps)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   RvalueOps)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     RvalueOps)
 #endif
 
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     Scope)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  Scope)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  Scope)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   Scope)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   Scope)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     Scope)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     TwoContainer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     TwoContainer)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  TwoContainer)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  TwoContainer)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   TwoContainer)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   TwoContainer)
 #endif
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     TwoContainer)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     ThreeContainerHelper)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     ThreeContainerHelper)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  ThreeContainerHelper)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  ThreeContainerHelper)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   ThreeContainerHelper)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   ThreeContainerHelper)
 #endif
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     ThreeContainerHelper)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     IterCopyPointer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     IterCopyPointer)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  IterCopyPointer)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  IterCopyPointer)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   IterCopyPointer)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   IterCopyPointer)
 #endif
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     IterCopyPointer)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     EraseIf)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     EraseIf)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  EraseIf)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  EraseIf)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   EraseIf)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   EraseIf)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     EraseIf)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     FindIf)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     FindIf)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  FindIf)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  FindIf)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   FindIf)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   FindIf)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     FindIf)
 
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     InsertByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     InsertByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  InsertByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  InsertByKey)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   InsertByKey)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   InsertByKey)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     InsertByKey)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     FindByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     FindByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  FindByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  FindByKey)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   FindByKey)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   FindByKey)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     FindByKey)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     EraseByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     EraseByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  EraseByKey)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  EraseByKey)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   EraseByKey)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   EraseByKey)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     EraseByKey)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     InsertOrFind)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     InsertOrFind)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  InsertOrFind)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  InsertOrFind)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   InsertOrFind)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   InsertOrFind)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     InsertOrFind)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     InsertOrReplace)
-RUN_ZXTEST(DoublyLinkedHashTableTest, UPTE,     InsertOrReplace)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPDDTE,  InsertOrReplace)
-RUN_ZXTEST(DoublyLinkedHashTableTest, SUPCDTE,  InsertOrReplace)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   InsertOrReplace)
+RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   InsertOrReplace)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     InsertOrReplace)
 // clang-format on
 

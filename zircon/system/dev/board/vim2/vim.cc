@@ -26,7 +26,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/scpi.h>
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-hw.h>
 

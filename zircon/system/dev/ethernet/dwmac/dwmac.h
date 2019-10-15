@@ -24,7 +24,6 @@
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/ethernet/mac.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "pinned-buffer.h"
 

@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <wlan/mlme/client/channel_scheduler.h>
 
 namespace wlan {
 
 ChannelScheduler::ChannelScheduler(OnChannelHandler* handler, DeviceInterface* device,
-                                   fbl::unique_ptr<Timer> timer)
+                                   std::unique_ptr<Timer> timer)
     : on_channel_handler_(handler), device_(device), timer_(std::move(timer)) {}
 
-void ChannelScheduler::HandleIncomingFrame(fbl::unique_ptr<Packet> packet) {
+void ChannelScheduler::HandleIncomingFrame(std::unique_ptr<Packet> packet) {
   if (on_channel_) {
     on_channel_handler_->HandleOnChannelFrame(std::move(packet));
   } else {

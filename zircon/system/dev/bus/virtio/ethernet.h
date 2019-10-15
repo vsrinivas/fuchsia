@@ -12,10 +12,11 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <virtio/net.h>
 
 #include "device.h"
@@ -25,7 +26,7 @@ namespace virtio {
 
 class EthernetDevice : public Device {
  public:
-  explicit EthernetDevice(zx_device_t* device, zx::bti, fbl::unique_ptr<Backend> backend);
+  explicit EthernetDevice(zx_device_t* device, zx::bti, std::unique_ptr<Backend> backend);
   virtual ~EthernetDevice();
 
   zx_status_t Init() override TA_EXCL(state_lock_);
@@ -60,7 +61,7 @@ class EthernetDevice : public Device {
   // each direction.
   Ring rx_;
   Ring tx_;
-  fbl::unique_ptr<io_buffer_t[]> bufs_;
+  std::unique_ptr<io_buffer_t[]> bufs_;
   size_t unkicked_ TA_GUARDED(tx_lock_);
 
   // Saved net device configuration out of the pci config BAR

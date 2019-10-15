@@ -6,7 +6,8 @@
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
@@ -242,7 +243,7 @@ MlmeMsg<wlan_mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
   return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_SetKeysReq_Ordinal};
 }
 
-fbl::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
+std::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
   constexpr size_t ie_len = 256;
   constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Beacon::max_len() + ie_len;
   auto packet = GetWlanPacket(max_frame_len);
@@ -278,7 +279,7 @@ fbl::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateProbeRequest() {
+std::unique_ptr<Packet> CreateProbeRequest() {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 
@@ -312,7 +313,7 @@ fbl::unique_ptr<Packet> CreateProbeRequest() {
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr) {
+std::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr) {
   common::MacAddr bssid(kBssid1);
   constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Authentication::max_len();
   auto packet = GetWlanPacket(max_frame_len);
@@ -339,7 +340,7 @@ fbl::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr) {
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
+std::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 
@@ -368,7 +369,7 @@ fbl::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
+std::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
   common::MacAddr bssid(kBssid1);
 
   constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Deauthentication::max_len();
@@ -393,7 +394,7 @@ fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
+std::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
                                             fbl::Span<const uint8_t> ssid, bool rsn) {
   common::MacAddr bssid(kBssid1);
 
@@ -435,7 +436,7 @@ fbl::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
+std::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 
@@ -484,7 +485,7 @@ fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
+std::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
   common::MacAddr bssid(kBssid1);
 
   constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Disassociation::max_len();
@@ -509,7 +510,7 @@ fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
+std::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 
@@ -543,7 +544,7 @@ fbl::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
   return packet;
 }
 
-fbl::unique_ptr<Packet> CreateAmsduDataFramePacket(
+std::unique_ptr<Packet> CreateAmsduDataFramePacket(
     const std::vector<fbl::Span<const uint8_t>>& payloads) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
@@ -620,7 +621,7 @@ DataFrame<> CreateNullDataFrame() {
   return DataFrame<>(std::move(packet));
 }
 
-fbl::unique_ptr<Packet> CreateEthFrame(fbl::Span<const uint8_t> payload) {
+std::unique_ptr<Packet> CreateEthFrame(fbl::Span<const uint8_t> payload) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 

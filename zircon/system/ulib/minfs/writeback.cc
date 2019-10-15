@@ -4,6 +4,8 @@
 
 #include <inttypes.h>
 
+#include <memory>
+
 #ifdef __Fuchsia__
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -20,7 +22,6 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <minfs/writeback.h>
 
@@ -30,8 +31,8 @@ namespace minfs {
 
 zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
                                 size_t reserve_blocks, InodeManager* inode_manager,
-                                Allocator* block_allocator, fbl::unique_ptr<Transaction>* out) {
-  fbl::unique_ptr<Transaction> transaction(new Transaction(minfs));
+                                Allocator* block_allocator, std::unique_ptr<Transaction>* out) {
+  std::unique_ptr<Transaction> transaction(new Transaction(minfs));
 
   if (reserve_inodes) {
     // The inode allocator is currently not accessed asynchronously.

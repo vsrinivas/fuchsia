@@ -5,6 +5,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/ap/infra_bss.h>
@@ -21,8 +23,8 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 #define BSS(b) static_cast<InfraBss*>(b)
-InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
-                   const common::MacAddr& bssid, fbl::unique_ptr<Timer> timer)
+InfraBss::InfraBss(DeviceInterface* device, std::unique_ptr<BeaconSender> bcn_sender,
+                   const common::MacAddr& bssid, std::unique_ptr<Timer> timer)
     : bssid_(bssid),
       device_(device),
       rust_ap_(nullptr, ap_sta_delete),
@@ -132,7 +134,7 @@ void InfraBss::Stop() {
 
 bool InfraBss::IsStarted() { return started_at_ != 0; }
 
-void InfraBss::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
+void InfraBss::HandleAnyFrame(std::unique_ptr<Packet> pkt) {
   switch (pkt->peer()) {
     case Packet::Peer::kEthernet: {
       if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
@@ -149,7 +151,7 @@ void InfraBss::HandleAnyFrame(fbl::unique_ptr<Packet> pkt) {
   }
 }
 
-void InfraBss::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
+void InfraBss::HandleAnyWlanFrame(std::unique_ptr<Packet> pkt) {
   if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
     if (auto mgmt_frame = possible_mgmt_frame.CheckLength()) {
       HandleAnyMgmtFrame(mgmt_frame.IntoOwned(std::move(pkt)));
@@ -411,7 +413,7 @@ bool InfraBss::ShouldBufferFrame(const common::MacAddr& receiver_addr) const {
   return receiver_addr.IsGroupAddr() && ps_cfg_.GetTim()->HasDozingClients();
 }
 
-zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
+zx_status_t InfraBss::BufferFrame(std::unique_ptr<Packet> packet) {
   // Drop oldest frame if queue reached its limit.
   if (bu_queue_.size() >= kMaxGroupAddressedBu) {
     bu_queue_.pop();

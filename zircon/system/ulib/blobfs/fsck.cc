@@ -5,6 +5,8 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <zircon/status.h>
 
+#include <memory>
+
 #include <blobfs/fsck.h>
 #include <fs/journal/replay.h>
 #include <fs/trace.h>

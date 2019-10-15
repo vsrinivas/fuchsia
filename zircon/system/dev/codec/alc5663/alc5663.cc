@@ -13,6 +13,7 @@
 #include <zircon/status.h>
 
 #include <cmath>
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -387,7 +388,7 @@ void Alc5663Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Alc5663Device::DdkRelease() { delete this; }
 
-zx_status_t Alc5663Device::AddChildToParent(fbl::unique_ptr<Alc5663Device> device) {
+zx_status_t Alc5663Device::AddChildToParent(std::unique_ptr<Alc5663Device> device) {
   // Add the device.
   zx_status_t status = device->DdkAdd("alc5663");
   if (status != ZX_OK) {
@@ -411,7 +412,7 @@ zx_status_t Alc5663Device::Bind(zx_device_t* parent, Alc5663Device** created_dev
 
   // Create the codec device.
   fbl::AllocChecker ac;
-  auto device = fbl::unique_ptr<Alc5663Device>(new (&ac) Alc5663Device(parent, channel));
+  auto device = std::unique_ptr<Alc5663Device>(new (&ac) Alc5663Device(parent, channel));
   if (!ac.check()) {
     zxlogf(ERROR, "alc5663: out of memory attempting to allocate device\n");
     return ZX_ERR_NO_MEMORY;

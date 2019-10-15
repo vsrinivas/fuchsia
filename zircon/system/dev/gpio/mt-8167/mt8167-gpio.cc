@@ -13,7 +13,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <soc/mt8167/mt8167-hw.h>
 

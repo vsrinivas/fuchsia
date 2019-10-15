@@ -9,6 +9,8 @@
 #include <lib/sync/completion.h>
 #include <threads.h>
 
+#include <memory>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/bus.h>
@@ -16,7 +18,6 @@
 #include <ddktl/protocol/usb/hci.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <usb/request-cpp.h>
 
 #include "usb-virtual-device.h"
@@ -103,9 +104,9 @@ class UsbVirtualBus : public UsbVirtualBusType,
   zx_status_t SetStall(uint8_t ep_address, bool stall);
 
   // Reference to class that implements the virtual device controller protocol.
-  fbl::unique_ptr<UsbVirtualDevice> device_;
+  std::unique_ptr<UsbVirtualDevice> device_;
   // Reference to class that implements the virtual host controller protocol.
-  fbl::unique_ptr<UsbVirtualHost> host_;
+  std::unique_ptr<UsbVirtualHost> host_;
 
   // Callbacks to the USB peripheral driver.
   ddk::UsbDciInterfaceProtocolClient dci_intf_;

@@ -4,8 +4,9 @@
 
 #include <time.h>
 
+#include <memory>
+
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "util.h"
 
@@ -22,7 +23,7 @@ bool test_sparse(void) {
 
   // Create a random write buffer of data
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> wbuf(new (&ac) uint8_t[WriteSize]);
+  std::unique_ptr<uint8_t[]> wbuf(new (&ac) uint8_t[WriteSize]);
   ASSERT_EQ(ac.check(), true);
   unsigned int seed = static_cast<unsigned int>(time(NULL));
   unittest_printf("Sparse test using seed: %u\n", seed);
@@ -42,7 +43,7 @@ bool test_sparse(void) {
   constexpr size_t kBytesToRead =
       (kFileSize - ReadOffset) > WriteSize ? WriteSize : (kFileSize - ReadOffset);
   static_assert(kBytesToRead > 0, "We want to test writing AND reading");
-  fbl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[kBytesToRead]);
+  std::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[kBytesToRead]);
   ASSERT_EQ(ac.check(), true);
   ASSERT_EQ(emu_pread(fd, &rbuf[0], kBytesToRead, ReadOffset), kBytesToRead);
 

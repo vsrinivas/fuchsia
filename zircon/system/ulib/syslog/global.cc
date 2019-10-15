@@ -4,13 +4,13 @@
 
 #include <lib/syslog/global.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
 
 #include "fx_logger.h"
 
 namespace {
 
-fbl::unique_ptr<fx_logger> g_logger_ptr;
+std::unique_ptr<fx_logger> g_logger_ptr;
 
 }  // namespace
 

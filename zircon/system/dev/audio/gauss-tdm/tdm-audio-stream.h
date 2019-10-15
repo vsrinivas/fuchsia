@@ -12,6 +12,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
 
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -144,9 +145,9 @@ class TdmOutputStream : public TdmAudioStreamBase,
   pdev_protocol_t pdev_;
   i2c_protocol_t i2c_;
 
-  fbl::unique_ptr<Tas57xx> left_sub_;
-  fbl::unique_ptr<Tas57xx> right_sub_;
-  fbl::unique_ptr<Tas57xx> tweeters_;
+  std::unique_ptr<Tas57xx> left_sub_;
+  std::unique_ptr<Tas57xx> right_sub_;
+  std::unique_ptr<Tas57xx> tweeters_;
 
   float current_gain_ = -20.0;
 

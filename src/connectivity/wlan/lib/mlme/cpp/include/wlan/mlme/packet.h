@@ -11,13 +11,13 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <type_traits>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/span.h>
-#include <fbl/unique_ptr.h>
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/wlan.h>
@@ -163,7 +163,7 @@ template <size_t NumBuffers, size_t BufferSize>
 class SlabBuffer;
 template <size_t NumBuffers, size_t BufferSize>
 using SlabBufferTraits =
-    fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
+    fbl::StaticSlabAllocatorTraits<std::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
                                    sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers +
                                        kSlabOverhead,
                                    ::fbl::Mutex, kBufferDebugEnabled>;
@@ -184,11 +184,11 @@ using LargeBufferAllocator = fbl::SlabAllocator<LargeBufferTraits>;
 using SmallBufferAllocator = fbl::SlabAllocator<SmallBufferTraits>;
 
 // Gets a (slab allocated) Buffer with at least |len| bytes capacity.
-fbl::unique_ptr<Buffer> GetBuffer(size_t len);
+std::unique_ptr<Buffer> GetBuffer(size_t len);
 
 // A Packet wraps a buffer with information about the recipient/sender and
 // length of the data within the buffer.
-class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
+class Packet : public fbl::DoublyLinkedListable<std::unique_ptr<Packet>> {
  public:
   typedef uint8_t value_type;
 
@@ -200,7 +200,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     kService,
   };
 
-  Packet(fbl::unique_ptr<Buffer> buffer, size_t len);
+  Packet(std::unique_ptr<Buffer> buffer, size_t len);
   size_t Capacity() const { return buffer_->capacity(); }
   void clear() {
     ZX_DEBUG_ASSERT(!has_ext_data());
@@ -268,7 +268,7 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
   uint16_t ext_offset() const { return ext_offset_; }
 
  private:
-  fbl::unique_ptr<Buffer> buffer_;
+  std::unique_ptr<Buffer> buffer_;
   size_t len_ = 0;
   size_t ctrl_len_ = 0;
   Peer peer_ = Peer::kUnknown;
@@ -276,13 +276,13 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
   uint16_t ext_offset_ = 0;
 };
 
-mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet);
-fbl::unique_ptr<Packet> FromRustOutBuf(mlme_out_buf_t buf);
+mlme_in_buf_t IntoRustInBuf(std::unique_ptr<Packet> packet);
+std::unique_ptr<Packet> FromRustOutBuf(mlme_out_buf_t buf);
 bool IsBodyAligned(const Packet& pkt);
 
 class PacketQueue {
  public:
-  using PacketPtr = fbl::unique_ptr<Packet>;
+  using PacketPtr = std::unique_ptr<Packet>;
   PacketQueue() = default;
 
   bool is_empty() const { return queue_.is_empty(); }
@@ -322,9 +322,9 @@ class PacketQueue {
 
 // Gets a Packet setup for a specific use-case, backed by a slab allocated
 // Buffer with at least |len| bytes capacity.
-fbl::unique_ptr<Packet> GetEthPacket(size_t len);
-fbl::unique_ptr<Packet> GetWlanPacket(size_t len);
-fbl::unique_ptr<Packet> GetSvcPacket(size_t len);
+std::unique_ptr<Packet> GetEthPacket(size_t len);
+std::unique_ptr<Packet> GetWlanPacket(size_t len);
+std::unique_ptr<Packet> GetSvcPacket(size_t len);
 
 extern mlme_buffer_provider_ops_t rust_buffer_provider;
 

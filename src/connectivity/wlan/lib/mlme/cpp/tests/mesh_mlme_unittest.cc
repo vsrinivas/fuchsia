@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include <gtest/gtest.h>
 #include <wlan/mlme/mesh/mesh_mlme.h>
 
@@ -79,7 +81,7 @@ struct MeshMlmeTest : public ::testing::Test {
   MeshMlme mlme;
 };
 
-static fbl::unique_ptr<Packet> MakeWlanPacket(fbl::Span<const uint8_t> bytes) {
+static std::unique_ptr<Packet> MakeWlanPacket(fbl::Span<const uint8_t> bytes) {
   auto packet = GetWlanPacket(bytes.size());
   memcpy(packet->data(), bytes.data(), bytes.size());
   return packet;

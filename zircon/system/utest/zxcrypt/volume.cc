@@ -76,7 +76,7 @@ bool TestInit(Volume::Version version, bool fvm) {
   // Invalid arguments
   fbl::unique_fd bad_fd;
   fbl::unique_fd bad_fd2;
-  fbl::unique_ptr<FdioVolume> volume;
+  std::unique_ptr<FdioVolume> volume;
   EXPECT_ZX(FdioVolume::Init(std::move(bad_fd), device.devfs_root(), &volume), ZX_ERR_INVALID_ARGS);
   EXPECT_ZX(FdioVolume::Init(device.parent(), std::move(bad_fd2), &volume), ZX_ERR_INVALID_ARGS);
   EXPECT_ZX(FdioVolume::Init(device.parent(), device.devfs_root(), nullptr), ZX_ERR_INVALID_ARGS);
@@ -124,7 +124,7 @@ bool TestUnlock(Volume::Version version, bool fvm) {
   ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
 
   // Invalid device
-  fbl::unique_ptr<FdioVolume> volume;
+  std::unique_ptr<FdioVolume> volume;
   EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume),
             ZX_ERR_ACCESS_DENIED);
 
@@ -191,7 +191,7 @@ bool TestEnroll(Volume::Version version, bool fvm) {
   ASSERT_TRUE(device.SetupDevmgr());
   ASSERT_TRUE(device.Bind(version, fvm));
 
-  fbl::unique_ptr<FdioVolume> volume;
+  std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
 
   // Bad key
@@ -220,7 +220,7 @@ bool TestRevoke(Volume::Version version, bool fvm) {
   ASSERT_TRUE(device.SetupDevmgr());
   ASSERT_TRUE(device.Bind(version, fvm));
 
-  fbl::unique_ptr<FdioVolume> volume;
+  std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
 
   // Bad slot
@@ -245,7 +245,7 @@ bool TestShred(Volume::Version version, bool fvm) {
   ASSERT_TRUE(device.SetupDevmgr());
   ASSERT_TRUE(device.Bind(version, fvm));
 
-  fbl::unique_ptr<FdioVolume> volume;
+  std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
 
   // Valid

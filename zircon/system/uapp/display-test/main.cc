@@ -16,6 +16,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
@@ -143,7 +145,7 @@ Display* find_display(fbl::Vector<Display>& displays, const char* id_str) {
   return nullptr;
 }
 
-bool update_display_layers(const fbl::Vector<fbl::unique_ptr<VirtualLayer>>& layers,
+bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers,
                            const Display& display, fbl::Vector<uint64_t>* current_layers) {
   fbl::Vector<uint64_t> new_layers;
 
@@ -239,7 +241,7 @@ bool apply_config() {
   return true;
 }
 
-zx_status_t wait_for_vsync(const fbl::Vector<fbl::unique_ptr<VirtualLayer>>& layers) {
+zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers) {
   zx_time_t deadline = has_ownership ? zx_clock_get_monotonic() + ZX_MSEC(100) : ZX_TIME_INFINITE;
   if (!wait_for_driver_event(deadline)) {
     return ZX_ERR_STOP;
@@ -308,7 +310,7 @@ int main(int argc, const char* argv[]) {
 
   fbl::Vector<Display> displays;
   fbl::Vector<fbl::Vector<uint64_t>> display_layers;
-  fbl::Vector<fbl::unique_ptr<VirtualLayer>> layers;
+  fbl::Vector<std::unique_ptr<VirtualLayer>> layers;
   int32_t num_frames = 120;  // default to 120 frames
   int32_t delay = 0;
   enum Platform {
@@ -398,14 +400,14 @@ int main(int argc, const char* argv[]) {
     constexpr bool kIntelYTiling = true;
 
     // Color layer which covers all displays
-    fbl::unique_ptr<ColorLayer> layer0 = fbl::make_unique_checked<ColorLayer>(&ac, displays);
+    std::unique_ptr<ColorLayer> layer0 = fbl::make_unique_checked<ColorLayer>(&ac, displays);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
     layers.push_back(std::move(layer0));
 
     // Layer which covers all displays and uses page flipping.
-    fbl::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
+    std::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -416,7 +418,7 @@ int main(int argc, const char* argv[]) {
 
     // Layer which covers the left half of the of the first display
     // and toggles on and off every frame.
-    fbl::unique_ptr<PrimaryLayer> layer2 =
+    std::unique_ptr<PrimaryLayer> layer2 =
         fbl::make_unique_checked<PrimaryLayer>(&ac, &displays[0]);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
@@ -433,7 +435,7 @@ int main(int argc, const char* argv[]) {
     // Layer which is smaller than the display and bigger than its image
     // and which animates back and forth across all displays and also
     // its src image and also rotates.
-    fbl::unique_ptr<PrimaryLayer> layer3 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
+    std::unique_ptr<PrimaryLayer> layer3 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -461,7 +463,7 @@ int main(int argc, const char* argv[]) {
     // Mediatek display test
     uint32_t width = displays[0].mode().horizontal_resolution;
     uint32_t height = displays[0].mode().vertical_resolution;
-    fbl::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
+    std::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -476,7 +478,7 @@ int main(int argc, const char* argv[]) {
     // Layer which covers the left half of the of the first display
     // and toggles on and off every frame.
     float alpha2 = (float)0.5;
-    fbl::unique_ptr<PrimaryLayer> layer2 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
+    std::unique_ptr<PrimaryLayer> layer2 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -485,14 +487,14 @@ int main(int argc, const char* argv[]) {
     layers.push_back(std::move(layer2));
 
     float alpha3 = (float)0.2;
-    fbl::unique_ptr<PrimaryLayer> layer3 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
+    std::unique_ptr<PrimaryLayer> layer3 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
     layer3->SetAlpha(true, alpha3);
     layers.push_back(std::move(layer3));
 
-    fbl::unique_ptr<PrimaryLayer> layer4 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
+    std::unique_ptr<PrimaryLayer> layer4 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -500,7 +502,7 @@ int main(int argc, const char* argv[]) {
     layers.push_back(std::move(layer4));
   } else if (platform == ARM_AMLOGIC) {
     // Amlogic display test
-    fbl::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
+    std::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -509,7 +511,7 @@ int main(int argc, const char* argv[]) {
   } else if (platform == SIMPLE) {
     // Simple display test
     bool mirrors = true;
-    fbl::unique_ptr<PrimaryLayer> layer1 =
+    std::unique_ptr<PrimaryLayer> layer1 =
         fbl::make_unique_checked<PrimaryLayer>(&ac, displays, mirrors);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;

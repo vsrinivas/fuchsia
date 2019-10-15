@@ -8,9 +8,8 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 
+#include <memory>
 #include <utility>
-
-#include <fbl/unique_ptr.h>
 
 namespace devmgr {
 
@@ -19,7 +18,7 @@ namespace devmgr {
 // connection handle.
 //
 // Deriving classes should define and implement this function:
-// static void HandleRpc(fbl::unique_ptr<T> conn,
+// static void HandleRpc(std::unique_ptr<T> conn,
 //                      async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
 //                      const zx_packet_signal_t* signal);
 template <typename T>
@@ -34,7 +33,7 @@ class AsyncLoopOwnedRpcHandler {
 
   // Variant of BeginWait that conditionally consumes |conn|.  On failure,
   // |*conn| is untouched.
-  static zx_status_t BeginWait(fbl::unique_ptr<T>* conn, async_dispatcher_t* dispatcher) {
+  static zx_status_t BeginWait(std::unique_ptr<T>* conn, async_dispatcher_t* dispatcher) {
     zx_status_t status = (*conn)->wait_.Begin(dispatcher);
     if (status == ZX_OK) {
       __UNUSED auto ptr = conn->release();
@@ -45,7 +44,7 @@ class AsyncLoopOwnedRpcHandler {
   // Begins waiting in |dispatcher| on |conn->wait|.  This transfers ownership
   // of |conn| to the dispatcher.  The dispatcher returns ownership when the
   // handler is invoked.
-  static zx_status_t BeginWait(fbl::unique_ptr<T> conn, async_dispatcher_t* dispatcher) {
+  static zx_status_t BeginWait(std::unique_ptr<T> conn, async_dispatcher_t* dispatcher) {
     return BeginWait(&conn, dispatcher);
   }
 
@@ -53,7 +52,7 @@ class AsyncLoopOwnedRpcHandler {
   // semantics.
   void HandleRpcEntry(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                       const zx_packet_signal_t* signal) {
-    fbl::unique_ptr<T> self(static_cast<T*>(this));
+    std::unique_ptr<T> self(static_cast<T*>(this));
     T::HandleRpc(std::move(self), dispatcher, wait, status, signal);
   }
 

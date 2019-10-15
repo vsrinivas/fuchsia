@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 
 #include <array>

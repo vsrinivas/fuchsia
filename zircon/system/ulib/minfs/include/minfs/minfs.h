@@ -7,13 +7,14 @@
 
 #include <inttypes.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
@@ -78,7 +79,7 @@ inline zx_status_t Mkfs(Bcache* bc) { return Mkfs({}, bc); }
 //
 // Identifies if the underlying device is read-only in |out_readonly|.
 zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
-                         fbl::unique_ptr<minfs::Bcache>* out);
+                         std::unique_ptr<minfs::Bcache>* out);
 
 // Mount the filesystem backed by |device_fd| using the VFS layer |vfs|,
 // and serve the root directory under the provided |mount_channel|.

@@ -9,11 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 
 namespace memfs {
@@ -25,7 +25,7 @@ std::unique_ptr<Dnode> Dnode::Create(fbl::StringPiece name, fbl::RefPtr<VnodeMem
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<char[]> namebuffer(new (&ac) char[name.length() + 1]);
+  std::unique_ptr<char[]> namebuffer(new (&ac) char[name.length() + 1]);
   if (!ac.check()) {
     return nullptr;
   }
@@ -175,16 +175,16 @@ bool Dnode::IsSubdirectory(const Dnode* dn) const {
   return false;
 }
 
-fbl::unique_ptr<char[]> Dnode::TakeName() { return std::move(name_); }
+std::unique_ptr<char[]> Dnode::TakeName() { return std::move(name_); }
 
-void Dnode::PutName(fbl::unique_ptr<char[]> name, size_t len) {
+void Dnode::PutName(std::unique_ptr<char[]> name, size_t len) {
   flags_ = static_cast<uint32_t>((flags_ & ~kDnodeNameMax) | len);
   name_ = std::move(name);
 }
 
 bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
-Dnode::Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags)
+Dnode::Dnode(fbl::RefPtr<VnodeMemfs> vn, std::unique_ptr<char[]> name, uint32_t flags)
     : vnode_(std::move(vn)),
       parent_(nullptr),
       ordering_token_(0),

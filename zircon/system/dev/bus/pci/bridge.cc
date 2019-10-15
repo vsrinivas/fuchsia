@@ -11,6 +11,8 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
@@ -225,7 +227,7 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   // to be important when we need to support hot-plugging.  See ZX-321
 
   zx_status_t status;
-  fbl::unique_ptr<PciAllocation> alloc;
+  std::unique_ptr<PciAllocation> alloc;
 
   // Every window is configured the same butwith different allocators and registers.
   auto configure_window = [&](auto& upstream_alloc, auto& dest_alloc, auto base, auto limit,

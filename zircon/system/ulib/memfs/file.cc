@@ -15,7 +15,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 

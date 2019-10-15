@@ -23,6 +23,7 @@
 #include <zircon/threads.h>
 
 #include <atomic>
+#include <memory>
 #include <utility>
 
 #include <block-client/cpp/client.h>
@@ -30,7 +31,6 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 
@@ -186,7 +186,7 @@ class Checker {
 class BlockChecker : public Checker {
  public:
   static zx_status_t Initialize(fzl::FdioCaller& caller, fuchsia_hardware_block_BlockInfo info,
-                                block_client::Client& client, fbl::unique_ptr<Checker>* checker) {
+                                block_client::Client& client, std::unique_ptr<Checker>* checker) {
     fzl::OwnedVmoMapper mapping;
     zx_status_t status = mapping.CreateAndMap(block_size, "");
     if (status != ZX_OK) {
@@ -300,7 +300,7 @@ class SkipBlockChecker : public Checker {
  public:
   static zx_status_t Initialize(fzl::FdioCaller& caller,
                                 fuchsia_hardware_skipblock_PartitionInfo info,
-                                fbl::unique_ptr<Checker>* checker) {
+                                std::unique_ptr<Checker>* checker) {
     fzl::VmoMapper mapping;
     zx::vmo vmo;
     zx_status_t status =
@@ -398,13 +398,13 @@ class SkipBlockChecker : public Checker {
   fuchsia_hardware_skipblock_PartitionInfo info_;
 };
 
-zx_status_t InitializeChecker(WorkContext& ctx, fbl::unique_ptr<Checker>* checker) {
+zx_status_t InitializeChecker(WorkContext& ctx, std::unique_ptr<Checker>* checker) {
   return skip ? SkipBlockChecker::Initialize(ctx.caller, ctx.skip.info, checker)
               : BlockChecker::Initialize(ctx.caller, ctx.block.info, ctx.block.client, checker);
 }
 
 zx_status_t InitializeDevice(WorkContext& ctx) {
-  fbl::unique_ptr<Checker> checker;
+  std::unique_ptr<Checker> checker;
   zx_status_t status;
   if ((status = InitializeChecker(ctx, &checker)) != ZX_OK) {
     printf("Failed to alloc resources to init device\n");
@@ -433,7 +433,7 @@ zx_status_t InitializeDevice(WorkContext& ctx) {
 int DoWork(void* arg) {
   auto* ctx = static_cast<WorkContext*>(arg);
 
-  fbl::unique_ptr<Checker> checker;
+  std::unique_ptr<Checker> checker;
   zx_status_t status;
   if ((status = InitializeChecker(*ctx, &checker)) != ZX_OK) {
     printf("Failed to alloc resources to init device\n");
@@ -713,7 +713,7 @@ int iochk(int argc, char** argv) {
   if (!ctx.iochk_failure) {
     printf("re-verifying device...\n");
     fflush(stdout);
-    fbl::unique_ptr<Checker> checker;
+    std::unique_ptr<Checker> checker;
     zx_status_t status;
     if ((status = InitializeChecker(ctx, &checker)) != ZX_OK) {
       printf("failed to initialize verification thread\n");

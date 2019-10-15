@@ -7,6 +7,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/process.h>
 
+#include <memory>
 #include <thread>
 
 #include <ddk/debug.h>
@@ -99,7 +100,7 @@ class FakeEthernetImplProtocol
  private:
   ethernet_impl_protocol_t proto_;
   const uint8_t mac_[ETH_MAC_SIZE] = {0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
-  fbl::unique_ptr<ddk::EthernetIfcProtocolClient> client_;
+  std::unique_ptr<ddk::EthernetIfcProtocolClient> client_;
 
   bool dump_called_ = false;
   int32_t promiscuous_ = -1;
@@ -182,7 +183,7 @@ class EthernetDeviceTest {
   zx::fifo& ReceiveFifo() { return rx_fifo_; }
 
   EthernetTester tester;
-  fbl::unique_ptr<eth::EthDev0> edev0;
+  std::unique_ptr<eth::EthDev0> edev0;
   fbl::RefPtr<eth::EthDev> edev;
 
  private:

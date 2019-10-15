@@ -6,10 +6,11 @@
 
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <fs/trace.h>
 #include <zstd/zstd.h>
 
@@ -32,7 +33,7 @@ ZSTDCompressor::~ZSTDCompressor() { ZSTD_freeCStream(stream_); }
 
 zx_status_t ZSTDCompressor::Create(size_t input_size, void* compression_buffer,
                                    size_t compression_buffer_length,
-                                   fbl::unique_ptr<ZSTDCompressor>* out) {
+                                   std::unique_ptr<ZSTDCompressor>* out) {
   if (BufferMax(input_size) > compression_buffer_length) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -42,7 +43,7 @@ zx_status_t ZSTDCompressor::Create(size_t input_size, void* compression_buffer,
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto compressor = fbl::unique_ptr<ZSTDCompressor>(
+  auto compressor = std::unique_ptr<ZSTDCompressor>(
       new ZSTDCompressor(stream, compression_buffer, compression_buffer_length));
 
   ssize_t r = ZSTD_initCStream(compressor->stream_, kCompressionLevel);

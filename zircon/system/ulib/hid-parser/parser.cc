@@ -4,7 +4,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hid-parser/item.h>
 #include <hid-parser/parser.h>

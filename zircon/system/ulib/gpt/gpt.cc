@@ -19,6 +19,8 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>  // for zx_cprng_draw
 
+#include <memory>
+
 #include <fbl/vector.h>
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
@@ -385,7 +387,7 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
 
   // always write 128 entries in partition table
   size_t ptable_size = kPartitionCount * sizeof(gpt_partition_t);
-  fbl::unique_ptr<gpt_partition_t[]> buf(new gpt_partition_t[kPartitionCount]);
+  std::unique_ptr<gpt_partition_t[]> buf(new gpt_partition_t[kPartitionCount]);
   if (!buf) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -579,7 +581,7 @@ zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
 }
 
 zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
-                            fbl::unique_ptr<GptDevice>* out_dev) {
+                            std::unique_ptr<GptDevice>* out_dev) {
   ssize_t ret;
   off_t offset;
 
@@ -617,7 +619,7 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
     return ZX_ERR_IO;
   }
 
-  fbl::unique_ptr<GptDevice> dev;
+  std::unique_ptr<GptDevice> dev;
   zx_status_t status = Load(buffer.get(), size, blocksize, block_count, &dev);
 
   if (status != ZX_OK) {
@@ -634,12 +636,12 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
 }
 
 zx_status_t GptDevice::Create(int fd, uint32_t blocksize, uint64_t blocks,
-                              fbl::unique_ptr<GptDevice>* out) {
+                              std::unique_ptr<GptDevice>* out) {
   return Init(fd, blocksize, blocks, out);
 }
 
 zx_status_t GptDevice::Load(const uint8_t* buffer, uint64_t buffer_size, uint32_t blocksize,
-                            uint64_t blocks, fbl::unique_ptr<GptDevice>* out) {
+                            uint64_t blocks, std::unique_ptr<GptDevice>* out) {
   if (buffer == nullptr || out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -657,7 +659,7 @@ zx_status_t GptDevice::Load(const uint8_t* buffer, uint64_t buffer_size, uint32_
     return status;
   }
 
-  fbl::unique_ptr<GptDevice> dev(new GptDevice());
+  std::unique_ptr<GptDevice> dev(new GptDevice());
   memcpy(&dev->header_, buffer, sizeof(gpt_header_t));
 
   if ((status = dev->LoadEntries(&buffer[blocksize], buffer_size - blocksize)) != ZX_OK) {

@@ -7,8 +7,9 @@
 
 #include <lib/mmio/mmio.h>
 
+#include <memory>
+
 #include <ddktl/protocol/camerasensor.h>
-#include <fbl/unique_ptr.h>
 
 namespace camera {
 
@@ -25,7 +26,7 @@ class Sensor {
          ddk::CameraSensorProtocolClient camera_sensor)
       : isp_mmio_(isp_mmio), isp_mmio_local_(isp_mmio_local), camera_sensor_(camera_sensor) {}
 
-  static fbl::unique_ptr<Sensor> Create(const ddk::MmioView& isp_mmio,
+  static std::unique_ptr<Sensor> Create(const ddk::MmioView& isp_mmio,
                                         const ddk::MmioView& isp_mmio_local,
                                         ddk::CameraSensorProtocolClient camera_sensor);
   zx_status_t Init();

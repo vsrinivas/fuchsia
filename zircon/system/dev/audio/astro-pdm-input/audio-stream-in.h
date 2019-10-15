@@ -11,6 +11,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
 #include <optional>
 
 #include <audio-proto/audio-proto.h>
@@ -51,7 +52,7 @@ class AstroAudioStreamIn : public SimpleAudioStream {
   zx::vmo ring_buffer_vmo_;
   fzl::PinnedVmo pinned_ring_buffer_;
 
-  fbl::unique_ptr<AmlPdmDevice> pdm_;
+  std::unique_ptr<AmlPdmDevice> pdm_;
 
   zx::bti bti_;
 };

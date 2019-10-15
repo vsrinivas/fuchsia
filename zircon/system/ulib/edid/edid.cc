@@ -8,6 +8,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <memory>
+
+#include <fbl/alloc_checker.h>
+
 #include "eisa_vid_lut.h"
 
 namespace {
@@ -80,7 +84,7 @@ bool Edid::Init(void* ctx, ddc_i2c_transact transact, const char** err_msg) {
 
   uint16_t edid_length = static_cast<uint16_t>((base_edid.num_extensions + 1) * kBlockSize);
   fbl::AllocChecker ac;
-  edid_bytes_ = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[edid_length]);
+  edid_bytes_ = std::unique_ptr<uint8_t[]>(new (&ac) uint8_t[edid_length]);
   if (!ac.check()) {
     *err_msg = "Failed to allocate edid storage";
     return false;

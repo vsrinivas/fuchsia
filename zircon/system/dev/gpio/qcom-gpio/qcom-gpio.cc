@@ -11,7 +11,6 @@
 #include <ddk/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 

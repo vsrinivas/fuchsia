@@ -4,6 +4,8 @@
 
 #include "minstrel.h"
 
+#include <memory>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/debug.h>
@@ -170,7 +172,7 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
             debug::Describe(gi).c_str());
 }
 
-MinstrelRateSelector::MinstrelRateSelector(fbl::unique_ptr<Timer>&& timer,
+MinstrelRateSelector::MinstrelRateSelector(std::unique_ptr<Timer>&& timer,
                                            ProbeSequence&& probe_sequence,
                                            zx::duration update_interval)
     : timer_mgr_(std::move(timer)),

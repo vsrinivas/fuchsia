@@ -9,6 +9,8 @@
 #include <lib/fdio/io.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
+#include <memory>
+
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
@@ -16,7 +18,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 
 namespace fs_test_utils {
@@ -31,13 +32,13 @@ enum class TestState {
   kReadable,
 };
 
-struct BlobState : public fbl::DoublyLinkedListable<fbl::unique_ptr<BlobState>> {
-  BlobState(fbl::unique_ptr<BlobInfo> i, size_t writes_remaining)
+struct BlobState : public fbl::DoublyLinkedListable<std::unique_ptr<BlobState>> {
+  BlobState(std::unique_ptr<BlobInfo> i, size_t writes_remaining)
       : info(std::move(i)), state(TestState::kEmpty), writes_remaining(writes_remaining) {
     bytes_remaining = info->size_data;
   }
 
-  fbl::unique_ptr<BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   TestState state;
   fbl::unique_fd fd;
   size_t writes_remaining;
@@ -147,7 +148,7 @@ class BlobList {
  private:
   fbl::String mount_path_;
   fbl::Mutex list_lock_;
-  fbl::DoublyLinkedList<fbl::unique_ptr<BlobState>> list_ TA_GUARDED(list_lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<BlobState>> list_ TA_GUARDED(list_lock_);
   uint32_t blob_count_ TA_GUARDED(list_lock_) = 0;
   BlobListState list_state_ = BlobListState::kOpen;
 };

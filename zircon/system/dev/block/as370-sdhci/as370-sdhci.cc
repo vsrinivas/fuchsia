@@ -6,11 +6,12 @@
 
 #include <lib/device-protocol/pdev.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 namespace sdhci {
 
@@ -37,7 +38,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<As370Sdhci> device(new (&ac)
+  std::unique_ptr<As370Sdhci> device(new (&ac)
                                          As370Sdhci(parent, *std::move(core_mmio), std::move(irq)));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: As370Sdhci alloc failed\n", __FILE__);

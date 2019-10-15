@@ -4,6 +4,8 @@
 
 #include <lib/timekeeper/test_clock.h>
 
+#include <memory>
+
 #include <gtest/gtest.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
@@ -52,7 +54,7 @@ struct TimerManagerTest : public ::testing::Test {
   timekeeper::TestClock* clock() { return &timer->clock; }
 
   MockedTimer* timer;
-  fbl::unique_ptr<TimerManager<std::string>> timer_manager;
+  std::unique_ptr<TimerManager<std::string>> timer_manager;
 };
 
 TEST_F(TimerManagerTest, HandleTimeout) {

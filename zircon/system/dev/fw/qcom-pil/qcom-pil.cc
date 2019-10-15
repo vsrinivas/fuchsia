@@ -18,7 +18,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string_buffer.h>
-#include <fbl/unique_ptr.h>
 #include <qcom/smc.h>
 
 namespace qcom_pil {

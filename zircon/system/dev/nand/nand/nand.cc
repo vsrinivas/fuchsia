@@ -10,13 +10,13 @@
 #include <zircon/threads.h>
 
 #include <algorithm>
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 // TODO: Investigate elimination of unmap.
 // This code does vx_vmar_map/unmap and copies data in/out of the
@@ -280,7 +280,7 @@ zx_status_t NandDevice::Create(void* ctx, zx_device_t* parent) {
   zxlogf(ERROR, "NandDevice::Create: Starting...!\n");
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<NandDevice> dev(new (&ac) NandDevice(parent));
+  std::unique_ptr<NandDevice> dev(new (&ac) NandDevice(parent));
   if (!ac.check()) {
     zxlogf(ERROR, "nand: no memory to allocate nand device!\n");
     return ZX_ERR_NO_MEMORY;

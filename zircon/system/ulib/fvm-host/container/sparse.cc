@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 
+#include <memory>
 #include <utility>
 
 #include <safemath/checked_math.h>
@@ -72,14 +73,14 @@ zx_status_t CompressionContext::Finish() {
 }
 
 zx_status_t SparseContainer::CreateNew(const char* path, size_t slice_size, uint32_t flags,
-                                       fbl::unique_ptr<SparseContainer>* out) {
+                                       std::unique_ptr<SparseContainer>* out) {
   return CreateNew(path, slice_size, flags, 0, out);
 }
 
 zx_status_t SparseContainer::CreateNew(const char* path, size_t slice_size, uint32_t flags,
                                        uint64_t max_disk_size,
-                                       fbl::unique_ptr<SparseContainer>* out) {
-  fbl::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, slice_size, flags));
+                                       std::unique_ptr<SparseContainer>* out) {
+  std::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, slice_size, flags));
   zx_status_t status;
   if ((status = sparseContainer->InitNew()) != ZX_OK) {
     return status;
@@ -90,8 +91,8 @@ zx_status_t SparseContainer::CreateNew(const char* path, size_t slice_size, uint
 }
 
 zx_status_t SparseContainer::CreateExisting(const char* path,
-                                            fbl::unique_ptr<SparseContainer>* out) {
-  fbl::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, 0, 0));
+                                            std::unique_ptr<SparseContainer>* out) {
+  std::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, 0, 0));
 
   zx_status_t status;
   if ((status = sparseContainer->InitExisting()) != ZX_OK) {
@@ -450,7 +451,7 @@ zx_status_t SparseContainer::Commit() {
   return ZX_OK;
 }
 
-zx_status_t SparseContainer::Pave(fbl::unique_ptr<fvm::host::FileWrapper> wrapper,
+zx_status_t SparseContainer::Pave(std::unique_ptr<fvm::host::FileWrapper> wrapper,
                                   size_t disk_offset, size_t disk_size) {
   uint64_t minimum_disk_size = CalculateDiskSize();
   uint64_t target_size = disk_size;
@@ -481,7 +482,7 @@ zx_status_t SparseContainer::Pave(fbl::unique_ptr<fvm::host::FileWrapper> wrappe
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::unique_ptr<SparsePaver> paver;
+  std::unique_ptr<SparsePaver> paver;
   status = SparsePaver::Create(std::move(wrapper), slice_size_, disk_offset, target_size, &paver);
 
   if (status != ZX_OK) {
@@ -525,7 +526,7 @@ size_t SparseContainer::SliceCount() const {
 
 zx_status_t SparseContainer::AddPartition(const char* path, const char* type_name,
                                           FvmReservation* reserve) {
-  fbl::unique_ptr<Format> format;
+  std::unique_ptr<Format> format;
   zx_status_t status;
 
   if ((status = Format::Create(path, type_name, &format)) != ZX_OK) {
@@ -557,7 +558,7 @@ zx_status_t SparseContainer::Decompress(const char* path) {
   return reader_->WriteDecompressed(std::move(fd));
 }
 
-zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format,
+zx_status_t SparseContainer::AllocatePartition(std::unique_ptr<Format> format,
                                                FvmReservation* reserve) {
   SparsePartitionInfo partition;
   format->GetPartitionInfo(&partition.descriptor);

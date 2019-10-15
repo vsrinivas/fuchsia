@@ -37,7 +37,6 @@ FBL provides:
 - smart pointers
   - [intrusive refcounted mixin](include/fbl/ref_counted.h)
   - [intrusive refcounting pointer](include/fbl/ref_ptr.h)
-  - [unique pointer](include/fbl/unique_ptr.h)
 - raii utilities
   - [auto call](include/fbl/auto_call.h) to run
     code upon leaving scope

@@ -4,6 +4,7 @@
 
 #include <lib/fzl/resizeable-vmo-mapper.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -42,7 +43,7 @@ bool ValidateCreateHelper(const fzl::ResizeableVmoMapper& mapper, uint64_t size)
 }
 
 template <bool NON_ROOT_VMAR>
-bool UncheckedCreateHelper(fbl::unique_ptr<fzl::ResizeableVmoMapper>* out_mapper, uint64_t size,
+bool UncheckedCreateHelper(std::unique_ptr<fzl::ResizeableVmoMapper>* out_mapper, uint64_t size,
                            const char* name,
                            zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                            uint32_t cache_policy = 0) {
@@ -61,7 +62,7 @@ bool UncheckedCreateHelper(fbl::unique_ptr<fzl::ResizeableVmoMapper>* out_mapper
 }
 
 template <bool NON_ROOT_VMAR>
-bool CreateHelper(fbl::unique_ptr<fzl::ResizeableVmoMapper>* out_mapper, uint64_t size,
+bool CreateHelper(std::unique_ptr<fzl::ResizeableVmoMapper>* out_mapper, uint64_t size,
                   const char* name, zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                   uint32_t cache_policy = 0) {
   BEGIN_HELPER;
@@ -119,7 +120,7 @@ template <bool NON_ROOT_VMAR>
 bool CreateTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, vmo_name));
 
   END_TEST;
@@ -209,7 +210,7 @@ template <bool NON_ROOT_VMAR>
 bool ReadTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, vmo_name));
 
   uint8_t bytes[ZX_PAGE_SIZE];
@@ -229,7 +230,7 @@ template <bool NON_ROOT_VMAR>
 bool WriteMappingTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, vmo_name));
 
   auto data = static_cast<uint8_t*>(mapper->start());
@@ -250,7 +251,7 @@ template <bool NON_ROOT_VMAR>
 bool ReadMappingTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, vmo_name));
 
   uint8_t bytes[ZX_PAGE_SIZE];
@@ -270,7 +271,7 @@ template <bool NON_ROOT_VMAR>
 bool EmptyNameTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, ""));
   ASSERT_NONNULL(mapper);
 
@@ -288,7 +289,7 @@ template <bool NON_ROOT_VMAR>
 bool NullptrNameTest() {
   BEGIN_TEST;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, nullptr));
   ASSERT_NONNULL(mapper);
 
@@ -310,7 +311,7 @@ bool LongNameTest() {
   memset(long_name, 'x', ZX_PAGE_SIZE);
   long_name[ZX_PAGE_SIZE - 1] = 0;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, ZX_PAGE_SIZE, long_name));
   ASSERT_NONNULL(mapper);
 
@@ -337,7 +338,7 @@ bool GoodSizesTest() {
   };
 
   for (size_t size : sizes) {
-    fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+    std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
     ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
   }
 
@@ -349,7 +350,7 @@ bool BadSizesTest() {
   BEGIN_TEST;
 
   // Size 0 should fail.
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(UncheckedCreateHelper<NON_ROOT_VMAR>(&mapper, 0, vmo_name));
   ASSERT_NULL(mapper);
 
@@ -366,7 +367,7 @@ bool GoodShrinkTest() {
 
   size_t size = ZX_PAGE_SIZE * ZX_PAGE_SIZE;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
 
   while (size > 2 * ZX_PAGE_SIZE) {
@@ -394,7 +395,7 @@ bool BadShrinkTest() {
 
   constexpr size_t size = 16 * ZX_PAGE_SIZE;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, size, vmo_name));
 
   // Shrinking to 0 should fail.
@@ -422,7 +423,7 @@ bool AlignedGoodGrowTest() {
   constexpr size_t original_size = ZX_PAGE_SIZE;
   constexpr size_t grow_size = 2 * ZX_PAGE_SIZE;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
 
   // Growing to the current size should always succeed.
@@ -453,7 +454,7 @@ bool UnalignedGoodGrowTest() {
   constexpr size_t grow_size = 2 * ZX_PAGE_SIZE + 1;
   constexpr size_t rounded_grow_size = 3 * ZX_PAGE_SIZE;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
 
   // Growing to the current size should always succeed.
@@ -483,7 +484,7 @@ bool BadGrowTest() {
   constexpr size_t original_size = 2 * ZX_PAGE_SIZE;
   constexpr size_t grow_size = ZX_PAGE_SIZE;
 
-  fbl::unique_ptr<fzl::ResizeableVmoMapper> mapper;
+  std::unique_ptr<fzl::ResizeableVmoMapper> mapper;
   ASSERT_TRUE(CreateHelper<NON_ROOT_VMAR>(&mapper, original_size, vmo_name));
 
   // Growing from 2 pages to 1 should fail.

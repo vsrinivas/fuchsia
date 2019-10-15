@@ -11,7 +11,6 @@
 #include <chrono>
 #include <optional>
 
-#include <fbl/unique_ptr.h>
 #include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/ht.h>

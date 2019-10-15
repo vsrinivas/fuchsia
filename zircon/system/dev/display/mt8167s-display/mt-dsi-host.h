@@ -11,6 +11,7 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/protocol/platform/device.h>
@@ -18,7 +19,6 @@
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/power.h>
-#include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 
 #include "common.h"
@@ -47,7 +47,7 @@ class MtDsiHost {
                    const ddk::PowerProtocolClient* power);
 
   // Used for Unit Testing
-  zx_status_t Init(fbl::unique_ptr<ddk::MmioBuffer> mmio, fbl::unique_ptr<Lcd> lcd,
+  zx_status_t Init(std::unique_ptr<ddk::MmioBuffer> mmio, std::unique_ptr<Lcd> lcd,
                    const ddk::DsiImplProtocolClient* dsi, const ddk::GpioProtocolClient* gpio,
                    const ddk::PowerProtocolClient* power) {
     mipi_tx_mmio_ = std::move(mmio);
@@ -60,8 +60,8 @@ class MtDsiHost {
 
   zx_status_t Config(const display_setting_t& disp_setting);
   zx_status_t Start();
-  zx_status_t Shutdown(fbl::unique_ptr<MtSysConfig>& syscfg);
-  zx_status_t PowerOn(fbl::unique_ptr<MtSysConfig>& syscfg);
+  zx_status_t Shutdown(std::unique_ptr<MtSysConfig>& syscfg);
+  zx_status_t PowerOn(std::unique_ptr<MtSysConfig>& syscfg);
 
   bool IsHostOn() {
     ZX_DEBUG_ASSERT(initialized_);
@@ -81,11 +81,11 @@ class MtDsiHost {
   uint32_t height_;  // display height
   uint32_t width_;   // display width
   uint8_t panel_type_;
-  fbl::unique_ptr<ddk::MmioBuffer> mipi_tx_mmio_;
+  std::unique_ptr<ddk::MmioBuffer> mipi_tx_mmio_;
   zx::bti bti_;
   ddk::DsiImplProtocolClient dsiimpl_;
   ddk::PowerProtocolClient power_;
-  fbl::unique_ptr<Lcd> lcd_;
+  std::unique_ptr<Lcd> lcd_;
 
   bool initialized_ = false;
 };

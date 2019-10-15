@@ -4,9 +4,9 @@
 
 #include "slice-extent.h"
 
+#include <memory>
 #include <utility>
 
-#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 namespace fvm {
@@ -66,7 +66,7 @@ TEST(SliceExtentTest, SplitExtent) {
   // vslice 4
   extent.push_back(5);
 
-  fbl::unique_ptr<SliceExtent> extent_2 = extent.Split(2);
+  std::unique_ptr<SliceExtent> extent_2 = extent.Split(2);
   ASSERT_TRUE(extent_2);
   uint64_t pslice;
 

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <limits>
+#include <memory>
 
 #include <ddk/debug.h>
 

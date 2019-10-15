@@ -4,6 +4,7 @@
 
 #include "ethernet.h"
 
+#include <memory>
 #include <type_traits>
 
 #include "zircon/errors.h"
@@ -433,7 +434,7 @@ zx_status_t EthDev::SetIObufLocked(zx_handle_t vmo) {
   zx_status_t status;
   zx::vmo io_vmo = zx::vmo(vmo);
   fzl::VmoMapper io_buffer;
-  fbl::unique_ptr<zx_paddr_t[]> paddr_map = nullptr;
+  std::unique_ptr<zx_paddr_t[]> paddr_map = nullptr;
   zx::pmt pmt;
 
   if ((status = io_vmo.get_size(&size)) < 0) {
@@ -453,7 +454,7 @@ zx_status_t EthDev::SetIObufLocked(zx_handle_t vmo) {
   if (edev0_->info_.features & ETHERNET_FEATURE_DMA) {
     fbl::AllocChecker ac;
     size_t pages = ROUNDUP(size, PAGE_SIZE) / PAGE_SIZE;
-    paddr_map = fbl::unique_ptr<zx_paddr_t[]>(new (&ac) zx_paddr_t[pages]);
+    paddr_map = std::unique_ptr<zx_paddr_t[]>(new (&ac) zx_paddr_t[pages]);
     if (!ac.check()) {
       status = ZX_ERR_NO_MEMORY;
       return status;

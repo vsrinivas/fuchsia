@@ -15,7 +15,6 @@
 #include <zircon/hw/usb.h>
 
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
 #include <src/lib/isolated_devmgr/usb-virtual-bus.h>
 

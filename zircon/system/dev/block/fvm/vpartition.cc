@@ -6,12 +6,12 @@
 
 #include <zircon/assert.h>
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "fvm-private.h"
@@ -72,7 +72,7 @@ VPartition::VPartition(VPartitionManager* vpm, size_t entry_index, size_t block_
 VPartition::~VPartition() = default;
 
 zx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
-                               fbl::unique_ptr<VPartition>* out) {
+                               std::unique_ptr<VPartition>* out) {
   ZX_DEBUG_ASSERT(entry_index != 0);
 
   auto vp = std::make_unique<VPartition>(vpm, entry_index, vpm->BlockOpSize());
@@ -137,7 +137,7 @@ void VPartition::SliceSetLocked(uint64_t vslice, uint64_t pslice) {
   } else {
     // Longer case: there is no extent for this vslice, so we should make
     // one.
-    fbl::unique_ptr<SliceExtent> new_extent(new SliceExtent(vslice));
+    std::unique_ptr<SliceExtent> new_extent(new SliceExtent(vslice));
     new_extent->push_back(pslice);
     slice_map_.insert(std::move(new_extent));
     extent = --slice_map_.upper_bound(vslice);
@@ -350,7 +350,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
   fbl::Vector<block_op_t*> txns;
   txns.reserve(txn_count);
 
-  fbl::unique_ptr<multi_txn_state_t> state(
+  std::unique_ptr<multi_txn_state_t> state(
       new multi_txn_state_t(txn_count, txn, completion_cb, cookie));
 
   uint32_t length_remaining = txn_length;

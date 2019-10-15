@@ -4,6 +4,8 @@
 
 #include "fvm-host/file-wrapper.h"
 
+#include <memory>
+
 namespace fvm::host {
 
 ssize_t FdWrapper::Read(void* buffer, size_t count) { return read(fd_, buffer, count); }
@@ -26,7 +28,7 @@ zx_status_t FdWrapper::Truncate(size_t size) { return ftruncate(fd_, size); }
 zx_status_t FdWrapper::Sync() { return fsync(fd_); }
 
 zx_status_t UniqueFdWrapper::Open(const char* path, int flags, mode_t mode,
-                                  fbl::unique_ptr<UniqueFdWrapper>* out) {
+                                  std::unique_ptr<UniqueFdWrapper>* out) {
   fbl::unique_fd fd(open(path, flags, mode));
   if (!fd) {
     return ZX_ERR_IO;

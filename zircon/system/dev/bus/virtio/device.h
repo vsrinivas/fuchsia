@@ -9,11 +9,12 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <virtio/virtio.h>
 
 #include "backends/backend.h"
@@ -28,7 +29,7 @@ namespace virtio {
 
 class Device {
  public:
-  Device(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend);
+  Device(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend);
   virtual ~Device();
 
   virtual zx_status_t Init() = 0;
@@ -91,7 +92,7 @@ class Device {
   // BTI for managing DMA
   zx::bti bti_;
   // backend responsible for hardware io. Will be released when device goes out of scope
-  fbl::unique_ptr<Backend> backend_;
+  std::unique_ptr<Backend> backend_;
   // irq thread object
   thrd_t irq_thread_ = {};
   zx::handle irq_handle_ = {};

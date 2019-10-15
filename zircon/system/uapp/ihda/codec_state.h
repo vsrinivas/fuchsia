@@ -10,7 +10,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <intel-hda/utils/codec-caps.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/codec-state.h>
@@ -19,11 +20,11 @@ namespace audio {
 namespace intel_hda {
 
 struct AudioWidgetState;
-using AudioWidgetStatePtr = fbl::unique_ptr<AudioWidgetState>;
+using AudioWidgetStatePtr = std::unique_ptr<AudioWidgetState>;
 
 struct FunctionGroupState;
 struct AudioFunctionGroupState;
-using FunctionGroupStatePtr = fbl::unique_ptr<FunctionGroupState>;
+using FunctionGroupStatePtr = std::unique_ptr<FunctionGroupState>;
 
 struct PowerState {
   // Section 7.3.4.12 : Supported Power States
@@ -124,7 +125,7 @@ struct AudioWidgetState {
   // Sections 7.3.3.2, 7.3.3.3 & 7.3.4.11 : Connection List
   bool long_form_conn_list_;
   uint8_t conn_list_len_;
-  fbl::unique_ptr<ConnListEntry[]> conn_list_;
+  std::unique_ptr<ConnListEntry[]> conn_list_;
   uint16_t connected_nid_;
   uint8_t connected_nid_ndx_;
 
@@ -212,7 +213,7 @@ struct AudioFunctionGroupState : public FunctionGroupState {
 
   uint8_t widget_count_ = 0;
   uint8_t widget_starting_id_ = 0;
-  fbl::unique_ptr<AudioWidgetStatePtr[]> widgets_;
+  std::unique_ptr<AudioWidgetStatePtr[]> widgets_;
 };
 
 struct ModemFunctionGroupState : public FunctionGroupState {
@@ -238,7 +239,7 @@ struct CodecState {
 
   uint8_t fn_group_count_;
   uint8_t fn_group_starting_id_;
-  fbl::unique_ptr<FunctionGroupStatePtr[]> fn_groups_;
+  std::unique_ptr<FunctionGroupStatePtr[]> fn_groups_;
 };
 
 }  // namespace intel_hda

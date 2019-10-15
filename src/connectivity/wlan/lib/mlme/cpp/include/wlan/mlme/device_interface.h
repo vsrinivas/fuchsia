@@ -10,10 +10,10 @@
 
 #include <cstdint>
 #include <cstring>
+#include <memory>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/protocol/mac.h>
@@ -51,17 +51,17 @@ class DeviceInterface {
   // Returns an unowned handle to the device's owned SME channel.
   virtual zx_handle_t GetSmeChannelRef() = 0;
 
-  virtual zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) = 0;
+  virtual zx_status_t GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) = 0;
 
   virtual zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) = 0;
-  virtual zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags = 0) = 0;
+  virtual zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags = 0) = 0;
   virtual zx_status_t SendService(fbl::Span<const uint8_t> span) = 0;
 
   virtual zx_status_t SetChannel(wlan_channel_t chan) = 0;
   virtual zx_status_t SetStatus(uint32_t status) = 0;
   virtual zx_status_t ConfigureBss(wlan_bss_config_t* cfg) = 0;
   virtual zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) = 0;
-  virtual zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> packet) = 0;
+  virtual zx_status_t ConfigureBeacon(std::unique_ptr<Packet> packet) = 0;
   virtual zx_status_t SetKey(wlan_key_config_t* key_config) = 0;
   virtual zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) = 0;
   virtual zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) = 0;

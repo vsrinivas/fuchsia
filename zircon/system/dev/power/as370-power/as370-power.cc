@@ -12,7 +12,7 @@
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 #include <soc/as370/as370-power.h>
 
 namespace {

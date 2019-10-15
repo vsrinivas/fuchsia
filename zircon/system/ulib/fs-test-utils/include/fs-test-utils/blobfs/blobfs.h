@@ -7,8 +7,9 @@
 
 #include <lib/fdio/io.h>
 
+#include <memory>
+
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 
 namespace fs_test_utils {
 
@@ -17,9 +18,9 @@ using BlobSrcFunction = void (*)(char* data, size_t length);
 // An in-memory representation of a blob.
 struct BlobInfo {
   char path[PATH_MAX];
-  fbl::unique_ptr<char[]> merkle;
+  std::unique_ptr<char[]> merkle;
   size_t size_merkle;
-  fbl::unique_ptr<char[]> data;
+  std::unique_ptr<char[]> data;
   size_t size_data;
 };
 
@@ -39,9 +40,9 @@ int StreamAll(T func, int fd, U* buf, size_t max) {
 void RandomFill(char* data, size_t length);
 
 bool GenerateBlob(BlobSrcFunction sourceCb, fbl::String mount_path, size_t size_data,
-                  fbl::unique_ptr<BlobInfo>* out);
+                  std::unique_ptr<BlobInfo>* out);
 
-bool GenerateRandomBlob(fbl::String mount_path, size_t size_data, fbl::unique_ptr<BlobInfo>* out);
+bool GenerateRandomBlob(fbl::String mount_path, size_t size_data, std::unique_ptr<BlobInfo>* out);
 
 bool VerifyContents(int fd, const char* data, size_t size_data);
 

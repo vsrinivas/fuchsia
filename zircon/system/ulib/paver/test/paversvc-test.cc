@@ -18,11 +18,11 @@
 #include <lib/zx/vmo.h>
 #include <zircon/hw/gpt.h>
 
+#include <memory>
 #include <optional>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fs-management/mount.h>
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
@@ -265,8 +265,8 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(),
                                    "misc/nand-ctl/ram-nand-0/sysconfig/skip-block", &fd));
-    ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(),
-                                   "misc/nand-ctl/ram-nand-0/fvm/ftl/block", &fvm_));
+    ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(), "misc/nand-ctl/ram-nand-0/fvm/ftl/block",
+                                   &fvm_));
   }
 
   void SetAbr(const abr::Data& data) {
@@ -318,7 +318,7 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
     memset(start, data, kPageSize * num_pages);
   }
 
-  fbl::unique_ptr<SkipBlockDevice> device_;
+  std::unique_ptr<SkipBlockDevice> device_;
   fbl::unique_fd fvm_;
 };
 
@@ -795,7 +795,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 
 TEST_F(PaverServiceBlockTest, InitializePartitionTables) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
                                                &gpt_dev));
@@ -809,7 +809,7 @@ TEST_F(PaverServiceBlockTest, InitializePartitionTables) {
 }
 
 TEST_F(PaverServiceBlockTest, InitializePartitionTablesMultipleDevices) {
-  fbl::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
+  std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
                                                &gpt_dev1));
@@ -825,7 +825,7 @@ TEST_F(PaverServiceBlockTest, InitializePartitionTablesMultipleDevices) {
 }
 
 TEST_F(PaverServiceBlockTest, WipePartitionTables) {
-  fbl::unique_ptr<BlockDevice> gpt_dev;
+  std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
                                                &gpt_dev));

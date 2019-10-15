@@ -4,7 +4,6 @@
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
-#include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/write_element.h>

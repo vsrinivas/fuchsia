@@ -4,6 +4,8 @@
 
 #include "allocator/allocator.h"
 
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 #include "utils.h"
@@ -30,7 +32,7 @@ TEST(AllocatorTest, Null) {
 
 TEST(AllocatorTest, Single) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
   // We can allocate a single unit.
@@ -42,7 +44,7 @@ TEST(AllocatorTest, Single) {
 
 TEST(AllocatorTest, SingleCollision) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(1, 1, &space_manager, &allocator));
 
   fbl::Vector<ReservedExtent> extents;
@@ -76,7 +78,7 @@ TEST(AllocatorTest, SingleCollision) {
 // blocks) we hit an already-allocated prefix of reserved / committed blocks.
 TEST(AllocatorTest, PrefixCollision) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(4, 4, &space_manager, &allocator));
 
   // Allocate a single extent of two blocks.
@@ -104,7 +106,7 @@ TEST(AllocatorTest, PrefixCollision) {
 // blocks) we hit an already-allocated suffix of reserved / committed blocks.
 TEST(AllocatorTest, SuffixCollision) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(4, 4, &space_manager, &allocator));
 
   // Allocate a single extent of two blocks.
@@ -140,7 +142,7 @@ TEST(AllocatorTest, SuffixCollision) {
 // previously allocated and reserved region.
 TEST(AllocatorTest, AllocatedBeforeReserved) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(4, 4, &space_manager, &allocator));
 
   // Allocate a single extent of one block.
@@ -167,7 +169,7 @@ TEST(AllocatorTest, AllocatedBeforeReserved) {
 // previously allocated and reserved region.
 TEST(AllocatorTest, ReservedBeforeAllocated) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(4, 4, &space_manager, &allocator));
 
   // Reserve an extent of one block.
@@ -199,7 +201,7 @@ TEST(AllocatorTest, ReservedBeforeAllocated) {
 // the committed blocks.
 TEST(AllocatorTest, InterleavedReservation) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FAILURES(InitializeAllocator(10, 5, &space_manager, &allocator));
 
   // R: Reserved
@@ -250,7 +252,7 @@ TEST(AllocatorTest, InterleavedReservation) {
 // 100% space utilization.
 void RunFragmentationTest(bool keep_even) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr uint64_t kBlockCount = 16;
   ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, 4, &space_manager, &allocator));
 
@@ -302,7 +304,7 @@ TEST(AllocatorTest, FragmentationKeepOddExtents) { RunFragmentationTest(false); 
 // within a single extent.
 TEST(AllocatorTest, MaxExtent) {
   MockSpaceManager space_manager;
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   constexpr uint64_t kBlockCount = kBlockCountMax * 2;
   ASSERT_NO_FAILURES(InitializeAllocator(kBlockCount, 4, &space_manager, &allocator));
 

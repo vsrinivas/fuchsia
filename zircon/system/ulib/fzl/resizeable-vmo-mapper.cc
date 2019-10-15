@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -14,7 +15,7 @@
 
 namespace fzl {
 
-fbl::unique_ptr<ResizeableVmoMapper> ResizeableVmoMapper::Create(
+std::unique_ptr<ResizeableVmoMapper> ResizeableVmoMapper::Create(
     uint64_t size, const char* name, uint32_t map_options, fbl::RefPtr<VmarManager> vmar_manager,
     uint32_t cache_policy) {
   fbl::AllocChecker ac;

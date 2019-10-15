@@ -5,6 +5,8 @@
 #ifndef FVM_HOST_FVM_INFO_H_
 #define FVM_HOST_FVM_INFO_H_
 
+#include <memory>
+
 #include <fbl/unique_fd.h>
 #include <fvm-host/file-wrapper.h>
 #include <fvm/fvm-sparse.h>
@@ -67,7 +69,7 @@ class FvmInfo {
   size_t metadata_size_;
   uint32_t vpart_hint_;
   uint32_t pslice_hint_;
-  fbl::unique_ptr<uint8_t[]> metadata_;
+  std::unique_ptr<uint8_t[]> metadata_;
 };
 
 #endif  // FVM_HOST_FVM_INFO_H_

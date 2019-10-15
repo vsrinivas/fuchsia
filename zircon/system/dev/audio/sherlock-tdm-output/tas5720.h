@@ -7,17 +7,17 @@
 
 #include <lib/device-protocol/i2c-channel.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c.h>
-#include <fbl/unique_ptr.h>
 
 namespace audio {
 
 class Tas5720 final {
  public:
-  static fbl::unique_ptr<Tas5720> Create(ddk::I2cChannel i2c);
+  static std::unique_ptr<Tas5720> Create(ddk::I2cChannel i2c);
 
   explicit Tas5720(const ddk::I2cChannel& i2c) : i2c_(i2c) {}
 

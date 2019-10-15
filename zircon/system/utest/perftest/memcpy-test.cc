@@ -4,8 +4,9 @@
 
 #include <string.h>
 
+#include <memory>
+
 #include <fbl/string_printf.h>
-#include <fbl/unique_ptr.h>
 #include <perftest/perftest.h>
 
 namespace {
@@ -14,8 +15,8 @@ namespace {
 bool MemcpyTest(perftest::RepeatState* state, size_t size) {
   state->SetBytesProcessedPerRun(size);
 
-  fbl::unique_ptr<char[]> src(new char[size]);
-  fbl::unique_ptr<char[]> dest(new char[size]);
+  std::unique_ptr<char[]> src(new char[size]);
+  std::unique_ptr<char[]> dest(new char[size]);
   // Initialize src so that we are not copying from uninitialized memory.
   memset(src.get(), 0, size);
 

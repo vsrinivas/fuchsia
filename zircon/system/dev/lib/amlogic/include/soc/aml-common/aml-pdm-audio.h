@@ -8,9 +8,9 @@
 #include <assert.h>
 #include <lib/mmio/mmio.h>
 
+#include <memory>
 #include <utility>
 
-#include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-audio-regs.h>
 /*
     Presently assumes stereo input with both streams multiplexed on the same
@@ -21,7 +21,7 @@ class AmlPdmDevice {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(AmlPdmDevice);
 
-  static fbl::unique_ptr<AmlPdmDevice> Create(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio,
+  static std::unique_ptr<AmlPdmDevice> Create(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio,
                                               ee_audio_mclk_src_t pdm_clk_src, uint32_t sclk_div,
                                               uint32_t dclk_div, aml_toddr_t toddr_dev);
 

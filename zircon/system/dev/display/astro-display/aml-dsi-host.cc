@@ -5,6 +5,7 @@
 #include "aml-dsi-host.h"
 
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 
 namespace astro_display {
 

@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 
+#include <memory>
 #include <utility>
 
 #include <audio-proto-utils/format-utils.h>
@@ -217,14 +218,14 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     size_t* display_info_actual) {
   ZX_DEBUG_ASSERT(!out_display_info_list || added_count == display_info_count);
 
-  fbl::unique_ptr<fbl::RefPtr<DisplayInfo>[]> added_success;
-  fbl::unique_ptr<uint64_t[]> removed;
-  fbl::unique_ptr<async::Task> task;
+  std::unique_ptr<fbl::RefPtr<DisplayInfo>[]> added_success;
+  std::unique_ptr<uint64_t[]> removed;
+  std::unique_ptr<async::Task> task;
   uint32_t added_success_count = 0;
 
   fbl::AllocChecker ac;
   if (added_count) {
-    added_success = fbl::unique_ptr<fbl::RefPtr<DisplayInfo>[]>(
+    added_success = std::unique_ptr<fbl::RefPtr<DisplayInfo>[]>(
         new (&ac) fbl::RefPtr<DisplayInfo>[added_count]);
     if (!ac.check()) {
       zxlogf(ERROR, "No memory when processing hotplug\n");
@@ -232,7 +233,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     }
   }
   if (removed_count) {
-    removed = fbl::unique_ptr<uint64_t[]>(new (&ac) uint64_t[removed_count]);
+    removed = std::unique_ptr<uint64_t[]>(new (&ac) uint64_t[removed_count]);
     if (!ac.check()) {
       zxlogf(ERROR, "No memory when processing hotplug\n");
       return;
@@ -769,7 +770,7 @@ zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) { return 
 zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
                                      zx::channel client_channel) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<async::Task> task = fbl::make_unique_checked<async::Task>(&ac);
+  std::unique_ptr<async::Task> task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
     zxlogf(TRACE, "Failed to alloc client task\n");
     return ZX_ERR_NO_MEMORY;
@@ -866,7 +867,7 @@ zx_status_t Controller::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_display_Provider_dispatch(this, txn, msg, &fidl_ops_);
 }
 
-zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
+zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   zx_status_t status;
   dc_ = ddk::DisplayControllerImplProtocolClient(parent_);
   if (!dc_.is_valid()) {
@@ -919,7 +920,7 @@ Controller::Controller(zx_device_t* parent)
 
 zx_status_t display_controller_bind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<display::Controller> core(new (&ac) display::Controller(parent));
+  std::unique_ptr<display::Controller> core(new (&ac) display::Controller(parent));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

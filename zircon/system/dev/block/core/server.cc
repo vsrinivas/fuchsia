@@ -12,6 +12,7 @@
 #include <zircon/syscalls.h>
 
 #include <limits>
+#include <memory>
 #include <new>
 #include <utility>
 
@@ -56,7 +57,7 @@ void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_
 
 void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
   ZX_DEBUG_ASSERT(bop != nullptr);
-  fbl::unique_ptr<Message> msg(static_cast<Message*>(cookie));
+  std::unique_ptr<Message> msg(static_cast<Message*>(cookie));
   msg->Complete(status);
 }
 
@@ -302,7 +303,7 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
     return status;
   }
 
-  fbl::unique_ptr<Message> msg;
+  std::unique_ptr<Message> msg;
   if ((status = Message::Create(block_op_size_, &msg)) != ZX_OK) {
     return status;
   }
@@ -374,7 +375,7 @@ zx_status_t Server::ProcessCloseVmoRequest(block_fifo_request_t* request) {
 zx_status_t Server::ProcessFlushRequest(block_fifo_request_t* request) {
   zx_status_t status;
 
-  fbl::unique_ptr<Message> msg;
+  std::unique_ptr<Message> msg;
   if ((status = Message::Create(block_op_size_, &msg)) != ZX_OK) {
     return status;
   }
@@ -389,7 +390,7 @@ zx_status_t Server::ProcessTrimRequest(block_fifo_request_t* request) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::unique_ptr<Message> msg;
+  std::unique_ptr<Message> msg;
   zx_status_t status = Message::Create(block_op_size_, &msg);
   if (status != ZX_OK) {
     return status;

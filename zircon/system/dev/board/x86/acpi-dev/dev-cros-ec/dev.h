@@ -8,6 +8,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <acpica/acpi.h>
 #include <chromiumos-platform-ec/ec_commands.h>
 #include <ddktl/device.h>
@@ -16,7 +18,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 class AcpiCrOsEc : public fbl::RefCounted<AcpiCrOsEc> {
@@ -54,7 +55,7 @@ class AcpiCrOsEcMotionDevice
       public ddk::HidbusProtocol<AcpiCrOsEcMotionDevice, ddk::base_protocol> {
  public:
   static zx_status_t Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
-                            ACPI_HANDLE acpi_handle, fbl::unique_ptr<AcpiCrOsEcMotionDevice>* out);
+                            ACPI_HANDLE acpi_handle, std::unique_ptr<AcpiCrOsEcMotionDevice>* out);
 
   // hidbus protocol implementation
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
@@ -127,7 +128,7 @@ class AcpiCrOsEcMotionDevice
 
   fbl::Vector<SensorInfo> sensors_;
 
-  fbl::unique_ptr<uint8_t[]> hid_descriptor_ = nullptr;
+  std::unique_ptr<uint8_t[]> hid_descriptor_ = nullptr;
   size_t hid_descriptor_len_ = 0;
 };
 

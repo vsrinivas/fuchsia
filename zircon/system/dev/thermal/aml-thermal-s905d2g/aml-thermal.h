@@ -9,13 +9,13 @@
 #include <lib/fidl-utils/bind.h>
 #include <threads.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fbl/unique_ptr.h>
 
 #include "aml-cpufreq.h"
 #include "aml-pwm.h"
@@ -30,9 +30,9 @@ using DeviceType = ddk::Device<AmlThermal, ddk::UnbindableNew, ddk::Messageable>
 class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlThermal);
-  AmlThermal(zx_device_t* device, fbl::unique_ptr<thermal::AmlTSensor> tsensor,
-             fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
-             fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling,
+  AmlThermal(zx_device_t* device, std::unique_ptr<thermal::AmlTSensor> tsensor,
+             std::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
+             std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling,
              fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config)
       : DeviceType(device),
         tsensor_(std::move(tsensor)),
@@ -87,9 +87,9 @@ class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
   int ThermalNotificationThread();
   zx_status_t NotifyThermalDaemon();
 
-  fbl::unique_ptr<thermal::AmlTSensor> tsensor_;
-  fbl::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator_;
-  fbl::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
+  std::unique_ptr<thermal::AmlTSensor> tsensor_;
+  std::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator_;
+  std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;
 };
 }  // namespace thermal

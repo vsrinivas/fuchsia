@@ -21,7 +21,6 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <lz4/lz4frame.h>
 
 #include "fvm/fvm-sparse.h"
@@ -95,11 +94,11 @@ class ReaderInterface {
 
 class SparseReader {
  public:
-  static zx_status_t Create(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out);
-  static zx_status_t CreateSilent(fbl::unique_fd fd, fbl::unique_ptr<SparseReader>* out);
+  static zx_status_t Create(fbl::unique_fd fd, std::unique_ptr<SparseReader>* out);
+  static zx_status_t CreateSilent(fbl::unique_fd fd, std::unique_ptr<SparseReader>* out);
 
   static zx_status_t Create(std::unique_ptr<ReaderInterface> reader,
-                            fbl::unique_ptr<SparseReader>* out);
+                            std::unique_ptr<SparseReader>* out);
 
   ~SparseReader();
 
@@ -112,10 +111,10 @@ class SparseReader {
   zx_status_t WriteDecompressed(fbl::unique_fd outfd);
 
  private:
-  static zx_status_t CreateHelper(fbl::unique_ptr<ReaderInterface> reader, bool verbose,
-                                  fbl::unique_ptr<SparseReader>* out);
+  static zx_status_t CreateHelper(std::unique_ptr<ReaderInterface> reader, bool verbose,
+                                  std::unique_ptr<SparseReader>* out);
 
-  SparseReader(fbl::unique_ptr<ReaderInterface> reader, bool verbose);
+  SparseReader(std::unique_ptr<ReaderInterface> reader, bool verbose);
 
   // Read in header data, prepare buffers and decompression context if necessary
   zx_status_t ReadMetadata();
@@ -134,8 +133,8 @@ class SparseReader {
   // If true, all logs are printed.
   bool verbose_;
 
-  fbl::unique_ptr<ReaderInterface> reader_;
-  fbl::unique_ptr<uint8_t[]> metadata_;
+  std::unique_ptr<ReaderInterface> reader_;
+  std::unique_ptr<uint8_t[]> metadata_;
   LZ4F_decompressionContext_t dctx_;
 
   // A hint of the size of the next compressed frame to be decompressed.

@@ -24,10 +24,10 @@
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <memory>
 
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <gpt/gpt.h>
 
 namespace {
@@ -114,7 +114,7 @@ static bool IsChromebook() {
             zx_status_get_string(response.status));
     return false;
   }
-  fbl::unique_ptr<gpt::GptDevice> gpt;
+  std::unique_ptr<gpt::GptDevice> gpt;
   zx_status_t status = gpt::GptDevice::Create(gpt_fd.get(), response.info->block_size,
                                               response.info->block_count, &gpt);
   if (status != ZX_OK) {

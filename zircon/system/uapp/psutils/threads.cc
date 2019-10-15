@@ -17,7 +17,6 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <inspector/inspector.h>
 #include <pretty/hexdump.h>
@@ -128,7 +127,7 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
     exit(1);
   }
 
-  auto threads = fbl::unique_ptr<zx_koid_t[]>(new zx_koid_t[num_threads]);
+  auto threads = std::unique_ptr<zx_koid_t[]>(new zx_koid_t[num_threads]);
   size_t records_read;
   status = zx_object_get_info(process, ZX_INFO_PROCESS_THREADS, threads.get(),
                               num_threads * sizeof(threads[0]), &records_read, nullptr);

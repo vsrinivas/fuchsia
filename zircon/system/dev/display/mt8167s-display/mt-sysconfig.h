@@ -10,11 +10,11 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 
 #include "common.h"
@@ -29,8 +29,8 @@ class MtSysConfig {
 
   // Init
   zx_status_t Init(zx_device_t* parent);
-  zx_status_t Init(fbl::unique_ptr<ddk::MmioBuffer> syscfg_mmio,
-                   fbl::unique_ptr<ddk::MmioBuffer> mutex_mmio) {
+  zx_status_t Init(std::unique_ptr<ddk::MmioBuffer> syscfg_mmio,
+                   std::unique_ptr<ddk::MmioBuffer> mutex_mmio) {
     syscfg_mmio_ = std::move(syscfg_mmio);
     mutex_mmio_ = std::move(mutex_mmio);
     initialized_ = true;
@@ -55,8 +55,8 @@ class MtSysConfig {
   void PrintRegisters();
 
  private:
-  fbl::unique_ptr<ddk::MmioBuffer> syscfg_mmio_;
-  fbl::unique_ptr<ddk::MmioBuffer> mutex_mmio_;
+  std::unique_ptr<ddk::MmioBuffer> syscfg_mmio_;
+  std::unique_ptr<ddk::MmioBuffer> mutex_mmio_;
   pdev_protocol_t pdev_ = {nullptr, nullptr};
   bool initialized_ = false;
 };

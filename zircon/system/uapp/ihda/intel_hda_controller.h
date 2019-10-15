@@ -5,9 +5,10 @@
 #ifndef ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CONTROLLER_H_
 #define ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CONTROLLER_H_
 
+#include <memory>
+
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 
 #include "intel_hda_codec.h"
 #include "intel_hda_device.h"
@@ -16,9 +17,9 @@
 namespace audio {
 namespace intel_hda {
 
-class IntelHDAController : public fbl::WAVLTreeContainable<fbl::unique_ptr<IntelHDAController>> {
+class IntelHDAController : public fbl::WAVLTreeContainable<std::unique_ptr<IntelHDAController>> {
  public:
-  using ControllerTree = fbl::WAVLTree<uint32_t, fbl::unique_ptr<IntelHDAController>>;
+  using ControllerTree = fbl::WAVLTree<uint32_t, std::unique_ptr<IntelHDAController>>;
 
   zx_status_t DumpRegs(int argc, const char** argv);
 

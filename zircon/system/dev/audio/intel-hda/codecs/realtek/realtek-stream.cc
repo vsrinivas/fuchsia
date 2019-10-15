@@ -6,6 +6,7 @@
 
 #include <lib/zx/clock.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/vector.h>
@@ -99,7 +100,7 @@ void RealtekStream::AddPDNotificationTgtLocked(dispatcher::Channel* channel) {
 
   if (!duplicate) {
     fbl::RefPtr<dispatcher::Channel> c(channel);
-    fbl::unique_ptr<NotifyTarget> tgt(new NotifyTarget(std::move(c)));
+    std::unique_ptr<NotifyTarget> tgt(new NotifyTarget(std::move(c)));
     plug_notify_targets_.push_back(std::move(tgt));
   }
 }
@@ -132,7 +133,7 @@ uint8_t RealtekStream::ComputeGainSteps(const CommonCaps& caps, float target_gai
 }
 
 zx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
-  fbl::unique_ptr<PendingCommand> pending_cmd;
+  std::unique_ptr<PendingCommand> pending_cmd;
   bool want_response = (cmd.thunk != nullptr);
 
   if (want_response) {

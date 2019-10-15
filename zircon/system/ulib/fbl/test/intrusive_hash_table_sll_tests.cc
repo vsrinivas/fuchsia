@@ -96,74 +96,64 @@ class HTSLLTraits {
 
 // clang-format off
 DEFINE_TEST_OBJECTS(HTSLL);
-using UMTE    = DEFINE_TEST_THUNK(Associative, HTSLL, Unmanaged);
-using UPTE    = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtr);
-using SUPDDTE = DEFINE_TEST_THUNK(Associative, HTSLL, StdUniquePtrDefaultDeleter);
-using SUPCDTE = DEFINE_TEST_THUNK(Associative, HTSLL, StdUniquePtrCustomDeleter);
-using RPTE    = DEFINE_TEST_THUNK(Associative, HTSLL, RefPtr);
+using UMTE   = DEFINE_TEST_THUNK(Associative, HTSLL, Unmanaged);
+using UPDDTE = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtrDefaultDeleter);
+using UPCDTE = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtrCustomDeleter);
+using RPTE   = DEFINE_TEST_THUNK(Associative, HTSLL, RefPtr);
 
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     Clear)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     Clear)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  Clear)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  Clear)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   Clear)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   Clear)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Clear)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     ClearUnsafe)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  ClearUnsafe)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  ClearUnsafe)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   ClearUnsafe)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   ClearUnsafe)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ClearUnsafe)
 #endif
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     IsEmpty)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     IsEmpty)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  IsEmpty)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  IsEmpty)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   IsEmpty)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   IsEmpty)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     IsEmpty)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     Iterate)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     Iterate)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  Iterate)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  Iterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   Iterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   Iterate)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Iterate)
 
 // Hashtables with singly linked list bucket can perform direct
 // iterator/reference erase operations, but the operations will be O(n)
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     IterErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     IterErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  IterErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  IterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   IterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   IterErase)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     IterErase)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     DirectErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     DirectErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  DirectErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  DirectErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   DirectErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   DirectErase)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     DirectErase)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     MakeIterator)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     MakeIterator)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  MakeIterator)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  MakeIterator)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   MakeIterator)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   MakeIterator)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     MakeIterator)
 
 // HashTables with SinglyLinkedList buckets cannot iterate backwards (because
 // their buckets cannot iterate backwards)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ReverseIterErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     ReverseIterErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  ReverseIterErase)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   ReverseIterErase)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ReverseIterErase)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ReverseIterate)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     ReverseIterate)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  ReverseIterate)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  ReverseIterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   ReverseIterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   ReverseIterate)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ReverseIterate)
 #endif
 
@@ -172,90 +162,77 @@ RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ReverseIterate)
 // number of buckets in the hashtable)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     Swap)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     Swap)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  Swap)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  Swap)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   Swap)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   Swap)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Swap)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     RvalueOps)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     RvalueOps)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  RvalueOps)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  RvalueOps)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   RvalueOps)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   RvalueOps)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     RvalueOps)
 #endif
 
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     Scope)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  Scope)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  Scope)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   Scope)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   Scope)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Scope)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     TwoContainer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     TwoContainer)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  TwoContainer)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  TwoContainer)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   TwoContainer)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   TwoContainer)
 #endif
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     TwoContainer)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ThreeContainerHelper)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     ThreeContainerHelper)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  ThreeContainerHelper)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  ThreeContainerHelper)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   ThreeContainerHelper)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   ThreeContainerHelper)
 #endif
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ThreeContainerHelper)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     IterCopyPointer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     IterCopyPointer)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  IterCopyPointer)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  IterCopyPointer)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   IterCopyPointer)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   IterCopyPointer)
 #endif
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     IterCopyPointer)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     EraseIf)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     EraseIf)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  EraseIf)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  EraseIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   EraseIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   EraseIf)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     EraseIf)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     FindIf)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     FindIf)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  FindIf)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  FindIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   FindIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   FindIf)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     FindIf)
 
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     InsertByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     InsertByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  InsertByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  InsertByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   InsertByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   InsertByKey)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     InsertByKey)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     FindByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     FindByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  FindByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  FindByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   FindByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   FindByKey)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     FindByKey)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     EraseByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     EraseByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  EraseByKey)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  EraseByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   EraseByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   EraseByKey)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     EraseByKey)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     InsertOrFind)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     InsertOrFind)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  InsertOrFind)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  InsertOrFind)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   InsertOrFind)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   InsertOrFind)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     InsertOrFind)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     InsertOrReplace)
-RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     InsertOrReplace)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  InsertOrReplace)
-RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  InsertOrReplace)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   InsertOrReplace)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   InsertOrReplace)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     InsertOrReplace)
 // clang-format on
 

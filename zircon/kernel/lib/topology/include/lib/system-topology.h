@@ -9,10 +9,10 @@
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <kernel/cpu.h>
 #include <ktl/move.h>
+#include <ktl/unique_ptr.h>
 
 /*
  * Captures the physical layout of the core system (processors, caches, etc..).
@@ -70,7 +70,7 @@ class Graph {
   Graph() = default;
 
   // Constructs a Graph instance from the given unflattened topology data.
-  Graph(fbl::unique_ptr<Node[]> nodes, fbl::Vector<Node*> processors,
+  Graph(ktl::unique_ptr<Node[]> nodes, fbl::Vector<Node*> processors,
         size_t logical_processor_count, fbl::Vector<Node*> processors_by_logical_id)
       : nodes_{ktl::move(nodes)},
         processors_{ktl::move(processors)},
@@ -119,7 +119,7 @@ class Graph {
   //   their children.
   static bool Validate(const zbi_topology_node_t* nodes, size_t count);
 
-  fbl::unique_ptr<Node[]> nodes_;
+  ktl::unique_ptr<Node[]> nodes_;
   fbl::Vector<Node*> processors_;
   size_t logical_processor_count_{0};
 

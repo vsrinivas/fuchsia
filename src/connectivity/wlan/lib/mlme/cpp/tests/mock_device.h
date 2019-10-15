@@ -9,10 +9,10 @@
 #include <lib/timekeeper/test_clock.h>
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mlme.h>
@@ -30,7 +30,7 @@ static constexpr uint8_t kClientAddress[] = {0x94, 0x3C, 0x49, 0x49, 0x9F, 0x2D}
 namespace {
 
 struct WlanPacket {
-  fbl::unique_ptr<Packet> pkt;
+  std::unique_ptr<Packet> pkt;
   wlan_channel_bandwidth_t cbw;
   wlan_info_phy_type_t phy;
   uint32_t flags;
@@ -98,12 +98,12 @@ struct MockDevice : public DeviceInterface {
 
   // DeviceInterface implementation.
 
-  zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final {
+  zx_status_t GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) override final {
     *timer = CreateTimer(id);
     return ZX_OK;
   }
 
-  fbl::unique_ptr<Timer> CreateTimer(uint64_t id) {
+  std::unique_ptr<Timer> CreateTimer(uint64_t id) {
     return std::make_unique<TestTimer>(id, &clock_);
   }
 
@@ -114,7 +114,7 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) override final {
+  zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) override final {
     WlanPacket wlan_packet;
     wlan_packet.pkt = std::move(packet);
     wlan_packet.flags = flags;
@@ -150,7 +150,7 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> packet) override final {
+  zx_status_t ConfigureBeacon(std::unique_ptr<Packet> packet) override final {
     beacon = std::move(packet);
     return ZX_OK;
   }
@@ -242,9 +242,9 @@ struct MockDevice : public DeviceInterface {
   PacketList wlan_queue;
   std::vector<std::vector<uint8_t>> svc_queue;
   std::vector<std::vector<uint8_t>> eth_queue;
-  fbl::unique_ptr<wlan_bss_config_t> bss_cfg;
+  std::unique_ptr<wlan_bss_config_t> bss_cfg;
   KeyList keys;
-  fbl::unique_ptr<Packet> beacon;
+  std::unique_ptr<Packet> beacon;
   bool beaconing_enabled;
   wlan_assoc_ctx_t sta_assoc_ctx_;
   zx::channel sme_;

@@ -9,15 +9,16 @@
 
 #include <stdint.h>
 
+#include <memory>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/intrusive_wavl_tree.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fvm/format.h>
 
 namespace fvm {
 
-class SliceExtent : public fbl::WAVLTreeContainable<fbl::unique_ptr<SliceExtent>> {
+class SliceExtent : public fbl::WAVLTreeContainable<std::unique_ptr<SliceExtent>> {
  public:
   SliceExtent() = delete;
   explicit SliceExtent(uint64_t vslice_start) : vslice_start_(vslice_start) {}
@@ -66,7 +67,7 @@ class SliceExtent : public fbl::WAVLTreeContainable<fbl::unique_ptr<SliceExtent>
   //   [start(), vslice] and [vslice + 1, end()).
   // Returns the latter extent on success; returns nullptr
   // if a memory allocation failure occurs.
-  fbl::unique_ptr<SliceExtent> Split(uint64_t vslice);
+  std::unique_ptr<SliceExtent> Split(uint64_t vslice);
 
   // Combines the other extent into this one.
   // 'other' must immediately follow the current slice.

@@ -30,7 +30,6 @@
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "controller-protocol.h"
 

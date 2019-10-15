@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <zircon/status.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/array.h>
@@ -62,7 +63,7 @@ bool Checker::LoadFVM(FvmInfo* out) const {
   }
   const size_t block_count = device_size / block_size_;
 
-  fbl::unique_ptr<uint8_t[]> header(new uint8_t[fvm::kBlockSize]);
+  std::unique_ptr<uint8_t[]> header(new uint8_t[fvm::kBlockSize]);
   if (pread(fd_.get(), header.get(), fvm::kBlockSize, 0) != static_cast<ssize_t>(fvm::kBlockSize)) {
     logger_.Error("Could not read header\n");
     return false;
@@ -76,7 +77,7 @@ bool Checker::LoadFVM(FvmInfo* out) const {
     logger_.Error("Slice size cannot be zero\n");
     return false;
   }
-  fbl::unique_ptr<uint8_t[]> metadata(new uint8_t[format_info.metadata_allocated_size() * 2]);
+  std::unique_ptr<uint8_t[]> metadata(new uint8_t[format_info.metadata_allocated_size() * 2]);
   if (pread(fd_.get(), metadata.get(), format_info.metadata_allocated_size() * 2, 0) !=
       static_cast<ssize_t>(format_info.metadata_allocated_size() * 2)) {
     logger_.Error("Could not read metadata\n");

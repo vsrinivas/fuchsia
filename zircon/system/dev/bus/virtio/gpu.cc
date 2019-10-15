@@ -12,9 +12,11 @@
 #include <zircon/compiler.h>
 #include <zircon/time.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
@@ -311,7 +313,7 @@ zx_status_t GpuDevice::virtio_get_single_buffer_framebuffer(void* ctx, zx_handle
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-GpuDevice::GpuDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+GpuDevice::GpuDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)) {
   sem_init(&request_sem_, 0, 1);
   sem_init(&response_sem_, 0, 0);

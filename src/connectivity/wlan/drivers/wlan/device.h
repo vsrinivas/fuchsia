@@ -10,6 +10,7 @@
 #include <lib/zx/port.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <tuple>
@@ -20,7 +21,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
-#include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/dispatcher.h>
@@ -65,15 +65,15 @@ class Device : public DeviceInterface {
 
   // DeviceInterface methods
   zx_handle_t GetSmeChannelRef() override final;
-  zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;
+  zx_status_t GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) override final;
   zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) override final;
-  zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) override final;
+  zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) override final;
   zx_status_t SendService(fbl::Span<const uint8_t> span) override final;
   zx_status_t SetChannel(wlan_channel_t chan) override final;
   zx_status_t SetStatus(uint32_t status) override final;
   zx_status_t ConfigureBss(wlan_bss_config_t* cfg) override final;
   zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) override final;
-  zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> beacon) override final;
+  zx_status_t ConfigureBeacon(std::unique_ptr<Packet> beacon) override final;
   zx_status_t SetKey(wlan_key_config_t* key_config) override final;
   zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) override final;
   zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) override final;
@@ -103,9 +103,9 @@ class Device : public DeviceInterface {
 
   zx_status_t AddEthDevice();
 
-  fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
+  std::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
   template <typename T>
-  fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer,
+  std::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer,
                                         const T& ctrl_data) {
     auto packet = PreparePacket(data, length, peer);
     if (packet != nullptr) {
@@ -116,7 +116,7 @@ class Device : public DeviceInterface {
 
   // Establishes a connection with this interface's SME on the given channel.
   zx_status_t Connect(zx::channel request);
-  zx_status_t QueuePacket(fbl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
+  zx_status_t QueuePacket(std::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
 
   // Waits the main loop to finish and frees itself afterwards.
   void DestroySelf();
@@ -149,9 +149,9 @@ class Device : public DeviceInterface {
   std::thread work_thread_;
   zx::port port_;
 
-  fbl::unique_ptr<MinstrelRateSelector> minstrel_;
+  std::unique_ptr<MinstrelRateSelector> minstrel_;
 
-  fbl::unique_ptr<Dispatcher> dispatcher_ __TA_GUARDED(lock_);
+  std::unique_ptr<Dispatcher> dispatcher_ __TA_GUARDED(lock_);
 
   bool dead_ __TA_GUARDED(lock_) = false;
   zx::channel channel_ __TA_GUARDED(lock_);

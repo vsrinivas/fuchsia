@@ -14,6 +14,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
 #include <fbl/unique_fd.h>
@@ -541,7 +543,7 @@ bool TestVmoStall(Volume::Version version, bool fvm) {
   size_t max = Volume::kBufferSize / (device.block_size() * blks_per_req);
   size_t num = max + 1;
   fbl::AllocChecker ac;
-  fbl::unique_ptr<block_fifo_request_t[]> requests(new (&ac) block_fifo_request_t[num]);
+  std::unique_ptr<block_fifo_request_t[]> requests(new (&ac) block_fifo_request_t[num]);
   ASSERT_TRUE(ac.check());
   for (size_t i = 0; i < num; ++i) {
     requests[i].opcode = (i % 2 == 0 ? BLOCKIO_WRITE : BLOCKIO_READ);

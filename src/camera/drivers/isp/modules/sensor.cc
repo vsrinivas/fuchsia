@@ -7,7 +7,10 @@
 #include <lib/syslog/global.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 
 #include "../mali-009/global_regs.h"
 #include "../mali-009/pingpong_regs.h"
@@ -230,7 +233,7 @@ zx_status_t Sensor::GetInfo(camera_sensor_info_t* out_info) {
 }
 
 // static
-fbl::unique_ptr<Sensor> Sensor::Create(const ddk::MmioView& isp_mmio,
+std::unique_ptr<Sensor> Sensor::Create(const ddk::MmioView& isp_mmio,
                                        const ddk::MmioView& isp_mmio_local,
                                        ddk::CameraSensorProtocolClient camera_sensor) {
   fbl::AllocChecker ac;

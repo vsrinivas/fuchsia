@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -120,7 +121,7 @@ class MinfsChecker {
   std::optional<std::string> CheckDataBlock(blk_t bno, BlockInfo block_info);
   zx_status_t CheckFile(Inode* inode, ino_t ino);
 
-  fbl::unique_ptr<Minfs> fs_;
+  std::unique_ptr<Minfs> fs_;
   RawBitmap checked_inodes_;
   RawBitmap checked_blocks_;
 
@@ -740,7 +741,7 @@ zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, Repair fsck_repair,
     options.repair_filesystem = false;
     options.use_journal = false;
   }
-  fbl::unique_ptr<Minfs> fs;
+  std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
@@ -923,7 +924,7 @@ zx_status_t LoadSuperblock(Bcache* bc, Superblock* out_info) {
   return ZX_OK;
 }
 
-zx_status_t UsedDataSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
+zx_status_t UsedDataSize(std::unique_ptr<Bcache>& bc, uint64_t* out_size) {
   zx_status_t status;
   Superblock info = {};
   if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {
@@ -934,7 +935,7 @@ zx_status_t UsedDataSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
   return ZX_OK;
 }
 
-zx_status_t UsedInodes(fbl::unique_ptr<Bcache>& bc, uint64_t* out_inodes) {
+zx_status_t UsedInodes(std::unique_ptr<Bcache>& bc, uint64_t* out_inodes) {
   zx_status_t status;
   Superblock info = {};
   if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {
@@ -945,7 +946,7 @@ zx_status_t UsedInodes(fbl::unique_ptr<Bcache>& bc, uint64_t* out_inodes) {
   return ZX_OK;
 }
 
-zx_status_t UsedSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
+zx_status_t UsedSize(std::unique_ptr<Bcache>& bc, uint64_t* out_size) {
   zx_status_t status;
   Superblock info = {};
   if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {

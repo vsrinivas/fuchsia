@@ -12,7 +12,6 @@
 #include <utility>
 
 #include <dev/pci/designware/atu-cfg.h>
-#include <fbl/unique_ptr.h>
 
 namespace pcie {
 namespace designware {

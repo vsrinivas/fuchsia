@@ -25,7 +25,6 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 #include "iobuffer.h"
 #include "message.h"

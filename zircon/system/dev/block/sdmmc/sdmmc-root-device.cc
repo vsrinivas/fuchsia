@@ -7,9 +7,10 @@
 #include <inttypes.h>
 #include <zircon/threads.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <fbl/unique_ptr.h>
 
 namespace sdmmc {
 
@@ -21,7 +22,7 @@ zx_status_t SdmmcRootDevice::Bind(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<SdmmcRootDevice> dev(new (&ac) SdmmcRootDevice(parent, host));
+  std::unique_ptr<SdmmcRootDevice> dev(new (&ac) SdmmcRootDevice(parent, host));
 
   zx_status_t st = dev->DdkAdd("sdmmc", DEVICE_ADD_NON_BINDABLE);
   if (st != ZX_OK) {

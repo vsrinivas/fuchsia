@@ -10,8 +10,9 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 namespace fzl {
 
@@ -20,7 +21,7 @@ namespace fzl {
 //
 class ResizeableVmoMapper : protected OwnedVmoMapper {
  public:
-  static fbl::unique_ptr<ResizeableVmoMapper> Create(
+  static std::unique_ptr<ResizeableVmoMapper> Create(
       uint64_t size, const char* name,
       zx_vm_option_t map_options = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
       fbl::RefPtr<VmarManager> vmar_manager = nullptr, uint32_t cache_policy = 0);

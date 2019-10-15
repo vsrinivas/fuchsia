@@ -12,6 +12,8 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <fbl/unique_fd.h>
 #include <gpt/cros.h>
@@ -178,7 +180,7 @@ class TestState {
   uint64_t blk_sz_kernc_;
   uint64_t blk_sz_rootc_;
   fuchsia_hardware_block_BlockInfo block_info_;
-  fbl::unique_ptr<GptDevice> device_;
+  std::unique_ptr<GptDevice> device_;
   fbl::unique_fd fd_;
 };
 

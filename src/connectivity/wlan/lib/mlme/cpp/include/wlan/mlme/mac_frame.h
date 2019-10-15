@@ -11,8 +11,8 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <memory>
 
-#include <fbl/unique_ptr.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/macaddr.h>
@@ -106,7 +106,7 @@ class FrameView {
     return FrameView<UnknownBody, UnknownBody>(pkt_, data_offset_ + len);
   }
 
-  Frame<Header, Body> IntoOwned(fbl::unique_ptr<Packet> pkt) const {
+  Frame<Header, Body> IntoOwned(std::unique_ptr<Packet> pkt) const {
     ZX_DEBUG_ASSERT(pkt != nullptr && pkt.get() == pkt_);
     return Frame<Header, Body>(data_offset_, std::move(pkt));
   }
@@ -214,11 +214,11 @@ class FrameView {
 template <typename Header, typename Body = UnknownBody>
 class Frame {
  public:
-  explicit Frame(fbl::unique_ptr<Packet> pkt) : data_offset_(0), pkt_(std::move(pkt)) {
+  explicit Frame(std::unique_ptr<Packet> pkt) : data_offset_(0), pkt_(std::move(pkt)) {
     ZX_DEBUG_ASSERT(pkt_ != nullptr);
   }
 
-  Frame(size_t offset, fbl::unique_ptr<Packet> pkt) : data_offset_(offset), pkt_(std::move(pkt)) {
+  Frame(size_t offset, std::unique_ptr<Packet> pkt) : data_offset_(offset), pkt_(std::move(pkt)) {
     ZX_DEBUG_ASSERT(pkt_ != nullptr);
   }
 
@@ -256,7 +256,7 @@ class Frame {
   // Returns the Frame's underlying Packet. The Frame will no longer own the
   // Packet and will be `empty` from that moment on and should no longer be
   // used.
-  fbl::unique_ptr<Packet> Take() {
+  std::unique_ptr<Packet> Take() {
     ZX_DEBUG_ASSERT(!IsEmpty());
     return std::move(pkt_);
   }
@@ -269,7 +269,7 @@ class Frame {
 
  private:
   size_t data_offset_;
-  fbl::unique_ptr<Packet> pkt_;
+  std::unique_ptr<Packet> pkt_;
 };
 
 // Frame which contains a known header but unknown payload.

@@ -7,8 +7,9 @@
 
 #include <lib/device-protocol/i2c-channel.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
-#include <fbl/unique_ptr.h>
 
 namespace audio {
 namespace astro {
@@ -29,9 +30,9 @@ static constexpr uint8_t TDM_CFG9 = 0x13;
 static constexpr uint8_t TDM_CFG10 = 0x14;
 static constexpr uint8_t CLOCK_CFG = 0x3c;  // Clock Config
 
-class Tas27xx : public fbl::unique_ptr<Tas27xx> {
+class Tas27xx : public std::unique_ptr<Tas27xx> {
  public:
-  static fbl::unique_ptr<Tas27xx> Create(ddk::I2cChannel&& i2c);
+  static std::unique_ptr<Tas27xx> Create(ddk::I2cChannel&& i2c);
   bool ValidGain(float gain);
   zx_status_t SetGain(float gain);
   float GetGain() const { return current_gain_; }

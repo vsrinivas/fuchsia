@@ -9,7 +9,6 @@
 #include <queue>
 #include <unordered_map>
 
-#include <fbl/unique_ptr.h>
 #include <wlan/mlme/timer.h>
 
 namespace wlan {
@@ -35,7 +34,7 @@ class TimeoutId {
 template <typename Event = std::tuple<>>
 class TimerManager {
  public:
-  explicit TimerManager(fbl::unique_ptr<Timer> timer) : timer_(std::move(timer)) {}
+  explicit TimerManager(std::unique_ptr<Timer> timer) : timer_(std::move(timer)) {}
 
   // If the call succeeds, the returned TimeoutId is guaranteed to not be equal
   // to 'TimeoutId{}'
@@ -114,7 +113,7 @@ class TimerManager {
     }
   };
 
-  fbl::unique_ptr<Timer> timer_;
+  std::unique_ptr<Timer> timer_;
   std::priority_queue<HeapItem> heap_;
   std::unordered_map<uint64_t, Event> events_;
   uint64_t next_id_ = 0;

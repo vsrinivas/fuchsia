@@ -6,6 +6,8 @@
 
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include "../../allocation.h"
 
 namespace pci {
@@ -34,12 +36,12 @@ class FakeAllocation : public PciAllocation {
 class FakeAllocator : public PciAllocator {
  public:
   zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
-                             fbl::unique_ptr<PciAllocation>* out_alloc) final {
+                             std::unique_ptr<PciAllocation>* out_alloc) final {
     *out_alloc = std::unique_ptr<PciAllocation>(new FakeAllocation(base, size));
     return ZX_OK;
   }
 
-  zx_status_t GrantAddressSpace(fbl::unique_ptr<PciAllocation> alloc) final {
+  zx_status_t GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) final {
     alloc.release();
     return ZX_OK;
   }

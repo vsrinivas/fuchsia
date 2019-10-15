@@ -15,13 +15,14 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <pretty/hexdump.h>
 #include <virtio/virtio.h>
 
@@ -128,7 +129,7 @@ static virtio_vsock_hdr_t make_hdr(const SocketDevice::ConnectionKey& key, uint1
   };
 }
 
-SocketDevice::SocketDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+SocketDevice::SocketDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)),
       dispatch_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       rx_(this, kDataBacklog, kFrameSize),

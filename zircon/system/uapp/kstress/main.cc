@@ -23,7 +23,6 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "stress_test.h"

@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <sys/stat.h>
 
+#include <memory>
 #include <utility>
 
 #include <blobfs/format.h>
@@ -50,10 +51,10 @@ struct BlobInfo {
   // Path to the generated blob.
   fbl::StringBuffer<fs_test_utils::kPathSize> path;
 
-  fbl::unique_ptr<char[]> merkle;
+  std::unique_ptr<char[]> merkle;
   size_t size_merkle;
 
-  fbl::unique_ptr<char[]> data;
+  std::unique_ptr<char[]> data;
   size_t size_data;
 };
 
@@ -118,11 +119,11 @@ fbl::String GetNameForOrder(ReadOrder order) {
 
 // Creates a an in memory blob.
 bool MakeBlob(fbl::String fs_path, size_t blob_size, unsigned int* seed,
-              fbl::unique_ptr<BlobInfo>* out) {
+              std::unique_ptr<BlobInfo>* out) {
   BEGIN_HELPER;
   // Generate a Blob of random data
   fbl::AllocChecker ac;
-  fbl::unique_ptr<BlobInfo> info(new (&ac) BlobInfo);
+  std::unique_ptr<BlobInfo> info(new (&ac) BlobInfo);
   EXPECT_EQ(ac.check(), true);
   info->data.reset(new (&ac) char[blob_size]);
   EXPECT_EQ(ac.check(), true);
@@ -138,11 +139,11 @@ bool MakeBlob(fbl::String fs_path, size_t blob_size, unsigned int* seed,
 
   // Generate the Merkle Tree
   Digest digest;
-  fbl::unique_ptr<uint8_t[]> tree;
-  ASSERT_EQ(MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree,
-                                      &info->size_merkle, &digest),
+  std::unique_ptr<uint8_t[]> tree;
+  ASSERT_EQ(MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree, &info->size_merkle,
+                                      &digest),
             ZX_OK, "Couldn't create Merkle Tree");
-  info->merkle.reset(reinterpret_cast<char *>(tree.release()));
+  info->merkle.reset(reinterpret_cast<char*>(tree.release()));
   info->path.AppendPrintf("%s/%s", fs_path.c_str(), digest.ToString().c_str());
 
   // Sanity-check the merkle tree
@@ -172,7 +173,7 @@ class BlobfsTest {
     BEGIN_HELPER;
 
     // How many blobs do we need to add.
-    fbl::unique_ptr<BlobInfo> new_blob;
+    std::unique_ptr<BlobInfo> new_blob;
 
     for (int64_t curr = 0; curr < info_.blob_count; ++curr) {
       MakeBlob(fixture->fs_path(), info_.blob_size, fixture->mutable_seed(), &new_blob);
@@ -187,7 +188,7 @@ class BlobfsTest {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<char[]> buffer(new (&ac) char[info_.blob_size]);
+    std::unique_ptr<char[]> buffer(new (&ac) char[info_.blob_size]);
     ASSERT_TRUE(ac.check());
 
     state->DeclareStep("generate_blob");
@@ -251,7 +252,7 @@ class BlobfsTest {
     SortPathsByOrder(order, fixture->mutable_seed());
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<char[]> buffer(new (&ac) char[info_.blob_size]);
+    std::unique_ptr<char[]> buffer(new (&ac) char[info_.blob_size]);
     ASSERT_TRUE(ac.check());
 
     uint64_t current = 0;

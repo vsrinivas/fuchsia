@@ -62,7 +62,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   static constexpr bool kDefaultHardwired = false;
   static constexpr bool kDefaultPlugCanNotify = true;
 
-  static fbl::unique_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
+  static std::unique_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
                                                         bool is_input);
 
   // Execute the given task on the FIDL channel's main dispatcher thread. Used to deliver callbacks
@@ -70,9 +70,9 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void PostToDispatcher(fit::closure task_to_post);
 
   void SetBinding(fidl::Binding<fuchsia::virtualaudio::Input,
-                                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
+                                std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
   void SetBinding(fidl::Binding<fuchsia::virtualaudio::Output,
-                                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
+                                std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
 
   virtual bool CreateStream(zx_device_t* devnode);
   void RemoveStream();
@@ -150,9 +150,9 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   // an impl*). Something might get dispatched from other thread at around this time, so we enqueue
   // them (ClosureQueue) and use StopAndClear to cancel them during ~DeviceImpl (in RemoveStream).
   fidl::Binding<fuchsia::virtualaudio::Input,
-                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* input_binding_ = nullptr;
+                std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* input_binding_ = nullptr;
   fidl::Binding<fuchsia::virtualaudio::Output,
-                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* output_binding_ = nullptr;
+                std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* output_binding_ = nullptr;
 
   // Don't initialize here or in ctor; do it all in Init() so ResetConfiguration has same effect.
   std::string device_name_;

@@ -11,6 +11,7 @@
 #include <zircon/syscalls/port.h>
 
 #include <atomic>
+#include <memory>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -83,7 +84,7 @@ void Vmo::GenerateBufferContents(void* dest_buffer, uint64_t len, uint64_t paged
   }
 }
 
-fbl::unique_ptr<Vmo> Vmo::Clone() {
+std::unique_ptr<Vmo> Vmo::Clone() {
   zx::vmo clone;
   if (vmo_.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE, 0, size_,
                         &clone) != ZX_OK) {
@@ -96,7 +97,7 @@ fbl::unique_ptr<Vmo> Vmo::Clone() {
     return nullptr;
   }
 
-  return fbl::unique_ptr<Vmo>(
+  return std::unique_ptr<Vmo>(
       new Vmo(std::move(clone), size_, reinterpret_cast<uint64_t*>(addr), addr, base_val_));
 }
 
@@ -124,7 +125,7 @@ bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
     return false;
   }
 
-  auto paged_vmo = fbl::unique_ptr<Vmo>(
+  auto paged_vmo = std::unique_ptr<Vmo>(
       new Vmo(std::move(vmo), size, reinterpret_cast<uint64_t*>(addr), addr, next_base_));
 
   next_base_ += (size / sizeof(uint64_t));

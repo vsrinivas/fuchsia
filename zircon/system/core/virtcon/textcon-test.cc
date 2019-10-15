@@ -6,7 +6,8 @@
 
 #include <sys/param.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <gfx/gfx.h>
 #include <zxtest/zxtest.h>
 
@@ -114,7 +115,7 @@ class TextconHelper {
       return memcmp(snapshot_.get(), helper_->vc_surface->ptr, helper_->vc_surface->len) != 0;
     }
 
-    fbl::unique_ptr<char[]> ComparisonString() {
+    std::unique_ptr<char[]> ComparisonString() {
       vc_t* vc_dev = helper_->vc_dev;
       gfx_surface* vc_surface = helper_->vc_surface;
       // Add 1 to these sizes to account for the margins.
@@ -122,7 +123,7 @@ class TextconHelper {
       uint32_t cmp_size_y = vc_dev->rows + 1;
       uint32_t size_in_chars = cmp_size_x * cmp_size_y;
 
-      fbl::unique_ptr<bool[]> diffs(new bool[size_in_chars]);
+      std::unique_ptr<bool[]> diffs(new bool[size_in_chars]);
       for (uint32_t i = 0; i < size_in_chars; ++i)
         diffs[i] = false;
 
@@ -142,7 +143,7 @@ class TextconHelper {
       // Build a string showing the differences.  If we had
       // std::string or equivalent, we'd use that here.
       size_t string_size = (cmp_size_x + 3) * cmp_size_y + 1;
-      fbl::unique_ptr<char[]> string(new char[string_size]);
+      std::unique_ptr<char[]> string(new char[string_size]);
       char* ptr = string.get();
       for (uint32_t y = 0; y < cmp_size_y; ++y) {
         *ptr++ = '|';
@@ -164,7 +165,7 @@ class TextconHelper {
 
    private:
     TextconHelper* helper_;
-    fbl::unique_ptr<uint8_t[]> snapshot_;
+    std::unique_ptr<uint8_t[]> snapshot_;
   };
 
   void InvalidateAllGraphics() {

@@ -11,11 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <usb/usb-request.h>
 
@@ -38,7 +39,7 @@ const fuchsia_hardware_camera_Device_ops_t UsbVideoStream::CAMERA_FIDL_THUNKS{
 // whereas the XHCI host returns 64 bits.
 static constexpr uint16_t USB_SOF_MASK = 0x7FF;
 
-fbl::unique_ptr<async::Loop> UsbVideoStream::fidl_dispatch_loop_ = nullptr;
+std::unique_ptr<async::Loop> UsbVideoStream::fidl_dispatch_loop_ = nullptr;
 
 UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb, UvcFormatList format_list,
                                fbl::Vector<UsbVideoStreamingSetting>* settings,
@@ -82,7 +83,7 @@ zx_status_t UsbVideoStream::Create(zx_device_t* device, usb_protocol_t* usb, int
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto dev = fbl::unique_ptr<UsbVideoStream>(new UsbVideoStream(
+  auto dev = std::unique_ptr<UsbVideoStream>(new UsbVideoStream(
       device, usb, std::move(format_list), settings, std::move(device_info), parent_req_size));
 
   char name[ZX_DEVICE_NAME_MAX];

@@ -19,8 +19,9 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
 
@@ -114,8 +115,8 @@ bool TestMemfsLimitPages() {
     fbl::unique_fd fd = fbl::unique_fd(openat(dirfd(d), filename, O_CREAT | O_RDWR));
     ASSERT_GE(fd.get(), 0);
 
-    auto data = fbl::unique_ptr<uint8_t[]>(new uint8_t[page_limit * kPageSize + 1]);
-    auto data_back = fbl::unique_ptr<uint8_t[]>(new uint8_t[page_limit * kPageSize + 1]);
+    auto data = std::unique_ptr<uint8_t[]>(new uint8_t[page_limit * kPageSize + 1]);
+    auto data_back = std::unique_ptr<uint8_t[]>(new uint8_t[page_limit * kPageSize + 1]);
     for (ssize_t i = 0; i < page_limit * kPageSize + 1; i++) {
       data[i] = static_cast<uint8_t>(i % 100);
       data_back[i] = 0;

@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <memory>
 #include <vector>
 
 #include <ddk/debug.h>
@@ -162,8 +163,8 @@ class DmaMgrTest : public zxtest::Test {
   char local_mmio_buffer_[kLocalBufferSize];
   zx_handle_t bti_handle_ = ZX_HANDLE_INVALID;
   std::optional<ddk::MmioView> mmio_view_;
-  fbl::unique_ptr<camera::DmaManager> full_resolution_dma_;
-  fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
+  std::unique_ptr<camera::DmaManager> full_resolution_dma_;
+  std::unique_ptr<camera::DmaManager> downscaled_dma_;
   fuchsia_sysmem_BufferCollectionInfo full_resolution_buffer_collection_;
   fuchsia_sysmem_BufferCollectionInfo downscaled_buffer_collection_;
   std::vector<fuchsia_camera_FrameAvailableEvent> full_resolution_callbacks_;

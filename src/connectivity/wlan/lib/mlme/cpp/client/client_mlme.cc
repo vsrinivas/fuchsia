@@ -9,6 +9,7 @@
 
 #include <cinttypes>
 #include <cstring>
+#include <memory>
 #include <sstream>
 
 #include <wlan/common/bitfield.h>
@@ -40,7 +41,7 @@ ClientMlme::~ClientMlme() = default;
 zx_status_t ClientMlme::Init() {
   debugfn();
 
-  fbl::unique_ptr<Timer> timer;
+  std::unique_ptr<Timer> timer;
   ObjectId timer_id;
   timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   timer_id.set_target(to_enum_type(ObjectTarget::kChannelScheduler));
@@ -51,7 +52,7 @@ zx_status_t ClientMlme::Init() {
   }
   chan_sched_.reset(new ChannelScheduler(&on_channel_handler_, device_, std::move(timer)));
 
-  fbl::unique_ptr<Timer> scanner_timer;
+  std::unique_ptr<Timer> scanner_timer;
   ObjectId scanner_timer_id;
   scanner_timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
   scanner_timer_id.set_target(to_enum_type(ObjectTarget::kScanner));
@@ -172,7 +173,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   }
 }
 
-zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
+zx_status_t ClientMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
   switch (pkt->peer()) {
     case Packet::Peer::kEthernet: {
       // For outbound frame (Ethernet frame), hand to station directly so
@@ -262,7 +263,7 @@ void ValidateOnChannelFrame(const Packet& pkt) {
   ZX_DEBUG_ASSERT(pkt.peer() == Packet::Peer::kWlan);
 }
 
-void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Packet> packet) {
+void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(std::unique_ptr<Packet> packet) {
   debugfn();
   ValidateOnChannelFrame(*packet);
 

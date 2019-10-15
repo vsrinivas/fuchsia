@@ -4,6 +4,7 @@
 
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -12,6 +13,7 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -42,8 +44,8 @@ SystemAudioDevices GetSystemAudioDevices();
 // Create and open an input/output audio device at |device|.
 //
 // Return nullptr on error.
-fbl::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char* device);
-fbl::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device);
+std::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char* device);
+std::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device);
 
 // Fetch the string |id| from the given audio stream / device node.
 StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,

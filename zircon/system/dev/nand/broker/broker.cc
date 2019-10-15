@@ -9,13 +9,14 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/nand.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 
@@ -51,7 +52,7 @@ class Operation {
 
   sync_completion_t event_;
   zx_status_t status_ = ZX_ERR_INTERNAL;
-  fbl::unique_ptr<uint8_t[]> raw_buffer_;
+  std::unique_ptr<uint8_t[]> raw_buffer_;
 };
 
 class Broker;
@@ -194,7 +195,7 @@ zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& re
 zx_status_t NandBrokerBind(void* ctx, zx_device_t* parent) {
   zxlogf(INFO, "nand-broker: binding\n");
   fbl::AllocChecker checker;
-  fbl::unique_ptr<Broker> device(new (&checker) Broker(parent));
+  std::unique_ptr<Broker> device(new (&checker) Broker(parent));
   if (!checker.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -221,4 +222,4 @@ ZIRCON_DRIVER_BEGIN(nand_broker, nand_broker_ops, "zircon", "0.1", 2)
   BI_ABORT_IF_AUTOBIND,
   BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_NAND)
 ZIRCON_DRIVER_END(nand_broker)
-// clang-format on
+    // clang-format on

@@ -18,7 +18,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 
 namespace board_mt8167 {
 

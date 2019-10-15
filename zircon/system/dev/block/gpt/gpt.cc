@@ -360,7 +360,7 @@ int gpt_bind_thread(void* arg) {
   uint32_t gpt_block_count = static_cast<uint32_t>(result.value());
   size_t gpt_buffer_size = gpt_block_count * block_info.block_size;
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[gpt_buffer_size]);
-  fbl::unique_ptr<GptDevice> gpt;
+  std::unique_ptr<GptDevice> gpt;
 
   // sanity check the default txn size with the block size
   if ((kMaxPartitionTableSize % block_info.block_size) ||

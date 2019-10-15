@@ -17,6 +17,8 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <block-client/client.h>
 #include <crypto/secret.h>
 #include <fbl/macros.h>
@@ -254,7 +256,7 @@ class TestDevice final {
   // File descriptor for the zxcrypt volume.
   fbl::unique_fd zxcrypt_;
   // The zxcrypt volume
-  fbl::unique_ptr<FdioVolume> volume_;
+  std::unique_ptr<FdioVolume> volume_;
   // The cached block count.
   size_t block_count_;
   // The cached block size.
@@ -268,9 +270,9 @@ class TestDevice final {
   // VMO attached to the zxcrypt device for use with the block I/O protocol.
   zx::vmo vmo_;
   // An internal write buffer, initially filled with pseudo-random data
-  fbl::unique_ptr<uint8_t[]> to_write_;
+  std::unique_ptr<uint8_t[]> to_write_;
   // An internal write buffer,  initially filled with zeros.
-  fbl::unique_ptr<uint8_t[]> as_read_;
+  std::unique_ptr<uint8_t[]> as_read_;
   // Lock to coordinate waking thread
   fbl::Mutex lock_;
   // Thread used to manage sleeping/waking.

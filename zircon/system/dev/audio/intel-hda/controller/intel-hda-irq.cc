@@ -6,6 +6,7 @@
 #include <string.h>
 #include <zircon/assert.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -132,7 +133,7 @@ void IntelHDAController::ProcessRIRB() {
     LOG(TRACE, "RX[%2u]: 0x%08x%s\n", caddr, resp.data, resp.unsolicited() ? " (unsolicited)" : "");
 
     if (!resp.unsolicited()) {
-      fbl::unique_ptr<CodecCmdJob> job;
+      std::unique_ptr<CodecCmdJob> job;
 
       {
         fbl::AutoLock corb_lock(&corb_lock_);
@@ -191,7 +192,7 @@ void IntelHDAController::SendCodecCmdLocked(CodecCommand cmd) {
   corb_space_--;
 }
 
-zx_status_t IntelHDAController::QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) {
+zx_status_t IntelHDAController::QueueCodecCmd(std::unique_ptr<CodecCmdJob>&& job) {
   ZX_DEBUG_ASSERT(job != nullptr);
   LOG(TRACE, "TX: Codec ID %u Node ID %hu Verb 0x%05x\n", job->codec_id(), job->nid(),
       job->verb().val);

@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/zx/eventpair.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
 
 namespace video {
 namespace usb {
@@ -75,7 +75,7 @@ class ControlImpl : public fuchsia::camera::Control {
     async::Wait stream_token_waiter_;
   };
 
-  fbl::unique_ptr<StreamImpl> stream_;
+  std::unique_ptr<StreamImpl> stream_;
 
   std::vector<fuchsia::camera::VideoFormat> formats_;
 

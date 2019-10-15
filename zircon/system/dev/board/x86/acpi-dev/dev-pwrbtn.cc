@@ -8,6 +8,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <utility>
 
 #include <acpica/acpi.h>
@@ -17,7 +18,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <hid/descriptor.h>
 
 #include "dev.h"
@@ -29,7 +29,7 @@ using DeviceType = ddk::Device<AcpiPwrbtnDevice>;
 class AcpiPwrbtnDevice : public DeviceType,
                          public ddk::HidbusProtocol<AcpiPwrbtnDevice, ddk::base_protocol> {
  public:
-  static zx_status_t Create(zx_device_t* parent, fbl::unique_ptr<AcpiPwrbtnDevice>* out);
+  static zx_status_t Create(zx_device_t* parent, std::unique_ptr<AcpiPwrbtnDevice>* out);
 
   // hidbus protocol implementation
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
@@ -247,9 +247,9 @@ void AcpiPwrbtnDevice::DdkRelease() {
   delete this;
 }
 
-zx_status_t AcpiPwrbtnDevice::Create(zx_device_t* parent, fbl::unique_ptr<AcpiPwrbtnDevice>* out) {
+zx_status_t AcpiPwrbtnDevice::Create(zx_device_t* parent, std::unique_ptr<AcpiPwrbtnDevice>* out) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AcpiPwrbtnDevice> dev(new (&ac) AcpiPwrbtnDevice(parent));
+  std::unique_ptr<AcpiPwrbtnDevice> dev(new (&ac) AcpiPwrbtnDevice(parent));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -277,7 +277,7 @@ zx_status_t AcpiPwrbtnDevice::Create(zx_device_t* parent, fbl::unique_ptr<AcpiPw
 zx_status_t pwrbtn_init(zx_device_t* parent) {
   zxlogf(TRACE, "acpi-pwrbtn: init\n");
 
-  fbl::unique_ptr<AcpiPwrbtnDevice> dev;
+  std::unique_ptr<AcpiPwrbtnDevice> dev;
   zx_status_t status = AcpiPwrbtnDevice::Create(parent, &dev);
   if (status != ZX_OK) {
     return status;

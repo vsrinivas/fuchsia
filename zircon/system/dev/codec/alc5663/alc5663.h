@@ -8,12 +8,13 @@
 #include <lib/device-protocol/i2c-channel.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/i2c.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "i2c_client.h"
 
@@ -43,7 +44,7 @@ class Alc5663Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_A
   // Add a created ALC5663 to its parent.
   //
   // The DDK gains ownership of the device until DdkRelease() is called.
-  static zx_status_t AddChildToParent(fbl::unique_ptr<Alc5663Device> device);
+  static zx_status_t AddChildToParent(std::unique_ptr<Alc5663Device> device);
 
   // Initialise the hardware.
   zx_status_t InitializeDevice();

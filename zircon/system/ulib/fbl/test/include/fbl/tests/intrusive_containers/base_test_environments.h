@@ -11,7 +11,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/tests/intrusive_containers/objects.h>
 #include <fbl/tests/intrusive_containers/test_environment_utils.h>
-#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 namespace fbl {
@@ -87,10 +86,10 @@ class TestEnvironmentSpecialized<UnmanagedTestTraits<T>>
 };
 
 template <typename T>
-class TestEnvironmentSpecialized<UniquePtrTestTraits<T>>
-    : public TestEnvironmentBase<UniquePtrTestTraits<T>> {
+class TestEnvironmentSpecialized<UniquePtrDefaultDeleterTestTraits<T>>
+    : public TestEnvironmentBase<UniquePtrDefaultDeleterTestTraits<T>> {
  protected:
-  using Base = TestEnvironmentBase<UniquePtrTestTraits<T>>;
+  using Base = TestEnvironmentBase<UniquePtrDefaultDeleterTestTraits<T>>;
   using PtrType = typename Base::PtrType;
   static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
 
@@ -107,30 +106,10 @@ class TestEnvironmentSpecialized<UniquePtrTestTraits<T>>
 };
 
 template <typename T>
-class TestEnvironmentSpecialized<StdUniquePtrDefaultDeleterTestTraits<T>>
-    : public TestEnvironmentBase<StdUniquePtrDefaultDeleterTestTraits<T>> {
+class TestEnvironmentSpecialized<UniquePtrCustomDeleterTestTraits<T>>
+    : public TestEnvironmentBase<UniquePtrCustomDeleterTestTraits<T>> {
  protected:
-  using Base = TestEnvironmentBase<StdUniquePtrDefaultDeleterTestTraits<T>>;
-  using PtrType = typename Base::PtrType;
-  static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
-
-  void ReleaseObject(size_t ndx) {
-    if (ndx < OBJ_COUNT)
-      this->objects_[ndx] = nullptr;
-  }
-
-  bool HoldingObject(size_t ndx) const { return false; }
-
-  PtrType CreateTrackedObject(size_t ndx, size_t value, bool hold_ref = false) {
-    return Base::CreateTrackedObject(ndx, value, false);
-  }
-};
-
-template <typename T>
-class TestEnvironmentSpecialized<StdUniquePtrCustomDeleterTestTraits<T>>
-    : public TestEnvironmentBase<StdUniquePtrCustomDeleterTestTraits<T>> {
- protected:
-  using Base = TestEnvironmentBase<StdUniquePtrCustomDeleterTestTraits<T>>;
+  using Base = TestEnvironmentBase<UniquePtrCustomDeleterTestTraits<T>>;
   using PtrType = typename Base::PtrType;
   static constexpr auto OBJ_COUNT = Base::OBJ_COUNT;
 

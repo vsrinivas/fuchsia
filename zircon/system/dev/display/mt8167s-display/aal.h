@@ -10,11 +10,11 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 
 #include "common.h"
@@ -38,7 +38,7 @@ class Aal {
   void PrintRegisters();
 
  private:
-  fbl::unique_ptr<ddk::MmioBuffer> aal_mmio_;
+  std::unique_ptr<ddk::MmioBuffer> aal_mmio_;
   pdev_protocol_t pdev_ = {nullptr, nullptr};
   const uint32_t height_;  // Display height
   const uint32_t width_;   // Display width

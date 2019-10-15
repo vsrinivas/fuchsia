@@ -21,7 +21,6 @@
 #include <ddktl/protocol/dsiimpl.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "dw-mipi-dsi-reg.h"
 

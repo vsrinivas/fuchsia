@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
 #include <utility>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/tests/lfsr.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
@@ -78,7 +78,7 @@ struct StructTypeTraits {
 };
 
 struct UniquePtrTraits {
-  using ItemType = fbl::unique_ptr<TestObject>;
+  using ItemType = std::unique_ptr<TestObject>;
 
   static ItemType Create(ValueType val) {
     fbl::AllocChecker ac;

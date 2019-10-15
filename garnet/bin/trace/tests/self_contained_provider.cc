@@ -12,6 +12,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
+#include <memory>
+
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 

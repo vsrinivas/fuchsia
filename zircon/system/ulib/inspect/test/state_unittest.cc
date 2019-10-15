@@ -10,9 +10,9 @@
 #include <threads.h>
 
 #include <iostream>
+#include <memory>
 
 #include <fbl/intrusive_wavl_tree.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <pretty/hexdump.h>
 #include <zxtest/zxtest.h>
@@ -58,7 +58,7 @@ zx::vmo MakeVmo(size_t size) {
 // Container for scanned blocks from the buffer.
 // TODO(CF-236): Use std::map instead of intrusive containers when
 // libstd++ is available.
-struct ScannedBlock : public fbl::WAVLTreeContainable<fbl::unique_ptr<ScannedBlock>> {
+struct ScannedBlock : public fbl::WAVLTreeContainable<std::unique_ptr<ScannedBlock>> {
   BlockIndex index;
   const Block* block;
 
@@ -134,7 +134,7 @@ Block MakeHeader(uint64_t generation) {
 }
 
 Snapshot SnapshotAndScan(const zx::vmo& vmo,
-                         fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>>* blocks,
+                         fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>>* blocks,
                          size_t* free_blocks, size_t* allocated_blocks) {
   *free_blocks = *allocated_blocks = 0;
 
@@ -158,7 +158,7 @@ TEST(State, CreateAndCopy) {
   auto state = State::CreateWithSize(4096);
   ASSERT_TRUE(state);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -191,7 +191,7 @@ TEST(State, CreateIntProperty) {
   b.Add(5);
   b.Subtract(10);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -238,7 +238,7 @@ TEST(State, CreateUintProperty) {
   b.Add(15);
   b.Subtract(10);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -285,7 +285,7 @@ TEST(State, CreateDoubleProperty) {
   b.Add(0.5);
   b.Subtract(0.25);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -352,7 +352,7 @@ TEST(State, CreateArrays) {
   c.Add(10, 10);
   c.Subtract(10, 10);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -423,7 +423,7 @@ TEST(State, CreateArrayChildren) {
   UintArray b = root.CreateUintArray("b", 10);
   DoubleArray c = root.CreateDoubleArray("c", 10);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -522,7 +522,7 @@ TEST(State, CreateLinearHistogramChildren) {
   c.Insert(1000);
   c.Insert(21);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -630,7 +630,7 @@ TEST(State, CreateExponentialHistogramChildren) {
   c.Insert(1000);
   c.Insert(30);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -718,7 +718,7 @@ TEST(State, CreateSmallProperties) {
   StringProperty a = state->CreateStringProperty("a", 0, "Hello");
   ByteVectorProperty b = state->CreateByteVectorProperty("b", 0, temp);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -775,7 +775,7 @@ TEST(State, CreateLargeSingleExtentProperties) {
   StringProperty a = state->CreateStringProperty("a", 0, str_contents);
   ByteVectorProperty b = state->CreateByteVectorProperty("b", 0, contents);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -835,7 +835,7 @@ TEST(State, CreateMultiExtentProperty) {
   }
   StringProperty a = state->CreateStringProperty("a", 0, contents);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -886,7 +886,7 @@ TEST(State, SetSmallStringProperty) {
 
   a.Set("World");
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -922,7 +922,7 @@ TEST(State, SetSmallBinaryProperty) {
 
   a.Set({'a', 'a', 'a', 'a'});
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -965,7 +965,7 @@ TEST(State, SetLargeProperty) {
 
   a.Set("World");
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -1004,7 +1004,7 @@ TEST(State, SetPropertyOutOfMemory) {
   ByteVectorProperty a = state->CreateByteVectorProperty("a", 0, vec);
   EXPECT_FALSE(bool(a));
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -1029,7 +1029,7 @@ TEST(State, CreateNodeHierarchy) {
 
   auto version = root.CreateString("version", "1.0beta2");
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -1103,7 +1103,7 @@ TEST(State, TombstoneTest) {
   auto heap = std::make_unique<Heap>(std::move(vmo));
   auto state = State::Create(std::move(heap));
 
-  fbl::unique_ptr<Node> requests;
+  std::unique_ptr<Node> requests;
   {
     // Root going out of scope causes a tombstone to be created,
     // but since requests is referencing it it will not be deleted.
@@ -1114,7 +1114,7 @@ TEST(State, TombstoneTest) {
     auto c = root.CreateDouble("c", 1);
   }
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -1169,7 +1169,7 @@ TEST(State, TombstoneCleanup) {
     }
   }
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -1224,7 +1224,7 @@ TEST(State, LinkTest) {
   Link link2 =
       state->CreateLink("link2", 1u /* root index */, "/test", LinkBlockDisposition::kInline);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -1280,7 +1280,7 @@ TEST(State, LinkContentsAllocationFailure) {
   std::string name(2000, 'a');
   Link link = state->CreateLink(name, 1u /* root index */, name, LinkBlockDisposition::kChild);
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);
@@ -1379,7 +1379,7 @@ TEST(State, MultithreadingTest) {
     thrd_join(child_thread_2, nullptr);
   }
 
-  fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
   auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
   ASSERT_TRUE(snapshot);

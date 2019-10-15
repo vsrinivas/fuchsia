@@ -4,6 +4,8 @@
 
 #include <zircon/status.h>
 
+#include <memory>
+
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/parse_element.h>
@@ -22,7 +24,7 @@ static constexpr size_t kDot11MeshHWMPpreqMinIntervalTu = 100;
 static constexpr bool kDot11MeshHWMPtargetOnly = true;
 static constexpr size_t kDot11MeshHWMPperrMinIntervalTu = 100;
 
-HwmpState::HwmpState(fbl::unique_ptr<Timer> timer)
+HwmpState::HwmpState(std::unique_ptr<Timer> timer)
     : our_hwmp_seqno(0),
       timer_mgr(std::move(timer)),
       perr_rate_limiter(WLAN_TU(kDot11MeshHWMPperrMinIntervalTu), 1) {}
@@ -139,7 +141,7 @@ struct SeqnoAndMetric {
 };
 
 // See IEEE Std 802.11-2016, 14.10.10.3, Cases A and C
-static fbl::unique_ptr<Packet> MakeOriginalPrep(const MacHeaderWriter& header_writer,
+static std::unique_ptr<Packet> MakeOriginalPrep(const MacHeaderWriter& header_writer,
                                                 const common::MacAddr& preq_transmitter_addr,
                                                 const PreqPerTarget& per_target,
                                                 const common::ParsedPreq& preq,
@@ -176,7 +178,7 @@ static fbl::unique_ptr<Packet> MakeOriginalPrep(const MacHeaderWriter& header_wr
 }
 
 // See IEEE Std 802.11-2016, 14.10.9.3, Case E
-static fbl::unique_ptr<Packet> MakeForwardedPreq(const MacHeaderWriter& mac_header_writer,
+static std::unique_ptr<Packet> MakeForwardedPreq(const MacHeaderWriter& mac_header_writer,
                                                  const common::ParsedPreq& incoming_preq,
                                                  uint32_t last_hop_metric,
                                                  fbl::Span<const PreqPerTarget> to_forward) {
@@ -290,7 +292,7 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
 }
 
 // See IEEE Std 802.11-2016, 14.10.10.3, Case B
-static fbl::unique_ptr<Packet> MakeForwardedPrep(const MacHeaderWriter& mac_header_writer,
+static std::unique_ptr<Packet> MakeForwardedPrep(const MacHeaderWriter& mac_header_writer,
                                                  const common::ParsedPrep& incoming_prep,
                                                  uint32_t last_hop_metric,
                                                  const MeshPath& path_to_originator) {
@@ -419,7 +421,7 @@ static void WriteForwardedPerrDestination(const common::ParsedPerrDestination& i
 }
 
 // See IEEE Std 802.11-2016, 14.10.11.3, Case D
-static fbl::unique_ptr<Packet> MakeForwardedPerr(const MacHeaderWriter& mac_header_writer,
+static std::unique_ptr<Packet> MakeForwardedPerr(const MacHeaderWriter& mac_header_writer,
                                                  const common::ParsedPerr& incoming_perr,
                                                  uint8_t num_destinations,
                                                  fbl::Span<const uint8_t> destinations) {
@@ -533,7 +535,7 @@ PacketQueue HandleHwmpAction(fbl::Span<const uint8_t> elements,
 }
 
 // IEEE Std 802.11-2016, 14.10.9.3, case A, Table 14-10
-static fbl::unique_ptr<Packet> MakeOriginalPreq(const common::MacAddr& target_addr,
+static std::unique_ptr<Packet> MakeOriginalPreq(const common::MacAddr& target_addr,
                                                 const common::MacAddr& self_addr,
                                                 const MacHeaderWriter& mac_header_writer,
                                                 uint32_t our_hwmp_seqno, uint32_t path_discovery_id,

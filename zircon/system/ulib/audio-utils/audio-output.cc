@@ -6,6 +6,8 @@
 #include <string.h>
 #include <zircon/device/audio.h>
 
+#include <memory>
+
 #include <audio-utils/audio-output.h>
 #include <audio-utils/audio-stream.h>
 #include <fbl/algorithm.h>
@@ -14,17 +16,17 @@
 namespace audio {
 namespace utils {
 
-fbl::unique_ptr<AudioOutput> AudioOutput::Create(uint32_t dev_id) {
+std::unique_ptr<AudioOutput> AudioOutput::Create(uint32_t dev_id) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_id));
+  std::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_id));
   if (!ac.check())
     return nullptr;
   return res;
 }
 
-fbl::unique_ptr<AudioOutput> AudioOutput::Create(const char* dev_path) {
+std::unique_ptr<AudioOutput> AudioOutput::Create(const char* dev_path) {
   fbl::AllocChecker ac;
-  fbl::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_path));
+  std::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_path));
   if (!ac.check())
     return nullptr;
   return res;

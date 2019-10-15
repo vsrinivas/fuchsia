@@ -22,7 +22,6 @@
 #include <zircon/syscalls.h>
 
 #include <ddk/platform-defs.h>
-#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 namespace usb_virtual_bus_base {

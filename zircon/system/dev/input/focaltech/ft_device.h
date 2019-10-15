@@ -20,7 +20,6 @@
 #include <ddktl/protocol/hidbus.h>
 #include <ddktl/protocol/test.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <hid/ft3x27.h>
 #include <hid/ft5726.h>
 #include <hid/ft6336.h>

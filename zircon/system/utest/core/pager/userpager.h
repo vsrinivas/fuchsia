@@ -13,6 +13,8 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 
@@ -20,7 +22,7 @@ namespace pager_tests {
 
 class UserPager;
 
-class Vmo : public fbl::DoublyLinkedListable<fbl::unique_ptr<Vmo>> {
+class Vmo : public fbl::DoublyLinkedListable<std::unique_ptr<Vmo>> {
  public:
   ~Vmo() = default;
 
@@ -46,7 +48,7 @@ class Vmo : public fbl::DoublyLinkedListable<fbl::unique_ptr<Vmo>> {
   uintptr_t GetBaseAddr() const { return base_addr_; }
   const zx::vmo& vmo() const { return vmo_; }
 
-  fbl::unique_ptr<Vmo> Clone();
+  std::unique_ptr<Vmo> Clone();
 
  private:
   Vmo(zx::vmo vmo, uint64_t size, uint64_t* base, uint64_t base_addr, uint64_t base_val)
@@ -115,13 +117,13 @@ class UserPager {
   zx::port port_;
   uint64_t next_base_ = 0;
 
-  fbl::DoublyLinkedList<fbl::unique_ptr<Vmo>> vmos_;
+  fbl::DoublyLinkedList<std::unique_ptr<Vmo>> vmos_;
 
-  typedef struct request : fbl::DoublyLinkedListable<fbl::unique_ptr<struct request>> {
+  typedef struct request : fbl::DoublyLinkedListable<std::unique_ptr<struct request>> {
     zx_port_packet_t req;
   } request_t;
 
-  fbl::DoublyLinkedList<fbl::unique_ptr<request_t>> requests_;
+  fbl::DoublyLinkedList<std::unique_ptr<request_t>> requests_;
 
   bool WaitForRequest(uint64_t key, const zx_packet_page_request_t& request, zx_time_t deadline);
   bool WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet)> cmp_fn,

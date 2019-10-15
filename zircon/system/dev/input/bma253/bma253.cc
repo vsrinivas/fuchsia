@@ -7,11 +7,13 @@
 #include <endian.h>
 #include <lib/device-protocol/pdev.h>
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 
@@ -84,7 +86,7 @@ zx_status_t Bma253::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Bma253> device(new (&ac) Bma253(parent, &i2c, std::move(port)));
+  std::unique_ptr<Bma253> device(new (&ac) Bma253(parent, &i2c, std::move(port)));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Bma253 alloc failed\n", __FILE__);
     return ZX_ERR_NO_MEMORY;

@@ -6,10 +6,11 @@
 
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <fs/trace.h>
 
 #include "lz4.h"
@@ -27,7 +28,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
       if (status != ZX_OK) {
         return std::nullopt;
       }
-      fbl::unique_ptr<LZ4Compressor> compressor;
+      std::unique_ptr<LZ4Compressor> compressor;
       status = LZ4Compressor::Create(blob_size, compressed_blob.start(), compressed_blob.size(),
                                      &compressor);
       if (status != ZX_OK) {
@@ -43,7 +44,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
       if (status != ZX_OK) {
         return std::nullopt;
       }
-      fbl::unique_ptr<ZSTDCompressor> compressor;
+      std::unique_ptr<ZSTDCompressor> compressor;
       status = ZSTDCompressor::Create(blob_size, compressed_blob.start(), compressed_blob.size(),
                                       &compressor);
       if (status != ZX_OK) {
@@ -57,7 +58,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
   }
 }
 
-BlobCompressor::BlobCompressor(fbl::unique_ptr<Compressor> compressor,
+BlobCompressor::BlobCompressor(std::unique_ptr<Compressor> compressor,
                                fzl::OwnedVmoMapper compressed_blob)
     : compressor_(std::move(compressor)), compressed_blob_(std::move(compressed_blob)) {}
 

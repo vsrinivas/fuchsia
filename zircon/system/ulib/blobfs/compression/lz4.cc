@@ -6,10 +6,11 @@
 
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <fs/trace.h>
 #include <lz4/lz4frame.h>
 
@@ -36,7 +37,7 @@ LZ4Compressor::~LZ4Compressor() { LZ4F_freeCompressionContext(ctx_); }
 
 zx_status_t LZ4Compressor::Create(size_t input_size, void* compression_buffer,
                                   size_t compression_buffer_length,
-                                  fbl::unique_ptr<LZ4Compressor>* out) {
+                                  std::unique_ptr<LZ4Compressor>* out) {
   if (BufferMax(input_size) > compression_buffer_length) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -47,7 +48,7 @@ zx_status_t LZ4Compressor::Create(size_t input_size, void* compression_buffer,
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto compressor = fbl::unique_ptr<LZ4Compressor>(
+  auto compressor = std::unique_ptr<LZ4Compressor>(
       new LZ4Compressor(std::move(ctx), compression_buffer, compression_buffer_length));
   size_t r =
       LZ4F_compressBegin(compressor->ctx_, compressor->Buffer(), compressor->Remaining(), nullptr);

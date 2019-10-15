@@ -145,7 +145,7 @@ zx_library("x86") {
     # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>.
     "$zx/system/ulib/bitmap:headers",
 
-    # <arch/aspace.h> has #include <fbl/unique_ptr.h>.
+    # <arch/aspace.h> uses various fbl things
     "$zx/system/ulib/fbl:headers",
 
     # <arch/x86/acpi.h> has #include <acpica/acpi.h>.

@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 
+#include <memory>
+
 namespace minfs {
 
 InodeManager::InodeManager(blk_t start_block) : start_block_(start_block) {}
@@ -19,7 +21,7 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
   auto grow_cb = [mgr_raw](uint32_t pool_size) { return mgr_raw->Grow(pool_size); };
 
   zx_status_t status;
-  fbl::unique_ptr<PersistentStorage> storage(
+  std::unique_ptr<PersistentStorage> storage(
       new PersistentStorage(device, sb, kMinfsInodeSize, std::move(grow_cb), std::move(metadata)));
 
   if ((status = Allocator::Create(txn, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {

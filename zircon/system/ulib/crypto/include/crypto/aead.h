@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
 #include <crypto/secret.h>
@@ -95,11 +97,11 @@ class __EXPORT AEAD final {
   struct Context;
 
   // Opaque pointer to the crypto implementation context.
-  fbl::unique_ptr<Context> ctx_;
+  std::unique_ptr<Context> ctx_;
   // Indicates whether configured to encrypt or decrypt.
   Cipher::Direction direction_;
   // Buffer holding initial vector.  The IV is expanded to be |uint64_t|-aligned.
-  fbl::unique_ptr<uint64_t[]> iv_;
+  std::unique_ptr<uint64_t[]> iv_;
   // Original value of |iv_[0]|.  |Seal| will fail if |iv_[0]| wraps around to this value.
   uint64_t iv0_;
   // Size of the actual IV.

@@ -6,6 +6,7 @@
 
 #include <lib/device-protocol/platform-device.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -17,7 +18,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "s912-blocks.h"
 
@@ -124,7 +124,7 @@ zx_status_t AmlGxlGpio::Create(zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  fbl::unique_ptr<AmlGxlGpio> device(
+  std::unique_ptr<AmlGxlGpio> device(
       new (&ac) AmlGxlGpio(parent, pdev, std::move(mmio_gpio), std::move(mmio_gpio_a0),
                            std::move(mmio_interrupt), gpio_blocks, gpio_interrupt, pinmux_blocks,
                            block_count, std::move(block_locks), std::move(irq_info)));

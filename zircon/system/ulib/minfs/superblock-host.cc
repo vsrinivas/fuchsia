@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory>
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
@@ -22,7 +23,7 @@ SuperblockManager::~SuperblockManager() = default;
 // Static.
 zx_status_t SuperblockManager::Create(const Superblock* info, uint32_t max_blocks,
                                       IntegrityCheck checks,
-                                      fbl::unique_ptr<SuperblockManager>* out) {
+                                      std::unique_ptr<SuperblockManager>* out) {
   zx_status_t status = ZX_OK;
   if (checks == IntegrityCheck::kAll) {
     status = CheckSuperblock(info, max_blocks);
@@ -32,7 +33,7 @@ zx_status_t SuperblockManager::Create(const Superblock* info, uint32_t max_block
     }
   }
 
-  auto sb = fbl::unique_ptr<SuperblockManager>(new SuperblockManager(info));
+  auto sb = std::unique_ptr<SuperblockManager>(new SuperblockManager(info));
   *out = std::move(sb);
   return ZX_OK;
 }

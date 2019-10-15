@@ -10,8 +10,9 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 
 namespace digest {
 
@@ -81,7 +82,7 @@ class Digest final {
   struct Context;
 
   // Opaque pointer to the crypto implementation context.
-  fbl::unique_ptr<Context> ctx_;
+  std::unique_ptr<Context> ctx_;
   // The raw bytes of the current digest.  This is filled in either by the
   // assignment operators or the Parse and Final methods.
   uint8_t bytes_[kSha256Length];

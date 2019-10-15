@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include <memory>
+
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
@@ -34,7 +36,7 @@ class Container {
   // does not exist or is not a valid Container type, or if flags is not zero or a valid
   // combination of fvm::sparse_flags_t.
   static zx_status_t Create(const char* path, off_t offset, uint32_t flags,
-                            fbl::unique_ptr<Container>* out);
+                            std::unique_ptr<Container>* out);
 
   Container(const char* path, size_t slice_size, uint32_t flags);
 
@@ -73,7 +75,7 @@ class FvmContainer final : public Container {
     uint32_t vpart_index;
     uint32_t pslice_start;
     uint32_t slice_count;
-    fbl::unique_ptr<Format> format;
+    std::unique_ptr<Format> format;
   };
 
  public:
@@ -81,12 +83,12 @@ class FvmContainer final : public Container {
   // Uses the provided |slice_size| to create the container starting at |offset| bytes within the
   // file with a total length of |length| bytes, and returns the result in |out|.
   static zx_status_t CreateNew(const char* path, size_t slice_size, off_t offset, off_t length,
-                               fbl::unique_ptr<FvmContainer>* out);
+                               std::unique_ptr<FvmContainer>* out);
 
   // Creates an FvmContainer from the existing image located at |offset| bytes within |path|.
   // Fails if a valid image  does not already exist.
   static zx_status_t CreateExisting(const char* path, off_t offset,
-                                    fbl::unique_ptr<FvmContainer>* out);
+                                    std::unique_ptr<FvmContainer>* out);
 
   ~FvmContainer();
 
@@ -162,7 +164,7 @@ class CompressionContext {
   }
 
   LZ4F_compressionContext_t cctx_;
-  fbl::unique_ptr<uint8_t[]> data_;
+  std::unique_ptr<uint8_t[]> data_;
   size_t size_ = 0;
   size_t offset_ = 0;
 };
@@ -180,17 +182,17 @@ class SparseContainer final : public Container {
   // Uses the provided |slice_size| and |flags| to create the container and returns the result in
   // |out|.
   static zx_status_t CreateNew(const char* path, size_t slice_size, uint32_t flags,
-                               fbl::unique_ptr<SparseContainer>* out);
+                               std::unique_ptr<SparseContainer>* out);
 
   // Creates a new SparseContainer at the given |path|, regardless of whether one already exists.
   // Uses the provided |slice_size|, |max_disk_size| and |flags| to create the container and returns
   // the result in |out|.
   static zx_status_t CreateNew(const char* path, size_t slice_size, uint32_t flags,
-                               uint64_t max_disk_size, fbl::unique_ptr<SparseContainer>* out);
+                               uint64_t max_disk_size, std::unique_ptr<SparseContainer>* out);
 
   // Creates a SparseContainer from the image located at |path|. Fails if a valid image does not
   // already exist.
-  static zx_status_t CreateExisting(const char* path, fbl::unique_ptr<SparseContainer>* out);
+  static zx_status_t CreateExisting(const char* path, std::unique_ptr<SparseContainer>* out);
 
   ~SparseContainer();
 
@@ -215,7 +217,7 @@ class SparseContainer final : public Container {
   zx_status_t Commit() final;
 
   // Unpacks the sparse container and "paves" it to the file system exposed by |wrapper|.
-  zx_status_t Pave(fbl::unique_ptr<fvm::host::FileWrapper> wrapper, size_t disk_offset = 0,
+  zx_status_t Pave(std::unique_ptr<fvm::host::FileWrapper> wrapper, size_t disk_offset = 0,
                    size_t disk_size = 0);
 
   size_t SliceSize() const final;
@@ -239,7 +241,7 @@ class SparseContainer final : public Container {
   fvm::sparse_image_t image_;
   fbl::Vector<SparsePartitionInfo> partitions_;
   CompressionContext compression_;
-  fbl::unique_ptr<fvm::SparseReader> reader_;
+  std::unique_ptr<fvm::SparseReader> reader_;
 
   SparseContainer(const char* path, uint64_t slice_size, uint32_t flags);
 
@@ -249,7 +251,7 @@ class SparseContainer final : public Container {
   // Reads sparse data from disk so we are able to inspect the existing container.
   zx_status_t InitExisting();
 
-  zx_status_t AllocatePartition(fbl::unique_ptr<Format> format, FvmReservation* reserve);
+  zx_status_t AllocatePartition(std::unique_ptr<Format> format, FvmReservation* reserve);
   zx_status_t AllocateExtent(uint32_t part_index, uint64_t slice_start, uint64_t slice_count,
                              uint64_t extent_length);
 

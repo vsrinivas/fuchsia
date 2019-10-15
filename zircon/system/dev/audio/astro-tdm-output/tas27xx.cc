@@ -4,6 +4,7 @@
 
 #include "tas27xx.h"
 
+#include <memory>
 #include <utility>
 
 #include <ddk/protocol/i2c.h>
@@ -14,10 +15,10 @@ namespace audio {
 namespace astro {
 
 // static
-fbl::unique_ptr<Tas27xx> Tas27xx::Create(ddk::I2cChannel&& i2c) {
+std::unique_ptr<Tas27xx> Tas27xx::Create(ddk::I2cChannel&& i2c) {
   fbl::AllocChecker ac;
 
-  auto ptr = fbl::unique_ptr<Tas27xx>(new (&ac) Tas27xx(std::move(i2c)));
+  auto ptr = std::unique_ptr<Tas27xx>(new (&ac) Tas27xx(std::move(i2c)));
   if (!ac.check()) {
     return nullptr;
   }

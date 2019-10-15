@@ -9,13 +9,13 @@
 #include <sys/stat.h>
 #include <threads.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>

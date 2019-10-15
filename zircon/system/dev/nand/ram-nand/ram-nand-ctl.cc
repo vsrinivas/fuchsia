@@ -11,10 +11,11 @@
 #include <string.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 #include "ram-nand.h"
 
@@ -56,7 +57,7 @@ zx_status_t RamNandCtl::CreateDevice(const fuchsia_hardware_nand_RamNandInfo* in
                                      const char** name) {
   const auto& params = static_cast<const NandParams>(info->nand_info);
   fbl::AllocChecker checker;
-  fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params, zxdev()));
+  std::unique_ptr<NandDevice> device(new (&checker) NandDevice(params, zxdev()));
   if (!checker.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -76,7 +77,7 @@ zx_status_t RamNandCtl::CreateDevice(const fuchsia_hardware_nand_RamNandInfo* in
 
 zx_status_t RamNandDriverBind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker checker;
-  fbl::unique_ptr<RamNandCtl> device(new (&checker) RamNandCtl(parent));
+  std::unique_ptr<RamNandCtl> device(new (&checker) RamNandCtl(parent));
   if (!checker.check()) {
     return ZX_ERR_NO_MEMORY;
   }

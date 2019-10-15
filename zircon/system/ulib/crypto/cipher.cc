@@ -14,9 +14,9 @@
 #include <crypto/cipher.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 // See note in //zircon/third_party/ulib/uboringssl/rules.mk
 #define BORINGSSL_NO_CXX

@@ -8,8 +8,9 @@
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 
+#include <memory>
+
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <loader-service/loader-service.h>
 
 class SystemInstance;
@@ -22,7 +23,7 @@ class DevhostLoaderService {
   // Create a new loader service for devhosts. The |dispatcher| must have a
   // longer lifetime than |out|.
   static zx_status_t Create(async_dispatcher_t* dispatcher, SystemInstance* system_instance,
-                            fbl::unique_ptr<DevhostLoaderService>* out);
+                            std::unique_ptr<DevhostLoaderService>* out);
   ~DevhostLoaderService();
 
   // Connect to the loader service.

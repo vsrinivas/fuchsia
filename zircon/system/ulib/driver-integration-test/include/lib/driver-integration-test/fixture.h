@@ -10,7 +10,6 @@
 #include <ddk/metadata/test.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 namespace driver_integration_test {
 

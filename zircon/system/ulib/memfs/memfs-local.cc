@@ -15,10 +15,10 @@
 #include <sys/stat.h>
 #include <zircon/device/vfs.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 
 #include "dnode.h"
@@ -58,7 +58,7 @@ zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatch
     return status;
   }
   vfs->SetDispatcher(dispatcher);
-  fbl::unique_ptr<memfs_filesystem_t> fs = std::make_unique<memfs_filesystem_t>(std::move(vfs));
+  std::unique_ptr<memfs_filesystem_t> fs = std::make_unique<memfs_filesystem_t>(std::move(vfs));
   if ((status = fs->vfs->ServeDirectory(std::move(root), std::move(server))) != ZX_OK) {
     return status;
   }

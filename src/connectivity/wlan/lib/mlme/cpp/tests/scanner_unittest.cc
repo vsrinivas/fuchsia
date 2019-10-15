@@ -7,9 +7,9 @@
 #include <zircon/status.h>
 
 #include <cstring>
+#include <memory>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/mlme/client/channel_scheduler.h>
@@ -51,7 +51,7 @@ const uint8_t kProbeResponse[] = {
 };
 
 struct MockOnChannelHandler : OnChannelHandler {
-  virtual void HandleOnChannelFrame(fbl::unique_ptr<Packet>) override {}
+  virtual void HandleOnChannelFrame(std::unique_ptr<Packet>) override {}
   virtual void PreSwitchOffChannel() override {}
   virtual void ReturnedOnChannel() override {}
 };
@@ -70,7 +70,7 @@ class ScannerTest : public ::testing::Test {
         {std::move(req), fuchsia::wlan::mlme::internal::kMLME_OnScanResult_Ordinal});
   }
 
-  fbl::unique_ptr<wlan::Packet> CreatePacket(fbl::Span<const uint8_t> data) {
+  std::unique_ptr<wlan::Packet> CreatePacket(fbl::Span<const uint8_t> data) {
     wlan_rx_info_t info;
     info.valid_fields = WLAN_RX_INFO_VALID_RSSI | WLAN_RX_INFO_VALID_SNR;
     info.chan = {

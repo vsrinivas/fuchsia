@@ -15,6 +15,8 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -22,7 +24,6 @@
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "id-map.h"
@@ -84,7 +85,7 @@ class Controller : public ControllerParent,
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t Bind(fbl::unique_ptr<display::Controller>* device_ptr);
+  zx_status_t Bind(std::unique_ptr<display::Controller>* device_ptr);
 
   void DisplayControllerInterfaceOnDisplaysChanged(const added_display_args_t* displays_added,
                                                    size_t added_count,

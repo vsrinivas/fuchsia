@@ -10,6 +10,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
 #include <optional>
 
 #include <audio-proto/audio-proto.h>
@@ -55,7 +56,7 @@ class As370AudioStreamIn : public SimpleAudioStream {
       notify_timer_ TA_GUARDED(domain_token()){this};
   ddk::PDev pdev_ TA_GUARDED(domain_token());
   zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
-  fbl::unique_ptr<SynAudioInDevice> lib_;
+  std::unique_ptr<SynAudioInDevice> lib_;
   ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_token());
   zx::vmo dma_buffer_ TA_GUARDED(domain_token());
 };

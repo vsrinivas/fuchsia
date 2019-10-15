@@ -27,6 +27,7 @@
 #include <zircon/syscalls.h>
 
 #include <atomic>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -40,7 +41,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -673,10 +673,10 @@ static bool CreateWriteReopen(BlobfsTest* blobfsTest) {
   BEGIN_HELPER;
   size_t num_ops = 10;
 
-  fbl::unique_ptr<fs_test_utils::BlobInfo> anchor_info;
+  std::unique_ptr<fs_test_utils::BlobInfo> anchor_info;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 10, &anchor_info));
 
-  fbl::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
   ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 10 * (1 << 20), &info));
   reopen_data_t dat;
   strcpy(dat.path, info->path);

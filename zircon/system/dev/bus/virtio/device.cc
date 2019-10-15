@@ -12,6 +12,7 @@
 #include <string.h>
 #include <zircon/status.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -24,7 +25,7 @@
 
 namespace virtio {
 
-Device::Device(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+Device::Device(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : bti_(std::move(bti)), backend_(std::move(backend)), bus_device_(bus_device) {
   LTRACE_ENTRY;
   device_ops_.version = DEVICE_OPS_VERSION;

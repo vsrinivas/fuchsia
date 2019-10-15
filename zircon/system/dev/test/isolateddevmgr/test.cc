@@ -15,7 +15,6 @@
 
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;

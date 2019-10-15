@@ -15,7 +15,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <usb/usb-request.h>
 
 #include "usb-virtual-bus.h"

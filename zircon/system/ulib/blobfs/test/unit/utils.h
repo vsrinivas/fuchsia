@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UNIT_UTILS_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_UNIT_UTILS_H_
 
+#include <memory>
 #include <optional>
 
 #include <block-client/cpp/block-device.h>
@@ -109,7 +110,7 @@ class MockSpaceManager : public SpaceManager {
 // Create a block and node map of the requested size, update the superblock of
 // the |space_manager|, and create an allocator from this provided info.
 void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_manager,
-                         fbl::unique_ptr<Allocator>* out);
+                         std::unique_ptr<Allocator>* out);
 
 // Force the allocator to become maximally fragmented by allocating
 // every-other block within up to |blocks|.

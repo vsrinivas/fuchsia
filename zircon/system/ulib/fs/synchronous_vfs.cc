@@ -5,9 +5,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 
+#include <memory>
 #include <utility>
 
-#include <fbl/unique_ptr.h>
 #include <fs/synchronous_vfs.h>
 
 namespace fs {

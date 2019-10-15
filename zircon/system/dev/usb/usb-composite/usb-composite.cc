@@ -7,7 +7,6 @@
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 #include "usb-interface.h"
 

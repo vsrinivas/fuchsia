@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <crypto/bytes.h>
 #include <crypto/digest.h>
 #include <crypto/secret.h>
@@ -60,7 +62,7 @@ class __EXPORT HMAC final {
   struct Context;
 
   // Opaque pointer to the crypto implementation context.
-  fbl::unique_ptr<Context> ctx_;
+  std::unique_ptr<Context> ctx_;
 };
 
 }  // namespace crypto

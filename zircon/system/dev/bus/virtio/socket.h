@@ -14,6 +14,7 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/timer.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -36,7 +37,7 @@ class SocketDevice : public Device {
  public:
   class ConnectionKey;
 
-  explicit SocketDevice(zx_device_t* device, zx::bti, fbl::unique_ptr<Backend> backend);
+  explicit SocketDevice(zx_device_t* device, zx::bti, std::unique_ptr<Backend> backend);
   virtual ~SocketDevice() override;
 
   // Handlers for the incoming FIDL message endpoint. Public as the messages

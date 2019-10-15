@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <crypto/bytes.h>
 #include <crypto/secret.h>
 #include <fbl/macros.h>
@@ -113,7 +115,7 @@ class __EXPORT Cipher final {
   struct Context;
 
   // Opaque pointer to the crypto implementation context.
-  fbl::unique_ptr<Context> ctx_;
+  std::unique_ptr<Context> ctx_;
   // Indicates which algorithm to use to transform data.
   Algorithm cipher_;
   // Indicates whether configured to encrypt or decrypt.
@@ -121,7 +123,7 @@ class __EXPORT Cipher final {
   // Cipher block size.
   size_t block_size_;
   // Buffer holding initial vector.  The IV is expanded to be |zx_off_t|-aligned.
-  fbl::unique_ptr<zx_off_t[]> iv_;
+  std::unique_ptr<zx_off_t[]> iv_;
   // Original value of |iv_[0]|.  |Transform| will fail if |iv_[0]| wraps around to this value.
   zx_off_t iv0_;
   // If non-zero, indicates how many bytes to use a nonce for before incrementing.

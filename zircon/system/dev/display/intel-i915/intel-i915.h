@@ -11,6 +11,7 @@
 #include <lib/zx/channel.h>
 #include <threads.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/mmio-buffer.h>
@@ -19,7 +20,6 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/protocol/display/controller.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hw/pci.h>
 
@@ -78,7 +78,7 @@ class Controller : public DeviceType,
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_status_t DdkSuspend(uint32_t reason);
   zx_status_t DdkResume(uint32_t reason);
-  zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
+  zx_status_t Bind(std::unique_ptr<i915::Controller>* controller_ptr);
 
   // display controller protocol ops
   void DisplayControllerImplSetDisplayControllerInterface(
@@ -144,7 +144,7 @@ class Controller : public DeviceType,
   bool ResetTrans(registers::Trans trans);
   bool ResetDdi(registers::Ddi ddi);
 
-  const fbl::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
+  const std::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
 
   registers::Dpll SelectDpll(bool is_edp, const dpll_state_t& state);
   const dpll_state_t* GetDpllState(registers::Dpll dpll);
@@ -152,9 +152,9 @@ class Controller : public DeviceType,
  private:
   void EnableBacklight(bool enable);
   void InitDisplays();
-  fbl::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
+  std::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
   bool LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) __TA_REQUIRES(display_lock_);
-  zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) __TA_REQUIRES(display_lock_);
+  zx_status_t AddDisplay(std::unique_ptr<DisplayDevice>&& display) __TA_REQUIRES(display_lock_);
   bool BringUpDisplayEngine(bool resume) __TA_REQUIRES(display_lock_);
   void InitDisplayBuffers();
   DisplayDevice* FindDevice(uint64_t display_id) __TA_REQUIRES(display_lock_);
@@ -208,9 +208,9 @@ class Controller : public DeviceType,
   Gtt gtt_ __TA_GUARDED(gtt_lock_);
   mtx_t gtt_lock_;
   // These regions' VMOs are not owned
-  fbl::Vector<fbl::unique_ptr<GttRegion>> imported_images_ __TA_GUARDED(gtt_lock_);
+  fbl::Vector<std::unique_ptr<GttRegion>> imported_images_ __TA_GUARDED(gtt_lock_);
   // These regions' VMOs are owned
-  fbl::Vector<fbl::unique_ptr<GttRegion>> imported_gtt_regions_ __TA_GUARDED(gtt_lock_);
+  fbl::Vector<std::unique_ptr<GttRegion>> imported_gtt_regions_ __TA_GUARDED(gtt_lock_);
 
   IgdOpRegion igd_opregion_;  // Read only, no locking
   Interrupts interrupts_;     // Internal locking
@@ -227,7 +227,7 @@ class Controller : public DeviceType,
 
   // References to displays. References are owned by devmgr, but will always
   // be valid while they are in this vector.
-  fbl::Vector<fbl::unique_ptr<DisplayDevice>> display_devices_ __TA_GUARDED(display_lock_);
+  fbl::Vector<std::unique_ptr<DisplayDevice>> display_devices_ __TA_GUARDED(display_lock_);
   uint64_t next_id_ __TA_GUARDED(display_lock_) = 1;  // id can't be INVALID_DISPLAY_ID == 0
   mtx_t display_lock_;
 

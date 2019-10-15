@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <zircon/device/block.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -19,7 +20,6 @@
 #include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <hw/sdio.h>
 #include <hw/sdmmc.h>
 
@@ -163,7 +163,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<MtkSdmmc> device(new (&ac)
+  std::unique_ptr<MtkSdmmc> device(new (&ac)
                                        MtkSdmmc(parent, *std::move(mmio), std::move(bti), info,
                                                 std::move(irq), reset_gpio, power_en_gpio, config));
 

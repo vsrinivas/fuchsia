@@ -9,8 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <tftp/tftp.h>
 #include <unittest/unittest.h>
 
@@ -41,9 +42,9 @@ struct test_state {
   size_t sess_size = 0;
   size_t msg_size = 0;
   size_t out_size = 0;
-  fbl::unique_ptr<uint8_t[]> sess_buf;
-  fbl::unique_ptr<uint8_t[]> msg_data;
-  fbl::unique_ptr<uint8_t[]> out_scratch;
+  std::unique_ptr<uint8_t[]> sess_buf;
+  std::unique_ptr<uint8_t[]> msg_data;
+  std::unique_ptr<uint8_t[]> out_scratch;
   void* data = nullptr;
   void* out = nullptr;
   size_t outlen = 0;

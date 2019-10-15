@@ -10,7 +10,6 @@
 
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <ramdevice-client/ramnand.h>
 
 // The nand device that will be used as the parent of the broker device. This

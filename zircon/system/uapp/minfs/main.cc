@@ -25,7 +25,6 @@
 
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
-#include <fbl/unique_ptr.h>
 #include <fs/trace.h>
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
@@ -33,7 +32,7 @@
 
 namespace {
 
-int Fsck(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
+int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
   if (options.readonly_after_initialization) {
     return Fsck(std::move(bc), minfs::Repair::kDisabled);
   }
@@ -72,13 +71,13 @@ int Mount(std::unique_ptr<block_client::BlockDevice> device, const minfs::MountO
   return 0;
 }
 
-int Mkfs(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
+int Mkfs(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
   return Mkfs(options, bc.get());
 }
 
 struct {
   const char* name;
-  int (*func)(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions&);
+  int (*func)(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions&);
   uint32_t flags;
   const char* help;
 } CMDS[] = {
@@ -178,7 +177,7 @@ int main(int argc, char** argv) {
     return Mount(std::move(device), options);
   }
 
-  fbl::unique_ptr<minfs::Bcache> bc;
+  std::unique_ptr<minfs::Bcache> bc;
 
   bool readonly_device = false;
   if (CreateBcache(std::move(device), &readonly_device, &bc) != ZX_OK) {

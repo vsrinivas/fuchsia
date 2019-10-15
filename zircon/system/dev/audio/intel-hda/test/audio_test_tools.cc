@@ -15,6 +15,7 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -65,9 +66,9 @@ StatusOr<std::vector<fbl::String>> GetFilesInDir(const char* path) {
 //
 // Return nullptr if there was an error during creation.
 template <typename T>
-fbl::unique_ptr<T> CreateAndOpenStream(const char* device) {
+std::unique_ptr<T> CreateAndOpenStream(const char* device) {
   // Create the stream.
-  fbl::unique_ptr<T> stream = T::Create(device);
+  std::unique_ptr<T> stream = T::Create(device);
   if (stream == nullptr) {
     return nullptr;
   }
@@ -122,11 +123,11 @@ StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* str
   return fbl::String(reinterpret_cast<const char*>(response.str), response.strlen);
 }
 
-fbl::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char* device) {
+std::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char* device) {
   return CreateAndOpenStream<audio::utils::AudioOutput>(device);
 }
 
-fbl::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device) {
+std::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device) {
   return CreateAndOpenStream<audio::utils::AudioInput>(device);
 }
 

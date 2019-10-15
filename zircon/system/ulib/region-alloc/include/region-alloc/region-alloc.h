@@ -58,7 +58,7 @@
 // Both C and C++ APIs are provided for using the RegionAllocator.  The C++ API
 // makes use of fbl managed pointer types in order to simplify lifecycle
 // management.  RegionPools are managed with fbl::RefPtr while Regions are
-// handed out via fbl::unique_ptr.  RegionAllocators themselves impose no
+// handed out via std::unique_ptr.  RegionAllocators themselves impose no
 // lifecycle restrictions and may be heap allocated, stack allocated, or
 // embedded directly in objects as the user sees fit.  It is an error to allow a
 // RegionAllocator to destruct while there are allocations in flight.
@@ -236,7 +236,7 @@ __END_CDECLS
 #ifdef _KERNEL
 #include <ktl/unique_ptr.h>
 #else
-#include <fbl/unique_ptr.h>
+#include <memory>
 #endif
 
 #include <utility>

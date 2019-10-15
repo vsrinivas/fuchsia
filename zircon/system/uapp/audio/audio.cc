@@ -504,7 +504,7 @@ int main(int argc, const char** argv) {
   print_usage.cancel();
 
   // Open the selected stream.
-  fbl::unique_ptr<audio::utils::AudioDeviceStream> stream;
+  std::unique_ptr<audio::utils::AudioDeviceStream> stream;
   if (input)
     stream = audio::utils::AudioInput::Create(dev_id);
   else

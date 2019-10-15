@@ -19,6 +19,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
@@ -35,17 +37,17 @@ namespace {
 
 uint64_t next_ino = 2;
 
-fbl::unique_ptr<Devnode> root_devnode;
+std::unique_ptr<Devnode> root_devnode;
 
-fbl::unique_ptr<Devnode> class_devnode;
+std::unique_ptr<Devnode> class_devnode;
 
-fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name);
+std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name);
 
 zx::channel g_devfs_root;
 
 }  // namespace
 
-struct Watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<Watcher>> {
+struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>> {
   Watcher(Devnode* dn, zx::channel ch, uint32_t mask);
 
   Watcher(const Watcher&) = delete;
@@ -77,7 +79,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   static zx_status_t DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie,
                                       async_dispatcher_t* dispatcher);
 
-  static void HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
+  static void HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
                         async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
 
@@ -106,7 +108,7 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   // otherwise the device we are referencing
   Device* device = nullptr;
 
-  fbl::DoublyLinkedList<fbl::unique_ptr<Watcher>> watchers;
+  fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
 
   // list of our child devnodes
   fbl::DoublyLinkedList<Devnode*> children;
@@ -191,7 +193,7 @@ bool devnode_is_local(Devnode* dn) {
 // Notify a single watcher about the given operation and path.  On failure,
 // frees the watcher.  This can only be called on a watcher that has not yet
 // been added to a Devnode's watchers list.
-void devfs_notify_single(fbl::unique_ptr<Watcher>* watcher, const fbl::String& name, unsigned op) {
+void devfs_notify_single(std::unique_ptr<Watcher>* watcher, const fbl::String& name, unsigned op) {
   size_t len = name.length();
   if (!*watcher || len > fuchsia_io_MAX_FILENAME) {
     return;
@@ -284,7 +286,7 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
 
 namespace {
 
-fbl::unique_ptr<Devnode> devfs_mknode(const fbl::RefPtr<Device>& dev, const fbl::String& name) {
+std::unique_ptr<Devnode> devfs_mknode(const fbl::RefPtr<Device>& dev, const fbl::String& name) {
   auto dn = std::make_unique<Devnode>(name);
   if (!dn) {
     return nullptr;
@@ -295,8 +297,8 @@ fbl::unique_ptr<Devnode> devfs_mknode(const fbl::RefPtr<Device>& dev, const fbl:
   return dn;
 }
 
-fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name) {
-  fbl::unique_ptr<Devnode> dn = devfs_mknode(nullptr, name);
+std::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name) {
+  std::unique_ptr<Devnode> dn = devfs_mknode(nullptr, name);
   if (dn == nullptr) {
     return nullptr;
   }
@@ -548,7 +550,7 @@ zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<D
     return ZX_ERR_INTERNAL;
   }
 
-  fbl::unique_ptr<Devnode> dnself = devfs_mknode(dev, dev->name());
+  std::unique_ptr<Devnode> dnself = devfs_mknode(dev, dev->name());
   if (dnself == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -582,7 +584,7 @@ zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<D
     }
 
   got_name:
-    fbl::unique_ptr<Devnode> dnlink = devfs_mknode(dev, name);
+    std::unique_ptr<Devnode> dnlink = devfs_mknode(dev, name);
     if (dnlink == nullptr) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -758,7 +760,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
+void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {

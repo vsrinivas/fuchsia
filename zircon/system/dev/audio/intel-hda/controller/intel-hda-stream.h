@@ -17,7 +17,6 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/utils.h>
 

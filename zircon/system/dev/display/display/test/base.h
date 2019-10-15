@@ -17,6 +17,7 @@
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
+
 #include "../../fake/fake-display.h"
 
 namespace display {
@@ -46,9 +47,7 @@ class Binder : public fake_ddk::Bind {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  void SetDisplay(fake_display::FakeDisplay* display) {
-    display_ = display;
-  }
+  void SetDisplay(fake_display::FakeDisplay* display) { display_ = display; }
 
   zx_device_t* display() { return display_->zxdev(); }
 

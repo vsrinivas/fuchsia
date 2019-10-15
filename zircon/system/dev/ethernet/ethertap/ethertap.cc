@@ -12,6 +12,7 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -59,7 +60,7 @@ static const fuchsia_hardware_ethertap_TapControl_ops_t tap_ctl_ops_ = {
 TapCtl::TapCtl(zx_device_t* device) : ddk::Device<TapCtl, ddk::Messageable>(device) {}
 
 zx_status_t TapCtl::Create(void* ctx, zx_device_t* parent) {
-  auto dev = fbl::unique_ptr<TapCtl>(new TapCtl(parent));
+  auto dev = std::unique_ptr<TapCtl>(new TapCtl(parent));
   zx_status_t status = dev->DdkAdd("tapctl");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
@@ -83,7 +84,7 @@ zx_status_t TapCtl::OpenDevice(const char* name, const fuchsia_hardware_ethertap
   }
 
   auto tap =
-      fbl::unique_ptr<eth::TapDevice>(new eth::TapDevice(zxdev(), config, std::move(device)));
+      std::unique_ptr<eth::TapDevice>(new eth::TapDevice(zxdev(), config, std::move(device)));
 
   auto status = tap->DdkAdd(name);
 
@@ -353,7 +354,7 @@ int TapDevice::Thread() {
   zx_signals_t pending;
   const uint32_t buff_size = 2 * mtu_;
   constexpr uint32_t handle_count = 8;
-  fbl::unique_ptr<uint8_t[]> data_buff(new uint8_t[buff_size]);
+  std::unique_ptr<uint8_t[]> data_buff(new uint8_t[buff_size]);
   zx_handle_t handles_buff[handle_count];
 
   fidl_msg_t msg = {

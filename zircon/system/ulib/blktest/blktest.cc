@@ -21,6 +21,7 @@
 
 #include <climits>
 #include <limits>
+#include <memory>
 
 #include <blktest/blktest.h>
 #include <block-client/client.h>
@@ -28,7 +29,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 
@@ -63,9 +63,9 @@ static bool blkdev_test_simple(void) {
   int64_t buffer_size = blk_size * 2;
 
   fbl::AllocChecker checker;
-  fbl::unique_ptr<uint8_t[]> buf(new (&checker) uint8_t[buffer_size]);
+  std::unique_ptr<uint8_t[]> buf(new (&checker) uint8_t[buffer_size]);
   ASSERT_TRUE(checker.check());
-  fbl::unique_ptr<uint8_t[]> out(new (&checker) uint8_t[buffer_size]);
+  std::unique_ptr<uint8_t[]> out(new (&checker) uint8_t[buffer_size]);
   ASSERT_TRUE(checker.check());
 
   memset(buf.get(), 'a', sizeof(buf));
@@ -92,7 +92,7 @@ bool blkdev_test_bad_requests(void) {
   fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
 
   fbl::AllocChecker checker;
-  fbl::unique_ptr<uint8_t[]> buf(new (&checker) uint8_t[blk_size * 4]);
+  std::unique_ptr<uint8_t[]> buf(new (&checker) uint8_t[blk_size * 4]);
   ASSERT_TRUE(checker.check());
   memset(buf.get(), 'a', blk_size * 4);
 
@@ -197,7 +197,7 @@ bool blkdev_test_fifo_basic(void) {
   const uint64_t vmo_size = blk_size * 3;
   zx::vmo vmo;
   ASSERT_EQ(zx::vmo::create(vmo_size, 0, &vmo), ZX_OK, "Failed to create VMO");
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[vmo_size]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[vmo_size]);
   fill_random(buf.get(), vmo_size);
 
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK, "");
@@ -233,7 +233,7 @@ bool blkdev_test_fifo_basic(void) {
   ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK, "");
 
   // Empty the vmo, then read the info we just wrote to the disk
-  fbl::unique_ptr<uint8_t[]> out(new uint8_t[vmo_size]());
+  std::unique_ptr<uint8_t[]> out(new uint8_t[vmo_size]());
 
   ASSERT_EQ(vmo.write(out.get(), 0, vmo_size), ZX_OK, "");
   requests[0].opcode = BLOCKIO_READ;
@@ -271,7 +271,7 @@ bool blkdev_test_fifo_whole_disk(void) {
   uint64_t vmo_size = blk_size * blk_count;
   zx::vmo vmo;
   ASSERT_EQ(zx::vmo::create(vmo_size, 0, &vmo), ZX_OK, "Failed to create VMO");
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[vmo_size]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[vmo_size]);
   fill_random(buf.get(), vmo_size);
 
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK, "");
@@ -299,7 +299,7 @@ bool blkdev_test_fifo_whole_disk(void) {
   ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_OK, "");
 
   // Empty the vmo, then read the info we just wrote to the disk
-  fbl::unique_ptr<uint8_t[]> out(new uint8_t[vmo_size]());
+  std::unique_ptr<uint8_t[]> out(new uint8_t[vmo_size]());
 
   ASSERT_EQ(vmo.write(out.get(), 0, vmo_size), ZX_OK, "");
   request.opcode = BLOCKIO_READ;
@@ -321,7 +321,7 @@ typedef struct {
   uint64_t vmo_size;
   zx::vmo vmo;
   fuchsia_hardware_block_VmoID vmoid;
-  fbl::unique_ptr<uint8_t[]> buf;
+  std::unique_ptr<uint8_t[]> buf;
 } test_vmo_object_t;
 
 // Creates a VMO, fills it with data, and gives it to the block device.
@@ -368,7 +368,7 @@ bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, siz
 bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size_t i, size_t objs,
                              groupid_t group, size_t kBlockSize) {
   // First, empty out the VMO
-  fbl::unique_ptr<uint8_t[]> out(new uint8_t[obj->vmo_size]());
+  std::unique_ptr<uint8_t[]> out(new uint8_t[obj->vmo_size]());
   ASSERT_EQ(obj->vmo.write(out.get(), 0, obj->vmo_size), ZX_OK);
 
   // Next, read to the vmo from the disk

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <perftest/results.h>
 #include <unittest/unittest.h>
 

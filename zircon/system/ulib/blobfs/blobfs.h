@@ -18,6 +18,8 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <bitmap/raw-bitmap.h>
 #include <blobfs/common.h>
 #include <blobfs/format.h>
@@ -31,7 +33,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs/journal/journal.h>
 #include <fs/managed_vfs.h>
@@ -228,7 +229,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Check if filesystem is readonly.
   bool IsReadonly() FS_TA_EXCLUDES(vfs_lock_);
 
-  fbl::unique_ptr<fs::Journal> journal_;
+  std::unique_ptr<fs::Journal> journal_;
   Superblock info_;
 
   BlobCache blob_cache_;
@@ -237,7 +238,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   fuchsia_hardware_block_BlockInfo block_info_ = {};
   block_client::BlockGroupRegistry group_registry_;
 
-  fbl::unique_ptr<Allocator> allocator_;
+  std::unique_ptr<Allocator> allocator_;
 
   fzl::ResizeableVmoMapper info_mapping_;
   vmoid_t info_vmoid_ = {};

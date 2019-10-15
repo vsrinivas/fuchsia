@@ -5,10 +5,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 
+#include <memory>
 #include <utility>
 
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <fs/managed_vfs.h>
 
 namespace fs {

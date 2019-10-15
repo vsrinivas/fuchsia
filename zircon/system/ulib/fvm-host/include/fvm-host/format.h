@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include <memory>
 #include <optional>
 
 #include <blobfs/format.h>
@@ -119,7 +120,7 @@ class Format {
   // Detect the type of partition starting at |offset| bytes
   static zx_status_t Detect(int fd, off_t offset, disk_format_t* out);
   // Read file at |path| and generate appropriate Format
-  static zx_status_t Create(const char* path, const char* type, fbl::unique_ptr<Format>* out);
+  static zx_status_t Create(const char* path, const char* type, std::unique_ptr<Format>* out);
   // Run fsck on partition contained between bytes |start| and |end|. extent_lengths is lengths
   // of each extent (in bytes).
   static zx_status_t Check(fbl::unique_fd fd, off_t start, off_t end,
@@ -217,7 +218,7 @@ class MinfsFormat final : public Format {
  private:
   const char* Name() const final;
 
-  fbl::unique_ptr<minfs::Bcache> bc_;
+  std::unique_ptr<minfs::Bcache> bc_;
 
   // Input superblock
   union {

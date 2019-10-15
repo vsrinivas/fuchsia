@@ -4,6 +4,7 @@
 
 #include "intel_hda_codec.h"
 
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -441,7 +442,7 @@ zx_status_t IntelHDACodec::Enumerate() {
   zx_status_t res = ZirconDevice::Enumerate(
       nullptr, DEV_PATH, [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
         fbl::AllocChecker ac;
-        auto codec = fbl::unique_ptr<IntelHDACodec>(new (&ac) IntelHDACodec(id, dev_name));
+        auto codec = std::unique_ptr<IntelHDACodec>(new (&ac) IntelHDACodec(id, dev_name));
         if (!ac.check()) {
           return ZX_ERR_NO_MEMORY;
         }

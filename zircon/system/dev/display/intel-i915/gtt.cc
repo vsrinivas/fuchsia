@@ -9,6 +9,7 @@
 
 #include <climits>
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <ddk/protocol/pci.h>
@@ -104,7 +105,7 @@ zx_status_t Gtt::Init(Controller* controller) {
 }
 
 zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
-                             fbl::unique_ptr<GttRegion>* region_out) {
+                             std::unique_ptr<GttRegion>* region_out) {
   uint32_t region_length = ROUNDUP(length, PAGE_SIZE);
   fbl::AllocChecker ac;
   auto r = fbl::make_unique_checked<GttRegion>(&ac, this);

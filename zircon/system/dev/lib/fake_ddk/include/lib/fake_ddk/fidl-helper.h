@@ -13,7 +13,6 @@
 #include <zircon/fidl.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 
 namespace fake_ddk {
 

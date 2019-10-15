@@ -7,9 +7,10 @@
 
 #include <zircon/hw/usb/audio.h>
 
+#include <memory>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
-#include <fbl/unique_ptr.h>
 
 #include "usb-audio-descriptors.h"
 #include "usb-audio-path.h"
@@ -28,14 +29,14 @@ class UsbAudioControlInterface {
   // control interface (and all of its children) have been properly shut down
   // before exiting.  At all times, the lifetime of the control interface
   // needs to be a subset of the lifetime of the device parent.
-  static fbl::unique_ptr<UsbAudioControlInterface> Create(UsbAudioDevice* parent);
+  static std::unique_ptr<UsbAudioControlInterface> Create(UsbAudioDevice* parent);
   zx_status_t Initialize(DescriptorListMemory::Iterator* iter);
 
   const char* log_prefix() const;
 
   // Extract the AudioPath whose streaming terminal interface link ID matches
   // the users request, if any.  Otherwise, simply return nullptr.
-  fbl::unique_ptr<AudioPath> ExtractPath(uint8_t term_link, Direction direction) {
+  std::unique_ptr<AudioPath> ExtractPath(uint8_t term_link, Direction direction) {
     return paths_.erase_if([term_link, direction](const AudioPath& path) -> bool {
       return (path.stream_terminal().id() == term_link) && (path.direction() == direction);
     });
@@ -51,7 +52,7 @@ class UsbAudioControlInterface {
   // A recursive method used to find interesting audio paths in the
   // unit/terminal graph.  See the comment at the end of the Init
   // implementation for details about the algorithm used to find these paths.
-  fbl::unique_ptr<AudioPath> TracePath(const OutputTerminal& out_term,
+  std::unique_ptr<AudioPath> TracePath(const OutputTerminal& out_term,
                                        const UnitMap::iterator& current, uint32_t level = 0);
 
   // The reference to our parent.  Note, because of this unmanaged reference,
@@ -80,7 +81,7 @@ class UsbAudioControlInterface {
   UnitMap units_;
 
   // The complete set of valid paths we have discovered.
-  fbl::DoublyLinkedList<fbl::unique_ptr<AudioPath>> paths_;
+  fbl::DoublyLinkedList<std::unique_ptr<AudioPath>> paths_;
 };
 
 }  // namespace usb

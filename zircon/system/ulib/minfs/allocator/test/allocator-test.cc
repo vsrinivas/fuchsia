@@ -6,6 +6,8 @@
 
 #include "allocator.h"
 
+#include <memory>
+
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
@@ -59,11 +61,11 @@ class FakeStorage : public AllocatorStorage {
 };
 
 // Creates an allocator with |kTotalElements| elements.
-void CreateAllocator(fbl::unique_ptr<Allocator>* out) {
+void CreateAllocator(std::unique_ptr<Allocator>* out) {
   // Create an Allocator with FakeStorage.
   // Give it 1 more than total_elements since element 0 will be unavailable.
-  fbl::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements + 1));
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements + 1));
+  std::unique_ptr<Allocator> allocator;
   ASSERT_OK(Allocator::Create(nullptr, std::move(storage), &allocator));
 
   // Allocate the '0' index (the Allocator assumes that this is reserved).
@@ -87,7 +89,7 @@ void InitializeReservation(size_t reserved_count, Allocator* allocator,
 }
 
 TEST(AllocatorTest, InitializeEmpty) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Initialize an empty AllocatorReservation (with no reserved units);
@@ -98,7 +100,7 @@ TEST(AllocatorTest, InitializeEmpty) {
 }
 
 TEST(AllocatorTest, InitializeSplit) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Initialize an AllocatorReservation with all available units reserved.
@@ -123,7 +125,7 @@ TEST(AllocatorTest, InitializeSplit) {
 }
 
 TEST(AllocatorTest, InitializeOverReserve) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Attempt to reserve more elements than the allocator has.
@@ -132,7 +134,7 @@ TEST(AllocatorTest, InitializeOverReserve) {
 }
 
 TEST(AllocatorTest, InitializeTwiceFails) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   AllocatorReservation reservation;
@@ -147,7 +149,7 @@ TEST(AllocatorTest, InitializeTwiceFails) {
 }
 
 TEST(AllocatorTest, SplitInitialized) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   uint32_t first_count = kTotalElements / 2;
@@ -180,7 +182,7 @@ TEST(AllocatorTest, SplitInitialized) {
 }
 
 TEST(AllocatorTest, TestSplitUninitialized) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Initialize an AllocatorReservation with all available elements reserved.
@@ -267,7 +269,7 @@ void PerformFree(Allocator* allocator, const fbl::Array<size_t>& indices) {
 }
 
 TEST(AllocatorTest, Allocate) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Reserve all of the elements.
@@ -288,7 +290,7 @@ TEST(AllocatorTest, Allocate) {
 }
 
 TEST(AllocatorTest, Swap) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Reserve all of the elements.
@@ -312,7 +314,7 @@ TEST(AllocatorTest, Swap) {
 }
 
 TEST(AllocatorTest, AllocateSwap) {
-  fbl::unique_ptr<Allocator> allocator;
+  std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURES(CreateAllocator(&allocator));
 
   // Reserve all of the elements.

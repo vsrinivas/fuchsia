@@ -73,7 +73,7 @@ struct TripleHdrFrame {
 
 } __PACKED;
 
-static fbl::unique_ptr<Packet> GetPacket(size_t len) {
+static std::unique_ptr<Packet> GetPacket(size_t len) {
   auto buffer = GetBuffer(len);
   memset(buffer->data(), 0, len);
   return std::make_unique<Packet>(std::move(buffer), len);

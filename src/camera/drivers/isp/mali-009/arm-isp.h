@@ -14,6 +14,7 @@
 #include <lib/zx/interrupt.h>
 
 #include <atomic>
+#include <memory>
 
 #include <ddk/metadata/camera.h>
 #include <ddk/platform-defs.h>
@@ -23,7 +24,6 @@
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/isp.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 
 #include "../modules/dma-mgr.h"
@@ -188,9 +188,9 @@ class ArmIspDevice : public IspDeviceType,
 
   ddk::CameraSensorProtocolClient camera_sensor_;
 
-  fbl::unique_ptr<camera::Sensor> sensor_module_;
-  fbl::unique_ptr<camera::DmaManager> full_resolution_dma_;
-  fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
+  std::unique_ptr<camera::Sensor> sensor_module_;
+  std::unique_ptr<camera::DmaManager> full_resolution_dma_;
+  std::unique_ptr<camera::DmaManager> downscaled_dma_;
   bool streaming_ = false;
 
   // TODO(CAM-88): Formalize isp sub-block ownership.

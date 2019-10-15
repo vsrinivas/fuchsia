@@ -6,6 +6,8 @@
 
 #include <lib/fake_ddk/fake_ddk.h>
 
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 #include "backends/fake.h"
@@ -35,7 +37,7 @@ class FakeBackendForScsi : public virtio::FakeBackend {
 };
 
 TEST(ScsiTest, Init) {
-  fbl::unique_ptr<virtio::Backend> backend = std::make_unique<FakeBackendForScsi>();
+  std::unique_ptr<virtio::Backend> backend = std::make_unique<FakeBackendForScsi>();
   zx::bti bti(ZX_HANDLE_INVALID);
 
   virtio::ScsiDevice scsi(/*parent=*/nullptr, std::move(bti), std::move(backend));

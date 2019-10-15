@@ -5,11 +5,11 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_PATH_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_PATH_H_
 
+#include <memory>
 #include <utility>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 #include "usb-audio-units.h"
 #include "usb-audio.h"
@@ -21,7 +21,7 @@ class UsbAudioControlInterface;
 
 // A small container class used by the audio control interface for describing a
 // path through the unit/terminal graph from host to pin (or vice-versa)
-class AudioPath : public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPath>> {
+class AudioPath : public fbl::DoublyLinkedListable<std::unique_ptr<AudioPath>> {
  public:
   Direction direction() const { return direction_; }
   const Terminal& stream_terminal() const {
@@ -72,17 +72,17 @@ class AudioPath : public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPath>> {
   //    stash pointers to important elements, such as the stream terminal
   //    node and the feature unit node (if found).
   //
-  static fbl::unique_ptr<AudioPath> Create(uint32_t unit_count);
+  static std::unique_ptr<AudioPath> Create(uint32_t unit_count);
   void AddUnit(uint32_t ndx, fbl::RefPtr<AudioUnit> unit);
   zx_status_t Setup(const usb_protocol_t& proto);
 
-  AudioPath(fbl::unique_ptr<fbl::RefPtr<AudioUnit>[]> units, uint32_t unit_count)
+  AudioPath(std::unique_ptr<fbl::RefPtr<AudioUnit>[]> units, uint32_t unit_count)
       : units_(std::move(units)), unit_count_(unit_count) {}
   ~AudioPath() {}
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(AudioPath);
 
-  const fbl::unique_ptr<fbl::RefPtr<AudioUnit>[]> units_;
+  const std::unique_ptr<fbl::RefPtr<AudioUnit>[]> units_;
   const uint32_t unit_count_;
   Direction direction_ = Direction::Unknown;
 

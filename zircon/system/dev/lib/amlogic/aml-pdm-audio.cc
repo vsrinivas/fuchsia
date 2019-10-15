@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 #include <soc/aml-common/aml-pdm-audio.h>
 
 // Filter configurations
@@ -52,7 +54,7 @@ static const uint32_t lpf2osr64[] = {
 constexpr uint32_t kLpf2osr64Len = static_cast<uint32_t>(countof(lpf2osr64));
 
 // static
-fbl::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
+std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
                                                    ddk::MmioBuffer audio_mmio,
                                                    ee_audio_mclk_src_t pdm_clk_src,
                                                    uint32_t sysclk_div, uint32_t dclk_div,
@@ -64,7 +66,7 @@ fbl::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
   }
 
   fbl::AllocChecker ac;
-  auto pdm = fbl::unique_ptr<AmlPdmDevice>(
+  auto pdm = std::unique_ptr<AmlPdmDevice>(
       new (&ac) AmlPdmDevice(std::move(pdm_mmio), std::move(audio_mmio), pdm_clk_src, sysclk_div,
                              dclk_div, toddr_dev, fifo_depth));
   if (!ac.check()) {

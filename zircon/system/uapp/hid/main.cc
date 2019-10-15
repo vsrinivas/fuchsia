@@ -23,7 +23,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 
 // defined in report.cpp
 void print_report_descriptor(const uint8_t* rpt_desc, size_t desc_len);
@@ -159,7 +158,7 @@ static zx_status_t get_report_desc_len(const fzl::FdioCaller& caller, const char
 
 static zx_status_t get_report_desc(const fzl::FdioCaller& caller, const char* name,
                                    size_t report_desc_len) {
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[report_desc_len]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[report_desc_len]);
 
   size_t actual;
   zx_status_t status = fuchsia_hardware_input_DeviceGetReportDesc(
@@ -216,7 +215,7 @@ static zx_status_t get_num_reports(const fzl::FdioCaller& caller, const char* na
 
 static zx_status_t get_report_ids(const fzl::FdioCaller& caller, const char* name,
                                   size_t num_reports) {
-  fbl::unique_ptr<uint8_t[]> ids(new uint8_t[num_reports]);
+  std::unique_ptr<uint8_t[]> ids(new uint8_t[num_reports]);
 
   size_t actual;
   zx_status_t status = fuchsia_hardware_input_DeviceGetReportIds(caller.borrow_channel(), ids.get(),
@@ -322,7 +321,7 @@ static int hid_input_thread(void* arg) {
 
   // Add 1 to the max report length to make room for a Report ID.
   max_report_len++;
-  fbl::unique_ptr<uint8_t[]> report(new uint8_t[max_report_len]);
+  std::unique_ptr<uint8_t[]> report(new uint8_t[max_report_len]);
 
   args->fd = caller.release();
   for (uint32_t i = 0; i < args->num_reads; i++) {
@@ -492,7 +491,7 @@ int get_report(int argc, const char** argv) {
   // with the expected size of the raw report.
   size_t bufsz = 4u << 10;
   size_t actual;
-  fbl::unique_ptr<uint8_t[]> buf(new uint8_t[bufsz]);
+  std::unique_ptr<uint8_t[]> buf(new uint8_t[bufsz]);
   res = fuchsia_hardware_input_DeviceGetReport(caller.borrow_channel(), type, id, &call_status,
                                                buf.get(), bufsz, &actual);
   if (res != ZX_OK || call_status != ZX_OK) {
@@ -547,7 +546,7 @@ int set_report(int argc, const char** argv) {
 
   xprintf("hid: report size=%u, tx payload size=%u\n", size, payload_size);
 
-  fbl::unique_ptr<uint8_t[]> report(new uint8_t[payload_size]);
+  std::unique_ptr<uint8_t[]> report(new uint8_t[payload_size]);
   for (int i = 0; i < payload_size; i++) {
     uint32_t tmp;
     zx_status_t res = parse_uint_arg(argv[i + 3], 0, 255, &tmp);

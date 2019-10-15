@@ -11,6 +11,7 @@
 #include <zircon/device/bt-hci.h>
 
 #include <algorithm>
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -18,7 +19,6 @@
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <hw/sdio.h>
 
 namespace {
@@ -155,7 +155,7 @@ zx_status_t BtHciMediatek::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<BtHciMediatek> device(
+  std::unique_ptr<BtHciMediatek> device(
       new (&ac) BtHciMediatek(parent, sdio, std::move(port), kFwPartMaxSize));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: BtHciMediatek alloc failed\n", __FILE__);

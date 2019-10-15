@@ -15,6 +15,7 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
 #include "aml-pcie-clk.h"

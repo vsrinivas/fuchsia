@@ -10,7 +10,6 @@
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fbl/unique_ptr.h>
 
 namespace audio {
 namespace alc5514 {

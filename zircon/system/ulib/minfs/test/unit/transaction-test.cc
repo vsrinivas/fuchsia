@@ -4,6 +4,8 @@
 
 // Tests Transaction behavior.
 
+#include <memory>
+
 #include <minfs/writeback.h>
 #include <zxtest/zxtest.h>
 
@@ -47,13 +49,13 @@ class MockMinfs : public TransactionalFs {
   fbl::Mutex* GetLock() const { return &txn_lock_; }
 
   zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                               fbl::unique_ptr<Transaction>* out) {
+                               std::unique_ptr<Transaction>* out) {
     return ZX_OK;
   }
 
   void EnqueueCallback(SyncCallback callback) {}
 
-  void CommitTransaction(fbl::unique_ptr<Transaction> transaction) {}
+  void CommitTransaction(std::unique_ptr<Transaction> transaction) {}
 
   Bcache* GetMutableBcache() { return nullptr; }
 
@@ -144,7 +146,7 @@ class TransactionTest : public zxtest::Test {
     fs::ReadTxn transaction(&handler);
 
     // Create block allocator.
-    fbl::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements));
+    std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements));
     ASSERT_OK(Allocator::Create(&transaction, std::move(storage), &block_allocator_));
 
     // Create superblock manager.
@@ -161,7 +163,7 @@ class TransactionTest : public zxtest::Test {
                                    &inode_manager_));
   }
 
-  zx_status_t CreateTransaction(size_t inodes, size_t blocks, fbl::unique_ptr<Transaction>* out) {
+  zx_status_t CreateTransaction(size_t inodes, size_t blocks, std::unique_ptr<Transaction>* out) {
     return Transaction::Create(&minfs_, inodes, blocks, inode_manager_.get(),
                                block_allocator_.get(), out);
   }
@@ -173,9 +175,9 @@ class TransactionTest : public zxtest::Test {
  private:
   Superblock info_;
   FakeBlockDevice block_device_;
-  fbl::unique_ptr<SuperblockManager> superblock_manager_;
-  fbl::unique_ptr<Allocator> block_allocator_;
-  fbl::unique_ptr<InodeManager> inode_manager_;
+  std::unique_ptr<SuperblockManager> superblock_manager_;
+  std::unique_ptr<Allocator> block_allocator_;
+  std::unique_ptr<InodeManager> inode_manager_;
 };
 
 // Creates a Transaction using the public constructor, which by default contains no reservations.
@@ -183,44 +185,44 @@ TEST_F(TransactionTest, CreateTransactionNoReservationsAlt) { Transaction transa
 
 // Creates a Transaction with no reservations.
 TEST_F(TransactionTest, CreateTransactionNoReservations) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(0, 0, &transaction));
 }
 
 // Creates a Transaction with inode and block reservations.
 TEST_F(TransactionTest, CreateTransactionWithReservations) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
 }
 
 // Creates a Transaction with the maximum possible number of inodes and blocks reserved.
 TEST_F(TransactionTest, CreateTransactionWithMaxBlockReservations) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kTotalElements, kTotalElements, &transaction));
 }
 
 // Attempts to create a transaction with more than the maximum available inodes reserved.
 TEST_F(TransactionTest, CreateTransactionTooManyInodesFails) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_EQ(ZX_ERR_NO_SPACE, CreateTransaction(kTotalElements + 1, 0, &transaction));
 }
 
 // Attempts to create a transaction with more than the maximum available blocks reserved.
 TEST_F(TransactionTest, CreateTransactionTooManyBlocksFails) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_EQ(ZX_ERR_NO_SPACE, CreateTransaction(0, kTotalElements + 1, &transaction));
 }
 
 // Tests allocation of a single inode.
 TEST_F(TransactionTest, InodeAllocationSucceeds) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
   ASSERT_NO_DEATH([&transaction]() { transaction->AllocateInode(); });
 }
 
 // Tests allocation of a single block.
 TEST_F(TransactionTest, BlockAllocationSucceeds) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
   ASSERT_NO_DEATH([&transaction]() { transaction->AllocateBlock(); });
 }
@@ -241,7 +243,7 @@ TEST_F(TransactionDeathTest, AllocateBlockWithoutInitializationFails) {
 
 // Attempts to allocate an inode when none have been reserved.
 TEST_F(TransactionDeathTest, AllocateTooManyInodesFails) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(1, 0, &transaction));
 
   // First allocation should succeed.
@@ -253,7 +255,7 @@ TEST_F(TransactionDeathTest, AllocateTooManyInodesFails) {
 
 // Attempts to allocate a block when none have been reserved.
 TEST_F(TransactionDeathTest, AllocateTooManyBlocksFails) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(0, 1, &transaction));
 
   // First allocation should succeed.
@@ -404,7 +406,7 @@ TEST_F(TransactionTest, RemovePinnedVnodeContainsManyVnodes) {
 // Checks that GiveBlocksToReservation correctly transfers block allocation to an external
 // reservation.
 TEST_F(TransactionTest, GiveBlocksToReservationAddsAllocation) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
   transaction->AllocateBlock();
 
@@ -419,7 +421,7 @@ TEST_F(TransactionTest, GiveBlocksToReservationAddsAllocation) {
 // Checks that TakeBlockReservation correctly transfers block allocation from an external
 // reservation.
 TEST_F(TransactionTest, TakeBlockReservationRemovesAllocation) {
-  fbl::unique_ptr<Transaction> transaction;
+  std::unique_ptr<Transaction> transaction;
   ASSERT_OK(CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
 
   AllocatorReservation reservation;

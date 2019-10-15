@@ -27,6 +27,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -305,7 +307,7 @@ bool TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
   ASSERT_OK(ToStatus(::lseek(fd.get(), blkno * block_size_, SEEK_SET)));
   ASSERT_OK(ToStatus(::read(fd.get(), block, block_size_)));
 
-  fbl::unique_ptr<FdioVolume> volume;
+  std::unique_ptr<FdioVolume> volume;
   ASSERT_OK(FdioVolume::Unlock(parent(), devfs_root(), key_, 0, &volume));
 
   zx_off_t off;

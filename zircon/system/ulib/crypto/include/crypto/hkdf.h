@@ -13,7 +13,6 @@
 #include <crypto/digest.h>
 #include <crypto/secret.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 
 // |crypto::HKDF| is a key derivation function.  It can turn variable-length and/or weak input key
 // material into cryptographically strong output key material.  However, this class does NOT do any

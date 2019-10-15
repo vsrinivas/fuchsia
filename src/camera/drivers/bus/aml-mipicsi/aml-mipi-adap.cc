@@ -13,7 +13,6 @@
 #include <ddk/metadata/camera.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 
 #include "aml-mipi-regs.h"

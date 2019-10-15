@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
 #include <utility>
 
 #include <blobfs/mount.h>
@@ -14,7 +15,7 @@ namespace blobfs {
 zx_status_t Mount(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                   MountOptions* options, zx::channel root, fbl::Closure on_unmount) {
   zx_status_t status;
-  fbl::unique_ptr<Blobfs> fs;
+  std::unique_ptr<Blobfs> fs;
   if ((status = Blobfs::Create(std::move(device), options, &fs)) != ZX_OK) {
     return status;
   }

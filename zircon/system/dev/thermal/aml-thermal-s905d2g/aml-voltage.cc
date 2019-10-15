@@ -8,7 +8,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 
 #include "aml-pwm.h"
 
@@ -198,7 +201,7 @@ zx_status_t AmlVoltageRegulator::Init(aml_voltage_table_info_t* voltage_table_in
 }
 
 zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
-                                                   fbl::unique_ptr<thermal::AmlPwm>* pwm,
+                                                   std::unique_ptr<thermal::AmlPwm>* pwm,
                                                    uint32_t microvolt) {
   // Find the entry in the voltage-table.
   int target_index;

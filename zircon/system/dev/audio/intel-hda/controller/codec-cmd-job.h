@@ -12,7 +12,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
-#include <fbl/unique_ptr.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 
@@ -22,10 +21,10 @@ namespace intel_hda {
 class CodecConnection;
 
 class CodecCmdJob;
-using CodecCmdJobAllocTraits = fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<CodecCmdJob>>;
+using CodecCmdJobAllocTraits = fbl::StaticSlabAllocatorTraits<std::unique_ptr<CodecCmdJob>>;
 using CodecCmdJobAllocator = fbl::SlabAllocator<CodecCmdJobAllocTraits>;
 
-class CodecCmdJob : public fbl::DoublyLinkedListable<fbl::unique_ptr<CodecCmdJob>>,
+class CodecCmdJob : public fbl::DoublyLinkedListable<std::unique_ptr<CodecCmdJob>>,
                     public fbl::SlabAllocated<CodecCmdJobAllocTraits> {
  public:
   CodecCommand command() const { return cmd_; }

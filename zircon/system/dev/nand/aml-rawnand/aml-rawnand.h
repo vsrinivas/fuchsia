@@ -26,7 +26,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/rawnand.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-rawnand.h>
 

@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <memory>
 #include <utility>
 
 #include <minfs/fsck.h>
@@ -70,7 +71,7 @@ int run_fsck() {
 
   size_t size = stats.st_size /= minfs::kMinfsBlockSize;
 
-  fbl::unique_ptr<minfs::Bcache> block_cache;
+  std::unique_ptr<minfs::Bcache> block_cache;
   if (minfs::Bcache::Create(std::move(disk), static_cast<uint32_t>(size), &block_cache) != ZX_OK) {
     fprintf(stderr, "error: cannot create block cache\n");
     return -1;

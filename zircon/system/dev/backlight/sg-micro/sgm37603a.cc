@@ -4,6 +4,8 @@
 
 #include "sgm37603a.h"
 
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
@@ -11,7 +13,6 @@
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 namespace {
 
@@ -59,7 +60,7 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, &i2c, &reset_gpio));
+  std::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, &i2c, &reset_gpio));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Sgm37603a alloc failed\n", __FILE__);
     return ZX_ERR_NO_MEMORY;

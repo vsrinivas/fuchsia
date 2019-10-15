@@ -8,8 +8,9 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <ddk/protocol/display/controller.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hwreg/mmio.h>
 #include <region-alloc/region-alloc.h>
@@ -55,7 +56,7 @@ class Gtt {
   ~Gtt();
   zx_status_t Init(Controller* controller);
   zx_status_t AllocRegion(uint32_t length, uint32_t align_pow2,
-                          fbl::unique_ptr<GttRegion>* region_out);
+                          std::unique_ptr<GttRegion>* region_out);
   void SetupForMexec(uintptr_t stolen_fb, uint32_t length);
 
   uint64_t size() const { return gfx_mem_size_; }

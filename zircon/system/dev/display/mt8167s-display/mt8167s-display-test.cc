@@ -12,6 +12,8 @@
 #include <lib/mmio/mmio.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
+#include <memory>
+
 #include <ddktl/protocol/platform/device.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
@@ -72,12 +74,12 @@ TEST(DsiHostTest, IsDsiHostOn) {
   ddk::DsiImplProtocolClient dsi = ddk::DsiImplProtocolClient();
   ddk::PowerProtocolClient power = ddk::PowerProtocolClient();
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Lcd> lcd =
+  std::unique_ptr<Lcd> lcd =
       fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, &dsi, &gpio, uint8_t(0));
   EXPECT_TRUE(ac.check());
   ddk_mock::MockMmioReg dsi_reg_array[kDsiHostRegNum];
   ddk_mock::MockMmioRegRegion mock_regs(dsi_reg_array, sizeof(uint32_t), kDsiHostRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> mmio;
+  std::unique_ptr<ddk::MmioBuffer> mmio;
   mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
   // This will simulate the HOST being ON
@@ -93,12 +95,12 @@ TEST(DsiHostTest, IsDsiHostOff) {
   ddk::DsiImplProtocolClient dsi = ddk::DsiImplProtocolClient();
   ddk::PowerProtocolClient power = ddk::PowerProtocolClient();
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Lcd> lcd =
+  std::unique_ptr<Lcd> lcd =
       fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, &dsi, &gpio, uint8_t(0));
   EXPECT_TRUE(ac.check());
   ddk_mock::MockMmioReg dsi_reg_array[kDsiHostRegNum];
   ddk_mock::MockMmioRegRegion mock_regs(dsi_reg_array, sizeof(uint32_t), kDsiHostRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> mmio;
+  std::unique_ptr<ddk::MmioBuffer> mmio;
   mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
   // This will simulate the HOST being OFF
@@ -116,12 +118,12 @@ TEST(DsiHostTest, DsiHostShutdown_OFF) {
   ddk::DsiImplProtocolClient dsi = ddk::DsiImplProtocolClient();
   ddk::PowerProtocolClient power = ddk::PowerProtocolClient();
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Lcd> lcd =
+  std::unique_ptr<Lcd> lcd =
       fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, &dsi, &gpio, uint8_t(0));
   EXPECT_TRUE(ac.check());
   ddk_mock::MockMmioReg dsi_reg_array[kDsiHostRegNum];
   ddk_mock::MockMmioRegRegion dsi_mock_regs(dsi_reg_array, sizeof(uint32_t), kDsiHostRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> dsi_mmio;
+  std::unique_ptr<ddk::MmioBuffer> dsi_mmio;
   dsi_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, dsi_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
@@ -131,17 +133,17 @@ TEST(DsiHostTest, DsiHostShutdown_OFF) {
 
   ddk_mock::MockMmioReg syscfg_reg_array[kSyscfgRegNum];
   ddk_mock::MockMmioRegRegion syscfg_mock_regs(syscfg_reg_array, sizeof(uint32_t), kSyscfgRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> syscfg_mmio;
+  std::unique_ptr<ddk::MmioBuffer> syscfg_mmio;
   syscfg_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, syscfg_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
   ddk_mock::MockMmioReg mutex_reg_array[kMutexRegNum];
   ddk_mock::MockMmioRegRegion mutex_mock_regs(mutex_reg_array, sizeof(uint32_t), kMutexRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> mutex_mmio;
+  std::unique_ptr<ddk::MmioBuffer> mutex_mmio;
   mutex_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mutex_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
-  fbl::unique_ptr<MtSysConfig> syscfg;
+  std::unique_ptr<MtSysConfig> syscfg;
   syscfg = fbl::make_unique_checked<MtSysConfig>(&ac);
   EXPECT_TRUE(ac.check());
   EXPECT_OK(syscfg->Init(std::move(syscfg_mmio), std::move(mutex_mmio)));
@@ -157,13 +159,13 @@ TEST(DsiHostTest, DsiHostShutdown_ON) {
   ddk::DsiImplProtocolClient dsi = ddk::DsiImplProtocolClient();
   ddk::PowerProtocolClient power = ddk::PowerProtocolClient();
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Lcd> lcd =
+  std::unique_ptr<Lcd> lcd =
       fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, &dsi, &gpio, uint8_t(0));
   EXPECT_TRUE(ac.check());
 
   ddk_mock::MockMmioReg dsi_reg_array[kDsiHostRegNum];
   ddk_mock::MockMmioRegRegion dsi_mock_regs(dsi_reg_array, sizeof(uint32_t), kDsiHostRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> dsi_mmio;
+  std::unique_ptr<ddk::MmioBuffer> dsi_mmio;
   dsi_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, dsi_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
@@ -173,17 +175,17 @@ TEST(DsiHostTest, DsiHostShutdown_ON) {
 
   ddk_mock::MockMmioReg syscfg_reg_array[kSyscfgRegNum];
   ddk_mock::MockMmioRegRegion syscfg_mock_regs(syscfg_reg_array, sizeof(uint32_t), kSyscfgRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> syscfg_mmio;
+  std::unique_ptr<ddk::MmioBuffer> syscfg_mmio;
   syscfg_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, syscfg_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
   ddk_mock::MockMmioReg mutex_reg_array[kMutexRegNum];
   ddk_mock::MockMmioRegRegion mutex_mock_regs(mutex_reg_array, sizeof(uint32_t), kMutexRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> mutex_mmio;
+  std::unique_ptr<ddk::MmioBuffer> mutex_mmio;
   mutex_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mutex_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
-  fbl::unique_ptr<MtSysConfig> syscfg;
+  std::unique_ptr<MtSysConfig> syscfg;
   syscfg = fbl::make_unique_checked<MtSysConfig>(&ac);
   EXPECT_TRUE(ac.check());
   EXPECT_OK(syscfg->Init(std::move(syscfg_mmio), std::move(mutex_mmio)));
@@ -199,13 +201,13 @@ TEST(DsiHostTest, DsiHostPowerOn) {
   ddk::DsiImplProtocolClient dsi = ddk::DsiImplProtocolClient();
   ddk::PowerProtocolClient power = ddk::PowerProtocolClient();
   fbl::AllocChecker ac;
-  fbl::unique_ptr<Lcd> lcd =
+  std::unique_ptr<Lcd> lcd =
       fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, &dsi, &gpio, uint8_t(0));
   EXPECT_TRUE(ac.check());
 
   ddk_mock::MockMmioReg dsi_reg_array[kDsiHostRegNum];
   ddk_mock::MockMmioRegRegion dsi_mock_regs(dsi_reg_array, sizeof(uint32_t), kDsiHostRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> dsi_mmio;
+  std::unique_ptr<ddk::MmioBuffer> dsi_mmio;
   dsi_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, dsi_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
@@ -215,17 +217,17 @@ TEST(DsiHostTest, DsiHostPowerOn) {
 
   ddk_mock::MockMmioReg syscfg_reg_array[kSyscfgRegNum];
   ddk_mock::MockMmioRegRegion syscfg_mock_regs(syscfg_reg_array, sizeof(uint32_t), kSyscfgRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> syscfg_mmio;
+  std::unique_ptr<ddk::MmioBuffer> syscfg_mmio;
   syscfg_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, syscfg_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
   ddk_mock::MockMmioReg mutex_reg_array[kMutexRegNum];
   ddk_mock::MockMmioRegRegion mutex_mock_regs(mutex_reg_array, sizeof(uint32_t), kMutexRegNum);
-  fbl::unique_ptr<ddk::MmioBuffer> mutex_mmio;
+  std::unique_ptr<ddk::MmioBuffer> mutex_mmio;
   mutex_mmio = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mutex_mock_regs.GetMmioBuffer());
   EXPECT_TRUE(ac.check());
 
-  fbl::unique_ptr<MtSysConfig> syscfg;
+  std::unique_ptr<MtSysConfig> syscfg;
   syscfg = fbl::make_unique_checked<MtSysConfig>(&ac);
   EXPECT_TRUE(ac.check());
   EXPECT_OK(syscfg->Init(std::move(syscfg_mmio), std::move(mutex_mmio)));

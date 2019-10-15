@@ -10,6 +10,7 @@
 #include <string.h>
 #include <zircon/hw/usb.h>
 
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -18,7 +19,6 @@
 #include <ddk/device.h>
 #include <ddk/protocol/usb/composite.h>
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <usb/usb-request.h>
 
 #include "usb-tester-hw.h"
@@ -606,7 +606,7 @@ zx_status_t UsbTester::Create(zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<UsbTester> dev(new (&ac) UsbTester(parent, usb, bulk_in_addr, bulk_out_addr,
+  std::unique_ptr<UsbTester> dev(new (&ac) UsbTester(parent, usb, bulk_in_addr, bulk_out_addr,
                                                      isoch_loopback_intf, parent_req_size));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;

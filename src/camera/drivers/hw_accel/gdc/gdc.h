@@ -30,7 +30,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 
 #include "gdc-task.h"

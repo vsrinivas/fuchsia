@@ -10,7 +10,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
@@ -109,14 +108,10 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo astro_config = {
             // The first trip point entry is the default state of the machine
             // and the driver does not use the specified temperature/hysterisis
             // to set any interrupt trip points.
-            TripPoint(0.0f, 10, 5),
-            TripPoint(75.0f, 9, 4),
-            TripPoint(80.0f, 8, 3),
-            TripPoint(85.0f, 7, 3),
-            TripPoint(90.0f, 6, 2),
-            TripPoint(95.0f, 5, 1),
+            TripPoint(0.0f, 10, 5), TripPoint(75.0f, 9, 4), TripPoint(80.0f, 8, 3),
+            TripPoint(85.0f, 7, 3), TripPoint(90.0f, 6, 2), TripPoint(95.0f, 5, 1),
             TripPoint(100.0f, 4, 0),
-            TripPoint(-273.15f, 0, 0),   // 0 Kelvin is impossible, marks end of TripPoints
+            TripPoint(-273.15f, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
         },
     .opps =
         {

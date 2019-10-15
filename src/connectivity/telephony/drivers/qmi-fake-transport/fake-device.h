@@ -11,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
-#include <fbl/unique_ptr.h>
 
 #define _ALL_SOURCE
 #include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>

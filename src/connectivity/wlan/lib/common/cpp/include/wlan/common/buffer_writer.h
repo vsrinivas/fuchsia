@@ -10,7 +10,6 @@
 #include <cstring>
 
 #include <fbl/span.h>
-#include <fbl/unique_ptr.h>
 
 namespace wlan {
 

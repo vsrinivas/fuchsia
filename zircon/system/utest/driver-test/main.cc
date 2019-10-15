@@ -24,7 +24,6 @@
 #include <zircon/syscalls.h>
 
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 
 static constexpr const char kDriverTestDir[] = "/boot/driver/test";
 static constexpr const char kBindFailDriver[] = "bind-fail-test.so";

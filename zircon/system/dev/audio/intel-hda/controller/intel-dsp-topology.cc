@@ -6,6 +6,8 @@
 
 #include <zircon/device/audio.h>
 
+#include <memory>
+
 #include <fbl/string_printf.h>
 
 #include "intel-dsp-ipc.h"
@@ -196,7 +198,7 @@ StatusOr<std::vector<uint8_t>> GetI2SModuleConfig(const Nhlt& nhlt, uint8_t i2s_
   ZX_DEBUG_ASSERT(cfg_size <= UINT16_MAX);
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> cfg_buf(new (&ac) uint8_t[cfg_size]);
+  std::unique_ptr<uint8_t[]> cfg_buf(new (&ac) uint8_t[cfg_size]);
   if (!ac.check()) {
     return Status(ZX_ERR_NO_MEMORY,
                   "out of memory while attempting to allocate copier config buffer");

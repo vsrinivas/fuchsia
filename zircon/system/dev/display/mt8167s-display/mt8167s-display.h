@@ -15,6 +15,7 @@
 #include <zircon/listnode.h>
 
 #include <array>
+#include <memory>
 
 #include <ddk/debug.h>
 #include <ddk/protocol/platform/device.h>
@@ -27,7 +28,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "aal.h"
 #include "ccorr.h"
@@ -157,7 +157,7 @@ class Mt8167sDisplay
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
 
   // SMI
-  fbl::unique_ptr<ddk::MmioBuffer> smi_mmio_;
+  std::unique_ptr<ddk::MmioBuffer> smi_mmio_;
 
   // DSIIMPL Protocol
   bool hasDsi_ = false;
@@ -168,15 +168,15 @@ class Mt8167sDisplay
   ddk::PowerProtocolClient power_;
 
   // Objects
-  fbl::unique_ptr<mt8167s_display::MtSysConfig> syscfg_;
-  fbl::unique_ptr<mt8167s_display::Ovl> ovl_;
-  fbl::unique_ptr<mt8167s_display::Color> color_;
-  fbl::unique_ptr<mt8167s_display::Ccorr> ccorr_;
-  fbl::unique_ptr<mt8167s_display::Aal> aal_;
-  fbl::unique_ptr<mt8167s_display::Gamma> gamma_;
-  fbl::unique_ptr<mt8167s_display::Dither> dither_;
-  fbl::unique_ptr<mt8167s_display::DispRdma> disp_rdma_;
-  fbl::unique_ptr<mt8167s_display::MtDsiHost> dsi_host_;
+  std::unique_ptr<mt8167s_display::MtSysConfig> syscfg_;
+  std::unique_ptr<mt8167s_display::Ovl> ovl_;
+  std::unique_ptr<mt8167s_display::Color> color_;
+  std::unique_ptr<mt8167s_display::Ccorr> ccorr_;
+  std::unique_ptr<mt8167s_display::Aal> aal_;
+  std::unique_ptr<mt8167s_display::Gamma> gamma_;
+  std::unique_ptr<mt8167s_display::Dither> dither_;
+  std::unique_ptr<mt8167s_display::DispRdma> disp_rdma_;
+  std::unique_ptr<mt8167s_display::MtDsiHost> dsi_host_;
 };
 
 }  // namespace mt8167s_display

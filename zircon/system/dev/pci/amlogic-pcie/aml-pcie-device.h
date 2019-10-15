@@ -9,6 +9,7 @@
 #include <lib/mmio/mmio.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/device.h>
@@ -16,7 +17,6 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/device.h>
 #include <dev/pci/designware/atu-cfg.h>
-#include <fbl/unique_ptr.h>
 
 #include "aml-pcie.h"
 
@@ -64,7 +64,7 @@ class AmlPcieDevice {
   iatu_translation_entry_t atu_io_;
   iatu_translation_entry_t atu_mem_;
 
-  fbl::unique_ptr<AmlPcie> pcie_;
+  std::unique_ptr<AmlPcie> pcie_;
 };
 
 }  // namespace aml

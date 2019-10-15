@@ -11,7 +11,6 @@
 #include <memory>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 namespace fbl {
 namespace internal {
@@ -41,27 +40,6 @@ struct ContainerPtrTraits<T*> {
   static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT { return ptr; }
 
   static inline PtrType Reclaim(RawPtrType ptr) { return ptr; }
-};
-
-// Traits for managing unique pointers.
-template <typename T>
-struct ContainerPtrTraits<::fbl::unique_ptr<T>> {
-  using ValueType = T;
-  using RefType = T&;
-  using ConstRefType = const T&;
-  using PtrType = ::fbl::unique_ptr<T>;
-  using ConstPtrType = ::fbl::unique_ptr<const T>;
-  using RawPtrType = T*;
-  using ConstRawPtrType = const T*;
-
-  static constexpr bool IsManaged = true;
-  static constexpr bool CanCopy = false;
-
-  static inline T* GetRaw(const PtrType& ptr) { return ptr.get(); }
-
-  static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT { return ptr.release(); }
-
-  static inline PtrType Reclaim(RawPtrType ptr) { return PtrType(ptr); }
 };
 
 // Traits for managing std::unique_ptrs to objects (arrays of objects are not supported)

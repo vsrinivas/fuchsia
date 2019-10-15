@@ -5,12 +5,13 @@
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
 
+#include <memory>
+
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <soc/as370/as370-nand.h>
 
 #include "as370.h"
@@ -63,7 +64,7 @@ zx_status_t As370::NandInit() {
           : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
   constexpr size_t kPartitionMapSize = sizeof(zbi_partition_map_t) + sizeof(kPartitions);
 
-  fbl::unique_ptr<zbi_partition_map_t> nand_partition_map(
+  std::unique_ptr<zbi_partition_map_t> nand_partition_map(
       reinterpret_cast<zbi_partition_map_t*>(aligned_alloc(
           kPartitionMapAlignment, fbl::round_up(kPartitionMapSize, kPartitionMapAlignment))));
   if (!nand_partition_map) {

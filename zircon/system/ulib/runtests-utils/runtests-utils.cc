@@ -34,7 +34,7 @@ namespace runtests {
 void ParseTestNames(const fbl::StringPiece input, fbl::Vector<fbl::String>* output) {
   // strsep modifies its input, so we have to make a mutable copy.
   // +1 because StringPiece::size() excludes null terminator.
-  fbl::unique_ptr<char[]> input_copy(new char[input.size() + 1]);
+  std::unique_ptr<char[]> input_copy(new char[input.size() + 1]);
   memcpy(input_copy.get(), input.data(), input.size());
   input_copy[input.size()] = '\0';
 

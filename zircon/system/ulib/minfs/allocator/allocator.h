@@ -8,12 +8,13 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_ALLOCATOR_H_
 #define ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_ALLOCATOR_H_
 
+#include <memory>
+
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <bitmap/storage.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <fs/transaction/block_transaction.h>
 #include <minfs/allocator-reservation.h>
 #include <minfs/format.h>
@@ -64,8 +65,8 @@ class Allocator {
   Allocator(const Allocator&) = delete;
   Allocator& operator=(const Allocator&) = delete;
 
-  static zx_status_t Create(fs::ReadTxn* txn, fbl::unique_ptr<AllocatorStorage> storage,
-                            fbl::unique_ptr<Allocator>* out);
+  static zx_status_t Create(fs::ReadTxn* txn, std::unique_ptr<AllocatorStorage> storage,
+                            std::unique_ptr<Allocator>* out);
 
   // Return the number of total available elements, after taking reservations into account.
   size_t GetAvailable() const FS_TA_EXCLUDES(lock_);
@@ -120,7 +121,7 @@ class Allocator {
 #endif
 
  private:
-  Allocator(fbl::unique_ptr<AllocatorStorage> storage)
+  Allocator(std::unique_ptr<AllocatorStorage> storage)
       : reserved_(0), first_free_(0), storage_(std::move(storage)) {}
 
   zx_status_t LoadStorage(fs::ReadTxn* txn) FS_TA_EXCLUDES(lock_);
@@ -155,7 +156,7 @@ class Allocator {
   size_t first_free_ FS_TA_GUARDED(lock_);
 
   // Represents the Allocator's backing storage.
-  fbl::unique_ptr<AllocatorStorage> storage_;
+  std::unique_ptr<AllocatorStorage> storage_;
   // A bitmap interface into |storage_|.
   RawBitmap map_ FS_TA_GUARDED(lock_);
 

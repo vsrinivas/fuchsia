@@ -12,6 +12,8 @@
 #include <zircon/device/vfs.h>
 #include <zircon/time.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
@@ -802,7 +804,7 @@ zx_status_t VnodeMinfs::Close() {
 
   if (fd_count_ == 0 && IsUnlinked()) {
     zx_status_t status;
-    fbl::unique_ptr<Transaction> transaction;
+    std::unique_ptr<Transaction> transaction;
     if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
       return status;
     }
@@ -1009,7 +1011,7 @@ zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   if (dirty) {
     // write to disk, but don't overwrite the time
     zx_status_t status;
-    fbl::unique_ptr<Transaction> transaction;
+    std::unique_ptr<Transaction> transaction;
     if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
       return status;
     }

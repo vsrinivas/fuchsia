@@ -10,6 +10,7 @@
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -130,7 +131,7 @@ void InputDevice::virtio_input_stop(void* ctx) {
   inp->Stop();
 }
 
-InputDevice::InputDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+InputDevice::InputDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)) {}
 
 InputDevice::~InputDevice() {}

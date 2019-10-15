@@ -14,6 +14,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <memory>
 #include <optional>
 
 #include <ddk/binding.h>
@@ -24,7 +25,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 
 #include "fidl.h"
@@ -38,7 +38,7 @@ class MockDevice : public MockDeviceType {
  public:
   MockDevice(zx_device_t* device, zx::channel controller);
   static zx_status_t Create(zx_device_t* parent, zx::channel controller,
-                            fbl::unique_ptr<MockDevice>* out);
+                            std::unique_ptr<MockDevice>* out);
 
   // Device protocol implementation.
   void DdkRelease();
@@ -124,7 +124,7 @@ MockDevice::MockDevice(zx_device_t* device, zx::channel controller)
       controller_(device_mock::MockDevice::SyncClient(std::move(controller))) {}
 
 int MockDevice::ThreadFunc(void* raw_arg) {
-  auto arg = fbl::unique_ptr<ThreadFuncArg>(static_cast<ThreadFuncArg*>(raw_arg));
+  auto arg = std::unique_ptr<ThreadFuncArg>(static_cast<ThreadFuncArg*>(raw_arg));
 
   while (true) {
     fbl::Array<device_mock::Action> actions;
@@ -322,7 +322,7 @@ zx_status_t MockDevice::DdkRxrpc(zx_handle_t channel) {
 }
 
 zx_status_t MockDevice::Create(zx_device_t* parent, zx::channel controller,
-                               fbl::unique_ptr<MockDevice>* out) {
+                               std::unique_ptr<MockDevice>* out) {
   auto dev = std::make_unique<MockDevice>(parent, std::move(controller));
   *out = std::move(dev);
   return ZX_OK;
@@ -401,7 +401,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         // TODO(teisenbe): Implement more functionality here
         auto& add_device_action = action.mutable_add_device();
         ZX_ASSERT_MSG(!add_device_action.do_bind, "bind not yet supported\n");
-        fbl::unique_ptr<MockDevice> dev;
+        std::unique_ptr<MockDevice> dev;
         zx_status_t status =
             MockDevice::Create(ctx->device, std::move(add_device_action.controller), &dev);
         if (status != ZX_OK) {

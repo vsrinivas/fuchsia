@@ -20,10 +20,11 @@ __END_CDECLS
 #ifdef __cplusplus
 #include <lib/zx/bti.h>
 
+#include <memory>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 #include "pci.h"
 
@@ -31,7 +32,7 @@ class Pciroot;
 using PcirootType = ddk::Device<Pciroot>;
 class Pciroot : public PcirootType, public ddk::PcirootProtocol<Pciroot, ddk::base_protocol> {
  public:
-  static zx_status_t Create(fbl::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent,
+  static zx_status_t Create(std::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent,
                             zx_device_t* platform_bus, const char* name);
   zx_status_t PcirootGetAuxdata(const char* args, void* out_data, size_t data_size,
                                 size_t* out_data_actual);
@@ -81,10 +82,10 @@ class Pciroot : public PcirootType, public ddk::PcirootProtocol<Pciroot, ddk::ba
   char name_[8];
 
  private:
-  Pciroot(fbl::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent, zx_device_t* platform_bus,
+  Pciroot(std::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent, zx_device_t* platform_bus,
           const char* name)
       : PcirootType(parent), ctx_(std::move(ctx)), platform_bus_(platform_bus) {}
-  fbl::unique_ptr<pciroot_ctx_t> ctx_;
+  std::unique_ptr<pciroot_ctx_t> ctx_;
   zx_device_t* platform_bus_;
 };
 

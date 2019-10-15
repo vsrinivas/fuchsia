@@ -13,9 +13,9 @@
 #include <zircon/threads.h>
 
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 namespace i2c {
 

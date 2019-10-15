@@ -4,10 +4,10 @@
 
 #include <unistd.h>
 
+#include <memory>
 #include <string>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <fvm-host/container.h>
 #include <fvm-host/file-wrapper.h>
 #include <fvm/sparse-reader.h>
@@ -322,7 +322,7 @@ int main(int argc, char** argv) {
       }
     }
 
-    fbl::unique_ptr<FvmContainer> fvmContainer;
+    std::unique_ptr<FvmContainer> fvmContainer;
     if (FvmContainer::CreateNew(path, slice_size, offset, length, &fvmContainer) != ZX_OK) {
       return -1;
     }
@@ -335,7 +335,7 @@ int main(int argc, char** argv) {
       return -1;
     }
   } else if (!strcmp(command, "add")) {
-    fbl::unique_ptr<FvmContainer> fvmContainer;
+    std::unique_ptr<FvmContainer> fvmContainer;
     if (FvmContainer::CreateExisting(path, offset, &fvmContainer) != ZX_OK) {
       return -1;
     }
@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
       usage();
     }
 
-    fbl::unique_ptr<FvmContainer> fvmContainer;
+    std::unique_ptr<FvmContainer> fvmContainer;
     if (FvmContainer::CreateExisting(path, offset, &fvmContainer) != ZX_OK) {
       return -1;
     }
@@ -374,7 +374,7 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    fbl::unique_ptr<SparseContainer> sparseContainer;
+    std::unique_ptr<SparseContainer> sparseContainer;
     if (SparseContainer::CreateNew(path, slice_size, flags, max_disk_size, &sparseContainer) !=
         ZX_OK) {
       return -1;
@@ -388,7 +388,7 @@ int main(int argc, char** argv) {
       return -1;
     }
   } else if (!strcmp(command, "verify")) {
-    fbl::unique_ptr<Container> containerData;
+    std::unique_ptr<Container> containerData;
     if (Container::Create(path, offset, flags, &containerData) != ZX_OK) {
       return -1;
     }
@@ -410,7 +410,7 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    fbl::unique_ptr<SparseContainer> compressedContainer;
+    std::unique_ptr<SparseContainer> compressedContainer;
     if (SparseContainer::CreateExisting(input_path, &compressedContainer) != ZX_OK) {
       return -1;
     }
@@ -419,7 +419,7 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    fbl::unique_ptr<SparseContainer> sparseContainer;
+    std::unique_ptr<SparseContainer> sparseContainer;
     if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
       return -1;
     }
@@ -428,7 +428,7 @@ int main(int argc, char** argv) {
       return -1;
     }
   } else if (!strcmp(command, "size")) {
-    fbl::unique_ptr<SparseContainer> sparseContainer;
+    std::unique_ptr<SparseContainer> sparseContainer;
     if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
       return -1;
     }
@@ -440,7 +440,7 @@ int main(int argc, char** argv) {
       return -1;
     }
   } else if (!strcmp(command, "used-data-size")) {
-    fbl::unique_ptr<SparseContainer> sparseContainer;
+    std::unique_ptr<SparseContainer> sparseContainer;
     if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
       return -1;
     }
@@ -452,7 +452,7 @@ int main(int argc, char** argv) {
     }
     printf("%" PRIu64 "\n", size);
   } else if (!strcmp(command, "used-inodes")) {
-    fbl::unique_ptr<SparseContainer> sparseContainer;
+    std::unique_ptr<SparseContainer> sparseContainer;
     if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
       return -1;
     }
@@ -464,7 +464,7 @@ int main(int argc, char** argv) {
     }
     printf("%" PRIu64 "\n", used_inodes);
   } else if (!strcmp(command, "used-size")) {
-    fbl::unique_ptr<SparseContainer> sparseContainer;
+    std::unique_ptr<SparseContainer> sparseContainer;
     if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
       return -1;
     }
@@ -485,15 +485,15 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    fbl::unique_ptr<SparseContainer> sparseData;
+    std::unique_ptr<SparseContainer> sparseData;
     if (SparseContainer::CreateExisting(input_path, &sparseData) != ZX_OK) {
       return -1;
     }
 
-    fbl::unique_ptr<fvm::host::FileWrapper> wrapper;
+    std::unique_ptr<fvm::host::FileWrapper> wrapper;
 
     if (disk_type == DiskType::File) {
-      fbl::unique_ptr<fvm::host::UniqueFdWrapper> unique_fd_wrapper;
+      std::unique_ptr<fvm::host::UniqueFdWrapper> unique_fd_wrapper;
       if (fvm::host::UniqueFdWrapper::Open(path, O_CREAT | O_WRONLY, 0644, &unique_fd_wrapper) !=
           ZX_OK) {
         return -1;

@@ -9,7 +9,6 @@
 #include <vector>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 

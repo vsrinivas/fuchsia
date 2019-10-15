@@ -11,6 +11,8 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/auxdata.h>
@@ -356,7 +358,7 @@ zx_status_t Pciroot::PcirootFreeAddressSpace(uint64_t base, size_t len, pci_addr
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Pciroot::Create(fbl::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent,
+zx_status_t Pciroot::Create(std::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent,
                             zx_device_t* platform_bus, const char* name) {
   fbl::AllocChecker ac;
   auto pciroot = new (&ac) Pciroot(std::move(ctx), parent, platform_bus, name);

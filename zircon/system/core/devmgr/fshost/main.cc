@@ -19,6 +19,8 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <memory>
+
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/unique_fd.h>
 #include <loader-service/loader-service.h>
@@ -193,7 +195,7 @@ int main(int argc, char** argv) {
   zx::event fshost_event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
 
   // First, initialize the local filesystem in isolation.
-  fbl::unique_ptr<devmgr::FsManager> fs_manager;
+  std::unique_ptr<devmgr::FsManager> fs_manager;
   zx_status_t status =
       devmgr::FsManager::Create(std::move(fshost_event), devmgr::MakeMetrics(), &fs_manager);
   if (status != ZX_OK) {

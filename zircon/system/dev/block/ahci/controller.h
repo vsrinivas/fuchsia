@@ -11,7 +11,6 @@
 
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "ahci.h"
 #include "bus.h"

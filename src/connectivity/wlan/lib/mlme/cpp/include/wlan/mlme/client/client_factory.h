@@ -5,7 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_FACTORY_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_FACTORY_H_
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/client/station.h>
@@ -13,7 +14,7 @@
 
 namespace wlan {
 
-fbl::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, JoinContext* join_ctx,
+std::unique_ptr<ClientInterface> CreateDefaultClient(DeviceInterface* device, JoinContext* join_ctx,
                                                      ChannelScheduler* chan_scheduler);
 
 }  // namespace wlan

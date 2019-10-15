@@ -11,6 +11,7 @@
 #include <sys/param.h>
 #include <zircon/compiler.h>
 
+#include <memory>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -85,11 +86,11 @@ void BlockDevice::virtio_block_unbind(void* ctx) {
 }
 
 void BlockDevice::virtio_block_release(void* ctx) {
-  fbl::unique_ptr<BlockDevice> bd(static_cast<BlockDevice*>(ctx));
+  std::unique_ptr<BlockDevice> bd(static_cast<BlockDevice*>(ctx));
   bd->Release();
 }
 
-BlockDevice::BlockDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+BlockDevice::BlockDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)) {
   sync_completion_reset(&txn_signal_);
   sync_completion_reset(&worker_signal_);

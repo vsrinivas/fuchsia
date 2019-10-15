@@ -23,7 +23,6 @@
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/spi.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 enum {
   OT_RADIO_INT_PIN,

@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <fbl/unique_ptr.h>
 #include <tftp/tftp.h>
 
 #include "internal.h"

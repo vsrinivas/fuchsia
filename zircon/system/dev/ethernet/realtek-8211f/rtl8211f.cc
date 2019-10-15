@@ -13,7 +13,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <fbl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
 
 #include "mdio-regs.h"
 

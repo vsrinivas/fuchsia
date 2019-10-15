@@ -22,6 +22,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
+
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
@@ -236,8 +238,8 @@ TEST_F(UmsTest, CachedWriteWithNoFlushShouldBeDiscarded) {
     blk_size = result->info->block_size;
   }
 
-  fbl::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
-  fbl::unique_ptr<uint8_t[]> read_buffer(new uint8_t[blk_size]);
+  std::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
+  std::unique_ptr<uint8_t[]> read_buffer(new uint8_t[blk_size]);
   ASSERT_EQ(blk_size, static_cast<uint64_t>(read(fd.get(), read_buffer.get(), blk_size)));
   fd.reset(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   // Create a pattern to write to the block device
@@ -275,7 +277,7 @@ TEST_F(UmsTest, UncachedWriteShouldBePersistedToBlockDevice) {
   }
 
   // Allocate our buffer
-  fbl::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
+  std::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
   // Generate and write a pattern to the block device
   for (size_t i = 0; i < blk_size; i++) {
     write_buffer.get()[i] = static_cast<unsigned char>(i);

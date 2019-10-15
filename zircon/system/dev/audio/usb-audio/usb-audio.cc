@@ -6,9 +6,10 @@
 
 #include <string.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 
 namespace audio {
 namespace usb {
@@ -31,7 +32,7 @@ fbl::Array<uint8_t> FetchStringDescriptor(const usb_protocol_t& usb, uint8_t des
   buflen = fbl::min(buflen, sizeof(str_buf));
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> mem(new (&ac) uint8_t[buflen + 1]);
+  std::unique_ptr<uint8_t[]> mem(new (&ac) uint8_t[buflen + 1]);
   if (!ac.check()) {
     return fbl::Array<uint8_t>();
   }
