@@ -1,8 +1,0 @@
-# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
-# before making changes to this file, and add a member of the fuchsia.dev
-# team as reviewer.
-toc:
-- title: "ACPI debugging"
-  path: /docs/zircon/debugging/acpi.md
-- title: "Debugging tips"
-  path: /docs/zircon/debugging/tips.md

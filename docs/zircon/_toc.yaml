@@ -8,10 +8,6 @@ toc:
 - title: "Getting started"
   path: /docs/zircon/getting_started.md
 
-- title: "Building zircon"
-  section:
-  - include: /docs/zircon/gn/_toc.yaml
-
 - title: "Architecture support"
   path: /docs/zircon/architecture_support.md
 
@@ -20,10 +16,6 @@ toc:
 
 - title: "C++"
   section:
-  - title: "Overview"
-    path: /docs/zircon/cxx.md
-  - title: "Compile time collections"
-    path: /docs/zircon/compile_time_object_collections.md
   - title: "fit::promise<> guide"
     path: /docs/zircon/fit_promise_guide.md
 
@@ -121,10 +113,6 @@ toc:
   section:
   - include: /docs/zircon/targets/_toc.yaml
 
-- title: "Debugging"
-  section:
-  - include: /docs/zircon/debugging/_toc.yaml
-
 - title: "Testing"
   section:
   - title: "Overview"
@@ -153,18 +141,12 @@ toc:
 - title: "Zircon and LK"
   path: /docs/zircon/zx_and_lk.md
 
-- title: "Benchmarks"
-  section:
-  - include: /docs/zircon/benchmarks/_toc.yaml
-
 - title: "Reference"
   path: /docs/reference/README.md
+
 - title: "Notes"
   section:
   - title: "Entropy collection TODOs"
     path: /docs/zircon/entropy_collection_todos.md
   - title: "Avoiding a problem with the SYSRET"
     path: /docs/zircon/sysret_problem.md
-
-- title: "QEMU"
-  path: /docs/zircon/qemu.md

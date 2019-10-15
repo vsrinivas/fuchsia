@@ -4,14 +4,14 @@
 toc:
 - title: "Overview"
   path: /docs/development/languages
-- title: "Linting and formatting"
-  path: /docs/development/languages/lint_and_format.md
-- title: "Supporting new languages"
+- title: "Configure editors"
   section:
-    - title: "Overview"
-      path: /docs/development/languages/new/README.md
-    - title: "Recommended structure to support Fuchsia"
-      path: /docs/development/languages/new/structure.md
+  - include: /docs/development/editors/_toc.yaml
+- title: "Configure linters and formatter"
+  path: /docs/development/languages/lint_and_format.md
+- title: "Support new languages"
+  section:
+  - include: /docs/development/languages/new/_toc.yaml
 - title: "C/C++"
   section:
   - include: /docs/development/languages/c-cpp/_toc.yaml

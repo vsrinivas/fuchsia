@@ -20,5 +20,9 @@ toc:
   path: /docs/development/build/variants.md
 - title: "Bundles"
   path: /docs/development/build/bundles.md
+- title: "A short introduction to GN"
+  path: /docs/development/build/intro.md
+- title: "GN in Zircon"
+  path: /docs/development/build/zircon_gn.md
 - title: "GN build arguments"
   path: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/gen/build_arguments.md

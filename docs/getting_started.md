@@ -119,7 +119,7 @@ Note: A quick overview of the basic build-and-pave workflow can be found
 ### Boot from QEMU
 
 If you don't have the supported hardware, you can run Fuchsia under emulation
-using [QEMU](/docs/zircon/qemu.md).
+using [QEMU](/docs/development/emulator/qemu.md).
 Fuchsia includes prebuilt binaries for QEMU under `prebuilt/third_party/qemu`.
 
 The `fx run` command will launch Zircon within QEMU, using the locally built
@@ -158,7 +158,7 @@ fx run -g
 
 #### Enabling Network
 
-First, [configure](/docs/zircon/qemu.md#enabling_networking_under_qemu) a
+First, [configure](/docs/development/emulator/qemu.md#enabling_networking_under_qemu) a
 virtual interface for QEMU's use.
 
 Once this is done you can add the `-N` and `-u` flags to `fx run`:

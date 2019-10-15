@@ -10,3 +10,5 @@ toc:
   path: /docs/development/benchmarking/running_on_ci.md
 - title: "Trace-based benchmarking"
   path: /docs/development/benchmarking/trace_based_benchmarking.md
+- title: "Microbenchmarks"
+  path: /docs/development/benchmarking/microbenchmarks.md

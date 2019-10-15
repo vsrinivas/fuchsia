@@ -1,8 +1,0 @@
-# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
-# before making changes to this file, and add a member of the fuchsia.dev
-# team as reviewer.
-toc:
-- title: "A short introduction to GN"
-  path: /docs/zircon/gn/intro.md
-- title: "GN in Zircon"
-  path: /docs/zircon/gn/zircon_gn.md

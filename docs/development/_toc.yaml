@@ -4,61 +4,59 @@
 toc:
 - title: "Development"
   path: /docs/development/README.md
+- heading: "Set up"
+- title: "Get source code"
+  section:
+  - include: /docs/development/source_code/_toc.yaml
+- title: "Set up hardware"
+  section:
+  - include: /docs/development/hardware/_toc.yaml
+- heading: "Build and run"
+- title: "Build"
+  section:
+  - include: /docs/development/build/_toc.yaml
+- heading: "Write code"
+- title: "Develop a kernel"
+  section:
+  - include: /docs/development/kernel/_toc.yaml
+- title: "Develop components"
+  section:
+  - include: /docs/development/components/_toc.yaml
+- title: "Inspect components"
+  section:
+  - include: /docs/development/inspect/_toc.yaml
+- title: "Develop using the SDK"
+  section:
+  - include: /docs/development/sdk/_toc.yaml
+- heading: "Test and debug"
+- title: "Test"
+  section:
+  - include: /docs/development/testing/_toc.yaml
+- title: "Benchmark"
+  section:
+  - include: /docs/development/benchmarking/_toc.yaml
+- title: "Debug"
+  section:
+  - include: /docs/development/debugging/_toc.yaml
+- title: "Trace"
+  section:
+  - include: /docs/development/tracing/_toc.yaml
+- heading: "Guides"
 - title: "ABI"
   section:
   - include: /docs/development/abi/_toc.yaml
 - title: "API"
   section:
   - include: /docs/development/api/_toc.yaml
-- title: "Benchmarking"
-  section:
-  - include: /docs/development/benchmarking/_toc.yaml
-- title: "Build"
-  section:
-  - include: /docs/development/build/_toc.yaml
-- title: "Supplying build-time configuration data to components"
-  path: /docs/development/config_data.md
-- title: "Develop a kernel"
-  section:
-  - include: /docs/development/kernel/_toc.yaml
-- title: "Component Inspection"
-  section:
-  - include: /docs/development/inspect/_toc.yaml
-- title: "Hardware"
-  section:
-  - include: /docs/development/hardware/_toc.yaml
-- title: "Internationalization"
-  section:
-  - include: /docs/development/internationalization/_toc.yaml
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml
-- title: "SDK"
+- title: "Internationalization"
   section:
-  - include: /docs/development/sdk/_toc.yaml
-- title: "Source code"
-  section:
-  - include: /docs/development/source_code/_toc.yaml
-- title: "Testing"
-  section:
-  - include: /docs/development/testing/_toc.yaml
-- title: "Tracing"
-  section:
-  - include: /docs/development/tracing/_toc.yaml
+  - include: /docs/development/internationalization/_toc.yaml
 - title: "Workflows"
   section:
   - include: /docs/development/workflows/_toc.yaml
 - title: "Tools"
   section:
-  - title: "Fidlcat"
-    section:
-    - include: /docs/development/fidl_inspecting/_toc.yaml
-  - title: "System monitor"
-    section:
-    - include: /docs/development/system_monitor/_toc.yaml
-  - title: "Debugger"
-    section:
-    - include: /docs/development/debugger/_toc.yaml
-- title: "Editors"
-  section:
-   - include: /docs/development/editors/_toc.yaml
+  - include: /docs/development/tools/_toc.yaml

@@ -22,3 +22,7 @@ toc:
   path: /docs/development/languages/c-cpp/syslog.md
 - title: "Perftest micro-benchmark library"
   path: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/README.md
+- title: "C++ in Zircon"
+  path: /docs/development/languages/c-cpp/cxx.md
+- title: "Compile time collections"
+  path: /docs/development/languages/c-cpp/compile_time_object_collections.md

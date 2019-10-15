@@ -70,7 +70,7 @@ on all architectures.
 You can skip this if you're only testing on actual hardware, but the emulator
 is handy for quick local tests and generally worth having around.
 
-See [QEMU](qemu.md) for information on building and using QEMU with zircon.
+See [QEMU](/docs/development/emulator/qemu.md) for information on building and using QEMU with zircon.
 
 
 ## Build Toolchains (Optional)
@@ -238,7 +238,7 @@ $BUILDDIR/tools/loglistener
 ## Debugging
 
 For random tips on debugging in the zircon environment see
-[debugging](debugging/tips.md).
+[debugging](/docs/development/debugging/tips.md).
 
 ## Contribute changes
 * See [contributing.md](/docs/contribute/contributing.md).

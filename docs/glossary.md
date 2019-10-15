@@ -323,7 +323,7 @@ Fuchsia.
 
 FBL is the Fuchsia Base Library, which is shared between kernel and userspace.
 
--   [Zircon C++](/docs/zircon/cxx.md)
+-   [Zircon C++](/docs/development/languages/c-cpp/cxx.md)
 
 #### **fdio** {#fdio}
 

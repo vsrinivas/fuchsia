@@ -210,7 +210,7 @@ to use that feature.
 The set of currently known features are as follows:
 
 - `config-data`, which will provide any configuration data available to the
-  package this component is in that was provided in the [config-data](/docs/development/config_data.md)
+  package this component is in that was provided in the [config-data](/docs/development/components/config_data.md)
   package on the system.
 
 - `introspection`, which requests access to introspect the system. The

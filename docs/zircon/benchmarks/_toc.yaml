@@ -1,6 +1,0 @@
-# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
-# before making changes to this file, and add a member of the fuchsia.dev
-# team as reviewer.
-toc:
-- title: "Microbenchmarks"
-  path: /docs/zircon/benchmarks/microbenchmarks.md
