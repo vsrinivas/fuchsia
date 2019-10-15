@@ -19,9 +19,6 @@ toc:
   - title: "fit::promise<> guide"
     path: /docs/zircon/fit_promise_guide.md
 
-- title: "libc support"
-  path: /docs/zircon/libc.md
-
 - title: Objects
   section:
   - title: "Kernel objects"
@@ -42,8 +39,6 @@ toc:
     path: /docs/zircon/kernel_scheduling.md
   - title: "Fair scheduling"
     path: /docs/zircon/fair_scheduler.md
-  - title: "Kernel tracing"
-    path: /docs/zircon/tracing/ktrace.md
   - title: "Kernel reference"
     section:
     - include: /docs/reference/kernel/_toc.yaml
@@ -112,19 +107,6 @@ toc:
 - title: "Targets"
   section:
   - include: /docs/zircon/targets/_toc.yaml
-
-- title: "Testing"
-  section:
-  - title: "Overview"
-    path: /docs/zircon/testing.md
-  - title: "Block device testing"
-    path: /docs/zircon/block_device_testing.md
-  - title: "Entropy quality tests"
-    path:  /docs/zircon/entropy_quality_tests.md
-  - title: "Fuzzing the FIDL host tools"
-    path:  /docs/zircon/fuzzing_fidl.md
-  - title: "NAND testing"
-    path: /docs/zircon/nand_testing.md
 
 - title: "Memory usage analysis tools"
   path: /docs/zircon/memory.md

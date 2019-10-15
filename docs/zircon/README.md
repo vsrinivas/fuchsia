@@ -49,17 +49,17 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Driver Development Kit](ddk/overview.md)
 + [Driver interfaces - audio overview](driver_interfaces/audio_overview.md)
 
-+ [libc](libc.md)
++ [libc](/docs/development/languages/c-cpp/libc.md)
 + [C++ fit::promise<> guide](fit_promise_guide.md)
 
-+ [Testing](testing.md)
-+ [Kernel tracing](tracing/ktrace.md)
-+ [Block device testing](block_device_testing.md)
-+ [nand Testing](nand_testing.md)
++ [Testing](/docs/development/testing/testing.md)
++ [Kernel tracing](/docs/development/tracing/ktrace.md)
++ [Block device testing](/docs/development/testing/block_device_testing.md)
++ [nand Testing](/docs/development/testing/nand_testing.md)
 
 + [Compile-time object collections](/docs/development/languages/c-cpp/compile_time_object_collections.md)
 + [ACPI debugging](/docs/development/debugging/acpi.md)
-+ [Fuzzing the FIDL host tools](fuzzing_fidl.md)
++ [Fuzzing the FIDL host tools](/docs/development/testing/fuzzing_fidl.md)
 + [Entropy collection TODOs](entropy_collection_todos.md)
 + [Memory usage analysis tools](memory.md)
 + [Symbolizer](/docs/reference/kernel/symbolizer_markup.md)

@@ -16,3 +16,13 @@ toc:
   path: /docs/development/testing/test_flake_policy.md
 - title: "Testing: questions and answers"
   path: /docs/development/testing/faq.md
+- title: "Zircon testing overview"
+  path: /docs/development/testing/testing.md
+- title: "Block device testing"
+  path: /docs/development/testing/block_device_testing.md
+- title: "Entropy quality tests"
+  path:  /docs/development/testing/entropy_quality_tests.md
+- title: "Fuzzing the FIDL host tools"
+  path:  /docs/development/testing/fuzzing_fidl.md
+- title: "NAND testing"
+  path: /docs/development/testing/nand_testing.md

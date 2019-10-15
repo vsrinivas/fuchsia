@@ -21,7 +21,7 @@ incomplete and will be expanded over time.
     See [Building Zircon for all targets](/docs/zircon/getting_started.md#building_zircon_for_all_targets)
     for more information.
 
-*   Avoid breaking the unit tests. Boot Zircon and [run the tests](/docs/zircon/testing.md) to verify that
+*   Avoid breaking the unit tests. Boot Zircon and [run the tests](/docs/development/testing/testing.md) to verify that
     they're all passing.
 
 *   Avoid whitespace or style changes. Especially do not mix style changes with

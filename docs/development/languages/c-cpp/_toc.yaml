@@ -14,6 +14,8 @@ toc:
   path: /docs/development/languages/c-cpp/cpp-style.md
 - title: "Lint"
   path: /docs/development/languages/c-cpp/lint.md
+- title: "Libc support"
+  path: /docs/development/languages/c-cpp/libc.md
 - title: "Library restrictions"
   path: /docs/development/languages/c-cpp/library_restrictions.md
 - title: "Testing FAQ"

@@ -18,3 +18,5 @@ toc:
   path: /docs/development/tracing/tutorial.md
 - title: "Tracing usage guide"
   path: /docs/development/tracing/usage-guide.md
+- title: "Kernel tracing"
+  path: /docs/development/tracing/ktrace.md
