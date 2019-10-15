@@ -60,7 +60,6 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Compile-time object collections](compile_time_object_collections.md)
 + [ACPI debugging](debugging/acpi.md)
 + [Fuzzing the FIDL host tools](fuzzing_fidl.md)
-+ [Hacking notes](hacking.md)
 + [Entropy collection TODOs](entropy_collection_todos.md)
 + [Memory usage analysis tools](memory.md)
 + [Symbolizer](/docs/reference/kernel/symbolizer_markup.md)

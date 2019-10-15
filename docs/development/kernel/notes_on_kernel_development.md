@@ -1,59 +1,4 @@
-# Notes for hacking on Zircon
-
-This file contains a random collection of notes for hacking on Zircon.
-
-[TOC]
-
-## Building and testing
-
-To ensure changes don't impact any of the builds it is recommended that
-that one tests all targets, with gcc and clang, and in both release mode
-and debug mode. This can all be executed with the `buildall` script:
-
-```./scripts/buildall -q -c -r```
-
-From the zircon shell run `k ut all` to execute all kernel tests, and
-`runtests` to execute all userspace tests.
-
-## Syscall generation
-
-Syscall support is generated from
-system/public/zircon/syscalls.abigen.  A host tool called
-[abigen](/zircon/tools/abigen) consumes that file and produces output
-for both the kernel and userspace in a variety of languages. This
-output includes C or C++ headers for both the kernel and userspace,
-syscall entry points, other language bindings, and so on.
-
-This tool is invoked as a part of the build, rather than checking in
-its output.
-
-## Terminal navigation and keyboard shortcuts
-
-* Alt+Tab switches between VTs
-* Alt+F{1,2,...} switches directly to a VT
-* Alt+Up/Down scrolls up and down by lines
-* Shift+PgUp/PgDown scrolls up and down by half page
-* Ctrl+Alt+Delete reboots
-
-## Kernel panics
-
-Since the kernel can't reliably draw to a framebuffer when the GPU is enabled,
-the system will reboot by default if the kernel crashes or panics.
-
-If the kernel crashes and the system reboots, the log from the kernel panic will
-appear at `/boot/log/last-panic.txt`, suitable for viewing, downloading, etc.
-
-> Please attach your `last-panic.txt` and `zircon.elf` files to any kernel
-> panic bugs you file.
-
-If there's a `last-panic.txt`, that indicates that this is the first successful
-boot since a kernel panic occurred.
-
-It is not "sticky" -- if you reboot cleanly, it will be gone, and if you crash
-again it will be replaced.
-
-To disable reboot-on-panic, pass the kernel commandline argument
-[`kernel.halt-on-panic=true`](kernel_cmdline.md#kernel_halt_on_panic_bool).
+# Notes on kernel development
 
 ## Low level kernel development
 
@@ -62,11 +7,11 @@ before the gfxconsole comes up.
 
 To force-enable log output to the legacy serial console on an x64 machine, pass
 "kernel.serial=legacy".  For other serial configurations, see the kernel.serial
-docs in [kernel_cmdline.md](kernel_cmdline.md).
+docs in [kernel_cmdline.md](/docs/reference/kernel/kernel_cmdline.md).
 
 To enable the early console before the graphical console comes up use the
 ``gfxconsole.early`` cmdline option. More information can be found in
-[kernel_cmdline.md](kernel_cmdline.md).
+[kernel_cmdline.md](/docs/reference/kernel/kernel_cmdline.md).
 Enabling ``startup.keep-log-visible``will ensure that the kernel log stays
 visible if the gfxconsole comes up after boot. To disable the gfxconsole
 entirely you can disable the video driver it is binding to via ``driver.<driver
@@ -146,14 +91,3 @@ through to devmgr, and devmgr will export the VMO as a file at the path
 
 This mechanism is used by the entropy collector quality tests to export
 relatively large (~1 Mbit) files full of random data.
-
-## How to deprecate #define constants
-
-One can create a deprecated typedef and have the constant definition
-cast to that type.  The ensuing warning/error will include the name
-of the deprecated typedef.
-
-```
-typedef int ZX_RESUME_NOT_HANDLED_DEPRECATION __attribute__((deprecated));
-#define ZX_RESUME_NOT_HANDLED ((ZX_RESUME_NOT_HANDLED_DEPRECATION)(2))
-```

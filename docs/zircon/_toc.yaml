@@ -138,9 +138,6 @@ toc:
   - title: "NAND testing"
     path: /docs/zircon/nand_testing.md
 
-- title: "Hacking notes"
-  path: /docs/zircon/hacking.md
-
 - title: "Memory usage analysis tools"
   path: /docs/zircon/memory.md
 

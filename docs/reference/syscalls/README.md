@@ -218,4 +218,15 @@
 + [syscall_test_wrapper](syscall_test_wrapper.md)
 + [syscall_test_handle_create](syscall_test_handle_create.md)
 
+## Syscall generation
+
+Syscall support is generated from
+system/public/zircon/syscalls.abigen.  A host tool called
+[abigen](/zircon/tools/abigen) consumes that file and produces output
+for both the kernel and userspace in a variety of languages. This
+output includes C or C++ headers for both the kernel and userspace,
+syscall entry points, other language bindings, and so on.
+
+This tool is invoked as a part of the build, rather than checking in
+its output.
 

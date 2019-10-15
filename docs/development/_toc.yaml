@@ -18,6 +18,9 @@ toc:
   - include: /docs/development/build/_toc.yaml
 - title: "Supplying build-time configuration data to components"
   path: /docs/development/config_data.md
+- title: "Develop a kernel"
+  section:
+  - include: /docs/development/kernel/_toc.yaml
 - title: "Component Inspection"
   section:
   - include: /docs/development/inspect/_toc.yaml

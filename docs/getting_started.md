@@ -222,14 +222,20 @@ rolldice
 
 Fuchsia shows multiple tabs after booting [with graphics
 enabled](#enabling-graphics). The currently selected tab is highlighted in
-yellow at the top of the screen. You can switch to the next tab using Alt-Tab on
-the keyboard.
+yellow at the top of the screen.
 
-- Tab zero is the console and displays the boot and component log.
-- Tabs 1, 2 and 3 contain shells.
-- Tabs 4 and higher contain components you've launched.
+The following keyborad shortcuts help you navigate the terminal:
 
-Note: to select tabs, you may need to enter "console mode". See the next section for details.
+- Alt+Tab switches between tabs.
+- Alt+F{1,2,...} switches directly to a tab.
+  - Tab zero is the console, which displays the boot and component log.
+  - Tabs 1, 2 and 3 contain shells.
+  - Tabs 4 and higher contain components you've launched.
+- Alt+Up/Down scrolls up and down by lines.
+- Shift+PgUp/PgDown scrolls up and down by half page.
+- Ctrl+Alt+Delete reboots.
+
+Note: To select tabs, you may need to enter "console mode". See the next section for details.
 
 ### Launch a graphical component
 

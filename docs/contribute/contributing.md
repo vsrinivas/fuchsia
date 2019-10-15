@@ -42,6 +42,20 @@ incomplete and will be expanded over time.
       kernel cmdline options in [/docs/reference/kernel/kernel_cmdline.md][cmdline-doc].  When editing or adding
       syscalls or cmdlines, update the docs!
 
+## Notes
+
+### How to deprecate #define constants
+
+One can create a deprecated typedef and have the constant definition
+cast to that type.  The ensuing warning/error will include the name
+of the deprecated typedef.
+
+```
+typedef int ZX_RESUME_NOT_HANDLED_DEPRECATION __attribute__((deprecated));
+#define ZX_RESUME_NOT_HANDLED ((ZX_RESUME_NOT_HANDLED_DEPRECATION)(2))
+```
+
 [googlesource-docs]: /docs/zircon/
 [syscall-doc]: /docs/reference/syscalls/README.md
 [cmdline-doc]: /docs/reference/kernel/kernel_cmdline.md
+

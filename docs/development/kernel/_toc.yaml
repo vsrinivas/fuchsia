@@ -1,0 +1,6 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Notes on kernel development"
+  path: /docs/development/kernel/notes_on_kernel_development.md
