@@ -36,6 +36,7 @@ test("blobfs-unit") {
     "$zx/system/ulib/blobfs",
     "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fs-test-utils",
     "$zx/system/ulib/storage/buffer",
     "$zx/system/ulib/storage/operation",
     "$zx/system/ulib/zxtest",

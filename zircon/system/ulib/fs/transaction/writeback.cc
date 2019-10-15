@@ -9,8 +9,8 @@
 
 namespace fs {
 
-zx_status_t FlushWriteRequests(fs::TransactionHandler* transaction_handler,
-                               const fbl::Vector<storage::BufferedOperation>& operations) {
+zx_status_t FlushRequests(TransactionHandler* transaction_handler,
+                          const fbl::Vector<storage::BufferedOperation>& operations) {
   if (operations.is_empty()) {
     return ZX_OK;
   }
@@ -23,7 +23,16 @@ zx_status_t FlushWriteRequests(fs::TransactionHandler* transaction_handler,
   for (size_t i = 0; i < operations.size(); i++) {
     blk_reqs[i].group = transaction_handler->BlockGroupID();
     blk_reqs[i].vmoid = operations[i].vmoid;
-    blk_reqs[i].opcode = BLOCKIO_WRITE;
+    switch (operations[i].op.type) {
+      case storage::OperationType::kTrim:
+        blk_reqs[i].opcode = BLOCKIO_TRIM;
+        break;
+      case storage::OperationType::kWrite:
+        blk_reqs[i].opcode = BLOCKIO_WRITE;
+        break;
+      default:
+        ZX_DEBUG_ASSERT_MSG(false, "Unsupported operation");
+    }
     blk_reqs[i].vmo_offset = operations[i].op.vmo_offset * block_per_fs_block;
     blk_reqs[i].dev_offset = operations[i].op.dev_offset * block_per_fs_block;
     uint64_t length = operations[i].op.length * block_per_fs_block;

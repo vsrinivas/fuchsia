@@ -40,8 +40,8 @@ decltype(auto) wrap_reference_vector(Promise promise, std::vector<fbl::RefPtr<T>
 
 // Flushes |operations| to persistent storage using a transaction created by |transaction_handler|,
 // sending through the disk-registered |vmoid| object.
-zx_status_t FlushWriteRequests(TransactionHandler* transaction_handler,
-                               const fbl::Vector<storage::BufferedOperation>& operations);
+zx_status_t FlushRequests(TransactionHandler* transaction_handler,
+                          const fbl::Vector<storage::BufferedOperation>& operations);
 
 }  // namespace fs
 

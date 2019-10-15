@@ -24,6 +24,15 @@ zx_status_t CheckAllWriteOperations(const fbl::Vector<storage::UnbufferedOperati
   return ZX_OK;
 }
 
+zx_status_t CheckAllTrimOperations(const fbl::Vector<storage::BufferedOperation>& operations) {
+  for (const auto& operation : operations) {
+    if (operation.op.type != storage::OperationType::kTrim) {
+      return ZX_ERR_WRONG_TYPE;
+    }
+  }
+  return ZX_OK;
+}
+
 fit::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion) {
   FS_TRACE_DEBUG("SignalSyncComplete\n");
   sync_completion_signal(completion);
@@ -132,6 +141,26 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<storage::UnbufferedOperation
   auto promise =
       fit::make_promise([this, work = std::move(work)]() mutable -> fit::result<void, zx_status_t> {
         return writer_.WriteMetadata(std::move(work));
+      });
+
+  // Ensure all metadata operations are completed in order.
+  auto ordered_promise = metadata_sequencer_.wrap(std::move(promise));
+
+  // Track write ops to ensure that invocations of |sync| can flush all prior work.
+  return barrier_.wrap(std::move(ordered_promise));
+}
+
+Journal::Promise Journal::TrimData(fbl::Vector<storage::BufferedOperation> operations) {
+  zx_status_t status = CheckAllTrimOperations(operations);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Not all operations to TrimData are trims\n");
+    return fit::make_error_promise(status);
+  }
+
+  // Return the deferred action to write the metadata operations to the device.
+  auto promise = fit::make_promise(
+      [this, operations = std::move(operations)]() mutable -> fit::result<void, zx_status_t> {
+        return writer_.TrimData(std::move(operations));
       });
 
   // Ensure all metadata operations are completed in order.

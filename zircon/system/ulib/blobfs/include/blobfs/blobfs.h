@@ -201,7 +201,8 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Frees an inode, from both the reserved map and the inode table. If the
   // inode was allocated in the inode table, write the deleted inode out to
   // disk.
-  void FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations);
+  void FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations,
+                 fbl::Vector<storage::BufferedOperation>* trim_data);
 
   // Does a single pass of all blobs, creating uninitialized Vnode
   // objects for them all.
@@ -233,7 +234,8 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   zx_status_t Reload();
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
-  void FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations);
+  void FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,
+                  fbl::Vector<storage::BufferedOperation>* trim_data);
 
   // Free a single node. Doesn't attempt to parse the type / traverse nodes;
   // this function just deletes a single node.
@@ -251,6 +253,10 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   // Enqueues an update for allocated inode/block counts.
   void WriteInfo(storage::UnbufferedOperationsBuilder* operations);
+
+  // Adds a trim operation to |trim_data|.
+  void DeleteExtent(uint64_t start_block, uint64_t num_blocks,
+                    fbl::Vector<storage::BufferedOperation>* trim_data);
 
   // When will flush the metrics in the calling thread and will schedule itself
   // to flush again in the future.

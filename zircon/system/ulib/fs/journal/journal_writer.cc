@@ -14,7 +14,6 @@
 namespace fs {
 namespace {
 
-using fs::FlushWriteRequests;
 using storage::OperationType;
 
 }  // namespace
@@ -99,6 +98,18 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work
   if (status != ZX_OK) {
     FS_TRACE_ERROR("WriteMetadata: Failed to write metadata to final location: %s\n",
                    zx_status_get_string(status));
+    return fit::error(status);
+  }
+  return fit::ok();
+}
+
+fit::result<void, zx_status_t> JournalWriter::TrimData(
+      fbl::Vector<storage::BufferedOperation> operations) {
+  FS_TRACE_DEBUG("TrimData: trimming %zu blocks\n", BlockCount(operations));
+
+  zx_status_t status = FlushRequests(transaction_handler_, operations);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("TrimData: Failed to trim requests: %s\n", zx_status_get_string(status));
     return fit::error(status);
   }
   return fit::ok();
@@ -271,7 +282,7 @@ zx_status_t JournalWriter::WriteOperations(
     return ZX_ERR_IO_REFUSED;
   }
 
-  zx_status_t status = FlushWriteRequests(transaction_handler_, operations);
+  zx_status_t status = FlushRequests(transaction_handler_, operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("WriteOperations: Failed to write requests: %s. Filesystem now read-only.\n",
                    zx_status_get_string(status));

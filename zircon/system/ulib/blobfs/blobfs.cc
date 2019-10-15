@@ -120,7 +120,8 @@ void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent,
 }
 
 // Frees blocks from reserved and allocated maps, updates disk in the latter case.
-void Blobfs::FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations) {
+void Blobfs::FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,
+                        fbl::Vector<storage::BufferedOperation>* trim_data) {
   size_t start = extent.Start();
   size_t num_blocks = extent.Length();
   size_t end = start + num_blocks;
@@ -133,6 +134,7 @@ void Blobfs::FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuild
     info_.alloc_block_count -= num_blocks;
     WriteBitmap(num_blocks, start, operations);
     WriteInfo(operations);
+    DeleteExtent(DataStart() + start, num_blocks, trim_data);
   }
 }
 
@@ -142,7 +144,8 @@ void Blobfs::FreeNode(uint32_t node_index, storage::UnbufferedOperationsBuilder*
   WriteNode(node_index, operations);
 }
 
-void Blobfs::FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations) {
+void Blobfs::FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder* operations,
+                       fbl::Vector<storage::BufferedOperation>* trim_data) {
   TRACE_DURATION("blobfs", "Blobfs::FreeInode", "node_index", node_index);
   Inode* mapped_inode = GetNode(node_index);
   ZX_DEBUG_ASSERT(operations != nullptr);
@@ -163,7 +166,7 @@ void Blobfs::FreeInode(uint32_t node_index, storage::UnbufferedOperationsBuilder
       ZX_ASSERT(extent_iter.Next(&extent) == ZX_OK);
 
       // Free the extent.
-      FreeExtent(*extent, operations);
+      FreeExtent(*extent, operations, trim_data);
     }
     WriteInfo(operations);
   }
@@ -286,6 +289,19 @@ void Blobfs::WriteInfo(storage::UnbufferedOperationsBuilder* operations) {
       },
   };
   operations->Add(std::move(operation));
+}
+
+void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
+                          fbl::Vector<storage::BufferedOperation>* trim_data) {
+  if (block_info_.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT) {
+    TRACE_DURATION("blobfs", "Blobfs::DeleteExtent", "num_blocks", num_blocks, "start_block",
+                   start_block);
+    storage::BufferedOperation operation = {};
+    operation.op.type = storage::OperationType::kTrim;
+    operation.op.dev_offset = start_block;
+    operation.op.length = num_blocks;
+    trim_data->push_back(operation);
+  }
 }
 
 zx_status_t Blobfs::CreateFsId() {

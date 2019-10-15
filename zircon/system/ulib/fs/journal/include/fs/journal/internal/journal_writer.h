@@ -66,6 +66,9 @@ class JournalWriter {
   // could be more fine grained, returning a promise that represents the completion of all phases.
   fit::result<void, zx_status_t> WriteMetadata(JournalWorkItem work);
 
+  // Trims |operations| immediately.
+  fit::result<void, zx_status_t> TrimData(fbl::Vector<storage::BufferedOperation> operations);
+
   // Synchronizes the most up-to-date info block back to disk.
   //
   // Returns ZX_ERR_IO_REFUSED if writeback is disabled.

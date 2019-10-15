@@ -64,14 +64,17 @@ TEST(FlushRequestsTest, FlushNoRequests) {
     }
   } handler;
   fbl::Vector<storage::BufferedOperation> operations;
-  EXPECT_OK(FlushWriteRequests(&handler, operations));
+  EXPECT_OK(FlushRequests(&handler, operations));
 }
 
 TEST(FlushRequestsTest, FlushOneRequest) {
   static constexpr vmoid_t kVmoid = 4;
   class TestTransactionHandler : public MockTransactionHandler {
     zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-      EXPECT_EQ(1, count);
+      if (count != 1) {
+        ADD_FAILURE("Unexpected count");
+        return ZX_ERR_OUT_OF_RANGE;
+      }
       EXPECT_EQ(1 * kDiskBlockRatio, requests[0].vmo_offset);
       EXPECT_EQ(2 * kDiskBlockRatio, requests[0].dev_offset);
       EXPECT_EQ(3 * kDiskBlockRatio, requests[0].length);
@@ -82,7 +85,7 @@ TEST(FlushRequestsTest, FlushOneRequest) {
   fbl::Vector<storage::BufferedOperation> operations;
   operations.push_back(storage::BufferedOperation{
       kVmoid, storage::Operation{storage::OperationType::kWrite, 1, 2, 3}});
-  EXPECT_OK(FlushWriteRequests(&handler, operations));
+  EXPECT_OK(FlushRequests(&handler, operations));
 }
 
 TEST(FlushRequestsTest, FlushManyRequests) {
@@ -90,7 +93,10 @@ TEST(FlushRequestsTest, FlushManyRequests) {
   static constexpr vmoid_t kVmoidB = 8;
   class TestTransactionHandler : public MockTransactionHandler {
     zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-      EXPECT_EQ(2, count);
+      if (count != 2) {
+        ADD_FAILURE("Unexpected count");
+        return ZX_ERR_OUT_OF_RANGE;
+      }
       EXPECT_EQ(1 * kDiskBlockRatio, requests[0].vmo_offset);
       EXPECT_EQ(2 * kDiskBlockRatio, requests[0].dev_offset);
       EXPECT_EQ(3 * kDiskBlockRatio, requests[0].length);
@@ -107,11 +113,11 @@ TEST(FlushRequestsTest, FlushManyRequests) {
       kVmoidA, storage::Operation{storage::OperationType::kWrite, 1, 2, 3}});
   operations.push_back(storage::BufferedOperation{
       kVmoidB, storage::Operation{storage::OperationType::kWrite, 4, 5, 6}});
-  EXPECT_OK(FlushWriteRequests(&handler, operations));
+  EXPECT_OK(FlushRequests(&handler, operations));
 }
 
 // This acts as a regression test against a previous implementation of
-// "FlushWriteRequests", which could pop the stack with a large enough number
+// "FlushRequests", which could pop the stack with a large enough number
 // of requests. The new implementation utilizes heap allocation when necessary,
 // and should be able to withstand very large request counts.
 TEST(FlushRequestsTest, FlushAVeryLargeNumberOfRequests) {
@@ -119,7 +125,10 @@ TEST(FlushRequestsTest, FlushAVeryLargeNumberOfRequests) {
   static constexpr size_t kOperationCount = 10000;
   class TestTransactionHandler : public MockTransactionHandler {
     zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
-      EXPECT_EQ(kOperationCount, count);
+      if (count != kOperationCount) {
+        ADD_FAILURE("Unexpected count");
+        return ZX_ERR_OUT_OF_RANGE;
+      }
       for (size_t i = 0; i < count; i++) {
         EXPECT_EQ(i * 2 * kDiskBlockRatio, requests[i].vmo_offset);
         EXPECT_EQ(i * 2 * kDiskBlockRatio, requests[i].dev_offset);
@@ -135,7 +144,7 @@ TEST(FlushRequestsTest, FlushAVeryLargeNumberOfRequests) {
     operations.push_back(storage::BufferedOperation{
         kVmoid, storage::Operation{storage::OperationType::kWrite, i * 2, i * 2, 1}});
   }
-  EXPECT_OK(FlushWriteRequests(&handler, operations));
+  EXPECT_OK(FlushRequests(&handler, operations));
 }
 
 TEST(FlushRequestsTest, BadFlush) {
@@ -147,7 +156,28 @@ TEST(FlushRequestsTest, BadFlush) {
   fbl::Vector<storage::BufferedOperation> operations;
   operations.push_back(
       storage::BufferedOperation{1, storage::Operation{storage::OperationType::kWrite, 1, 2, 3}});
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, FlushWriteRequests(&handler, operations));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, FlushRequests(&handler, operations));
+}
+
+TEST(FlushRequestsTest, FlushTrimRequest) {
+  static constexpr vmoid_t kVmoid = 4;
+  class TestTransactionHandler : public MockTransactionHandler {
+    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+      if (count != 1) {
+        ADD_FAILURE("Unexpected count");
+        return ZX_ERR_OUT_OF_RANGE;
+      }
+      EXPECT_EQ(BLOCKIO_TRIM, requests[0].opcode);
+      EXPECT_EQ(2 * kDiskBlockRatio, requests[0].dev_offset);
+      EXPECT_EQ(3 * kDiskBlockRatio, requests[0].length);
+      return ZX_OK;
+    }
+  } handler;
+  fbl::Vector<storage::BufferedOperation> operations;
+  operations.push_back(
+        storage::BufferedOperation{kVmoid,
+                                   storage::Operation{storage::OperationType::kTrim, 1, 2, 3}});
+  EXPECT_OK(FlushRequests(&handler, operations));
 }
 
 }  // namespace

@@ -274,7 +274,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
                     op.op.dev_offset, op.op.vmo_offset, op.op.length);
     }
 
-    status = fs::FlushWriteRequests(transaction_handler, operations);
+    status = FlushRequests(transaction_handler, operations);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("journal: Cannot replay entries: %d\n", status);
       return status;
@@ -290,7 +290,7 @@ zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler,
     operation.op.dev_offset = journal_start;
     operation.op.length = kJournalMetadataBlocks;
     operations.push_back(std::move(operation));
-    status = fs::FlushWriteRequests(transaction_handler, operations);
+    status = FlushRequests(transaction_handler, operations);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("journal: Cannot update journal superblock: %d\n", status);
       return status;

@@ -718,6 +718,41 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
   }
 }
 
+// Tests that TrimData() is observable from the "block device".
+TEST_F(JournalTest, TrimDataObserveTransaction) {
+  const storage::BufferedOperation operation = {
+      0,
+      {
+          storage::OperationType::kTrim,
+          .vmo_offset = 0,
+          .dev_offset = 20,
+          .length = 5,
+      },
+  };
+
+  MockTransactionHandler::TransactionCallback callbacks[] = {
+      [&](const block_fifo_request_t* requests, size_t count) {
+        if (count != 1) {
+          ADD_FAILURE("Unexpected count");
+          return ZX_ERR_OUT_OF_RANGE;
+        }
+        EXPECT_EQ(BLOCKIO_TRIM, requests[0].opcode);
+        EXPECT_EQ(20, requests[0].dev_offset);
+        EXPECT_EQ(5, requests[0].length);
+        return ZX_OK;
+      },
+  };
+  MockTransactionHandler handler(callbacks, std::size(callbacks));
+
+  {
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    auto promise = journal.TrimData({operation}).and_then([&]() {
+      CheckInfoBlock(registry()->info(), /* start= */ 0, /* sequence_number= */ 0);
+    });
+    journal.schedule_task(std::move(promise));
+  }
+}
+
 // Tests that the info block is not updated if it doesn't need to be updated.
 //
 // Operation 1: [ H, 1, 2, 3, 4, 5, C, _, _, _ ]
