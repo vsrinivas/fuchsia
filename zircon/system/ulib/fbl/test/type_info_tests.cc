@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/type_info.h>
-
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace test {
 
@@ -26,9 +25,7 @@ struct IncompleteType;
 
 namespace {
 
-bool type_info_test() {
-  BEGIN_TEST;
-
+TEST(TypeInfoTest, Basic) {
   EXPECT_STR_EQ(fbl::TypeInfo<int>::Name(), "int");
   EXPECT_STR_EQ(fbl::TypeInfo<double>::Name(), "double");
   EXPECT_STR_EQ(fbl::TypeInfo<test::Struct>::Name(), "test::Struct");
@@ -45,12 +42,6 @@ bool type_info_test() {
 
   char(&array_reference)[10] = array;
   EXPECT_STR_EQ(fbl::TypeInfo<decltype(array_reference)>::Name(), "char (&)[10]");
-
-  END_TEST;
 }
 
 }  // anonymous namespace
-
-BEGIN_TEST_CASE(type_info_tests)
-RUN_NAMED_TEST("type info test", type_info_test)
-END_TEST_CASE(type_info_tests)
