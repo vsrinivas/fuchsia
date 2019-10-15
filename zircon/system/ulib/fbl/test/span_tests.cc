@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/span.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -14,29 +14,19 @@ static constexpr fbl::Span<const int> kLastDigits = kDigits.subspan(7);
 static constexpr fbl::Span<const int> kEmpty = kDigits.subspan(0, 0);
 static constexpr fbl::Span<const int> kDefault;  // default constructor
 
-bool front_test() {
-  BEGIN_TEST;
-
+TEST(SpanTest, Front) {
   EXPECT_EQ(kDigits.front(), 9);
   EXPECT_EQ(kMiddleDigits.front(), 6);
   EXPECT_EQ(kLastDigits.front(), 2);
-
-  END_TEST;
 }
 
-bool back_test() {
-  BEGIN_TEST;
-
+TEST(SpanTest, Back) {
   EXPECT_EQ(kDigits.back(), 0);
   EXPECT_EQ(kMiddleDigits.back(), 3);
   EXPECT_EQ(kLastDigits.back(), 0);
-
-  END_TEST;
 }
 
-bool index_test() {
-  BEGIN_TEST;
-
+TEST(SpanTest, Index) {
   EXPECT_EQ(kDigits[0], 9);
   EXPECT_EQ(kDigits[9], 0);
   EXPECT_EQ(kDigits[4], 5);
@@ -48,13 +38,9 @@ bool index_test() {
   EXPECT_EQ(kLastDigits[0], 2);
   EXPECT_EQ(kLastDigits[1], 1);
   EXPECT_EQ(kLastDigits[2], 0);
-
-  END_TEST;
 }
 
-bool size_empty_test() {
-  BEGIN_TEST;
-
+TEST(SpanTest, SizeEmpty) {
   EXPECT_EQ(kDigits.size(), 10);
   EXPECT_EQ(kMiddleDigits.size(), 4);
   EXPECT_EQ(kLastDigits.size(), 3);
@@ -72,13 +58,9 @@ bool size_empty_test() {
   EXPECT_EQ(kLastDigits.size_bytes(), 3 * sizeof(int));
   EXPECT_EQ(kEmpty.size_bytes(), 0);
   EXPECT_EQ(kDefault.size_bytes(), 0);
-
-  END_TEST;
 }
 
-bool data_references_test() {
-  BEGIN_TEST;
-
+TEST(SpanTest, DataReferences) {
   EXPECT_EQ(kDigits.data(), kDigitsArray);
   EXPECT_EQ(kMiddleDigits.data(), kDigitsArray + 3);
   EXPECT_EQ(kLastDigits.data(), kDigitsArray + 7);
@@ -90,13 +72,9 @@ bool data_references_test() {
   EXPECT_EQ(&kDigits[0], kDigitsArray);
   EXPECT_EQ(&kDigits.back(), kDigitsArray + 9);
   EXPECT_EQ(&kMiddleDigits[2], kDigitsArray + 5);
-
-  END_TEST;
 }
 
-bool iterators_test() {
-  BEGIN_TEST;
-
+TEST(SpanTest, Iterators) {
   int digits_array[] = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
 
   fbl::Span<int> digits = digits_array;
@@ -115,13 +93,9 @@ bool iterators_test() {
   for (auto x : digits) {
     EXPECT_EQ(x, 7);
   }
-
-  END_TEST;
 }
 
-bool as_bytes_test() {
-  BEGIN_TEST;
-
+TEST(SpanTest, AsBytes) {
   int digits_array[] = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
 
   fbl::Span<int> digits = digits_array;
@@ -139,8 +113,6 @@ bool as_bytes_test() {
   }
 
   EXPECT_EQ(digits_array[0], 0);
-
-  END_TEST;
 }
 
 struct SpannableContainer {
@@ -150,9 +122,7 @@ struct SpannableContainer {
   size_t size() const { return 50; }
 };
 
-bool container_test() {
-  BEGIN_TEST;
-
+TEST(SpanTest, ContainerTest) {
   SpannableContainer writable;
 
   fbl::Span<int> container_span = writable;
@@ -166,8 +136,6 @@ bool container_test() {
 
   EXPECT_EQ(const_container_span.data(), reinterpret_cast<int*>(0x1234));
   EXPECT_EQ(const_container_span.size(), 50);
-
-  END_TEST;
 }
 
 struct Incomplete;
@@ -192,14 +160,3 @@ static_assert(std::is_same_v<fbl::Span<Incomplete>::const_reference, const Incom
 static_assert(std::is_same_v<fbl::Span<const Incomplete>::const_reference, const Incomplete&>);
 
 }  // namespace
-
-BEGIN_TEST_CASE(span_tests)
-RUN_TEST(front_test)
-RUN_TEST(back_test)
-RUN_TEST(index_test)
-RUN_TEST(size_empty_test)
-RUN_TEST(data_references_test)
-RUN_TEST(iterators_test)
-RUN_TEST(as_bytes_test)
-RUN_TEST(container_test)
-END_TEST_CASE(span_tests)
