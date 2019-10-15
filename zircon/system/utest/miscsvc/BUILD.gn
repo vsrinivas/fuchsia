@@ -7,7 +7,7 @@ test("miscsvc") {
     "main.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-paver:c",
+    "$zx/system/fidl/fuchsia-paver:llcpp",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
