@@ -75,7 +75,6 @@ class Dump {
 
     final filename = '${DateTime.now().toIso8601String()}-$name.$suffix';
 
-    // Writes to the file asynchronously so the test can continue.
     return File([_dumpDirectory, filename].join('/'));
   }
 
