@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string_traits.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <unittest/unittest.h>
+#include <fbl/string_traits.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -61,9 +60,7 @@ static_assert(!fbl::is_string_like_v<LengthOnlyBadString>, "bad - length only");
 static_assert(!fbl::is_string_like_v<WrongDataTypeBadString>, "bad - wrong data type");
 static_assert(!fbl::is_string_like_v<WrongLengthTypeBadString>, "bad - wrong length type");
 
-bool string_accessors_test() {
-  BEGIN_TEST;
-
+TEST(StringTraitsTest, Accessor) {
   {
     SimpleFakeString str;
     EXPECT_EQ(kFakeStringData, fbl::GetStringData(str));
@@ -75,12 +72,6 @@ bool string_accessors_test() {
     EXPECT_EQ(kFakeStringData, fbl::GetStringData(str));
     EXPECT_EQ(kFakeStringLength, fbl::GetStringLength(str));
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(string_traits_tests)
-RUN_TEST(string_accessors_test)
-END_TEST_CASE(string_traits_tests)
