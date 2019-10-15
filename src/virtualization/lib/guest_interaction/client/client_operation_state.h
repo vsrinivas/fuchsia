@@ -443,7 +443,7 @@ void ExecReadCallData<T>::Proceed(bool ok) {
   std::string new_stderr = response_.std_err();
 
   platform_interface_.WriteFile(stdout_, new_stdout.c_str(), new_stdout.size());
-  platform_interface_.WriteFile(stderr_, new_stderr.c_str(), new_stdout.size());
+  platform_interface_.WriteFile(stderr_, new_stderr.c_str(), new_stderr.size());
 
   reader_->Read(&response_, this);
 }

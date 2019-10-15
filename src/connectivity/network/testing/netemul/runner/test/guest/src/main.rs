@@ -12,6 +12,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
+    futures::io::AsyncReadExt,
     netemul_guest_lib::wait_for_command_completion,
     rand::distributions::Alphanumeric,
     rand::{thread_rng, Rng},
@@ -78,6 +79,7 @@ async fn test_exec_script() -> Result<(), Error> {
     let stderr_env_var = "STDERR_STRING";
     let stdout_expected_string = "stdout";
     let stderr_expected_string = "stderr";
+
     let mut env = vec![
         EnvironmentVariable {
             key: stdout_env_var.to_string(),
@@ -115,12 +117,15 @@ async fn test_exec_script() -> Result<(), Error> {
         .await?;
 
     // Validate the stdout and stderr.
-    let mut guest_stdout = vec![0; 6];
-    let mut guest_stderr = vec![0; 6];
-    stdout_0.read(&mut guest_stdout)?;
-    stderr_0.read(&mut guest_stderr)?;
-    assert_eq!(std::str::from_utf8(&guest_stdout)?, stdout_expected_string.to_string());
-    assert_eq!(std::str::from_utf8(&guest_stderr)?, stderr_expected_string.to_string());
+    let mut guest_stdout = Vec::new();
+    let mut stdout_socket = fasync::Socket::from_socket(stdout_0)?;
+    stdout_socket.read_to_end(&mut guest_stdout).await?;
+    assert_eq!(std::str::from_utf8(&guest_stdout)?.trim(), stdout_expected_string);
+
+    let mut guest_stderr = Vec::new();
+    let mut stderr_socket = fasync::Socket::from_socket(stderr_0)?;
+    stderr_socket.read_to_end(&mut guest_stderr).await?;
+    assert_eq!(std::str::from_utf8(&guest_stderr)?.trim(), stderr_expected_string);
 
     // Pull the file that was created by the script and validate its contents.
     let local_copy = "/data/script_output_copy.txt";
