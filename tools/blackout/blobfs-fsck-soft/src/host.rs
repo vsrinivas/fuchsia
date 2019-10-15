@@ -7,6 +7,7 @@ use {blackout_host::Test, failure::Error, std::time::Duration};
 fn main() -> Result<(), Error> {
     Test::new("blobfs-fsck-soft-target")
         .collect_options()
+        .setup_step()
         .load_step(Duration::from_secs(5))
         .reboot_step()
         .verify_step(10, Duration::from_secs(1))
