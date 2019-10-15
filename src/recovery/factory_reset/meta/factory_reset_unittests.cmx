@@ -4,9 +4,9 @@
   },
   "sandbox": {
     "features": [
-      "deprecated-shell",
       "deprecated-ambient-replace-as-executable"
     ],
+    "boot": [ "bin", "driver", "lib", "config" ],
     "services": [
       "fuchsia.process.Launcher"
     ]

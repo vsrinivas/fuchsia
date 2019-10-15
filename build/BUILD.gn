@@ -93,7 +93,6 @@ group("deprecated_shell_allowlist") {
     "//src/devices/tests/libdriver-integration-test",
     "//src/connectivity/network/netstack:netstack_gotests",
     "//src/devices/coordinator:coordinator_tests",
-    "//src/recovery/factory_reset:factory_reset_tests",
   ]
 }
 

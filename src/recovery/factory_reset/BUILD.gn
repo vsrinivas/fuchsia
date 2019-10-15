@@ -157,8 +157,6 @@ action("devmgr-manifest") {
 }
 
 test_package("factory_reset_tests") {
-  deprecated_shell = "//build"
-
   deps = [
     ":devmgr-manifest",
     ":factory_reset_unittests",
