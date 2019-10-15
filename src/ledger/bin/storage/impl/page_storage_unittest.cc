@@ -76,6 +76,10 @@ class PageStorageImplAccessorForTest {
     return storage->roots_of_commits_being_added_.empty();
   }
 
+  static bool RemoteCommitIdMapIsEmpty(const std::unique_ptr<PageStorageImpl>& storage) {
+    return storage->remote_ids_of_commits_being_added_.empty();
+  }
+
   static void ChooseDiffBases(const std::unique_ptr<PageStorageImpl>& storage,
                               CommitIdView target_id,
                               fit::callback<void(Status, std::vector<CommitId>)> callback) {
@@ -3602,6 +3606,76 @@ TEST_F(PageStorageTest, GetCommitRootIdentifierFailedToAdd) {
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   EXPECT_EQ(root_id_from_storage, root_id);
+}
+
+TEST_F(PageStorageTest, GetCommitIdFromRemoteId) {
+  bool called;
+  Status status;
+  std::unique_ptr<const Commit> base_commit = GetFirstHead();
+  std::unique_ptr<Journal> journal = storage_->StartCommit(base_commit->Clone());
+  ObjectIdentifier value = RandomInlineObjectIdentifier();
+  journal->Put("key", value, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_TRUE(commit);
+
+  ObjectIdentifier root_id = commit->GetRootIdentifier();
+  std::string root_data = TryGetPiece(root_id)->GetData().ToString();
+  CommitId commit_id = commit->GetId();
+  std::string commit_data = commit->GetStorageBytes().ToString();
+  auto commit_id_and_bytes = CommitAndBytesFromCommit(*commit);
+  std::string remote_commit_id = encryption_service_.EncodeCommitId(commit_id);
+
+  ResetStorage();
+  EXPECT_TRUE(PageStorageImplAccessorForTest::RemoteCommitIdMapIsEmpty(storage_));
+
+  bool sync_delegate_called;
+  fit::closure sync_delegate_call;
+  DelayingFakeSyncDelegate sync(
+      callback::Capture(callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
+  storage_->SetSyncDelegate(&sync);
+  sync.AddObject(root_id, root_data);
+
+  // Start adding the remote commit.
+  bool commits_from_sync_called;
+  Status commits_from_sync_status;
+  storage_->AddCommitsFromSync(std::move(commit_id_and_bytes), ChangeSource::CLOUD,
+                               callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
+                                                 &commits_from_sync_status));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(commits_from_sync_called);
+  EXPECT_TRUE(sync_delegate_called);
+  ASSERT_TRUE(sync_delegate_call);
+
+  // AddCommitsFromSync is waiting in GetObject.
+  CommitId commit_id_from_storage;
+  storage_->GetCommitIdFromRemoteId(
+      remote_commit_id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit_id_from_storage));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(commit_id_from_storage, commit_id);
+
+  // Unblock AddCommitsFromSync.
+  sync_delegate_call();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(commits_from_sync_called);
+  EXPECT_EQ(commits_from_sync_status, Status::OK);
+
+  // The map is empty, and the root identifier is fetched from the database.
+  EXPECT_TRUE(PageStorageImplAccessorForTest::RemoteCommitIdMapIsEmpty(storage_));
+  storage_->GetCommitIdFromRemoteId(
+      remote_commit_id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit_id_from_storage));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(commit_id_from_storage, commit_id);
 }
 
 TEST_F(PageStorageTest, ChooseDiffBases) {

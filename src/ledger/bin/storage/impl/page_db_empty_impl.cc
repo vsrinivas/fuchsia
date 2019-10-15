@@ -95,12 +95,14 @@ Status PageDbEmptyImpl::DeleteMerge(coroutine::CoroutineHandler* /*handler*/,
 }
 Status PageDbEmptyImpl::AddCommitStorageBytes(CoroutineHandler* /*handler*/,
                                               const CommitId& /*commit_id*/,
+                                              fxl::StringView /*remote_commit_id*/,
                                               const ObjectIdentifier& /*root_node*/,
                                               fxl::StringView /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::DeleteCommit(coroutine::CoroutineHandler* /*handler*/,
                                      CommitIdView /*commit_id*/,
+                                     fxl::StringView /*remote_commit_id*/,
                                      const ObjectIdentifier& /*root_node*/) {
   return Status::NOT_IMPLEMENTED;
 }

@@ -830,6 +830,23 @@ void PageStorageImpl::GetClock(
       });
 }
 
+void PageStorageImpl::GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+                                              fit::function<void(Status, CommitId)> callback) {
+  auto it = remote_ids_of_commits_being_added_.find(remote_commit_id);
+  if (it != remote_ids_of_commits_being_added_.end()) {
+    callback(Status::OK, it->second);
+    return;
+  }
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this, remote_commit_id = remote_commit_id.ToString()](
+          coroutine::CoroutineHandler* handler, fit::function<void(Status, CommitId)> callback) {
+        CommitId commit_id;
+        Status status = db_->GetCommitIdFromRemoteId(handler, remote_commit_id, &commit_id);
+        callback(status, std::move(commit_id));
+      });
+}
+
 Status PageStorageImpl::DeleteCommits(coroutine::CoroutineHandler* handler,
                                       std::vector<std::unique_ptr<const Commit>> commits) {
   std::unique_ptr<PageDb::Batch> batch;
@@ -839,7 +856,9 @@ Status PageStorageImpl::DeleteCommits(coroutine::CoroutineHandler* handler,
     if (parents.size() > 1) {
       RETURN_ON_ERROR(batch->DeleteMerge(handler, parents[0], parents[1], commit->GetId()));
     }
-    RETURN_ON_ERROR(batch->DeleteCommit(handler, commit->GetId(), commit->GetRootIdentifier()));
+    RETURN_ON_ERROR(batch->DeleteCommit(handler, commit->GetId(),
+                                        encryption_service_->EncodeCommitId(commit->GetId()),
+                                        commit->GetRootIdentifier()));
   }
   RETURN_ON_ERROR(batch->Execute(handler));
   for (const std::unique_ptr<const Commit>& commit : commits) {
@@ -1448,6 +1467,8 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
   for (const auto& commit : commits) {
     commit_ids_being_added.push_back(commit->GetId());
     roots_of_commits_being_added_[commit->GetId()] = commit->GetRootIdentifier();
+    remote_ids_of_commits_being_added_[encryption_service_->EncodeCommitId(commit->GetId())] =
+        commit->GetId();
   }
 
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
@@ -1475,6 +1496,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
     // this ensures we never lose a CommitId / root ObjectIdentifier association.
     for (auto commit_id : commit_ids_being_added) {
       roots_of_commits_being_added_.erase(commit_id);
+      remote_ids_of_commits_being_added_.erase(encryption_service_->EncodeCommitId(commit_id));
     }
   }
   return status;
@@ -1605,7 +1627,8 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
     }
 
     RETURN_ON_ERROR(batch->AddCommitStorageBytes(
-        handler, commit->GetId(), commit->GetRootIdentifier(), commit->GetStorageBytes()));
+        handler, commit->GetId(), encryption_service_->EncodeCommitId(commit->GetId()),
+        commit->GetRootIdentifier(), commit->GetStorageBytes()));
 
     if (source != ChangeSource::CLOUD) {
       // New commits from LOCAL or P2P are unsynced. They will be added to the commit factory once

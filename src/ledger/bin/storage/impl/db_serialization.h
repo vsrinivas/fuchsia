@@ -18,18 +18,19 @@ namespace storage {
 // Important: Always append at the end. Do not reorder, do not delete.
 enum class RowType : uint8_t {
   HEADS = ' ',
-  MERGES,                   // '!'
-  COMMITS,                  // '"'
-  OBJECTS,                  // '#'
-  REFCOUNTS,                // '$'
-  UNSYNCED_COMMIT,          // '%'
-  TRANCIENT_OBJECT_DIGEST,  // '&'
-  LOCAL_OBJECT_DIGEST,      // '\''
-  SYNCED_OBJECT_DIGEST,     // '('
-  SYNC_METADATA,            // ')'
-  PAGE_IS_ONLINE,           // '*'
-  CLOCK_DEVICE_ID,          // '+'
-  CLOCK_ENTRIES,            // ','
+  MERGES,                     // '!'
+  COMMITS,                    // '"'
+  OBJECTS,                    // '#'
+  REFCOUNTS,                  // '$'
+  UNSYNCED_COMMIT,            // '%'
+  TRANCIENT_OBJECT_DIGEST,    // '&'
+  LOCAL_OBJECT_DIGEST,        // '\''
+  SYNCED_OBJECT_DIGEST,       // '('
+  SYNC_METADATA,              // ')'
+  PAGE_IS_ONLINE,             // '*'
+  CLOCK_DEVICE_ID,            // '+'
+  CLOCK_ENTRIES,              // ','
+  REMOTE_COMMIT_ID_TO_LOCAL,  // '-'
 };
 
 class HeadRow {
@@ -94,10 +95,10 @@ class ReferenceRow {
 
  public:
   static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
-  static constexpr fxl::StringView kCommitPrefix= fxl::StringView(&kCommitPrefixChar, 1);
-  static constexpr fxl::StringView kObjectPrefix= fxl::StringView(&kObjectPrefixChar, 1);
-  static constexpr fxl::StringView kEagerPrefix= fxl::StringView(&kEagerPrefixChar, 1);
-  static constexpr fxl::StringView kLazyPrefix= fxl::StringView(&kLazyPrefixChar, 1);
+  static constexpr fxl::StringView kCommitPrefix = fxl::StringView(&kCommitPrefixChar, 1);
+  static constexpr fxl::StringView kObjectPrefix = fxl::StringView(&kObjectPrefixChar, 1);
+  static constexpr fxl::StringView kEagerPrefix = fxl::StringView(&kEagerPrefixChar, 1);
+  static constexpr fxl::StringView kLazyPrefix = fxl::StringView(&kLazyPrefixChar, 1);
 
   // Returns key for object-object links.
   static std::string GetKeyForObject(const ObjectDigest& source, const ObjectDigest& destination,
@@ -180,6 +181,16 @@ class ClockRow {
 
   // Gets the clock entry key for the provided |device_id|.
   static std::string GetClockEntryForKey(DeviceIdView device_id);
+};
+
+class RemoteCommitIdToLocalRow {
+ private:
+  static constexpr char kPrefixChar = static_cast<char>(RowType::REMOTE_COMMIT_ID_TO_LOCAL);
+
+ public:
+  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+
+  static std::string GetKeyFor(fxl::StringView remote_commit_id);
 };
 
 }  // namespace storage

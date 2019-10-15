@@ -79,11 +79,11 @@ class PageDbTest : public ledger::TestWithEnvironment {
   // Utility function to delete commit |commit_id|. PageDb::DeleteCommit cannot be called directly,
   // the implementation requires it to be part of a batch.
   Status DeleteCommit(CoroutineHandler* handler, const CommitId& commit_id,
-                      const ObjectDigest& root_node_digest) {
+                      fxl::StringView remote_commit_id, const ObjectDigest& root_node_digest) {
     std::unique_ptr<PageDbImpl::Batch> batch;
     RETURN_ON_ERROR(page_db_.StartBatch(handler, &batch));
     RETURN_ON_ERROR(batch->DeleteCommit(
-        handler, commit_id,
+        handler, commit_id, remote_commit_id,
         page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, root_node_digest)));
     return batch->Execute(handler);
   }
@@ -192,9 +192,10 @@ TEST_F(PageDbTest, Commits) {
     EXPECT_EQ(page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes),
               Status::INTERNAL_NOT_FOUND);
 
-    EXPECT_EQ(page_db_.AddCommitStorageBytes(handler, commit->GetId(), commit->GetRootIdentifier(),
-                                             commit->GetStorageBytes()),
-              Status::OK);
+    EXPECT_EQ(
+        page_db_.AddCommitStorageBytes(handler, commit->GetId(), "encoded identifier",
+                                       commit->GetRootIdentifier(), commit->GetStorageBytes()),
+        Status::OK);
     EXPECT_EQ(page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes), Status::OK);
     EXPECT_EQ(commit->GetStorageBytes(), storage_bytes);
 
@@ -203,6 +204,17 @@ TEST_F(PageDbTest, Commits) {
         page_db_.GetInboundCommitReferences(handler, commit->GetRootIdentifier(), &references),
         Status::OK);
     EXPECT_THAT(references, ElementsAre(commit->GetId()));
+
+    CommitId commit_id;
+    EXPECT_EQ(page_db_.GetCommitIdFromRemoteId(handler, "encoded identifier", &commit_id),
+              Status::OK);
+    EXPECT_EQ(commit_id, commit->GetId());
+
+    EXPECT_EQ(DeleteCommit(handler, commit->GetId(), "encoded identifier",
+                           commit->GetRootIdentifier().object_digest()),
+              Status::OK);
+    EXPECT_EQ(page_db_.GetCommitIdFromRemoteId(handler, "encoded indentifier", &commit_id),
+              Status::INTERNAL_NOT_FOUND);
   });
 }
 
@@ -378,9 +390,9 @@ TEST_F(PageDbTest, DeleteTransientObjectWithOnDiskReferences) {
               Status::OK);
 
     const CommitId commit_id = RandomCommitId(environment_.random());
-    EXPECT_EQ(
-        page_db_.AddCommitStorageBytes(handler, commit_id, object_identifier, "fake storage bytes"),
-        Status::OK);
+    EXPECT_EQ(page_db_.AddCommitStorageBytes(handler, commit_id, "fake remote id",
+                                             object_identifier, "fake storage bytes"),
+              Status::OK);
 
     // Discard the live references.
     object_identifier = ObjectIdentifier();
@@ -390,7 +402,7 @@ TEST_F(PageDbTest, DeleteTransientObjectWithOnDiskReferences) {
     EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::CANCELED);
 
     // Discard the commit-object on-disk reference.
-    EXPECT_EQ(DeleteCommit(handler, commit_id, object_digest), Status::OK);
+    EXPECT_EQ(DeleteCommit(handler, commit_id, "fake remote id", object_digest), Status::OK);
 
     // Deletion should still fail because of the object-object reference.
     EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::CANCELED);
@@ -431,9 +443,9 @@ TEST_F(PageDbTest, DeleteLocalObjectWithOnDiskReferences) {
               Status::OK);
 
     const CommitId commit_id = RandomCommitId(environment_.random());
-    EXPECT_EQ(
-        page_db_.AddCommitStorageBytes(handler, commit_id, object_identifier, "fake storage bytes"),
-        Status::OK);
+    EXPECT_EQ(page_db_.AddCommitStorageBytes(handler, commit_id, "fake remote id",
+                                             object_identifier, "fake storage bytes"),
+              Status::OK);
 
     // Discard the live references.
     object_identifier = ObjectIdentifier();
@@ -449,7 +461,7 @@ TEST_F(PageDbTest, DeleteLocalObjectWithOnDiskReferences) {
     EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::CANCELED);
 
     // Discard the commit-object on-disk reference.
-    EXPECT_EQ(DeleteCommit(handler, commit_id, object_digest), Status::OK);
+    EXPECT_EQ(DeleteCommit(handler, commit_id, "fake remote id", object_digest), Status::OK);
 
     // Deletion now succeeds.
     EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::OK);
@@ -484,9 +496,9 @@ TEST_F(PageDbTest, DeleteSyncedObjectWithOnDiskReferences) {
               Status::OK);
 
     const CommitId commit_id = RandomCommitId(environment_.random());
-    EXPECT_EQ(
-        page_db_.AddCommitStorageBytes(handler, commit_id, object_identifier, "fake storage bytes"),
-        Status::OK);
+    EXPECT_EQ(page_db_.AddCommitStorageBytes(handler, commit_id, "fake remote id",
+                                             object_identifier, "fake storage bytes"),
+              Status::OK);
 
     // Discard the live references.
     object_identifier = ObjectIdentifier();

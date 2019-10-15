@@ -46,18 +46,23 @@ Status PageDbBatchImpl::DeleteMerge(coroutine::CoroutineHandler* handler, Commit
 }
 
 Status PageDbBatchImpl::AddCommitStorageBytes(CoroutineHandler* handler, const CommitId& commit_id,
+                                              fxl::StringView remote_commit_id,
                                               const ObjectIdentifier& root_node,
                                               fxl::StringView storage_bytes) {
   RETURN_ON_ERROR(batch_->Put(
       handler, ReferenceRow::GetKeyForCommit(commit_id, root_node.object_digest()), ""));
+  RETURN_ON_ERROR(
+      batch_->Put(handler, RemoteCommitIdToLocalRow::GetKeyFor(remote_commit_id), commit_id));
   return batch_->Put(handler, CommitRow::GetKeyFor(commit_id), storage_bytes);
 }
 
 Status PageDbBatchImpl::DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
+                                     fxl::StringView remote_commit_id,
                                      const ObjectIdentifier& root_node) {
   RETURN_ON_ERROR(
       batch_->Delete(handler, ReferenceRow::GetKeyForCommit(commit_id, root_node.object_digest())));
   RETURN_ON_ERROR(batch_->Delete(handler, UnsyncedCommitRow::GetKeyFor(commit_id)));
+  RETURN_ON_ERROR(batch_->Delete(handler, RemoteCommitIdToLocalRow::GetKeyFor(remote_commit_id)));
   return batch_->Delete(handler, CommitRow::GetKeyFor(commit_id));
 }
 

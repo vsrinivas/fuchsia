@@ -31,10 +31,10 @@ class PageDbBatchImpl : public PageDb::Batch {
                      CommitIdView parent2_id, CommitIdView commit_id) override;
   // Commits.
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler, const CommitId& commit_id,
-                               const ObjectIdentifier& root_node,
+                               fxl::StringView remote_commit_id, const ObjectIdentifier& root_node,
                                fxl::StringView storage_bytes) override;
   Status DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
-                      const ObjectIdentifier& root_node) override;
+                      fxl::StringView remote_commit_id, const ObjectIdentifier& root_node) override;
 
   // Object data.
   Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,

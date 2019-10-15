@@ -83,6 +83,9 @@ TEST_F(DbSerialization, SerializationVersionControl) {
 
   // Clock row: entries (prefix ',').
   EXPECT_EQ(ClockRow::GetClockEntryForKey(DeviceId("device")), ",device");
+
+  // Remote commit id to local row (prefix '-').
+  EXPECT_EQ(RemoteCommitIdToLocalRow::GetKeyFor("remote_commit_id"), "-remote_commit_id");
 }
 
 TEST_F(DbSerialization, MergeRow) {

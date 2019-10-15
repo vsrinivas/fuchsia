@@ -129,6 +129,9 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
 
   void GetClock(fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) override;
 
+  void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+                               fit::function<void(Status, CommitId)> callback) override;
+
   // CommitPrunerDelegate:
   Status DeleteCommits(coroutine::CoroutineHandler* handler,
                        std::vector<std::unique_ptr<const Commit>> commits) override;
@@ -300,6 +303,10 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // Temporarily stores the root of commits being added from sync, so they can be used to apply
   // diffs. A commit will be removed from this set once it is successfully added to the storage.
   std::map<CommitId, ObjectIdentifier, std::less<>> roots_of_commits_being_added_;
+  // Temporarily stores the mapping from remote commit id to local commit id for commits that have
+  // not yet been added to the storage. A commit will be removed from this set once it is
+  // successfully added to the storage.
+  std::map<std::string, CommitId, std::less<>> remote_ids_of_commits_being_added_;
   // Identifier for this device on the page clock. It does not need to be consistent across pages.
   DeviceId device_id_;
 

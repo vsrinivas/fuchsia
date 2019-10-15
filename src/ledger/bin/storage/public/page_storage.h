@@ -291,6 +291,10 @@ class PageStorage : public PageSyncClient {
   // Gets the current clock for this page.
   virtual void GetClock(fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) = 0;
 
+  // Finds the commit id of the commit with the given |remote_commit_id|.
+  virtual void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+                                       fit::function<void(Status, CommitId)> callback) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
 };

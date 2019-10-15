@@ -257,15 +257,18 @@ Status PageDbImpl::DeleteMerge(coroutine::CoroutineHandler* handler, CommitIdVie
 }
 
 Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler, const CommitId& commit_id,
+                                         fxl::StringView remote_commit_id,
                                          const ObjectIdentifier& root_node,
                                          fxl::StringView storage_bytes) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->AddCommitStorageBytes(handler, commit_id, root_node, storage_bytes));
+  RETURN_ON_ERROR(
+      batch->AddCommitStorageBytes(handler, commit_id, remote_commit_id, root_node, storage_bytes));
   return batch->Execute(handler);
 }
 
 Status PageDbImpl::DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
+                                fxl::StringView remote_commit_id,
                                 const ObjectIdentifier& root_node) {
   // This should only be called in a batch.
   return Status::ILLEGAL_STATE;
@@ -358,6 +361,11 @@ Status PageDbImpl::SetClockEntry(coroutine::CoroutineHandler* handler, DeviceIdV
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->SetClockEntry(handler, device_id, entry));
   return batch->Execute(handler);
+}
+
+Status PageDbImpl::GetCommitIdFromRemoteId(coroutine::CoroutineHandler* handler,
+                                           fxl::StringView remote_id, CommitId* commit_id) {
+  return db_->Get(handler, RemoteCommitIdToLocalRow::GetKeyFor(remote_id), commit_id);
 }
 
 }  // namespace storage

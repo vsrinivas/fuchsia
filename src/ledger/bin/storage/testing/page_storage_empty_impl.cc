@@ -214,4 +214,10 @@ void PageStorageEmptyImpl::GetClock(
   callback(Status::NOT_IMPLEMENTED, {});
 }
 
+void PageStorageEmptyImpl::GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+                                                   fit::function<void(Status, CommitId)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, "");
+}
+
 }  // namespace storage

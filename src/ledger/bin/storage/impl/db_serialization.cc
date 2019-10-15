@@ -145,13 +145,21 @@ std::string SyncMetadataRow::GetKeyFor(fxl::StringView key) {
 
 constexpr fxl::StringView PageIsOnlineRow::kKey;
 
-// ClockRow
+// ClockRow.
 
 constexpr fxl::StringView ClockRow::kDeviceIdKey;
 constexpr fxl::StringView ClockRow::kEntriesPrefix;
 
 std::string ClockRow::GetClockEntryForKey(DeviceIdView device_id) {
   return fxl::Concatenate({kEntriesPrefix, device_id});
+}
+
+// RemoteCommitIdToLocalRow.
+
+constexpr fxl::StringView RemoteCommitIdToLocalRow::kPrefix;
+
+std::string RemoteCommitIdToLocalRow::GetKeyFor(fxl::StringView remote_commit_id) {
+  return fxl::Concatenate({kPrefix, remote_commit_id});
 }
 
 }  // namespace storage

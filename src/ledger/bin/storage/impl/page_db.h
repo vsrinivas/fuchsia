@@ -77,12 +77,14 @@ class PageDbMutator {
   // Adds the given |commit|, referencing |root_node|, in the database.
   FXL_WARN_UNUSED_RESULT virtual Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                                               const CommitId& commit_id,
+                                                              fxl::StringView remote_commit_id,
                                                               const ObjectIdentifier& root_node,
                                                               fxl::StringView storage_bytes) = 0;
 
   // Deletes the commit with given |commit_id|, referencing |root_node|, from the database.
   FXL_WARN_UNUSED_RESULT virtual Status DeleteCommit(coroutine::CoroutineHandler* handler,
                                                      CommitIdView commit_id,
+                                                     fxl::StringView remote_commit_id,
                                                      const ObjectIdentifier& root_node) = 0;
 
   // Object data.
@@ -273,6 +275,9 @@ class PageDb : public PageDbMutator {
   // Gets the full vector clock for this page as currently stored.
   FXL_WARN_UNUSED_RESULT virtual Status GetClock(coroutine::CoroutineHandler* handler,
                                                  std::map<DeviceId, ClockEntry>* clock) = 0;
+
+  FXL_WARN_UNUSED_RESULT virtual Status GetCommitIdFromRemoteId(
+      coroutine::CoroutineHandler* handler, fxl::StringView remote_id, CommitId* commit_id) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDb);
