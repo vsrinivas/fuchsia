@@ -280,12 +280,15 @@ class EntityNode : public ContainerNode {
   void SetClip(uint32_t clip_id, bool clip_to_self);
   void SetClipPlanes(std::vector<fuchsia::ui::gfx::Plane3> planes);
 
+  // Deprecated(38480): use |AddChild| instead.
   void Attach(const ViewHolder& view_holder);
 };
 
 // Represents an imported node resource in a session.
 // The imported node is initially created in an unbound state and must
 // be bound immediately after creation, prior to use.
+//
+// Deprecated(38480): use EntityNode instead or consider omitting.
 class ImportNode final : public ContainerNode {
  public:
   explicit ImportNode(Session* session);
@@ -313,7 +316,7 @@ class ImportNode final : public ContainerNode {
 /// the linked |View| will become a child of the Node as well.
 ///
 /// Each |ViewHolder| is linked to a paired |View| via a shared token pair.
-class ViewHolder final : public Resource {
+class ViewHolder final : public Node {
  public:
   ViewHolder(Session* session, zx::eventpair token, const std::string& debug_name);
   ViewHolder(Session* session, fuchsia::ui::views::ViewHolderToken token,

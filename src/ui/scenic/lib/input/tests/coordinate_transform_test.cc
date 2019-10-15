@@ -107,7 +107,6 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
     // Add local root node to the scene. Attach two entity nodes that
     // perform translation for the two clients; attach ViewHolders.
     scene.AddChild(*root_node);
-    scenic::EntityNode translate_1(session), translate_2(session);
     scenic::ViewHolder holder_1(session, std::move(vh1), "holder_1"),
         holder_2(session, std::move(vh2), "holder_2");
 
@@ -119,13 +118,11 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
     holder_1.SetViewProperties(bbox_min, bbox_max, inset_min, inset_max);
     holder_2.SetViewProperties(bbox_min, bbox_max, inset_min, inset_max);
 
-    root_node->AddChild(translate_1);
-    translate_1.SetTranslation(0, 0, -2);
-    translate_1.Attach(holder_1);
+    root_node->AddChild(holder_1);
+    holder_1.SetTranslation(0, 0, -2);
 
-    root_node->AddChild(translate_2);
-    translate_2.SetTranslation(4, 4, -1);
-    translate_2.Attach(holder_2);
+    root_node->AddChild(holder_2);
+    holder_2.SetTranslation(4, 4, -1);
 
     RequestToPresent(session);
   });

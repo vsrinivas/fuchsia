@@ -56,15 +56,13 @@ TestSession::TestSession(fuchsia::ui::scenic::Scenic* scenic,
       layer(&session),
       renderer(&session),
       scene(&session),
-      ambient_light(&session),
-      root_node(&session) {
+      ambient_light(&session) {
   compositor.SetLayerStack(layer_stack);
   layer_stack.AddLayer(layer);
   layer.SetSize(display_dimensions.width, display_dimensions.height);
   layer.SetRenderer(renderer);
   scene.AddLight(ambient_light);
   ambient_light.SetColor(1.f, 1.f, 1.f);
-  scene.AddChild(root_node.id());
 }
 
 PixelTest::PixelTest(const std::string& environment_label)

@@ -236,9 +236,7 @@ EntityNode::EntityNode(EntityNode&& moved) : ContainerNode(std::move(moved)) {}
 
 EntityNode::~EntityNode() = default;
 
-void EntityNode::Attach(const ViewHolder& view_holder) {
-  session()->Enqueue(NewAddChildCmd(id(), view_holder.id()));
-}
+void EntityNode::Attach(const ViewHolder& view_holder) { AddChild(view_holder); }
 
 void EntityNode::SetClip(uint32_t clip_id, bool clip_to_self) {
   session()->Enqueue(NewSetClipCmd(id(), clip_id, clip_to_self));
@@ -273,18 +271,18 @@ void ImportNode::Attach(const ViewHolder& view_holder) {
 }
 
 ViewHolder::ViewHolder(Session* session, zx::eventpair token, const std::string& debug_name)
-    : Resource(session) {
+    : Node(session) {
   session->Enqueue(
       NewCreateViewHolderCmd(id(), scenic::ToViewHolderToken(std::move(token)), debug_name));
 }
 
 ViewHolder::ViewHolder(Session* session, fuchsia::ui::views::ViewHolderToken token,
                        const std::string& debug_name)
-    : Resource(session) {
+    : Node(session) {
   session->Enqueue(NewCreateViewHolderCmd(id(), std::move(token), debug_name));
 }
 
-ViewHolder::ViewHolder(ViewHolder&& moved) : Resource(std::move(moved)) {}
+ViewHolder::ViewHolder(ViewHolder&& moved) : Node(std::move(moved)) {}
 
 ViewHolder::~ViewHolder() = default;
 

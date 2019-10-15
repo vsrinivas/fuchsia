@@ -57,7 +57,6 @@ struct TestSession {
   scenic::Renderer renderer;
   scenic::Scene scene;
   scenic::AmbientLight ambient_light;
-  scenic::EntityNode root_node;
 };
 
 // Test fixture that sets up an environment suitable for pixel tests and provides related utilities.

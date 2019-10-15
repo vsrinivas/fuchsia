@@ -157,7 +157,7 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
-  scenic::EntityNode* const root_node = &test_session->root_node;
+  scenic::Scene* const scene = &test_session->scene;
 
   const float pane_width = display_width / 2;
   const float pane_height = display_height / 2;
@@ -172,7 +172,7 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
       pane_node.SetShape(pane_shape);
       pane_node.SetMaterial(pane_material);
       pane_node.SetTranslation((i + .5f) * pane_width, (j + .5f) * pane_height, -20);
-      root_node->AddChild(pane_node);
+      scene->AddChild(pane_node);
     }
   }
 
@@ -184,7 +184,7 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
   pane_node.SetShape(pane_shape);
   pane_node.SetMaterial(pane_material);
   pane_node.SetTranslation(.5f * display_width, .5f * display_height, -40);
-  root_node->AddChild(pane_node);
+  scene->AddChild(pane_node);
 
   // Actual tests. Test the same scene with an orthographic and perspective
   // camera.
@@ -251,7 +251,7 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   pane_shape_node.SetShape(pane_shape);
   pane_shape_node.SetMaterial(pane_material);
   pane_shape_node.SetTranslation(translation.x, translation.y, translation.z);
-  test_session->root_node.AddChild(pane_shape_node);
+  test_session->scene.AddChild(pane_shape_node);
 
   Present(session);
   scenic::Screenshot screenshot = TakeScreenshot();
@@ -295,7 +295,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
-  scenic::EntityNode* root_node = &test_session->root_node;
+  scenic::Scene* const scene = &test_session->scene;
 
   const float viewport_width = display_width / 2;
   const float viewport_height = display_height;
@@ -424,7 +424,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
     pane_shape_node.SetMaterial(pane_material);
     pane_shape_node.SetTranslation(translation.x, translation.y, translation.z);
     pane_shape_node.SetRotation(orientation.x, orientation.y, orientation.z, orientation.w);
-    root_node->AddChild(pane_shape_node);
+    scene->AddChild(pane_shape_node);
   }
 
   static const int num_quaternions = 8;
@@ -540,7 +540,7 @@ TEST_F(ScenicPixelTest, ViewBoundClipping) {
   pane_node2.SetMaterial(pane_material2);
   pane_node2.SetTranslation(0.5 * pane_width, display_height - 0.5 * pane_height, 3);
 
-  test_session->root_node.Attach(view_holder);
+  test_session->scene.AddChild(view_holder);
   view.AddChild(pane_node);
   view.AddChild(pane_node2);
 
@@ -559,13 +559,11 @@ TEST_F(ScenicPixelTest, ViewBoundClipping) {
   EXPECT_EQ(clipped_color2, scenic::Color(0, 0, 0, 0));
 }
 
-// This unit test verifies the behavior of view bound clipping
-// when the view exists under a node that itself has a translation
-// applied to it. There are two views with a rectangle in each.
-// The first view is under a node that is translated (display_width/2, 0,0).
-// The second view is under a node that is placed under the first transform
-// node, and then translated again by (0, display_height/2, 0,0). This means
-// that what you see on the screen should look like the following:
+// This unit test verifies the behavior of view bound clipping when the view exists under a node
+// that itself has a translation applied to it. There are two views with a rectangle in each. The
+// first view is under a node that is translated (display_width/2, 0,0). The second view is placed
+// under the first transform node, and then translated again by (0, display_height/2, 0,0). This
+// means that what you see on the screen should look like the following:
 //
 //  xxxxxxxxxxvvvvvvvvvv
 //  xxxxxxxxxxvvvvvvvvvv
@@ -582,10 +580,9 @@ TEST_F(ScenicPixelTest, ViewBoundClipping) {
 //       v refers to pixels covered by the first view's bounds.
 //       r refers to pixels covered by the second view's bounds.
 //
-// All of the view bounds are given in local coordinates (so their min-point is
-// at (0,0) in the xy plane) which means the test would fail if the bounds were
-// not being updated properly to the correct world-space location by the
-// transform stack before rendering.
+// All of the view bounds are given in local coordinates (so their min-point is at (0,0) in the xy
+// plane) which means the test would fail if the bounds were not being updated properly to the
+// correct world-space location by the transform stack before rendering.
 TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
@@ -614,14 +611,8 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   scenic::EntityNode transform_node(session);
   transform_node.SetTranslation(display_width / 2, 0, 0);
 
-  // Create a second transform node and add it as a child to the first transform
-  // node.
-  scenic::EntityNode transform_node_2(session);
-  transform_node_2.SetTranslation(0, display_height / 2, 0);
-  transform_node.AddChild(transform_node_2);
-
-  // Add the transform node as a child of the root node.
-  test_session->root_node.AddChild(transform_node);
+  // Add the transform node as a child of the scene.
+  test_session->scene.AddChild(transform_node);
 
   // Create two sets of view/view-holder token pairs.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -641,6 +632,8 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   const float imax[3] = {0, 0, 0};
   view_holder.SetViewProperties(bmin, bmax, imin, imax);
   view_holder2.SetViewProperties(bmin, bmax, imin, imax);
+
+  view_holder2.SetTranslation(0, display_height / 2, 0);
 
   // Pane extends across the entire right-side of the display, even though
   // its containing view is only in the top-right corner.
@@ -669,12 +662,10 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
   // overlapping with view1, but should still be clipped.
   pane_node2.SetTranslation(pane_width / 2, 0, 0);
 
-  // Add first view holder to the first transform.
-  transform_node.Attach(view_holder);
+  // Add view holders to the transform.
+  transform_node.AddChild(view_holder);
   view.AddChild(pane_node);
-
-  // Add the second view holder to the second transform.
-  transform_node_2.Attach(view_holder2);
+  transform_node.AddChild(view_holder2);
   view2.AddChild(pane_node2);
 
   Present(session);
@@ -714,7 +705,7 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
-  scenic::EntityNode* root_node = &test_session->root_node;
+  scenic::Scene* const scene = &test_session->scene;
   test_session->SetUpCamera().SetProjection(0);
 
   // Initialize session 2.
@@ -769,19 +760,19 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   // should still be off.
   view.enableDebugBounds(true);
 
-  root_node->Attach(view_holder);
+  scene->AddChild(view_holder);
 
   // Transform and embed view holder 2 in first view.
   scenic::EntityNode transform_node(session);
   transform_node.SetTranslation(display_width / 2, 0, 0);
   view.AddChild(transform_node);
-  transform_node.Attach(view_holder2);
+  transform_node.AddChild(view_holder2);
 
   // Transform and embed view holder 3 in view 2.
   scenic::EntityNode transform_node2(session2);
   transform_node2.SetTranslation(0, display_height / 2, 0);
   view2.AddChild(transform_node2);
-  transform_node2.Attach(view_holder3);
+  transform_node2.AddChild(view_holder3);
 
   Present(session);
   Present(session2);
@@ -835,7 +826,7 @@ TEST_F(ScenicPixelTest, DISABLED_Compositor) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
-  scenic::EntityNode* root_node = &test_session->root_node;
+  scenic::Scene* const scene = &test_session->scene;
 
   test_session->SetUpCamera().SetProjection(0);
 
@@ -864,7 +855,7 @@ TEST_F(ScenicPixelTest, DISABLED_Compositor) {
     pane_node.SetShape(pane_shape);
     pane_node.SetMaterial(pane_material);
     pane_node.SetTranslation((i + 0.5) * pane_width, 0.5 * pane_height, -20);
-    root_node->AddChild(pane_node);
+    scene->AddChild(pane_node);
   }
 
   // Display uncorrected version first.
@@ -898,7 +889,7 @@ class RotationTest : public ScenicPixelTest {
     auto test_session = SetUpTestSession();
     scenic::Session* const session = &test_session->session;
     const auto [display_width, display_height] = test_session->display_dimensions;
-    scenic::EntityNode* root_node = &test_session->root_node;
+    scenic::Scene* const scene = &test_session->scene;
 
     test_session->SetUpCamera().SetProjection(0);
 
@@ -920,7 +911,7 @@ class RotationTest : public ScenicPixelTest {
       pane_node.SetShape(pane_shape);
       pane_node.SetMaterial(pane_material);
       pane_node.SetTranslation((i + 0.5) * pane_width, 0.5 * pane_height, -20);
-      root_node->AddChild(pane_node);
+      scene->AddChild(pane_node);
     }
 
     // Display unrotated version first.
@@ -959,7 +950,7 @@ TEST_F(ScenicPixelTest, BasicShapeTest) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
-  scenic::EntityNode* root_node = &test_session->root_node;
+  scenic::Scene* const scene = &test_session->scene;
 
   test_session->SetUpCamera().SetProjection(0);
 
@@ -973,7 +964,7 @@ TEST_F(ScenicPixelTest, BasicShapeTest) {
   circle_node.SetShape(circle_shape);
   circle_node.SetMaterial(circle_material);
   circle_node.SetTranslation(display_width / 2, display_height / 2, -20);
-  root_node->AddChild(circle_node);
+  scene->AddChild(circle_node);
 
   Present(session);
   scenic::Screenshot screenshot = TakeScreenshot();
@@ -986,7 +977,7 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformOrtho) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
-  scenic::EntityNode* const root_node = &test_session->root_node;
+  scenic::Scene* const scene = &test_session->scene;
 
   struct Shape {
     float scale;
@@ -1024,7 +1015,7 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformOrtho) {
     node.SetMaterial(material);
     node.SetTranslation(shape.translation.x * display_width, shape.translation.y * display_height,
                         shape.translation.z);
-    root_node->AddChild(node);
+    scene->AddChild(node);
   }
 
   auto camera = test_session->SetUpCamera();
@@ -1056,7 +1047,7 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
-  scenic::EntityNode* const root_node = &test_session->root_node;
+  scenic::Scene* const scene = &test_session->scene;
 
   static const glm::quat face_right = glm::angleAxis(kPi / 2, glm::vec3(0, -1, 0));
   static const float kFovy = kPi / 4;
@@ -1108,7 +1099,7 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
     if (shape.rotation) {
       node.SetRotation(shape.rotation->x, shape.rotation->y, shape.rotation->z, shape.rotation->w);
     }
-    root_node->AddChild(node);
+    scene->AddChild(node);
   }
 
   auto camera = test_session->SetUpCamera();
@@ -1145,7 +1136,7 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
   const uint32_t kShapeId = kShapeNodeId + 1;
   session->Enqueue(scenic::NewCreateRectangleCmd(kShapeId, display_width, display_height));
   session->Enqueue(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
-  session->Enqueue(scenic::NewAddChildCmd(test_session->root_node.id(), kShapeNodeId));
+  session->Enqueue(scenic::NewAddChildCmd(test_session->scene.id(), kShapeNodeId));
   Present(session);
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
@@ -1195,6 +1186,47 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
   scenic::Screenshot screenshot = TakeScreenshot();
   ASSERT_FALSE(screenshot.empty());
   EXPECT_EQ(scenic::Color({255, 0, 255, 255}), screenshot.ColorAt(.25f, .25f));
+}
+
+// This test ensures that detaching a view holder ceases rendering the view. Finer grained
+// functionality is covered in node and view unit tests.
+TEST_F(ScenicPixelTest, ViewHolderDetach) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+
+  test_session->SetUpCamera().SetProjection(0);
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  scenic::View view(session, std::move(view_token), "View");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ViewHolder");
+
+  view_holder.SetViewProperties({.bounding_box = {
+                                     .min = {0, 0, -2},
+                                     .max = {display_width, display_height, 1},
+                                 }});
+
+  // Solid color
+  scenic::Rectangle pane_shape(session, display_width, display_height);
+  scenic::Material pane_material(session);
+  pane_material.SetColor(255, 0, 255, 255);  // Magenta.
+
+  scenic::ShapeNode pane_node(session);
+  pane_node.SetShape(pane_shape);
+  pane_node.SetMaterial(pane_material);
+  pane_node.SetTranslation(display_width / 2, display_height / 2, 0);
+
+  test_session->scene.AddChild(view_holder);
+  view.AddChild(pane_node);
+
+  Present(session);
+  EXPECT_EQ(TakeScreenshot().ColorAt(.5f, .5f), scenic::Color(255, 0, 255, 255));  // Magenta
+
+  view_holder.Detach();
+
+  Present(session);
+  EXPECT_EQ(TakeScreenshot().ColorAt(.5f, .5f), scenic::Color(0, 0, 0, 0));  // Blank
 }
 
 }  // namespace
