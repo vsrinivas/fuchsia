@@ -2,18 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string_piece.h>
+#include <utility>
 
 #include <fbl/algorithm.h>
-#include <unittest/unittest.h>
-
-#include <utility>
+#include <fbl/string_piece.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool empty_string_test() {
-  BEGIN_TEST;
-
+TEST(StringPieceTest, EmptyString) {
   fbl::StringPiece empty;
 
   EXPECT_NULL(empty.data());
@@ -26,13 +23,9 @@ bool empty_string_test() {
   EXPECT_NULL(empty.end());
   EXPECT_NULL(empty.cbegin());
   EXPECT_NULL(empty.cend());
-
-  END_TEST;
 }
 
-bool non_empty_string_test() {
-  BEGIN_TEST;
-
+TEST(StringPieceTest, NonEmptyString) {
   const char data[] = "abc";
 
   fbl::StringPiece str1(data);
@@ -64,13 +57,9 @@ bool non_empty_string_test() {
   EXPECT_EQ(data + 3u, str2.cend());
 
   EXPECT_EQ('c', str2[1u]);
-
-  END_TEST;
 }
 
-bool copy_move_and_assignment_test() {
-  BEGIN_TEST;
-
+TEST(StringPieceTest, CopyMoveAndAssignment) {
   const char data[] = "abc";
 
   {
@@ -113,13 +102,9 @@ bool copy_move_and_assignment_test() {
     EXPECT_NULL(str.data());
     EXPECT_EQ(0u, str.length());
   }
-
-  END_TEST;
 }
 
-bool set_clear_test() {
-  BEGIN_TEST;
-
+TEST(StringPieceTest, SetClear) {
   const char data[] = "abc";
 
   fbl::StringPiece str;
@@ -141,13 +126,9 @@ bool set_clear_test() {
   str.clear();
   EXPECT_NULL(str.data());
   EXPECT_EQ(0u, str.length());
-
-  END_TEST;
 }
 
-bool compare_test() {
-  BEGIN_TEST;
-
+TEST(StringPieceTest, CompareTest) {
   const char data[] = "abc";
   fbl::StringPiece empty;
   fbl::StringPiece a(data, 1);
@@ -161,10 +142,10 @@ bool compare_test() {
 
   EXPECT_EQ(0, a.compare(a));
   EXPECT_EQ(0, ab.compare(ab));
-  EXPECT_EQ(-1, a.compare(ab));
-  EXPECT_EQ(1, ab.compare(a));
-  EXPECT_EQ(-1, ab.compare(bc));
-  EXPECT_EQ(1, bc.compare(ab));
+  EXPECT_GT(0, a.compare(ab));
+  EXPECT_LT(0, ab.compare(a));
+  EXPECT_GT(0, ab.compare(bc));
+  EXPECT_LT(0, bc.compare(ab));
 
   EXPECT_TRUE(empty == empty);
   EXPECT_TRUE(empty <= empty);
@@ -215,8 +196,6 @@ bool compare_test() {
   EXPECT_TRUE(bc > a);
   EXPECT_TRUE(bc >= a);
   EXPECT_FALSE(bc <= a);
-
-  END_TEST;
 }
 
 constexpr char kFakeStringData[] = "hello";
@@ -242,9 +221,7 @@ struct EmptyString {
   size_t length() const { return 0u; }
 };
 
-bool conversion_from_string_like_object() {
-  BEGIN_TEST;
-
+TEST(StringPieceTest, ConversionFromStringLikeObject) {
   {
     SimpleFakeString str;
     fbl::StringPiece p(str);
@@ -265,13 +242,9 @@ bool conversion_from_string_like_object() {
     EXPECT_NULL(p.data());
     EXPECT_EQ(0u, p.length());
   }
-
-  END_TEST;
 }
 
-bool assignment_from_string_like_object() {
-  BEGIN_TEST;
-
+TEST(StringPieceTest, AssignmentFromStringLikeObject) {
   {
     SimpleFakeString str;
     fbl::StringPiece p;
@@ -295,18 +268,6 @@ bool assignment_from_string_like_object() {
     EXPECT_NULL(p.data());
     EXPECT_EQ(0u, p.length());
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(string_piece_tests)
-RUN_TEST(empty_string_test)
-RUN_TEST(non_empty_string_test)
-RUN_TEST(copy_move_and_assignment_test)
-RUN_TEST(set_clear_test)
-RUN_TEST(compare_test)
-RUN_TEST(conversion_from_string_like_object)
-RUN_TEST(assignment_from_string_like_object)
-END_TEST_CASE(string_piece_tests)
