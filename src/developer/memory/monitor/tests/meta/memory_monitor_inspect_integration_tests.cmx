@@ -11,7 +11,7 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+	    "hub"
         ],
         "services": [
             "fuchsia.kernel.Stats",

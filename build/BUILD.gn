@@ -89,13 +89,11 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/sshd-host:sshd-host",
     "//garnet/bin/trace:trace",
     "//garnet/bin/trace/tests:trace_tests",
-    "//src/lib/inspect_deprecated/integration:libinspect_integration_tests",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//src/devices/tests/libdriver-integration-test",
     "//src/connectivity/network/netstack:netstack_gotests",
     "//src/connectivity/network/testing/netemul/runner:netemul_devmgr",
     "//src/devices/coordinator:coordinator_tests",
-    "//src/developer/memory/monitor/tests:memory_monitor_inspect_integration_tests",
     "//src/recovery/factory_reset:factory_reset_tests",
   ]
 }

@@ -84,8 +84,6 @@ executable("test-inspect") {
 }
 
 test_package("memory_monitor_inspect_integration_tests") {
-  deprecated_shell = "//build"
-
   deps = [
     ":bin-monitor",
     ":test-inspect",
