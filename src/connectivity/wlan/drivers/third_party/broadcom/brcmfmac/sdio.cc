@@ -518,8 +518,8 @@ struct brcmf_sdio {
   pthread_t watchdog_tsk;
   std::atomic<bool> wd_active;
 
-  struct workqueue_struct* brcmf_wq;
-  struct work_struct datawork;
+  WorkQueue* brcmf_wq;
+  WorkItem datawork;
   std::atomic<bool> dpc_triggered;
   bool dpc_running;
 
@@ -3050,7 +3050,7 @@ done:
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus) {
   if (!bus->dpc_triggered.load()) {
     bus->dpc_triggered.store(true);
-    workqueue_schedule(bus->brcmf_wq, &bus->datawork);
+    bus->brcmf_wq->Schedule(&bus->datawork);
   }
 }
 
@@ -3074,7 +3074,7 @@ void brcmf_sdio_isr(struct brcmf_sdio* bus) {
   }
 
   bus->dpc_triggered.store(true);
-  workqueue_schedule(bus->brcmf_wq, &bus->datawork);
+  bus->brcmf_wq->Schedule(&bus->datawork);
 }
 
 void brcmf_sdio_event_handler(struct brcmf_sdio* bus);
@@ -3125,7 +3125,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
         bus->ipend.store(1);
 
         bus->dpc_triggered.store(true);
-        workqueue_schedule(bus->brcmf_wq, &bus->datawork);
+        bus->brcmf_wq->Schedule(&bus->datawork);
       }
     }
 
@@ -3194,7 +3194,7 @@ void brcmf_sdio_event_handler(struct brcmf_sdio* bus) {
   mtx_unlock(&lock);
 }
 
-static void brcmf_sdio_dataworker(struct work_struct* work) {
+static void brcmf_sdio_dataworker(WorkItem* work) {
   struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
   brcmf_sdio_event_handler(bus);
 }
@@ -3789,7 +3789,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   zx_status_t ret;
   int thread_result;
   struct brcmf_sdio* bus;
-  struct workqueue_struct* wq;
+  WorkQueue* wq;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
@@ -3808,16 +3808,16 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->tx_seq = SDPCM_SEQ_WRAP - 1;
 
   /* single-threaded workqueue */
-  char name[WORKQUEUE_NAME_MAXLEN];
+  char name[WorkQueue::kWorkqueueNameMaxlen];
   static int queue_uniquify = 0;
-  snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s%d", device_get_name(sdiodev->drvr->zxdev),
-           queue_uniquify++);
-  wq = workqueue_create(name);
+  snprintf(name, WorkQueue::kWorkqueueNameMaxlen, "brcmf_wq/%s%d",
+           device_get_name(sdiodev->drvr->zxdev), queue_uniquify++);
+  wq = new WorkQueue(name);
   if (!wq) {
     BRCMF_ERR("insufficient memory to create txworkqueue\n");
     goto fail;
   }
-  workqueue_init_work(&bus->datawork, brcmf_sdio_dataworker);
+  bus->datawork = WorkItem(brcmf_sdio_dataworker);
   bus->brcmf_wq = wq;
 
   /* attempt to attach to the dongle */
@@ -3930,9 +3930,9 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
 
     brcmf_detach(bus->sdiodev->drvr);
 
-    workqueue_cancel_work(&bus->datawork);
+    bus->datawork.Cancel();
     if (bus->brcmf_wq) {
-      workqueue_destroy(bus->brcmf_wq);
+      delete bus->brcmf_wq;
     }
 
     if (bus->ci) {

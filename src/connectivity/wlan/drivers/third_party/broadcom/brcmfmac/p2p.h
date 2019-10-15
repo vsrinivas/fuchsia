@@ -98,7 +98,7 @@ enum brcmf_p2p_status {
  * @tx_dst_addr: mac address where tx af should be sent to.
  */
 struct afx_hdl {
-  struct work_struct afx_work;
+  WorkItem afx_work;
   sync_completion_t act_frm_scan;
   bool is_active;
   int32_t peer_chan;

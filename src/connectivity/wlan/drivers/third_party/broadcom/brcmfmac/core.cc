@@ -117,7 +117,7 @@ void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
   }
 }
 
-static void _brcmf_set_multicast_list(struct work_struct* work) {
+static void _brcmf_set_multicast_list(WorkItem* work) {
   struct brcmf_if* ifp;
   struct net_device* ndev;
   struct netdev_hw_addr* ha;
@@ -213,7 +213,7 @@ zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, void* addr) {
 void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
-  workqueue_schedule_default(&ifp->multicast_work);
+  WorkQueue::ScheduleDefault(&ifp->multicast_work);
 }
 
 void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* ethernet_netbuf) {
@@ -571,7 +571,7 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
   BRCMF_DBG(TRACE, "Enter-New, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx, ifp->mac_addr);
 
   ndev->needed_headroom += drvr->hdrlen;
-  workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
+  ifp->multicast_work = WorkItem(_brcmf_set_multicast_list);
   return ZX_OK;
 }
 
@@ -750,7 +750,7 @@ static void brcmf_del_if(struct brcmf_pub* drvr, int32_t bsscfgidx, bool rtnl_lo
     }
 
     if (ifp->ndev->initialized_for_ap) {
-      workqueue_cancel_work(&ifp->multicast_work);
+      ifp->multicast_work.Cancel();
     }
     brcmf_net_detach(ifp->ndev, rtnl_locked);
   }

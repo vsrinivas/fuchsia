@@ -17,10 +17,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_
 
-#include <zircon/listnode.h>
-
 #include <endian.h>
 #include <string.h>
+#include <zircon/listnode.h>
 
 #include "linuxisms.h"
 #include "netbuf.h"
@@ -314,7 +313,7 @@ typedef zx_status_t (*brcmf_fweh_handler_t)(struct brcmf_if* ifp,
  */
 struct brcmf_fweh_info {
   bool p2pdev_setup_ongoing;
-  struct work_struct event_work;
+  WorkItem event_work;
   // spinlock_t evt_q_lock;
   struct list_node event_q;
   zx_status_t (*evt_handler[BRCMF_E_LAST])(struct brcmf_if* ifp,

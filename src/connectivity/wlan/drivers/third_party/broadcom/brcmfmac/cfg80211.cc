@@ -1138,7 +1138,7 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   BRCMF_DBG(TRACE, "Exit\n");
 }
 
-static void brcmf_disconnect_timeout_worker(struct work_struct* work) {
+static void brcmf_disconnect_timeout_worker(WorkItem* work) {
   struct brcmf_cfg80211_info* cfg =
       containerof(work, struct brcmf_cfg80211_info, disconnect_timeout_work);
   brcmf_disconnect_done(cfg);
@@ -1148,7 +1148,7 @@ static void brcmf_disconnect_timeout(void* data) {
   struct brcmf_cfg80211_info* cfg = static_cast<decltype(cfg)>(data);
   cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter\n");
-  workqueue_schedule_default(&cfg->disconnect_timeout_work);
+  WorkQueue::ScheduleDefault(&cfg->disconnect_timeout_work);
 
   cfg->pub->irq_callback_lock.unlock();
 }
@@ -1532,7 +1532,7 @@ void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
 }
 
-static void brcmf_cfg80211_escan_timeout_worker(struct work_struct* work) {
+static void brcmf_cfg80211_escan_timeout_worker(WorkItem* work) {
   struct brcmf_cfg80211_info* cfg =
       containerof(work, struct brcmf_cfg80211_info, escan_timeout_work);
 
@@ -1545,7 +1545,7 @@ static void brcmf_escan_timeout(void* data) {
 
   if (cfg->int_escan_map || cfg->scan_request) {
     BRCMF_ERR("timer expired\n");
-    workqueue_schedule_default(&cfg->escan_timeout_work);
+    WorkQueue::ScheduleDefault(&cfg->escan_timeout_work);
   }
   cfg->pub->irq_callback_lock.unlock();
 }
@@ -1647,7 +1647,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
   /* Init scan_timeout timer */
   cfg->escan_timeout.data = cfg;
   brcmf_timer_init(&cfg->escan_timeout, cfg->pub->dispatcher, brcmf_escan_timeout, cfg);
-  workqueue_init_work(&cfg->escan_timeout_work, brcmf_cfg80211_escan_timeout_worker);
+  cfg->escan_timeout_work = WorkItem(brcmf_cfg80211_escan_timeout_worker);
 }
 
 static wlanif_scan_req_t* brcmf_alloc_internal_escan_request(void) {
@@ -4153,7 +4153,7 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
   mtx_init(&cfg->usr_sync, mtx_plain);
   brcmf_init_escan(cfg);
   brcmf_init_conf(cfg->conf);
-  workqueue_init_work(&cfg->disconnect_timeout_work, brcmf_disconnect_timeout_worker);
+  cfg->disconnect_timeout_work = WorkItem(brcmf_disconnect_timeout_worker);
   cfg->vif_disabled = {};
   return err;
 }

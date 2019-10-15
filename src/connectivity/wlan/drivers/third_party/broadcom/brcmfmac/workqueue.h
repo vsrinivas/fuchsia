@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 The Fuchsia Authors
+ * Copyright (c) 2019 The Fuchsia Authors
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,57 +17,75 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WORKQUEUE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WORKQUEUE_H_
 
+#define _ALL_SOURCE
+
+#include <lib/sync/completion.h>
+#include <pthread.h>
+#include <string.h>
+#include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
-// This is a PARTIAL implementation of Linux work queues.
-//
-// Linux workqueues pay attention to which CPU work is scheduled on. This implementation does
-// not.
-//
-// Every work queue, including the default one accessed through workqueue_schedule_default(), is
-// single-threaded. In Linux, they're per-CPU by default, so several works may run in parallel.
-// This may cause slowness.
+#include <memory>
+#include <mutex>
 
-#define WORKQUEUE_NAME_MAXLEN 64
+class WorkQueue;
+class WorkItem;
+typedef void (*work_handler_t)(WorkItem* work);
 
-struct workqueue_struct;
+class WorkItem {
+ public:
+  explicit WorkItem(void (*handler)(WorkItem* work));
+  // Default constructor for structs which contain it, might be removed after all the things get
+  // into C++.
+  WorkItem() {}
+  // If work isn't started, deletes it. If it was started, waits for it to finish. Thus, this may
+  // block. Either way, the work is guaranteed not to be running after workqueue_cancel_work
+  // returns.
+  void Cancel();
 
-// handler: The callback function.
-// signaler: If not ZX_HANDLE_INVALID, will be signaled WORKQUEUE_SIGNAL on completion of work.
-// workqueue: The work queue currently queued or executing on.
-// item: If work is queued, item is the link to the work list.
-struct work_struct {
-  void (*handler)(struct work_struct*);
+  // The callback function.
+  void (*handler)(WorkItem*);
+  // signaler: If not ZX_HANDLE_INVALID, will be signaled WORKQUEUE_SIGNAL on completion of work.
   zx_handle_t signaler;
-  struct workqueue_struct* workqueue;
+  // item: If work is queued, item is the link to the work list.
   list_node_t item;
+  // workqueue: The work queue currently queued or executing on.
+  WorkQueue* workqueue;
 };
 
-void workqueue_init_work(struct work_struct* work, void (*handler)(struct work_struct* work));
+class WorkQueue {
+ public:
+  explicit WorkQueue(const char* name);
 
-// Creates a single-threaded workqueue, which must eventually be given to workqueue_destroy for
-// disposal.
-struct workqueue_struct* workqueue_create(const char* name);
+  // This is a static member which can be accessed globally.
+  static WorkQueue& DefaultInstance();
+  static void FlushDefault(void) { DefaultInstance().Flush(); }
+  static void ScheduleDefault(WorkItem* work);
 
-// Waits for currently scheduled work to finish, then tears down the queue. It is illegal to
-// schedule new work after calling workqueue_destroy, including current work scheduling new work.
-void workqueue_destroy(struct workqueue_struct* queue);
+  // Waits for any work on workqueue at time of call to complete. Jobs scheduled after flush starts,
+  // including work scheduled by pre-flush work, will not be waited for.
+  void Flush();
+  void Schedule(WorkItem* work);
 
-// Waits for any work on workqueue at time of call to complete. Jobs scheduled after flush
-// starts, including work scheduled by pre-flush work, will not be waited for.
-void workqueue_flush(struct workqueue_struct* workqueue);
-void workqueue_flush_default(void);
+  ~WorkQueue();
 
-// Queues work on the given work queue. Work will be executed one at a time in order queued (FIFO).
-void workqueue_schedule(struct workqueue_struct* queue, struct work_struct* work);
+  static constexpr int kWorkqueueNameMaxlen = 64;
+  std::mutex lock_;
+  list_node_t list_;
+  WorkItem* current_;
 
-// Queues work on the global default work queue, creating the work queue if necessary.
-void workqueue_schedule_default(struct work_struct* work);
+ private:
+  sync_completion_t work_ready_;
+  char name_[kWorkqueueNameMaxlen];
+  pthread_t thread_;
 
-// If work isn't started, deletes it. If it was started, waits for it to finish. Thus, this
-// may block. Either way, the work is guaranteed not to be running after workqueue_cancel_work
-// returns.
-void workqueue_cancel_work(struct work_struct* work);
+  // Thread body for the WorkQueue execution thread.
+  void* Runner();
+
+  // Start the WorkQueue thread.
+  void StartWorkQueue();
+};
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WORKQUEUE_H_

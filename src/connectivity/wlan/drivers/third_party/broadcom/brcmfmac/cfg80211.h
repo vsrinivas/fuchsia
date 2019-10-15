@@ -338,10 +338,10 @@ struct brcmf_cfg80211_info {
   zx_handle_t debugfsdir;
   struct escan_info escan_info;
   brcmf_timer_info_t escan_timeout;
-  struct work_struct escan_timeout_work;
+  WorkItem escan_timeout_work;
   uint8_t disconnect_mode;
   brcmf_timer_info_t disconnect_timeout;
-  struct work_struct disconnect_timeout_work;
+  WorkItem disconnect_timeout_work;
   struct list_node vif_list;
   struct brcmf_cfg80211_vif_event vif_event;
   uint8_t vif_event_pending_action;

@@ -90,7 +90,7 @@ struct brcmf_btcoex_info {
   bool timer_on;
   bool dhcp_done;
   enum brcmf_btcoex_state bt_state;
-  struct work_struct work;
+  WorkItem work;
   struct brcmf_cfg80211_info* cfg;
   uint32_t reg66;
   uint32_t reg41;
@@ -268,7 +268,7 @@ static void brcmf_btcoex_timerfunc(void* data) {
   BRCMF_DBG(TRACE, "enter\n");
 
   bt_local->timer_on = false;
-  workqueue_schedule_default(&bt_local->work);
+  WorkQueue::ScheduleDefault(&bt_local->work);
   bt_local->cfg->pub->irq_callback_lock.unlock();
 }
 
@@ -276,7 +276,7 @@ static void brcmf_btcoex_timerfunc(void* data) {
  * brcmf_btcoex_handler() - BT coex state machine work handler
  * @work: work
  */
-static void brcmf_btcoex_handler(struct work_struct* work) {
+static void brcmf_btcoex_handler(WorkItem* work) {
   struct brcmf_btcoex_info* btci;
   btci = containerof(work, struct brcmf_btcoex_info, work);
   if (btci->timer_on) {
@@ -366,7 +366,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
   btci->saved_regs_part1 = false;
   btci->saved_regs_part2 = false;
 
-  workqueue_init_work(&btci->work, brcmf_btcoex_handler);
+  btci->work = WorkItem(brcmf_btcoex_handler);
 
   cfg->btcoex = btci;
   return ZX_OK;
@@ -388,7 +388,7 @@ void brcmf_btcoex_detach(struct brcmf_cfg80211_info* cfg) {
     brcmf_timer_stop(&cfg->btcoex->timer);
   }
 
-  workqueue_cancel_work(&cfg->btcoex->work);
+  cfg->btcoex->work.Cancel();
 
   brcmf_btcoex_boost_wifi(cfg->btcoex, false);
   brcmf_btcoex_restore_part1(cfg->btcoex);
@@ -407,7 +407,7 @@ static void brcmf_btcoex_dhcp_start(struct brcmf_btcoex_info* btci) {
   brcmf_btcoex_params_write(ifp, 68, BRCMF_BT_DHCP_REG68);
   btci->dhcp_done = false;
   btci->bt_state = BRCMF_BT_DHCP_START;
-  workqueue_schedule_default(&btci->work);
+  WorkQueue::ScheduleDefault(&btci->work);
   BRCMF_DBG(TRACE, "enable BT DHCP Timer\n");
 }
 
@@ -422,7 +422,7 @@ static void brcmf_btcoex_dhcp_end(struct brcmf_btcoex_info* btci) {
     /* schedule worker if transition to IDLE is needed */
     if (btci->bt_state != BRCMF_BT_DHCP_IDLE) {
       BRCMF_DBG(INFO, "bt_state:%d\n", btci->bt_state);
-      workqueue_schedule_default(&btci->work);
+      WorkQueue::ScheduleDefault(&btci->work);
     }
   } else {
     /* Restore original values */

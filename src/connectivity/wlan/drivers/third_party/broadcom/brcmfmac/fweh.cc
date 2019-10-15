@@ -95,7 +95,7 @@ static void brcmf_fweh_queue_event(brcmf_pub* drvr, brcmf_fweh_info* fweh,
   list_add_tail(&fweh->event_q, &event->q);
   // spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
   drvr->irq_callback_lock.unlock();
-  workqueue_schedule_default(&fweh->event_work);
+  WorkQueue::ScheduleDefault(&fweh->event_work);
 }
 
 static zx_status_t brcmf_fweh_call_event_handler(struct brcmf_if* ifp,
@@ -273,7 +273,7 @@ static struct brcmf_fweh_queue_item* brcmf_fweh_dequeue_event(brcmf_pub* drvr,
  *
  * @work: worker object.
  */
-static void brcmf_fweh_event_worker(struct work_struct* work) {
+static void brcmf_fweh_event_worker(WorkItem* work) {
   struct brcmf_fweh_queue_item* event;
   struct brcmf_fweh_info* fweh = containerof(work, struct brcmf_fweh_info, event_work);
   struct brcmf_pub* drvr = containerof(fweh, struct brcmf_pub, fweh);
@@ -300,7 +300,7 @@ void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing) {
  */
 void brcmf_fweh_attach(struct brcmf_pub* drvr) {
   struct brcmf_fweh_info* fweh = &drvr->fweh;
-  workqueue_init_work(&fweh->event_work, brcmf_fweh_event_worker);
+  fweh->event_work = WorkItem(brcmf_fweh_event_worker);
   // spin_lock_init(&fweh->evt_q_lock);
   list_initialize(&fweh->event_q);
 }
@@ -321,7 +321,7 @@ void brcmf_fweh_detach(struct brcmf_pub* drvr) {
     (void)brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, nullptr);
   }
   /* cancel the worker */
-  workqueue_cancel_work(&fweh->event_work);
+  fweh->event_work.Cancel();
   WARN_ON(!list_is_empty(&fweh->event_q));
   memset(fweh->evt_handler, 0, sizeof(fweh->evt_handler));
 }

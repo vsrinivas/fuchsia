@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 The Fuchsia Authors
+ * Copyright (c) 2019 The Fuchsia Authors
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,82 +16,46 @@
 
 #include "workqueue.h"
 
-#include <pthread.h>
-#include <string.h>
-#define _ALL_SOURCE  // to get MTX_INIT from threads.h
-#include <threads.h>
-
-#include <lib/sync/completion.h>
-#include <zircon/listnode.h>
-#include <zircon/syscalls.h>
-#include <zircon/threads.h>
-
 #include "debug.h"
-
-typedef void (*work_handler_t)(struct work_struct* work);
 
 #define WORKQUEUE_SIGNAL ZX_USER_SIGNAL_0
 
-// lock: Held when accessing list, current, or contents of current.
-// list: Pending work (not including current work).
-// current: Currently executing work, or NULL.
-// work_ready: Signaled to tell worker to start.
-// name: May be used for debugging.
-// thread: The worker thread.
-struct workqueue_struct {
-  // TODO(WLAN-737): Convert to C++ and add locking annotations.
-  mtx_t lock;
-  list_node_t list;
-  struct work_struct* current;
-  sync_completion_t work_ready;
-  char name[WORKQUEUE_NAME_MAXLEN];
-  pthread_t thread;
-};
-
-static struct workqueue_struct default_workqueue = {.lock = MTX_INIT};
-
-void workqueue_init_work(struct work_struct* work, work_handler_t handler) {
-  if (work == NULL) {
-    return;
+WorkQueue::WorkQueue(const char* name) {
+  if (name == nullptr) {
+    strlcpy(this->name_, "nameless", sizeof(name_));
+  } else {
+    strlcpy(this->name_, name, sizeof(name_));
   }
-  work->handler = handler;
-  work->signaler = ZX_HANDLE_INVALID;
-  list_initialize(&work->item);
-  work->workqueue = NULL;
+  StartWorkQueue();
 }
 
-static void kill_this_workqueue(struct work_struct* work) { pthread_exit(NULL); }
-
-void workqueue_destroy(struct workqueue_struct* workqueue) {
-  if (workqueue == NULL) {
-    return;
-  }
-
-  struct work_struct work;
-  workqueue_init_work(&work, kill_this_workqueue);
-  workqueue_schedule(workqueue, &work);
-  pthread_join(workqueue->thread, NULL);
-  mtx_destroy(&workqueue->lock);
-
-  free(workqueue);
+WorkQueue::~WorkQueue() {
+  auto work = WorkItem([](WorkItem* work) { pthread_exit(nullptr); });
+  Schedule(&work);
+  pthread_join(thread_, nullptr);
 }
 
-static void workqueue_nop(struct work_struct* work) {}
+WorkQueue& WorkQueue::DefaultInstance() {
+  static WorkQueue default_workqueue_("default_workqueue");
+  return default_workqueue_;
+}
 
-void workqueue_flush(struct workqueue_struct* workqueue) {
-  if (workqueue == NULL) {
+void WorkQueue::ScheduleDefault(WorkItem* work) {
+  if (work == nullptr) {
     return;
   }
+  DefaultInstance().Schedule(work);
+}
 
-  struct work_struct work;
-  workqueue_init_work(&work, workqueue_nop);
+void WorkQueue::Flush() {
+  auto work = WorkItem([](WorkItem* work) {});
   zx_status_t result;
   result = zx_event_create(0, &work.signaler);
   if (result != ZX_OK) {
     BRCMF_ERR("Failed to create signal (work not canceled)");
     return;
   }
-  workqueue_schedule(workqueue, &work);
+  Schedule(&work);
   zx_signals_t observed;
   result = zx_object_wait_one(work.signaler, WORKQUEUE_SIGNAL, ZX_TIME_INFINITE, &observed);
   if (result != ZX_OK || (observed & WORKQUEUE_SIGNAL) == 0) {
@@ -101,138 +65,101 @@ void workqueue_flush(struct workqueue_struct* workqueue) {
   zx_handle_close(work.signaler);
 }
 
-void workqueue_flush_default(void) { workqueue_flush(&default_workqueue); }
-
-void workqueue_cancel_work(struct work_struct* work) {
-  if (work == NULL) {
+void WorkQueue::Schedule(WorkItem* work) {
+  if (work == nullptr) {
     return;
   }
+  list_node_t* node;
+  lock_.lock();
 
-  struct workqueue_struct* workqueue = work->workqueue;
-  if (workqueue == NULL) {
+  if (current_ == work) {
+    lock_.unlock();
+    return;
+  }
+  list_for_every(&list_, node) {
+    if (node == &work->item) {
+      lock_.unlock();
+      return;
+    }
+  }
+  work->workqueue = this;
+  list_add_tail(&list_, &work->item);
+  sync_completion_signal(&work_ready_);
+  lock_.unlock();
+}
+
+void* WorkQueue::Runner() {
+  while (true) {
+    // When all the works are consumed, these two lines will block the thread.
+    sync_completion_wait(&work_ready_, ZX_TIME_INFINITE);
+    sync_completion_reset(&work_ready_);
+    list_node_t* item;
+    lock_.lock();
+    item = list_remove_head(&list_);
+    current_ = (item == nullptr) ? nullptr : containerof(item, WorkItem, item);
+    lock_.unlock();
+    while (current_ != nullptr) {
+      current_->handler(current_);
+      lock_.lock();
+      if (current_->signaler != ZX_HANDLE_INVALID) {
+        zx_object_signal(current_->signaler, 0, WORKQUEUE_SIGNAL);
+      }
+      item = list_remove_head(&list_);
+      current_ = (item == nullptr) ? nullptr : containerof(item, WorkItem, item);
+      lock_.unlock();
+    }
+  }
+}
+
+void WorkQueue::StartWorkQueue() {
+  work_ready_ = {};
+  list_initialize(&list_);
+  pthread_create(
+      &thread_, nullptr, [](void* arg) { return reinterpret_cast<WorkQueue*>(arg)->Runner(); },
+      this);
+}
+
+WorkItem::WorkItem(void (*handler)(WorkItem* work))
+    : handler(handler), signaler(ZX_HANDLE_INVALID) {
+  list_initialize(&item);
+}
+
+void WorkItem::Cancel() {
+  WorkQueue* wq = workqueue;
+  if (wq == nullptr) {
     return;
   }
   zx_status_t result;
-  mtx_lock(&workqueue->lock);
-  if (workqueue->current == work) {
-    result = zx_event_create(0, &work->signaler);
-    mtx_unlock(&workqueue->lock);
+  wq->lock_.lock();
+  if (wq->current_ == this) {
+    result = zx_event_create(0, &signaler);
+    wq->lock_.unlock();
     if (result != ZX_OK) {
       BRCMF_ERR("Failed to create signal (work not canceled)");
       return;
     }
     zx_signals_t observed;
-    result = zx_object_wait_one(work->signaler, WORKQUEUE_SIGNAL, ZX_TIME_INFINITE, &observed);
+    result = zx_object_wait_one(signaler, WORKQUEUE_SIGNAL, ZX_TIME_INFINITE, &observed);
     if (result != ZX_OK || (observed & WORKQUEUE_SIGNAL) == 0) {
       BRCMF_ERR("Bad return from wait (work likely not canceled): result %d, observed %x", result,
                 observed);
     }
-    mtx_lock(&workqueue->lock);
-    zx_handle_close(work->signaler);
-    work->signaler = ZX_HANDLE_INVALID;
-    mtx_unlock(&workqueue->lock);
+    wq->lock_.lock();
+    zx_handle_close(signaler);
+    signaler = ZX_HANDLE_INVALID;
+    wq->lock_.unlock();
     return;
   } else {
     list_node_t* node;
     list_node_t* temp_node;
-    list_for_every_safe(&(workqueue->list), node, temp_node) {
-      if (node == &work->item) {
+    list_for_every_safe(&(wq->list_), node, temp_node) {
+      if (node == &item) {
         list_delete(node);
-        mtx_unlock(&workqueue->lock);
+        wq->lock_.unlock();
         return;
       }
     }
-    mtx_unlock(&workqueue->lock);
+    wq->lock_.unlock();
     BRCMF_DBG(TEMP, "Work to be canceled not found");
   }
-}
-
-static void* workqueue_runner(void* arg) {
-  struct workqueue_struct* workqueue = (struct workqueue_struct*)arg;
-
-  while (1) {
-    sync_completion_wait(&workqueue->work_ready, ZX_TIME_INFINITE);
-    sync_completion_reset(&workqueue->work_ready);
-    struct work_struct* work;
-    list_node_t* item;
-    mtx_lock(&workqueue->lock);
-    item = list_remove_head(&workqueue->list);
-    work = (item == NULL) ? NULL : containerof(item, struct work_struct, item);
-    workqueue->current = work;
-    mtx_unlock(&workqueue->lock);
-    while (work != NULL) {
-      work->handler(workqueue->current);
-      mtx_lock(&workqueue->lock);
-      work->workqueue = NULL;
-      if (work->signaler != ZX_HANDLE_INVALID) {
-        zx_object_signal(work->signaler, 0, WORKQUEUE_SIGNAL);
-      }
-      item = list_remove_head(&workqueue->list);
-      work = (item == NULL) ? NULL : containerof(item, struct work_struct, item);
-      workqueue->current = work;
-      mtx_unlock(&workqueue->lock);
-    }
-  }
-  return NULL;
-}
-
-void workqueue_schedule(struct workqueue_struct* workqueue, struct work_struct* work) {
-  if (workqueue == NULL) {
-    return;
-  }
-  if (work == NULL) {
-    return;
-  }
-
-  list_node_t* node;
-  mtx_lock(&workqueue->lock);
-  work->workqueue = workqueue;
-  if (workqueue->current == work) {
-    mtx_unlock(&workqueue->lock);
-    return;
-  }
-  list_for_every(&workqueue->list, node) {
-    if (node == &work->item) {
-      mtx_unlock(&workqueue->lock);
-      return;
-    }
-  }
-  list_add_tail(&workqueue->list, &work->item);
-  sync_completion_signal(&workqueue->work_ready);
-  mtx_unlock(&workqueue->lock);
-}
-
-static void start_workqueue(struct workqueue_struct* workqueue, const char* name) {
-  strlcpy(workqueue->name, name, WORKQUEUE_NAME_MAXLEN);
-  workqueue->work_ready = {};
-  list_initialize(&workqueue->list);
-  workqueue->current = NULL;
-  pthread_create(&workqueue->thread, NULL, workqueue_runner, workqueue);
-}
-
-void workqueue_schedule_default(struct work_struct* work) {
-  if (work == NULL) {
-    return;
-  }
-  mtx_lock(&default_workqueue.lock);
-  if (!default_workqueue.thread) {
-    start_workqueue(&default_workqueue, "default_workqueue");
-  }
-  mtx_unlock(&default_workqueue.lock);
-  workqueue_schedule(&default_workqueue, work);
-}
-
-struct workqueue_struct* workqueue_create(const char* name) {
-  struct workqueue_struct* workqueue;
-
-  workqueue = static_cast<decltype(workqueue)>(calloc(1, sizeof(*workqueue)));
-  if (workqueue == NULL) {
-    return NULL;
-  }
-  if (name == NULL) {
-    start_workqueue(workqueue, "nameless");
-  } else {
-    start_workqueue(workqueue, name);
-  }
-  return workqueue;
 }

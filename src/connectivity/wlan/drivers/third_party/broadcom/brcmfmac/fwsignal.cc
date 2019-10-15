@@ -18,9 +18,9 @@
 
 #include <threads.h>
 
+#include "bcdc.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
-#include "bcdc.h"
 #include "bus.h"
 #include "cfg80211.h"
 #include "common.h"
@@ -490,8 +490,8 @@ struct brcmf_fws_info {
   bool fw_signals;
   bool bcmc_credit_check;
   struct brcmf_fws_macdesc_table desc;
-  struct workqueue_struct* fws_wq;
-  struct work_struct fws_dequeue_work;
+  WorkQueue* fws_wq;
+  WorkItem fws_dequeue_work;
   uint32_t fifo_enqpkt[BRCMF_FWS_FIFO_COUNT];
   int fifo_credit[BRCMF_FWS_FIFO_COUNT];
   int credits_borrowed[BRCMF_FWS_FIFO_AC_VO + 1];
@@ -1219,7 +1219,7 @@ static void brcmf_fws_schedule_deq(struct brcmf_fws_info* fws) {
   /* only schedule dequeue when there are credits for delayed traffic */
   if ((fws->fifo_credit_map & fws->fifo_delay_map) ||
       (!brcmf_fws_fc_active(fws) && fws->fifo_delay_map)) {
-    workqueue_schedule(fws->fws_wq, &fws->fws_dequeue_work);
+    fws->fws_wq->Schedule(&fws->fws_dequeue_work);
   }
 }
 
@@ -2135,7 +2135,7 @@ void brcmf_fws_del_interface(struct brcmf_if* ifp) {
   brcmf_fws_unlock(fws);
 }
 
-static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
+static void brcmf_fws_dequeue_worker(WorkItem* worker) {
   struct brcmf_fws_info* fws;
   struct brcmf_pub* drvr;
   struct brcmf_netbuf* netbuf;
@@ -2233,13 +2233,13 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
     return ZX_OK;
   }
 
-  fws->fws_wq = workqueue_create("brcmf_fws_wq");
+  fws->fws_wq = new WorkQueue("brcmf_fws_wq");
   if (fws->fws_wq == NULL) {
     BRCMF_ERR("workqueue creation failed\n");
     rc = ZX_ERR_NO_RESOURCES;
     goto fail;
   }
-  workqueue_init_work(&fws->fws_dequeue_work, brcmf_fws_dequeue_worker);
+  fws->fws_dequeue_work = WorkItem(brcmf_fws_dequeue_worker);
 
   /* enable firmware signalling if fcmode active */
   if (fws->fcmode != BRCMF_FWS_FCMODE_NONE)
@@ -2308,7 +2308,7 @@ void brcmf_fws_detach(struct brcmf_fws_info* fws) {
   }
 
   if (fws->fws_wq) {
-    workqueue_destroy(fws->fws_wq);
+    delete fws->fws_wq;
   }
 
   /* cleanup */

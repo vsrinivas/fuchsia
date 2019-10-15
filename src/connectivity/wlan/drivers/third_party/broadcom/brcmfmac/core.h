@@ -218,8 +218,8 @@ struct brcmf_if {
   struct brcmf_pub* drvr;
   struct brcmf_cfg80211_vif* vif;
   struct net_device* ndev;
-  struct work_struct multicast_work;
-  struct work_struct ndoffload_work;
+  WorkItem multicast_work;
+  WorkItem ndoffload_work;
   struct brcmf_fws_mac_descriptor* fws_desc;
   int ifidx;
   int32_t bsscfgidx;
