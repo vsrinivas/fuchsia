@@ -18,6 +18,7 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <ktl/popcount.h>
+#include <ktl/unique_ptr.h>
 
 #include "zircon/time.h"
 
@@ -127,12 +128,14 @@ static bool yield_deboost_test() {
   volatile int started = 0;
   YieldData data = {&done, &started};
 
-  constexpr int kNumYieldThreads = 128;
-  constexpr int kNumTotalThreads = kNumYieldThreads + 1;
-  thread_t* threads[kNumTotalThreads];
+  const int num_yield_threads = arch_max_num_cpus() * 2;
+  const int num_total_threads = num_yield_threads + 1;
+  fbl::AllocChecker ac;
+  auto threads = ktl::unique_ptr<thread_t*[]>(new (&ac) thread_t*[num_total_threads]);
+  ASSERT_TRUE(ac.check());
 
   // Start a pile of threads that all spin-yield.
-  for (int i = 0; i < kNumYieldThreads; ++i) {
+  for (int i = 0; i < num_yield_threads; ++i) {
     threads[i] = thread_create("yielder", &yielding_tester, reinterpret_cast<void*>(&data),
                                DEFAULT_PRIORITY);
     ASSERT_NONNULL(threads[i], "thread_create");
@@ -140,13 +143,13 @@ static bool yield_deboost_test() {
   }
 
   // Start the potentially-starved thread.
-  int starve = kNumYieldThreads;
+  int starve = num_yield_threads;
   threads[starve] = thread_create("ender", &end_yielders_tester, reinterpret_cast<void*>(&data),
                                   DEFAULT_PRIORITY);
   ASSERT_NONNULL(threads[starve], "thread_create");
   thread_resume(threads[starve]);
 
-  while (atomic_load(&started) < kNumTotalThreads) {
+  while (atomic_load(&started) < num_total_threads) {
     // Wait until all the threads have started.
   }
 
@@ -159,9 +162,8 @@ static bool yield_deboost_test() {
   thread_sleep_relative(ZX_MSEC(100));
   atomic_add(&done, 1);
 
-  TRACEF("going to join %d threads\n", kNumTotalThreads);
-  for (int i = 0; i < kNumTotalThreads; ++i) {
-    thread_join(threads[i], NULL, ZX_TIME_INFINITE);
+  for (int i = 0; i < num_total_threads; ++i) {
+    thread_join(threads[i], nullptr, ZX_TIME_INFINITE);
   }
 
   END_TEST;
