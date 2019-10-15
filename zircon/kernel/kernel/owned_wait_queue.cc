@@ -656,13 +656,18 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
 
   // Now that we are finished moving everyone around, update the ownership of
   // the queues involved in the operation.  These updates should deal with
-  // propagating any priority inheritance consequences of the requeue
-  // operation.
+  // propagating any priority inheritance consequences of the requeue operation.
   cpu_mask_t accum_cpu_mask = 0;
   bool pi_resched = false;
 
   if (UpdateBookkeeping(new_wake_owner, old_wake_prio, &accum_cpu_mask)) {
     pi_resched = true;
+  }
+
+  // If there is no one waiting in the requeue target, then it is not allowed to
+  // have an owner.
+  if (requeue_target->IsEmpty()) {
+    requeue_owner = nullptr;
   }
 
   if (requeue_target->UpdateBookkeeping(requeue_owner, old_requeue_prio, &accum_cpu_mask)) {

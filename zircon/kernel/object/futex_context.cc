@@ -11,6 +11,8 @@
 #include <trace.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_call.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/sched.h>
 #include <kernel/thread_lock.h>
 #include <object/process_dispatcher.h>
@@ -139,13 +141,58 @@ inline zx_status_t ValidateNewFutexOwner(zx_handle_t new_owner_handle,
 
 }  // namespace
 
+struct ResetBlockingFutexIdState {
+  ResetBlockingFutexIdState() = default;
+
+  // No move, no copy.
+  ResetBlockingFutexIdState(const ResetBlockingFutexIdState&) = delete;
+  ResetBlockingFutexIdState(ResetBlockingFutexIdState&&) = delete;
+  ResetBlockingFutexIdState& operator=(const ResetBlockingFutexIdState&) = delete;
+  ResetBlockingFutexIdState& operator=(ResetBlockingFutexIdState&&) = delete;
+
+  uint32_t count = 0;
+};
+
+struct SetBlockingFutexIdState {
+  explicit SetBlockingFutexIdState(uintptr_t new_id) : id(new_id) {}
+
+  // No move, no copy.
+  SetBlockingFutexIdState(const SetBlockingFutexIdState&) = delete;
+  SetBlockingFutexIdState(SetBlockingFutexIdState&&) = delete;
+  SetBlockingFutexIdState& operator=(const SetBlockingFutexIdState&) = delete;
+  SetBlockingFutexIdState& operator=(SetBlockingFutexIdState&&) = delete;
+
+  const uintptr_t id;
+  uint32_t count = 0;
+};
+
+template <OwnedWaitQueue::Hook::Action action>
+OwnedWaitQueue::Hook::Action FutexContext::ResetBlockingFutexId(thread_t* thrd, void* ctx) {
+  // Any thread involved in one of these operations is
+  // currently blocked on a futex's wait queue, and therefor
+  // *must* be a user mode thread.
+  DEBUG_ASSERT((thrd != nullptr) && (thrd->user_thread != nullptr));
+  DEBUG_ASSERT(ctx != nullptr);
+  auto state = reinterpret_cast<ResetBlockingFutexIdState*>(ctx);
+
+  thrd->user_thread->blocking_futex_id_ = 0;
+  ++state->count;
+
+  return action;
+}
+
 template <OwnedWaitQueue::Hook::Action action>
 OwnedWaitQueue::Hook::Action FutexContext::SetBlockingFutexId(thread_t* thrd, void* ctx) {
   // Any thread involved in one of these operations is
   // currently blocked on a futex's wait queue, and therefor
   // *must* be a user mode thread.
   DEBUG_ASSERT((thrd != nullptr) && (thrd->user_thread != nullptr));
-  thrd->user_thread->blocking_futex_id_ = reinterpret_cast<uintptr_t>(ctx);
+  DEBUG_ASSERT(ctx != nullptr);
+  auto state = reinterpret_cast<SetBlockingFutexIdState*>(ctx);
+
+  thrd->user_thread->blocking_futex_id_ = state->id;
+  ++state->count;
+
   return action;
 }
 
@@ -158,29 +205,35 @@ FutexContext::~FutexContext() {
 
   // All of the threads should have removed themselves from wait queues and
   // destroyed themselves by the time the process has exited.
-  DEBUG_ASSERT(futex_table_.is_empty());
+  DEBUG_ASSERT(active_futexes_.is_empty());
   DEBUG_ASSERT(free_futexes_.is_empty());
 }
 
 zx_status_t FutexContext::GrowFutexStatePool() {
   fbl::AllocChecker ac;
-  ktl::unique_ptr<FutexState> new_state{new (&ac) FutexState()};
-
+  ktl::unique_ptr<FutexState> new_state1{new (&ac) FutexState};
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  Guard<fbl::Mutex> guard{&lock_};
-  free_futexes_.push_front(ktl::move(new_state));
+  ktl::unique_ptr<FutexState> new_state2{new (&ac) FutexState};
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  Guard<SpinLock, IrqSave> pool_lock_guard{&pool_lock_};
+  free_futexes_.push_front(ktl::move(new_state1));
+  free_futexes_.push_front(ktl::move(new_state2));
   return ZX_OK;
 }
 
 void FutexContext::ShrinkFutexStatePool() {
-  ktl::unique_ptr<FutexState> state;
+  ktl::unique_ptr<FutexState> state1, state2;
   {  // Do not let the futex state become released inside of the lock.
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<SpinLock, IrqSave> pool_lock_guard{&pool_lock_};
     DEBUG_ASSERT(free_futexes_.is_empty() == false);
-    state = free_futexes_.pop_front();
+    state1 = free_futexes_.pop_front();
+    state2 = free_futexes_.pop_front();
   }
 }
 
@@ -193,6 +246,7 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
                                     zx_futex_t current_value, zx_handle_t new_futex_owner,
                                     const Deadline& deadline) {
   LTRACE_ENTRY;
+  KTracer wait_tracer;
   zx_status_t result;
 
   // Make sure the futex pointer is following the basic rules.
@@ -201,16 +255,57 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
     return result;
   }
 
+  // Validate the proposed new owner, if any, but do not take any immediate
+  // action, even if owner validation fails..
+  //
+  // Do this before we enter any potentially blocking locks.  Right now, this
+  // operation can block on BRW locks involved in protecting the global handle
+  // table, and the penalty for doing so can be severe due to other issues.
+  // Until these are resolved, we would rather pay the price to do validation
+  // here instead of while holding the lock.
+  //
+  // This said, we cannot bail out with an error just yet.  We need to make it
+  // into the futex's lock and perform futex state validation first.  See Bug
+  // #34382 for details.
+  //
+  // TODO(johngro) : Once handle validation becomes something which cannot
+  // block, move this validation step inside of the FutexState lock, after the
+  // futex state validation step.
+  fbl::RefPtr<ThreadDispatcher> futex_owner_thread;
+  zx_status_t owner_validation_result = ValidateNewFutexOwner(new_futex_owner, &futex_owner_thread);
+
   auto current_thread = ThreadDispatcher::GetCurrent();
   uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
   {
+    // Obtain the FutexState for the ID we are interested in, activating a free
+    // futex state in the process if needed.  This operation should never fail
+    // (there should always be a FutexState available to us).
+    //
+    FutexState::PendingOpRef futex_ref = ActivateFutex(futex_id);
+    DEBUG_ASSERT(futex_ref != nullptr);
+
+    // Now that we have a hold of the FutexState, enter the futex specific lock
+    // and validate the user-mote futex state.
+    //
     // FutexWait() checks that the address value_ptr still contains
     // current_value, and if so it sleeps awaiting a FutexWake() on value_ptr.
-    // Those two steps must together be atomic with respect to FutexWake().
-    // If a FutexWake() operation could occur between them, a userland mutex
-    // operation built on top of futexes would have a race condition that
-    // could miss wakeups.
-    Guard<fbl::Mutex> guard{&lock_};
+    // Those two steps must together be atomic with respect to FutexWake().  If
+    // a FutexWake() operation could occur between them, a user-land mutex
+    // operation built on top of futexes would have a race condition that could
+    // miss wakeups.
+    //
+    // Note that we disable involuntary preemption while we are inside of this
+    // lock.  The price of blocking while holding this lock is high, and we
+    // should not (in theory) _ever_ be inside of this lock for very long at
+    // all.  Were it not for the potential to block while resolving a page fault
+    // during validation of the futex state, this would be an IRQ-disable spin
+    // lock.  The vast majority of the time, we just need validate the state,
+    // then trade this lock for the thread lock, and then block.  Even if we are
+    // operating at the very end of our slice, it is best to disable preemption
+    // until we manage to join the wait queue, or abort because of state
+    // validation issues.
+    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabler;
+    Guard<Mutex> guard{&futex_ref->lock_};
 
     // Sanity check, bookkeeping should not indicate that we are blocked on
     // a futex at this point in time.
@@ -225,43 +320,22 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
       return ZX_ERR_BAD_STATE;
     }
 
-    // Now that we have validated the futex state, validate the proposed new owner.
-    fbl::RefPtr<ThreadDispatcher> futex_owner_thread;
-    result = ValidateNewFutexOwner(new_futex_owner, &futex_owner_thread);
-
-    if (result != ZX_OK) {
-      return result;
+    // Now perform validation of the proposed new owner.
+    if (owner_validation_result != ZX_OK) {
+      return owner_validation_result;
     }
 
-    // When attempting to wait, the new owner of the futex (if any) may not be
-    // the thread which is attempting to wait.
-    if (futex_owner_thread.get() == ThreadDispatcher::GetCurrent()) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+    if (futex_owner_thread != nullptr) {
+      // When attempting to wait, the new owner of the futex (if any) may not be
+      // the thread which is attempting to wait.
+      if (futex_owner_thread.get() == ThreadDispatcher::GetCurrent()) {
+        return ZX_ERR_INVALID_ARGS;
+      }
 
-    // Find the FutexState for this futex.  If there is no FutexState
-    // already, then there are no current waiters.  Grab a free futex futex
-    // struct from the pool, and add it to the hash table instead.
-    //
-    // Either way, make sure that we hold a reference to the FutexState that
-    // we end up with.  We will want to keep it alive in order to optimize
-    // the case where we are removed from the wait queue for a reason other
-    // then being explicitly woken.  If we fail to do this, it is possible
-    // for us to time out on the futex, then have someone else return the
-    // futex to the free pool, and finally have the futex removed from the
-    // free pool and destroyed by an exiting thread.
-    FutexState* futex = ObtainActiveFutex(futex_id);
-    if (futex == nullptr) {
-      futex = ActivateFromPool(futex_id);
-    } else {
-      // If there was already a FutexState (implying that there are
-      // currently waiters, and perhaps an owner) verify that the thread
-      // we are attempting to make the new futex owner (if any) is not
-      // already waiting on the target futex.
-      if (futex_owner_thread) {
-        if (futex_owner_thread->blocking_futex_id_ == futex_id) {
-          return ZX_ERR_INVALID_ARGS;
-        }
+      // If we have a valid new owner, then verify that this thread is not already
+      // waiting on the target futex.
+      if (futex_owner_thread->blocking_futex_id_ == futex_id) {
+        return ZX_ERR_INVALID_ARGS;
       }
     }
 
@@ -281,20 +355,34 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
     guard.Release(MutexPolicy::ThreadLockHeld, MutexPolicy::NoReschedule);
 
     thread_t* new_owner = futex_owner_thread ? &futex_owner_thread->thread_ : nullptr;
-
-    KTracer tracer;
-    tracer.FutexWait(futex_id, new_owner);
+    wait_tracer.FutexWait(futex_id, new_owner);
 
     current_thread->thread_.interruptable = true;
-    result = futex->waiters_.BlockAndAssignOwner(deadline, new_owner, ResourceOwnership::Normal);
+    result =
+        futex_ref->waiters_.BlockAndAssignOwner(deadline, new_owner, ResourceOwnership::Normal);
     current_thread->thread_.interruptable = false;
+
+    // Do _not_ allow the PendingOpRef helper to release our pending op
+    // reference.  Having just woken up, either the thread which woke us will
+    // have released our pending op reference, or we will need to revalidate
+    // _which_ futex we were waiting on (because of FutexRequeue) and manage the
+    // release of the reference ourselves.
+    futex_ref.CancelRef();
   }
 
   // If we were woken by another thread, then our block result will be ZX_OK.
-  // We know that the thread who woke us up will have returned the FutexState
-  // to the free list if needed.  No special action should be needed by us at
-  // this point.
-  //
+  // We know that the thread has handled releasing our pending op reference, and
+  // has reset our blocking futex ID to zero.  No special action should be
+  // needed by us at this point.
+  KTracer woke_tracer;
+  if (result == ZX_OK) {
+    // The FutexWake operation should have already cleared our blocking
+    // futex ID.
+    DEBUG_ASSERT(current_thread->blocking_futex_id_ == 0);
+    woke_tracer.FutexWoke(futex_id, result);
+    return ZX_OK;
+  }
+
   // If the result is not ZX_OK, then additional actions may be required by
   // us.  This could be because
   //
@@ -306,88 +394,42 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
   // waiter in our FutexState and need to return the FutexState to the free
   // pool as a result.  To complicate things just a bit further, becuse of
   // zx_futex_requeue, the futex that we went to sleep on may not be the futex
-  // we just woke up from.  We need to re-enter the context's futex lock and
-  // revalidate the state of the world.
-  KTracer tracer;
-  if (result == ZX_OK) {
-    // The FutexWake operation should have already cleared our blocking
-    // futex ID.
-    DEBUG_ASSERT(current_thread->blocking_futex_id_ == 0);
-    tracer.FutexWoke(futex_id, result);
-    return ZX_OK;
-  }
+  // we just woke up from.  We need to find the futex we were blocked by, and
+  // release our pending op reference to it (potentially returning the
+  // FutexState to the free pool in the process).
+  DEBUG_ASSERT(current_thread->blocking_futex_id_ != 0);
+  woke_tracer.FutexWoke(current_thread->blocking_futex_id_, result);
 
+  FutexState::PendingOpRef futex_ref = FindActiveFutex(current_thread->blocking_futex_id_);
+  current_thread->blocking_futex_id_ = 0;
+  DEBUG_ASSERT(futex_ref != nullptr);
+
+  // Record the fact that we are holding an extra reference.  The first
+  // reference was placed on the FutexState at the start of this method as we
+  // fetched the FutexState from the pool.  This reference was not removed by a
+  // waking thread because we just timed out, or were killed/suspended.
+  //
+  // The second reference was just added during the FindActiveFutex (above).
+  //
+  futex_ref.SetExtraRefs(1);
+
+  // Enter the thread lock and deal with ownership of the futex.  It is possible
+  // that we were the last thread waiting on the futex, but that the futex's
+  // wait queue still has an owner assigned.  If that turns out to be the case
+  // once we are inside of the thread-lock, we need to clear the wait queue's
+  // owner.
+  //
+  // Note: We should not need the actual FutexState lock at this point in time.
+  // We know that the FutexState cannot disappear out from under us (we are
+  // holding two pending operation references), and once we are inside of the
+  // thread lock, we no that no new threads can join the wait queue.  If there
+  // is a thread racing with us to join the queue, then it will go ahead and
+  // explicitly update ownership as it joins the queue once it has made it
+  // inside of the thread lock.
   {
-    Guard<fbl::Mutex> guard{&lock_};
-
-    DEBUG_ASSERT(current_thread->blocking_futex_id_ != 0);
-    FutexState* futex = ObtainActiveFutex(current_thread->blocking_futex_id_);
-    tracer.FutexWoke(current_thread->blocking_futex_id_, result);
-    current_thread->blocking_futex_id_ = 0;
-
-    // Important Note:
-    //
-    // It is possible for this thread to have exited via an error path
-    // (timeout, killed, whatever), but for our futex context to have
-    // already been returned to the free pool.  It is not possible, however,
-    // for the blocking_futex_id to ever be 0 at this point.  The sequence
-    // which would produce something like this is as follows.
-    //
-    // 1) Threads A is blocked in a Futex X's wait queue.
-    // 2) Thread A times out, and under the protection of the ThreadLock is
-    //    removed from the wait queue by the kernel.  The wait queue now has
-    //    no waiters, but futex X's FutexState has not been returned to the
-    //    pool yet.
-    // 3) Before thread A makes it to the guard at the top of this block,
-    //    Thread B comes along and attempts to wake at least one thread from
-    //    futex X.
-    // 4) Thread B is inside of the processes futex context lock when it
-    //    does this, it notices that futex X's wait queue is now empty, so it
-    //    returns the queue to the free pool.
-    // 5) Finally, thread A makes it into the futex context lock and
-    //    discovers that it had been waiting on futex X, but futex X is not in
-    //    the set of active futexes.
-    //
-    // There are many other variations on this sequence, this just happens
-    // to be the simplest one that I can think of.  Other threads can be
-    // involved, futex X could have been retired, then reactivated any
-    // number of times, and so on.
-    //
-    // The important things to realize here are...
-    // 1) An truly active futex *must* have at least one waiter.
-    // 2) Because of timeouts, it is possible for a futex to be in the
-    //    active set, with no waiters.
-    // 3) If #2 is true, then there must be at least one thread which has
-    //    been released from the wait queue and it traveling along the error
-    //    path.
-    // 4) One of these threads will make it to here, enter the lock, and
-    //    attempt to retire the FutexState to the inactive pool if it is
-    //    still in the active set.
-    // 5) It does not matter *who* does this, as long as someone does this
-    //    job.  It can be the waking thread, or one of the timed out
-    //    threads.  As long as everyone makes an attempt while inside of the
-    //    lock, things should be OK and no FutexStates should be leaked.
-    if (futex != nullptr) {
-      // Looks like the futex is still in the active set.  Enter the
-      // thread_lock and check to see if the OwnedWaitQueue member of this
-      // FutexState is now empty.  If so, then we need to release the wait
-      // queue owner, update any related PI pressure, and return the futex
-      // state to the available pool.
-      bool is_empty = false;
-      {
-        Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-        DEBUG_ASSERT(current_thread->thread_.blocking_wait_queue == nullptr);
-        is_empty = futex->waiters_.IsEmpty();
-        if (is_empty) {
-          if (futex->waiters_.AssignOwner(nullptr)) {
-            sched_reschedule();
-          }
-        }
-      }
-
-      if (is_empty) {
-        ReturnToPool(futex);
-      }
+    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+    if (futex_ref->waiters_.IsEmpty() && futex_ref->waiters_.AssignOwner(nullptr)) {
+      sched_reschedule();
     }
   }
 
@@ -406,48 +448,62 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uin
     return result;
   }
 
+  // Try to find an active futex with the specified ID.  If we cannot find one,
+  // then we are done.  This wake operation had no threads to wake.
   uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
-  AutoReschedDisable resched_disable;  // Must come before the Guard.
-  {                                    // explicit lock scope for clarity.
-    Guard<fbl::Mutex> guard{&lock_};
+  FutexState::PendingOpRef futex_ref = FindActiveFutex(futex_id);
+  if (futex_ref == nullptr) {
+    tracer.FutexWake(futex_id, KTracer::FutexActive::No, KTracer::RequeueOp::No, wake_count,
+                     nullptr);
+    return ZX_OK;
+  }
 
-    // If the futex key is not in our hash table, then there is no one to
-    // wake, we are finished.
-    FutexState* futex = ObtainActiveFutex(futex_id);
-    if (futex == nullptr) {
-      tracer.FutexWake(futex_id, KTracer::FutexActive::No, KTracer::RequeueOp::No, wake_count,
-                       nullptr);
-      return ZX_OK;
-    }
+  // We found an "active" futex, meaning its pending operation count was
+  // non-zero when we went looking for it.  Now enter the FutexState specific
+  // lock and see if there are any actual waiters to wake up.
+  ResetBlockingFutexIdState wake_op;
+  {
+    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabler;
+    Guard<Mutex> guard{&futex_ref->lock_};
 
     // Now, enter the thread lock and actually wake up the threads.
     // OwnedWakeQueue will handle the ownership bookkeeping for us.
-    bool futex_emptied;
     {
-      resched_disable.Disable();
+      using Action = OwnedWaitQueue::Hook::Action;
       Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-      using Action = OwnedWaitQueue::Hook::Action;
+      // Attempt to wake |wake_count| threads.  Count the number of thread that
+      // we have successfully woken, and assign each of their blocking futex IDs
+      // to 0 as we go.  We need an accurate count in order to properly adjust
+      // the pending operation ref count on our way out of this function.
       auto hook = (owner_action == OwnerAction::RELEASE)
-                      ? SetBlockingFutexId<Action::SelectAndKeepGoing>
-                      : SetBlockingFutexId<Action::SelectAndAssignOwner>;
+                      ? ResetBlockingFutexId<Action::SelectAndKeepGoing>
+                      : ResetBlockingFutexId<Action::SelectAndAssignOwner>;
 
-      if (futex->waiters_.WakeThreads(wake_count, {hook, nullptr})) {
+      if (futex_ref->waiters_.WakeThreads(wake_count, {hook, &wake_op})) {
         sched_reschedule();
       }
 
-      futex_emptied = futex->waiters_.IsEmpty();
-      tracer.FutexWake(futex_id, KTracer::FutexActive::Yes, KTracer::RequeueOp::No, wake_count,
-                       futex->waiters_.owner());
-    }
+      // Either our owner action was RELEASE (in which case we should not have
+      // any owner), or our action was ASSIGN_WOKEN (in which case we should
+      // _only_ have an owner if there are still waiters remaining.
+      DEBUG_ASSERT(
+          ((owner_action == OwnerAction::RELEASE) && (futex_ref->waiters_.owner() == nullptr)) ||
+          ((owner_action == OwnerAction::ASSIGN_WOKEN) &&
+           (!futex_ref->waiters_.IsEmpty() || (futex_ref->waiters_.owner() == nullptr))));
 
-    // Now that we are outside of the thread lock, if there are no longer
-    // any waiters for this futex, return the state to the pool.
-    if (futex_emptied) {
-      ReturnToPool(futex);
+      tracer.FutexWake(futex_id, KTracer::FutexActive::Yes, KTracer::RequeueOp::No, wake_op.count,
+                       futex_ref->waiters_.owner());
     }
   }
 
+  // Adjust the number of pending operation refs we are about to release.  In
+  // addition to the ref we were holding when we started the wake operation, we
+  // are also now responsible for the refs which were being held by each of the
+  // threads which we have successfully woken.  Those threads are exiting along
+  // the FutexWait hot-path, and they have expected us to manage their
+  // blocking_futex_id and pending operation references for them.
+  futex_ref.SetExtraRefs(wake_op.count);
   return ZX_OK;
 }
 
@@ -475,119 +531,139 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr, u
     return ZX_ERR_INVALID_ARGS;
   }
 
-  AutoReschedDisable resched_disable;  // Must come before the Guard.
-  Guard<fbl::Mutex> guard{&lock_};
-
-  int value;
-  result = wake_ptr.copy_from_user(&value);
-  if (result != ZX_OK) {
-    return result;
-  }
-
-  if (value != current_value) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  // Now that we have validated the futex state, validate the proposed new owner.
+  // Validate the proposed new owner outside of any FutexState locks, but take
+  // no action just yet.  See the comment in FutexWait for details.
   fbl::RefPtr<ThreadDispatcher> requeue_owner_thread;
-  result = ValidateNewFutexOwner(new_requeue_owner_handle, &requeue_owner_thread);
-  if (result != ZX_OK) {
-    return result;
-  }
+  zx_status_t owner_validation_result =
+      ValidateNewFutexOwner(new_requeue_owner_handle, &requeue_owner_thread);
 
   // Find the FutexState for the wake and requeue futexes.
   uintptr_t wake_id = reinterpret_cast<uintptr_t>(wake_ptr.get());
   uintptr_t requeue_id = reinterpret_cast<uintptr_t>(requeue_ptr.get());
-  FutexState* wake_futex = ObtainActiveFutex(wake_id);
-  FutexState* requeue_futex = ObtainActiveFutex(requeue_id);
+  KTracer::FutexActive requeue_futex_was_active;
 
-  // Verify that the thread we are attempting to make the requeue target's
-  // owner (if any) is not waiting on either the wake futex or the requeue
-  // futex.
-  if (requeue_owner_thread && ((requeue_owner_thread->blocking_futex_id_ == wake_id) ||
-                               (requeue_owner_thread->blocking_futex_id_ == requeue_id))) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  Guard<SpinLock, IrqSave> ref_lookup_guard{&pool_lock_};
+  FutexState::PendingOpRef wake_futex_ref = ActivateFutexLocked(wake_id);
+  FutexState::PendingOpRef requeue_futex_ref = ActivateFutexLocked(requeue_id);
 
-  thread_t* new_requeue_owner = requeue_owner_thread ? &(requeue_owner_thread->thread_) : nullptr;
-  KTracer::FutexActive requeue_futex_was_active =
-      (requeue_futex == nullptr) ? KTracer::FutexActive::No : KTracer::FutexActive::Yes;
+  DEBUG_ASSERT(wake_futex_ref != nullptr);
+  DEBUG_ASSERT(requeue_futex_ref != nullptr);
 
-  // If we have no waiters for the wake futex, then we are more or less
-  // finished.  Just be sure to re-assign the futex owner for the requeue
-  // futex if needed.
-  if (wake_futex == nullptr) {
-    tracer.FutexWake(wake_id, KTracer::FutexActive::No, KTracer::RequeueOp::Yes, wake_count,
-                     nullptr);
-    tracer.FutexRequeue(requeue_id, requeue_futex_was_active, requeue_count, new_requeue_owner);
+  // Check to see if the requeue target was active or not when we fetched it by
+  // looking at the pending operation ref count.  If it is exactly 1, then we
+  // just activated it.  Note that the only reason why we can get away with this
+  // is that we are still inside of the pool lock.
+  requeue_futex_was_active = (requeue_futex_ref->pending_operation_count() == 1)
+                                 ? KTracer::FutexActive::No
+                                 : KTracer::FutexActive::Yes;
 
-    if (requeue_futex != nullptr) {
+  // Manually release the ref lookup guard.  While we would typically do this
+  // using scope, the PendingOpRefs need to live outside of just the locking
+  // scope.  We cannot declare the PendingOpRefs outside of the scope because we
+  // do not allow default construction of PendingOpRefs, nor do we allow move
+  // assignment.  This is done on purpose; pending op refs should only ever be
+  // constructed during lookup operations, and they really should not be moved
+  // around.  We need to have a move constructor, but there is no reason for a
+  // move assignment.
+  ref_lookup_guard.Release();
+
+  ResetBlockingFutexIdState wake_op;
+  SetBlockingFutexIdState requeue_op(requeue_id);
+  {
+    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disabler;
+    GuardMultiple<2, Mutex> futex_guards{&wake_futex_ref->lock_, &requeue_futex_ref->lock_};
+
+    // Validate the futex storage state.
+    int value;
+    result = wake_ptr.copy_from_user(&value);
+    if (result != ZX_OK) {
+      return result;
+    }
+
+    if (value != current_value) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    // If owner validation failed earlier, then bail out now (after we have
+    // passed the state check)
+    if (owner_validation_result != ZX_OK) {
+      return owner_validation_result;
+    }
+
+    // Verify that the thread we are attempting to make the requeue target's
+    // owner (if any) is not waiting on either the wake futex or the requeue
+    // futex.
+    if (requeue_owner_thread && ((requeue_owner_thread->blocking_futex_id_ == wake_id) ||
+                                 (requeue_owner_thread->blocking_futex_id_ == requeue_id))) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    thread_t* new_requeue_owner = requeue_owner_thread ? &(requeue_owner_thread->thread_) : nullptr;
+
+    // Now that all of our sanity checks are complete, it is time to do the
+    // actual manipulation of the various wait queues.
+    {
+      DEBUG_ASSERT(wake_futex_ref != nullptr);
       Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+      bool do_resched;
 
-      thread_t* new_owner =
-          (requeue_owner_thread != nullptr) ? &requeue_owner_thread->thread_ : nullptr;
+      using Action = OwnedWaitQueue::Hook::Action;
+      auto wake_hook = (owner_action == OwnerAction::RELEASE)
+                           ? ResetBlockingFutexId<Action::SelectAndKeepGoing>
+                           : ResetBlockingFutexId<Action::SelectAndAssignOwner>;
+      auto requeue_hook = SetBlockingFutexId<Action::SelectAndKeepGoing>;
 
-      if (requeue_futex->waiters_.AssignOwner(new_owner)) {
+      if (requeue_count) {
+        DEBUG_ASSERT(requeue_futex_ref != nullptr);
+        do_resched = wake_futex_ref->waiters_.WakeAndRequeue(
+            wake_count, &(requeue_futex_ref->waiters_), requeue_count, new_requeue_owner,
+            {wake_hook, &wake_op}, {requeue_hook, &requeue_op});
+      } else {
+        do_resched = wake_futex_ref->waiters_.WakeThreads(wake_count, {wake_hook, &wake_op});
+
+        // We made no attempt to requeue anyone, but we still need to update
+        // ownership.  If it has waiters currently, make sure that we clear out
+        // any owner, no matter what the user requested.  Futexes without
+        // waiters are not permitted to have owners.
+        if (requeue_futex_ref->waiters_.IsEmpty()) {
+          new_requeue_owner = nullptr;
+        }
+
+        if (requeue_futex_ref->waiters_.AssignOwner(new_requeue_owner)) {
+          do_resched = true;
+        }
+      }
+
+      // If we requeued any threads, we need to transfer their pending operation
+      // counts from the FutexState that they went to sleep on, over to the
+      // FutexState they are being requeued to.
+      //
+      // Sadly, this needs to be done from within the context of the thread
+      // lock.  Failure to do this means that it would be possible for us to
+      // requeue a thread from futex A over to futex B, then have that thread
+      // time out from the futex before we have move the pending operation
+      // references from A to B.  If the thread manages wake up and attempts to
+      // drop its pending operation count on futex B before we have transferred
+      // the count, it would result in a bookkeeping error.
+      requeue_futex_ref.TakeRefs(&wake_futex_ref, requeue_op.count);
+
+      tracer.FutexWake(wake_id, KTracer::FutexActive::Yes, KTracer::RequeueOp::Yes, wake_op.count,
+                       wake_futex_ref->waiters_.owner());
+      tracer.FutexRequeue(requeue_id, requeue_futex_was_active, requeue_op.count,
+                          new_requeue_owner);
+
+      if (do_resched) {
         sched_reschedule();
       }
     }
-    return ZX_OK;
   }
 
-  // If we plan to make an attempt to requeue _any_ threads, make sure that we
-  // have a requeue target ready.
-  if (requeue_count && (requeue_futex == nullptr)) {
-    requeue_futex = ActivateFromPool(requeue_id);
-  }
+  // Now, if we successfully woke any threads from the wake_futex, then we need
+  // to adjust the number of references we are holding by that number of
+  // threads.  They are on the hot-path out of FutexWake, and we are responsible
+  // for their pending op refs.
+  wake_futex_ref.SetExtraRefs(wake_op.count);
 
-  // Now that all of our sanity checks are complete, it is time to do the
-  // actual manipulation of the various wait queues.  Start by disabling
-  // rescheduling and entering the thread lock.
-  resched_disable.Disable();
-  bool wake_futex_emptied;
-  bool requeue_futex_emptied;
-  {
-    DEBUG_ASSERT(wake_futex != nullptr);
-    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-    bool do_resched;
-
-    using Action = OwnedWaitQueue::Hook::Action;
-    auto wake_hook = (owner_action == OwnerAction::RELEASE)
-                         ? SetBlockingFutexId<Action::SelectAndKeepGoing>
-                         : SetBlockingFutexId<Action::SelectAndAssignOwner>;
-    auto requeue_hook = SetBlockingFutexId<Action::SelectAndKeepGoing>;
-
-    if (requeue_count) {
-      DEBUG_ASSERT(requeue_futex != nullptr);
-      do_resched = wake_futex->waiters_.WakeAndRequeue(
-          wake_count, &(requeue_futex->waiters_), requeue_count, new_requeue_owner,
-          {wake_hook, nullptr}, {requeue_hook, reinterpret_cast<void*>(requeue_id)});
-    } else {
-      do_resched = wake_futex->waiters_.WakeThreads(wake_count, {wake_hook, nullptr});
-    }
-
-    tracer.FutexWake(wake_id, KTracer::FutexActive::Yes, KTracer::RequeueOp::Yes, wake_count,
-                     wake_futex->waiters_.owner());
-    tracer.FutexRequeue(requeue_id, requeue_futex_was_active, requeue_count, new_requeue_owner);
-
-    wake_futex_emptied = wake_futex->waiters_.IsEmpty();
-    requeue_futex_emptied = (requeue_futex != nullptr) && requeue_futex->waiters_.IsEmpty();
-
-    if (do_resched) {
-      sched_reschedule();
-    }
-  }
-
-  // Make sure we have retuned any now-empty futex states to the pool before
-  // requesting a reschedule (if needed).
-  if (wake_futex_emptied) {
-    ReturnToPool(wake_futex);
-  }
-
-  if (requeue_futex_emptied) {
-    ReturnToPool(requeue_futex);
-  }
-
+  // Now just return.  The futex states will return to the pool as needed.
   return ZX_OK;
 }
 
@@ -603,15 +679,18 @@ zx_status_t FutexContext::FutexGetOwner(user_in_ptr<const zx_futex_t> value_ptr,
     return result;
   }
 
+  // Attempt to find the futex.  If it is not in the active set, then there is no owner.
   zx_koid_t koid = ZX_KOID_INVALID;
   uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
-  {
-    Guard<fbl::Mutex> guard{&lock_};
-    FutexState* futex = ObtainActiveFutex(futex_id);
-    if (futex != nullptr) {
+  FutexState::PendingOpRef futex_ref = FindActiveFutex(futex_id);
+
+  // We found a FutexState in the active set.  It may have an owner, but we need
+  // to enter the thread lock in order to check.
+  if (futex_ref != nullptr) {
+    {  // explicit lock scope
       Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
-      if (const thread_t* owner = futex->waiters_.owner(); owner != nullptr) {
+      if (const thread_t* owner = futex_ref->waiters_.owner(); owner != nullptr) {
         // Any thread which owns a FutexState's wait queue *must* be a
         // user mode thread.
         DEBUG_ASSERT(owner->user_thread != nullptr);
