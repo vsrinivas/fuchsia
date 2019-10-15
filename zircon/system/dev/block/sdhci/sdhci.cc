@@ -40,10 +40,11 @@ constexpr uint32_t Lo32(zx_paddr_t val) { return val & 0xffffffff; }
 constexpr int kDmaDescCount = 512;
 
 constexpr zx::duration kResetTime                = zx::sec(1);
-constexpr zx::duration kClockStabilizationTime   = zx::sec(1);
+constexpr zx::duration kClockStabilizationTime   = zx::msec(150);
 constexpr zx::duration kVoltageStabilizationTime = zx::msec(5);
-constexpr zx::duration kControlUpdateWaitTime    = zx::msec(2);
+constexpr zx::duration kDataStabilizationTime    = zx::msec(1);
 constexpr zx::duration kInhibitWaitTime          = zx::msec(1);
+constexpr zx::duration kWaitYieldTime            = zx::usec(1);
 
 constexpr bool SdmmcCmdRspBusy(uint32_t cmd_flags) { return cmd_flags & SDMMC_RESP_LEN_48B; }
 
@@ -126,9 +127,36 @@ zx_status_t Sdhci::WaitForReset(const SoftwareReset mask) const {
     if ((SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).reg_value() & mask.reg_value()) == 0) {
       return ZX_OK;
     }
+    zx::nanosleep(zx::deadline_after(kWaitYieldTime));
   } while (zx::clock::get_monotonic() <= deadline);
 
   zxlogf(ERROR, "sdhci: timed out while waiting for reset\n");
+  return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t Sdhci::WaitForInhibit(const PresentState mask) const {
+  const zx::time deadline = zx::clock::get_monotonic() + kInhibitWaitTime;
+  do {
+    if ((PresentState::Get().ReadFrom(&regs_mmio_buffer_).reg_value() & mask.reg_value()) == 0) {
+      return ZX_OK;
+    }
+    zx::nanosleep(zx::deadline_after(kWaitYieldTime));
+  } while (zx::clock::get_monotonic() <= deadline);
+
+  zxlogf(ERROR, "sdhci: timed out while waiting for command/data inhibit\n");
+  return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t Sdhci::WaitForInternalClockStable() const {
+  const zx::time deadline = zx::clock::get_monotonic() + kClockStabilizationTime;
+  do {
+    if ((ClockControl::Get().ReadFrom(&regs_mmio_buffer_).internal_clock_stable())) {
+      return ZX_OK;
+    }
+    zx::nanosleep(zx::deadline_after(kWaitYieldTime));
+  } while (zx::clock::get_monotonic() <= deadline);
+
+  zxlogf(ERROR, "sdhci: timed out while waiting for internal clock to stabilize\n");
   return ZX_ERR_TIMED_OUT;
 }
 
@@ -416,14 +444,14 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
   }
 
   // Wait for the inhibit masks from above to become 0 before issuing the command.
-  while (PresentState::Get().ReadFrom(&regs_mmio_buffer_).reg_value() & inhibit_mask.reg_value()) {
-    zx::nanosleep(zx::deadline_after(kInhibitWaitTime));
+  zx_status_t st = WaitForInhibit(inhibit_mask);
+  if (st != ZX_OK) {
+    return st;
   }
 
   if (has_data) {
     if (req->use_dma) {
-      zx_status_t st = BuildDmaDescriptor(req);
-      if (st != ZX_OK) {
+      if ((st = BuildDmaDescriptor(req)) != ZX_OK) {
         zxlogf(ERROR, "sdhci: failed to build DMA descriptor\n");
         return st;
       }
@@ -514,35 +542,15 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Disable the SD clock before messing with the voltage.
-  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
-  clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
-
   auto ctrl2 = HostControl2::Get().ReadFrom(&regs_mmio_buffer_);
+  uint16_t voltage_1v8_value = 0;
   switch (voltage) {
     case SDMMC_VOLTAGE_V180: {
-      ctrl2.set_voltage_1v8_signalling_enable(1).WriteTo(&regs_mmio_buffer_);
-      // 1.8V regulator out should be stable within 5ms
-      zx::nanosleep(zx::deadline_after(kVoltageStabilizationTime));
-      if (driver_get_log_flags() & DDK_LOG_TRACE) {
-        if (!ctrl2.ReadFrom(&regs_mmio_buffer_).voltage_1v8_signalling_enable()) {
-          zxlogf(TRACE, "sdhci: 1.8V regulator output did not become stable\n");
-          return ZX_ERR_INTERNAL;
-        }
-      }
+      voltage_1v8_value = 1;
       break;
     }
     case SDMMC_VOLTAGE_V330: {
-      ctrl2.set_voltage_1v8_signalling_enable(0).WriteTo(&regs_mmio_buffer_);
-      // 3.3V regulator out should be stable within 5ms
-      zx::nanosleep(zx::deadline_after(kVoltageStabilizationTime));
-      if (driver_get_log_flags() & DDK_LOG_TRACE) {
-        if (ctrl2.ReadFrom(&regs_mmio_buffer_).voltage_1v8_signalling_enable()) {
-          zxlogf(TRACE, "sdhci: 3.3V regulator output did not become stable\n");
-          return ZX_ERR_INTERNAL;
-        }
-      }
+      voltage_1v8_value = 0;
       break;
     }
     default:
@@ -550,27 +558,52 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
       return ZX_ERR_INVALID_ARGS;
   }
 
-  // Make sure our changes are acknowledged.
-  uint8_t expected_power = 0;
-  switch (voltage) {
-    case SDMMC_VOLTAGE_V180:
-      expected_power = PowerControl::kBusVoltage1V8;
-      break;
-    case SDMMC_VOLTAGE_V330:
-      expected_power = PowerControl::kBusVoltage3V3;
-      break;
-    default:
-      break;
-  }
-  if (PowerControl::Get().ReadFrom(&regs_mmio_buffer_).sd_bus_voltage_vdd1() != expected_power) {
-    zxlogf(TRACE, "sdhci: after voltage switch vdd1=0x%x, expected=0x%x\n",
-           PowerControl::Get().ReadFrom(&regs_mmio_buffer_).sd_bus_voltage_vdd1(), expected_power);
+  // Note: the SDHCI spec indicates that the data lines should be checked to see if the card is
+  // ready for a voltage switch, however that doesn't seem to work for one of our devices.
+
+  // Disable the SD clock before messing with the voltage.
+  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
+  clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
+
+  ctrl2.set_voltage_1v8_signalling_enable(voltage_1v8_value).WriteTo(&regs_mmio_buffer_);
+
+  // Wait 5ms for the regulator to stabilize.
+  zx::nanosleep(zx::deadline_after(kVoltageStabilizationTime));
+
+  if (ctrl2.ReadFrom(&regs_mmio_buffer_).voltage_1v8_signalling_enable() != voltage_1v8_value) {
+    zxlogf(ERROR, "sdhci: voltage regulator output did not become stable\n");
+    // Cut power to the card if the voltage switch failed.
+    PowerControl::Get()
+        .ReadFrom(&regs_mmio_buffer_)
+        .set_sd_bus_power_vdd1(0)
+        .WriteTo(&regs_mmio_buffer_);
     return ZX_ERR_INTERNAL;
   }
 
   // Turn the clock back on
   clock.ReadFrom(&regs_mmio_buffer_).set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
+
+  // Wait 1ms for the data lines to stabilize.
+  zx::nanosleep(zx::deadline_after(kDataStabilizationTime));
+
+  // According to the SDHCI spec the data lines should all be high after switching to 1.8V.
+
+  auto state = PresentState::Get().ReadFrom(&regs_mmio_buffer_);
+  const uint32_t dat = state.dat_3_0() | (state.dat_7_4() << 4);
+
+  auto ctrl1 = HostControl1::Get().ReadFrom(&regs_mmio_buffer_);
+  const uint32_t dat_mask = ctrl1.extended_data_transfer_width()
+                                ? 0b1111'1111
+                                : (ctrl1.data_transfer_width_4bit() ? 0b0000'1111 : 0b0000'0001);
+
+  if ((dat & dat_mask) != dat_mask) {
+    zxlogf(ERROR, "sdhci: data bus did not come up after voltage switch\n");
+    PowerControl::Get()
+        .ReadFrom(&regs_mmio_buffer_)
+        .set_sd_bus_power_vdd1(0)
+        .WriteTo(&regs_mmio_buffer_);
+    return ZX_ERR_INTERNAL;
+  }
 
   zxlogf(TRACE, "sdhci: switch signal voltage to %d\n", voltage);
 
@@ -612,29 +645,26 @@ zx_status_t Sdhci::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
 zx_status_t Sdhci::SdmmcSetBusFreq(uint32_t bus_freq) {
   fbl::AutoLock lock(&mtx_);
 
-  uint32_t iterations = 0;
-  auto state = PresentState::Get().ReadFrom(&regs_mmio_buffer_);
-  while (state.command_inhibit_cmd() || state.command_inhibit_dat()) {
-    if (++iterations > 1000) {
-      return ZX_ERR_TIMED_OUT;
-    }
-    zx::nanosleep(zx::deadline_after(kInhibitWaitTime));
-    state.ReadFrom(&regs_mmio_buffer_);
+  zx_status_t st = WaitForInhibit(
+      PresentState::Get().FromValue(0).set_command_inhibit_cmd(1).set_command_inhibit_dat(1));
+  if (st != ZX_OK) {
+    return st;
   }
 
   // Turn off the SD clock before messing with the clock rate.
   auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
   clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   // Write the new divider into the control register.
   clock.set_frequency_select(GetClockDividerValue(base_clock_, bus_freq))
       .WriteTo(&regs_mmio_buffer_);
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
+
+  if ((st = WaitForInternalClockStable()) != ZX_OK) {
+    return st;
+  }
 
   // Turn the SD clock back on.
   clock.set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   zxlogf(TRACE, "sdhci: set bus frequency to %u\n", bus_freq);
 
@@ -657,11 +687,6 @@ zx_status_t Sdhci::SdmmcSetTiming(sdmmc_timing_t timing) {
     ctrl1.set_high_speed_enable(0).WriteTo(&regs_mmio_buffer_);
   }
 
-  // Disable SD clock before changing UHS timing
-  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
-  clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
-
   auto ctrl2 = HostControl2::Get().ReadFrom(&regs_mmio_buffer_);
   if (timing == SDMMC_TIMING_HS200) {
     ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr104);
@@ -673,10 +698,6 @@ zx_status_t Sdhci::SdmmcSetTiming(sdmmc_timing_t timing) {
     ctrl2.set_uhs_mode_select(HostControl2::kUhsModeSdr12);
   }
   ctrl2.WriteTo(&regs_mmio_buffer_);
-
-  // Turn the SD clock back on.
-  clock.set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   zxlogf(TRACE, "sdhci: set bus timing to %d\n", timing);
 
@@ -879,26 +900,20 @@ zx_status_t Sdhci::Init() {
   clock.set_frequency_select(GetClockDividerValue(base_clock_, kSdFreqSetupHz))
       .WriteTo(&regs_mmio_buffer_);
 
+  // Wait for the clock to stabilize.
+  status = WaitForInternalClockStable();
+  if (status != ZX_OK) {
+    return ZX_ERR_TIMED_OUT;
+  }
+
   // Set the command timeout.
   TimeoutControl::Get()
       .ReadFrom(&regs_mmio_buffer_)
       .set_data_timeout_counter(TimeoutControl::kDataTimeoutMax)
       .WriteTo(&regs_mmio_buffer_);
 
-  // Wait for the clock to stabilize.
-  zx::time deadline = zx::clock::get_monotonic() + kClockStabilizationTime;
-  while (clock.ReadFrom(&regs_mmio_buffer_).internal_clock_stable() == 0) {
-    if (zx::clock::get_monotonic() > deadline) {
-      zxlogf(ERROR, "sdhci: Clock did not stabilize in time\n");
-      return ZX_ERR_TIMED_OUT;
-    }
-  }
-
-  // Cut voltage to the card. This may automatically gate the SD clock on some controllers.
-  auto power = PowerControl::Get().ReadFrom(&regs_mmio_buffer_);
-  power.set_sd_bus_power_vdd1(0).WriteTo(&regs_mmio_buffer_);
-
   // Set SD bus voltage to maximum supported by the host controller
+  auto power = PowerControl::Get().ReadFrom(&regs_mmio_buffer_).set_sd_bus_power_vdd1(1);
   if (info_.caps & SDMMC_HOST_CAP_VOLTAGE_330) {
     power.set_sd_bus_voltage_vdd1(PowerControl::kBusVoltage3V3);
   } else {
@@ -906,13 +921,8 @@ zx_status_t Sdhci::Init() {
   }
   power.WriteTo(&regs_mmio_buffer_);
 
-  // Restore voltage to the card.
-  power.set_sd_bus_power_vdd1(1).WriteTo(&regs_mmio_buffer_);
-
   // Enable the SD clock.
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
   clock.ReadFrom(&regs_mmio_buffer_).set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
-  zx::nanosleep(zx::deadline_after(kControlUpdateWaitTime));
 
   // Disable all interrupts
   InterruptStatus::Get().FromValue(0).ClearAll().WriteTo(&regs_mmio_buffer_);

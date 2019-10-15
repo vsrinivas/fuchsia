@@ -111,6 +111,9 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
            !(quirks_ & SDHCI_QUIRK_NO_DMA);
   }
 
+  zx_status_t WaitForInhibit(const PresentState mask) const;
+  zx_status_t WaitForInternalClockStable() const;
+
   void CompleteRequestLocked(sdmmc_req_t* req, zx_status_t status) TA_REQ(mtx_);
   void CmdStageCompleteLocked() TA_REQ(mtx_);
   void DataStageReadReadyLocked() TA_REQ(mtx_);

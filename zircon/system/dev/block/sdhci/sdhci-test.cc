@@ -219,6 +219,8 @@ TEST_F(SdhciTest, SetSignalVoltage) {
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
+  PresentState::Get().FromValue(0).set_dat_3_0(0b0001).WriteTo(&mmio_);
+
   PowerControl::Get()
       .FromValue(0)
       .set_sd_bus_voltage_vdd1(PowerControl::kBusVoltage1V8)
@@ -234,6 +236,22 @@ TEST_F(SdhciTest, SetSignalVoltage) {
       .WriteTo(&mmio_);
   EXPECT_OK(dut_->SdmmcSetSignalVoltage(SDMMC_VOLTAGE_V330));
   EXPECT_FALSE(HostControl2::Get().ReadFrom(&mmio_).voltage_1v8_signalling_enable());
+}
+
+TEST_F(SdhciTest, SetSignalVoltageFail) {
+  mock_sdhci_.ExpectGetQuirks(0);
+  ASSERT_NO_FATAL_FAILURES(CreateDut());
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  Capabilities0::Get().FromValue(0).set_voltage_1v8_support(1).WriteTo(&mmio_);
+  EXPECT_OK(dut_->Init());
+  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+
+  PresentState::Get().FromValue(0).set_dat_3_0(0b0001).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcSetSignalVoltage(SDMMC_VOLTAGE_V180));
+
+  PresentState::Get().FromValue(0).set_dat_3_0(0b0000).WriteTo(&mmio_);
+  EXPECT_NOT_OK(dut_->SdmmcSetSignalVoltage(SDMMC_VOLTAGE_V180));
 }
 
 TEST_F(SdhciTest, SetSignalVoltageUnsupported) {
@@ -299,6 +317,21 @@ TEST_F(SdhciTest, SetBusFreq) {
   EXPECT_OK(dut_->SdmmcSetBusFreq(26'000'000));
   EXPECT_EQ(clock.ReadFrom(&mmio_).frequency_select(), 2);
   EXPECT_TRUE(clock.sd_clock_enable());
+}
+
+TEST_F(SdhciTest, SetBusFreqTimeout) {
+  mock_sdhci_.ExpectGetQuirks(0);
+  ASSERT_NO_FATAL_FAILURES(CreateDut());
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  EXPECT_OK(dut_->Init());
+  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+
+  ClockControl::Get().FromValue(0).set_internal_clock_stable(1).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcSetBusFreq(12'500'000));
+
+  ClockControl::Get().FromValue(0).WriteTo(&mmio_);
+  EXPECT_NOT_OK(dut_->SdmmcSetBusFreq(12'500'000));
 }
 
 TEST_F(SdhciTest, HwReset) {

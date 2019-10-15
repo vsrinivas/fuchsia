@@ -78,6 +78,8 @@ class PresentState : public hwreg::RegisterBase<PresentState, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<PresentState>(0x24); }
 
+  DEF_FIELD(23, 20, dat_3_0);
+  DEF_FIELD(7, 4, dat_7_4);
   DEF_BIT(1, command_inhibit_dat);
   DEF_BIT(0, command_inhibit_cmd);
 };
