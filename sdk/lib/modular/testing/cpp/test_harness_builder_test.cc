@@ -34,8 +34,7 @@ class FakeTestHarness : public fuchsia::modular::testing::TestHarness {
   void ConnectToEnvironmentService(std::string service_name, zx::channel request) override {}
 
   // |fuchsia::modular::testing::TestHarness|
-  void ParseConfig(std::string config, std::string config_path,
-                   ParseConfigCallback callback) override {}
+  void ParseConfig(std::string config, ParseConfigCallback callback) override {}
 
   std::optional<fuchsia::modular::testing::TestHarnessSpec> spec_;
 };

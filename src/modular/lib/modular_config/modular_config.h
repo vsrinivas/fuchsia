@@ -32,7 +32,8 @@ class ModularConfigReader {
 
   // Parses |config| into modular configs. If |config| cannot be parsed,
   // defaults will be used.
-  explicit ModularConfigReader(std::string config, std::string config_path);
+  explicit ModularConfigReader(std::string config);
+
   ~ModularConfigReader();
 
   // Returns a ModularConfigReader which sources the config file from the

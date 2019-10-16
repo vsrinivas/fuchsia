@@ -349,15 +349,13 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
     ]
   }
   })";
-  auto config_path = "/pkg/data/test_config.json";
 
   fuchsia::modular::session::BasemgrConfig basemgr_config;
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
   bool done = false;
   test_harness()->ParseConfig(
-      config, config_path,
-      [&](fuchsia::modular::session::BasemgrConfig parsed_basemgr_config,
-          fuchsia::modular::session::SessionmgrConfig parsed_sessionmgr_config) {
+      config, [&](fuchsia::modular::session::BasemgrConfig parsed_basemgr_config,
+                  fuchsia::modular::session::SessionmgrConfig parsed_sessionmgr_config) {
         basemgr_config = std::move(parsed_basemgr_config);
         sessionmgr_config = std::move(parsed_sessionmgr_config);
         done = true;

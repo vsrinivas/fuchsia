@@ -64,9 +64,9 @@ protocol TestHarness {
     /// environment.
     ConnectToEnvironmentService(string service_name, handle<channel> request);
 
-    /// Parses a modular configuration from string into BasemgrConfig and
-    /// SessionmgrConfig
-    ParseConfig(string config, string config_path)
+    /// Parses a JSON modular configuration string into BasemgrConfig and
+    /// SessionmgrConfig. This method may be called before `Run()` is called.
+    ParseConfig(string config)
         -> (fuchsia.modular.session.BasemgrConfig basemgr_config,
             fuchsia.modular.session.SessionmgrConfig sessionmgr_config);
 };

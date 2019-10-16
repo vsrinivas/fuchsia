@@ -287,9 +287,8 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
   return ZX_OK;
 }
 
-void TestHarnessImpl::ParseConfig(std::string config, std::string config_path,
-                                  ParseConfigCallback callback) {
-  auto config_reader = modular::ModularConfigReader(config, config_path);
+void TestHarnessImpl::ParseConfig(std::string config, ParseConfigCallback callback) {
+  auto config_reader = modular::ModularConfigReader(config);
   callback(config_reader.GetBasemgrConfig(), config_reader.GetSessionmgrConfig());
 }
 

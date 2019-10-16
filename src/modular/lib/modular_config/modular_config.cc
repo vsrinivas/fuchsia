@@ -53,12 +53,13 @@ ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
   ParseConfig(std::move(json_parser), std::move(doc), config_path);
 }
 
-ModularConfigReader::ModularConfigReader(std::string config, std::string config_path) {
+ModularConfigReader::ModularConfigReader(std::string config) {
+  constexpr char kPathForErrorStrings[] = ".";
   // Parse the JSON out of the config string.
   json::JSONParser json_parser;
-  auto doc = json_parser.ParseFromString(config, config_path);
+  auto doc = json_parser.ParseFromString(config, kPathForErrorStrings);
 
-  ParseConfig(std::move(json_parser), std::move(doc), config_path);
+  ParseConfig(std::move(json_parser), std::move(doc), kPathForErrorStrings);
 }
 
 // static
