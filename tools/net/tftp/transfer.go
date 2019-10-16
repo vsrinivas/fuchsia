@@ -16,14 +16,14 @@ import (
 )
 
 type transfer struct {
+	addr     *net.UDPAddr
 	buffer   *bytes.Buffer
 	filename string
 	lastAck  uint32
 	opCode   uint8
 	seq      uint32
-	*options
-	*net.UDPConn
-	*net.UDPAddr
+	opts     *options
+	client   *ClientImpl
 }
 
 func (t *transfer) request() error {
@@ -32,23 +32,23 @@ func (t *transfer) request() error {
 	b.WriteByte(t.opCode)
 	writeString(b, t.filename)
 	writeString(b, "octet")
-	writeOption(b, "tsize", int64(t.transferSize))
-	writeOption(b, "blksize", int64(t.blockSize))
-	writeOption(b, "timeout", int64(t.timeout/time.Second))
-	writeOption(b, "windowsize", int64(t.windowSize))
+	writeOption(b, "tsize", int64(t.opts.transferSize))
+	writeOption(b, "blksize", int64(t.opts.blockSize))
+	writeOption(b, "timeout", int64(t.opts.timeout/time.Second))
+	writeOption(b, "windowsize", int64(t.opts.windowSize))
 
 	return t.send(b.Bytes())
 }
 
 func (t *transfer) wait(ctx context.Context, handlePacket func(*transfer, []byte, *net.UDPAddr) error) (uint8, error) {
-	b := make([]byte, t.blockSize+dataOffset)
+	b := make([]byte, t.opts.blockSize+dataOffset)
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
-				t.SetReadDeadline(time.Now())
+				t.client.conn.SetReadDeadline(time.Now())
 				time.Sleep(time.Second)
 				continue
 			case <-done:
@@ -57,8 +57,8 @@ func (t *transfer) wait(ctx context.Context, handlePacket func(*transfer, []byte
 		}
 	}()
 	for {
-		t.SetReadDeadline(time.Now().Add(t.timeout))
-		n, addr, err := t.ReadFromUDP(b)
+		t.client.conn.SetReadDeadline(time.Now().Add(t.opts.timeout))
+		n, addr, err := t.client.conn.ReadFromUDP(b)
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
 				if ctx.Err() != nil {
@@ -72,7 +72,7 @@ func (t *transfer) wait(ctx context.Context, handlePacket func(*transfer, []byte
 		if n < dataOffset {
 			continue
 		}
-		if !addr.IP.Equal(t.IP) {
+		if !addr.IP.Equal(t.addr.IP) {
 			continue
 		}
 		return b[opCodeOffset], handlePacket(t, b[:n], addr)
@@ -150,8 +150,8 @@ func (t *transfer) cancel(code uint16, err error) error {
 }
 
 func (t *transfer) send(buf []byte) error {
-	t.SetWriteDeadline(time.Now().Add(t.timeout))
-	if _, err := t.WriteToUDP(buf, t.UDPAddr); err != nil {
+	t.client.conn.SetWriteDeadline(time.Now().Add(t.opts.timeout))
+	if _, err := t.client.conn.WriteToUDP(buf, t.addr); err != nil {
 		return fmt.Errorf("send: %v", err)
 	}
 	return nil
@@ -162,7 +162,7 @@ func (t *transfer) handleData(p []byte) error {
 	// If this isn't the next packet we expect, resend an ACK
 	// for the last in-order packet received.
 	if seq != uint16(t.seq)+1 {
-		if seq-uint16(t.seq) <= t.windowSize {
+		if seq-uint16(t.seq) <= t.opts.windowSize {
 			if err := t.ack(t.seq); err != nil {
 				return err
 			}
@@ -178,7 +178,7 @@ func (t *transfer) handleData(p []byte) error {
 	t.seq++
 	// If the packet has a partial payload, it's the last,
 	// ACK it and return.
-	if len(p) < int(t.blockSize+dataOffset) {
+	if len(p) < int(t.opts.blockSize+dataOffset) {
 		if err := t.ack(t.seq); err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ func (t *transfer) handleData(p []byte) error {
 	}
 	// If this is the last packet in the receive window,
 	// ACK it.
-	if uint16(t.seq-t.lastAck) == t.windowSize {
+	if uint16(t.seq-t.lastAck) == t.opts.windowSize {
 		if err := t.ack(t.seq); err != nil {
 			return err
 		}
@@ -199,7 +199,7 @@ func (t *transfer) handleData(p []byte) error {
 func (t *transfer) handleAck(p []byte) error {
 	seq := binary.BigEndian.Uint16(p[blockNumberOffset:dataOffset])
 	off := seq - uint16(t.seq)
-	if off > 0 && off <= t.windowSize {
+	if off > 0 && off <= t.opts.windowSize {
 		t.seq += uint32(off)
 	}
 	return nil
@@ -212,13 +212,13 @@ func (t *transfer) handleOack(p []byte, addr *net.UDPAddr) error {
 		return err
 	}
 
-	if t.transferSize != 0 && t.transferSize != o.transferSize {
+	if t.opts.transferSize != 0 && t.opts.transferSize != o.transferSize {
 		err := fmt.Errorf("transfer size mismatch")
 		t.cancel(errorBadOptions, err)
 		return err
 	}
-	t.options = o
-	t.UDPAddr = addr
+	t.opts = o
+	t.addr = addr
 	// Rrq requires an ACK of the OACK.
 	if t.opCode == opRrq {
 		return t.ack(t.seq)

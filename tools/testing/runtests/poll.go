@@ -25,7 +25,7 @@ import (
 
 // PollForSummary polls a node waiting for a summary.json to be written; this relies on
 // runtests having been run on target.
-func PollForSummary(ctx context.Context, t *tftp.Client, summaryFilename, testResultsDir, outputArchive string, filePollInterval time.Duration) error {
+func PollForSummary(ctx context.Context, t tftp.Client, summaryFilename, testResultsDir, outputArchive string, filePollInterval time.Duration) error {
 	var buffer bytes.Buffer
 	var writer io.WriterTo
 	var err error

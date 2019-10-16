@@ -32,7 +32,7 @@ func TestHandleAck(t *testing.T) {
 			ackPacket := make([]byte, 4, 4)
 			ackPacket[opCodeOffset] = opAck
 
-			xfer := &transfer{options: &options{
+			xfer := &transfer{opts: &options{
 				windowSize: test.windowSize,
 			}}
 
@@ -81,21 +81,23 @@ func TestHandleData(t *testing.T) {
 			defer conn.Close()
 
 			xfer := &transfer{
+				addr:   conn.LocalAddr().(*net.UDPAddr),
 				buffer: bytes.NewBuffer([]byte{}),
-				options: &options{
+				opts: &options{
 					blockSize:    test.blockSize,
 					windowSize:   test.windowSize,
 					timeout:      timeout,
 					transferSize: test.transferSize,
 				},
-				UDPConn: conn,
-				UDPAddr: conn.LocalAddr().(*net.UDPAddr),
+				client: &ClientImpl{
+					conn: conn,
+				},
 			}
 
 			l := int(test.blockSize)
 			// Create a partial packet if EOF
 			if test.expectedErr == io.EOF {
-				l -= 1
+				l--
 			}
 
 			for i := 0; i < l; i++ {

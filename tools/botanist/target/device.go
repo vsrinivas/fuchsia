@@ -76,7 +76,7 @@ type DeviceTarget struct {
 	opts    Options
 	signers []ssh.Signer
 	serial  io.ReadWriteCloser
-	tftp    *tftp.Client
+	tftp    tftp.Client
 }
 
 // NewDeviceTarget returns a new device target with a given configuration.
@@ -121,7 +121,8 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 	}, nil
 }
 
-func (t *DeviceTarget) Tftp() *tftp.Client {
+// Tftp returns a tftp client interface for the device.
+func (t *DeviceTarget) Tftp() tftp.Client {
 	return t.tftp
 }
 

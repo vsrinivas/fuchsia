@@ -83,7 +83,7 @@ var transferOrder = map[string]int{
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
 // device will either be paved or netbooted with the provided images, command-line
 // arguments and a public SSH user key.
-func Boot(ctx context.Context, t *tftp.Client, bootMode int, imgs []build.Image, cmdlineArgs []string, signers []ssh.Signer) error {
+func Boot(ctx context.Context, t tftp.Client, bootMode int, imgs []build.Image, cmdlineArgs []string, signers []ssh.Signer) error {
 	var bootArgs func(build.Image) []string
 	switch bootMode {
 	case ModePave:
@@ -154,17 +154,17 @@ func Boot(ctx context.Context, t *tftp.Client, bootMode int, imgs []build.Image,
 		// Try to send the boot command a few times, as there's no ack, so it's
 		// not possible to tell if it's successfully booted or not.
 		for i := 0; i < 5; i++ {
-			n.Boot(t.RemoteAddr)
+			n.Boot(t.RemoteAddr())
 		}
 	}
-	return n.Reboot(t.RemoteAddr)
+	return n.Reboot(t.RemoteAddr())
 }
 
 // BootZedbootShim extracts the Zircon-R image that is intended to be paved to the device
 // and mexec()'s it, it is intended to be executed before calling Boot().
 // This function serves to emulate zero-state, and will eventually be superseded by an
 // infra implementation.
-func BootZedbootShim(ctx context.Context, t *tftp.Client, imgs []build.Image) error {
+func BootZedbootShim(ctx context.Context, t tftp.Client, imgs []build.Image) error {
 	files, err := filterZedbootShimImages(imgs)
 	if err != nil {
 		return err
@@ -180,9 +180,9 @@ func BootZedbootShim(ctx context.Context, t *tftp.Client, imgs []build.Image) er
 	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
 	n := netboot.NewClient(time.Second)
 	if hasRAMKernel {
-		return n.Boot(t.RemoteAddr)
+		return n.Boot(t.RemoteAddr())
 	}
-	return n.Reboot(t.RemoteAddr)
+	return n.Reboot(t.RemoteAddr())
 }
 
 func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
@@ -261,7 +261,7 @@ func newNetsvcFile(name string, buf []byte) (*netsvcFile, error) {
 }
 
 // Transfers files over TFTP to a node at a given address.
-func transfer(ctx context.Context, t *tftp.Client, files []*netsvcFile) error {
+func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 	// Attempt the whole process of sending every file over and retry on failure of any file.
 	// This behavior more closely aligns with that of the bootserver.
 	return retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 20), func() error {

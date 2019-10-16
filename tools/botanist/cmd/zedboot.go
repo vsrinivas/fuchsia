@@ -74,7 +74,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, t *tftp.Client, cmdlineArgs []string) error {
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, t tftp.Client, cmdlineArgs []string) error {
 	logger.Debugf(ctx, "waiting for %q\n", cmd.summaryFilename)
 	return runtests.PollForSummary(ctx, t, cmd.summaryFilename, cmd.testResultsDir, cmd.outputArchive, cmd.filePollInterval)
 }
