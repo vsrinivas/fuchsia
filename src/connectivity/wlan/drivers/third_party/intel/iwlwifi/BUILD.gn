@@ -33,6 +33,7 @@ source_set("core") {
     "iwl-io.c",
     "iwl-io.h",
     "iwl-phy-db.c",
+    "iwl-prph.h",
     "iwl-trans.c",
     "iwl-trans.h",
     "mvm/fw.c",

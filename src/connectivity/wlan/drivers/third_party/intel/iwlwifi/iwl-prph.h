@@ -36,6 +36,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PRPH_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PRPH_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 /*
  * Registers in this file are internal, not PCI bus memory mapped.
  * Driver accesses these via HBUS_TARG_PRPH_* registers.
@@ -216,11 +218,11 @@
 
 #define SCD_QUEUE_CTX_REG1_CREDIT (0x00FFFF00)
 #define SCD_QUEUE_CTX_REG1_SUPER_CREDIT (0xFF000000)
-#define SCD_QUEUE_CTX_REG1_VAL(_n, _v) FIELD_PREP(SCD_QUEUE_CTX_REG1_##_n, _v)
+#define SCD_QUEUE_CTX_REG1_VAL(_n, _v) ((_v) << __builtin_ctz(SCD_QUEUE_CTX_REG1_##_n))
 
 #define SCD_QUEUE_CTX_REG2_WIN_SIZE (0x0000007F)
 #define SCD_QUEUE_CTX_REG2_FRAME_LIMIT (0x007F0000)
-#define SCD_QUEUE_CTX_REG2_VAL(_n, _v) FIELD_PREP(SCD_QUEUE_CTX_REG2_##_n, _v)
+#define SCD_QUEUE_CTX_REG2_VAL(_n, _v) ((_v) << __builtin_ctz(SCD_QUEUE_CTX_REG2_##_n))
 
 #define SCD_GP_CTRL_ENABLE_31_QUEUES BIT(0)
 #define SCD_GP_CTRL_DRAM_BC_TABLE_DUP_DIS BIT(16)
