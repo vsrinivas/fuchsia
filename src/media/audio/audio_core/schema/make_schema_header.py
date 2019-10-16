@@ -34,37 +34,39 @@ FOOTER = """
 }  // namespace media::audio
 """
 
+
 def main():
-  if len(sys.argv) != 3:
-    print "Usage: %s <input_file> <output_file>" % (sys.argv[0], )
-    exit(-1)
+    if len(sys.argv) != 3:
+        print "Usage: %s <input_file> <output_file>" % (sys.argv[0],)
+        exit(-1)
 
-  lines = open(sys.argv[1], 'r').readlines()
-  out = open(sys.argv[2], 'w')
-  varname = re.sub('_([a-zA-Z0-9])',
-                   lambda m: m.group(1).upper(),
-                   'k_' + os.path.splitext(os.path.split(sys.argv[1])[1])[0])
+    lines = open(sys.argv[1], 'r').readlines()
+    out = open(sys.argv[2], 'w')
+    varname = re.sub(
+        '_([a-zA-Z0-9])', lambda m: m.group(1).upper(),
+        'k_' + os.path.splitext(os.path.split(sys.argv[1])[1])[0])
 
-  out.write(HEADER % (varname, ));
+    out.write(HEADER % (varname,))
 
-  for i in range(len(lines)):
-    l = lines[i].replace('\n', '')   # Remove the trailing newline
-    l = re.sub('//.*', '', l)        # Remove any comments
-    l = re.sub('(^\s+|\s+$)', '', l) # Remove leading/trailing whitespace
-    l = l.replace('"', '\\"')        # Escape all double-quotes
+    for i in range(len(lines)):
+        l = lines[i].replace('\n', '')  # Remove the trailing newline
+        l = re.sub('//.*', '', l)  # Remove any comments
+        l = re.sub('(^\s+|\s+$)', '', l)  # Remove leading/trailing whitespace
+        l = l.replace('"', '\\"')  # Escape all double-quotes
 
-    # Skip empty lines
-    if len(l) == 0:
-      continue
+        # Skip empty lines
+        if len(l) == 0:
+            continue
 
-    out.write('    "%s"' % (l, ))
-    if ((i + 1) == len(lines)):
-      out.write(';\n')
-    else:
-      out.write('\n')
+        out.write('    "%s"' % (l,))
+        if ((i + 1) == len(lines)):
+            out.write(';\n')
+        else:
+            out.write('\n')
 
-  out.write(FOOTER)
-  out.close()
+    out.write(FOOTER)
+    out.close()
+
 
 if __name__ == '__main__':
-  main()
+    main()
