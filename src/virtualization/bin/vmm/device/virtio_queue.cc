@@ -45,6 +45,9 @@ bool VirtioQueue::NextChain(VirtioChain* chain) {
     if (head >= ring_.size) {
       return false;
     }
+    if (use_event_index_ && ring_.avail_event) {
+      *ring_.avail_event = ring_.index;
+    }
   }
   *chain = VirtioChain(this, head);
   return true;
