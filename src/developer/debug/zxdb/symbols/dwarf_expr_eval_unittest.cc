@@ -33,7 +33,7 @@ class DwarfExprEvalTest : public testing::Test {
   // failure. The expected result will only be checked on success, true, and
   // the expected_message will only be checked on failure.
   void DoEvalTest(const std::vector<uint8_t> data, bool expected_success,
-                  DwarfExprEval::Completion expected_completion, uint64_t expected_result,
+                  DwarfExprEval::Completion expected_completion, uint128_t expected_result,
                   DwarfExprEval::ResultType expected_result_type,
                   const char* expected_message = nullptr);
 
@@ -46,7 +46,7 @@ class DwarfExprEvalTest : public testing::Test {
 
 void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expected_success,
                                    DwarfExprEval::Completion expected_completion,
-                                   uint64_t expected_result,
+                                   uint128_t expected_result,
                                    DwarfExprEval::ResultType expected_result_type,
                                    const char* expected_message) {
   bool callback_issued = false;
@@ -278,7 +278,7 @@ TEST_F(DwarfExprEvalTest, CFA) {
 
 TEST_F(DwarfExprEvalTest, Const1s) {
   DoEvalTest({llvm::dwarf::DW_OP_const1s, static_cast<uint8_t>(-3)}, true,
-             DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-3),
+             DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-3),
              DwarfExprEval::ResultType::kPointer);
 }
 
@@ -289,7 +289,7 @@ TEST_F(DwarfExprEvalTest, Const1u) {
 
 TEST_F(DwarfExprEvalTest, Const2s) {
   DoEvalTest({llvm::dwarf::DW_OP_const2s, static_cast<uint8_t>(-3), 0xff}, true,
-             DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-3),
+             DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-3),
              DwarfExprEval::ResultType::kPointer);
 }
 
@@ -300,7 +300,7 @@ TEST_F(DwarfExprEvalTest, Const2u) {
 
 TEST_F(DwarfExprEvalTest, Const4s) {
   DoEvalTest({llvm::dwarf::DW_OP_const4s, static_cast<uint8_t>(-3), 0xff, 0xff, 0xff}, true,
-             DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-3),
+             DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-3),
              DwarfExprEval::ResultType::kPointer);
 }
 
@@ -312,7 +312,7 @@ TEST_F(DwarfExprEvalTest, Const4u) {
 TEST_F(DwarfExprEvalTest, Const8s) {
   DoEvalTest({llvm::dwarf::DW_OP_const8s, static_cast<uint8_t>(-3), 0xff, 0xff, 0xff, 0xff, 0xff,
               0xff, 0xff},
-             true, DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-3),
+             true, DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-3),
              DwarfExprEval::ResultType::kPointer);
 }
 
@@ -325,7 +325,7 @@ TEST_F(DwarfExprEvalTest, Const8u) {
 TEST_F(DwarfExprEvalTest, Consts) {
   // -127 in SLEB is 0x81, 0x7f (example in DWARF spec).
   DoEvalTest({llvm::dwarf::DW_OP_consts, 0x81, 0x7f}, true, DwarfExprEval::Completion::kSync,
-             static_cast<uint64_t>(-127), DwarfExprEval::ResultType::kPointer);
+             static_cast<DwarfExprEval::StackEntry>(-127), DwarfExprEval::ResultType::kPointer);
 }
 
 // Tests both "constu" and "drop".
@@ -345,7 +345,7 @@ TEST_F(DwarfExprEvalTest, DupAdd) {
 TEST_F(DwarfExprEvalTest, Neg) {
   // Negate one should give -1 casted to unsigned.
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_neg}, true,
-             DwarfExprEval::Completion::kSync, 0xffffffffffffffffu,
+             DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-1),
              DwarfExprEval::ResultType::kPointer);
 
   // Double negate should come back to 1.
@@ -355,7 +355,7 @@ TEST_F(DwarfExprEvalTest, Neg) {
 
 TEST_F(DwarfExprEvalTest, Not) {
   DoEvalTest({llvm::dwarf::DW_OP_lit1, llvm::dwarf::DW_OP_not}, true,
-             DwarfExprEval::Completion::kSync, 0xfffffffffffffffeu,
+             DwarfExprEval::Completion::kSync, ~static_cast<DwarfExprEval::StackEntry>(1),
              DwarfExprEval::ResultType::kPointer);
 }
 
@@ -449,7 +449,7 @@ TEST_F(DwarfExprEvalTest, Div) {
   // 8 / -2 = -4.
   DoEvalTest({llvm::dwarf::DW_OP_lit8, llvm::dwarf::DW_OP_lit2, llvm::dwarf::DW_OP_neg,
               llvm::dwarf::DW_OP_div},
-             true, DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-4),
+             true, DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-4),
              DwarfExprEval::ResultType::kPointer);
 
   // Divide by zero should give an error.
@@ -485,7 +485,7 @@ TEST_F(DwarfExprEvalTest, Shra) {
   // -7 (=0b1111...1111001) >> 2 = -2 (=0b1111...1110)
   DoEvalTest({llvm::dwarf::DW_OP_lit7, llvm::dwarf::DW_OP_neg, llvm::dwarf::DW_OP_lit2,
               llvm::dwarf::DW_OP_shra},
-             true, DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-2),
+             true, DwarfExprEval::Completion::kSync, static_cast<DwarfExprEval::StackEntry>(-2),
              DwarfExprEval::ResultType::kPointer);
 }
 
@@ -634,6 +634,27 @@ TEST_F(DwarfExprEvalTest, DerefSize) {
 
   DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, kMemValue + kAddAmount,
              DwarfExprEval::ResultType::kValue);
+}
+
+TEST_F(DwarfExprEvalTest, ImplicitValue) {
+  // This is a real program GCC generated for the 80-bit constant 2.38. It encodes it as a 128-bit
+  // constant for some reason.
+  // clang-format off
+  std::vector<uint8_t> program = {llvm::dwarf::DW_OP_implicit_value, 0x10,
+                                  0x00, 0x50, 0xb8, 0x1e, 0x85, 0xeb, 0x51, 0x98,
+                                  0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  constexpr uint128_t kExpected = (static_cast<uint128_t>(0x4000) << 64) | 0x9851eb851eb85000llu;
+  DoEvalTest(program, true, DwarfExprEval::Completion::kSync, kExpected,
+             DwarfExprEval::ResultType::kValue);
+
+  // This program declares it has 0x10 bytes of data (2nd array value), but there are only 0x0f
+  // values following it.
+  std::vector<uint8_t> bad_program = {llvm::dwarf::DW_OP_implicit_value, 0x10,
+                                      0x00, 0x50, 0xb8, 0x1e, 0x85, 0xeb, 0x51, 0x98,
+                                      0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00};
+  // clang-format on
+  DoEvalTest(bad_program, false, DwarfExprEval::Completion::kSync, kExpected,
+             DwarfExprEval::ResultType::kValue, "DWARF implicit value length too long: 0x10.");
 }
 
 }  // namespace zxdb

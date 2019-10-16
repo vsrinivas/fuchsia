@@ -162,14 +162,15 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallba
   if (!type)
     return cb(Err("Missing type information."), var);
 
-  std::optional<uint64_t> ip;
+  std::optional<uint128_t> ip;
   data_provider_->GetRegister(debug_ipc::GetSpecialRegisterID(data_provider_->GetArch(),
                                                               debug_ipc::SpecialRegisterType::kIP),
                               &ip);
   if (!ip)  // The IP should never require an async call.
     return cb(Err("No location available."), var);
 
-  const VariableLocation::Entry* loc_entry = var->location().EntryForIP(symbol_context_, *ip);
+  const VariableLocation::Entry* loc_entry =
+      var->location().EntryForIP(symbol_context_, static_cast<TargetPointer>(*ip));
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
     const char* err_str;

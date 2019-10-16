@@ -12,6 +12,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/macros.h"
@@ -52,6 +53,17 @@ class DwarfExprEval {
   // exist in memory).
   enum class ResultType { kPointer, kValue };
 
+  // The DWARF spec says the stack entry "can represent a value of any supported base type of the
+  // target machine". We need to support x87 long doubles (80 bits) and XMM registers (128 bits).
+  // Generally the XMM registers used for floating point use only the low 64 bits and long doubles
+  // are very uncommon, but using 128 bits here covers the edge cases better. The ARM "v" registers
+  // (128 bits) are similar.
+  //
+  // The YMM (256 bit) and ZMM (512 bit) x64 reigisters aren't currently representable in DWARF
+  // expressions so larger numbers are unnecessary.
+  using StackEntry = uint128_t;
+  using SignedStackEntry = int128_t;
+
   // Storage for opcode data.
   using Expression = std::vector<uint8_t>;
 
@@ -69,8 +81,9 @@ class DwarfExprEval {
   ResultType GetResultType() const;
 
   // Valid when is_success(), this returns the result of evaluating the expression. The meaning will
-  // be dependent on the context of the expression being evaluated.
-  uint64_t GetResult() const;
+  // be dependent on the context of the expression being evaluated. Most results will be smaller
+  // than this in which case they will use only the low bits.
+  StackEntry GetResult() const;
 
   // This will take a reference to the SymbolDataProvider until the computation is complete.
   //
@@ -97,24 +110,24 @@ class DwarfExprEval {
 
   // Adds a register's contents + an offset to the stack. Use 0 for the offset to get the raw
   // register value.
-  Completion PushRegisterWithOffset(int dwarf_register_number, int64_t offset);
+  Completion PushRegisterWithOffset(int dwarf_register_number, int128_t offset);
 
   // Pushes a value on the stack.
-  void Push(uint64_t value);
+  void Push(StackEntry value);
 
   // These read constant data from the current index in the stream. The size of the data is in
   // byte_size, and the result will be extended to 64 bits according to the type.
   //
   // They return true if the value was read, false if there wasn't enough data (they will issue the
   // error internally, the calling code should just return on failure).
-  bool ReadSigned(int byte_size, int64_t* output);
-  bool ReadUnsigned(int byte_size, uint64_t* output);
+  bool ReadSigned(int byte_size, SignedStackEntry* output);
+  bool ReadUnsigned(int byte_size, StackEntry* output);
 
   // Reads a signed or unsigned LEB constant from the stream. They return true if the value was
   // read, false if there wasn't enough data (they will issue the error internally, the calling code
   // should just return on failure).
-  bool ReadLEBSigned(int64_t* output);
-  bool ReadLEBUnsigned(uint64_t* output);
+  bool ReadLEBSigned(SignedStackEntry* output);
+  bool ReadLEBUnsigned(StackEntry* output);
 
   void ReportError(const std::string& msg);
   void ReportError(const Err& err);
@@ -123,11 +136,11 @@ class DwarfExprEval {
 
   // Executes the given unary operation with the top stack entry as the parameter and pushes the
   // result.
-  Completion OpUnary(uint64_t (*op)(uint64_t));
+  Completion OpUnary(StackEntry (*op)(StackEntry));
 
   // Executes the given binary operation by popping the top two stack entries as parameters (the
   // first is the next-to-top, the second is the top) and pushing the result on the stack.
-  Completion OpBinary(uint64_t (*op)(uint64_t, uint64_t));
+  Completion OpBinary(StackEntry (*op)(StackEntry, StackEntry));
 
   // Operations. On call, the expr_index_ will index the byte following the opcode, and on return
   // expr_index_ will index the next instruction (any parameters will be consumed).
@@ -141,6 +154,7 @@ class DwarfExprEval {
   Completion OpDrop();
   Completion OpDup();
   Completion OpFbreg();
+  Completion OpImplicitValue();
   Completion OpRegx();
   Completion OpBregx();
   Completion OpMod();
@@ -158,7 +172,7 @@ class DwarfExprEval {
 
   // Adjusts the instruction offset by the given amount, handling out-of-bounds as appropriate. This
   // is the backend for jumps and branches.
-  void Skip(int64_t amount);
+  void Skip(int128_t amount);
 
   fxl::RefPtr<SymbolDataProvider> data_provider_;
   SymbolContext symbol_context_;
@@ -186,7 +200,7 @@ class DwarfExprEval {
   // Indicates that the expression is complete and that there is a result value.
   bool is_success_ = false;
 
-  std::vector<uint64_t> stack_;
+  std::vector<StackEntry> stack_;
 
   fxl::WeakPtrFactory<DwarfExprEval> weak_factory_;
 

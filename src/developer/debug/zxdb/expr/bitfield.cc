@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/bitfield.h"
 
+#include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/found_member.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -15,7 +16,6 @@ namespace {
 // We use 128-bit numbers for bitfield computations so we can shift around 64 bit bitfields. This
 // allows us to handle anything up to 120 bits, or 128 bits if the beginning is aligned. This
 // limitation seems reasonable.
-using uint128_t = __int128;
 
 // We treat "signed int" bitfields as being signed and needing sign extensions. Whether "int"
 // bitfields are signed or unsigned is actually implementation-defined in the C standard.

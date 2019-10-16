@@ -35,7 +35,7 @@ DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
   return result_type_;
 }
 
-uint64_t DwarfExprEval::GetResult() const {
+DwarfExprEval::StackEntry DwarfExprEval::GetResult() const {
   FXL_DCHECK(is_complete_);
   FXL_DCHECK(is_success_);
   return stack_.back();
@@ -172,53 +172,55 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
       return Completion::kSync;
     case llvm::dwarf::DW_OP_abs:
       return OpUnary(
-          [](uint64_t a) { return static_cast<uint64_t>(llabs(static_cast<long long>(a))); });
+          [](StackEntry a) { return static_cast<StackEntry>(llabs(static_cast<long long>(a))); });
     case llvm::dwarf::DW_OP_and:
-      return OpBinary([](uint64_t a, uint64_t b) { return a & b; });
+      return OpBinary([](StackEntry a, StackEntry b) { return a & b; });
     case llvm::dwarf::DW_OP_div:
       return OpDiv();
     case llvm::dwarf::DW_OP_minus:
-      return OpBinary([](uint64_t a, uint64_t b) { return a - b; });
+      return OpBinary([](StackEntry a, StackEntry b) { return a - b; });
     case llvm::dwarf::DW_OP_mod:
       return OpMod();
     case llvm::dwarf::DW_OP_mul:
-      return OpBinary([](uint64_t a, uint64_t b) { return a * b; });
+      return OpBinary([](StackEntry a, StackEntry b) { return a * b; });
     case llvm::dwarf::DW_OP_neg:
-      return OpUnary([](uint64_t a) { return static_cast<uint64_t>(-static_cast<int64_t>(a)); });
+      return OpUnary(
+          [](StackEntry a) { return static_cast<StackEntry>(-static_cast<SignedStackEntry>(a)); });
     case llvm::dwarf::DW_OP_not:
-      return OpUnary([](uint64_t a) { return ~a; });
+      return OpUnary([](StackEntry a) { return ~a; });
     case llvm::dwarf::DW_OP_or:
-      return OpBinary([](uint64_t a, uint64_t b) { return a | b; });
+      return OpBinary([](StackEntry a, StackEntry b) { return a | b; });
     case llvm::dwarf::DW_OP_plus:
-      return OpBinary([](uint64_t a, uint64_t b) { return a + b; });
+      return OpBinary([](StackEntry a, StackEntry b) { return a + b; });
     case llvm::dwarf::DW_OP_plus_uconst:
       return OpPlusUconst();
     case llvm::dwarf::DW_OP_shl:
-      return OpBinary([](uint64_t a, uint64_t b) { return a << b; });
+      return OpBinary([](StackEntry a, StackEntry b) { return a << b; });
     case llvm::dwarf::DW_OP_shr:
-      return OpBinary([](uint64_t a, uint64_t b) { return a >> b; });
+      return OpBinary([](StackEntry a, StackEntry b) { return a >> b; });
     case llvm::dwarf::DW_OP_shra:
-      return OpBinary([](uint64_t a, uint64_t b) {
-        return static_cast<uint64_t>(static_cast<int64_t>(a) >> static_cast<int64_t>(b));
+      return OpBinary([](StackEntry a, StackEntry b) {
+        return static_cast<StackEntry>(static_cast<SignedStackEntry>(a) >>
+                                       static_cast<SignedStackEntry>(b));
       });
     case llvm::dwarf::DW_OP_xor:
-      return OpBinary([](uint64_t a, uint64_t b) { return a ^ b; });
+      return OpBinary([](StackEntry a, StackEntry b) { return a ^ b; });
     case llvm::dwarf::DW_OP_skip:
       return OpSkip();
     case llvm::dwarf::DW_OP_bra:
       return OpBra();
     case llvm::dwarf::DW_OP_eq:
-      return OpBinary([](uint64_t a, uint64_t b) { return static_cast<uint64_t>(a == b); });
+      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a == b); });
     case llvm::dwarf::DW_OP_ge:
-      return OpBinary([](uint64_t a, uint64_t b) { return static_cast<uint64_t>(a >= b); });
+      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a >= b); });
     case llvm::dwarf::DW_OP_gt:
-      return OpBinary([](uint64_t a, uint64_t b) { return static_cast<uint64_t>(a > b); });
+      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a > b); });
     case llvm::dwarf::DW_OP_le:
-      return OpBinary([](uint64_t a, uint64_t b) { return static_cast<uint64_t>(a <= b); });
+      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a <= b); });
     case llvm::dwarf::DW_OP_lt:
-      return OpBinary([](uint64_t a, uint64_t b) { return static_cast<uint64_t>(a < b); });
+      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a < b); });
     case llvm::dwarf::DW_OP_ne:
-      return OpBinary([](uint64_t a, uint64_t b) { return static_cast<uint64_t>(a != b); });
+      return OpBinary([](StackEntry a, StackEntry b) { return static_cast<StackEntry>(a != b); });
     case llvm::dwarf::DW_OP_regx:
       return OpRegx();
     case llvm::dwarf::DW_OP_fbreg:
@@ -226,11 +228,17 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_bregx:
       return OpBregx();
     case llvm::dwarf::DW_OP_piece:
-      // TODO(brettw) implement this.
+      // TODO(brettw) implement this. An example oif LLVM building a 80-bit constant:
+      //   DW_OP_constu 0x9851eb851eb85000, DW_OP_stack_value, DW_OP_piece 0x8,
+      //   DW_OP_constu 0x4000, DW_OP_stack_value, DW_OP_bit_piece 0x10 0x40, DW_OP_stack_value
+      // For the code:
+      //   long double ld = 2.38;
+      //   ld += argc;  // Force non-constant.
+      // Which in binary is 0x04009851eb851eb85000
       ReportUnimplementedOpcode(op);
       return Completion::kSync;
     case llvm::dwarf::DW_OP_deref:
-      return OpDeref(sizeof(uint64_t));
+      return OpDeref(sizeof(TargetPointer));
     case llvm::dwarf::DW_OP_deref_size:
       return OpDerefSize();
     case llvm::dwarf::DW_OP_xderef_size:
@@ -249,11 +257,12 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
       return Completion::kSync;
     case llvm::dwarf::DW_OP_call_frame_cfa:
       return OpCFA();
-    case llvm::dwarf::DW_OP_bit_piece:       // ULEB128 size + ULEB128 offset.
-    case llvm::dwarf::DW_OP_implicit_value:  // ULEB128 size + block of size.
-      // TODO(brettw) implement these.
+    case llvm::dwarf::DW_OP_bit_piece:  // ULEB128 size + ULEB128 offset.
+      // TODO(brettw) implement this, see DW_OP_piece.
       ReportUnimplementedOpcode(op);
       return Completion::kSync;
+    case llvm::dwarf::DW_OP_implicit_value:  // ULEB128 size + block of size.
+      return OpImplicitValue();
     case llvm::dwarf::DW_OP_stack_value:
       return OpStackValue();
     case llvm::dwarf::DW_OP_GNU_push_tls_address:
@@ -285,7 +294,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
 }
 
 DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_register_number,
-                                                                int64_t offset) {
+                                                                SignedStackEntry offset) {
   const debug_ipc::RegisterInfo* reg_info =
       debug_ipc::DWARFToRegisterInfo(data_provider_->GetArch(), dwarf_register_number);
   if (!reg_info) {
@@ -296,7 +305,7 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
   // This function doesn't set the result_type_ because it is called from
   // different contexts. The callers should set the result_type_ as appropriate
   // for their operation.
-  if (std::optional<uint64_t> reg_data; data_provider_->GetRegister(reg_info->id, &reg_data)) {
+  if (std::optional<StackEntry> reg_data; data_provider_->GetRegister(reg_info->id, &reg_data)) {
     // State known synchronously (could be available or known unavailable).
     if (!reg_data) {
       ReportError(fxl::StringPrintf("Register %d not available.", dwarf_register_number));
@@ -308,14 +317,14 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
 
   // Must request async.
   data_provider_->GetRegisterAsync(reg_info->id, [weak_eval = weak_factory_.GetWeakPtr(), offset](
-                                                     const Err& err, uint64_t value) {
+                                                     const Err& err, StackEntry value) {
     if (!weak_eval)
       return;
     if (err.has_error()) {
       weak_eval->ReportError(err);
       return;
     }
-    weak_eval->Push(static_cast<uint64_t>(value + offset));
+    weak_eval->Push(static_cast<StackEntry>(value + offset));
 
     // Picks up processing at the next instruction.
     weak_eval->ContinueEval();
@@ -324,11 +333,11 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
   return Completion::kAsync;
 }
 
-void DwarfExprEval::Push(uint64_t value) { stack_.push_back(value); }
+void DwarfExprEval::Push(StackEntry value) { stack_.push_back(value); }
 
-bool DwarfExprEval::ReadSigned(int byte_size, int64_t* output) {
+bool DwarfExprEval::ReadSigned(int byte_size, SignedStackEntry* output) {
   uint32_t old_expr_index = expr_index_;
-  *output = data_extractor_->getSigned(&expr_index_, byte_size);
+  *output = (SignedStackEntry)(int64_t)data_extractor_->getSigned(&expr_index_, byte_size);
   if (old_expr_index == expr_index_) {
     ReportError("Bad number format in DWARF expression.");
     return false;
@@ -336,7 +345,7 @@ bool DwarfExprEval::ReadSigned(int byte_size, int64_t* output) {
   return true;
 }
 
-bool DwarfExprEval::ReadUnsigned(int byte_size, uint64_t* output) {
+bool DwarfExprEval::ReadUnsigned(int byte_size, StackEntry* output) {
   uint32_t old_expr_index = expr_index_;
   *output = data_extractor_->getUnsigned(&expr_index_, byte_size);
   if (old_expr_index == expr_index_) {
@@ -346,7 +355,7 @@ bool DwarfExprEval::ReadUnsigned(int byte_size, uint64_t* output) {
   return true;
 }
 
-bool DwarfExprEval::ReadLEBSigned(int64_t* output) {
+bool DwarfExprEval::ReadLEBSigned(SignedStackEntry* output) {
   uint32_t old_expr_index = expr_index_;
   *output = data_extractor_->getSLEB128(&expr_index_);
   if (old_expr_index == expr_index_) {
@@ -356,7 +365,7 @@ bool DwarfExprEval::ReadLEBSigned(int64_t* output) {
   return true;
 }
 
-bool DwarfExprEval::ReadLEBUnsigned(uint64_t* output) {
+bool DwarfExprEval::ReadLEBUnsigned(StackEntry* output) {
   uint32_t old_expr_index = expr_index_;
   *output = data_extractor_->getULEB128(&expr_index_);
   if (old_expr_index == expr_index_) {
@@ -386,7 +395,7 @@ void DwarfExprEval::ReportUnimplementedOpcode(uint8_t op) {
   ReportError(fxl::StringPrintf("Unimplemented opcode 0x%x in DWARF expression.", op));
 }
 
-DwarfExprEval::Completion DwarfExprEval::OpUnary(uint64_t (*op)(uint64_t)) {
+DwarfExprEval::Completion DwarfExprEval::OpUnary(StackEntry (*op)(StackEntry)) {
   if (stack_.empty())
     ReportStackUnderflow();
   else
@@ -394,13 +403,13 @@ DwarfExprEval::Completion DwarfExprEval::OpUnary(uint64_t (*op)(uint64_t)) {
   return Completion::kSync;
 }
 
-DwarfExprEval::Completion DwarfExprEval::OpBinary(uint64_t (*op)(uint64_t, uint64_t)) {
+DwarfExprEval::Completion DwarfExprEval::OpBinary(StackEntry (*op)(StackEntry, StackEntry)) {
   if (stack_.size() < 2) {
     ReportStackUnderflow();
   } else {
-    uint64_t b = stack_.back();
+    StackEntry b = stack_.back();
     stack_.pop_back();
-    uint64_t a = stack_.back();
+    StackEntry a = stack_.back();
     stack_.back() = op(a, b);
   }
   return Completion::kSync;
@@ -409,11 +418,11 @@ DwarfExprEval::Completion DwarfExprEval::OpBinary(uint64_t (*op)(uint64_t, uint6
 // 1 parameter: unsigned the size of a pointer. This is relative to the load
 // address of the current module. It is used to for globals and statics.
 DwarfExprEval::Completion DwarfExprEval::OpAddr() {
-  TargetPointer offset;
+  StackEntry offset;
   if (!ReadUnsigned(kTargetPointerSize, &offset))
     return Completion::kSync;
 
-  Push(symbol_context_.RelativeToAbsolute(offset));
+  Push(symbol_context_.RelativeToAbsolute(static_cast<TargetPointer>(offset)));
   return Completion::kSync;
 }
 
@@ -422,7 +431,7 @@ DwarfExprEval::Completion DwarfExprEval::OpBra() {
   // "The 2-byte constant is the number of bytes of the DWARF expression to skip
   // forward or backward from the current operation, beginning after the 2-byte
   // constant."
-  int64_t skip_amount = 0;
+  SignedStackEntry skip_amount = 0;
   if (!ReadSigned(2, &skip_amount))
     return Completion::kSync;
 
@@ -432,7 +441,7 @@ DwarfExprEval::Completion DwarfExprEval::OpBra() {
   }
 
   // 0 @ top of stack means don't take the branch.
-  uint64_t condition = stack_.back();
+  StackEntry condition = stack_.back();
   stack_.pop_back();
   if (condition == 0)
     return Completion::kSync;
@@ -445,7 +454,7 @@ DwarfExprEval::Completion DwarfExprEval::OpBra() {
 // 1 parameter: SLEB128 offset added to base register.
 DwarfExprEval::Completion DwarfExprEval::OpBreg(uint8_t op) {
   int reg_index = op - llvm::dwarf::DW_OP_breg0;
-  int64_t offset = 0;
+  SignedStackEntry offset = 0;
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
 
@@ -454,7 +463,7 @@ DwarfExprEval::Completion DwarfExprEval::OpBreg(uint8_t op) {
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpCFA() {
-  if (uint64_t cfa = data_provider_->GetCanonicalFrameAddress())
+  if (StackEntry cfa = data_provider_->GetCanonicalFrameAddress())
     Push(cfa);
   else
     ReportError("Frame address is 0.");
@@ -465,14 +474,15 @@ DwarfExprEval::Completion DwarfExprEval::OpDiv() {
   if (stack_.size() < 2) {
     ReportStackUnderflow();
   } else {
-    uint64_t b = stack_.back();
+    StackEntry b = stack_.back();
     stack_.pop_back();
-    uint64_t a = stack_.back();
+    StackEntry a = stack_.back();
 
     if (b == 0) {
       ReportError("DWARF expression divided by zero.");
     } else {
-      stack_.back() = static_cast<uint64_t>(static_cast<int64_t>(a) / static_cast<int64_t>(b));
+      stack_.back() = static_cast<StackEntry>(static_cast<SignedStackEntry>(a) /
+                                              static_cast<SignedStackEntry>(b));
     }
   }
   return Completion::kSync;
@@ -496,7 +506,7 @@ DwarfExprEval::Completion DwarfExprEval::OpDup() {
 
 // 1 parameter: Signed LEB128 offset from frame base pointer.
 DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
-  int64_t offset = 0;
+  SignedStackEntry offset = 0;
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
 
@@ -515,7 +525,7 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
 
   // Must request async.
   data_provider_->GetFrameBaseAsync(
-      [weak_eval = weak_factory_.GetWeakPtr(), offset](const Err& err, uint64_t value) {
+      [weak_eval = weak_factory_.GetWeakPtr(), offset](const Err& err, StackEntry value) {
         if (!weak_eval)
           return;
         if (err.has_error()) {
@@ -529,7 +539,7 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
         }
 
         weak_eval->result_type_ = ResultType::kPointer;
-        weak_eval->Push(static_cast<uint64_t>(value + offset));
+        weak_eval->Push(static_cast<StackEntry>(value + offset));
 
         // Picks up processing at the next instruction.
         weak_eval->ContinueEval();
@@ -538,9 +548,31 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
   return Completion::kAsync;
 }
 
+// 2 parameters: ULEB128 length, followed by that much data (in machine-endianness).
+DwarfExprEval::Completion DwarfExprEval::OpImplicitValue() {
+  StackEntry len = 0;
+  if (!ReadLEBUnsigned(&len))
+    return Completion::kSync;
+  if (len > sizeof(StackEntry) || expr_index_ + static_cast<size_t>(len) > expr_.size()) {
+    ReportError(fxl::StringPrintf("DWARF implicit value length too long: 0x%x.",
+                                  static_cast<unsigned>(len)));
+    return Completion::kSync;
+  }
+
+  StackEntry value = 0;
+  if (len > 0) {
+    memcpy(&value, &expr_[expr_index_], static_cast<size_t>(len));
+    Skip(len);
+  }
+
+  Push(value);
+  result_type_ = ResultType::kValue;
+  return Completion::kSync;
+}
+
 // 1 parameter: ULEB128 constant indexing the register.
 DwarfExprEval::Completion DwarfExprEval::OpRegx() {
-  uint64_t reg = 0;
+  StackEntry reg = 0;
   if (!ReadLEBUnsigned(&reg))
     return Completion::kSync;
 
@@ -550,11 +582,11 @@ DwarfExprEval::Completion DwarfExprEval::OpRegx() {
 
 // 2 parameters: ULEB128 register number + SLEB128 offset.
 DwarfExprEval::Completion DwarfExprEval::OpBregx() {
-  uint64_t reg = 0;
+  StackEntry reg = 0;
   if (!ReadLEBUnsigned(&reg))
     return Completion::kSync;
 
-  int64_t offset = 0;
+  SignedStackEntry offset = 0;
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
 
@@ -569,12 +601,12 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size) {
     return Completion::kSync;
   }
 
-  if (byte_size == 0 || byte_size > 8) {
+  if (byte_size == 0 || byte_size > sizeof(StackEntry)) {
     ReportError(fxl::StringPrintf("Invalid DWARF expression read size: %u", byte_size));
     return Completion::kSync;
   }
 
-  uint64_t addr = stack_.back();
+  StackEntry addr = stack_.back();
   stack_.pop_back();
   data_provider_->GetMemoryAsync(
       addr, byte_size,
@@ -585,10 +617,11 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size) {
         } else if (err.has_error()) {
           weak_eval->ReportError(err);
         } else if (value.size() != byte_size) {
-          weak_eval->ReportError(fxl::StringPrintf("Invalid pointer 0x%" PRIx64 ".", addr));
+          weak_eval->ReportError(
+              fxl::StringPrintf("Invalid pointer 0x%" PRIx64 ".", static_cast<uint64_t>(addr)));
         } else {
           // Success (this assumes little-endian and copies starting from the low bytes).
-          uint64_t to_push = 0;
+          StackEntry to_push = 0;
           memcpy(&to_push, &value[0], byte_size);
           weak_eval->Push(to_push);
 
@@ -601,7 +634,7 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size) {
 
 DwarfExprEval::Completion DwarfExprEval::OpDerefSize() {
   // The operand is a 1-byte unsigned constant following the opcode.
-  uint64_t byte_size = 0;
+  StackEntry byte_size = 0;
   if (!ReadUnsigned(1, &byte_size))
     return Completion::kSync;
 
@@ -613,14 +646,15 @@ DwarfExprEval::Completion DwarfExprEval::OpMod() {
   if (stack_.size() < 2) {
     ReportStackUnderflow();
   } else {
-    uint64_t b = stack_.back();
+    StackEntry b = stack_.back();
     stack_.pop_back();
-    uint64_t a = stack_.back();
+    StackEntry a = stack_.back();
 
     if (b == 0) {
       ReportError("DWARF expression divided by zero.");
     } else {
-      stack_.back() = static_cast<uint64_t>(static_cast<int64_t>(a) % static_cast<int64_t>(b));
+      stack_.back() = static_cast<StackEntry>(static_cast<SignedStackEntry>(a) %
+                                              static_cast<SignedStackEntry>(b));
     }
   }
   return Completion::kSync;
@@ -637,7 +671,7 @@ DwarfExprEval::Completion DwarfExprEval::OpOver() {
 
 // 1 parameter: 1-byte stack index from the top to push.
 DwarfExprEval::Completion DwarfExprEval::OpPick() {
-  uint64_t index = 0;
+  StackEntry index = 0;
   if (!ReadUnsigned(1, &index))
     return Completion::kSync;
 
@@ -657,10 +691,10 @@ DwarfExprEval::Completion DwarfExprEval::OpPlusUconst() {
   if (stack_.empty()) {
     ReportStackUnderflow();
   } else {
-    uint64_t top = stack_.back();
+    StackEntry top = stack_.back();
     stack_.pop_back();
 
-    uint64_t param = 0;
+    StackEntry param = 0;
     if (ReadLEBUnsigned(&param))
       Push(top + param);
   }
@@ -668,28 +702,28 @@ DwarfExprEval::Completion DwarfExprEval::OpPlusUconst() {
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPushSigned(int byte_count) {
-  int64_t value = 0;
+  SignedStackEntry value = 0;
   if (ReadSigned(byte_count, &value))
-    Push(static_cast<uint64_t>(value));
+    Push(static_cast<StackEntry>(value));
   return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPushUnsigned(int byte_count) {
-  uint64_t value = 0;
+  StackEntry value = 0;
   if (ReadUnsigned(byte_count, &value))
     Push(value);
   return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPushLEBSigned() {
-  int64_t value = 0;
+  SignedStackEntry value = 0;
   if (ReadLEBSigned(&value))
-    Push(static_cast<uint64_t>(value));
+    Push(static_cast<StackEntry>(value));
   return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPushLEBUnsigned() {
-  uint64_t value = 0;
+  StackEntry value = 0;
   if (ReadLEBUnsigned(&value))
     Push(value);
   return Completion::kSync;
@@ -702,9 +736,9 @@ DwarfExprEval::Completion DwarfExprEval::OpRot() {
   if (stack_.size() < 3) {
     ReportStackUnderflow();
   } else {
-    uint64_t top = stack_[stack_.size() - 1];
-    uint64_t one_back = stack_[stack_.size() - 2];
-    uint64_t two_back = stack_[stack_.size() - 3];
+    StackEntry top = stack_[stack_.size() - 1];
+    StackEntry one_back = stack_[stack_.size() - 2];
+    StackEntry two_back = stack_[stack_.size() - 3];
 
     stack_[stack_.size() - 1] = one_back;
     stack_[stack_.size() - 2] = two_back;
@@ -715,7 +749,7 @@ DwarfExprEval::Completion DwarfExprEval::OpRot() {
 
 // 1 parameter: 2-byte signed constant.
 DwarfExprEval::Completion DwarfExprEval::OpSkip() {
-  int64_t skip_amount = 0;
+  SignedStackEntry skip_amount = 0;
   if (!ReadSigned(2, &skip_amount))
     return Completion::kSync;
   Skip(skip_amount);
@@ -743,9 +777,9 @@ DwarfExprEval::Completion DwarfExprEval::OpSwap() {
   return Completion::kSync;
 }
 
-void DwarfExprEval::Skip(int64_t amount) {
-  int64_t new_index = static_cast<int64_t>(expr_index_) + amount;
-  if (new_index >= static_cast<int64_t>(expr_.size())) {
+void DwarfExprEval::Skip(SignedStackEntry amount) {
+  SignedStackEntry new_index = static_cast<SignedStackEntry>(expr_index_) + amount;
+  if (new_index >= static_cast<SignedStackEntry>(expr_.size())) {
     // Skip to or past the end just terminates the program.
     expr_index_ = expr_.size();
   } else if (new_index < 0) {

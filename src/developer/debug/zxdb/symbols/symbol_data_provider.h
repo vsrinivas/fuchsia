@@ -12,6 +12,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
@@ -34,7 +35,7 @@ class Err;
 class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
  public:
   using GetMemoryCallback = fit::callback<void(const Err&, std::vector<uint8_t>)>;
-  using GetRegisterCallback = fit::callback<void(const Err&, uint64_t)>;
+  using GetRegisterCallback = fit::callback<void(const Err&, uint128_t)>;
   using WriteMemoryCallback = fit::callback<void(const Err&)>;
 
   virtual debug_ipc::Arch GetArch();
@@ -48,7 +49,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // In the synchronous case, we could have the value, but we could also know that the value is not
   // known (e.g. when that register was not saved for the stack frame). The *value will reflect this
   // when the return value is true.
-  virtual bool GetRegister(debug_ipc::RegisterID id, std::optional<uint64_t>* value);
+  virtual bool GetRegister(debug_ipc::RegisterID id, std::optional<uint128_t>* value);
 
   // Request for register data with an asynchronous callback. The callback will be issued when the
   // register data is available.

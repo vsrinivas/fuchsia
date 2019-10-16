@@ -29,7 +29,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // should be synchronously available, false if it should require a callback to retrieve.
   //
   // Any registers not set will be synchronously reported as unknown.
-  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, uint64_t value);
+  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, uint128_t value);
 
   // Sets an expected memory value.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
@@ -40,7 +40,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   // SymbolDataProvider implementation.
   debug_ipc::Arch GetArch() override;
-  bool GetRegister(debug_ipc::RegisterID id, std::optional<uint64_t>* value) override;
+  bool GetRegister(debug_ipc::RegisterID id, std::optional<uint128_t>* value) override;
   void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetRegisterCallback callback) override;
@@ -51,7 +51,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
  private:
   struct RegData {
     RegData() = default;
-    RegData(bool sync, uint64_t v) : synchronous(sync), value(v) {}
+    RegData(bool sync, uint128_t v) : synchronous(sync), value(v) {}
 
     bool synchronous = false;
     uint64_t value = 0;

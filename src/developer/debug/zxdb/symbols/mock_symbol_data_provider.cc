@@ -18,7 +18,7 @@ namespace zxdb {
 MockSymbolDataProvider::MockSymbolDataProvider() : weak_factory_(this) {}
 
 void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
-                                              uint64_t value) {
+                                              uint128_t value) {
   regs_[id] = RegData(synchronous, value);
 }
 
@@ -28,7 +28,8 @@ void MockSymbolDataProvider::AddMemory(uint64_t address, std::vector<uint8_t> da
 
 debug_ipc::Arch MockSymbolDataProvider::GetArch() { return debug_ipc::Arch::kArm64; }
 
-bool MockSymbolDataProvider::GetRegister(debug_ipc::RegisterID id, std::optional<uint64_t>* value) {
+bool MockSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
+                                         std::optional<uint128_t>* value) {
   *value = std::nullopt;
 
   if (GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP) {

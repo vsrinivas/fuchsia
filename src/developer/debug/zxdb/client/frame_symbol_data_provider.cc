@@ -40,7 +40,7 @@ void FrameSymbolDataProvider::Disown() {
 }
 
 bool FrameSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
-                                          std::optional<uint64_t>* value) {
+                                          std::optional<uint128_t>* value) {
   FXL_DCHECK(id != debug_ipc::RegisterID::kUnknown);
 
   *value = std::nullopt;
@@ -52,9 +52,8 @@ bool FrameSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
 
   for (const auto& r : frame_->GetGeneralRegisters()) {
     if (r.id() == id) {
-      // Currently we expect all general registers to be <= 64 bits and we're
-      // returning the value in 64 bits.
-      if (r.size() > 0 && r.size() <= sizeof(uint64_t))
+      // Currently we expect all general registers to be <= 128 bits.
+      if (r.size() > 0 && r.size() <= sizeof(uint128_t))
         *value = r.GetValue();
       return true;
     }
@@ -79,7 +78,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
   // Return them (or error if not available) if somebody requests them
   // asynchronously.
   if (debug_ipc::IsGeneralRegister(id)) {
-    std::optional<uint64_t> value;
+    std::optional<uint128_t> value;
     GetRegister(id, &value);
 
     debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,

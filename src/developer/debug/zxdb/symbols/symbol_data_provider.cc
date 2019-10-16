@@ -18,7 +18,7 @@ Err NoFrameErr() { return Err("No stack frame to evaluate."); }
 
 debug_ipc::Arch SymbolDataProvider::GetArch() { return debug_ipc::Arch::kUnknown; }
 
-bool SymbolDataProvider::GetRegister(debug_ipc::RegisterID id, std::optional<uint64_t>* value) {
+bool SymbolDataProvider::GetRegister(debug_ipc::RegisterID id, std::optional<uint128_t>* value) {
   *value = std::nullopt;
   return true;  // Known to be unknown.
 }
