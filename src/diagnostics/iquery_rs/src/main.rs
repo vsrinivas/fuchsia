@@ -24,7 +24,7 @@ async fn execute(options: &Options) -> Vec<IqueryResult> {
         ModeCommand::Cat | ModeCommand::Health | ModeCommand::Ls => {
             commands::cat(&options.path).await
         }
-        ModeCommand::Find => commands::find(&options.path).await,
+        ModeCommand::Find => commands::find(&options.path, options.recursive).await,
         ModeCommand::Report => {
             // REPORT is a CAT and Options takes care of treating it as such.
             panic!("Unexpected command");

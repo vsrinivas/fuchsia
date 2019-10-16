@@ -56,11 +56,11 @@ impl Formatter for TextFormatter {
         let mut outputs = vec![];
         for mut result in results.into_iter() {
             if self.sort {
-                result.hierarchy.sort();
+                result.sort_hierarchy();
             }
-            if self.max_depth.is_none() {
+            if self.max_depth.is_none() && result.is_loaded() {
                 let locations =
-                    get_locations(result.hierarchy, &result.location, &self.path_format);
+                    get_locations(result.hierarchy.unwrap(), &result.location, &self.path_format);
                 outputs.extend(locations.into_iter().map(|location| format!("{}", location)));
             } else {
                 outputs

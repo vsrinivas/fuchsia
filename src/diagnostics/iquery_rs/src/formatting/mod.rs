@@ -48,11 +48,15 @@ fn get_child_listing(
 ) -> Vec<String> {
     let mut children = vec![];
     for mut result in results {
+        if !result.is_loaded() {
+            continue;
+        }
         if sort {
-            result.hierarchy.sort();
+            result.sort_hierarchy();
         }
         let location = result.location.clone();
-        if let Some(result_children) = get_children(result.hierarchy, &location.parts[..]) {
+        if let Some(result_children) = get_children(result.hierarchy.unwrap(), &location.parts[..])
+        {
             let mut parts = location.parts.clone();
             children.extend(result_children.into_iter().map(|child| {
                 if *path_format == PathFormat::Undefined {

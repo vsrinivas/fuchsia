@@ -14,48 +14,74 @@ use {
 #[derive(Debug)]
 pub struct IqueryResult {
     pub location: InspectLocation,
-    pub hierarchy: NodeHierarchy,
+    pub hierarchy: Option<NodeHierarchy>,
 }
 
 impl IqueryResult {
+    pub fn new(location: InspectLocation) -> Self {
+        Self { location, hierarchy: None }
+    }
+
     pub async fn try_from(location: InspectLocation) -> Result<Self, Error> {
-        match location.inspect_type {
-            InspectType::Vmo => Self::try_from_vmo(location).await,
-            InspectType::DeprecatedFidl => Self::try_from_fidl(location).await,
+        let mut result = Self::new(location);
+        result.load().await?;
+        Ok(result)
+    }
+
+    pub async fn load(&mut self) -> Result<(), Error> {
+        match self.location.inspect_type {
+            InspectType::Vmo => self.load_from_vmo().await,
+            InspectType::DeprecatedFidl => self.load_from_fidl().await,
         }
     }
 
-    async fn try_from_vmo(location: InspectLocation) -> Result<Self, Error> {
+    pub fn is_loaded(&self) -> bool {
+        self.hierarchy.is_some()
+    }
+
+    pub fn sort_hierarchy(&mut self) {
+        match self.hierarchy {
+            None => return,
+            Some(ref mut hierarchy) => hierarchy.sort(),
+        }
+    }
+
+    async fn load_from_vmo(&mut self) -> Result<(), Error> {
         let proxy = io_util::open_file_in_namespace(
-            &location.absolute_path()?,
+            &self.location.absolute_path()?,
             io_util::OPEN_RIGHT_READABLE,
         )?;
 
         // Obtain the vmo backing any VmoFiles.
         let node_info = proxy.describe().await?;
         match node_info {
-            NodeInfo::Vmofile(vmofile) => NodeHierarchy::try_from(&vmofile.vmo),
+            NodeInfo::Vmofile(vmofile) => {
+                self.hierarchy = Some(NodeHierarchy::try_from(&vmofile.vmo)?);
+                Ok(())
+            }
             NodeInfo::File(_) => {
                 let bytes = io_util::read_file_bytes(&proxy).await?;
-                NodeHierarchy::try_from(bytes)
+                self.hierarchy = Some(NodeHierarchy::try_from(bytes)?);
+                Ok(())
             }
-            _ => Err(format_err!("Unknown inspect file at {}", location.path.display())),
+            _ => Err(format_err!("Unknown inspect file at {}", self.location.path.display())),
         }
-        .map(|hierarchy| Self { location, hierarchy })
     }
 
-    async fn try_from_fidl(location: InspectLocation) -> Result<Self, Error> {
-        let path = location.absolute_path()?;
-        let hierarchy = inspect_fidl::load_hierarchy_from_path(&path).await?;
-        Ok(IqueryResult { location, hierarchy })
+    async fn load_from_fidl(&mut self) -> Result<(), Error> {
+        let path = self.location.absolute_path()?;
+        self.hierarchy = Some(inspect_fidl::load_hierarchy_from_path(&path).await?);
+        Ok(())
     }
 
     pub fn get_query_hierarchy(&self) -> Option<&NodeHierarchy> {
         if self.location.parts.is_empty() {
-            return Some(&self.hierarchy);
+            return self.hierarchy.as_ref();
         }
         let remaining_path = &self.location.parts[..];
-        self.hierarchy.children.iter().filter_map(move |c| self.query(c, remaining_path)).next()
+        self.hierarchy.as_ref().and_then(|hierarchy| {
+            hierarchy.children.iter().filter_map(move |c| self.query(c, remaining_path)).next()
+        })
     }
 
     fn query<'a>(
@@ -95,7 +121,7 @@ mod tests {
                 path: PathBuf::from("/hub/c/test.cmx/123/objects"),
                 parts,
             },
-            hierarchy: NodeHierarchy {
+            hierarchy: Some(NodeHierarchy {
                 name: "root".to_string(),
                 properties: vec![],
                 children: vec![NodeHierarchy {
@@ -107,7 +133,7 @@ mod tests {
                         properties: vec![],
                     }],
                 }],
-            },
+            }),
         }
     }
 }

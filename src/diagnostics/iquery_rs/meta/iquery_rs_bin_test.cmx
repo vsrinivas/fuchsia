@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/iquery_rs_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
     }
 }

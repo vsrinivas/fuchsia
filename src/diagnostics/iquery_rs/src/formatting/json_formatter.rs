@@ -8,7 +8,7 @@ use {
         options::PathFormat,
         result::IqueryResult,
     },
-    failure::{format_err, Error},
+    failure::{bail, format_err, Error},
     inspect_formatter::{self, HierarchyFormatter},
     serde::ser::Serialize,
     serde_json::{
@@ -34,10 +34,13 @@ impl Formatter for JsonFormatter {
             .into_iter()
             .map(|mut result| {
                 if self.sort {
-                    result.hierarchy.sort();
+                    result.sort_hierarchy();
+                }
+                if !result.is_loaded() {
+                    bail!("Failed to format result at {}", result.location.to_string());
                 }
                 Ok(inspect_formatter::HierarchyData {
-                    hierarchy: result.hierarchy,
+                    hierarchy: result.hierarchy.unwrap(),
                     file_path: match self.path_format {
                         PathFormat::Absolute => result.location.absolute_path_to_string()?,
                         PathFormat::Undefined | PathFormat::Full => result.location.to_string(),
@@ -54,10 +57,11 @@ impl Formatter for JsonFormatter {
             .into_iter()
             .flat_map(|mut result| {
                 if self.sort {
-                    result.hierarchy.sort();
+                    result.sort_hierarchy();
                 }
-                if self.max_depth.is_none() {
-                    get_locations(result.hierarchy, &result.location, &self.path_format).into_iter()
+                if self.max_depth.is_none() && result.is_loaded() {
+                    get_locations(result.hierarchy.unwrap(), &result.location, &self.path_format)
+                        .into_iter()
                 } else {
                     vec![format_parts(&result.location, &self.path_format, &vec![])].into_iter()
                 }

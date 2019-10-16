@@ -13,12 +13,22 @@ use {
 };
 
 /// Executes the FIND command.
-pub async fn find(paths: &[String]) -> Vec<IqueryResult> {
+pub async fn find(paths: &[String], recursive: bool) -> Vec<IqueryResult> {
     let mut locations =
         paths.iter().flat_map(|path| all_locations(path)).collect::<Vec<InspectLocation>>();
     locations.sort();
-    let futs = locations.into_iter().map(|location| IqueryResult::try_from(location));
-    to_result(join_all(futs).await)
+    let results = locations.into_iter().map(|location| IqueryResult::new(location));
+    if recursive {
+        let futs = results.map(|mut result| {
+            async {
+                result.load().await?;
+                Ok(result)
+            }
+        });
+        to_result(join_all(futs).await)
+    } else {
+        results.collect()
+    }
 }
 
 /// Executes the CAT command.
@@ -45,4 +55,35 @@ fn to_result(results: Vec<Result<IqueryResult, Error>>) -> Vec<IqueryResult> {
                 .ok()
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, fuchsia_async as fasync, fuchsia_inspect::component, std::fs, tempfile::tempdir,
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_find() -> Result<(), Error> {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("root.inspect");
+
+        // Write some inspect data to a tmp file.
+        let data = component::inspector().copy_vmo_data().unwrap();
+        fs::write(file_path, &data).unwrap();
+        let paths = vec!["/tmp".to_string()];
+
+        // The result is not loaded when non-recursive.
+        let results = find(&paths, false).await;
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].is_loaded());
+
+        // Loads the tmp file that contains the inspect hierarchy created above
+        // when recursive.
+        let results = find(&paths, true).await;
+        assert_eq!(results.len(), 1);
+        assert!(results[0].is_loaded());
+
+        Ok(())
+    }
 }
