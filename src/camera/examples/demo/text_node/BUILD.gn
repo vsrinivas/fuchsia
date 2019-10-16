@@ -1,0 +1,49 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("text_node") {
+  public_deps = [
+    ":text_node_lib",
+  ]
+  public_configs = [
+    ":text_node_config",
+  ]
+}
+
+source_set("text_node_lib") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "text_node.cc",
+    "//zircon/system/ulib/gfx-font-data/9x16.c",
+  ]
+
+  include_dirs = [
+    "//zircon/system/ulib/gfx/include",
+    "//zircon/system/ulib/gfx-font-data/include",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/ui/scenic/cpp",
+    "//zircon/public/lib/fzl",
+  ]
+
+  configs += [
+    ":text_node_config",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.camera2",
+    "//zircon/system/fidl/fuchsia-sysmem",
+  ]
+}
+
+config("text_node_config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "//src/camera/examples/demo/text_node/include",
+  ]
+}

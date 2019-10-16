@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <fuchsia/camera/common/cpp/fidl.h>
 #include <fuchsia/camera/test/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
 
 #include <src/lib/fxl/logging.h>

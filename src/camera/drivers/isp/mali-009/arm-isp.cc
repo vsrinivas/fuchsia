@@ -761,6 +761,7 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
 }
 
 int ArmIspDevice::FrameProcessingThread() {
+  bool fr_frame_written = false;
   while (running_frame_processing_.load()) {
     sync_completion_wait(&frame_processing_signal_, ZX_TIME_INFINITE);
     // Currently this is called only on the new frame signal, so we maintain
@@ -770,11 +771,13 @@ int ArmIspDevice::FrameProcessingThread() {
     } else {
       // Each of these calls has it's own interrupt, that it could be
       // attached to:
-      full_resolution_dma_->OnFrameWritten();
+      if (fr_frame_written) {
+        full_resolution_dma_->OnFrameWritten();
+      }
       downscaled_dma_->OnFrameWritten();
     }
     // Now for the actions we should take on new frame:
-    full_resolution_dma_->OnNewFrame();
+    fr_frame_written = full_resolution_dma_->OnNewFrame();
     downscaled_dma_->OnNewFrame();
 
     // Reset the signal

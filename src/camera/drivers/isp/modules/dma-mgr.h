@@ -51,7 +51,8 @@ class DmaManager {
                             Stream stream_type, std::unique_ptr<DmaManager>* out);
 
   // Updates the dma writer with the address of a free buffer from the pool.
-  void OnNewFrame();
+  // Returns true iff a new frame was actually written.
+  bool OnNewFrame();
 
   // Signal that all consumers are done with this frame.
   zx_status_t ReleaseFrame(uint32_t buffer_index);

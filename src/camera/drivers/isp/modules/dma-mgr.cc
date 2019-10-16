@@ -195,10 +195,10 @@ void DmaManager::OnFrameWritten() {
 }
 
 // Called as one of the later steps when a new frame arrives.
-void DmaManager::OnNewFrame() {
+bool DmaManager::OnNewFrame() {
   // If we have not initialized yet with a format, just skip.
   if (!enabled_) {
-    return;
+    return false;
   }
   // 1) Get another buffer
   auto buffer = buffers_.LockBufferForWrite();
@@ -223,7 +223,7 @@ void DmaManager::OnNewFrame() {
     event.frame_status = fuchsia_camera_common_FrameStatus_ERROR_BUFFER_FULL;
     event.metadata.timestamp = 0;
     frame_available_callback_(event);
-    return;
+    return false;
   }
   // 2) Optional?  Set the DMA settings again... seems unnecessary
   // 3) Set the DMA address
@@ -251,6 +251,8 @@ void DmaManager::OnNewFrame() {
   WriteFormat();
   // Add buffer to queue of buffers we are writing:
   write_locked_buffers_.push_front(std::move(*buffer));
+
+  return true;
 }
 
 zx_status_t DmaManager::ReleaseFrame(uint32_t buffer_index) {

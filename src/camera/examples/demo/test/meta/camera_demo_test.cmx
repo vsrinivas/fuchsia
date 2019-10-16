@@ -3,7 +3,8 @@
     "fuchsia.test": {
       "system-services": [
         "fuchsia.ui.policy.Presenter",
-        "fuchsia.ui.scenic.Scenic"
+        "fuchsia.ui.scenic.Scenic",
+        "fuchsia.sysmem.Allocator"
       ]
     }
   },

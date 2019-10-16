@@ -17,6 +17,7 @@ fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cm
 #include <lib/zx/time.h>
 #include <stream_provider.h>
 #include <sys/types.h>
+#include <text_node.h>
 
 #include <queue>
 #include <random>
@@ -54,8 +55,8 @@ static fuchsia::images::PixelFormat convertFormat(fuchsia::sysmem::PixelFormatTy
 }
 
 // Draws a scenic scene containing a single rectangle with an image pipe material,
-// constructed with buffers populated by a stream provider (in this case, the ArmIspDevice).
-class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventSender {
+// constructed with buffers populated by a stream provider.
+class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::EventSender_ {
  public:
   explicit DemoView(scenic::ViewContext context, async::Loop* loop, bool chaos)
       : BaseView(std::move(context), "Camera Demo"),
@@ -63,7 +64,8 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
         chaos_(chaos),
         chaos_dist_(kChaosMaxSleepMsec,
                     static_cast<float>(kChaosMeanSleepMsec) / kChaosMaxSleepMsec),
-        node_(session()) {}
+        node_(session()),
+        text_node_(session()) {}
 
   ~DemoView() override {
     // Manually delete Wait instances before their corresponding events to avoid a failed assert.
@@ -78,16 +80,20 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
                                           bool chaos) {
     auto view = std::make_unique<DemoView>(std::move(context), loop, chaos);
 
-    auto stream_provider = StreamProvider::Create(StreamProvider::Source::ISP);
-    if (!stream_provider) {
-      FXL_LOG(ERROR) << "Failed to get ISP stream provider";
+    view->stream_provider_ = StreamProvider::Create(StreamProvider::Source::CONTROLLER);
+    if (!view->stream_provider_) {
+      FXL_LOG(ERROR) << "Failed to get CONTROLLER stream provider";
       return nullptr;
     }
 
     fuchsia::sysmem::ImageFormat_2 format;
     fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-    view->stream_ =
-        stream_provider->ConnectToStream(view.get(), &format, &buffers, &view->should_rotate_);
+    view->stream_ = view->stream_provider_->ConnectToStream(view.get(), &format, &buffers,
+                                                            &view->should_rotate_);
+    if (!view->stream_) {
+      FXL_LOG(ERROR) << "Failed to connect to stream";
+      return nullptr;
+    }
 
     uint32_t image_pipe_id = view->session()->AllocResourceId();
     view->session()->Enqueue(
@@ -95,16 +101,17 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
     scenic::Material material(view->session());
     material.SetTexture(image_pipe_id);
     view->session()->ReleaseResource(image_pipe_id);
-    scenic::Rectangle shape(view->session(), format.display_width, format.display_height);
-    view->shape_width_ = format.display_width;
-    view->shape_height_ = format.display_height;
+    scenic::Rectangle shape(view->session(), format.coded_width, format.coded_height);
+    view->shape_width_ = format.coded_width;
+    view->shape_height_ = format.coded_height;
     view->node_.SetShape(shape);
     view->node_.SetMaterial(material);
     view->root_node().AddChild(view->node_);
+    view->root_node().AddChild(view->text_node_);
 
     fuchsia::images::ImageInfo image_info{};
-    image_info.width = format.display_width;
-    image_info.height = format.display_height;
+    image_info.width = format.coded_width;
+    image_info.height = format.coded_height;
     image_info.stride = format.bytes_per_row;
     image_info.pixel_format = convertFormat(format.pixel_format.type);
     for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
@@ -125,16 +132,22 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
  private:
   // |scenic::BaseView|
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override {
-    if (!has_logical_size())
+    if (!has_logical_size() || !has_metrics())
       return;
     if (should_rotate_) {
       auto rotation = glm::angleAxis(glm::half_pi<float>(), glm::vec3(0, 0, 1));
       node_.SetRotation(rotation.x, rotation.y, rotation.z, rotation.w);
     }
-    node_.SetTranslation(logical_size().x * 0.5f, logical_size().y * 0.5f, -5.0f);
+    node_.SetTranslation(logical_size().x * 0.5f, logical_size().y * 0.5f, -1.0f);
     const float shape_vertical_size = should_rotate_ ? shape_width_ : shape_height_;
     const float scale = logical_size().y / shape_vertical_size;  // Fit vertically.
     node_.SetScale(scale, scale, 1.0f);
+    text_node_.SetText(stream_provider_->GetName() +
+                       (should_rotate_ ? " (Rotated by Scenic)" : ""));
+    text_node_.SetTranslation(logical_size().x * 0.5f + metrics().scale_x * 0.5f,
+                              logical_size().y * 0.02f, -1.1f);
+    text_node_.SetScale(1.0f / metrics().scale_x, 1.0f / metrics().scale_y,
+                        1.0f / metrics().scale_z);
   }
 
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override {
@@ -222,12 +235,14 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream_EventS
   std::binomial_distribution<uint32_t> chaos_dist_;
   std::unique_ptr<fuchsia::camera2::Stream> stream_;
   scenic::ShapeNode node_;
+  TextNode text_node_;
   fuchsia::images::ImagePipePtr image_pipe_;
   std::map<uint32_t, uint32_t> image_ids_;
   float shape_width_;
   float shape_height_;
   bool should_rotate_;
   std::queue<std::pair<std::unique_ptr<async::Wait>, zx::event>> waiters_;
+  std::unique_ptr<StreamProvider> stream_provider_;
 };
 
 int main(int argc, const char** argv) {

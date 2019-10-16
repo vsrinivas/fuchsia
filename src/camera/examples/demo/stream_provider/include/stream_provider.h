@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_STREAM_PROVIDER_H_
-#define SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_STREAM_PROVIDER_H_
+#ifndef SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_INCLUDE_STREAM_PROVIDER_H_
+#define SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_INCLUDE_STREAM_PROVIDER_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -18,6 +18,7 @@ class StreamProvider {
  public:
   enum class Source {
     ISP,
+    CONTROLLER,
     NUM_SOURCES,
   };
   virtual ~StreamProvider() = default;
@@ -52,4 +53,4 @@ class StreamProvider {
       fuchsia::sysmem::BufferCollectionInfo_2* buffers_out, bool* should_rotate_out) = 0;
 };
 
-#endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_STREAM_PROVIDER_H_
+#endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_INCLUDE_STREAM_PROVIDER_H_
