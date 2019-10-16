@@ -10,9 +10,9 @@ etc.
 ## Example usage
 
 ```
-fx set bringup.x64 -with-base //garnet/packages/tests:zircon  # or bringup.arm64
+fx set bringup.x64 --with-base //garnet/packages/tests:zircon  # or bringup.arm64
 fx build
-fx run -z out/default.zircon/core-tests-x64.zbi
+fx run -z out/default.zircon/user-x64-clang/obj/system/utest/core/core-tests.zbi
 ```
 
 ## Notes
