@@ -136,7 +136,7 @@ bool TestLoop::BlockCurrentSubLoopAndRunOthersUntil(fit::function<bool()> condit
 
   // Control advancing time. It is necessary to prevent Run() from advancing the
   // time if |condition()| becomes true in the current run.
-  deadline_ = Now();
+  deadline_ = std::min(Now(), initial_deadline);
   while (!success) {
     // Run tasks, which may advance the current time up to |deadline_| but no further.
     bool did_work = Run();

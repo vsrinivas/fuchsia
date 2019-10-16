@@ -766,43 +766,79 @@ bool BlocksFinishWhenOtherLoopQuit() {
   END_TEST;
 }
 
+bool BlocksWhileOtherLoopAdvanceTimeFor(uint32_t random_seed) {
+  BEGIN_HELPER;
+  std::unique_ptr<async::TestLoop> loop;
+
+  EXPECT_TRUE(SeedTestLoopWithEnv(random_seed, &loop));
+  auto loopB = loop->StartNewLoop();
+
+  auto initial_time = loop->Now();
+  async::PostTask(loop->dispatcher(), [&] { loop->AdvanceTimeByEpsilon(); });
+  async::PostTask(loopB->dispatcher(), [&] {
+    EXPECT_TRUE(
+        loop->BlockCurrentSubLoopAndRunOthersUntil([&] { return loop->Now() > initial_time; }));
+  });
+  loop->RunUntilIdle();
+
+  EXPECT_TRUE(loop->Now() > initial_time);
+
+  END_HELPER;
+}
+
+bool BlocksWhileOtherLoopAdvanceTime() {
+  BEGIN_TEST;
+
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(1));
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(43));
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(893));
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(39408));
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(844018));
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(83018299));
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(3213));
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(139133113));
+  EXPECT_TRUE(BlocksWhileOtherLoopAdvanceTimeFor(1323234373));
+
+  END_TEST;
+}
+
 // Test that non-async-dispatcher loops run fine.
 struct ExternalLoop : async_test_subloop_t {
-  ExternalLoop() { ops = &kOps; }
+    ExternalLoop() { ops = &kOps; }
 
-  // The loop keeps a state, that is repeatedly incremented.
-  // 0: advance to 1
-  // 1: wait until |time_ >= kState1Deadline|, advance to 2
-  // 2: advance to 3
-  // 3: blocked, needs to be manually advanced
-  // 4: advance to 5
-  // 5: done, do not increment
-  // 6: finalized
-  int state_ = 0;
+    // The loop keeps a state, that is repeatedly incremented.
+    // 0: advance to 1
+    // 1: wait until |time_ >= kState1Deadline|, advance to 2
+    // 2: advance to 3
+    // 3: blocked, needs to be manually advanced
+    // 4: advance to 5
+    // 5: done, do not increment
+    // 6: finalized
+    int state_ = 0;
 
-  // The current time, according to the TestLoop.
-  zx_time_t time_ = ZX_TIME_INFINITE_PAST;
+    // The current time, according to the TestLoop.
+    zx_time_t time_ = ZX_TIME_INFINITE_PAST;
 
-  constexpr static zx_time_t kState1Deadline = 1000;
-  constexpr static int kStateFinalized = 6;
+    constexpr static zx_time_t kState1Deadline = 1000;
+    constexpr static int kStateFinalized = 6;
 
-  // Returns the minimum time for the next transition starting from |state|.
-  // If |ZX_TIME_INFINITE| is returned, the state should not be advanced.
-  static zx_time_t NextTransitionTime(int state) {
-    switch (state) {
-      case 0:
-      case 2:
-      case 4:
-        // Advance immediately.
-        return ZX_TIME_INFINITE_PAST;
-      case 1:
-        return kState1Deadline;
-      case 3:
-      case 5:
-        return ZX_TIME_INFINITE;
-      default:
-        ZX_ASSERT(false);
-    }
+    // Returns the minimum time for the next transition starting from |state|.
+    // If |ZX_TIME_INFINITE| is returned, the state should not be advanced.
+    static zx_time_t NextTransitionTime(int state) {
+      switch (state) {
+        case 0:
+        case 2:
+        case 4:
+          // Advance immediately.
+          return ZX_TIME_INFINITE_PAST;
+        case 1:
+          return kState1Deadline;
+        case 3:
+        case 5:
+          return ZX_TIME_INFINITE;
+        default:
+          ZX_ASSERT(false);
+      }
   }
 
   static void advance_time_to(async_test_subloop_t* self_generic, zx_time_t time) {
@@ -924,4 +960,5 @@ RUN_TEST(WaitsAreDispatchedOnManyLoops)
 RUN_TEST(DispatchOrderIsDeterministic)
 RUN_TEST(BlockCurrentSubLoopAndRunOthersUntilOtherLoop)
 RUN_TEST(BlocksFinishWhenOtherLoopQuit)
+RUN_TEST(BlocksWhileOtherLoopAdvanceTime)
 END_TEST_CASE(MultiLoopTests)
