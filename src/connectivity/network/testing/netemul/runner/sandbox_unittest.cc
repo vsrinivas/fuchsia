@@ -16,9 +16,6 @@
 #include "lib/gtest/real_loop_fixture.h"
 #include "log_listener_test_helpers.h"
 
-// A fairly large timeout is used to prevent flakiness in CQ, but we don't want
-// to have a test that just blocks forever.
-static const uint32_t kTimeoutSecs = 90;
 static const char* kBusName = "test-bus";
 static const char* kBusClientName = "sandbox_unittest";
 
@@ -71,7 +68,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
     sandbox.Start(dispatcher());
 
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&done]() { return done; }, zx::sec(kTimeoutSecs)));
+    RunLoopUntil([&done]() { return done; });
 
     // We quit the loop when sandbox terminates,
     // but because some of the tests will look at services in the sandbox when
