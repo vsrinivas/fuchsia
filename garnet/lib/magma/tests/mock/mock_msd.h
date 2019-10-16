@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "platform_buffer.h"
@@ -39,16 +38,6 @@ class MsdMockBuffer : public msd_buffer_t {
 };
 
 class MsdMockConnection;
-
-class MsdMockCommandBuffer : public magma::CommandBuffer {
- public:
-  MsdMockCommandBuffer(MsdMockBuffer* buffer) : buffer_(buffer) {}
-
-  magma::PlatformBuffer* platform_buffer() override { return buffer_->platform_buffer(); }
-
- private:
-  MsdMockBuffer* buffer_;
-};
 
 class MsdMockContext : public msd_context_t {
  public:

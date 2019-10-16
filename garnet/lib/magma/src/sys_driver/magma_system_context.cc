@@ -10,22 +10,8 @@
 
 #include "magma_system_connection.h"
 #include "magma_system_device.h"
-#include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "platform_trace.h"
-
-class MagmaSystemCommandBuffer final : public magma::CommandBuffer {
- public:
-  MagmaSystemCommandBuffer(std::unique_ptr<MagmaSystemBuffer> buffer)
-      : buffer_(std::move(buffer)) {}
-
-  magma::PlatformBuffer* platform_buffer() override { return buffer_->platform_buffer(); }
-
-  MagmaSystemBuffer* system_buffer() { return buffer_.get(); }
-
- private:
-  std::unique_ptr<MagmaSystemBuffer> buffer_;
-};
 
 magma::Status MagmaSystemContext::ExecuteCommandBufferWithResources(
     std::unique_ptr<magma_system_command_buffer> cmd_buf,

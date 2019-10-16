@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "magma_sysmem.h"
-#include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_connection_client.h"

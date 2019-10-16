@@ -74,8 +74,8 @@ source_set("src") {
   # libdriver.so.
   deps = [
     "../include",
+    "//garnet/lib/magma/include:msd_abi",
     "//garnet/lib/magma/src/magma_util",
-    "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util:registers",
     "//garnet/lib/magma/src/magma_util:thread",
     "//garnet/lib/magma/src/magma_util/platform:barriers",

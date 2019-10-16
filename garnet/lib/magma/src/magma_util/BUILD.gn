@@ -65,23 +65,6 @@ source_set("inflight_list") {
   ]
 }
 
-source_set("command_buffer") {
-  public_configs = [
-    ":magma_util_config",
-    "$magma_build_root:magma_src_include_config",
-  ]
-
-  sources = [
-    "command_buffer.cc",
-    "command_buffer.h",
-  ]
-
-  public_deps = [
-    "$magma_build_root/include:msd_abi",
-    "platform:buffer",
-  ]
-}
-
 source_set("thread") {
   public_configs = [
     ":magma_util_config",
