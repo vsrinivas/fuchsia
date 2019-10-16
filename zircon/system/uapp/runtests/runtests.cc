@@ -44,7 +44,7 @@ class FuchsiaStopwatch final : public runtests::Stopwatch {
   int64_t DurationInMsecs() override { return (Now() - start_time_).to_msecs(); }
 
  private:
-  zx::time Now() const { return zx::clock::get_monotonic(); }
+  static zx::time Now()  { return zx::clock::get_monotonic(); }
 
   zx::time start_time_;
 };
@@ -87,9 +87,8 @@ int main(int argc, char** argv) {
   }
 
   fbl::Vector<fbl::String> default_test_dirs;
-  const int num_default_test_dirs = sizeof(kDefaultTestDirs) / sizeof(char*);
-  for (int i = 0; i < num_default_test_dirs; ++i) {
-    default_test_dirs.push_back(kDefaultTestDirs[i]);
+  for (auto & kDefaultTestDir : kDefaultTestDirs) {
+    default_test_dirs.push_back(kDefaultTestDir);
   }
 
   FuchsiaStopwatch stopwatch;
