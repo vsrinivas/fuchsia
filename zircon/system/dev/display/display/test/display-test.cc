@@ -56,9 +56,8 @@ TEST(DispTest, ClientVSyncNotSupported) {
   clientproxy.CloseTest();
 }
 
-#if 0
 // FLK-366 These tests appear to be flaking on the fuchsia roller.
-TEST(DispTest, ClientVSyncWrongContext1) {
+TEST(DispTest, DISABLED_ClientVSyncWrongContext1) {
     zx::channel server_chl, client_chl;
     zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
     EXPECT_OK(status);
@@ -70,7 +69,7 @@ TEST(DispTest, ClientVSyncWrongContext1) {
     clientproxy.CloseTest();
 }
 
-TEST(DispTest, ClientVSyncWrongContext2) {
+TEST(DispTest, DISABLED_ClientVSyncWrongContext2) {
     zx::channel server_chl, client_chl;
     zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
     EXPECT_OK(status);
@@ -85,33 +84,5 @@ TEST(DispTest, ClientVSyncWrongContext2) {
     }, "controller_->mtx() not held! \n");
     clientproxy.CloseTest();
 }
-#endif
-
-#if 0
-// This test will cause an OOM which might lead to other tests failing. Enable this test
-// locally only
-TEST(DispTest, ClientVSyncOom) {
-    zx::channel server_chl, client_chl;
-    zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
-    EXPECT_OK(status);
-
-    Controller controller(nullptr);
-    ClientProxy clientproxy(&controller, false, std::move(server_chl));
-    fbl::AutoLock lock(controller.mtx());
-    clientproxy.EnableVsync(true);
-
-    status = clientproxy.OnDisplayVsync(0, 0, nullptr, 0);
-    while (status != ZX_ERR_NO_MEMORY) {
-        status = clientproxy.OnDisplayVsync(0, 0, nullptr, 0);
-    }
-    EXPECT_TRUE(status == ZX_ERR_NO_MEMORY);
-
-    for (int i = 0; i < 5000; i++) {
-        clientproxy.OnDisplayVsync(0, 0, nullptr, 0);
-    }
-
-    clientproxy.CloseTest();
-}
-#endif
 
 }  // namespace display
