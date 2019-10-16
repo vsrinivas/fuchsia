@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include <math.h>
+
+#include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/tests/intrusive_containers/intrusive_wavl_tree_checker.h>
 #include <fbl/tests/intrusive_containers/ordered_associative_container_test_environment.h>
 #include <fbl/tests/intrusive_containers/test_thunks.h>
-#include <fbl/intrusive_pointer_traits.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -167,8 +168,7 @@ class WAVLBalanceTestObserver {
   static void RecordEraseDoubleRotation() { ++op_counts_.erase_double_rotations_; }
 
   template <typename TreeType>
-  static bool VerifyRankRule(const TreeType& tree, typename TreeType::RawPtrType node) {
-    BEGIN_TEST;
+  static void VerifyRankRule(const TreeType& tree, typename TreeType::RawPtrType node) {
     using NodeTraits = typename TreeType::NodeTraits;
 
     // Check the rank rule.  The rules for a WAVL tree are...
@@ -195,14 +195,10 @@ class WAVLBalanceTestObserver {
         ASSERT_GE(2, delta, "Right hand rank difference not on range [1, 2]");
       }
     }
-
-    END_TEST;
   }
 
   template <typename TreeType>
-  static bool VerifyBalance(const TreeType& tree, uint64_t depth) {
-    BEGIN_TEST;
-
+  static void VerifyBalance(const TreeType& tree, uint64_t depth) {
     // Compute the maximum expected depth.
     uint64_t max_depth = 0;
     if (tree.size()) {
@@ -238,8 +234,6 @@ class WAVLBalanceTestObserver {
     EXPECT_LE(total_erase_rotations, op_counts_.erase_ops_, "#erase_rotations must be <= #erases");
 
     EXPECT_GE(max_depth, depth);
-
-    END_TEST;
   }
 
  private:
@@ -297,26 +291,20 @@ class BalanceTestObj {
 
 static constexpr size_t kBalanceTestSize = 2048;
 
-static bool DoBalanceTestInsert(BalanceTestTree& tree, BalanceTestObj* ptr) {
-  BEGIN_TEST;
-
+static void DoBalanceTestInsert(BalanceTestTree& tree, BalanceTestObj* ptr) {
   // The selected object should not be in the tree.
-  ASSERT_NONNULL(ptr);
+  ASSERT_NOT_NULL(ptr);
   ASSERT_FALSE(ptr->InContainer());
 
   // Put the object into the tree.  Assert that it succeeds, then
   // sanity check the tree.
   ASSERT_TRUE(tree.insert_or_find(BalanceTestObjPtr(ptr)));
-  ASSERT_TRUE(WAVLTreeChecker::SanityCheck(tree));
-
-  END_TEST;
+  ASSERT_NO_FAILURES(WAVLTreeChecker::SanityCheck(tree));
 }
 
-static bool DoBalanceTestErase(BalanceTestTree& tree, BalanceTestObj* ptr) {
-  BEGIN_TEST;
-
+static void DoBalanceTestErase(BalanceTestTree& tree, BalanceTestObj* ptr) {
   // The selected object should still be in the tree.
-  ASSERT_NONNULL(ptr);
+  ASSERT_NOT_NULL(ptr);
   ASSERT_TRUE(ptr->InContainer());
 
   // Erase should find the object and transfer its pointer back to us.
@@ -327,9 +315,7 @@ static bool DoBalanceTestErase(BalanceTestTree& tree, BalanceTestObj* ptr) {
 
   // Run a full sanity check on the tree.  Its depth should be
   // consistent with a tree which has seen both inserts and erases.
-  ASSERT_TRUE(WAVLTreeChecker::SanityCheck(tree));
-
-  END_TEST;
+  ASSERT_NO_FAILURES(WAVLTreeChecker::SanityCheck(tree));
 }
 
 static void ShuffleEraseDeck(const unique_ptr<BalanceTestObj[]>& objects,
@@ -343,9 +329,182 @@ static void ShuffleEraseDeck(const unique_ptr<BalanceTestObj[]>& objects,
   }
 }
 
-static bool WAVLBalanceTest() {
-  BEGIN_TEST;
+// clang-format off
+//////////////////////////////////////////
+// General container specific tests.
+//////////////////////////////////////////
+RUN_ZXTEST(WavlTreeTest, UMTE,     Clear)
+RUN_ZXTEST(WavlTreeTest, UPTE,     Clear)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  Clear)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  Clear)
+RUN_ZXTEST(WavlTreeTest, RPTE,     Clear)
 
+RUN_ZXTEST(WavlTreeTest, UMTE,     ClearUnsafe)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_ZXTEST(WavlTreeTest, UPTE,     ClearUnsafe)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  ClearUnsafe)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  ClearUnsafe)
+RUN_ZXTEST(WavlTreeTest, RPTE,     ClearUnsafe)
+#endif
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     IsEmpty)
+RUN_ZXTEST(WavlTreeTest, UPTE,     IsEmpty)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  IsEmpty)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  IsEmpty)
+RUN_ZXTEST(WavlTreeTest, RPTE,     IsEmpty)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     Iterate)
+RUN_ZXTEST(WavlTreeTest, UPTE,     Iterate)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  Iterate)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  Iterate)
+RUN_ZXTEST(WavlTreeTest, RPTE,     Iterate)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     IterErase)
+RUN_ZXTEST(WavlTreeTest, UPTE,     IterErase)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  IterErase)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  IterErase)
+RUN_ZXTEST(WavlTreeTest, RPTE,     IterErase)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     DirectErase)
+RUN_ZXTEST(WavlTreeTest, UPTE,     DirectErase)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  DirectErase)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  DirectErase)
+RUN_ZXTEST(WavlTreeTest, RPTE,     DirectErase)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     MakeIterator)
+RUN_ZXTEST(WavlTreeTest, UPTE,     MakeIterator)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  MakeIterator)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  MakeIterator)
+RUN_ZXTEST(WavlTreeTest, RPTE,     MakeIterator)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     ReverseIterErase)
+RUN_ZXTEST(WavlTreeTest, UPTE,     ReverseIterErase)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  ReverseIterErase)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  ReverseIterErase)
+RUN_ZXTEST(WavlTreeTest, RPTE,     ReverseIterErase)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     ReverseIterate)
+RUN_ZXTEST(WavlTreeTest, UPTE,     ReverseIterate)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  ReverseIterate)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  ReverseIterate)
+RUN_ZXTEST(WavlTreeTest, RPTE,     ReverseIterate)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     Swap)
+RUN_ZXTEST(WavlTreeTest, UPTE,     Swap)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  Swap)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  Swap)
+RUN_ZXTEST(WavlTreeTest, RPTE,     Swap)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     RvalueOps)
+RUN_ZXTEST(WavlTreeTest, UPTE,     RvalueOps)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  RvalueOps)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  RvalueOps)
+RUN_ZXTEST(WavlTreeTest, RPTE,     RvalueOps)
+
+RUN_ZXTEST(WavlTreeTest, UPTE,     Scope)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  Scope)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  Scope)
+RUN_ZXTEST(WavlTreeTest, RPTE,     Scope)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     TwoContainer)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_ZXTEST(WavlTreeTest, UPTE,     TwoContainer)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  TwoContainer)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  TwoContainer)
+#endif
+RUN_ZXTEST(WavlTreeTest, RPTE,     TwoContainer)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     ThreeContainerHelper)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_ZXTEST(WavlTreeTest, UPTE,     ThreeContainerHelper)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  ThreeContainerHelper)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  ThreeContainerHelper)
+#endif
+RUN_ZXTEST(WavlTreeTest, RPTE,     ThreeContainerHelper)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     IterCopyPointer)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_ZXTEST(WavlTreeTest, UPTE,     IterCopyPointer)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  IterCopyPointer)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  IterCopyPointer)
+#endif
+RUN_ZXTEST(WavlTreeTest, RPTE,     IterCopyPointer)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     EraseIf)
+RUN_ZXTEST(WavlTreeTest, UPTE,     EraseIf)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  EraseIf)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  EraseIf)
+RUN_ZXTEST(WavlTreeTest, RPTE,     EraseIf)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     FindIf)
+RUN_ZXTEST(WavlTreeTest, UPTE,     FindIf)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  FindIf)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  FindIf)
+RUN_ZXTEST(WavlTreeTest, RPTE,     FindIf)
+
+//////////////////////////////////////////
+// Associative container specific tests.
+//////////////////////////////////////////
+RUN_ZXTEST(WavlTreeTest, UMTE,     InsertByKey)
+RUN_ZXTEST(WavlTreeTest, UPTE,     InsertByKey)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  InsertByKey)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  InsertByKey)
+RUN_ZXTEST(WavlTreeTest, RPTE,     InsertByKey)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     FindByKey)
+RUN_ZXTEST(WavlTreeTest, UPTE,     FindByKey)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  FindByKey)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  FindByKey)
+RUN_ZXTEST(WavlTreeTest, RPTE,     FindByKey)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     EraseByKey)
+RUN_ZXTEST(WavlTreeTest, UPTE,     EraseByKey)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  EraseByKey)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  EraseByKey)
+RUN_ZXTEST(WavlTreeTest, RPTE,     EraseByKey)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     InsertOrFind)
+RUN_ZXTEST(WavlTreeTest, UPTE,     InsertOrFind)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  InsertOrFind)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  InsertOrFind)
+RUN_ZXTEST(WavlTreeTest, RPTE,     InsertOrFind)
+
+RUN_ZXTEST(WavlTreeTest, UMTE,     InsertOrReplace)
+RUN_ZXTEST(WavlTreeTest, UPTE,     InsertOrReplace)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE,  InsertOrReplace)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE,  InsertOrReplace)
+RUN_ZXTEST(WavlTreeTest, RPTE,     InsertOrReplace)
+
+////////////////////////////////////////////////
+// OrderedAssociative container specific tests.
+////////////////////////////////////////////////
+RUN_ZXTEST(WavlTreeTest, UMTE, OrderedIter)
+RUN_ZXTEST(WavlTreeTest, UPTE, OrderedIter)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE, OrderedIter)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE, OrderedIter)
+RUN_ZXTEST(WavlTreeTest, RPTE, OrderedIter)
+
+RUN_ZXTEST(WavlTreeTest, UMTE, OrderedReverseIter)
+RUN_ZXTEST(WavlTreeTest, UPTE, OrderedReverseIter)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE, OrderedReverseIter)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE, OrderedReverseIter)
+RUN_ZXTEST(WavlTreeTest, RPTE, OrderedReverseIter)
+
+RUN_ZXTEST(WavlTreeTest, UMTE, UpperBound)
+RUN_ZXTEST(WavlTreeTest, UPTE, UpperBound)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE, UpperBound)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE, UpperBound)
+RUN_ZXTEST(WavlTreeTest, RPTE, UpperBound)
+
+RUN_ZXTEST(WavlTreeTest, UMTE, LowerBound)
+RUN_ZXTEST(WavlTreeTest, UPTE, LowerBound)
+RUN_ZXTEST(WavlTreeTest, SUPDDTE, LowerBound)
+RUN_ZXTEST(WavlTreeTest, SUPCDTE, LowerBound)
+RUN_ZXTEST(WavlTreeTest, RPTE, LowerBound)
+
+// The balance test is a pretty heavy test.  Only enable it when asked to do so.
+#if FBL_TEST_ENABLE_WAVL_TREE_BALANCE_TEST
+TEST(WavlTreeTest, Balance) {
   WAVLBalanceTestObserver::OpCounts op_counts;
 
   // Declare these in a specific order (object pointer first) so that the tree
@@ -399,27 +558,31 @@ static bool WAVLBalanceTest() {
     // Place each object into the tree, then perform a full sanity check on
     // the tree.  If anything goes wrong, just abort the test.  If we keep
     // going, we are just going to get an unmanageable amt of errors.
-    for (size_t i = 0; i < kBalanceTestSize; ++i)
-      ASSERT_TRUE(DoBalanceTestInsert(tree, &objects[i]));
+    for (size_t i = 0; i < kBalanceTestSize; ++i) {
+      ASSERT_NO_FAILURES(DoBalanceTestInsert(tree, &objects[i]));
+    }
 
     // Shuffle the erase deck.
     ShuffleEraseDeck(objects, rng);
 
     // Erase half of the elements in the tree.
-    for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i)
-      ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()));
+    for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i) {
+      ASSERT_NO_FAILURES(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()));
+    }
 
     // Put the elements back so that we have inserted some elements into a
     // non-empty tree which has seen erase operations.
-    for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i)
-      ASSERT_TRUE(DoBalanceTestInsert(tree, objects[i].EraseDeckPtr()));
+    for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i) {
+      ASSERT_NO_FAILURES(DoBalanceTestInsert(tree, objects[i].EraseDeckPtr()));
+    }
 
     // Shuffle the erase deck again.
     ShuffleEraseDeck(objects, rng);
 
     // Now erase every element from the tree.
-    for (size_t i = 0; i < kBalanceTestSize; ++i)
-      ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()));
+    for (size_t i = 0; i < kBalanceTestSize; ++i) {
+      ASSERT_NO_FAILURES(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()));
+    }
 
     ASSERT_EQ(0u, tree.size());
 
@@ -436,196 +599,8 @@ static bool WAVLBalanceTest() {
   EXPECT_LT(0u, op_counts.erase_demotes_, "Insufficient test coverage!");
   EXPECT_LT(0u, op_counts.erase_rotations_, "Insufficient test coverage!");
   EXPECT_LT(0u, op_counts.erase_double_rotations_, "Insufficient test coverage!");
-
-  END_TEST;
 }
-
-// clang-format off
-BEGIN_TEST_CASE(wavl_tree_tests)
-//////////////////////////////////////////
-// General container specific tests.
-//////////////////////////////////////////
-RUN_NAMED_TEST("Clear (unmanaged)",                        UMTE::ClearTest)
-RUN_NAMED_TEST("Clear (unique)",                           UPTE::ClearTest)
-RUN_NAMED_TEST("Clear (std::uptr)",                        SUPDDTE::ClearTest)
-RUN_NAMED_TEST("Clear (std::uptr<Del>)",                   SUPCDTE::ClearTest)
-RUN_NAMED_TEST("Clear (RefPtr)",                           RPTE::ClearTest)
-
-RUN_NAMED_TEST("ClearUnsafe (unmanaged)",                  UMTE::ClearUnsafeTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ClearUnsafe (unique)",                     UPTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (std::uptr)",                  SUPDDTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (std::uptr<Del>)",             SUPCDTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (RefPtr)",                     RPTE::ClearUnsafeTest)
 #endif
-
-RUN_NAMED_TEST("IsEmpty (unmanaged)",                      UMTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (unique)",                         UPTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (std::uptr)",                      SUPDDTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (std::uptr<Del>)",                 SUPCDTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (RefPtr)",                         RPTE::IsEmptyTest)
-
-RUN_NAMED_TEST("Iterate (unmanaged)",                      UMTE::IterateTest)
-RUN_NAMED_TEST("Iterate (unique)",                         UPTE::IterateTest)
-RUN_NAMED_TEST("Iterate (std::uptr)",                      SUPDDTE::IterateTest)
-RUN_NAMED_TEST("Iterate (std::uptr<Del>)",                 SUPCDTE::IterateTest)
-RUN_NAMED_TEST("Iterate (RefPtr)",                         RPTE::IterateTest)
-
-RUN_NAMED_TEST("IterErase (unmanaged)",                    UMTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (unique)",                       UPTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (std::uptr)",                    SUPDDTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (std::uptr<Del>)",               SUPCDTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (RefPtr)",                       RPTE::IterEraseTest)
-
-RUN_NAMED_TEST("DirectErase (unmanaged)",                  UMTE::DirectEraseTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("DirectErase (unique)",                     UPTE::DirectEraseTest)
-RUN_NAMED_TEST("DirectErase (std::uptr)",                  SUPDDTE::DirectEraseTest)
-RUN_NAMED_TEST("DirectErase (std::uptr<Del>)",             SUPCDTE::DirectEraseTest)
-#endif
-RUN_NAMED_TEST("DirectErase (RefPtr)",                     RPTE::DirectEraseTest)
-
-RUN_NAMED_TEST("MakeIterator (unmanaged)",                 UMTE::MakeIteratorTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("MakeIterator (unique)",                    UPTE::MakeIteratorTest)
-RUN_NAMED_TEST("MakeIterator (std::uptr)",                 SUPDDTE::MakeIteratorTest)
-RUN_NAMED_TEST("MakeIterator (std::uptr<Del>)",            SUPCDTE::MakeIteratorTest)
-#endif
-RUN_NAMED_TEST("MakeIterator (RefPtr)",                    RPTE::MakeIteratorTest)
-
-RUN_NAMED_TEST("ReverseIterErase (unmanaged)",             UMTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (unique)",                UPTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (std::uptr)",             SUPDDTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (std::uptr<Del>)",        SUPCDTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (RefPtr)",                RPTE::ReverseIterEraseTest)
-
-RUN_NAMED_TEST("ReverseIterate (unmanaged)",               UMTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (unique)",                  UPTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (std::uptr)",               SUPDDTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (std::uptr<Del>)",          SUPCDTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (RefPtr)",                  RPTE::ReverseIterateTest)
-
-RUN_NAMED_TEST("Swap (unmanaged)",                         UMTE::SwapTest)
-RUN_NAMED_TEST("Swap (unique)",                            UPTE::SwapTest)
-RUN_NAMED_TEST("Swap (std::uptr)",                         SUPDDTE::SwapTest)
-RUN_NAMED_TEST("Swap (std::uptr<Del>)",                    SUPCDTE::SwapTest)
-RUN_NAMED_TEST("Swap (RefPtr)",                            RPTE::SwapTest)
-
-RUN_NAMED_TEST("Rvalue Ops (unmanaged)",                   UMTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (unique)",                      UPTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (std::uptr)",                   SUPDDTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (std::uptr<Del>)",              SUPCDTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (RefPtr)",                      RPTE::RvalueOpsTest)
-
-RUN_NAMED_TEST("Scope (unique)",                           UPTE::ScopeTest)
-RUN_NAMED_TEST("Scope (std::uptr)",                        SUPDDTE::ScopeTest)
-RUN_NAMED_TEST("Scope (std::uptr<Del>)",                   SUPCDTE::ScopeTest)
-RUN_NAMED_TEST("Scope (RefPtr)",                           RPTE::ScopeTest)
-
-RUN_NAMED_TEST("TwoContainer (unmanaged)",                 UMTE::TwoContainerTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("TwoContainer (unique)",                    UPTE::TwoContainerTest)
-RUN_NAMED_TEST("TwoContainer (std::uptr)",                 SUPDDTE::TwoContainerTest)
-RUN_NAMED_TEST("TwoContainer (std::uptr<Del>)",            SUPCDTE::TwoContainerTest)
-#endif
-RUN_NAMED_TEST("TwoContainer (RefPtr)",                    RPTE::TwoContainerTest)
-
-RUN_NAMED_TEST("ThreeContainerHelper (unmanaged)",         UMTE::ThreeContainerHelperTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ThreeContainerHelper (unique)",            UPTE::ThreeContainerHelperTest)
-RUN_NAMED_TEST("ThreeContainerHelper (std::uptr)",         SUPDDTE::ThreeContainerHelperTest)
-RUN_NAMED_TEST("ThreeContainerHelper (std::uptr<Del>)",    SUPCDTE::ThreeContainerHelperTest)
-#endif
-RUN_NAMED_TEST("ThreeContainerHelper (RefPtr)",            RPTE::ThreeContainerHelperTest)
-
-RUN_NAMED_TEST("IterCopyPointer (unmanaged)",              UMTE::IterCopyPointerTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("IterCopyPointer (unique)",                 UPTE::IterCopyPointerTest)
-RUN_NAMED_TEST("IterCopyPointer (std::uptr)",              SUPDDTE::IterCopyPointerTest)
-RUN_NAMED_TEST("IterCopyPointer (std::uptr<Del>)",         SUPCDTE::IterCopyPointerTest)
-#endif
-RUN_NAMED_TEST("IterCopyPointer (RefPtr)",                 RPTE::IterCopyPointerTest)
-
-RUN_NAMED_TEST("EraseIf (unmanaged)",                      UMTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (unique)",                         UPTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (std::uptr)",                      SUPDDTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (std::uptr<Del>)",                 SUPCDTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (RefPtr)",                         RPTE::EraseIfTest)
-
-RUN_NAMED_TEST("FindIf (unmanaged)",                       UMTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (unique)",                          UPTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (std::uptr)",                       SUPDDTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (std::uptr<Del>)",                  SUPCDTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (RefPtr)",                          RPTE::FindIfTest)
-
-//////////////////////////////////////////
-// Associative container specific tests.
-//////////////////////////////////////////
-RUN_NAMED_TEST("InsertByKey (unmanaged)",                  UMTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (unique)",                     UPTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (std::uptr)",                  SUPDDTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (std::uptr<Del>)",             SUPCDTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (RefPtr)",                     RPTE::InsertByKeyTest)
-
-RUN_NAMED_TEST("FindByKey (unmanaged)",                    UMTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (unique)",                       UPTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (std::uptr)",                    SUPDDTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (std::uptr<Del>)",               SUPCDTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (RefPtr)",                       RPTE::FindByKeyTest)
-
-RUN_NAMED_TEST("EraseByKey (unmanaged)",                   UMTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (unique)",                      UPTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (std::uptr)",                   SUPDDTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (std::uptr<Del>)",              SUPCDTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (RefPtr)",                      RPTE::EraseByKeyTest)
-
-RUN_NAMED_TEST("InsertOrFind (unmanaged)",                 UMTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (unique)",                    UPTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (std::uptr)",                 SUPDDTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (std::uptr<Del>)",            SUPCDTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (RefPtr)",                    RPTE::InsertOrFindTest)
-
-RUN_NAMED_TEST("InsertOrReplace (unmanaged)",              UMTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (unique)",                 UPTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (std::uptr)",              SUPDDTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (std::uptr<Del>)",         SUPCDTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (RefPtr)",                 RPTE::InsertOrReplaceTest)
-
-////////////////////////////////////////////////
-// OrderedAssociative container specific tests.
-////////////////////////////////////////////////
-RUN_NAMED_TEST("OrderedIter (unmanaged)",                  UMTE::OrderedIterTest)
-RUN_NAMED_TEST("OrderedIter (unique)",                     UPTE::OrderedIterTest)
-RUN_NAMED_TEST("OrderedIter (std::uptr)",                  SUPDDTE::OrderedIterTest)
-RUN_NAMED_TEST("OrderedIter (std::uptr<Del>)",             SUPCDTE::OrderedIterTest)
-RUN_NAMED_TEST("OrderedIter (RefPtr)",                     RPTE::OrderedIterTest)
-
-RUN_NAMED_TEST("OrderedReverseIter (unmanaged)",           UMTE::OrderedReverseIterTest)
-RUN_NAMED_TEST("OrderedReverseIter (unique)",              UPTE::OrderedReverseIterTest)
-RUN_NAMED_TEST("OrderedReverseIter (std::uptr)",           SUPDDTE::OrderedReverseIterTest)
-RUN_NAMED_TEST("OrderedReverseIter (std::uptr<Del>)",      SUPCDTE::OrderedReverseIterTest)
-RUN_NAMED_TEST("OrderedReverseIter (RefPtr)",              RPTE::OrderedReverseIterTest)
-
-RUN_NAMED_TEST("UpperBound (unmanaged)",                   UMTE::UpperBoundTest)
-RUN_NAMED_TEST("UpperBound (unique)",                      UPTE::UpperBoundTest)
-RUN_NAMED_TEST("UpperBound (std::uptr)",                   SUPDDTE::UpperBoundTest)
-RUN_NAMED_TEST("UpperBound (std::uptr<Del>)",              SUPCDTE::UpperBoundTest)
-RUN_NAMED_TEST("UpperBound (RefPtr)",                      RPTE::UpperBoundTest)
-
-RUN_NAMED_TEST("LowerBound (unmanaged)",                   UMTE::LowerBoundTest)
-RUN_NAMED_TEST("LowerBound (unique)",                      UPTE::LowerBoundTest)
-RUN_NAMED_TEST("LowerBound (std::uptr)",                   SUPDDTE::LowerBoundTest)
-RUN_NAMED_TEST("LowerBound (std::uptr<Del>)",              SUPCDTE::LowerBoundTest)
-RUN_NAMED_TEST("LowerBound (RefPtr)",                      RPTE::LowerBoundTest)
-
-////////////////////////////
-// WAVLTree specific tests.
-////////////////////////////
-// ZX-2230: This can take more than 20 seconds in CI, so mark it medium.
-RUN_NAMED_TEST_MEDIUM("BalanceTest", WAVLBalanceTest)
-
-END_TEST_CASE(wavl_tree_tests)
-// clang-format on
 
 }  // namespace intrusive_containers
 }  // namespace tests

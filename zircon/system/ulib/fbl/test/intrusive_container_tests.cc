@@ -4,7 +4,7 @@
 
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/tests/intrusive_containers/objects.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -13,9 +13,7 @@ namespace intrusive_containers {
 size_t TestObjBase::live_obj_count_ = 0;
 
 template <typename T>
-bool swap_test(const T initial_a, const T initial_b) {
-  BEGIN_HELPER;
-
+void swap_test(const T initial_a, const T initial_b) {
   // Starting A and B need to be different in order for us to know that swap
   // worked.
   EXPECT_NE(::memcmp(&initial_a, &initial_b, sizeof(T)), 0);
@@ -26,13 +24,9 @@ bool swap_test(const T initial_a, const T initial_b) {
 
   EXPECT_EQ(::memcmp(&a, &initial_b, sizeof(T)), 0);
   EXPECT_EQ(::memcmp(&b, &initial_a, sizeof(T)), 0);
-
-  END_HELPER;
 }
 
-bool swap_test() {
-  BEGIN_TEST;
-
+TEST(IntrusiveContainerUtilsTest, Swap) {
   struct SimpleSmallStruct {
     uint8_t a, b;
   };
@@ -43,34 +37,28 @@ bool swap_test() {
     uint64_t a, b;
   };
 
-  EXPECT_TRUE(swap_test<char>('a', 'b'));
-  EXPECT_TRUE(swap_test<int8_t>(-5, 10));
-  EXPECT_TRUE(swap_test<uint8_t>(5, 10));
-  EXPECT_TRUE(swap_test<int16_t>(-12345, 12345));
-  EXPECT_TRUE(swap_test<uint16_t>(12345, 54321));
-  EXPECT_TRUE(swap_test<int32_t>(-1234567890, 123456789));
-  EXPECT_TRUE(swap_test<uint32_t>(1234567890, 987654321));
-  EXPECT_TRUE(swap_test<int64_t>(-12345678901234567, 12345678901234567));
-  EXPECT_TRUE(swap_test<uint64_t>(12345678901234567, 98765432109876543));
-  EXPECT_TRUE(swap_test<float>(-0.1234567f, 0.7654321f));
-  EXPECT_TRUE(swap_test<double>(-0.12345678901234567890, 0.98765432109876543210));
-  EXPECT_TRUE(swap_test<SimpleSmallStruct>({5, 4}, {2, 9}));
-  EXPECT_TRUE(swap_test<SimpleBigStruct>({5, 4}, {2, 9}));
+  swap_test<char>('a', 'b');
+  swap_test<int8_t>(-5, 10);
+  swap_test<uint8_t>(5, 10);
+  swap_test<int16_t>(-12345, 12345);
+  swap_test<uint16_t>(12345, 54321);
+  swap_test<int32_t>(-1234567890, 123456789);
+  swap_test<uint32_t>(1234567890, 987654321);
+  swap_test<int64_t>(-12345678901234567, 12345678901234567);
+  swap_test<uint64_t>(12345678901234567, 98765432109876543);
+  swap_test<float>(-0.1234567f, 0.7654321f);
+  swap_test<double>(-0.12345678901234567890, 0.98765432109876543210);
+  swap_test<SimpleSmallStruct>({5, 4}, {2, 9});
+  swap_test<SimpleBigStruct>({5, 4}, {2, 9});
 #if TEST_WILL_NOT_COMPILE || 0
-  EXPECT_TRUE(swap_test<SimpleHugeStruct>({5, 4}, {2, 9}));
+  swap_test<SimpleHugeStruct>({5, 4}, {2, 9});
 #endif
 
   SimpleBigStruct a = {};
   SimpleBigStruct b = {};
-  EXPECT_TRUE(swap_test<void*>(&a, &b));
-  EXPECT_TRUE(swap_test<SimpleBigStruct*>(&a, &b));
-
-  END_TEST;
+  swap_test<void*>(&a, &b);
+  swap_test<SimpleBigStruct*>(&a, &b);
 }
-
-BEGIN_TEST_CASE(container_utils_tests)
-RUN_NAMED_TEST("swap test", swap_test)
-END_TEST_CASE(container_utils_tests)
 
 }  // namespace intrusive_containers
 }  // namespace tests

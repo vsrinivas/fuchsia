@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_INTRUSIVE_WAVL_TREE_CHECKER_H_
+#define FBL_TESTS_INTRUSIVE_CONTAINERS_INTRUSIVE_WAVL_TREE_CHECKER_H_
 
-#include <unittest/unittest.h>
 #include <fbl/intrusive_wavl_tree.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -17,11 +18,10 @@ using ::fbl::internal::valid_sentinel_ptr;
 class WAVLTreeChecker {
  public:
   template <typename TreeType>
-  static bool VerifyParentBackLinks(const TreeType& tree, typename TreeType::RawPtrType node) {
-    BEGIN_TEST;
+  static void VerifyParentBackLinks(const TreeType& tree, typename TreeType::RawPtrType node) {
     using NodeTraits = typename TreeType::NodeTraits;
 
-    ASSERT_TRUE(valid_sentinel_ptr(node), "");
+    ASSERT_TRUE(valid_sentinel_ptr(node));
     const auto& ns = NodeTraits::node_state(*node);
 
     if (valid_sentinel_ptr(ns.left_)) {
@@ -33,13 +33,10 @@ class WAVLTreeChecker {
       EXPECT_EQ(node, NodeTraits::node_state(*ns.right_).parent_,
                 "Corrupt right-side parent back-link!");
     }
-
-    END_TEST;
   }
 
   template <typename TreeType>
-  static bool SanityCheck(const TreeType& tree) {
-    BEGIN_TEST;
+  static void SanityCheck(const TreeType& tree) {
     using NodeTraits = typename TreeType::NodeTraits;
     using RawPtrType = typename TreeType::RawPtrType;
     using Observer = typename TreeType::Observer;
@@ -48,26 +45,26 @@ class WAVLTreeChecker {
     if (tree.is_empty()) {
       // If the tree is empty, then the root should be null, and the
       // left/right-most members should be set to the sentinel value.
-      ASSERT_NULL(tree.root_, "");
-      ASSERT_EQ(tree.sentinel(), tree.left_most_, "");
-      ASSERT_EQ(tree.sentinel(), tree.right_most_, "");
-      EXPECT_EQ(0u, tree.size(), "");
+      ASSERT_NULL(tree.root_);
+      ASSERT_EQ(tree.sentinel(), tree.left_most_);
+      ASSERT_EQ(tree.sentinel(), tree.right_most_);
+      EXPECT_EQ(0u, tree.size());
     } else {
       // If the tree is non-empty, then the root, left-most and
       // right-most pointers should all be valid.  The LR-child of the
       // LR-most element should be the sentinel value.
-      ASSERT_NONNULL(tree.root_, "");
-      ASSERT_FALSE(is_sentinel_ptr(tree.root_), "");
+      ASSERT_NOT_NULL(tree.root_);
+      ASSERT_FALSE(is_sentinel_ptr(tree.root_));
 
-      ASSERT_NONNULL(tree.left_most_, "");
-      ASSERT_FALSE(is_sentinel_ptr(tree.left_most_), "");
-      ASSERT_EQ(tree.sentinel(), NodeTraits::node_state(*tree.left_most_).left_, "");
+      ASSERT_NOT_NULL(tree.left_most_);
+      ASSERT_FALSE(is_sentinel_ptr(tree.left_most_));
+      ASSERT_EQ(tree.sentinel(), NodeTraits::node_state(*tree.left_most_).left_);
 
-      ASSERT_NONNULL(tree.right_most_, "");
-      ASSERT_FALSE(is_sentinel_ptr(tree.right_most_), "");
-      ASSERT_EQ(tree.sentinel(), NodeTraits::node_state(*tree.right_most_).right_, "");
+      ASSERT_NOT_NULL(tree.right_most_);
+      ASSERT_FALSE(is_sentinel_ptr(tree.right_most_));
+      ASSERT_EQ(tree.sentinel(), NodeTraits::node_state(*tree.right_most_).right_);
 
-      EXPECT_LT(0u, tree.size(), "");
+      EXPECT_LT(0u, tree.size());
     }
 
     // Compute the size and depth of the tree, verifying the parent
@@ -83,7 +80,7 @@ class WAVLTreeChecker {
     // Start by going left until we have determined the depth of the
     // left most node of the tree.
     while (valid_sentinel_ptr(node)) {
-      ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
+      ASSERT_NO_FAILURES(VerifyParentBackLinks(tree, node));
 
       auto& ns = NodeTraits::node_state(*node);
       ++cur_depth;
@@ -111,22 +108,22 @@ class WAVLTreeChecker {
         depth = cur_depth;
       ++size;
 
-      ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
+      ASSERT_NO_FAILURES(VerifyParentBackLinks(tree, node));
 
       // Verify the rank rule using the tree's observer's implementation.
       // If this sanity check is being run as part of the balance test, it
       // will use the implementation above.  For all other tests, only the
       // rank parity is stored in the node, so we cannot rigorously verify
       // the rule.  The default VerifyRankRule implementation will be used
-      // instead (which just returns true).
-      ASSERT_TRUE(Observer::VerifyRankRule(tree, node), "");
+      // instead.
+      ASSERT_NO_FAILURES(Observer::VerifyRankRule(tree, node));
 
       // #2: Can we go right?
       const auto& ns = NodeTraits::node_state(*node);
       if (valid_sentinel_ptr(ns.right_)) {
         cur_depth++;
         node = ns.right_;
-        ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
+        ASSERT_NO_FAILURES(VerifyParentBackLinks(tree, node));
 
         // Now go as far left as we can.
         while (true) {
@@ -137,7 +134,7 @@ class WAVLTreeChecker {
 
           ++cur_depth;
           node = ns.left_;
-          ASSERT_TRUE(VerifyParentBackLinks(tree, node), "");
+          ASSERT_NO_FAILURES(VerifyParentBackLinks(tree, node));
         }
 
         // Loop and visit the next node.
@@ -152,8 +149,8 @@ class WAVLTreeChecker {
         bool is_left = (parent_ns.left_ == node);
         bool is_right = (parent_ns.right_ == node);
 
-        ASSERT_TRUE(is_left != is_right, "");
-        ASSERT_TRUE(is_left || is_right, "");
+        ASSERT_TRUE(is_left != is_right);
+        ASSERT_TRUE(is_left || is_right);
 
         node = parent;
         --cur_depth;
@@ -170,16 +167,16 @@ class WAVLTreeChecker {
     }
 
     // We should have visited all of the nodes by now.
-    ASSERT_EQ(tree.size(), size, "");
+    ASSERT_EQ(tree.size(), size);
 
     // If this is being called from the balance tests, check the balance
     // bounds, and computational complexity bounds.
-    ASSERT_TRUE(Observer::VerifyBalance(tree, depth), "");
-
-    END_TEST;
+    ASSERT_NO_FAILURES(Observer::VerifyBalance(tree, depth));
   }
 };
 
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl
+
+#endif  // FBL_TESTS_INTRUSIVE_CONTAINERS_INTRUSIVE_WAVL_TREE_CHECKER_H_

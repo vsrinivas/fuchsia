@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_TEST_THUNKS_H_
+#define FBL_TESTS_INTRUSIVE_CONTAINERS_TEST_THUNKS_H_
+
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
 namespace intrusive_containers {
 
-#define MAKE_TEST_THUNK(_test_name)    \
-  static bool _test_name##Test() {     \
-    TestEnvironmentClass env;          \
-    BEGIN_TEST;                        \
-    EXPECT_TRUE(env._test_name(), ""); \
-    EXPECT_TRUE(env.Reset(), "");      \
-    END_TEST;                          \
+#define MAKE_TEST_THUNK(_test_name)           \
+  static void _test_name() {                  \
+    TestEnvironmentClass env;                 \
+    ASSERT_NO_FAILURES(env._test_name(), ""); \
+    ASSERT_NO_FAILURES(env.Reset(), "");      \
   }
 
 // A utility class used to generate static test thunks for the various
@@ -106,6 +107,14 @@ struct TestThunks {
 #define DEFINE_TEST_THUNK(_env_type, _container_type, _ptr_type) \
   TestThunks<_env_type##ContainerTestEnvironment<_ptr_type##_container_type##TestTraits>>
 
+#define RUN_ZXTEST(_group, _flavor, _test) \
+  TEST(_group, _test##_##_flavor) {        \
+    auto fn = _flavor ::_test;             \
+    ASSERT_NO_FAILURES(fn());              \
+  }
+
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl
+
+#endif  // FBL_TESTS_INTRUSIVE_CONTAINERS_TEST_THUNKS_H_

@@ -37,11 +37,15 @@ test("fbl") {
     "unique_fd_tests.cc",
     "vector_tests.cc",
   ]
+
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/unittest",  # TODO: convert to zxtest.
     "$zx/system/ulib/zxtest",
   ]
+
+  if (!is_fuchsia) {
+    defines = [ "FBL_TEST_ENABLE_WAVL_TREE_BALANCE_TEST=1" ]
+  }
 
   if (is_fuchsia) {
     # These tests won't run on the host. There are two primary reasons for this.

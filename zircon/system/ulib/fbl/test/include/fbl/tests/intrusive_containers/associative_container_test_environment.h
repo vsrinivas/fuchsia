@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_ASSOCIATIVE_CONTAINER_TEST_ENVIRONMENT_H_
+#define FBL_TESTS_INTRUSIVE_CONTAINERS_ASSOCIATIVE_CONTAINER_TEST_ENVIRONMENT_H_
 
-#include <unittest/unittest.h>
 #include <fbl/tests/intrusive_containers/base_test_environments.h>
 #include <fbl/tests/lfsr.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -50,11 +51,9 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
     return SizeUtils<CType>::size(container);
   }
 
-  bool SetTestObjKeys(const PtrType& test_obj, PopulateMethod method) {
-    BEGIN_TEST;
-
-    ASSERT_NONNULL(test_obj, "");
-    ASSERT_LT(test_obj->value(), OBJ_COUNT, "");
+  void SetTestObjKeys(const PtrType& test_obj, PopulateMethod method) {
+    ASSERT_NOT_NULL(test_obj);
+    ASSERT_LT(test_obj->value(), OBJ_COUNT);
 
     // Assign a key to the object based on the chosen populate method.
     KeyType key = 0;
@@ -88,18 +87,14 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
     // Set the primary key on the object.  Offset the "other" key by OBJ_COUNT
     test_obj->SetKey(key);
     OtherContainerTraits::SetKey(*test_obj, other_key);
-
-    END_TEST;
   }
 
-  bool Populate(ContainerType& container, PopulateMethod method,
+  void Populate(ContainerType& container, PopulateMethod method,
                 RefAction ref_action = RefAction::HoldSome) {
-    BEGIN_TEST;
-
-    EXPECT_EQ(0U, ObjType::live_obj_count(), "");
+    EXPECT_EQ(0U, ObjType::live_obj_count());
 
     for (size_t i = 0; i < OBJ_COUNT; ++i) {
-      EXPECT_EQ(i, Size(container), "");
+      EXPECT_EQ(i, Size(container));
 
       // Unless explicitly told to do so, don't hold a reference in the
       // test environment for every 4th object created.  Note, this only
@@ -122,10 +117,10 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
       }
 
       PtrType new_object = this->CreateTrackedObject(i, i, hold_ref);
-      ASSERT_NONNULL(new_object, "");
-      EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
+      ASSERT_NOT_NULL(new_object);
+      EXPECT_EQ(new_object->raw_ptr(), objects()[i]);
 
-      ASSERT_TRUE(SetTestObjKeys(new_object, method), "");
+      ASSERT_NO_FAILURES(SetTestObjKeys(new_object, method));
 
       KeyType obj_key = KeyTraits::GetKey(*new_object);
       max_key_ = !i ? obj_key : KeyTraits::LessThan(max_key_, obj_key) ? obj_key : max_key_;
@@ -142,52 +137,40 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
 #else
         container.insert(TestEnvTraits::Transfer(new_object));
 #endif
-        EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
+        EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object));
       } else {
         container.insert(std::move(new_object));
-        EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
+        EXPECT_TRUE(TestEnvTraits::WasMoved(new_object));
       }
     }
 
-    EXPECT_EQ(OBJ_COUNT, Size(container), "");
-    EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-    EXPECT_TRUE(ContainerChecker::SanityCheck(container), "");
-
-    END_TEST;
+    EXPECT_EQ(OBJ_COUNT, Size(container));
+    EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count());
+    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container));
   }
 
-  bool Populate(ContainerType& container, RefAction ref_action = RefAction::HoldSome) override {
+  void Populate(ContainerType& container, RefAction ref_action = RefAction::HoldSome) override {
     return Populate(container, PopulateMethod::AscendingKey, ref_action);
   }
 
-  bool DoInsertByKey(PopulateMethod populate_method) {
-    BEGIN_TEST;
-
-    EXPECT_TRUE(Populate(container(), populate_method), "");
-    ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
-
-    END_TEST;
+  void DoInsertByKey(PopulateMethod populate_method) {
+    ASSERT_NO_FATAL_FAILURES(Populate(container(), populate_method));
+    ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
   }
 
-  bool InsertByKey() {
-    BEGIN_TEST;
+  void InsertByKey() {
+    ASSERT_NO_FATAL_FAILURES(DoInsertByKey(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
 
-    EXPECT_TRUE(DoInsertByKey(PopulateMethod::AscendingKey), "");
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURES(DoInsertByKey(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
 
-    EXPECT_TRUE(DoInsertByKey(PopulateMethod::DescendingKey), "");
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
-
-    EXPECT_TRUE(DoInsertByKey(PopulateMethod::RandomKey), "");
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
-
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(DoInsertByKey(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
   }
 
-  bool DoFindByKey(PopulateMethod populate_method) {
-    BEGIN_TEST;
-
-    EXPECT_TRUE(Populate(container(), populate_method), "");
+  void DoFindByKey(PopulateMethod populate_method) {
+    ASSERT_NO_FATAL_FAILURES(Populate(container(), populate_method));
 
     // Lookup the various items which should be in the collection by key.
     for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -196,43 +179,36 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
 
       auto iter = const_container().find(key);
 
-      ASSERT_TRUE(iter.IsValid(), "");
-      EXPECT_EQ(key, iter->GetKey(), "");
-      EXPECT_EQ(value, iter->value(), "");
+      ASSERT_TRUE(iter.IsValid());
+      EXPECT_EQ(key, iter->GetKey());
+      EXPECT_EQ(value, iter->value());
     }
 
     // Fail to look up something which should not be in the collection.
     auto iter = const_container().find(kBannedKeyValue);
-    EXPECT_FALSE(iter.IsValid(), "");
+    EXPECT_FALSE(iter.IsValid());
 
-    ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
   }
 
-  bool FindByKey() {
-    BEGIN_TEST;
+  void FindByKey() {
+    ASSERT_NO_FATAL_FAILURES(DoFindByKey(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
 
-    EXPECT_TRUE(DoFindByKey(PopulateMethod::AscendingKey), "");
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURES(DoFindByKey(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
 
-    EXPECT_TRUE(DoFindByKey(PopulateMethod::DescendingKey), "");
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(2 * OBJ_COUNT));
-
-    EXPECT_TRUE(DoFindByKey(PopulateMethod::RandomKey), "");
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
-
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(DoFindByKey(PopulateMethod::RandomKey));
+    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(3 * OBJ_COUNT));
   }
 
-  bool DoEraseByKey(PopulateMethod populate_method, size_t already_erased) {
-    BEGIN_TEST;
-
-    EXPECT_TRUE(Populate(container(), populate_method), "");
+  void DoEraseByKey(PopulateMethod populate_method, size_t already_erased) {
+    ASSERT_NO_FATAL_FAILURES(Populate(container(), populate_method));
     size_t remaining = OBJ_COUNT;
     size_t erased = 0;
 
     // Fail to erase a key which is not in the container.
-    EXPECT_NULL(container().erase(kBannedKeyValue), "");
+    EXPECT_NULL(container().erase(kBannedKeyValue));
 
     // Erase all of the even members of the collection by key.
     for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -243,13 +219,15 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
       if (key & 1)
         continue;
 
-      EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
-      EXPECT_TRUE(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining), "");
-      EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(++erased + already_erased));
+      ASSERT_NO_FATAL_FAILURES(
+          TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
+      ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining));
+      ASSERT_NO_FATAL_FAILURES(
+          TestEnvTraits::CheckCustomDeleteInvocations(++erased + already_erased));
       --remaining;
     }
 
-    EXPECT_EQ(remaining, Size(container()), "");
+    EXPECT_EQ(remaining, Size(container()));
 
     // Erase the remaining odd members.
     for (size_t i = 0; i < OBJ_COUNT; ++i) {
@@ -257,40 +235,35 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
         continue;
 
       KeyType key = objects()[i]->GetKey();
-      EXPECT_TRUE(key & 1, "");
+      EXPECT_TRUE(key & 1);
 
-      EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
-      EXPECT_TRUE(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining), "");
-      EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(++erased + already_erased));
+      ASSERT_NO_FATAL_FAILURES(
+          TestEnvTraits::CheckCustomDeleteInvocations(erased + already_erased));
+      ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::DoErase(key, i, remaining));
+      ASSERT_NO_FATAL_FAILURES(
+          TestEnvTraits::CheckCustomDeleteInvocations(++erased + already_erased));
       --remaining;
     }
 
-    EXPECT_EQ(0u, Size(container()), "");
+    EXPECT_EQ(0u, Size(container()));
 
-    ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
   }
 
-  bool EraseByKey() {
-    BEGIN_TEST;
-
-    EXPECT_TRUE(DoEraseByKey(PopulateMethod::AscendingKey, 0), "");
-    EXPECT_TRUE(DoEraseByKey(PopulateMethod::DescendingKey, OBJ_COUNT), "");
-    EXPECT_TRUE(DoEraseByKey(PopulateMethod::RandomKey, 2 * OBJ_COUNT), "");
-
-    END_TEST;
+  void EraseByKey() {
+    ASSERT_NO_FATAL_FAILURES(DoEraseByKey(PopulateMethod::AscendingKey, 0));
+    ASSERT_NO_FATAL_FAILURES(DoEraseByKey(PopulateMethod::DescendingKey, OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURES(DoEraseByKey(PopulateMethod::RandomKey, 2 * OBJ_COUNT));
   }
 
-  bool DoInsertOrFind(PopulateMethod populate_method, size_t already_destroyed) {
-    BEGIN_TEST;
-
+  void DoInsertOrFind(PopulateMethod populate_method, size_t already_destroyed) {
     for (unsigned int pass_iterator = 0u; pass_iterator < 2u; ++pass_iterator) {
       for (size_t i = 0u; i < OBJ_COUNT; ++i) {
         // Create a new tracked object.
         PtrType new_object = this->CreateTrackedObject(i, i, true);
-        ASSERT_NONNULL(new_object, "");
-        EXPECT_EQ(new_object->raw_ptr(), objects()[i], "");
-        ASSERT_TRUE(SetTestObjKeys(new_object, populate_method), "");
+        ASSERT_NOT_NULL(new_object);
+        EXPECT_EQ(new_object->raw_ptr(), objects()[i]);
+        ASSERT_NO_FAILURES(SetTestObjKeys(new_object, populate_method));
 
         // Insert the object into the container using insert_or_find.  There
         // should be no collision.  Exercise both the move and the copy
@@ -305,32 +278,34 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
           success = container().insert_or_find(TestEnvTraits::Transfer(new_object),
                                                pass_iterator ? &iter : nullptr);
 #endif
-          EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object), "");
+          EXPECT_TRUE(TestEnvTraits::WasTransferred(new_object));
         } else {
           success =
               container().insert_or_find(std::move(new_object), pass_iterator ? &iter : nullptr);
 
-          EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
+          EXPECT_TRUE(TestEnvTraits::WasMoved(new_object));
         }
 
-        EXPECT_TRUE(success, "");
+        EXPECT_TRUE(success);
 
         // If we passed an iterator to the insert_or_find operation, it
         // should point to the newly inserted object.
         if (pass_iterator) {
-          ASSERT_TRUE(iter.IsValid(), "");
-          EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
+          ASSERT_TRUE(iter.IsValid());
+          EXPECT_EQ(objects()[i], iter->raw_ptr());
         }
       }
 
       // If we have not tested passing a non-null iterator yet, reset the
       // environment and do the test again.
-      if (!pass_iterator)
-        ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
+      if (!pass_iterator) {
+        ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
+      }
     }
 
     // The objects from the first test pass should have been deleted.
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURES(
+        TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + OBJ_COUNT));
 
     // Now go over the (populated) container and attempt to insert new
     // objects which have the same keys as existing objects.  Each of these
@@ -338,13 +313,13 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
     // previously.
     for (unsigned int pass_iterator = 0u; pass_iterator < 2u; ++pass_iterator) {
       for (size_t i = 0u; i < OBJ_COUNT; ++i) {
-        ASSERT_NONNULL(objects()[i], "");
+        ASSERT_NOT_NULL(objects()[i]);
 
         // Create a new non-tracked object; assign it the same key as
         // the existing object.
         PtrType new_object = TestEnvTraits::CreateObject(i);
-        ASSERT_NONNULL(new_object, "");
-        EXPECT_NE(new_object->raw_ptr(), objects()[i], "");
+        ASSERT_NOT_NULL(new_object);
+        EXPECT_NE(new_object->raw_ptr(), objects()[i]);
         new_object->SetKey(KeyTraits::GetKey(*objects()[i]));
 
         // Attempt (but fail) to insert the object into the container
@@ -369,68 +344,62 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
         // The object should not have been inserted.  If an attempt was
         // made to move the pointer into the collection, it should have
         // failed and we should still own the pointer.
-        EXPECT_FALSE(success, "");
-        ASSERT_NONNULL(new_object, "");
+        EXPECT_FALSE(success);
+        ASSERT_NOT_NULL(new_object);
 
         // If we passed an iterator to the insert_or_find operation, it
         // should point to the object we collided with.
         if (pass_iterator) {
-          EXPECT_TRUE(iter.IsValid(), "");
-          if (iter.IsValid(), "") {
-            EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
-            EXPECT_NE(PtrTraits::GetRaw(new_object), iter->raw_ptr(), "");
+          EXPECT_TRUE(iter.IsValid());
+          if (iter.IsValid()) {
+            EXPECT_EQ(objects()[i], iter->raw_ptr());
+            EXPECT_NE(PtrTraits::GetRaw(new_object), iter->raw_ptr());
             EXPECT_TRUE(
-                KeyTraits::EqualTo(KeyTraits::GetKey(*iter), KeyTraits::GetKey(*new_object)), "");
+                KeyTraits::EqualTo(KeyTraits::GetKey(*iter), KeyTraits::GetKey(*new_object)));
           }
         }
 
         // Release the object we failed to insert.
-        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + OBJ_COUNT +
-                                                                (OBJ_COUNT * pass_iterator) + i));
+        ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(
+            already_destroyed + OBJ_COUNT + (OBJ_COUNT * pass_iterator) + i));
         TestEnvTraits::ReleaseObject(new_object);
-        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(
+        ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(
             already_destroyed + OBJ_COUNT + (OBJ_COUNT * pass_iterator) + i + 1));
       }
     }
 
-    ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + (4 * OBJ_COUNT)));
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
+    ASSERT_NO_FATAL_FAILURES(
+        TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + (4 * OBJ_COUNT)));
   }
 
-  bool InsertOrFind() {
-    BEGIN_TEST;
-
+  void InsertOrFind() {
     // Each time we run this test, we create and destroy 4 * OBJ_COUNT objects
-    EXPECT_TRUE(DoInsertOrFind(PopulateMethod::AscendingKey, 0), "");
-    EXPECT_TRUE(DoInsertOrFind(PopulateMethod::DescendingKey, 4 * OBJ_COUNT), "");
-    EXPECT_TRUE(DoInsertOrFind(PopulateMethod::RandomKey, 8 * OBJ_COUNT), "");
-
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(DoInsertOrFind(PopulateMethod::AscendingKey, 0));
+    ASSERT_NO_FATAL_FAILURES(DoInsertOrFind(PopulateMethod::DescendingKey, 4 * OBJ_COUNT));
+    ASSERT_NO_FATAL_FAILURES(DoInsertOrFind(PopulateMethod::RandomKey, 8 * OBJ_COUNT));
   }
 
   template <typename CopyOrMoveUtil>
-  bool DoInsertOrReplace(size_t extra_elements, size_t already_destroyed) {
-    BEGIN_TEST;
-
-    ASSERT_EQ(0u, ObjType::live_obj_count(), "");
-    EXPECT_TRUE(Populate(container(), PopulateMethod::AscendingKey), "");
+  void DoInsertOrReplace(size_t extra_elements, size_t already_destroyed) {
+    ASSERT_EQ(0u, ObjType::live_obj_count());
+    ASSERT_NO_FATAL_FAILURES(Populate(container(), PopulateMethod::AscendingKey));
 
     // Attempt to replace every element in the container with one that has
     // the same key.  Then attempt to replace some which were not in the
     // container to start with and verify that they were inserted instead.
     for (size_t i = 0; i < OBJ_COUNT + extra_elements; ++i) {
       PtrType new_obj = TestEnvTraits::CreateObject(i);
-      ASSERT_NONNULL(new_obj, "");
+      ASSERT_NOT_NULL(new_obj);
       new_obj->SetKey(i);
 
       PtrType replaced = container().insert_or_replace(CopyOrMoveUtil::Op(new_obj));
-      EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+      ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
 
       if (i < OBJ_COUNT) {
-        EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, container().size(), "");
-        ASSERT_NONNULL(replaced, "");
+        EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count());
+        EXPECT_EQ(OBJ_COUNT, container().size());
+        ASSERT_NOT_NULL(replaced);
         ASSERT_LT(replaced->value(), OBJ_COUNT);
         EXPECT_TRUE(KeyTraits::EqualTo(KeyTraits::GetKey(*replaced), i));
         EXPECT_TRUE(KeyTraits::EqualTo(KeyTraits::GetKey(*replaced), replaced->value()));
@@ -438,49 +407,45 @@ class AssociativeContainerTestEnvironment : public TestEnvironment<TestEnvTraits
         ASSERT_EQ(objects()[i], PtrTraits::GetRaw(replaced));
         ReleaseObject(i);
         replaced = nullptr;
-        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
-        EXPECT_EQ(OBJ_COUNT, container().size(), "");
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count());
+        EXPECT_EQ(OBJ_COUNT, container().size());
 
         // The replaced object should be gone now.
-        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + i + 1));
+        ASSERT_NO_FATAL_FAILURES(
+            TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + i + 1));
       } else {
         EXPECT_EQ(i + 1, ObjType::live_obj_count());
-        EXPECT_EQ(i + 1, container().size(), "");
-        EXPECT_NULL(replaced, "");
+        EXPECT_EQ(i + 1, container().size());
+        EXPECT_NULL(replaced);
 
         // We should have succeeded in inserting this object, so the delete count should not
         // have gone up.
-        EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + OBJ_COUNT));
+        ASSERT_NO_FATAL_FAILURES(
+            TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + OBJ_COUNT));
       }
     }
 
-    EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
 
     while (!container().is_empty()) {
       PtrType ptr = container().erase(container().begin());
       TestEnvTraits::ReleaseObject(ptr);
     }
 
-    EXPECT_TRUE(TestEnvTraits::CheckCustomDeleteInvocations(already_destroyed + (2 * OBJ_COUNT) +
-                                                            extra_elements));
-
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(TestEnvTraits::CheckCustomDeleteInvocations(
+        already_destroyed + (2 * OBJ_COUNT) + extra_elements));
   }
 
-  bool InsertOrReplace() {
-    BEGIN_TEST;
-
+  void InsertOrReplace() {
     // Each time we run each version of the tests, we create and destroy 2 *
     // OBJ_COUNT + the number of extra elements we specify;
     constexpr size_t EXTRA_ELEMENTS = 10;
     constexpr size_t TOTAL_OBJS = (2 * OBJ_COUNT) + EXTRA_ELEMENTS;
 
-    EXPECT_TRUE(DoInsertOrReplace<MoveUtil>(EXTRA_ELEMENTS, 0), "");
+    ASSERT_NO_FATAL_FAILURES(DoInsertOrReplace<MoveUtil>(EXTRA_ELEMENTS, 0));
     if (CopyUtil<PtrTraits>::CanCopy) {
-      EXPECT_TRUE(DoInsertOrReplace<CopyUtil<PtrTraits>>(EXTRA_ELEMENTS, TOTAL_OBJS), "");
+      ASSERT_NO_FATAL_FAILURES(DoInsertOrReplace<CopyUtil<PtrTraits>>(EXTRA_ELEMENTS, TOTAL_OBJS));
     }
-
-    END_TEST;
   }
 
  protected:
@@ -563,3 +528,5 @@ constexpr typename AssociativeContainerTestEnvironment<TestEnvTraits>::OtherKeyT
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl
+
+#endif  // FBL_TESTS_INTRUSIVE_CONTAINERS_ASSOCIATIVE_CONTAINER_TEST_ENVIRONMENT_H_

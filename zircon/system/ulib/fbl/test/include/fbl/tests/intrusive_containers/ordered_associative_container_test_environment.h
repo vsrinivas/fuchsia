@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_ORDERED_ASSOCIATIVE_CONTAINER_TEST_ENVIRONMENT_H_
+#define FBL_TESTS_INTRUSIVE_CONTAINERS_ORDERED_ASSOCIATIVE_CONTAINER_TEST_ENVIRONMENT_H_
 
-#include <unittest/unittest.h>
 #include <fbl/algorithm.h>
 #include <fbl/tests/intrusive_containers/associative_container_test_environment.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -62,99 +63,83 @@ class OrderedAssociativeContainerTestEnvironment
     }
   };
 
-  bool DoOrderedIter(PopulateMethod populate_method) {
-    BEGIN_TEST;
-
-    ASSERT_TRUE(ACTE::Populate(container(), populate_method), "");
+  void DoOrderedIter(PopulateMethod populate_method) {
+    ASSERT_NO_FAILURES(ACTE::Populate(container(), populate_method));
 
     auto iter = container().begin();
-    EXPECT_TRUE(iter.IsValid(), "");
+    EXPECT_TRUE(iter.IsValid());
 
     for (auto prev = iter++; iter.IsValid(); prev = iter++) {
       // None of the associative containers currently support storing
       // mutliple nodes with the same key, therefor the iteration ordering
       // of the keys should be strictly monotonically increasing.
-      ASSERT_TRUE(prev.IsValid(), "");
+      ASSERT_TRUE(prev.IsValid());
 
       auto iter_key = KeyTraits::GetKey(*iter);
       auto prev_key = KeyTraits::GetKey(*prev);
 
-      EXPECT_TRUE(KeyTraits::LessThan(prev_key, iter_key), "");
-      EXPECT_FALSE(KeyTraits::LessThan(iter_key, prev_key), "");
-      EXPECT_FALSE(KeyTraits::EqualTo(prev_key, iter_key), "");
-      EXPECT_FALSE(KeyTraits::EqualTo(iter_key, prev_key), "");
+      EXPECT_TRUE(KeyTraits::LessThan(prev_key, iter_key));
+      EXPECT_FALSE(KeyTraits::LessThan(iter_key, prev_key));
+      EXPECT_FALSE(KeyTraits::EqualTo(prev_key, iter_key));
+      EXPECT_FALSE(KeyTraits::EqualTo(iter_key, prev_key));
     }
 
-    ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
-    END_TEST;
+    ASSERT_NO_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
   }
 
-  bool OrderedIter() {
-    BEGIN_TEST;
-
-    EXPECT_TRUE(DoOrderedIter(PopulateMethod::AscendingKey), "");
-    EXPECT_TRUE(DoOrderedIter(PopulateMethod::DescendingKey), "");
-    EXPECT_TRUE(DoOrderedIter(PopulateMethod::RandomKey), "");
-
-    END_TEST;
+  void OrderedIter() {
+    ASSERT_NO_FATAL_FAILURES(DoOrderedIter(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoOrderedIter(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoOrderedIter(PopulateMethod::RandomKey));
   }
 
-  bool DoOrderedReverseIter(PopulateMethod populate_method) {
-    BEGIN_TEST;
-
-    ASSERT_TRUE(ACTE::Populate(container(), populate_method), "");
+  void DoOrderedReverseIter(PopulateMethod populate_method) {
+    ASSERT_NO_FAILURES(ACTE::Populate(container(), populate_method));
 
     auto iter = container().end();
-    EXPECT_FALSE(iter.IsValid(), "");
+    EXPECT_FALSE(iter.IsValid());
     --iter;
-    EXPECT_TRUE(iter.IsValid(), "");
+    EXPECT_TRUE(iter.IsValid());
 
     for (auto prev = iter--; iter.IsValid(); prev = iter--) {
       // None of the associative containers currently support storing
       // mutliple nodes with the same key, therefor the reverse iteration
       // ordering of the keys should be strictly monotonically decreasing.
-      ASSERT_TRUE(prev.IsValid(), "");
+      ASSERT_TRUE(prev.IsValid());
 
       auto iter_key = KeyTraits::GetKey(*iter);
       auto prev_key = KeyTraits::GetKey(*prev);
 
-      EXPECT_TRUE(KeyTraits::LessThan(iter_key, prev_key), "");
-      EXPECT_FALSE(KeyTraits::LessThan(prev_key, iter_key), "");
-      EXPECT_FALSE(KeyTraits::EqualTo(prev_key, iter_key), "");
-      EXPECT_FALSE(KeyTraits::EqualTo(iter_key, prev_key), "");
+      EXPECT_TRUE(KeyTraits::LessThan(iter_key, prev_key));
+      EXPECT_FALSE(KeyTraits::LessThan(prev_key, iter_key));
+      EXPECT_FALSE(KeyTraits::EqualTo(prev_key, iter_key));
+      EXPECT_FALSE(KeyTraits::EqualTo(iter_key, prev_key));
     }
 
-    ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
-    END_TEST;
+    ASSERT_NO_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
   }
 
-  bool OrderedReverseIter() {
-    BEGIN_TEST;
-
-    EXPECT_TRUE(DoOrderedReverseIter(PopulateMethod::AscendingKey), "");
-    EXPECT_TRUE(DoOrderedReverseIter(PopulateMethod::DescendingKey), "");
-    EXPECT_TRUE(DoOrderedReverseIter(PopulateMethod::RandomKey), "");
-
-    END_TEST;
+  void OrderedReverseIter() {
+    ASSERT_NO_FATAL_FAILURES(DoOrderedReverseIter(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoOrderedReverseIter(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoOrderedReverseIter(PopulateMethod::RandomKey));
   }
 
   template <typename BoundTraits>
-  bool DoBoundTest(PopulateMethod populate_method) {
-    BEGIN_TEST;
-
+  void DoBoundTest(PopulateMethod populate_method) {
     // Searching for a value while the tree is empty should always fail.
     auto found = BoundTraits::Search(container(), 0u);
-    EXPECT_FALSE(found.IsValid(), "");
+    EXPECT_FALSE(found.IsValid());
 
     // Populate the container.
-    ASSERT_TRUE(ACTE::Populate(container(), populate_method), "");
+    ASSERT_NO_FAILURES(ACTE::Populate(container(), populate_method));
 
     // For every object we just put into the container compute the bound of
     // obj.key, (obj.key - 1) and (obj.key + 1) using brute force as well as
     // by using (upper|lower)_bound.  Make sure that the result agree.
     for (size_t i = 0; i < ACTE::OBJ_COUNT; ++i) {
       auto ptr = ACTE::objects()[i];
-      ASSERT_NONNULL(ptr, "");
+      ASSERT_NOT_NULL(ptr);
 
       struct {
         KeyType key;
@@ -170,7 +155,7 @@ class OrderedAssociativeContainerTestEnvironment
       // bound this/prev/next.
       for (size_t j = 0; j < ACTE::OBJ_COUNT; ++j) {
         auto tmp = ACTE::objects()[j];
-        ASSERT_NONNULL(tmp, "");
+        ASSERT_NOT_NULL(tmp);
         KeyType tmp_key = KeyTraits::GetKey(*tmp);
 
         for (size_t k = 0; k < fbl::count_of(tests); ++k) {
@@ -192,48 +177,39 @@ class OrderedAssociativeContainerTestEnvironment
         // force.  If we did find a bound, it should be the same bound
         // we found using brute force.
         if (test.bound != nullptr) {
-          ASSERT_TRUE(iter.IsValid(), "");
-          EXPECT_EQ(test.bound, iter->raw_ptr(), "");
+          ASSERT_TRUE(iter.IsValid());
+          EXPECT_EQ(test.bound, iter->raw_ptr());
         } else {
-          EXPECT_FALSE(iter.IsValid(), "");
+          EXPECT_FALSE(iter.IsValid());
         }
       }
     }
 
-    ASSERT_TRUE(TestEnvironment<TestEnvTraits>::Reset(), "");
-    END_TEST;
+    ASSERT_NO_FAILURES(TestEnvironment<TestEnvTraits>::Reset());
   }
 
-  bool UpperBound() {
-    BEGIN_TEST;
-
+  void UpperBound() {
     using NonConstBoundTraits = UpperBoundTraits<NonConstTraits>;
-    EXPECT_TRUE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::AscendingKey), "");
-    EXPECT_TRUE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::DescendingKey), "");
-    EXPECT_TRUE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::RandomKey), "");
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::RandomKey));
 
     using ConstBoundTraits = UpperBoundTraits<ConstTraits>;
-    EXPECT_TRUE(DoBoundTest<ConstBoundTraits>(PopulateMethod::AscendingKey), "");
-    EXPECT_TRUE(DoBoundTest<ConstBoundTraits>(PopulateMethod::DescendingKey), "");
-    EXPECT_TRUE(DoBoundTest<ConstBoundTraits>(PopulateMethod::RandomKey), "");
-
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::RandomKey));
   }
 
-  bool LowerBound() {
-    BEGIN_TEST;
-
+  void LowerBound() {
     using NonConstBoundTraits = LowerBoundTraits<NonConstTraits>;
-    EXPECT_TRUE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::AscendingKey), "");
-    EXPECT_TRUE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::DescendingKey), "");
-    EXPECT_TRUE(DoBoundTest<NonConstBoundTraits>(PopulateMethod::RandomKey), "");
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<NonConstBoundTraits>(PopulateMethod::RandomKey));
 
     using ConstBoundTraits = LowerBoundTraits<ConstTraits>;
-    EXPECT_TRUE(DoBoundTest<ConstBoundTraits>(PopulateMethod::AscendingKey), "");
-    EXPECT_TRUE(DoBoundTest<ConstBoundTraits>(PopulateMethod::DescendingKey), "");
-    EXPECT_TRUE(DoBoundTest<ConstBoundTraits>(PopulateMethod::RandomKey), "");
-
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::AscendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::DescendingKey));
+    ASSERT_NO_FATAL_FAILURES(DoBoundTest<ConstBoundTraits>(PopulateMethod::RandomKey));
   }
 
  private:
@@ -244,3 +220,5 @@ class OrderedAssociativeContainerTestEnvironment
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl
+
+#endif  // FBL_TESTS_INTRUSIVE_CONTAINERS_ORDERED_ASSOCIATIVE_CONTAINER_TEST_ENVIRONMENT_H_

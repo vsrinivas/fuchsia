@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
-#include <fbl/intrusive_single_list.h>
 #include <fbl/intrusive_hash_table.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/tests/intrusive_containers/associative_container_test_environment.h>
 #include <fbl/tests/intrusive_containers/intrusive_hash_table_checker.h>
 #include <fbl/tests/intrusive_containers/test_thunks.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -102,165 +102,161 @@ using SUPDDTE = DEFINE_TEST_THUNK(Associative, HTSLL, StdUniquePtrDefaultDeleter
 using SUPCDTE = DEFINE_TEST_THUNK(Associative, HTSLL, StdUniquePtrCustomDeleter);
 using RPTE    = DEFINE_TEST_THUNK(Associative, HTSLL, RefPtr);
 
-BEGIN_TEST_CASE(hashtable_sll_tests)
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
-RUN_NAMED_TEST("Clear (unmanaged)",                        UMTE::ClearTest)
-RUN_NAMED_TEST("Clear (unique)",                           UPTE::ClearTest)
-RUN_NAMED_TEST("Clear (std::uptr)",                        SUPDDTE::ClearTest)
-RUN_NAMED_TEST("Clear (std::uptr<Del>)",                   SUPCDTE::ClearTest)
-RUN_NAMED_TEST("Clear (RefPtr)",                           RPTE::ClearTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     Clear)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     Clear)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  Clear)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  Clear)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Clear)
 
-RUN_NAMED_TEST("ClearUnsafe (unmanaged)",                  UMTE::ClearUnsafeTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ClearUnsafe (unique)",                     UPTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (std::uptr)",                  SUPDDTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (std::uptr<Del>)",             SUPCDTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (RefPtr)",                     RPTE::ClearUnsafeTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     ClearUnsafe)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  ClearUnsafe)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  ClearUnsafe)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ClearUnsafe)
 #endif
 
-RUN_NAMED_TEST("IsEmpty (unmanaged)",                      UMTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (unique)",                         UPTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (std::uptr)",                      SUPDDTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (std::uptr<Del>)",                 SUPCDTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (RefPtr)",                         RPTE::IsEmptyTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     IsEmpty)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     IsEmpty)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  IsEmpty)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  IsEmpty)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     IsEmpty)
 
-RUN_NAMED_TEST("Iterate (unmanaged)",                      UMTE::IterateTest)
-RUN_NAMED_TEST("Iterate (unique)",                         UPTE::IterateTest)
-RUN_NAMED_TEST("Iterate (std::uptr)",                      SUPDDTE::IterateTest)
-RUN_NAMED_TEST("Iterate (std::uptr<Del>)",                 SUPCDTE::IterateTest)
-RUN_NAMED_TEST("Iterate (RefPtr)",                         RPTE::IterateTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     Iterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     Iterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  Iterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  Iterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Iterate)
 
 // Hashtables with singly linked list bucket can perform direct
 // iterator/reference erase operations, but the operations will be O(n)
-RUN_NAMED_TEST("IterErase (unmanaged)",                    UMTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (unique)",                       UPTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (std::uptr)",                    SUPDDTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (std::uptr<Del>)",               SUPCDTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (RefPtr)",                       RPTE::IterEraseTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     IterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     IterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  IterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  IterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     IterErase)
 
-RUN_NAMED_TEST("DirectErase (unmanaged)",                  UMTE::DirectEraseTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("DirectErase (unique)",                     UPTE::DirectEraseTest)
-RUN_NAMED_TEST("DirectErase (std::uptr)",                  SUPDDTE::DirectEraseTest)
-RUN_NAMED_TEST("DirectErase (std::uptr<Del>)",             SUPCDTE::DirectEraseTest)
-#endif
-RUN_NAMED_TEST("DirectErase (RefPtr)",                     RPTE::DirectEraseTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     DirectErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     DirectErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  DirectErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  DirectErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     DirectErase)
 
-RUN_NAMED_TEST("MakeIterator (unmanaged)",                 UMTE::MakeIteratorTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("MakeIterator (unique)",                    UPTE::MakeIteratorTest)
-RUN_NAMED_TEST("MakeIterator (std::uptr)",                 SUPDDTE::MakeIteratorTest)
-RUN_NAMED_TEST("MakeIterator (std::uptr<Del>)",            SUPCDTE::MakeIteratorTest)
-#endif
-RUN_NAMED_TEST("MakeIterator (RefPtr)",                    RPTE::MakeIteratorTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     MakeIterator)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     MakeIterator)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  MakeIterator)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  MakeIterator)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     MakeIterator)
 
 // HashTables with SinglyLinkedList buckets cannot iterate backwards (because
 // their buckets cannot iterate backwards)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ReverseIterErase (unmanaged)",             UMTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (unique)",                UPTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (std::uptr)",             SUPDDTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (std::uptr<Del>)",        SUPCDTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (RefPtr)",                RPTE::ReverseIterEraseTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ReverseIterErase)
 
-RUN_NAMED_TEST("ReverseIterate (unmanaged)",               UMTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (unique)",                  UPTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (std::uptr)",               SUPDDTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (std::uptr<Del>)",          SUPCDTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (RefPtr)",                  RPTE::ReverseIterateTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ReverseIterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     ReverseIterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  ReverseIterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  ReverseIterate)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ReverseIterate)
 #endif
 
 // Hash tables do not support swapping or Rvalue operations (Assignment or
 // construction) as doing so would be an O(n) operation (With 'n' == to the
 // number of buckets in the hashtable)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("Swap (unmanaged)",                         UMTE::SwapTest)
-RUN_NAMED_TEST("Swap (unique)",                            UPTE::SwapTest)
-RUN_NAMED_TEST("Swap (std::uptr)",                         SUPDDTE::SwapTest)
-RUN_NAMED_TEST("Swap (std::uptr<Del>)",                    SUPCDTE::SwapTest)
-RUN_NAMED_TEST("Swap (RefPtr)",                            RPTE::SwapTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     Swap)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     Swap)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  Swap)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  Swap)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Swap)
 
-RUN_NAMED_TEST("Rvalue Ops (unmanaged)",                   UMTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (unique)",                      UPTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (std::uptr)",                   SUPDDTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (std::uptr<Del>)",              SUPCDTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (RefPtr)",                      RPTE::RvalueOpsTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     RvalueOps)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     RvalueOps)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  RvalueOps)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  RvalueOps)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     RvalueOps)
 #endif
 
-RUN_NAMED_TEST("Scope (unique)",                           UPTE::ScopeTest)
-RUN_NAMED_TEST("Scope (std::uptr)",                        SUPDDTE::ScopeTest)
-RUN_NAMED_TEST("Scope (std::uptr<Del>)",                   SUPCDTE::ScopeTest)
-RUN_NAMED_TEST("Scope (RefPtr)",                           RPTE::ScopeTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     Scope)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  Scope)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  Scope)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Scope)
 
-RUN_NAMED_TEST("TwoContainer (unmanaged)",                 UMTE::TwoContainerTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     TwoContainer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("TwoContainer (unique)",                    UPTE::TwoContainerTest)
-RUN_NAMED_TEST("TwoContainer (std::uptr)",                 SUPDDTE::TwoContainerTest)
-RUN_NAMED_TEST("TwoContainer (std::uptr<Del>)",            SUPCDTE::TwoContainerTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     TwoContainer)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  TwoContainer)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  TwoContainer)
 #endif
-RUN_NAMED_TEST("TwoContainer (RefPtr)",                    RPTE::TwoContainerTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     TwoContainer)
 
-RUN_NAMED_TEST("ThreeContainerHelper (unmanaged)",         UMTE::ThreeContainerHelperTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ThreeContainerHelper)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ThreeContainerHelper (unique)",            UPTE::ThreeContainerHelperTest)
-RUN_NAMED_TEST("ThreeContainerHelper (std::uptr)",         SUPDDTE::ThreeContainerHelperTest)
-RUN_NAMED_TEST("ThreeContainerHelper (std::uptr<Del>)",    SUPCDTE::ThreeContainerHelperTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     ThreeContainerHelper)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  ThreeContainerHelper)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  ThreeContainerHelper)
 #endif
-RUN_NAMED_TEST("ThreeContainerHelper (RefPtr)",            RPTE::ThreeContainerHelperTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ThreeContainerHelper)
 
-RUN_NAMED_TEST("IterCopyPointer (unmanaged)",              UMTE::IterCopyPointerTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     IterCopyPointer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("IterCopyPointer (unique)",                 UPTE::IterCopyPointerTest)
-RUN_NAMED_TEST("IterCopyPointer (std::uptr)",              SUPDDTE::IterCopyPointerTest)
-RUN_NAMED_TEST("IterCopyPointer (std::uptr<Del>)",         DDTE::IterCopyPointerTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     IterCopyPointer)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  IterCopyPointer)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  IterCopyPointer)
 #endif
-RUN_NAMED_TEST("IterCopyPointer (RefPtr)",                 RPTE::IterCopyPointerTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     IterCopyPointer)
 
-RUN_NAMED_TEST("EraseIf (unmanaged)",                      UMTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (unique)",                         UPTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (std::uptr)",                      SUPCDTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (RefPtr)",                         RPTE::EraseIfTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     EraseIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     EraseIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  EraseIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  EraseIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     EraseIf)
 
-RUN_NAMED_TEST("FindIf (unmanaged)",                       UMTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (unique)",                          UPTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (std::uptr)",                       SUPDDTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (std::uptr<Del>)",                  SUPCDTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (RefPtr)",                          RPTE::FindIfTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     FindIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     FindIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  FindIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  FindIf)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     FindIf)
 
 //////////////////////////////////////////
 // Associative container specific tests.
 //////////////////////////////////////////
-RUN_NAMED_TEST("InsertByKey (unmanaged)",          UMTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (unique)",             UPTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (std::uptr)",          SUPDDTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (std::uptr<Del>)",     SUPCDTE::InsertByKeyTest)
-RUN_NAMED_TEST("InsertByKey (RefPtr)",             RPTE::InsertByKeyTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     InsertByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     InsertByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  InsertByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  InsertByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     InsertByKey)
 
-RUN_NAMED_TEST("FindByKey (unmanaged)",            UMTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (unique)",               UPTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (std::uptr)",            SUPDDTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (std::uptr<Del>)",       SUPCDTE::FindByKeyTest)
-RUN_NAMED_TEST("FindByKey (RefPtr)",               RPTE::FindByKeyTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     FindByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     FindByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  FindByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  FindByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     FindByKey)
 
-RUN_NAMED_TEST("EraseByKey (unmanaged)",           UMTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (unique)",              UPTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (std::uptr)",           SUPDDTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (std::uptr<Del>)",      SUPCDTE::EraseByKeyTest)
-RUN_NAMED_TEST("EraseByKey (RefPtr)",              RPTE::EraseByKeyTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     EraseByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     EraseByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  EraseByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  EraseByKey)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     EraseByKey)
 
-RUN_NAMED_TEST("InsertOrFind (unmanaged)",         UMTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (unique)",            UPTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (std::uptr)",         SUPDDTE::InsertOrFindTest)
-RUN_NAMED_TEST("InsertOrFind (RefPtr)",            RPTE::InsertOrFindTest)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     InsertOrFind)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     InsertOrFind)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  InsertOrFind)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  InsertOrFind)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     InsertOrFind)
 
-RUN_NAMED_TEST("InsertOrReplace (unmanaged)",      UMTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (unique)",         UPTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (std::uptr)",      SUPDDTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (std::uptr<Del>)", SUPCDTE::InsertOrReplaceTest)
-RUN_NAMED_TEST("InsertOrReplace (RefPtr)",         RPTE::InsertOrReplaceTest)
-END_TEST_CASE(hashtable_sll_tests)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     InsertOrReplace)
+RUN_ZXTEST(SinglyLinkedHashTableTest, UPTE,     InsertOrReplace)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPDDTE,  InsertOrReplace)
+RUN_ZXTEST(SinglyLinkedHashTableTest, SUPCDTE,  InsertOrReplace)
+RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     InsertOrReplace)
 // clang-format on
 
 }  // namespace intrusive_containers

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_INTRUSIVE_DOUBLY_LINKED_LIST_CHECKER_H_
+#define FBL_TESTS_INTRUSIVE_CONTAINERS_INTRUSIVE_DOUBLY_LINKED_LIST_CHECKER_H_
 
-#include <unittest/unittest.h>
 #include <fbl/intrusive_hash_table.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -20,17 +21,15 @@ using ::fbl::internal::is_sentinel_ptr;
 class DoublyLinkedListChecker {
  public:
   template <typename ContainerType>
-  static bool SanityCheck(const ContainerType& container) {
+  static void SanityCheck(const ContainerType& container) {
     using NodeTraits = typename ContainerType::NodeTraits;
     using PtrTraits = typename ContainerType::PtrTraits;
-    BEGIN_TEST;
-
     typename PtrTraits::RawPtrType tmp = container.head_;
     while (true) {
-      ASSERT_NONNULL(tmp, "");
+      ASSERT_NOT_NULL(tmp);
 
       if (is_sentinel_ptr(tmp)) {
-        ASSERT_EQ(container.sentinel(), tmp, "");
+        ASSERT_EQ(container.sentinel(), tmp);
         break;
       }
 
@@ -39,15 +38,15 @@ class DoublyLinkedListChecker {
 
     tmp = container.tail();
     if (!is_sentinel_ptr(container.head_)) {
-      ASSERT_NONNULL(tmp, "");
+      ASSERT_NOT_NULL(tmp);
       tmp = NodeTraits::node_state(*tmp).next_;
     }
-    ASSERT_EQ(container.sentinel(), tmp, "");
-
-    END_TEST;
+    ASSERT_EQ(container.sentinel(), tmp);
   }
 };
 
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl
+
+#endif  // FBL_TESTS_INTRUSIVE_CONTAINERS_INTRUSIVE_DOUBLY_LINKED_LIST_CHECKER_H_

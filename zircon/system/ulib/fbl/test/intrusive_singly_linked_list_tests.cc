@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/tests/intrusive_containers/intrusive_singly_linked_list_checker.h>
 #include <fbl/tests/intrusive_containers/sequence_container_test_environment.h>
 #include <fbl/tests/intrusive_containers/test_thunks.h>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -56,233 +56,228 @@ static_assert(
                    std::tuple<typename SLLTraits<int*>::Tag1, typename SLLTraits<int*>::Tag2,
                               typename SLLTraits<int*>::Tag3>>);
 
+// clang-format off
 DEFINE_TEST_OBJECTS(SLL);
-using UMTE = DEFINE_TEST_THUNK(Sequence, SLL, Unmanaged);
-using UPTE = DEFINE_TEST_THUNK(Sequence, SLL, UniquePtr);
+using UMTE    = DEFINE_TEST_THUNK(Sequence, SLL, Unmanaged);
+using UPTE    = DEFINE_TEST_THUNK(Sequence, SLL, UniquePtr);
 using SUPDDTE = DEFINE_TEST_THUNK(Sequence, SLL, StdUniquePtrDefaultDeleter);
 using SUPCDTE = DEFINE_TEST_THUNK(Sequence, SLL, StdUniquePtrCustomDeleter);
-using RPTE = DEFINE_TEST_THUNK(Sequence, SLL, RefPtr);
+using RPTE    = DEFINE_TEST_THUNK(Sequence, SLL, RefPtr);
 
-// clang-format off
-BEGIN_TEST_CASE(single_linked_list_tests)
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
-RUN_NAMED_TEST("Clear (unmanaged)",                         UMTE::ClearTest)
-RUN_NAMED_TEST("Clear (unique)",                            UPTE::ClearTest)
-RUN_NAMED_TEST("Clear (std::uptr)",                         SUPDDTE::ClearTest)
-RUN_NAMED_TEST("Clear (std::uptr<Del>)",                    SUPCDTE::ClearTest)
-RUN_NAMED_TEST("Clear (RefPtr)",                            RPTE::ClearTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    Clear)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    Clear)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, Clear)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, Clear)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    Clear)
 
-RUN_NAMED_TEST("ClearUnsafe (unmanaged)",                   UMTE::ClearUnsafeTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ClearUnsafe (unique)",                      UPTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (std::uptr)",                   SUPDDTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (std::uptr<Del>)",              SUPCDTE::ClearUnsafeTest)
-RUN_NAMED_TEST("ClearUnsafe (RefPtr)",                      RPTE::ClearUnsafeTest)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    ClearUnsafe)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, ClearUnsafe)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, ClearUnsafe)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ClearUnsafe)
 #endif
 
-RUN_NAMED_TEST("IsEmpty (unmanaged)",                       UMTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (unique)",                          UPTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (std::uptr)",                       SUPDDTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (std::uptr<Del>)",                  SUPCDTE::IsEmptyTest)
-RUN_NAMED_TEST("IsEmpty (RefPtr)",                          RPTE::IsEmptyTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    IsEmpty)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    IsEmpty)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, IsEmpty)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, IsEmpty)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    IsEmpty)
 
-RUN_NAMED_TEST("Iterate (unmanaged)",                       UMTE::IterateTest)
-RUN_NAMED_TEST("Iterate (unique)",                          UPTE::IterateTest)
-RUN_NAMED_TEST("Iterate (std::uptr)",                       SUPDDTE::IterateTest)
-RUN_NAMED_TEST("Iterate (std::uptr<Del>)",                  SUPCDTE::IterateTest)
-RUN_NAMED_TEST("Iterate (RefPtr)",                          RPTE::IterateTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    Iterate)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    Iterate)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, Iterate)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, Iterate)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    Iterate)
 
 // SinglyLinkedLists cannot perform direct erase operations, nor can they erase
 // using an iterator.
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("IterErase (unmanaged)",                     UMTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (unique)",                        UPTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (std::uptr)",                     SUPDDTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (std::uptr<Del>)",                SUPCDTE::IterEraseTest)
-RUN_NAMED_TEST("IterErase (RefPtr)",                        RPTE::IterEraseTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    IterErase)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    IterErase)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, IterErase)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, IterErase)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    IterErase)
 
-RUN_NAMED_TEST("DirectErase (unmanaged)",                   UMTE::DirectEraseTest)
-RUN_NAMED_TEST("DirectErase (unique)",                      UPTE::DirectEraseTest)
-RUN_NAMED_TEST("DirectErase (std::uptr)",                   SUPDDTE::DirectEraseTest)
-RUN_NAMED_TEST("DirectErase (std::uptr<Del>)",              SUPCDTE::DirectEraseTest)
-RUN_NAMED_TEST("DirectErase (RefPtr)",                      RPTE::DirectEraseTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    DirectErase)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    DirectErase)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, DirectErase)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, DirectErase)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    DirectErase)
 #endif
 
-RUN_NAMED_TEST("MakeIterator (unmanaged)",                  UMTE::MakeIteratorTest)
-#if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("MakeIterator (unique)",                     UPTE::MakeIteratorTest)
-RUN_NAMED_TEST("MakeIterator (std::uptr)",                  SUPDDTE::MakeIteratorTest)
-RUN_NAMED_TEST("MakeIterator (std::uptr<Del>)",             SUPCDTE::MakeIteratorTest)
-#endif
-RUN_NAMED_TEST("MakeIterator (RefPtr)",                     RPTE::MakeIteratorTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    MakeIterator)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    MakeIterator)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, MakeIterator)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, MakeIterator)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    MakeIterator)
 
 // SinglyLinkedLists cannot iterate backwards.
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ReverseIterErase (unmanaged)",              UMTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (unique)",                 UPTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (std::uptr)",              SUPDDTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (std::uptr<Del>)",         SUPCDTE::ReverseIterEraseTest)
-RUN_NAMED_TEST("ReverseIterErase (RefPtr)",                 RPTE::ReverseIterEraseTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, ReverseIterErase)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ReverseIterErase)
 
-RUN_NAMED_TEST("ReverseIterate (unmanaged)",                UMTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (unique)",                   UPTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (std::uptr)",                SUPDDTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (std::uptr<Del>)",           SUPCDTE::ReverseIterateTest)
-RUN_NAMED_TEST("ReverseIterate (RefPtr)",                   RPTE::ReverseIterateTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ReverseIterate)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    ReverseIterate)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, ReverseIterate)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, ReverseIterate)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ReverseIterate)
 #endif
 
-RUN_NAMED_TEST("Swap (unmanaged)",                          UMTE::SwapTest)
-RUN_NAMED_TEST("Swap (unique)",                             UPTE::SwapTest)
-RUN_NAMED_TEST("Swap (std::uptr)",                          SUPDDTE::SwapTest)
-RUN_NAMED_TEST("Swap (std::uptr<Del>)",                     SUPCDTE::SwapTest)
-RUN_NAMED_TEST("Swap (RefPtr)",                             RPTE::SwapTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    Swap)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    Swap)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, Swap)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, Swap)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    Swap)
 
-RUN_NAMED_TEST("Rvalue Ops (unmanaged)",                    UMTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (unique)",                       UPTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (std::uptr)",                    SUPDDTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (std::uptr<Del>)",               SUPCDTE::RvalueOpsTest)
-RUN_NAMED_TEST("Rvalue Ops (RefPtr)",                       RPTE::RvalueOpsTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    RvalueOps)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    RvalueOps)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, RvalueOps)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, RvalueOps)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    RvalueOps)
 
-RUN_NAMED_TEST("Scope (unique)",                            UPTE::ScopeTest)
-RUN_NAMED_TEST("Scope (std::uptr)",                         SUPDDTE::ScopeTest)
-RUN_NAMED_TEST("Scope (std::uptr<Del>)",                    SUPCDTE::ScopeTest)
-RUN_NAMED_TEST("Scope (RefPtr)",                            RPTE::ScopeTest)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    Scope)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, Scope)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, Scope)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    Scope)
 
-RUN_NAMED_TEST("TwoContainer (unmanaged)",                  UMTE::TwoContainerTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    TwoContainer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("TwoContainer (unique)",                     UPTE::TwoContainerTest)
-RUN_NAMED_TEST("TwoContainer (std::uptr)",                  SUPDDTE::TwoContainerTest)
-RUN_NAMED_TEST("TwoContainer (std::uptr<Del>)",             SUPCDTE::TwoContainerTest)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    TwoContainer)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, TwoContainer)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, TwoContainer)
 #endif
-RUN_NAMED_TEST("TwoContainer (RefPtr)",                     RPTE::TwoContainerTest)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    TwoContainer)
 
-RUN_NAMED_TEST("ThreeContainerHelper (unmanaged)",          UMTE::ThreeContainerHelperTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ThreeContainerHelper)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ThreeContainerHelper (unique)",             UPTE::ThreeContainerHelperTest)
-RUN_NAMED_TEST("ThreeContainerHelper (std::uptr)",          SUPDDTE::ThreeContainerHelperTest)
-RUN_NAMED_TEST("ThreeContainerHelper (std::uptr<Del>)",     SUPCDTE::ThreeContainerHelperTest)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    ThreeContainerHelper)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, ThreeContainerHelper)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, ThreeContainerHelper)
 #endif
-RUN_NAMED_TEST("ThreeContainerHelper (RefPtr)",             RPTE::ThreeContainerHelperTest)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ThreeContainerHelper)
 
-RUN_NAMED_TEST("IterCopyPointer (unmanaged)",               UMTE::IterCopyPointerTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    IterCopyPointer)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("IterCopyPointer (unique)",                  UPTE::IterCopyPointerTest)
-RUN_NAMED_TEST("IterCopyPointer (std::uptr)",               SUPDDTE::IterCopyPointerTest)
-RUN_NAMED_TEST("IterCopyPointer (std::uptr<Del>)",          SUPCDTE::IterCopyPointerTest)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    IterCopyPointer)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, IterCopyPointer)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, IterCopyPointer)
 #endif
-RUN_NAMED_TEST("IterCopyPointer (RefPtr)",                  RPTE::IterCopyPointerTest)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    IterCopyPointer)
 
-RUN_NAMED_TEST("EraseIf (unmanaged)",                       UMTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (unique)",                          UPTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (std::uptr)",                       SUPDDTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (std::uptr<Del>)",                  SUPCDTE::EraseIfTest)
-RUN_NAMED_TEST("EraseIf (RefPtr)",                          RPTE::EraseIfTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    EraseIf)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    EraseIf)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, EraseIf)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, EraseIf)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    EraseIf)
 
-RUN_NAMED_TEST("FindIf (unmanaged)",                        UMTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (unique)",                           UPTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (std::uptr)",                        SUPDDTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (std::uptr<Del>)",                   SUPCDTE::FindIfTest)
-RUN_NAMED_TEST("FindIf (RefPtr)",                           RPTE::FindIfTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    FindIf)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    FindIf)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, FindIf)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, FindIf)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    FindIf)
 
 //////////////////////////////////////////
 // Sequence container specific tests.
 //////////////////////////////////////////
-RUN_NAMED_TEST("PushFront (unmanaged)",                     UMTE::PushFrontTest)
-RUN_NAMED_TEST("PushFront (unique)",                        UPTE::PushFrontTest)
-RUN_NAMED_TEST("PushFront (std::uptr)",                     SUPDDTE::PushFrontTest)
-RUN_NAMED_TEST("PushFront (std::uptr<Del>)",                SUPCDTE::PushFrontTest)
-RUN_NAMED_TEST("PushFront (RefPtr)",                        RPTE::PushFrontTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    PushFront)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    PushFront)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, PushFront)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, PushFront)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    PushFront)
 
-RUN_NAMED_TEST("PopFront (unmanaged)",                      UMTE::PopFrontTest)
-RUN_NAMED_TEST("PopFront (unique)",                         UPTE::PopFrontTest)
-RUN_NAMED_TEST("PopFront (std::uptr)",                      SUPDDTE::PopFrontTest)
-RUN_NAMED_TEST("PopFront (std::uptr<Del>)",                 SUPCDTE::PopFrontTest)
-RUN_NAMED_TEST("PopFront (RefPtr)",                         RPTE::PopFrontTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    PopFront)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    PopFront)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, PopFront)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, PopFront)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    PopFront)
 
 // Singly linked lists cannot push/pop to/from the back
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("PushBack (unmanaged)",                     UMTE::PushBackTest)
-RUN_NAMED_TEST("PushBack (unique)",                        UPTE::PushBackTest)
-RUN_NAMED_TEST("PushBack (std::uptr)",                     SUPDDTE::PushBackTest)
-RUN_NAMED_TEST("PushBack (std::uptr<Del>)",                SUPCDTE::PushBackTest)
-RUN_NAMED_TEST("PushBack (RefPtr)",                        RPTE::PushBackTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    PushBack)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    PushBack)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, PushBack)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, PushBack)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    PushBack)
 
-RUN_NAMED_TEST("PopBack (unmanaged)",                      UMTE::PopBackTest)
-RUN_NAMED_TEST("PopBack (unique)",                         UPTE::PopBackTest)
-RUN_NAMED_TEST("PopBack (std::uptr)",                      SUPDDTE::PopBackTest)
-RUN_NAMED_TEST("PopBack (std::uptr<Del>)",                 SUPCDTE::PopBackTest)
-RUN_NAMED_TEST("PopBack (RefPtr)",                         RPTE::PopBackTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    PopBack)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    PopBack)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, PopBack)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, PopBack)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    PopBack)
 #endif
 
-RUN_NAMED_TEST("SeqIterate (unmanaged)",                   UMTE::SeqIterateTest)
-RUN_NAMED_TEST("SeqIterate (unique)",                      UPTE::SeqIterateTest)
-RUN_NAMED_TEST("SeqIterate (std::uptr)",                   SUPDDTE::SeqIterateTest)
-RUN_NAMED_TEST("SeqIterate (std::uptr<Del>)",              SUPCDTE::SeqIterateTest)
-RUN_NAMED_TEST("SeqIterate (RefPtr)",                      RPTE::SeqIterateTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    SeqIterate)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    SeqIterate)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, SeqIterate)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, SeqIterate)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    SeqIterate)
 
 // SinglyLinkedLists cannot iterate backwards.
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("SeqReverseIterate (unmanaged)",            UMTE::SeqReverseIterateTest)
-RUN_NAMED_TEST("SeqReverseIterate (unique)",               UPTE::SeqReverseIterateTest)
-RUN_NAMED_TEST("SeqReverseIterate (std::uptr)",            SUPDDTE::SeqReverseIterateTest)
-RUN_NAMED_TEST("SeqReverseIterate (std::uptr<Del>)",       SUPCDTE::SeqReverseIterateTest)
-RUN_NAMED_TEST("SeqReverseIterate (RefPtr)",               RPTE::SeqReverseIterateTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    SeqReverseIterate)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    SeqReverseIterate)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, SeqReverseIterate)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, SeqReverseIterate)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    SeqReverseIterate)
 #endif
 
-RUN_NAMED_TEST("EraseNext (unmanaged)",                    UMTE::EraseNextTest)
-RUN_NAMED_TEST("EraseNext (unique)",                       UPTE::EraseNextTest)
-RUN_NAMED_TEST("EraseNext (std::uptr)",                    SUPDDTE::EraseNextTest)
-RUN_NAMED_TEST("EraseNext (std::uptr<Del>)",               SUPCDTE::EraseNextTest)
-RUN_NAMED_TEST("EraseNext (RefPtr)",                       RPTE::EraseNextTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    EraseNext)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    EraseNext)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, EraseNext)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, EraseNext)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    EraseNext)
 
-RUN_NAMED_TEST("InsertAfter (unmanaged)",                  UMTE::InsertAfterTest)
-RUN_NAMED_TEST("InsertAfter (unique)",                     UPTE::InsertAfterTest)
-RUN_NAMED_TEST("InsertAfter (std::uptr)",                  SUPDDTE::InsertAfterTest)
-RUN_NAMED_TEST("InsertAfter (std::uptr<Del>)",             SUPCDTE::InsertAfterTest)
-RUN_NAMED_TEST("InsertAfter (RefPtr)",                     RPTE::InsertAfterTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    InsertAfter)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    InsertAfter)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, InsertAfter)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, InsertAfter)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    InsertAfter)
 
-// SinglyLinkedLists cannot perform inserts-bef            ore operations, either with an
+// SinglyLinkedLists cannot perform inserts-before operations, either with an
 // iterator or with a direct object reference.
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("Insert (unmanaged)",                        UMTE::InsertTest)
-RUN_NAMED_TEST("Insert (unique)",                           UPTE::InsertTest)
-RUN_NAMED_TEST("Insert (std::uptr)",                        SUPDDTE::InsertTest)
-RUN_NAMED_TEST("Insert (std::uptr<Del>)",                   SUPCDTE::InsertTest)
-RUN_NAMED_TEST("Insert (RefPtr)",                           RPTE::InsertTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    Insert)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    Insert)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, Insert)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, Insert)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    Insert)
 
-RUN_NAMED_TEST("DirectInsert (unmanaged)",                  UMTE::DirectInsertTest)
-RUN_NAMED_TEST("DirectInsert (unique)",                     UPTE::DirectInsertTest)
-RUN_NAMED_TEST("DirectInsert (std::uptr)",                  SUPDDTE::DirectInsertTest)
-RUN_NAMED_TEST("DirectInsert (std::uptr<Del>)",             SUPCDTE::DirectInsertTest)
-RUN_NAMED_TEST("DirectInsert (RefPtr)",                     RPTE::DirectInsertTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    DirectInsert)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    DirectInsert)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, DirectInsert)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, DirectInsert)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    DirectInsert)
 #endif
 
-// SinglyLinkedLists cannot perform splice oper            ations.
+// SinglyLinkedLists cannot perform splice operations.
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("Splice (unmanaged)",                        UMTE::SpliceTest)
-RUN_NAMED_TEST("Splice (unique)",                           UPTE::SpliceTest)
-RUN_NAMED_TEST("Splice (std::uptr)",                        SUPDDTE::SpliceTest)
-RUN_NAMED_TEST("Splice (std::uptr<Del>)",                   SUPCDTE::SpliceTest)
-RUN_NAMED_TEST("Splice (RefPtr)",                           RPTE::SpliceTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    Splice)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    Splice)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, Splice)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, Splice)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    Splice)
 #endif
 
-RUN_NAMED_TEST("ReplaceIfCopy (unmanaged)",                 UMTE::ReplaceIfCopyTest)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ReplaceIfCopy)
 #if TEST_WILL_NOT_COMPILE || 0
-RUN_NAMED_TEST("ReplaceIfCopy (unique)",                    UPTE::ReplaceIfCopyTest)
-RUN_NAMED_TEST("ReplaceIfCopy (std::uptr)",                 SUPDDTE::ReplaceIfCopyTest)
-RUN_NAMED_TEST("ReplaceIfCopy (std::uptr<Del>)",            SUPCDTE::ReplaceIfCopyTest)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    ReplaceIfCopy)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, ReplaceIfCopy)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, ReplaceIfCopy)
 #endif
-RUN_NAMED_TEST("ReplaceIfCopy (RefPtr)",                    RPTE::ReplaceIfCopyTest)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ReplaceIfCopy)
 
-RUN_NAMED_TEST("ReplaceIfMove (unmanaged)",                 UMTE::ReplaceIfMoveTest)
-RUN_NAMED_TEST("ReplaceIfMove (unique)",                    UPTE::ReplaceIfMoveTest)
-RUN_NAMED_TEST("ReplaceIfMove (std::uptr)",                 SUPDDTE::ReplaceIfMoveTest)
-RUN_NAMED_TEST("ReplaceIfMove (std::uptr<Del>)",            SUPCDTE::ReplaceIfMoveTest)
-RUN_NAMED_TEST("ReplaceIfMove (RefPtr)",                    RPTE::ReplaceIfMoveTest)
-
-END_TEST_CASE(single_linked_list_tests)
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ReplaceIfMove)
+RUN_ZXTEST(SinglyLinkedListTest, UPTE,    ReplaceIfMove)
+RUN_ZXTEST(SinglyLinkedListTest, SUPDDTE, ReplaceIfMove)
+RUN_ZXTEST(SinglyLinkedListTest, SUPCDTE, ReplaceIfMove)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ReplaceIfMove)
 // clang-format on
 
 }  // namespace intrusive_containers

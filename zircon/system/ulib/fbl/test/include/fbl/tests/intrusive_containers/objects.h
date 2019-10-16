@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_OBJECTS_H_
+#define FBL_TESTS_INTRUSIVE_CONTAINERS_OBJECTS_H_
+
+#include <atomic>
+#include <memory>
+#include <utility>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <unittest/unittest.h>
-
-#include <atomic>
-#include <memory>
-#include <utility>
+#include <zxtest/zxtest.h>
 
 namespace fbl {
 namespace tests {
@@ -206,7 +207,7 @@ struct UnmanagedTestTraits {
     ptr = nullptr;
   }
 
-  static bool CheckCustomDeleteInvocations(size_t expected) { return true; }
+  static void CheckCustomDeleteInvocations(size_t expected) {}
   static void ResetCustomDeleter() {}
 
   // Unmanaged pointers never get cleared when being moved or transferred.
@@ -230,7 +231,7 @@ struct UniquePtrTestTraits {
 
   static void ReleaseObject(PtrType& ptr) { ptr = nullptr; }
 
-  static bool CheckCustomDeleteInvocations(size_t expected) { return true; }
+  static void CheckCustomDeleteInvocations(size_t expected) {}
   static void ResetCustomDeleter() {}
 
   // Unique pointers always get cleared when being moved or transferred.
@@ -254,7 +255,7 @@ struct StdUniquePtrDefaultDeleterTestTraits {
 
   static void ReleaseObject(PtrType& ptr) { ptr = nullptr; }
 
-  static bool CheckCustomDeleteInvocations(size_t expected) { return true; }
+  static void CheckCustomDeleteInvocations(size_t expected) {}
   static void ResetCustomDeleter() {}
 
   // Unique pointers always get cleared when being moved or transferred.
@@ -278,10 +279,8 @@ struct StdUniquePtrCustomDeleterTestTraits {
 
   static void ReleaseObject(PtrType& ptr) { ptr = nullptr; }
 
-  static bool CheckCustomDeleteInvocations(size_t expected) {
-    BEGIN_HELPER;
+  static void CheckCustomDeleteInvocations(size_t expected) {
     EXPECT_EQ(expected, TestCustomDeleter<_ObjType>::delete_count());
-    END_HELPER;
   }
 
   static void ResetCustomDeleter() { TestCustomDeleter<_ObjType>::reset_delete_count(); }
@@ -307,7 +306,7 @@ struct RefPtrTestTraits {
 
   static void ReleaseObject(PtrType& ptr) { ptr = nullptr; }
 
-  static bool CheckCustomDeleteInvocations(size_t expected) { return true; }
+  static void CheckCustomDeleteInvocations(size_t expected) {}
   static void ResetCustomDeleter() {}
 
   // RefCounted pointers do not get cleared when being transferred, but do get
@@ -320,3 +319,5 @@ struct RefPtrTestTraits {
 }  // namespace intrusive_containers
 }  // namespace tests
 }  // namespace fbl
+
+#endif  // FBL_TESTS_INTRUSIVE_CONTAINERS_OBJECTS_H_

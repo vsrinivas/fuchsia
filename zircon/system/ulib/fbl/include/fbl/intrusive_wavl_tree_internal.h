@@ -39,14 +39,10 @@ struct DefaultWAVLTreeObserver {
   static void RecordEraseDoubleRotation() {}
 
   template <typename TreeType>
-  static bool VerifyRankRule(const TreeType& tree, typename TreeType::RawPtrType node) {
-    return true;
-  }
+  static void VerifyRankRule(const TreeType& tree, typename TreeType::RawPtrType node) {}
 
   template <typename TreeType>
-  static bool VerifyBalance(const TreeType& tree, uint64_t depth) {
-    return true;
-  }
+  static void VerifyBalance(const TreeType& tree, uint64_t depth) {}
 };
 
 }  // namespace intrusive_containers
