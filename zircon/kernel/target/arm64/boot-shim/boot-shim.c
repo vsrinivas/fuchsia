@@ -17,16 +17,6 @@
 #include "devicetree.h"
 #include "util.h"
 
-// uncomment to dump device tree at boot
-#ifndef PRINT_DEVICE_TREE
-#define PRINT_DEVICE_TREE 0
-#endif
-
-// Uncomment to list ZBI items.
-#ifndef PRINT_ZBI
-#define PRINT_ZBI 0
-#endif
-
 // used in boot-shim-config.h and in this file below
 static void append_boot_item(zbi_header_t* container, uint32_t type, uint32_t extra,
                              const void* payload, uint32_t length) {
@@ -45,6 +35,24 @@ static void set_cpu_count(uint32_t cpu_count);
 
 // Include board specific definitions
 #include "boot-shim-config.h"
+
+// behavior switches that may be overridden by boot-shim-config.h
+
+// uncomment to dump device tree at boot
+#ifndef PRINT_DEVICE_TREE
+#define PRINT_DEVICE_TREE 0
+#endif
+
+// Uncomment to list ZBI items.
+#ifndef PRINT_ZBI
+#define PRINT_ZBI 0
+#endif
+
+// When copying the kernel out of the ZBI as it was placed by previous loaders,
+// remove the kernel ZBI section to reclaim some memory.
+#ifndef REMOVE_KERNEL_FROM_ZBI
+#define REMOVE_KERNEL_FROM_ZBI 1
+#endif
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
@@ -234,7 +242,12 @@ static zbi_result_t list_zbi_cb(zbi_header_t* item, void* payload, void* ctx) {
   uart_print_hex(item->length);
   uart_puts(" type=0x");
   uart_print_hex(item->type);
-  uart_puts(" extra=0x");
+  uart_puts(" (");
+  uart_putc(item->type & 0xff);
+  uart_putc((item->type >> 8) & 0xff);
+  uart_putc((item->type >> 16) & 0xff);
+  uart_putc((item->type >> 24) & 0xff);
+  uart_puts(") extra=0x");
   uart_print_hex(item->extra);
   uart_puts("\n");
   return ZBI_RESULT_OK;
@@ -375,8 +388,11 @@ boot_shim_return_t boot_shim(void* device_tree) {
       // Fix up the kernel's solo container size.
       kernel->hdr_file.length = sizeof(*zbi) + kernel_len;
 
+#if REMOVE_KERNEL_FROM_ZBI
       // Now move the ZBI into its aligned place and fix up the
-      // container header to exclude the kernel.
+      // container header to exclude the kernel. We can conditionally
+      // disable this to avoid a fairly expensive memmove() with the
+      // cpu cache disabled.
       uart_puts("\nZBI to ");
       uart_print_hex((uintptr_t)zbi);
       zbi_header_t header = *old;
@@ -385,6 +401,7 @@ boot_shim_return_t boot_shim(void* device_tree) {
 
       memmove(zbi + 1, payload, header.length);
       *zbi = header;
+#endif
 
 #if RELOCATE_KERNEL
       // move the final ZBI far away as well

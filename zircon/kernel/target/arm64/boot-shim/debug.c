@@ -10,10 +10,14 @@
 void uart_puts(const char* str) {
   char ch;
   while ((ch = *str++)) {
-    if (ch == '\n')
-      uart_pputc('\r');
-    uart_pputc(ch);
+    uart_putc(ch);
   }
+}
+
+void uart_putc(char ch) {
+  if (ch == '\n')
+    uart_pputc('\r');
+  uart_pputc(ch);
 }
 
 void uart_print_hex(uint64_t value) {
@@ -23,11 +27,4 @@ void uart_print_hex(uint64_t value) {
     uart_pputc(digits[(value >> i) & 0xf]);
   }
 }
-
-#else
-
-void uart_puts(const char* str) {}
-
-void uart_print_hex(uint64_t value) {}
-
-#endif  // DEBUG_UART
+#endif

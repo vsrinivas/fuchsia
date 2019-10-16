@@ -6,6 +6,10 @@
 #define USE_DEVICE_TREE_CPU_COUNT 1
 #define USE_DEVICE_TREE_GIC_VERSION 1
 #define PRINT_DEVICE_TREE 0
+// leave the kernel in place where the ZBI was placed to save some boot
+// time on KVM hosted qemu machines
+#define REMOVE_KERNEL_FROM_ZBI 0
+
 
 #define MAX_CPU_COUNT 16
 static size_t cpu_count = 0;

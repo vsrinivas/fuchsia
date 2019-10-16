@@ -14,7 +14,15 @@
 void uart_pputc(char c);
 
 // Common code.
+#if DEBUG_UART
 void uart_puts(const char* str);
+void uart_putc(char c);
 void uart_print_hex(uint64_t value);
+#else
+static inline void uart_puts(const char* str) {}
+static inline void uart_putc(char ch) {}
+
+static inline void uart_print_hex(uint64_t value) {}
+#endif
 
 #endif  // ZIRCON_KERNEL_TARGET_ARM64_BOOT_SHIM_DEBUG_H_
