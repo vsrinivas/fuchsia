@@ -481,7 +481,6 @@ void DecryptorAdapter::ProcessInput() {
     input.data_length = data_length;
 
     OutputBuffer output;
-
     if (is_secure()) {
       SecureOutputBuffer secure_output;
       secure_output.vmo = zx::unowned_vmo(output_buffer->vmo());
@@ -495,7 +494,7 @@ void DecryptorAdapter::ProcessInput() {
       output = clear_output;
     }
 
-    auto error = Decrypt(encryption_params_, input, output);
+    auto error = Decrypt(encryption_params_, input, output, output_packet);
     if (error) {
       OnCoreCodecFailStream(*error);
       return;
@@ -518,6 +517,19 @@ void DecryptorAdapter::ProcessInput() {
     //
     // ~item
   }
+}
+
+std::optional<fuchsia::media::StreamError> DecryptorAdapter::Decrypt(const EncryptionParams& params,
+                                                                     const InputBuffer& input,
+                                                                     const OutputBuffer& output) {
+  return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
+}
+
+std::optional<fuchsia::media::StreamError> DecryptorAdapter::Decrypt(const EncryptionParams& params,
+                                                                     const InputBuffer& input,
+                                                                     const OutputBuffer& output,
+                                                                     CodecPacket* output_packet) {
+  return Decrypt(params, input, output);
 }
 
 bool DecryptorAdapter::UpdateEncryptionParams(
