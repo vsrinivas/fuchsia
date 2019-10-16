@@ -9,7 +9,6 @@
 #include <unistd.h>
 #ifndef __Fuchsia__
 #include <signal.h>
-#include <sys/ioctl.h>
 #include <termios.h>
 #endif
 

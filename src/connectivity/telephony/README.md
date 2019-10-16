@@ -70,10 +70,10 @@ TODO(bwb): Add name of tests when they land
 ### Architecture
 #### QMI-based
 
-Modem Manager watches the VFS for the qmi-usb-transport device to bind against any of the
-usb devices it supports. Modem manager uses an IOCTL call (TODO: transition to FIDL) to acquire
-a transport channel to the driver. It then starts a service that provides the FRIL, `ril-qmi`. `ril-qmi`
-proxies/translates the FIDL messages spoken to the RadioInterfaceLayer interface to vendor specific calls.
+Modem Manager watches the VFS for the qmi-usb-transport device to bind against any of the usb
+devices it supports. Modem manager uses a FIDL call to acquire a transport channel to the driver. It
+then starts a service that provides the FRIL, `ril-qmi`. `ril-qmi` proxies/translates the FIDL
+messages spoken to the RadioInterfaceLayer interface to vendor specific calls.
 
 `ril-ctl` tool is also able to initialize and connect `ril-qmi` to a specified device. It will also eventually
 have the ability to interact with an existing `ril-qmi` through a management interface on the Modem Manager.

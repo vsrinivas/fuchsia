@@ -66,6 +66,8 @@ impl DebugLog {
     // TODO(ZX-3187): Return a safe wrapper type for zx_log_record_t rather than raw bytes
     // depending on resolution.
     pub fn read(&self, record: &mut Vec<u8>) -> Result<(), Status> {
+        use std::convert::TryInto;
+
         let mut buf = [0; sys::ZX_LOG_RECORD_MAX];
 
         // zx_debuglog_read options appear to be unused.
@@ -73,7 +75,9 @@ impl DebugLog {
         // read into the buffer.
         let status_or_actual =
             unsafe { sys::zx_debuglog_read(self.raw_handle(), 0, buf.as_mut_ptr(), buf.len()) };
-        let actual = Status::ioctl_ok(status_or_actual)? as usize;
+        let actual = status_or_actual
+            .try_into()
+            .map_err(|std::num::TryFromIntError { .. }| Status::from_raw(status_or_actual))?;
 
         record.clear();
         record.extend_from_slice(&buf[0..actual]);

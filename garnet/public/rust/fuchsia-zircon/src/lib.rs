@@ -180,12 +180,12 @@ pub use self::resource::*;
 pub use self::rights::*;
 pub use self::signals::*;
 pub use self::socket::*;
-pub use fuchsia_zircon_status::*;
 pub use self::task::*;
 pub use self::thread::*;
 pub use self::time::*;
 pub use self::vmar::*;
 pub use self::vmo::*;
+pub use fuchsia_zircon_status::*;
 
 /// Prelude containing common utility traits.
 /// Designed for use like `use fuchsia_zircon::prelude::*;`
@@ -196,11 +196,6 @@ pub mod prelude {
 /// Convenience re-export of `Status::ok`.
 pub fn ok(raw: sys::zx_status_t) -> Result<(), Status> {
     Status::ok(raw)
-}
-
-/// Convenience re-export of `Status::ioctl_ok`.
-pub fn ioctl_ok(raw: sys::zx_status_t) -> Result<u32, Status> {
-    Status::ioctl_ok(raw)
 }
 
 /// A "wait item" containing a handle reference and information about what signals

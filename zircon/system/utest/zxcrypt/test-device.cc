@@ -53,7 +53,7 @@ const zx::duration kTimeout = zx::sec(3);
 // FVM driver library
 const char* kFvmDriver = "/boot/driver/fvm.so";
 
-// Takes a given |result|, e.g. from an ioctl, and translates into a zx_status_t.
+// Translates |result| into a zx_status_t.
 zx_status_t ToStatus(ssize_t result) {
   return result < 0 ? static_cast<zx_status_t>(result) : ZX_OK;
 }

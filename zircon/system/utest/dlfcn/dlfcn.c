@@ -4,16 +4,17 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/fdio/io.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <ldmsg/ldmsg.h>
-#include <lib/fdio/io.h>
 #include <loader-service/loader-service.h>
 #include <unittest/unittest.h>
 
@@ -191,8 +192,8 @@ bool clone_test(void) {
 
   zx_handle_t h = ZX_HANDLE_INVALID;
   zx_status_t s = dl_clone_loader_service(&h);
-  EXPECT_EQ(s, ZX_OK, "unexpected return value from ioctl");
-  EXPECT_NE(h, ZX_HANDLE_INVALID, "invalid handle from ioctl");
+  EXPECT_EQ(s, ZX_OK, zx_status_get_string(s));
+  EXPECT_NE(h, ZX_HANDLE_INVALID, "invalid handle from loader service");
 
   zx_handle_close(h);
 

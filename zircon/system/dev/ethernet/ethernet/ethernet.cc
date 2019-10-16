@@ -5,12 +5,13 @@
 #include "ethernet.h"
 
 #include <type_traits>
+
 #include "zircon/errors.h"
 
 namespace eth {
 
-zx_status_t EthDev::PromiscHelperLogicLocked(bool req_on, uint32_t state_bit,
-                                             uint32_t param_id, int32_t* requesters_count) {
+zx_status_t EthDev::PromiscHelperLogicLocked(bool req_on, uint32_t state_bit, uint32_t param_id,
+                                             int32_t* requesters_count) {
   if (state_bit == 0 || state_bit & (state_bit - 1)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -721,7 +722,7 @@ void EthDev::KillLocked() {
          (state_ & kStateTransmitThreadCreated) ? " tx thread" : "");
   SetPromiscLocked(false);
 
-  // Make sure any future ioctls or other ops will fail.
+  // Make sure any future ops will fail.
   state_ |= kStateDead;
 
   // Try to convince clients to close us.

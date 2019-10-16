@@ -4,12 +4,10 @@
 
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/io.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxs/protocol.h>
 #include <poll.h>
-#include <sys/ioctl.h>
 #include <zircon/syscalls.h>
 
 #include "private-socket.h"

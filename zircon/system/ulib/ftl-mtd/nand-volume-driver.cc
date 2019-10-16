@@ -2,23 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <math.h>
+#include <lib/ftl-mtd/nand-volume-driver.h>
 #include <stdio.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#include <algorithm>
-#include <cstring>
-#include <functional>
-#include <string>
-#include <utility>
-
 #include <zircon/assert.h>
 
-#include <lib/ftl-mtd/nand-volume-driver.h>
+#include <functional>
+#include <utility>
 
 namespace ftl_mtd {
 

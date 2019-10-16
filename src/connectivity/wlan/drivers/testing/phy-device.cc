@@ -43,9 +43,7 @@ static wlanphy_protocol_ops_t wlanphy_test_ops = {
 class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::Interface {
  public:
   DeviceConnector(PhyDevice* device) : device_(device) {}
-  void Connect(
-      ::zx::channel request,
-      ConnectCompleter::Sync _completer) override {
+  void Connect(::zx::channel request, ConnectCompleter::Sync _completer) override {
     device_->Connect(std::move(request));
   }
 
@@ -229,9 +227,9 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
     return;
   }
 
-  // Memory management follows the device lifecycle at this point. The only way an interface
-  // can be removed is through this phy device, either through a "destroy interface" ioctl or
-  // by the phy going away, so it should be safe to store the raw pointer.
+  // Memory management follows the device lifecycle at this point. The only way an interface can be
+  // removed is through this phy device, either through a DestroyIface call or by the phy going
+  // away, so it should be safe to store the raw pointer.
   ifaces_[id] = macdev.release();
 
   // Since we successfully used the id, increment the next id counter.

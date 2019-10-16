@@ -4,17 +4,14 @@
 
 #include <fcntl.h>
 #include <getopt.h>
-#include <lib/cksum.h>
 #include <lib/mtd/mtd-interface.h>
 #include <lib/nand-redundant-storage/nand-redundant-storage.h>
 #include <string.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
 
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
-#include <cstring>
 #include <vector>
 
 #include <fbl/unique_fd.h>
@@ -68,7 +65,7 @@ void Usage(const char* prog_name) {
 bool IsMtd(const char* path) {
   auto mtd = mtd::MtdInterface::Create(path);
   if (!mtd) {
-    // Logs any informative errors. An ioctl error where the path doesn't
+    // Logs any informative errors. An error where the path doesn't
     // lead to a valid MTD is an uninformative error as this is expected
     // behavior for either the input or the output device.
     if (errno == EACCES) {
