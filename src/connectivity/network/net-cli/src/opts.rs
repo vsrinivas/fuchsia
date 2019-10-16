@@ -2,24 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use clap::arg_enum;
+use argh::FromArgs;
 use fidl_fuchsia_net_stack::{self as netstack};
-use structopt::StructOpt;
 
 // Same as https://docs.rs/log/0.4.8/log/enum.Level.html
-// but it can't be used for clap parsing here since it is external.
-arg_enum! {
-    #[derive(PartialEq, Copy, Clone, Debug)]
-    pub enum LogLevelArg {
-        // See syslog/logger.go for numeric definitions.
-        Trace,
-        Debug,
-        Info ,
-        Warn,
-        Error,
-        Fatal,
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum LogLevelArg {
+    // See syslog/logger.go for numeric definitions.
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+    Fatal,
+}
+
+fn parse_log_level_str(value: &str) -> Result<LogLevelArg, String> {
+    match &value.to_lowercase()[..] {
+        "trace" => Ok(LogLevelArg::Trace),
+        "debug" => Ok(LogLevelArg::Debug),
+        "info" => Ok(LogLevelArg::Info),
+        "warn" => Ok(LogLevelArg::Warn),
+        "error" => Ok(LogLevelArg::Error),
+        "fatal" => Ok(LogLevelArg::Fatal),
+        _ => Err("invalid log level".to_string()),
     }
 }
+
 impl ::std::convert::From<LogLevelArg> for netstack::LogLevelFilter {
     fn from(arg: LogLevelArg) -> Self {
         match arg {
@@ -33,205 +42,345 @@ impl ::std::convert::From<LogLevelArg> for netstack::LogLevelFilter {
     }
 }
 
-#[derive(StructOpt, Debug)]
-pub enum Opt {
-    #[structopt(name = "if")]
-    /// commands for network interfaces
-    If(IfCmd),
-
-    #[structopt(name = "fwd")]
-    /// commands for forwarding tables
-    Fwd(FwdCmd),
-
-    #[structopt(name = "route")]
-    /// commands for routing tables
-    Route(RouteCmd),
-
-    #[structopt(name = "filter")]
-    /// commands for packet filter
-    Filter(FilterCmd),
-
-    #[structopt(name = "log")]
-    /// commands for logging
-    Log(LogCmd),
-
-    #[structopt(name = "stats")]
-    /// commands for aggregates statistics
-    Stat(StatCmd),
+#[derive(FromArgs)]
+/// commands for net-cli
+pub struct Command {
+    #[argh(subcommand)]
+    pub cmd: CommandEnum,
 }
 
-#[derive(StructOpt, Clone, Debug)]
-pub enum IfCmd {
-    #[structopt(name = "list")]
-    /// lists network interfaces
-    List {
-        /// name substring to be matched
-        name_pattern: Option<String>,
-    },
-    #[structopt(name = "add")]
-    /// adds a network interface by path
-    Add {
-        #[structopt(raw(required = "true"))]
-        // The path must yield a handle to a fuchsia.hardware.ethernet.Device interface.
-        // Currently this means paths under /dev/class/ethernet.
-        /// path to the device to add
-        path: String,
-    },
-    #[structopt(name = "del")]
-    /// removes a network interface
-    Del {
-        #[structopt(raw(required = "true"))]
-        /// id of the network interface to remove
-        id: u64,
-    },
-    #[structopt(name = "get")]
-    /// queries a network interface
-    Get {
-        #[structopt(raw(required = "true"))]
-        /// id of the network interface to query
-        id: u64,
-    },
-    #[structopt(name = "enable")]
-    /// enables a network interface
-    Enable {
-        #[structopt(raw(required = "true"))]
-        /// id of the network interface to enable
-        id: u64,
-    },
-    #[structopt(name = "disable")]
-    /// disables a network interface
-    Disable {
-        #[structopt(raw(required = "true"))]
-        /// id of the network interface to disable
-        id: u64,
-    },
-    #[structopt(name = "addr")]
-    /// commands for updating network interface addresses
-    Addr(AddrCmd),
+#[derive(FromArgs)]
+#[argh(subcommand)]
+pub enum CommandEnum {
+    Filter(Filter),
+    Fwd(Fwd),
+    If(If),
+    Log(Log),
+    Route(Route),
+    Stat(Stat),
 }
 
-#[derive(StructOpt, Clone, Debug)]
-pub enum AddrCmd {
-    #[structopt(name = "add")]
-    /// adds an address to the network interface
-    Add {
-        #[structopt(raw(required = "true"))]
-        /// id of the network interface
-        id: u64,
-        #[structopt(raw(required = "true"))]
-        addr: String,
-        #[structopt(raw(required = "true"))]
-        prefix: u8,
-    },
-    #[structopt(name = "del")]
-    /// deletes an address from the network interface
-    Del {
-        #[structopt(raw(required = "true"))]
-        /// id of the network interface
-        id: u64,
-        #[structopt(raw(required = "true"))]
-        addr: String,
-        /// optional address subnet prefix (defaults to 32 for v4, 128 for v6)
-        prefix: Option<u8>,
-    },
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "filter")]
+/// commands for packet filter
+pub struct Filter {
+    #[argh(subcommand)]
+    pub filter_cmd: FilterEnum,
 }
 
-#[derive(StructOpt, Clone, Debug)]
-pub enum FwdCmd {
-    #[structopt(name = "list")]
-    /// lists forwarding table entries
-    List,
-    #[structopt(name = "add-device")]
-    /// adds a forwarding table entry to route to a device
-    AddDevice {
-        #[structopt(raw(required = "true"))]
-        /// id of the network interface to route to
-        id: u64,
-        #[structopt(raw(required = "true"))]
-        /// address portion of the subnet for this forwarding rule
-        addr: String,
-        #[structopt(raw(required = "true"))]
-        /// routing prefix for this forwarding rule
-        prefix: u8,
-    },
-    #[structopt(name = "add-hop")]
-    /// adds a forwarding table entry to route to a IP address
-    AddHop {
-        #[structopt(raw(required = "true"))]
-        /// IP address of the next hop to route to
-        next_hop: String,
-        #[structopt(raw(required = "true"))]
-        /// address portion of the subnet for this forwarding rule
-        addr: String,
-        #[structopt(raw(required = "true"))]
-        /// routing prefix for this forwarding rule
-        prefix: u8,
-    },
-    #[structopt(name = "del")]
-    /// deletes a forwarding table entry
-    Del {
-        #[structopt(raw(required = "true"))]
-        /// address portion of the subnet for this forwarding rule
-        addr: String,
-        #[structopt(raw(required = "true"))]
-        /// routing prefix for this forwarding rule
-        prefix: u8,
-    },
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum FilterEnum {
+    Disable(FilterDisable),
+    Enable(FilterEnable),
+    GetNatRules(FilterGetNatRules),
+    GetRdrRules(FilterGetRdrRules),
+    GetRules(FilterGetRules),
+    IsEnabled(FilterIsEnabled),
+    SetNatRules(FilterSetNatRules),
+    SetRdrRules(FilterSetRdrRules),
+    SetRules(FilterSetRules),
 }
 
-#[derive(StructOpt, Clone, Debug)]
-pub enum RouteCmd {
-    #[structopt(name = "list")]
-    List,
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "disable")]
+/// disables the packet filter
+pub struct FilterDisable {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "enable")]
+/// enables the packet filter
+pub struct FilterEnable {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "get_nat_rules")]
+/// gets nat rules
+pub struct FilterGetNatRules {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "get_rdr_rules")]
+/// gets rdr rules
+pub struct FilterGetRdrRules {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "get_rules")]
+/// gets filter rules
+pub struct FilterGetRules {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "is_enabled")]
+/// is the packet filter enabled?
+pub struct FilterIsEnabled {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "set_nat_rules")]
+/// sets nat rules (see the netfilter::parser library for the NAT rules format)
+pub struct FilterSetNatRules {
+    #[argh(positional)]
+    /// nat rules
+    pub rules: String,
 }
 
-#[derive(StructOpt, Clone, Debug)]
-pub enum FilterCmd {
-    #[structopt(name = "enable")]
-    /// enable the packet filter
-    Enable,
-    #[structopt(name = "disable")]
-    /// disable the packet filter
-    Disable,
-    #[structopt(name = "is_enabled")]
-    /// is the packet filter enabled?
-    IsEnabled,
-    #[structopt(name = "get_rules")]
-    /// get filter rules
-    GetRules,
-    #[structopt(name = "set_rules")]
-    /// set filter rules (see the netfilter::parser library for the rules format)
-    SetRules { rules: String },
-    #[structopt(name = "get_nat_rules")]
-    /// get nat rules
-    GetNatRules,
-    #[structopt(name = "set_nat_rules")]
-    /// set nat rules (see the netfilter::parser library for the NAT rules format)
-    SetNatRules { rules: String },
-    #[structopt(name = "get_rdr_rules")]
-    /// get rdr rules
-    GetRdrRules,
-    #[structopt(name = "set_rdr_rules")]
-    /// set rdr rules (see the netfilter::parser library for the RDR rules format)
-    SetRdrRules { rules: String },
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "set_rdr_rules")]
+/// sets rdr rules (see the netfilter::parser library for the RDR rules format)
+pub struct FilterSetRdrRules {
+    #[argh(positional)]
+    /// rdr rules
+    pub rules: String,
 }
 
-#[derive(StructOpt, Clone, Debug)]
-pub enum LogCmd {
-    /// Syslog severity level / loglevel
-    #[structopt(name = "set-level")]
-    SetLevel {
-        #[structopt(
-            raw(possible_values = "&LogLevelArg::variants()"),
-            raw(case_insensitive = "true")
-        )]
-        log_level: LogLevelArg,
-    },
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "set_rules")]
+/// sets filter rules (see the netfilter::parser library for the rules format)
+pub struct FilterSetRules {
+    #[argh(positional)]
+    /// rules
+    pub rules: String,
 }
 
-#[derive(StructOpt, Clone, Debug)]
-pub enum StatCmd {
-    #[structopt(name = "show")]
-    /// show classified netstack stats
-    Show,
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "fwd")]
+/// commands for forwarding tables
+pub struct Fwd {
+    #[argh(subcommand)]
+    pub fwd_cmd: FwdEnum,
 }
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum FwdEnum {
+    AddDevice(FwdAddDevice),
+    AddHop(FwdAddHop),
+    Del(FwdDel),
+    List(FwdList),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "add-device")]
+/// adds a forwarding table entry to route to a device
+pub struct FwdAddDevice {
+    #[argh(positional)]
+    /// id of the network interface to route to
+    pub id: u64,
+    #[argh(positional)]
+    /// address portion of the subnet for this forwarding rule
+    pub addr: String,
+    #[argh(positional)]
+    /// routing prefix for this forwarding rule
+    pub prefix: u8,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "add-hop")]
+/// adds a forwarding table entry to route to a IP address
+pub struct FwdAddHop {
+    #[argh(positional)]
+    /// ip address of the next hop to route to
+    pub next_hop: String,
+    #[argh(positional)]
+    /// address portion of the subnet for this forwarding rule
+    pub addr: String,
+    #[argh(positional)]
+    /// routing prefix for this forwarding rule
+    pub prefix: u8,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "del")]
+/// deletes a forwarding table entry
+pub struct FwdDel {
+    #[argh(positional)]
+    /// address portion of the subnet for this forwarding rule
+    pub addr: String,
+    #[argh(positional)]
+    /// routing prefix for this forwarding rule
+    pub prefix: u8,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "list")]
+/// lists forwarding table entries
+pub struct FwdList {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "if")]
+/// commands for network interfaces
+pub struct If {
+    #[argh(subcommand)]
+    pub if_cmd: IfEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum IfEnum {
+    Add(IfAdd),
+    Addr(IfAddr),
+    Del(IfDel),
+    Disable(IfDisable),
+    Enable(IfEnable),
+    Get(IfGet),
+    List(IfList),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "add")]
+/// adds a network interface by path
+pub struct IfAdd {
+    // The path must yield a handle to a fuchsia.hardware.ethernet.Device interface.
+    // Currently this means paths under /dev/class/ethernet.
+    #[argh(positional)]
+    /// path to the device to add
+    pub path: String,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "addr")]
+/// commands for updates network interface addresses
+pub struct IfAddr {
+    #[argh(subcommand)]
+    pub addr_cmd: IfAddrEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum IfAddrEnum {
+    Add(IfAddrAdd),
+    Del(IfAddrDel),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "add")]
+/// adds an address to the network interface
+pub struct IfAddrAdd {
+    #[argh(positional)]
+    /// id of the network interface
+    pub id: u64,
+    #[argh(positional)]
+    /// addr of the network interface
+    pub addr: String,
+    #[argh(positional)]
+    /// prefix of the network interface
+    pub prefix: u8,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "del")]
+/// deletes an address from the network interface
+pub struct IfAddrDel {
+    #[argh(positional)]
+    /// id of the network interface
+    pub id: u64,
+    #[argh(positional)]
+    /// addr of the network interface
+    pub addr: String,
+    #[argh(positional)]
+    /// optional address subnet prefix (defaults to 32 for v4, 128 for v6)
+    pub prefix: Option<u8>,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "del")]
+/// removes a network interface
+pub struct IfDel {
+    #[argh(positional)]
+    /// id of the network interface to remove
+    pub id: u64,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "disable")]
+/// disables a network interface
+pub struct IfDisable {
+    #[argh(positional)]
+    /// id of the network interface to disable
+    pub id: u64,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "enable")]
+/// enables a network interface
+pub struct IfEnable {
+    #[argh(positional)]
+    /// id of the network interface to enable
+    pub id: u64,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "get")]
+/// queries a network interface
+pub struct IfGet {
+    #[argh(positional)]
+    /// id of the network interface to query
+    pub id: u64,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "list")]
+/// lists network interfaces
+pub struct IfList {
+    #[argh(positional)]
+    /// name substring to be matched
+    pub name_pattern: Option<String>,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "log")]
+/// commands for logging
+pub struct Log {
+    #[argh(subcommand)]
+    pub log_cmd: LogEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum LogEnum {
+    SetLevel(LogSetLevel),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "set-level")]
+/// syslog severity level / loglevel
+pub struct LogSetLevel {
+    #[argh(positional, from_str_fn(parse_log_level_str))]
+    /// log level
+    pub log_level: LogLevelArg,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "route")]
+/// commands for routing tables
+pub struct Route {
+    #[argh(subcommand)]
+    pub route_cmd: RouteEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum RouteEnum {
+    List(RouteList),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "list")]
+/// lists devices
+pub struct RouteList {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "stat")]
+/// commands for aggregates statistics
+pub struct Stat {
+    #[argh(subcommand)]
+    pub stat_cmd: StatEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum StatEnum {
+    Show(StatShow),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "show")]
+/// shows classified netstack stats
+pub struct StatShow {}

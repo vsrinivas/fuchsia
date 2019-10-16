@@ -21,7 +21,6 @@ use netfilter::FidlReturn as FilterFidlReturn;
 use prettytable::{cell, format, row, Table};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
-use structopt::StructOpt;
 
 mod opts;
 
@@ -71,20 +70,20 @@ fn logger_init() -> Result<(), SetLoggerError> {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let () = logger_init()?;
-    let opt = Opt::from_args();
+    let command: Command = argh::from_env();
     let stack = connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
     let netstack =
         connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
     let filter = connect_to_service::<FilterMarker>().context("failed to connect to netfilter")?;
     let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
 
-    match opt {
-        Opt::If(cmd) => do_if(cmd, &stack).await,
-        Opt::Fwd(cmd) => do_fwd(cmd, stack).await,
-        Opt::Route(cmd) => do_route(cmd, netstack).await,
-        Opt::Filter(cmd) => do_filter(cmd, filter).await,
-        Opt::Log(cmd) => do_log(cmd, log).await,
-        Opt::Stat(cmd) => do_stat(cmd).await,
+    match command.cmd {
+        CommandEnum::If(cmd) => do_if(cmd.if_cmd, &stack).await,
+        CommandEnum::Fwd(cmd) => do_fwd(cmd.fwd_cmd, stack).await,
+        CommandEnum::Route(cmd) => do_route(cmd.route_cmd, netstack).await,
+        CommandEnum::Filter(cmd) => do_filter(cmd.filter_cmd, filter).await,
+        CommandEnum::Log(cmd) => do_log(cmd.log_cmd, log).await,
+        CommandEnum::Stat(cmd) => do_stat(cmd.stat_cmd).await,
     }
 }
 
@@ -138,9 +137,9 @@ async fn tabulate_interfaces_info(interfaces: Vec<InterfaceInfo>) -> Result<Stri
     Ok(t.to_string())
 }
 
-async fn do_if(cmd: opts::IfCmd, stack: &StackProxy) -> Result<(), Error> {
+async fn do_if(cmd: opts::IfEnum, stack: &StackProxy) -> Result<(), Error> {
     match cmd {
-        IfCmd::List { name_pattern } => {
+        IfEnum::List(IfList { name_pattern }) => {
             let mut response = stack.list_interfaces().await.context("error getting response")?;
             if let Some(name_pattern) = name_pattern {
                 let () = shortlist_interfaces(&name_pattern, &mut response);
@@ -150,7 +149,7 @@ async fn do_if(cmd: opts::IfCmd, stack: &StackProxy) -> Result<(), Error> {
                 .context("error tabulating interface info")?;
             println!("{}", result);
         }
-        IfCmd::Add { path } => {
+        IfEnum::Add(IfAdd { path }) => {
             let dev = File::open(&path).context("failed to open device")?;
             let topological_path =
                 fdio::device_get_topo_path(&dev).context("failed to get topological path")?;
@@ -168,67 +167,70 @@ async fn do_if(cmd: opts::IfCmd, stack: &StackProxy) -> Result<(), Error> {
             )?;
             info!("Added interface {}", id);
         }
-        IfCmd::Del { id } => {
+        IfEnum::Del(IfDel { id }) => {
             let () = stack_fidl!(stack.del_ethernet_interface(id), "error removing interface")?;
             info!("Deleted interface {}", id);
         }
-        IfCmd::Get { id } => {
+        IfEnum::Get(IfGet { id }) => {
             let info = stack_fidl!(stack.get_interface_info(id), "error getting interface")?;
             println!("{}", pretty::InterfaceInfo::from(info));
         }
-        IfCmd::Enable { id } => {
+        IfEnum::Enable(IfEnable { id }) => {
             let () = stack_fidl!(stack.enable_interface(id), "error enabling interface")?;
             info!("Interface {} enabled", id);
         }
-        IfCmd::Disable { id } => {
+        IfEnum::Disable(IfDisable { id }) => {
             let () = stack_fidl!(stack.disable_interface(id), "error disabling interface")?;
             info!("Interface {} disabled", id);
         }
-        IfCmd::Addr(AddrCmd::Add { id, addr, prefix }) => {
-            let parsed_addr = parse_ip_addr(&addr)?;
-            let mut fidl_addr =
-                netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len: prefix };
-            let () = stack_fidl!(
-                stack.add_interface_address(id, &mut fidl_addr),
-                "error adding interface address"
-            )?;
-            info!(
-                "Address {} added to interface {}",
-                pretty::InterfaceAddress::from(fidl_addr),
-                id
-            );
-        }
-        IfCmd::Addr(AddrCmd::Del { id, addr, prefix }) => {
-            let parsed_addr = parse_ip_addr(&addr)?;
-            let prefix_len = prefix.unwrap_or_else(|| match parsed_addr {
-                net::IpAddress::Ipv4(_) => 32,
-                net::IpAddress::Ipv6(_) => 128,
-            });
-            let mut fidl_addr = netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len };
-            let () = stack_fidl!(
-                stack.del_interface_address(id, &mut fidl_addr),
-                "error deleting interface address"
-            )?;
-            info!(
-                "Address {} deleted from interface {}",
-                pretty::InterfaceAddress::from(fidl_addr),
-                id
-            );
-        }
+        IfEnum::Addr(IfAddr { addr_cmd }) => match addr_cmd {
+            IfAddrEnum::Add(IfAddrAdd { id, addr, prefix }) => {
+                let parsed_addr = parse_ip_addr(&addr)?;
+                let mut fidl_addr =
+                    netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len: prefix };
+                let () = stack_fidl!(
+                    stack.add_interface_address(id, &mut fidl_addr),
+                    "error adding interface address"
+                )?;
+                info!(
+                    "Address {} added to interface {}",
+                    pretty::InterfaceAddress::from(fidl_addr),
+                    id
+                );
+            }
+            IfAddrEnum::Del(IfAddrDel { id, addr, prefix }) => {
+                let parsed_addr = parse_ip_addr(&addr)?;
+                let prefix_len = prefix.unwrap_or_else(|| match parsed_addr {
+                    net::IpAddress::Ipv4(_) => 32,
+                    net::IpAddress::Ipv6(_) => 128,
+                });
+                let mut fidl_addr =
+                    netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len };
+                let () = stack_fidl!(
+                    stack.del_interface_address(id, &mut fidl_addr),
+                    "error deleting interface address"
+                )?;
+                info!(
+                    "Address {} deleted from interface {}",
+                    pretty::InterfaceAddress::from(fidl_addr),
+                    id
+                );
+            }
+        },
     }
     Ok(())
 }
 
-async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
+async fn do_fwd(cmd: opts::FwdEnum, stack: StackProxy) -> Result<(), Error> {
     match cmd {
-        FwdCmd::List => {
+        FwdEnum::List(_) => {
             let response =
                 stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
             for entry in response {
                 println!("{}", pretty::ForwardingEntry::from(entry));
             }
         }
-        FwdCmd::AddDevice { id, addr, prefix } => {
+        FwdEnum::AddDevice(FwdAddDevice { id, addr, prefix }) => {
             let mut entry = netstack::ForwardingEntry {
                 subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
                 destination: netstack::ForwardingDestination::DeviceId(id),
@@ -239,7 +241,7 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
             )?;
             info!("Added forwarding entry for {}/{} to device {}", addr, prefix, id);
         }
-        FwdCmd::AddHop { next_hop, addr, prefix } => {
+        FwdEnum::AddHop(FwdAddHop { next_hop, addr, prefix }) => {
             let mut entry = netstack::ForwardingEntry {
                 subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
                 destination: netstack::ForwardingDestination::NextHop(parse_ip_addr(&next_hop)?),
@@ -250,7 +252,7 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
             )?;
             info!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop);
         }
-        FwdCmd::Del { addr, prefix } => {
+        FwdEnum::Del(FwdDel { addr, prefix }) => {
             let mut entry = net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix };
             let () = stack_fidl!(
                 stack.del_forwarding_entry(&mut entry),
@@ -262,9 +264,9 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
     Ok(())
 }
 
-async fn do_route(cmd: opts::RouteCmd, netstack: NetstackProxy) -> Result<(), Error> {
+async fn do_route(cmd: opts::RouteEnum, netstack: NetstackProxy) -> Result<(), Error> {
     match cmd {
-        RouteCmd::List => {
+        RouteEnum::List(_) => {
             let response =
                 netstack.get_route_table2().await.context("error retrieving routing table")?;
 
@@ -305,26 +307,26 @@ fn parse_ip_addr(addr: &str) -> Result<net::IpAddress, Error> {
     }
 }
 
-async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Error> {
+async fn do_filter(cmd: opts::FilterEnum, filter: FilterProxy) -> Result<(), Error> {
     match cmd {
-        FilterCmd::Enable => {
+        FilterEnum::Enable(_) => {
             let () = filter_fidl!(filter.enable(true), "error enabling filter")?;
             info!("successfully enabled filter");
         }
-        FilterCmd::Disable => {
+        FilterEnum::Disable(_) => {
             let () = filter_fidl!(filter.enable(false), "error disabling filter")?;
             info!("successfully disabled filter");
         }
-        FilterCmd::IsEnabled => {
+        FilterEnum::IsEnabled(_) => {
             let is_enabled = filter.is_enabled().await.context("FIDL error")?;
             println!("{:?}", is_enabled);
         }
-        FilterCmd::GetRules => {
+        FilterEnum::GetRules(_) => {
             let (rules, generation) =
                 filter_fidl!(filter.get_rules(), "error getting filter rules")?;
             println!("{:?} (generation {})", rules, generation);
         }
-        FilterCmd::SetRules { rules } => {
+        FilterEnum::SetRules(FilterSetRules { rules }) => {
             let (_cur_rules, generation) =
                 filter_fidl!(filter.get_rules(), "error getting filter rules")?;
             let mut rules = netfilter::parser::parse_str_to_rules(&rules)?;
@@ -334,12 +336,12 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
             )?;
             info!("successfully set filter rules");
         }
-        FilterCmd::GetNatRules => {
+        FilterEnum::GetNatRules(_) => {
             let (rules, generation) =
                 filter_fidl!(filter.get_nat_rules(), "error getting NAT rules")?;
             println!("{:?} (generation {})", rules, generation);
         }
-        FilterCmd::SetNatRules { rules } => {
+        FilterEnum::SetNatRules(FilterSetNatRules { rules }) => {
             let (_cur_rules, generation) =
                 filter_fidl!(filter.get_nat_rules(), "error getting NAT rules")?;
             let mut rules = netfilter::parser::parse_str_to_nat_rules(&rules)?;
@@ -349,12 +351,12 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
             )?;
             info!("successfully set NAT rules");
         }
-        FilterCmd::GetRdrRules => {
+        FilterEnum::GetRdrRules(_) => {
             let (rules, generation) =
                 filter_fidl!(filter.get_rdr_rules(), "error getting RDR rules")?;
             println!("{:?} (generation {})", rules, generation);
         }
-        FilterCmd::SetRdrRules { rules } => {
+        FilterEnum::SetRdrRules(FilterSetRdrRules { rules }) => {
             let (_cur_rules, generation) =
                 filter_fidl!(filter.get_rdr_rules(), "error getting RDR rules")?;
             let mut rules = netfilter::parser::parse_str_to_rdr_rules(&rules)?;
@@ -368,9 +370,9 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
     Ok(())
 }
 
-async fn do_log(cmd: opts::LogCmd, log: LogProxy) -> Result<(), Error> {
+async fn do_log(cmd: opts::LogEnum, log: LogProxy) -> Result<(), Error> {
     match cmd {
-        LogCmd::SetLevel { log_level } => {
+        LogEnum::SetLevel(LogSetLevel { log_level }) => {
             let () = stack_fidl!(log.set_log_level(log_level.into()), "error setting log level")?;
             info!("log level set to {:?}", log_level);
         }
@@ -378,9 +380,9 @@ async fn do_log(cmd: opts::LogCmd, log: LogProxy) -> Result<(), Error> {
     Ok(())
 }
 
-async fn do_stat(cmd: opts::StatCmd) -> Result<(), Error> {
+async fn do_stat(cmd: opts::StatEnum) -> Result<(), Error> {
     match cmd {
-        StatCmd::Show => {
+        StatEnum::Show(_) => {
             let mut entries = Vec::new();
             let globs = [
                 "/hub",         // accessed in "sys" realm
@@ -543,10 +545,12 @@ mod tests {
 
         // Make the first request.
         let () = do_if(
-            opts::IfCmd::Addr(opts::AddrCmd::Del {
-                id: 1,
-                addr: String::from("192.168.0.1"),
-                prefix: None, // The prefix should be set to the default of 32 for IPv4.
+            IfEnum::Addr(IfAddr {
+                addr_cmd: IfAddrEnum::Del(IfAddrDel {
+                    id: 1,
+                    addr: String::from("192.168.0.1"),
+                    prefix: None, // The prefix should be set to the default of 32 for IPv4.
+                }),
             }),
             &stack,
         )
@@ -555,10 +559,12 @@ mod tests {
 
         // Make the second request.
         do_if(
-            opts::IfCmd::Addr(opts::AddrCmd::Del {
-                id: 2,
-                addr: String::from("fd00::1"),
-                prefix: None, // The prefix should be set to the default of 128 for IPv6.
+            IfEnum::Addr(IfAddr {
+                addr_cmd: IfAddrEnum::Del(IfAddrDel {
+                    id: 2,
+                    addr: String::from("fd00::1"),
+                    prefix: None, // The prefix should be set to the default of 128 for IPv6.
+                }),
             }),
             &stack,
         )
