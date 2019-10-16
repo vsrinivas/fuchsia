@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/cmx/facet_parser/cmx_facet_parser.h"
+#include "lib/cmx_facet_parser/cmx_facet_parser.h"
 
 #include <algorithm>
 #include <regex>
 #include <sstream>
 #include <string>
 
-#include <rapidjson/document.h>
 #include <trace/event.h>
 
+#include "rapidjson/document.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {

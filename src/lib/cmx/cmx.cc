@@ -9,9 +9,9 @@
 #include <sstream>
 #include <string>
 
-#include <rapidjson/document.h>
 #include <trace/event.h>
 
+#include "rapidjson/document.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 

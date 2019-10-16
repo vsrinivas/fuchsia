@@ -11,18 +11,17 @@ source_set("cmx_facet_parser") {
     "cmx_facet_parser.h",
   ]
 
-  public_deps = [
-    "//src/lib/json_parser:json",
+  deps = [
+    "//garnet/public/lib/json",
+    "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
-  ]
-
-  deps = [
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/trace",
   ]
 }
 
-executable("cmx_facet_parser_unittests_bin") {
+executable("tests") {
   testonly = true
 
   output_name = "cmx_facet_parser_unittest"
@@ -33,8 +32,10 @@ executable("cmx_facet_parser_unittests_bin") {
 
   deps = [
     ":cmx_facet_parser",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/json",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/json_parser:json",
+    "//src/lib/pkg_url",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]
@@ -42,20 +43,12 @@ executable("cmx_facet_parser_unittests_bin") {
 
 test_package("cmx_facet_parser_unittests") {
   deps = [
-    ":cmx_facet_parser_unittests_bin",
+    ":tests",
   ]
   tests = [
     {
       name = "cmx_facet_parser_unittest"
       environments = basic_envs
     },
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    ":cmx_facet_parser_unittests",
   ]
 }

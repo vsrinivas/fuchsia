@@ -7,7 +7,6 @@ group("lib") {
   deps = [
     ":tests",
     "argh",
-    "cmx",
     "cobalt",
     "elflib",
     "fidl_table_validation",
@@ -31,7 +30,6 @@ group("tests") {
   deps = [
     "argh/argh_tests",
     "by_addr:tests",
-    "cmx:tests",
     "cobalt:tests",
     "containers/cpp:tests",
     "cstr:tests",
