@@ -44,6 +44,28 @@ use proc_macro::TokenStream;
 /// }
 ///
 /// ```
+///
+/// If a state machine enum is generated, additional enums for state transitions are generated.
+/// This is particularly useful to keep state transition and business logic separated, example:
+/// ```
+/// fn authenticate(auth: AuthHdr) -> AuthenticatingTransition {
+///    if auth.result == ResultCode::SUCCESS {
+///        ...
+///        AuthenticatingTransition::ToAuthenticated(data)
+///    } else {
+///        ...
+///        AuthenticatingTransition::ToIdle(data)
+///    }
+/// }
+///
+/// fn on_mac_frame(state: States, frame: Frame) -> Sates {
+///     ...
+///     let transition = authenticate(auth);
+///     let next_state = state.apply(transition);
+///     ...
+/// }
+///
+/// ```
 #[proc_macro]
 pub fn statemachine(input: TokenStream) -> TokenStream {
     statemachine::process(input)

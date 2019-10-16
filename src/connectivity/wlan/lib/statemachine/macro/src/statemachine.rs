@@ -4,8 +4,8 @@
 
 use {
     proc_macro::TokenStream,
-    quote::{quote, ToTokens},
-    std::collections::HashSet,
+    quote::{format_ident, quote, ToTokens},
+    std::collections::{HashMap, HashSet},
     syn::{
         bracketed,
         export::TokenStream2,
@@ -145,71 +145,119 @@ pub fn process(input: TokenStream) -> TokenStream {
     let args: StateMachineArgs = parse(input).expect("error processing macro");
 
     // Collect unique states and state transitions.
-    let mut transitions = HashSet::<StateTransition>::new();
+    let mut transitions = HashMap::<Ident, HashSet<Ident>>::new();
     let mut state_set = HashSet::<Ident>::new();
     state_set.insert(args.init_state.0.clone());
     for transition in &args.transitions {
         state_set.insert(transition.from_name.clone());
         state_set.extend(transition.to_names.iter().map(|x| x.clone()));
-        transitions.extend(
-            transition
-                .to_names
-                .iter()
-                .map(|x| StateTransition(transition.from_name.clone(), x.clone())),
-        );
+
+        transitions
+            .entry(transition.from_name.clone())
+            .or_insert(HashSet::new())
+            .extend(transition.to_names.iter().map(|x| x.clone()));
     }
 
-    // Verify no unreachable state was defined:
+    // Check if every state is reachable.
     for state in &state_set {
-        if state != &args.init_state.0 && !transitions.iter().any(|t| &t.1 == state) {
+        let is_reachable = transitions
+            .values()
+            .fold(false, |reachable, states| reachable || states.iter().any(|x| x == state));
+        if state != &args.init_state.0 && !is_reachable {
             panic!("Unreachable state defined: {}", state);
         }
     }
 
     // Make optional enum type definition:
     let mut enum_code = quote!();
+    let mut transition_enums = quote!();
     if let Some(enum_data) = args.enum_data {
         // Define state machine's enum variants:
-        let state_variants = state_set
-            .iter()
-            .map(|x| {
-                let x = x.clone();
-                quote! {
-                    #x(State<#x>),
-                }
-            })
-            .collect::<Vec<_>>();
+        let state_variants = state_set.iter().fold(quote!(), |code, x| {
+            quote! {
+                #code
+                #x(State<#x>),
+            }
+        });
 
         // Implement From<State<S>> for the newly defined state machine:
         let enum_name = enum_data.name.clone();
-        let states_from_impl = state_set
-            .iter()
-            .map(|x| {
-                let x = x.clone();
+        let states_from_impl = state_set.iter().fold(quote!(), |code, x| {
+            quote! {
+                #code
+                impl From<State<#x>> for #enum_name {
+                    fn from(state: State<#x>) -> #enum_name {
+                        #enum_name::#x(state)
+                    }
+                }
+            }
+        });
+        enum_code = quote! {
+            #enum_data {
+                #state_variants
+            }
+            #states_from_impl
+        };
+
+        // Implement transition enum for each state:
+        transition_enums = transitions.iter().fold(quote!(), |code, (from, to_list)| {
+            let states_enum_name = enum_data.name.clone();
+            let enum_name = format_ident!("{}Transition", from);
+            let variants = to_list.iter().fold(quote!(), |code, to| {
+                let variant_name = format_ident!("To{}", to);
                 quote! {
-                    impl From<State<#x>> for #enum_name {
-                        fn from(state: State<#x>) -> #enum_name {
-                            #enum_name::#x(state)
+                    #code
+                    #variant_name(#to),
+                }
+            });
+
+            let from_transitions = to_list.iter().fold(quote!(), |code, to| {
+                let variant_name = format_ident!("To{}", to);
+                quote! {
+                    #code
+                    #enum_name::#variant_name(data) => {
+                        state.transition_to(data).into()
+                    },
+                }
+            });
+
+            let via_transitions = to_list.iter().fold(quote!(), |code, to| {
+                let variant_name = format_ident!("To{}", to);
+                quote! {
+                    #code
+                    #enum_name::#variant_name(data) => {
+                        transition.to(data).into()
+                    },
+                }
+            });
+
+            quote! {
+                #code
+                enum #enum_name {
+                    #variants
+                }
+
+                impl MultiTransition<#states_enum_name, #from> for #enum_name {
+                    fn from(self, state: State<#from>) -> #states_enum_name {
+                        match self {
+                            #from_transitions
+                        }
+                    }
+                    fn via(self, transition: Transition<#from>) -> #states_enum_name {
+                        match self {
+                            #via_transitions
                         }
                     }
                 }
-            })
-            .collect::<Vec<_>>();
-        enum_code = quote! {
-            #enum_data {
-                #(#state_variants)*
             }
-            #(#states_from_impl)*
-        }
+        });
     };
 
     // Implement each necessary state transition:
-    let transitions = transitions
-        .into_iter()
-        .map(|transition| {
-            let from = transition.0;
-            let to = transition.1;
+    let transitions = transitions.iter().fold(quote!(), |code, (from, to_list)| {
+        to_list.iter().fold(code, |code, to| {
             quote! {
+                #code
                 impl StateTransition<#to> for State<#from> {
                     fn __internal_transition_to(new_state: #to) -> State<#to> {
                         State::__internal_new(new_state)
@@ -217,14 +265,15 @@ pub fn process(input: TokenStream) -> TokenStream {
                 }
             }
         })
-        .collect::<Vec<_>>();
+    });
 
     // Make final enum, initial state and state transitions definitions.
     let initial = args.init_state;
     TokenStream::from(quote! {
         #enum_code
         #initial
-        #(#transitions)*
+        #transitions
+        #transition_enums
     })
 }
 

@@ -148,6 +148,13 @@ impl<S> State<S> {
     {
         Self::__internal_transition_to(new_state)
     }
+
+    pub fn apply<T, E>(self, transition: T) -> E
+    where
+        T: MultiTransition<E, S>,
+    {
+        transition.from(self)
+    }
 }
 
 /// Convenience functions for unit testing.
@@ -189,6 +196,11 @@ pub struct Transition<S> {
     _phantom: PhantomData<S>,
 }
 
+pub trait MultiTransition<E, S> {
+    fn from(self, state: State<S>) -> E;
+    fn via(self, transition: Transition<S>) -> E;
+}
+
 impl<S> Transition<S> {
     pub fn to<T>(self, new_state: T) -> State<T>
     where
@@ -221,6 +233,13 @@ mod tests {
         B => C,
         B => [A, C],
     );
+
+    fn multi_transition(foo: u8) -> BTransition {
+        match foo {
+            0 => BTransition::ToA(A),
+            _ => BTransition::ToC(C(SharedStateData::default())),
+        }
+    }
 
     #[derive(Debug)]
     pub struct A2;
@@ -260,6 +279,40 @@ mod tests {
             States::B(State { data: B(SharedStateData { foo: 0 }), .. }) => (),
             _ => panic!("unexpected state"),
         }
+    }
+
+    #[test]
+    fn transition_enums() {
+        let state = State::new(A).transition_to(B(SharedStateData::default()));
+        let transition = multi_transition(0);
+        match state.apply(transition) {
+            States::A(_) => (),
+            _ => panic!("expected transition into A"),
+        };
+    }
+
+    #[test]
+    fn transition_enums_release() {
+        let state = State::new(A).transition_to(B(SharedStateData::default()));
+        let (transition, _data) = state.release_data();
+
+        let target = multi_transition(0);
+        match target.via(transition) {
+            States::A(_) => (),
+            _ => panic!("expected transition into A"),
+        };
+    }
+
+    #[test]
+    fn transition_enums_branching() {
+        let state = State::new(A).transition_to(B(SharedStateData::default()));
+        let (transition, _data) = state.release_data();
+
+        let target = multi_transition(1);
+        match target.via(transition) {
+            States::C(_) => (),
+            _ => panic!("expected transition into C"),
+        };
     }
 
     #[test]
