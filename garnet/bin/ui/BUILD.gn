@@ -35,6 +35,7 @@ group("ui") {
 test_package("scenic_tests") {
   deps = [
     "input_reader/tests",
+    "present_view/tests",
     "presentation_mode/tests",
     "root_presenter/tests",
     "//garnet/public/lib/ui/geometry/cpp:tests",
@@ -84,6 +85,14 @@ test_package("scenic_tests") {
     },
     {
       name = "presentation_mode_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "present_view_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "present_view_apptests"
       environments = basic_envs
     },
     {

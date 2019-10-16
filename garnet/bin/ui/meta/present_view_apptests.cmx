@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/present_view_apptests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}
