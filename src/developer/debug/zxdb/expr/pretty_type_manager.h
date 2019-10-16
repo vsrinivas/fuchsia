@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_TYPE_MANAGER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_PRETTY_TYPE_MANAGER_H_
 
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -57,6 +58,9 @@ class PrettyTypeManager {
   using PrefixPrettyType = std::pair<TypeGlob, std::unique_ptr<PrettyType>>;
   std::vector<PrefixPrettyType> cpp_;
   std::vector<PrefixPrettyType> rust_;
+
+  // Pretty printer for all Rust tuple types
+  std::unique_ptr<PrettyType> rust_tuple_type_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PrettyTypeManager);
 };

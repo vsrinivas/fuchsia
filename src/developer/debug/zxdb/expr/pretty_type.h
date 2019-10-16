@@ -67,6 +67,10 @@ class PrettyType {
   // execute it with a callback, which is how most nodes want to run.)
   virtual EvalFunction GetGetter(const std::string& getter_name) const;
 
+  // Returns a function which can be evaluated to fetch a member variable from an object of this
+  // type. If there is no matching member, a null fit::function is returned.
+  virtual EvalFunction GetMember(const std::string& member_name) const { return EvalFunction(); }
+
   // Returns a function which can be evaluated to execute a unary "*" dereference operator on an
   // object of the given type.
   //

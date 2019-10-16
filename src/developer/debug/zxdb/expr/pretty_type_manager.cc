@@ -8,9 +8,11 @@
 
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
+#include "src/developer/debug/zxdb/expr/pretty_rust_tuple.h"
 #include "src/developer/debug/zxdb/expr/pretty_std_string.h"
 #include "src/developer/debug/zxdb/expr/pretty_tree.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -74,7 +76,23 @@ PrettyType* PrettyTypeManager::GetForType(const Type* type) const {
     }
   }
 
-  return best_type;
+  if (best_type) {
+    return best_type;
+  }
+
+  if (type->GetLanguage() == DwarfLang::kRust) {
+    const Collection* coll = type->AsCollection();
+    if (!coll) {
+      return nullptr;
+    }
+
+    auto special = coll->GetSpecialType();
+    if (special == Collection::kRustTuple || special == Collection::kRustTupleStruct) {
+      return rust_tuple_type_.get();
+    }
+  }
+
+  return nullptr;
 }
 
 bool PrettyTypeManager::Format(FormatNode* node, const Type* type, const FormatOptions& options,
@@ -154,6 +172,8 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
 }
 
 void PrettyTypeManager::AddDefaultRustPrettyTypes() {
+  rust_tuple_type_ = std::make_unique<PrettyRustTuple>();
+
   // Rust's "&str" type won't parse as an identifier, construct an Identifier manually.
   rust_.emplace_back(TypeGlob(ParsedIdentifier(IdentifierQualification::kRelative,
                                                ParsedIdentifierComponent("&str"))),
