@@ -6,6 +6,7 @@ use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_inspect_deprecated as inspect;
 use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_ext as net_ext;
 use fidl_fuchsia_net_filter::{FilterMarker, FilterProxy};
 use fidl_fuchsia_net_stack::{
     self as netstack, InterfaceInfo, LogMarker, LogProxy, StackMarker, StackProxy,
@@ -21,6 +22,7 @@ use netfilter::FidlReturn as FilterFidlReturn;
 use prettytable::{cell, format, row, Table};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
+use std::str::FromStr;
 
 mod opts;
 
@@ -185,7 +187,7 @@ async fn do_if(cmd: opts::IfEnum, stack: &StackProxy) -> Result<(), Error> {
         }
         IfEnum::Addr(IfAddr { addr_cmd }) => match addr_cmd {
             IfAddrEnum::Add(IfAddrAdd { id, addr, prefix }) => {
-                let parsed_addr = parse_ip_addr(&addr)?;
+                let parsed_addr = net_ext::IpAddress::from_str(&addr)?.into();
                 let mut fidl_addr =
                     netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len: prefix };
                 let () = stack_fidl!(
@@ -199,7 +201,7 @@ async fn do_if(cmd: opts::IfEnum, stack: &StackProxy) -> Result<(), Error> {
                 );
             }
             IfAddrEnum::Del(IfAddrDel { id, addr, prefix }) => {
-                let parsed_addr = parse_ip_addr(&addr)?;
+                let parsed_addr = net_ext::IpAddress::from_str(&addr)?.into();
                 let prefix_len = prefix.unwrap_or_else(|| match parsed_addr {
                     net::IpAddress::Ipv4(_) => 32,
                     net::IpAddress::Ipv6(_) => 128,
@@ -232,7 +234,10 @@ async fn do_fwd(cmd: opts::FwdEnum, stack: StackProxy) -> Result<(), Error> {
         }
         FwdEnum::AddDevice(FwdAddDevice { id, addr, prefix }) => {
             let mut entry = netstack::ForwardingEntry {
-                subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
+                subnet: net::Subnet {
+                    addr: net_ext::IpAddress::from_str(&addr)?.into(),
+                    prefix_len: prefix,
+                },
                 destination: netstack::ForwardingDestination::DeviceId(id),
             };
             let () = stack_fidl!(
@@ -243,8 +248,13 @@ async fn do_fwd(cmd: opts::FwdEnum, stack: StackProxy) -> Result<(), Error> {
         }
         FwdEnum::AddHop(FwdAddHop { next_hop, addr, prefix }) => {
             let mut entry = netstack::ForwardingEntry {
-                subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
-                destination: netstack::ForwardingDestination::NextHop(parse_ip_addr(&next_hop)?),
+                subnet: net::Subnet {
+                    addr: net_ext::IpAddress::from_str(&addr)?.into(),
+                    prefix_len: prefix,
+                },
+                destination: netstack::ForwardingDestination::NextHop(
+                    net_ext::IpAddress::from_str(&next_hop)?.into(),
+                ),
             };
             let () = stack_fidl!(
                 stack.add_forwarding_entry(&mut entry),
@@ -253,7 +263,10 @@ async fn do_fwd(cmd: opts::FwdEnum, stack: StackProxy) -> Result<(), Error> {
             info!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop);
         }
         FwdEnum::Del(FwdDel { addr, prefix }) => {
-            let mut entry = net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix };
+            let mut entry = net::Subnet {
+                addr: net_ext::IpAddress::from_str(&addr)?.into(),
+                prefix_len: prefix,
+            };
             let () = stack_fidl!(
                 stack.del_forwarding_entry(&mut entry),
                 "error removing forwarding entry"
@@ -294,17 +307,6 @@ async fn do_route(cmd: opts::RouteEnum, netstack: NetstackProxy) -> Result<(), E
         }
     }
     Ok(())
-}
-
-fn parse_ip_addr(addr: &str) -> Result<net::IpAddress, Error> {
-    match addr.parse()? {
-        ::std::net::IpAddr::V4(ipv4) => {
-            Ok(net::IpAddress::Ipv4(net::Ipv4Address { addr: ipv4.octets() }))
-        }
-        ::std::net::IpAddr::V6(ipv6) => {
-            Ok(net::IpAddress::Ipv6(net::Ipv6Address { addr: ipv6.octets() }))
-        }
-    }
 }
 
 async fn do_filter(cmd: opts::FilterEnum, filter: FilterProxy) -> Result<(), Error> {

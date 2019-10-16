@@ -27,13 +27,20 @@ impl Into<fidl::IpAddress> for IpAddress {
     fn into(self) -> fidl::IpAddress {
         let IpAddress(ip_address) = self;
         match ip_address {
-            std::net::IpAddr::V4(v4addr) => fidl::IpAddress::Ipv4(fidl::Ipv4Address {
-                addr: v4addr.octets(),
-            }),
-            std::net::IpAddr::V6(v6addr) => fidl::IpAddress::Ipv6(fidl::Ipv6Address {
-                addr: v6addr.octets(),
-            }),
+            std::net::IpAddr::V4(v4addr) => {
+                fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr: v4addr.octets() })
+            }
+            std::net::IpAddr::V6(v6addr) => {
+                fidl::IpAddress::Ipv6(fidl::Ipv6Address { addr: v6addr.octets() })
+            }
         }
+    }
+}
+
+impl std::str::FromStr for IpAddress {
+    type Err = failure::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(IpAddress(s.parse()?))
     }
 }
 
@@ -92,12 +99,8 @@ impl std::str::FromStr for Subnet {
             )),
             None => Ok(()),
         }?;
-
         let addr = IpAddress(addr);
-        Ok(Subnet {
-            addr,
-            prefix_len: validated_prefix?,
-        })
+        Ok(Subnet { addr, prefix_len: validated_prefix? })
     }
 }
 
@@ -114,5 +117,67 @@ impl Into<fidl::Subnet> for Subnet {
         let Self { addr, prefix_len } = self;
         let addr = addr.into();
         fidl::Subnet { addr, prefix_len }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_ipaddr() {
+        let want_ext = IpAddress(std::net::IpAddr::V4(std::net::Ipv4Addr::new(1, 2, 3, 4)));
+        let want_fidl = fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr: [1, 2, 3, 4] });
+        let got_fidl: fidl::IpAddress = want_ext.into();
+        let got_ext = IpAddress::from(got_fidl);
+
+        assert_eq!(want_ext, got_ext);
+        assert_eq!(want_fidl, got_fidl);
+    }
+
+    #[test]
+    fn test_subnet() {
+        let err_str_subnets = vec![
+            // Note "1.2.3.4" or "::" is a valid form. Subnet's FromStr trait allows
+            // missing prefix, and assumes the legally maximum prefix length.
+            "",
+            "/32",                              // no ip address
+            " /32",                             // no ip address
+            "1.2.3.4/8/8",                      // too many slashes
+            "1.2.3.4/33",                       // prefix too long
+            "192.168.32.1:8080",                // that's a port, not a prefix
+            "e80::e1bf:4fe9:fb62:e3f4/129",     // prefix too long
+            "e80::e1bf:4fe9:fb62:e3f4/32%eth0", // zone index
+        ];
+        for e in err_str_subnets {
+            if Subnet::from_str(e).is_ok() {
+                eprintln!(
+                    "a malformed str is wrongfully convertitable to Subnet struct: \"{}\"",
+                    e
+                );
+                assert!(false);
+            }
+        }
+
+        let want_str = "1.2.3.4/18";
+        let want_ext = Subnet {
+            addr: IpAddress(std::net::IpAddr::V4(std::net::Ipv4Addr::new(1, 2, 3, 4))),
+            prefix_len: 18,
+        };
+        let want_fidl = fidl::Subnet {
+            addr: fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr: [1, 2, 3, 4] }),
+            prefix_len: 18,
+        };
+
+        let got_ext = Subnet::from_str(want_str).ok().expect("conversion error");
+        let got_fidl: fidl::Subnet = got_ext.into();
+        let got_ext_back = Subnet::from(got_fidl);
+        let got_str = &format!("{}", got_ext_back);
+
+        assert_eq!(want_ext, got_ext);
+        assert_eq!(want_fidl, got_fidl);
+        assert_eq!(got_ext, got_ext_back);
+        assert_eq!(want_str, got_str);
     }
 }
