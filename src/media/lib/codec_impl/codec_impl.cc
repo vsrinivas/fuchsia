@@ -21,21 +21,18 @@
 // async (we Unbind(), sweep the in-proc send queue, and only then delete the
 // Binding).
 
-// The VLOGF() and LOGF() macros are here because we want the calls sites to
-// look like FX_VLOGF and FX_LOGF, but without hard-wiring to those.  For now,
-// printf() seems to work fine.
-
 #define VLOG_ENABLED 0
 
 #if (VLOG_ENABLED)
-#define VLOGF(...) printf(__VA_ARGS__)
+#define VLOGF(format, ...) LOGF(format, ##__VA_ARGS__)
 #else
 #define VLOGF(...) \
   do {             \
   } while (0)
 #endif
 
-#define LOGF(...) printf(__VA_ARGS__)
+#define LOGF(format, ...) \
+    printf("[%s:%s:%d] " format "\n", "codec_impl", __func__, __LINE__, ##__VA_ARGS__)
 
 namespace {
 
@@ -166,6 +163,11 @@ CodecImpl::~CodecImpl() {
     // lambda, or when this lambda is deleted without ever having run during ~async::Loop
     // or async::Loop::Shutdown().
   });
+
+  // Before destruction, we know that EnsureBuffersNotConfigured() got called for both input and
+  // output, so we can assert that these are already not set during destruction.
+  ZX_DEBUG_ASSERT(!fake_map_range_[kInputPort]);
+  ZX_DEBUG_ASSERT(!fake_map_range_[kOutputPort]);
 }
 
 std::mutex& CodecImpl::lock() { return lock_; }
@@ -173,6 +175,9 @@ std::mutex& CodecImpl::lock() { return lock_; }
 void CodecImpl::SetCoreCodecAdapter(std::unique_ptr<CodecAdapter> codec_adapter) {
   ZX_DEBUG_ASSERT(!codec_adapter_);
   codec_adapter_ = std::move(codec_adapter);
+  if (IsCoreCodecHwBased()) {
+    core_codec_bti_ = CoreCodecBti();
+  }
 }
 
 void CodecImpl::BindAsync(fit::closure error_handler) {
@@ -932,12 +937,12 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
   CodecPacket* core_codec_packet = all_packets_[kInputPort][packet.header().packet_index()].get();
   core_codec_packet->SetBuffer(all_buffers_[kInputPort][packet.buffer_index()].get());
   if (!packet.has_start_offset()) {
-    FailLocked("client QueueInputPacket() with packet has no start offset");
+    Fail("client QueueInputPacket() with packet has no start offset");
     return;
   }
   core_codec_packet->SetStartOffset(packet.start_offset());
   if (!packet.has_valid_length_bytes()) {
-    FailLocked("client QueueInputPacket() with packet has no valid length bytes");
+    Fail("client QueueInputPacket() with packet has no valid length bytes");
     return;
   }
   core_codec_packet->SetValidLengthBytes(packet.valid_length_bytes());
@@ -945,6 +950,18 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     core_codec_packet->SetTimstampIsh(packet.timestamp_ish());
   } else {
     core_codec_packet->ClearTimestampIsh();
+  }
+
+  // Flush the data out to RAM if needed.
+  if (IsCoreCodecHwBased() && port_settings_[kInputPort]->coherency_domain() ==
+      fuchsia::sysmem::CoherencyDomain::CPU) {
+    // This flushes only the portion of the buffer that the packet is
+    // referencing.
+    zx_status_t status = core_codec_packet->CacheFlush();
+    if (status != ZX_OK) {
+      Fail("CacheFlush() failed");
+      return;
+    }
   }
 
   // We don't need to be under lock for this, because the fact that we're on the
@@ -1009,6 +1026,12 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(uint64_t stream_lifetime_ord
   }  // ~lock
 
   CoreCodecQueueInputEndOfStream();
+}
+
+zx_status_t CodecImpl::Pin(uint32_t options, const zx::vmo& vmo, uint64_t offset, uint64_t size,
+                           zx_paddr_t* addrs, size_t addrs_count, zx::pmt* pmt) {
+  ZX_DEBUG_ASSERT(*core_codec_bti_);
+  return core_codec_bti_->pin(options, vmo, offset, size, addrs, addrs_count, pmt);
 }
 
 bool CodecImpl::CheckWaitEnsureInputConfigured(std::unique_lock<std::mutex>& lock) {
@@ -1147,6 +1170,7 @@ void CodecImpl::UnbindLocked() {
       // happen to get more coverage of those orderings.
       if (is_core_codec_init_called_) {
         EnsureStreamClosed(lock);
+        EnsureBuffersNotConfigured(lock, kInputPort);
       }
 
       // Because the current path is the only path that sets this bool to true,
@@ -1271,7 +1295,10 @@ void CodecImpl::EnsureUnbindCompleted() {
   stream_control_loop_.Shutdown();
 
   {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
+    std::unique_lock<std::mutex> lock(lock_);
+
+    EnsureBuffersNotConfigured(lock, kOutputPort);
+
     // This unbinds any BufferCollection bindings.  This is effectively part
     // of the overall unbind of anything generating activity on FIDL thread
     // based on incoming channel messages.
@@ -1298,6 +1325,34 @@ void CodecImpl::EnsureUnbindCompleted() {
   // has no particular expectation that any particular messages were sent before deletion vs. not
   // getting sent due to deletion.
   shared_fidl_queue_.StopAndClear();
+}
+
+bool CodecImpl::IsSecureOutput() {
+  if (!IsDecoder() && !IsDecryptor()) {
+    return false;
+  }
+  if (IsDecoder()) {
+    if (!decoder_params().has_secure_output_mode()) {
+      return false;
+    }
+    return decoder_params().secure_output_mode() == fuchsia::mediacodec::SecureMemoryMode::ON;
+  } else {
+    ZX_DEBUG_ASSERT(IsDecryptor());
+    if (!decryptor_params().has_require_secure_mode()) {
+      return false;
+    }
+    return decryptor_params().require_secure_mode();
+  }
+}
+
+bool CodecImpl::IsSecureInput() {
+  if (!IsDecoder()) {
+    return false;
+  }
+  if (!decoder_params().has_secure_input_mode()) {
+    return false;
+  }
+  return decoder_params().secure_input_mode() == fuchsia::mediacodec::SecureMemoryMode::ON;
 }
 
 bool CodecImpl::IsStreamActiveLocked() {
@@ -1683,6 +1738,29 @@ void CodecImpl::OnBufferCollectionInfoInternal(
     port_settings_[port]->SetBufferCollectionInfo(std::move(buffer_collection_info));
   }
 
+  ZX_DEBUG_ASSERT(!fake_map_range_[port]);
+  // TODO(35200): Later we'll enforce that if this bool is true, is_secure() must also be
+  // true.  At that point we won't need this bool any more.
+  bool fake_secure;
+  if (port == kOutputPort) {
+    fake_secure = IsSecureOutput();
+  } else {
+    ZX_DEBUG_ASSERT(port == kInputPort);
+    fake_secure = IsSecureInput();
+  }
+  if (port_settings_[port]->is_secure() || fake_secure) {
+    if (IsCoreCodecMappedBufferNeeded(port)) {
+      zx_status_t status =
+          FakeMapRange::Create(port_settings_[port]->vmo_usable_size(), &fake_map_range_[port]);
+      if (status != ZX_OK) {
+        Fail("FakeMapRange::Init() failed");
+        return;
+      }
+    }
+    // TODO(35200): Make real, and stop logging this.
+    LOGF("### TEMP FAKE SECURE ### - port: %d", port);
+  }
+
   // We convert the buffer_collection_info into AddInputBuffer_StreamControl()
   // and AddOutputBufferInternal() calls, almost as if the client were adding
   // the buffers itself (but without the check that the client isn't adding
@@ -1733,11 +1811,10 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock, C
     buffer_lifetime_ordinal_[port]++;
   }
   if (port_settings_[port]) {
-    // This will close the BufferCollection async cleanly, without causing the
-    // LogicalBufferCollection to fail.  Mainly we care so we can more easily
-    // tell during debugging whether a LogicalBufferCollection was cleanly
-    // closed by all participants, vs. potentially getting failed by a
-    // participant exiting or non-cleanly closing.  A Sync() by the client is
+    // This will close the BufferCollection (async as-needed) cleanly, without causing the
+    // LogicalBufferCollection to fail.  Mainly we care so we can more easily tell during debugging
+    // whether a LogicalBufferCollection was cleanly closed by all participants, vs. potentially
+    // getting failed by a participant exiting or non-cleanly closing.  A Sync() by the client is
     // sufficient to ensure this async close is done.
     port_settings_[port] = nullptr;
   }
@@ -1755,6 +1832,12 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock, C
   // with the HW.
   // ZX_DEBUG_ASSERT(all_packets_[port].empty() ||
   // !all_packets_[port][0]->is_with_hw());
+
+  // This ~FakeMapRange (which calls zx::vmar::destroy()) is among the motivations for calling
+  // EnsureBuffersNotConfigured() during the Unbind() sequence / during ~CodecImpl.
+  if (fake_map_range_[port]) {
+    fake_map_range_[port].reset();
+  }
 
   all_packets_[port].clear();
   all_buffers_[port].clear();
@@ -1943,21 +2026,52 @@ bool CodecImpl::AddBufferCommon(bool is_client, CodecPort port,
       return false;
     }
 
-    // So far, there's little reason to avoid doing the Map() part under the
-    // lock, even if it can be a bit more time consuming, since there's no data
-    // processing happening at this point anyway, and there wouldn't be any
-    // happening in any other code location where we could potentially move the
-    // Map() either.
-
     std::unique_ptr<CodecBuffer> local_buffer =
-        std::unique_ptr<CodecBuffer>(new CodecBuffer(this, port, std::move(buffer)));
-    if (IsCoreCodecMappedBufferNeeded(port) && !local_buffer->Map()) {
-      FailLocked(
-          "AddOutputBuffer()/AddInputBuffer() couldn't Map() new buffer - "
-          "port: %d",
-          port);
-      return false;
+        std::unique_ptr<CodecBuffer>(new CodecBuffer(this, port, std::move(buffer),
+                                                     port_settings_[port]->is_secure()));
+    if (IsCoreCodecMappedBufferNeeded(port)) {
+      if (fake_map_range_[port]) {
+        // The fake_map_range_[port]->base() is % ZX_PAGE_SIZE == 0, which is the same as a mapping
+        // would be.  There are sufficient virtual pages starting at FakeMapRange::base() to permit
+        // CodecBuffer to include the low-order vmo_usable_start % ZX_PAGE_SIZE bits in
+        // CodecBuffer::base(), for any vmo_usable_start() value (even the worst case of
+        // ZX_PAGE_SIZE - 1, and buffer size % ZX_PAGE_SIZE == 2).  By including those low-order
+        // intra-page-offset bits, we can treat non-secure and secure cases similarly.
+        local_buffer->FakeMap(fake_map_range_[port]->base());
+      } else {
+        // So far, there's little reason to avoid doing the Map() part under the
+        // lock, even if it can be a bit more time consuming, since there's no data
+        // processing happening at this point anyway, and there wouldn't be any
+        // happening in any other code location where we could potentially move the
+        // Map() either.
+        if (!local_buffer->Map()) {
+          FailLocked("AddOutputBuffer()/AddInputBuffer() couldn't Map() new buffer - port: %d",
+                     port);
+          return false;
+        }
+      }
     }
+
+    // We keep the buffers pinned for DMA continuously, since there's not much benefit to un-pinning
+    // and re-pinning them (so far).  By pinning, we prevent sysmem from recycling the
+    // BufferCollection VMOs until the driver has re-started and un-quarantined pinned pages (via
+    // its BTI), after ensuring the HW is no longer doing DMA from/to the pages.
+    //
+    // TODO(38650): All CodecAdapter(s) that start memory access that can continue beyond VMO
+    // handle closure during process death/termination should have a BTI.  Resolving this TODO will
+    // require updating at least the amlogic-video VP9 decoder to provide a BTI.
+    //
+    // TODO(38651): Currently OEMCrypto's indirect (via FIDL) SMC calls that take physical addresses
+    // are not guaranteed to be fully over/done before VMO handles are auto-closed by OEMCrypto
+    // assuming OEMCryto's process dies/terminates.
+    if (IsCoreCodecHwBased() && *core_codec_bti_) {
+      zx_status_t status = local_buffer->Pin();
+      if (status != ZX_OK) {
+        FailLocked("buffer->Pin() failed - status: %d", status);
+        return false;
+      }
+    }
+
     {
       ScopedUnlock unlock(lock);
       // Inform the core codec up-front about each buffer.
@@ -3375,16 +3489,25 @@ CodecImpl::PortSettings::PortSettings(CodecImpl* parent, CodecPort port,
 }
 
 CodecImpl::PortSettings::~PortSettings() {
-  // To be safe, the unbind needs to occur on the FIDL thread.  In addition, we
-  // want to send a clean Close() to avoid causing the LogicalBufferCollection
-  // to fail.  Since we're not a crashing process, this is a clean close by
-  // definition.
-  if (buffer_collection_ && thrd_current() != parent_->fidl_thread()) {
+  // To be safe, the unbind needs to occur on the FIDL thread.  In addition, we want to send a clean
+  // Close() to avoid causing the LogicalBufferCollection to fail.  Since we're not a crashing
+  // process, this is a clean close by definition.
+  //
+  // TODO(37257): Consider _not_ sending Close() for unexpected failures initiated by the server.
+  // Consider whether to have a Close() on StreamProcessor to disambiguate clean vs. unexpected
+  // StreamProcessor channel close.
+  if (thrd_current() != parent_->fidl_thread()) {
     parent_->PostToSharedFidl([buffer_collection = std::move(buffer_collection_)] {
       // Sysmem will notice the Close() before the PEER_CLOSED.
-      buffer_collection->Close();
+      if (buffer_collection) {
+        buffer_collection->Close();
+      }
       // ~buffer_collection on FIDL thread
     });
+  } else {
+    if (buffer_collection_) {
+      buffer_collection_->Close();
+    }
   }
 }
 
@@ -3438,6 +3561,16 @@ uint32_t CodecImpl::PortSettings::buffer_count() {
       return 1;
     }
     return packet_count();
+  }
+}
+
+fuchsia::sysmem::CoherencyDomain CodecImpl::PortSettings::coherency_domain() {
+  if (is_partial_settings()) {
+    ZX_DEBUG_ASSERT(buffer_collection_info_);
+    return buffer_collection_info_->settings.buffer_settings.coherency_domain;
+  } else {
+    // default to CPU
+    return fuchsia::sysmem::CoherencyDomain::CPU;
   }
 }
 
@@ -3519,6 +3652,14 @@ uint64_t CodecImpl::PortSettings::vmo_usable_size() {
   ZX_DEBUG_ASSERT(is_partial_settings());
   ZX_DEBUG_ASSERT(buffer_collection_info_);
   return buffer_collection_info_->settings.buffer_settings.size_bytes;
+}
+
+bool CodecImpl::PortSettings::is_secure() {
+  if (!is_partial_settings()) {
+    return false;
+  }
+  ZX_DEBUG_ASSERT(buffer_collection_info_);
+  return buffer_collection_info_->settings.buffer_settings.is_secure;
 }
 
 //
@@ -3614,6 +3755,11 @@ bool CodecImpl::IsCoreCodecMappedBufferNeeded(CodecPort port) {
 }
 
 bool CodecImpl::IsCoreCodecHwBased() { return codec_adapter_->IsCoreCodecHwBased(); }
+
+zx::unowned_bti CodecImpl::CoreCodecBti() {
+  ZX_DEBUG_ASSERT(IsCoreCodecHwBased());
+  return codec_adapter_->CoreCodecBti();
+}
 
 std::unique_ptr<const fuchsia::media::StreamBufferConstraints>
 CodecImpl::CoreCodecBuildNewInputConstraints() {

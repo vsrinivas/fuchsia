@@ -355,10 +355,13 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
 }
 
 zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
   {
     std::lock_guard<std::mutex> lock(parser_running_lock_);
     ZX_DEBUG_ASSERT(!parser_running_);
   }
+#endif
+
   if (!parser_input_ || io_buffer_size(parser_input_.get(), 0) < len) {
     if (parser_input_) {
       io_buffer_release(parser_input_.get());
@@ -375,6 +378,23 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
     SetIoBufferName(parser_input_.get(), "ParserInput");
   }
 
+  memcpy(io_buffer_virt(parser_input_.get()), data, len);
+  io_buffer_cache_flush(parser_input_.get(), 0, len);
+  BarrierAfterFlush();
+
+  return ParseVideoPhysical(io_buffer_phys(parser_input_.get()), len);
+}
+
+// The caller of this method must know that the physical range is entirely
+// within a VMO that's pinned for at least the duration of this call.
+zx_status_t AmlogicVideo::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+  {
+    std::lock_guard<std::mutex> lock(parser_running_lock_);
+    ZX_DEBUG_ASSERT(!parser_running_);
+  }
+#endif
+
   PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
   PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
   ParserControl::Get().ReadFrom(parser_.get()).set_es_pack_size(len).WriteTo(parser_.get());
@@ -385,13 +405,8 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
       .set_command(ParserControl::kAutoSearch)
       .WriteTo(parser_.get());
 
-  memcpy(io_buffer_virt(parser_input_.get()), data, len);
-  io_buffer_cache_flush(parser_input_.get(), 0, len);
-
-  BarrierAfterFlush();
-
   ParserFetchAddr::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(parser_input_.get())))
+      .FromValue(truncate_to_32(paddr))
       .WriteTo(parser_.get());
   ParserFetchCmd::Get().FromValue(0).set_len(len).set_fetch_endian(7).WriteTo(parser_.get());
 
@@ -399,8 +414,9 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   // es_pack_size data has been read.  The parser cancellation bit should not
   // be set because that bit is never set while parser_running_ is false
   // (ignoring transients while under parser_running_lock_).
-  assert(ZX_ERR_TIMED_OUT ==
-         parser_finished_event_.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, zx::time(), nullptr));
+  ZX_ASSERT(ZX_ERR_TIMED_OUT ==
+            parser_finished_event_.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
+                                            zx::time(), nullptr));
 
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&search_pattern_)))

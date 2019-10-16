@@ -49,6 +49,9 @@ class CodecPacket {
   void SetIsNew(bool is_new);
   bool is_new() const;
 
+  [[nodiscard]]
+  zx_status_t CacheFlush() const;
+
  private:
   // The public section is for the core codec to call - the private section is
   // only for CodecImpl to call.

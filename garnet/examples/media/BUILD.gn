@@ -75,6 +75,74 @@ package("use_h264_decoder_test") {
   ]
 }
 
+package("use_h264_decoder_secure_output_test") {
+  testonly = true
+
+  deps = [
+    "//garnet/examples/media/use_media_decoder:use_h264_decoder_secure_output_test",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/use_h264_decoder_secure_output_test.cmx")
+      dest = "use_h264_decoder_secure_output_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      # Should pass when run on astro.
+      name = "use_h264_decoder_secure_output_test"
+
+      environments = [
+        astro_env,
+      ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
+      dest = "bear.h264"
+    },
+  ]
+}
+
+package("use_h264_decoder_secure_input_test") {
+  testonly = true
+
+  deps = [
+    "//garnet/examples/media/use_media_decoder:use_h264_decoder_secure_input_test",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/use_h264_decoder_secure_input_test.cmx")
+      dest = "use_h264_decoder_secure_input_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      # Should pass when run on astro.
+      name = "use_h264_decoder_secure_input_test"
+
+      environments = [
+        astro_env,
+      ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
+      dest = "bear.h264"
+    },
+  ]
+}
+
 #
 # Tests that don't run on CQ yet.
 #

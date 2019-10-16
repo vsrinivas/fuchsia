@@ -119,19 +119,22 @@ CodecAdapterH264::~CodecAdapterH264() {
 bool CodecAdapterH264::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
 bool CodecAdapterH264::IsCoreCodecMappedBufferNeeded(CodecPort port) {
-  // If protected buffers, then only in-band AnnexB is supported, because in
-  // that case we can't implement conversion of OOB AnnexB-like oob_bytes to
-  // in-band AnnexB (at least not yet, since that would require one buffer to be
-  // in normal non-protected RAM), and we can't implement avcC format conversion
-  // to AnnexB, because that would require the CPU reading from input buffers.
-  //
-  // TODO(dustingreen): Make the previous paragraph true.  For now we report
-  // true here to ensure we don't get secure buffers since the rest of this
-  // class doesn't yet constrain what it can do based on is_secure or not.
-  return true;
+  if (port == kInputPort) {
+    // Returning true here essentially means that we may be able to make use of mapped buffers if
+    // they're possible.  However if is_secure true, we won't get a mapping and we don't really need
+    // a mapping, other than for avcC.  If avcC shows up on input, we'll fail then.
+    //
+    // TODO(35200): Add the failure when avcC shows up when is_secure, as described above.
+    return true;
+  } else {
+    ZX_DEBUG_ASSERT(port == kOutputPort);
+    return false;
+  }
 }
 
 bool CodecAdapterH264::IsCoreCodecHwBased() { return true; }
+
+zx::unowned_bti CodecAdapterH264::CoreCodecBti() { return zx::unowned_bti(video_->bti()); }
 
 void CodecAdapterH264::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
@@ -341,6 +344,7 @@ void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buf
   if (port != kOutputPort) {
     return;
   }
+  ZX_DEBUG_ASSERT(port == kOutputPort);
   all_output_buffers_.push_back(buffer);
 }
 
@@ -349,6 +353,9 @@ void CodecAdapterH264::CoreCodecConfigureBuffers(
   if (port != kOutputPort) {
     return;
   }
+  ZX_DEBUG_ASSERT(port == kOutputPort);
+  // output
+
   ZX_DEBUG_ASSERT(all_output_packets_.empty());
   ZX_DEBUG_ASSERT(free_output_packets_.empty());
   ZX_DEBUG_ASSERT(!all_output_buffers_.empty());
@@ -504,7 +511,7 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
 
   constraints->set_is_physically_contiguous_required(true);
   ::zx::bti very_temp_kludge_bti;
-  zx_status_t dup_status = ::zx::unowned<::zx::bti>(video_->bti())
+  zx_status_t dup_status = ::zx::unowned_bti(video_->bti())
                                ->duplicate(ZX_RIGHT_SAME_RIGHTS, &very_temp_kludge_bti);
   if (dup_status != ZX_OK) {
     events_->onCoreCodecFailCodec("BTI duplicate failed - status: %d", dup_status);
@@ -665,7 +672,10 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
 void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
   ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
-  if (port == kOutputPort) {
+  if (port == kInputPort) {
+    // struct copy
+    input_buffer_settings_ = buffer_collection_info.settings;
+  } else if (port == kOutputPort) {
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
                     fuchsia::sysmem::PixelFormatType::NV12);
@@ -838,13 +848,13 @@ void CodecAdapterH264::ProcessInput() {
 
     if (item.is_end_of_stream()) {
       video_->pts_manager()->SetEndOfStreamOffset(parsed_video_size_);
-      if (!ParseVideoAnnexB(&new_stream_h264[0], new_stream_h264_len)) {
+      if (!ParseVideoAnnexB(nullptr, &new_stream_h264[0], new_stream_h264_len)) {
         DECODE_ERROR("!ParseVideoAnnexB(new_stream_h264)");
         return;
       }
       auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
       memset(bytes.get(), 0, kFlushThroughBytes);
-      if (!ParseVideoAnnexB(bytes.get(), kFlushThroughBytes)) {
+      if (!ParseVideoAnnexB(nullptr, bytes.get(), kFlushThroughBytes)) {
         DECODE_ERROR("!ParseVideoAnnexB(kFlushThroughBytes)");
         return;
       }
@@ -876,7 +886,7 @@ void CodecAdapterH264::ProcessInput() {
     // TODO(dustingreen): The current wait duration within ParseVideo() assumes
     // that free output frames will become free on an ongoing basis, which isn't
     // really what'll happen when video output is paused.
-    if (!ParseVideo(data, len)) {
+    if (!ParseVideo(item.packet()->buffer(), data, len)) {
       return;
     }
 
@@ -928,7 +938,7 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
       // This ParseVideo() consumes AnnexB oob data directly.  We don't
       // presently check if the oob data has only SPS/PPS.  This data is just
       // logically pre-pended to the stream.
-      if (!ParseVideo(oob->data(), oob->size())) {
+      if (!ParseVideo(nullptr, oob->data(), oob->size())) {
         return false;
       }
       return true;
@@ -977,7 +987,7 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
-        if (!ParseVideo(&oob->data()[offset], 2 + sps_length)) {
+        if (!ParseVideo(nullptr, &oob->data()[offset], 2 + sps_length)) {
           return false;
         }
         offset += 2 + sps_length;
@@ -997,7 +1007,7 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return false;
         }
-        if (!ParseVideo(&oob->data()[offset], 2 + pps_length)) {
+        if (!ParseVideo(nullptr, &oob->data()[offset], 2 + pps_length)) {
           return false;
         }
         offset += 2 + pps_length;
@@ -1013,8 +1023,13 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
   }
 }
 
-bool CodecAdapterH264::ParseVideo(const uint8_t* data, uint32_t length) {
-  return is_avcc_ ? ParseVideoAvcc(data, length) : ParseVideoAnnexB(data, length);
+bool CodecAdapterH264::ParseVideo(const CodecBuffer* buffer, const uint8_t* data, uint32_t length) {
+  if (is_avcc_) {
+    ZX_DEBUG_ASSERT(!buffer);
+    return ParseVideoAvcc(data, length);
+  } else {
+    return ParseVideoAnnexB(buffer, data, length);
+  }
 }
 
 bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
@@ -1097,10 +1112,11 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
   ZX_DEBUG_ASSERT(o == local_length);
   ZX_DEBUG_ASSERT(i == length);
 
-  return ParseVideoAnnexB(local_data, local_length);
+  return ParseVideoAnnexB(nullptr, local_data, local_length);
 }
 
-bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
+bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t* data,
+                                        uint32_t length) {
   // We don't need to check is_cancelling_input_processing_ here, because we
   // check further down before waiting (see comment there re. why the check
   // there after video_->ParseVideo() is important), and because returning false
@@ -1113,10 +1129,26 @@ bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
   // Parse AnnexB data, with start codes and start code emulation prevention
   // bytes present.
   //
-  // The data won't be modified by ParseVideo().
-  if (ZX_OK != video_->ParseVideo(static_cast<void*>(const_cast<uint8_t*>(data)), length)) {
-    OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
-    return false;
+  // The data won't be modified by ParseVideo() or ParseVideoPhysical().
+  zx_status_t status;
+  if (buffer) {
+    // CodecImpl will Pin() the buffer if the CodecAdapter is HW-based and
+    // provides a BTI; CodecAdapterH264 does.
+    ZX_DEBUG_ASSERT(buffer->is_pinned());
+    // Convert data from vaddr to paddr.  All the input buffers are pinned
+    // continuously.
+    zx_paddr_t data_paddr = buffer->physical_base() + (data - buffer->base());
+    status = video_->ParseVideoPhysical(data_paddr, length);
+    if (status != ZX_OK) {
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return false;
+    }
+  } else {
+    status = video_->ParseVideo(static_cast<void*>(const_cast<uint8_t*>(data)), length);
+    if (status != ZX_OK) {
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return false;
+    }
   }
   parsed_video_size_ += length;
 

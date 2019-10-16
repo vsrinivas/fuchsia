@@ -72,6 +72,10 @@ void CodecPacket::SetIsNew(bool is_new) { is_new_ = is_new; }
 
 bool CodecPacket::is_new() const { return is_new_; }
 
+zx_status_t CodecPacket::CacheFlush() const {
+  return buffer()->CacheFlush(start_offset_, valid_length_bytes_);
+}
+
 void CodecPacket::ClearStartOffset() { start_offset_ = kStartOffsetNotSet; }
 
 void CodecPacket::ClearValidLengthBytes() { valid_length_bytes_ = kValidLengthBytesNotSet; }

@@ -35,7 +35,11 @@ class BufferPool {
   // Removes all free buffers and re-arms the buffer pool to block when
   // servicing allocation requests.
   //
-  // Does not modify the tracking for buffers already in use.
+  // If keep_data is true, does not modify the tracking for buffers already in
+  // use.
+  //
+  // If keep_data is false, old buffers are forgotten, and it's up to client
+  // code to avoid calling FreeBuffer() regarding any old buffer.
   void Reset(bool keep_data = false);
 
   // Stop blocking for new buffers when empty.

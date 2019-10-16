@@ -340,6 +340,8 @@ static void use_video_decoder(
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
     InStreamPeeker* in_stream, Format format,
     uint64_t min_output_buffer_size,
+    bool is_secure_output,
+    bool is_secure_input,
     FrameSink* frame_sink,
     EmitFrame emit_frame) {
   VLOGF("use_video_decoder()\n");
@@ -362,7 +364,7 @@ static void use_video_decoder(
   async::PostTask(
       fidl_loop->dispatcher(),
       [&codec_factory, codec_client_request = codec_client.GetTheRequestOnce(),
-       mime_type]() mutable {
+       mime_type, is_secure_output, is_secure_input]() mutable {
         VLOGF("before codec_factory->CreateDecoder() (async)\n");
         fuchsia::media::FormatDetails input_details;
         input_details.set_format_details_version_ordinal(0);
@@ -372,6 +374,14 @@ static void use_video_decoder(
         // This is required for timestamp_ish values to transit the
         // Codec.
         params.set_promise_separate_access_units_on_input(true);
+        // TODO(35200): Wire this up more fully.  Currently this is fake and consistency with codec
+        // capabilities is not enforced.
+        if (is_secure_output) {
+          params.set_secure_output_mode(fuchsia::mediacodec::SecureMemoryMode::ON);
+        }
+        if (is_secure_input) {
+          params.set_secure_input_mode(fuchsia::mediacodec::SecureMemoryMode::ON);
+        }
         codec_factory->CreateDecoder(std::move(params),
                                      std::move(codec_client_request));
       });
@@ -732,10 +742,13 @@ void use_h264_decoder(async::Loop* fidl_loop,
                       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                       InStreamPeeker* in_stream,
                       uint64_t min_output_buffer_size,
+                      bool is_secure_output,
+                      bool is_secure_input,
                       FrameSink* frame_sink,
                       EmitFrame emit_frame) {
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
                     in_stream, Format::kH264, min_output_buffer_size,
+                    is_secure_output, is_secure_input,
                     frame_sink, std::move(emit_frame));
 }
 
@@ -745,9 +758,12 @@ void use_vp9_decoder(async::Loop* fidl_loop,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      InStreamPeeker* in_stream,
                      uint64_t min_output_buffer_size,
+                     bool is_secure_output,
+                     bool is_secure_input,
                      FrameSink* frame_sink,
                      EmitFrame emit_frame) {
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
                     in_stream, Format::kVp9, min_output_buffer_size,
+                    is_secure_output, is_secure_input,
                     frame_sink, std::move(emit_frame));
 }

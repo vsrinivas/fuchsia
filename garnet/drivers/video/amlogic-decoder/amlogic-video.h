@@ -94,6 +94,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   zx_status_t InitializeEsParser();
   __WARN_UNUSED_RESULT
   zx_status_t ParseVideo(void* data, uint32_t len);
+  __WARN_UNUSED_RESULT
+  zx_status_t ParseVideoPhysical(zx_paddr_t paddr, uint32_t len);
+
   // If parser_running_, try to cause WaitForParsingCompleted() to return
   // ZX_ERR_CANCELED ASAP.  If !parser_running_, do nothing.  The caller is
   // responsible for ensuring that only its own decoder's work is ever canceled.

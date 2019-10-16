@@ -109,7 +109,7 @@ class VideoDecoder {
                                                           bool protect) = 0;
   };
 
-  VideoDecoder() { pts_manager_ = std::make_unique<PtsManager>(); }
+  explicit VideoDecoder(Owner* owner) : owner_(owner) { pts_manager_ = std::make_unique<PtsManager>(); }
 
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
   virtual __WARN_UNUSED_RESULT zx_status_t InitializeHardware() { return ZX_ERR_NOT_SUPPORTED; }
@@ -148,6 +148,7 @@ class VideoDecoder {
  protected:
   std::unique_ptr<PtsManager> pts_manager_;
   uint64_t next_non_codec_buffer_lifetime_ordinal_ = 0;
+  Owner* owner_ = {};
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_DECODER_H_

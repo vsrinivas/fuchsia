@@ -11,6 +11,21 @@ using fuchsia.media;
 // Input parameters for creating a decoder (audio or video).
 //
 
+/// Whether buffers need to be secure.  If not specified, the default is OFF.
+///
+/// This enum may have additional values added later; code handling this type
+/// should be written with this in mind.  For example, in C++, having a
+/// "default" case in any switch statement on this type will avoid compilation
+/// warnings/errors when a new value is added.
+//
+// Later we can add DYNAMIC, as needed.
+enum SecureMemoryMode : uint32 {
+  // Normal memory.  This is the default if a field of this type is not set.
+  OFF = 0;
+  // Secure memory.
+  ON = 1;
+};
+
 table CreateDecoder_Params {
     /// Input mime type for a decoder.
     ///
@@ -162,6 +177,24 @@ table CreateDecoder_Params {
     // similar issues in other codecs) and remove this field.
     // TODO(FIDL-609): Default to false.
     8: bool permit_lack_of_split_header_handling;
+
+    /// If set to ON, the decoder must support secure buffers on output, and
+    /// must reject non-secure buffers on output.
+    ///
+    /// If set to OFF or not set, the created decoder will reject secure buffers
+    /// on output by closing the StreamProcessor channel.
+    ///
+    /// If secure_input_mode ON, secure_output_mode must also be ON.
+    9: SecureMemoryMode secure_output_mode;
+
+    /// If set to ON, the decoder must support secure buffers on input and must
+    /// reject non-secure buffers on input.
+    ///
+    /// If set to OFF or not set, the created decoder will reject secure buffers
+    /// on input by closing the StreamProcessor channel.
+    ///
+    /// If secure_input_mode ON, secure_output_mode must also be ON.
+    10: SecureMemoryMode secure_input_mode;
 };
 
 /// Parameters used to request an encoder.

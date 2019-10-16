@@ -25,6 +25,7 @@
 #include "codec_admission_control.h"
 #include "codec_buffer.h"
 #include "codec_packet.h"
+#include "fake_map_range.h"
 
 // The CodecImpl class can be used for both SW and HW codecs.
 //
@@ -154,13 +155,40 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void QueueInputPacket(fuchsia::media::Packet packet) override;
   void QueueInputEndOfStream(uint64_t stream_lifetime_ordinal) override;
 
- private:
-  // For FailFatalLocked().
-  //
-  // Tradeoff: sharing more code vs. having a fatal error not depend on calling
-  // through CodecImpl.
-  friend class CodecBuffer;
+  // These are public so that CodecBuffer doesn't have to be a friend of CodecImpl.
 
+  // This way CodecBuffer doesn't use the core_codec_bti_ directly.
+  zx_status_t Pin(uint32_t options, const zx::vmo& vmo, uint64_t offset, uint64_t size,
+                  zx_paddr_t* addrs, size_t addrs_count, zx::pmt* pmt);
+
+  // Complain sync, then Unbind() async.  Even if more than one caller
+  // complains, the async Unbind() work will only run once (but in such cases it
+  // can be nice to see all the complaining in case multiple things fail at
+  // once).  While more than one source of failure can complain, only one will
+  // actually trigger Unbind() work, and the rest will just return knowing that
+  // Unbind() work is started.  The Unbind() work itself will synchronize such
+  // that other-thread sources of failure are no longer possible (can no longer
+  // even complain) before deallocating "this".
+  //
+  // Callers to Fail() must not be holding lock_.  On return from Fail(), "this"
+  // must not be touched as it can already be deallocated.
+  void Fail(const char* format, ...);
+
+  // Callers to FailLocked() must hold lock_ during the call.  On return from
+  // FailLocked(), the caller can know that "this" is still allocated only up
+  // to the point where the caller releases lock_.  Callers are encouraged not
+  // to touch "this" after the call to FailLocked() besides releasing lock_,
+  // for consistency with how Fail() is used; that said, the unlock itself is
+  // safe.
+  void FailLocked(const char* format, ...);
+  // Report a devhost-fatal error.  This method never returns - instead we
+  // fault the whole process.  This should only be used in cases where we
+  // don't really expect an error, and where a client can't unilaterally induce
+  // the error - but in case the error happens despite not being expected, we
+  // want nice output that's easy to debug.
+  void FailFatalLocked(const char* format, ...);
+
+ private:
   // We keep a queue of Stream objects rather than just a single current stream
   // object, so we can track which streams are future-discarded and which are
   // not yet known to be future-discarded.  This difference matters because
@@ -286,6 +314,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
     uint32_t packet_count();
     uint32_t buffer_count();
 
+    fuchsia::sysmem::CoherencyDomain coherency_domain();
+
     // If is_partial_settings(), the PortSettings are initially partial, with
     // sysmem used to complete the settings.  Along the way the PortSettings
     // transiently also have the zx::vmo handles.  In contrast, if
@@ -314,6 +344,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
     uint64_t vmo_usable_start(uint32_t buffer_index);
     uint64_t vmo_usable_size();
+
+    bool is_secure();
 
     // Only call from FIDL thread.
     fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> NewBufferCollectionRequest(
@@ -425,6 +457,12 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // that all relevant FIDL bindings are un-bound.  Calls to this method must
   // only occur on the FIDL thread.
   void EnsureUnbindCompleted();
+
+  // TODO(35200): This isn't fully hooked up yet, so doesn't actually yet
+  // indicate whether buffers are secure.  Enforce that
+  // port_settings_[X].is_secure() is consistent with these.
+  bool IsSecureOutput();
+  bool IsSecureInput();
 
   // The CodecAdapter is owned by the CodecImpl, and is listed near the top of
   // the local variables in CodecImpl so that it gets deleted near the end of
@@ -780,6 +818,13 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
       CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t allocate_status,
       fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info);
 
+  // This is set if IsCoreCodecHwBased(), so CodecBuffer::Pin() can get the physical address info,
+  // so DMA can be done directly from/to BufferCollection buffers.  We cache this just so we're not
+  // constantly calling CoreCodecBti().
+  zx::unowned_bti core_codec_bti_;
+
+  fit::optional<FakeMapRange> fake_map_range_[kPortCount];
+
   // These are 1:1 with logical CodecBuffer(s).
   std::vector<std::unique_ptr<CodecBuffer>> all_buffers_[kPortCount];
 
@@ -817,32 +862,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // configured using sysmem-style port settings.  Else the client isn't
   // behaving properly.
   __WARN_UNUSED_RESULT bool IsPortBuffersAtLeastPartiallyConfiguredLocked(CodecPort port);
-
-  // Complain sync, then Unbind() async.  Even if more than one caller
-  // complains, the async Unbind() work will only run once (but in such cases it
-  // can be nice to see all the complaining in case multiple things fail at
-  // once).  While more than one source of failure can complain, only one will
-  // actually trigger Unbind() work, and the rest will just return knowing that
-  // Unbind() work is started.  The Unbind() work itself will synchronize such
-  // that other-thread sources of failure are no longer possible (can no longer
-  // even complain) before deallocating "this".
-  //
-  // Callers to Fail() must not be holding lock_.  On return from Fail(), "this"
-  // must not be touched as it can already be deallocated.
-  void Fail(const char* format, ...);
-  // Callers to FailLocked() must hold lock_ during the call.  On return from
-  // FailLocked(), the caller can know that "this" is still allocated only up
-  // to the point where the caller releases lock_.  Callers are encouraged not
-  // to touch "this" after the call to FailLocked() besides releasing lock_,
-  // for consistency with how Fail() is used; that said, the unlock itself is
-  // safe.
-  void FailLocked(const char* format, ...);
-  // Report a devhost-fatal error.  This method never returns - instead we
-  // fault the whole process.  This should only be used in cases where we
-  // don't really expect an error, and where a client can't unilaterally induce
-  // the error - but in case the error happens despite not being expected, we
-  // want nice output that's easy to debug.
-  void FailFatalLocked(const char* format, ...);
 
   void vFail(bool is_fatal, const char* format, va_list args);
   void vFailLocked(bool is_fatal, const char* format, va_list args);
@@ -926,6 +945,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   __WARN_UNUSED_RESULT bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
 
   __WARN_UNUSED_RESULT bool IsCoreCodecHwBased() override;
+
+  __WARN_UNUSED_RESULT zx::unowned_bti CoreCodecBti() override;
 
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
 

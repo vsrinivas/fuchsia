@@ -244,7 +244,6 @@ class Vp9Decoder : public VideoDecoder {
   __WARN_UNUSED_RESULT zx_status_t InitializeBuffers();
   void InitializeLoopFilterData();
 
-  Owner* owner_;
   InputType input_type_;
 
   FrameDataProvider* frame_data_provider_ = nullptr;

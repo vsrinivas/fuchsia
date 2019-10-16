@@ -23,7 +23,7 @@ class H264Decoder : public VideoDecoder {
     kWaitingForNewFrames,
   };
 
-  H264Decoder(Owner* owner) : owner_(owner) {}
+  explicit H264Decoder(Owner* owner) : VideoDecoder(owner) {}
 
   ~H264Decoder() override;
 
@@ -55,7 +55,6 @@ class H264Decoder : public VideoDecoder {
   void TryReturnFrames();
   void OnFatalError();
 
-  Owner* owner_;
   io_buffer_t codec_data_ = {};
   io_buffer_t sei_data_buffer_ = {};
   io_buffer_t reference_mv_buffer_ = {};

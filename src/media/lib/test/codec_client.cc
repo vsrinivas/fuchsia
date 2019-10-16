@@ -727,6 +727,10 @@ bool CodecClient::ConfigurePortBufferCollection(
   constraints.buffer_memory_constraints.physically_contiguous_required = false;
   constraints.buffer_memory_constraints.secure_required = false;
 
+  ZX_DEBUG_ASSERT(constraints.buffer_memory_constraints.cpu_domain_supported);
+  ZX_DEBUG_ASSERT(!constraints.buffer_memory_constraints.ram_domain_supported);
+  ZX_DEBUG_ASSERT(!constraints.buffer_memory_constraints.inaccessible_domain_supported);
+
   // Despite being a consumer of output uncompressed video frames (when decoding
   // video and is_output), for now we intentionally don't constrain to the
   // PixelFormatType(s) that we can consume, and instead fail later if we get

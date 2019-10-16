@@ -36,7 +36,7 @@ class CodecAdmissionControl {
   //
   // TODO(dustingreen): std::optional<> instead when C++17.
   void TryAddCodec(bool multi_instance, fit::function<void(std::unique_ptr<CodecAdmission>)>
-                                            continue_after_previously_started_channel_closes_done);
+                   continue_after_previously_started_channel_closes_done);
 
   // Anything posted here will run after any previously-posted items here or via
   // TryAddCodec().

@@ -36,6 +36,8 @@ impl StreamProcessorFactory for DecoderFactory {
                     require_report_all_detected_errors: Some(false),
                     require_hw: Some(false),
                     permit_lack_of_split_header_handling: Some(true),
+                    secure_output_mode: None,
+                    secure_input_mode: None,
                 },
                 decoder_request,
             )?;

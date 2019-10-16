@@ -190,14 +190,16 @@ int main(int argc, char* argv[]) {
                    sysmem = std::move(sysmem), in_stream_peeker = in_stream_peeker.get(),
                    frame_sink = frame_sink.get()]() mutable {
       use_h264_decoder(&fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                       in_stream_peeker, 0, frame_sink, nullptr);
+                       in_stream_peeker, /*min_output_buffer_size=*/0, /*is_secure_output=*/false,
+                       /*is_secure_input=*/false, frame_sink, /*emit_frame=*/nullptr);
     };
   } else if (command_line.HasOption("vp9")) {
     use_decoder = [&fidl_loop, fidl_thread, codec_factory = std::move(codec_factory),
                    sysmem = std::move(sysmem), in_stream_peeker = in_stream_peeker.get(),
                    frame_sink = frame_sink.get()]() mutable {
       use_vp9_decoder(&fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                      in_stream_peeker, 0, frame_sink, nullptr);
+                      in_stream_peeker, /*min_output_buffer_size=*/0, /*is_secure_output=*/false,
+                      /*is_secure_input=*/false, frame_sink, /*emit_frame=*/nullptr);
     };
   } else {
     usage(command_line.argv0().c_str());

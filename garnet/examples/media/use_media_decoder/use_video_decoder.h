@@ -48,6 +48,8 @@ void use_h264_decoder(async::Loop* fidl_loop,
                       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                       InStreamPeeker* in_stream,
                       uint64_t min_output_buffer_size,
+                      bool is_secure_output,
+                      bool is_secure_input,
                       FrameSink* frame_sink,
                       EmitFrame emit_frame);
 
@@ -58,6 +60,8 @@ void use_vp9_decoder(async::Loop* fidl_loop,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      InStreamPeeker* in_stream,
                      uint64_t min_output_buffer_size,
+                     bool is_secure_output,
+                     bool is_secure_input,
                      FrameSink* frame_sink,
                      EmitFrame emit_frame);
 
@@ -67,6 +71,7 @@ typedef void (*UseVideoDecoderFunction)(
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
     InStreamPeeker* in_stream,
     uint64_t min_output_buffer_size,
+    bool is_secure_output, bool is_secure_input,
     FrameSink* frame_sink, EmitFrame emit_frame);
 
 #endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_VIDEO_DECODER_H_

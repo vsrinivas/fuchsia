@@ -35,7 +35,9 @@ constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
 }  // namespace
 
 int use_video_decoder_test(std::string input_file_path, int expected_frame_count,
-                           UseVideoDecoderFunction use_video_decoder, std::string golden_sha256) {
+                           UseVideoDecoderFunction use_video_decoder,
+                           bool is_secure_output, bool is_secure_input,
+                           std::string golden_sha256) {
   async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FIDL_thread", &fidl_thread));
@@ -53,19 +55,22 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   SHA256_Init(&sha256_ctx);
 
   uint32_t frame_index = 0;
-  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index](
+  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index, is_secure_output](
                              uint8_t* i420_data, uint32_t width, uint32_t height, uint32_t stride,
                              bool has_timestamp_ish, uint64_t timestamp_ish) {
     VLOGF("emit_frame frame_index: %u", frame_index);
     ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
     ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
     timestamps.push_back({has_timestamp_ish, timestamp_ish});
-    SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
+    if (!is_secure_output) {
+      SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
+    }
     frame_index++;
   };
 
   if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),
                                 in_stream_peeker.get(), use_video_decoder, 0,
+                                is_secure_output, is_secure_input,
                                 std::move(emit_frame))) {
     printf("decode_video_stream_test() failed.\n");
     return -1;
@@ -108,22 +113,26 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
     exit(-1);
   }
 
-  uint8_t md[SHA256_DIGEST_LENGTH] = {};
-  ZX_ASSERT(SHA256_Final(md, &sha256_ctx));
-  char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
-  char* actual_sha256_ptr = actual_sha256;
-  for (uint8_t byte : md) {
-    // Writes the terminating 0 each time, returns 2 each time.
-    actual_sha256_ptr += snprintf(actual_sha256_ptr, 3, "%02x", byte);
+  if (!is_secure_output) {
+    uint8_t md[SHA256_DIGEST_LENGTH] = {};
+    ZX_ASSERT(SHA256_Final(md, &sha256_ctx));
+    char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
+    char* actual_sha256_ptr = actual_sha256;
+    for (uint8_t byte : md) {
+      // Writes the terminating 0 each time, returns 2 each time.
+      actual_sha256_ptr += snprintf(actual_sha256_ptr, 3, "%02x", byte);
+    }
+    FXL_CHECK(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
+    printf("Done decoding - computed sha256 is: %s\n", actual_sha256);
+    if (strcmp(actual_sha256, golden_sha256.c_str())) {
+      printf("The sha256 doesn't match - expected: %s actual: %s\n", golden_sha256.c_str(),
+            actual_sha256);
+      exit(-1);
+    }
+    printf("The computed sha256 matches golden sha256.  Yay!\nPASS\n");
+  } else {
+    printf("Can't check output data sha256 because output is secure.\nPASS.\n");
   }
-  FXL_CHECK(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
-  printf("Done decoding - computed sha256 is: %s\n", actual_sha256);
-  if (strcmp(actual_sha256, golden_sha256.c_str())) {
-    printf("The sha256 doesn't match - expected: %s actual: %s\n", golden_sha256.c_str(),
-           actual_sha256);
-    exit(-1);
-  }
-  printf("The computed sha256 matches golden sha256.  Yay!\nPASS\n");
 
   fidl_loop.Quit();
   fidl_loop.JoinThreads();
@@ -137,7 +146,9 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
                               sys::ComponentContext* component_context,
                               InStreamPeeker* in_stream_peeker,
                               UseVideoDecoderFunction use_video_decoder,
-                              uint64_t min_output_buffer_size, EmitFrame emit_frame) {
+                              uint64_t min_output_buffer_size,
+                              bool is_secure_output, bool is_secure_input,
+                              EmitFrame emit_frame) {
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
   codec_factory.set_error_handler(
       [](zx_status_t status) { FXL_PLOG(FATAL, status) << "codec_factory failed - unexpected"; });
@@ -148,7 +159,9 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
   component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                    in_stream_peeker, min_output_buffer_size, nullptr, std::move(emit_frame));
+                    in_stream_peeker, min_output_buffer_size,
+                    is_secure_output, is_secure_input, nullptr,
+                    std::move(emit_frame));
 
   return true;
 }

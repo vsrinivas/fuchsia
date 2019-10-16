@@ -1,10 +1,7 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This manual test is a basic integration test of the codec_factory +
-// amlogic_video_decoder driver.
-//
 // If this test breaks and it's not immediately obvoius why, please feel free to
 // involve dustingreen@ (me) in figuring it out.
 
@@ -33,7 +30,6 @@ const char* kGoldenSha256 = "a4418265eaa493604731d6871523ac2a0d606f40cddd48e2a8c
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
-                                /*is_secure_output=*/false, /*is_secure_input=*/false,
+  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder, false, true,
                                 kGoldenSha256);
 }

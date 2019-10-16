@@ -59,14 +59,38 @@ class CodecAdapter {
   // or may require an output config (true).
   virtual bool IsCoreCodecRequiringOutputConfigForFormatDetection() = 0;
 
-  // If true, the codec requires that the buffer VMOs be mappable for direct
-  // access by the CPU.
+  // If true, the codec can make use of VMOs that are mapped for direct access
+  // by the CPU.
+  //
+  // If true, the CodecImpl will map the buffer VMOs unless buffers are secure
+  // memory, and CodecBuffer::base() is usable for direct CPU access.
+  //
+  // If a codec doesn't support secure memory operation, then buffers won't be
+  // secure memory and will be mapped if IsCoreCodecMappedBufferNeeded().
+  //
+  // If buffers are secure, then CodecImpl won't actually map the buffer VMOs,
+  // and CodecBuffer::base() isn't usable for direct CPU access.  Instead
+  // CodecBuffer::base() will be a vaddr that will fault if accessed as if it
+  // were buffer data, and preserves the low-order vmo_usable_start %
+  // ZX_PAGE_SIZE bits.
+  //
+  // TODO(38652): Rename this to IsCoreCodecMappedBufferUseful().
   virtual bool IsCoreCodecMappedBufferNeeded(CodecPort port) = 0;
 
   // If true, the codec is HW-based, in the sense that at least some of the
   // processing is performed by specialized processing HW running separately
   // from any CPU execution context.
   virtual bool IsCoreCodecHwBased() = 0;
+  // Any core codec that performs DMA that will potentially continue beyond the
+  // lifetime of the process that holds open the VMO handles being DMA(ed)
+  // should override this method to provide CodecImpl with the driver's BTI so
+  // VMOs can be properly pinned for DMA.  If a core codec returns true from
+  // IsCoreCodecHwBased(), the core codec should also override this method.
+  //
+  // TODO(38650): At least the VP9 decoder isn't overriding this method yet.
+  // Also we should enforce that this method be overridden when
+  // IsCoreCodecHwBased() true.
+  virtual zx::unowned_bti CoreCodecBti() {return zx::unowned_bti();}
 
   // The initial input format details and later input format details will
   // _often_ remain the same overall format, and only differ in ways that are

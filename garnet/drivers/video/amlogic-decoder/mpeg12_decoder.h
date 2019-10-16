@@ -17,7 +17,7 @@
 
 class Mpeg12Decoder : public VideoDecoder {
  public:
-  Mpeg12Decoder(Owner* owner) : owner_(owner) {}
+  explicit Mpeg12Decoder(Owner* owner) : VideoDecoder(owner) {}
 
   ~Mpeg12Decoder() override;
 
@@ -37,8 +37,6 @@ class Mpeg12Decoder : public VideoDecoder {
   zx_status_t InitializeVideoBuffers();
   void ResetHardware();
   void TryReturnFrames();
-
-  Owner* owner_;
 
   FrameReadyNotifier notifier_;
   std::vector<ReferenceFrame> video_frames_;

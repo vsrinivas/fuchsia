@@ -24,8 +24,8 @@ class CodecAdapterH264 : public CodecAdapter {
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
   bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
-
   bool IsCoreCodecHwBased() override;
+  zx::unowned_bti CoreCodecBti() override;
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
   void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
@@ -61,13 +61,21 @@ class CodecAdapterH264 : public CodecAdapter {
   void ProcessInput();
   bool ParseAndDeliverCodecOobBytes();
   // If parsing something whose format depends on is_avcc_, use this method.
-  bool ParseVideo(const uint8_t* data, uint32_t length);
+  //
+  // The buffer pointer can be nullptr unless the VMO is a secure VMO.
+  bool ParseVideo(const CodecBuffer* buffer, const uint8_t* data, uint32_t length);
   // If parsing something that's known to be in AVCC format, such as a bunch of
   // 0x00 without start codes or emulation prevention bytes, use this method.
+  //
+  // This does not support secure buffers, as this requires a CPU re-pack which at least for now is
+  // only implemented in the REE (rich execution environment), so the re-pack can't happen if the
+  // buffer can't be read by the CPU from the REE.
   bool ParseVideoAvcc(const uint8_t* data, uint32_t length);
   // If parsing something that's known to be in AnnexB format, such as the
   // end-of-stream marker data, use this method.
-  bool ParseVideoAnnexB(const uint8_t* data, uint32_t length);
+  //
+  // The buffer pointer can be nullptr unless the VMO is a secure VMO.
+  bool ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t* data, uint32_t length);
   zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count, uint32_t width,
                                       uint32_t height, uint32_t stride, uint32_t display_width,
                                       uint32_t display_height, bool has_sar, uint32_t sar_width,
@@ -81,6 +89,8 @@ class CodecAdapterH264 : public CodecAdapter {
 
   fuchsia::media::FormatDetails initial_input_format_details_;
   fuchsia::media::FormatDetails latest_input_format_details_;
+
+  fuchsia::sysmem::SingleBufferSettings input_buffer_settings_;
 
   // Currently, AmlogicVideo::ParseVideo() can indirectly block on availability
   // of output buffers to make space in the ring buffer the parser is outputting

@@ -51,7 +51,13 @@ std::optional<BufferPool::Allocation> BufferPool::FindBufferByBase(uint8_t* base
   return iter->second;
 }
 
-void BufferPool::Reset(bool keep_data) { free_buffers_.Reset(keep_data); }
+void BufferPool::Reset(bool keep_data) {
+  if (!keep_data) {
+    std::lock_guard<std::mutex> lock(lock_);
+    ZX_DEBUG_ASSERT(buffers_in_use_.empty());
+  }
+  free_buffers_.Reset(keep_data);
+}
 
 void BufferPool::StopAllWaits() { free_buffers_.StopAllWaits(); }
 

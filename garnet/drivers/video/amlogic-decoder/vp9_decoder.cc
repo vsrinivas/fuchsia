@@ -141,7 +141,7 @@ Vp9Decoder::WorkingBuffer::~WorkingBuffer() { io_buffer_release(&buffer_); }
 uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(io_buffer_phys(&buffer_)); }
 
 Vp9Decoder::Vp9Decoder(Owner* owner, InputType input_type)
-    : owner_(owner), input_type_(input_type) {
+    : VideoDecoder(owner), input_type_(input_type) {
   InitializeLoopFilterData();
 }
 

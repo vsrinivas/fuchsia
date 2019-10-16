@@ -180,19 +180,24 @@ class CodecAdapterSW : public CodecAdapter {
       return;
     }
 
+    {  // scope to_drop
+      std::map<CodecPacket*, LocalOutput> to_drop;
+      {
+        std::lock_guard<std::mutex> lock(lock_);
+        std::swap(to_drop, in_use_by_client_);
+      }
+      // ~to_drop
+    }
+
+    // The ~to_drop returns all buffers to the output_buffer_pool_.
+    ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
+
+    // VMO handles for the old output buffers may still exist, but the SW
+    // decoder doesn't know about those, and buffer_lifetime_ordinal will
+    // prevent us calling output_buffer_pool_.FreeBuffer() for any of the old
+    // buffers.  So forget about the old buffers here.
     output_buffer_pool_.Reset();
     staged_output_buffers_.clear();
-
-    std::map<CodecPacket*, LocalOutput> to_drop;
-    {
-      std::lock_guard<std::mutex> lock(lock_);
-      std::swap(to_drop, in_use_by_client_);
-    }
-    // ~ to_drop
-
-    // Given that we currently fail the codec on mid-stream output format
-    // change (elsewhere), the decoder won't have buffers referenced here.
-    ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
 
     free_output_packets_.Reset();
   }

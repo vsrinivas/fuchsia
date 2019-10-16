@@ -47,9 +47,11 @@ fuchsia::media::StreamBuffer StreamBufferOfSize(size_t size, uint32_t index) {
 
 class CodecBufferForTest : public CodecBuffer {
  public:
-  CodecBufferForTest(size_t size, uint32_t index)
-      : CodecBuffer(/*parent=*/nullptr, kOutputPort, StreamBufferOfSize(size, index)) {
-    Map();
+  CodecBufferForTest(size_t size, uint32_t index, bool is_secure)
+      : CodecBuffer(/*parent=*/nullptr, kOutputPort, StreamBufferOfSize(size, index), is_secure) {
+    if (!Map()) {
+      ZX_PANIC("CodecBufferForTest() failed to Map()\n");
+    }
   }
 };
 
@@ -74,7 +76,8 @@ struct TestBuffers {
 TestBuffers Buffers(std::vector<size_t> sizes) {
   TestBuffers buffers;
   for (size_t i = 0; i < sizes.size(); ++i) {
-    buffers.buffers.push_back(std::make_unique<CodecBufferForTest>(sizes[i], i));
+    constexpr bool kIsSecure = false;
+    buffers.buffers.push_back(std::make_unique<CodecBufferForTest>(sizes[i], i, kIsSecure));
   }
   return buffers;
 }
