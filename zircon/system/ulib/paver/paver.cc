@@ -714,7 +714,7 @@ void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync com
     response.configuration = *config;
     result.set_response(response);
   } else {
-    result.set_err(ZX_ERR_BAD_STATE);
+    result.set_err(ZX_ERR_NOT_SUPPORTED);
   }
   completer.Reply(std::move(result));
 }

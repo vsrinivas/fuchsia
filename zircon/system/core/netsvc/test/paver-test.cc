@@ -105,13 +105,29 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
   void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
                               SetConfigurationActiveCompleter::Sync completer) {
     last_command_ = Command::kSetConfigurationActive;
-    completer.Reply(abr_supported_ && abr_initialized_ ? ZX_OK : ZX_ERR_NOT_SUPPORTED);
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    if (abr_supported_ && abr_initialized_) {
+      if (configuration == ::llcpp::fuchsia::paver::Configuration::A) {
+        status = ZX_OK;
+      } else {
+        status = ZX_ERR_INVALID_ARGS;
+      }
+    }
+    completer.Reply(status);
   }
 
   void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
                                    SetConfigurationUnbootableCompleter::Sync completer) {
     last_command_ = Command::kSetConfigurationUnbootable;
-    completer.Reply(abr_supported_ && abr_initialized_ ? ZX_OK : ZX_ERR_NOT_SUPPORTED);
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    if (abr_supported_ && abr_initialized_) {
+      if (configuration == ::llcpp::fuchsia::paver::Configuration::RECOVERY) {
+        status = ZX_ERR_INVALID_ARGS;
+      } else {
+        status = ZX_OK;
+      }
+    }
+    completer.Reply(status);
   }
 
   void SetActiveConfigurationHealthy(
@@ -444,6 +460,19 @@ TEST_F(PaverTest, WriteZirconBWithABRSupported) {
   ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
 }
 
+TEST_F(PaverTest, WriteZirconRWithABRSupported) {
+  size_t size = sizeof(kFakeData);
+  fake_svc_.fake_paver().set_abr_supported(true);
+  fake_svc_.fake_paver().set_expected_payload_size(size);
+  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONR_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
+  ASSERT_EQ(size, sizeof(kFakeData));
+  paver_.Close();
+  Wait();
+  ASSERT_OK(paver_.exit_code());
+  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+}
+
 TEST_F(PaverTest, WriteVbMetaAWithABRSupported) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
@@ -454,7 +483,7 @@ TEST_F(PaverTest, WriteVbMetaAWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kSetActiveConfigurationHealthy);
+  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kSetConfigurationActive);
 }
 
 TEST_F(PaverTest, WriteVbMetaBWithABRSupported) {
@@ -462,6 +491,19 @@ TEST_F(PaverTest, WriteVbMetaBWithABRSupported) {
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
   ASSERT_EQ(paver_.OpenWrite(NB_VBMETAB_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
+  ASSERT_EQ(size, sizeof(kFakeData));
+  paver_.Close();
+  Wait();
+  ASSERT_OK(paver_.exit_code());
+  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+}
+
+TEST_F(PaverTest, WriteVbMetaRWithABRSupported) {
+  size_t size = sizeof(kFakeData);
+  fake_svc_.fake_paver().set_abr_supported(true);
+  fake_svc_.fake_paver().set_expected_payload_size(size);
+  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAR_FILENAME, size), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   paver_.Close();

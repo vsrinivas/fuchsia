@@ -143,7 +143,7 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
   }
 
  private:
-  static constexpr char kArgs[] = "zvb.current_slot=_a";
+  static constexpr char kArgs[] = "zvb.current_slot=-a";
 };
 
 class FakeSvc {
@@ -366,6 +366,19 @@ TEST_F(PaverServiceSkipBlockTest, InitializeAbrAlreadyValid) {
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationInvalidAbr) {
   abr::Data abr_data = {};
   memset(&abr_data, 0x3d, sizeof(abr_data));
+  SetAbr(abr_data);
+
+  auto result = client_->QueryActiveConfiguration();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_err());
+  ASSERT_STATUS(result->result.err(), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
+  abr::Data abr_data = kAbrData;
+  abr_data.slots[0].priority = 0;
+  abr_data.slots[1].priority = 0;
+  ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
   auto result = client_->QueryActiveConfiguration();

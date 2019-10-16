@@ -179,7 +179,7 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::mem::Buffer buffer) {
     }
   }
   // Make sure to mark the configuration we are about to pave as no longer bootable.
-  if (abr_supported) {
+  if (abr_supported && configuration_ != ::llcpp::fuchsia::paver::Configuration::RECOVERY) {
     auto result = paver_svc_->SetConfigurationUnbootable(configuration_);
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
@@ -206,16 +206,6 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::mem::Buffer buffer) {
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to set configuration as active.\n");
-      return status;
-    }
-  }
-  // TODO(22860): Set configuration A as healthy until system_updater starts doing this on
-  // boot correctly.
-  {
-    auto result = paver_svc_->SetActiveConfigurationHealthy();
-    auto status = result.ok() ? result->status : result.status();
-    if (status != ZX_OK) {
-      fprintf(stderr, "netsvc: Unable to set configuration as healthy.\n");
       return status;
     }
   }

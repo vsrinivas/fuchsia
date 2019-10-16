@@ -1342,10 +1342,12 @@ zx_status_t SkipBlockDevicePartitioner::QueryBootConfig(Configuration* out) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (slot->compare("_a") == 0) {
+  if (slot->compare("-a") == 0) {
     *boot_config_ = Configuration::A;
-  } else if (slot->compare("_b") == 0) {
+  } else if (slot->compare("-b") == 0) {
     *boot_config_ = Configuration::B;
+  } else if (slot->compare("-r") == 0) {
+    *boot_config_ = Configuration::RECOVERY;
   } else {
     ERROR("Invalid value `%.*s` found in zvb.current_slot!\n", static_cast<int>(slot->size()),
           slot->data());
