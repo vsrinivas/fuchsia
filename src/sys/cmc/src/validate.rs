@@ -660,7 +660,10 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
-                            "target_path": "/svc/fuchsia.ui.Scenic"
+                            "target_path": "/svc/fuchsia.ui.Scenic",
+                            "target": {
+                                "realm": {},
+                            }
                         }
                     },
                     {
@@ -669,7 +672,10 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
-                            "target_path": "/svc/fuchsia.ui.Scenic"
+                            "target_path": "/svc/fuchsia.ui.Scenic",
+                            "target": {
+                                "realm": {},
+                            }
                         }
                     },
                     {
@@ -680,7 +686,10 @@ mod tests {
                                     "name": "cat_viewer"
                                 }
                             },
-                            "target_path": "/data/kitten_assets"
+                            "target_path": "/data/kitten_assets",
+                            "target": {
+                                "realm": {},
+                            }
                         }
                     },
                     {
@@ -689,7 +698,10 @@ mod tests {
                             "source": {
                                 "framework": {}
                             },
-                            "target_path": "/child_hub"
+                            "target_path": "/child_hub",
+                            "target": {
+                                "realm": {},
+                            }
                         }
                     }
                 ]
@@ -709,7 +721,10 @@ mod tests {
                         "service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {},
-                            "target_path": "/svc/fuchsia.ui.Scenic"
+                            "target_path": "/svc/fuchsia.ui.Scenic",
+                            "target": {
+                                "realm": {},
+                            }
                         }
                     }
                 ]
@@ -728,7 +743,10 @@ mod tests {
                                     "name": "foo"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.ui.Scenic"
+                            "target_path": "/svc/fuchsia.ui.Scenic",
+                            "target": {
+                                "realm": {},
+                            }
                         }
                     }
                 ]
@@ -746,7 +764,10 @@ mod tests {
                                     "name": "bad^"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.ui.Scenic"
+                            "target_path": "/svc/fuchsia.ui.Scenic",
+                            "target": {
+                                "realm": {},
+                            }
                         }
                     }
                 ]

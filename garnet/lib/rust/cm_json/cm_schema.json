@@ -275,6 +275,7 @@
             "required": [
               "source",
               "source_path",
+              "target",
               "target_path"
             ],
             "properties": {
@@ -285,6 +286,10 @@
               "source_path": {
                 "title": "Exposed service source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target": {
+                "title": "Exposed service target component",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "target_path": {
                 "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -298,6 +303,7 @@
             "required": [
               "source",
               "source_path",
+              "target",
               "target_path"
             ],
             "properties": {
@@ -308,6 +314,10 @@
               "source_path": {
                 "title": "Exposed legacy service source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target": {
+                "title": "Exposed legacy service target component",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "target_path": {
                 "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -321,6 +331,7 @@
             "required": [
               "source",
               "source_path",
+              "target",
               "target_path"
             ],
             "properties": {
@@ -331,6 +342,10 @@
               "source_path": {
                 "title": "Exposed directory source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target": {
+                "title": "Exposed directory target component",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "target_path": {
                 "allOf": [{ "$ref": "#/definitions/path-clause" }],
