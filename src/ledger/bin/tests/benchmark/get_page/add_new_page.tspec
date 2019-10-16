@@ -18,7 +18,6 @@
       "output_test_name": "new_page/precache_db",
       "event_name": "new_db_creation",
       "event_category": "ledger",
-      "expected_sample_count": 501,
       "split_first": true
     }
   ]
