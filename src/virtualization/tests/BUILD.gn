@@ -137,7 +137,6 @@ source_set("lib") {
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/inet",
     "//src/virtualization/bin/vmm/device",
@@ -148,6 +147,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//src/virtualization/lib/grpc",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
     "//third_party/googletest:gmock",
