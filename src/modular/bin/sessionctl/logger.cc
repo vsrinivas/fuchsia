@@ -4,7 +4,10 @@
 
 #include "src/modular/bin/sessionctl/logger.h"
 
+#include "src/lib/json_parser/pretty_print.h"
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"
+
+using json_parser::JsonValueToPrettyString;
 
 namespace modular {
 

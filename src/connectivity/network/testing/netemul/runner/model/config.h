@@ -5,7 +5,6 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_CONFIG_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_CONFIG_H_
 
-#include <lib/json/json_parser.h>
 #include <lib/zx/time.h>
 
 #include <vector>
@@ -15,6 +14,7 @@
 #include "environment.h"
 #include "guest.h"
 #include "network.h"
+#include "src/lib/json_parser/json_parser.h"
 
 namespace netemul {
 namespace config {

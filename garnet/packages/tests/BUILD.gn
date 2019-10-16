@@ -377,7 +377,6 @@ group("all") {
     ":pmd",
     ":process",
     ":profiler",
-    ":rapidjson_utils",
     ":run_test_component",
     ":run_tests",
     ":runtime",
@@ -609,13 +608,6 @@ group("setui_service") {
   public_deps = [
     "//garnet/bin/setui:setui_service_tests",
     "//garnet/packages/prod:setui_service",
-  ]
-}
-
-group("rapidjson_utils") {
-  testonly = true
-  public_deps = [
-    "//garnet/public/lib/rapidjson_utils:rapidjson_utils_unittests",
   ]
 }
 

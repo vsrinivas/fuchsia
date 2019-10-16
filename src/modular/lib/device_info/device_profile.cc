@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/device_info/device_profile.h>
+#include "src/modular/lib/device_info/device_profile.h"
 
-#include "peridot/lib/rapidjson/rapidjson.h"
+#include <rapidjson/document.h>
 
 namespace modular {
 
@@ -16,7 +16,7 @@ constexpr char kPresentationServer[] = "remote_presentor";
 DeviceProfile::DeviceProfile() {}
 
 bool DeviceProfile::Parse(const std::string& jsonProfile) {
-  fuchsia::modular::JsonDoc document;
+  rapidjson::JsonDoc document;
   document.Parse(jsonProfile);
   if (!document.IsObject()) {
     return false;

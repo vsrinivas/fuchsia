@@ -16,6 +16,7 @@ source_set("modular_config") {
 
   public_deps = [
     ":modular_config_constants",
+    "//src/lib/json_parser",
   ]
 
   deps = [
@@ -60,14 +61,12 @@ source_set("unittests") {
     ":json_xdr",
     ":modular_config",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/rapidjson",
     "//peridot/lib/util:pseudo_dir_server",
     "//peridot/lib/util:pseudo_dir_utils",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

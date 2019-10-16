@@ -19,9 +19,6 @@
 #include <memory>
 #include <utility>
 
-#include "peridot/lib/rapidjson/rapidjson.h"
-#include "src/lib/component/cpp/connect.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"

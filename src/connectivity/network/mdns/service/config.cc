@@ -6,9 +6,9 @@
 
 #include <sstream>
 
-#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace mdns {
 namespace {
@@ -91,9 +91,9 @@ const char Config::kConfigDir[] = "/config/data";
 void Config::ReadConfigFiles(const std::string& host_name, const std::string& config_dir) {
   FXL_DCHECK(MdnsNames::IsValidHostName(host_name));
 
-  auto schema = rapidjson_utils::InitSchema(kSchema);
+  auto schema = json_parser::InitSchema(kSchema);
   parser_.ParseFromDirectory(config_dir, [this, &schema, &host_name](rapidjson::Document document) {
-    if (!rapidjson_utils::ValidateSchema(document, *schema)) {
+    if (!json_parser::ValidateSchema(document, *schema)) {
       parser_.ReportError("Schema validation failure.");
       return;
     }

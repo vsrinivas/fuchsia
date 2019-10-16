@@ -8,9 +8,8 @@
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include <src/lib/files/unique_fd.h>
-
-#include "lib/json/json_parser.h"
+#include "src/lib/files/unique_fd.h"
+#include "src/lib/json_parser/json_parser.h"
 
 namespace modular {
 

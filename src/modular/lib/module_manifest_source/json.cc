@@ -4,8 +4,9 @@
 
 #include "src/modular/lib/module_manifest_source/json.h"
 
-#include "peridot/lib/rapidjson/rapidjson.h"
-#include "rapidjson/document.h"
+#include <rapidjson/document.h>
+
+#include "src/lib/json_parser/pretty_print.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/module_manifest/module_manifest_xdr.h"
 
@@ -38,7 +39,7 @@ void ModuleManifestEntryToJson(const fuchsia::modular::ModuleManifest& entry, st
   fidl::Clone(entry, &local_entry);
   XdrWrite(&doc, &local_entry, XdrModuleManifest);
 
-  *json = JsonValueToPrettyString(doc);
+  *json = json_parser::JsonValueToPrettyString(doc);
 }
 
 }  // namespace modular

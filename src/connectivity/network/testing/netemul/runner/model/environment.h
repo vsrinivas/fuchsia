@@ -5,12 +5,12 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_ENVIRONMENT_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_ENVIRONMENT_H_
 
-#include <lib/json/json_parser.h>
 #include <src/lib/fxl/macros.h>
 
 #include "launch_app.h"
 #include "launch_service.h"
 #include "logger_options.h"
+#include "src/lib/json_parser/json_parser.h"
 
 namespace netemul {
 namespace config {

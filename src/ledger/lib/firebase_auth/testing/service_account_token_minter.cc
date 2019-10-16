@@ -17,7 +17,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/lib/files/file.h"
@@ -26,6 +25,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace service_account {
 
@@ -47,7 +47,7 @@ constexpr fxl::StringView kIdentityResponseSchema = R"({
 })";
 
 rapidjson::SchemaDocument& GetResponseSchema() {
-  static auto schema = rapidjson_utils::InitSchema(kIdentityResponseSchema);
+  static auto schema = json_parser::InitSchema(kIdentityResponseSchema);
   FXL_DCHECK(schema);
   return *schema;
 }
@@ -305,7 +305,7 @@ void ServiceAccountTokenMinter::HandleIdentityResponse(const std::string& api_ke
     return;
   }
 
-  if (!rapidjson_utils::ValidateSchema(document, GetResponseSchema(), "identity response")) {
+  if (!json_parser::ValidateSchema(document, GetResponseSchema(), "identity response")) {
     ResolveCallbacks(
         api_key, GetErrorResponse(Status::BAD_RESPONSE, "Malformed response: " + response_body));
     return;

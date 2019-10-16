@@ -41,7 +41,6 @@ source_set("sessionmgr_lib") {
   ]
 
   public_deps = [
-    "//peridot/lib/rapidjson",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.ledger",
@@ -115,7 +114,6 @@ executable_package("dev_session_shell") {
   ]
 
   deps = [
-    "//peridot/lib/rapidjson",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
@@ -180,7 +178,6 @@ source_set("focus") {
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
-    "//peridot/lib/rapidjson",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",

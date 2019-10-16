@@ -7,7 +7,7 @@
 #include <rapidjson/document.h>
 #include <rapidjson/schema.h>
 
-#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
+#include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace service_account {
 
@@ -53,11 +53,10 @@ std::unique_ptr<Credentials> Credentials::Parse(fxl::StringView json) {
 }
 
 std::unique_ptr<Credentials> Credentials::Parse(const rapidjson::Value& json) {
-  static auto service_account_schema =
-      rapidjson_utils::InitSchema(kServiceAccountConfigurationSchema);
+  static auto service_account_schema = json_parser::InitSchema(kServiceAccountConfigurationSchema);
   FXL_DCHECK(service_account_schema);
   FXL_DCHECK(json.IsObject());
-  if (!rapidjson_utils::ValidateSchema(json, *service_account_schema)) {
+  if (!json_parser::ValidateSchema(json, *service_account_schema)) {
     return nullptr;
   }
 

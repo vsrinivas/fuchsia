@@ -11,6 +11,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/json_parser/pretty_print.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/modular_config/modular_config_xdr.h"
@@ -24,7 +25,7 @@ std::string GetSectionAsString(const rapidjson::Document& doc, const std::string
     return "{}";
   }
 
-  return modular::JsonValueToString(config_json->value);
+  return json_parser::JsonValueToString(config_json->value);
 }
 
 std::string StripLeadingSlash(std::string str) {

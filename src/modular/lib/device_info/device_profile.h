@@ -7,8 +7,7 @@
 
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
+#include "src/lib/fxl/macros.h"
 #include "src/modular/lib/device_info/device_info.h"
 
 namespace modular {

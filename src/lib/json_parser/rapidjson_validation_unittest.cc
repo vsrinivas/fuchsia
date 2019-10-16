@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
+#include "src/lib/json_parser/rapidjson_validation.h"
 
 #include "gtest/gtest.h"
 
-namespace rapidjson_utils {
+namespace json_parser {
 
 constexpr fxl::StringView kInvalidSchema = "Hello";
 
@@ -59,4 +59,4 @@ TEST(RapidJsonValidation, InvalidJson) {
   EXPECT_FALSE(ValidateSchema(document, *schema));
 }
 
-}  // namespace rapidjson_utils
+}  // namespace json_parser

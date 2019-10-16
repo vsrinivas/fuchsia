@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
+#include "src/lib/json_parser/rapidjson_validation.h"
 
-#include <src/lib/fxl/logging.h>
 #include <rapidjson/error/en.h>
 
-namespace rapidjson_utils {
+#include "src/lib/fxl/logging.h"
+
+namespace json_parser {
 
 std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
   rapidjson::Document schema_document;
@@ -44,4 +45,4 @@ bool ValidateSchema(const rapidjson::Value& value, const rapidjson::SchemaDocume
   return true;
 }
 
-}  // namespace rapidjson_utils
+}  // namespace json_parser

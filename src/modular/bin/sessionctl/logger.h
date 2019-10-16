@@ -13,10 +13,10 @@
 #include <iostream>
 #include <string>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_printf.h>
+#include <rapidjson/document.h>
 
-#include "peridot/lib/rapidjson/rapidjson.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {

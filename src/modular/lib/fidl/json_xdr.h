@@ -13,11 +13,12 @@
 #include <type_traits>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
+#include <rapidjson/document.h>
+#include <rapidjson/rapidjson.h>
 
-#include "peridot/lib/rapidjson/rapidjson.h"
-#include "rapidjson/document.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/json_parser/pretty_print.h"
 
 namespace modular {
 
@@ -156,7 +157,7 @@ void XdrFilter(XdrContext* xdr, V* value);
 // Field().
 class XdrContext {
  public:
-  XdrContext(XdrOp op, JsonDoc* doc, std::string* error);
+  XdrContext(XdrOp op, rapidjson::Document* doc, std::string* error);
 
   ~XdrContext();
 
@@ -706,8 +707,9 @@ class XdrContext {
   }
 
  private:
-  XdrContext(XdrContext* parent, const char* name, XdrOp op, JsonDoc* doc, JsonValue* value);
-  JsonDoc::AllocatorType& allocator() const { return doc_->GetAllocator(); }
+  XdrContext(XdrContext* parent, const char* name, XdrOp op, rapidjson::Document* doc,
+             rapidjson::Value* value);
+  rapidjson::Document::AllocatorType& allocator() const { return doc_->GetAllocator(); }
   XdrContext Field(const char field[]);
   XdrContext FieldWithDefault(const char field[]);
   XdrContext Element(size_t i);
@@ -739,14 +741,14 @@ class XdrContext {
   // the document the value is part of, in order to access the
   // allocator.
   const XdrOp op_;
-  JsonDoc* const doc_;
-  JsonValue* const value_;
+  rapidjson::Document* const doc_;
+  rapidjson::Value* const value_;
 
   // A JSON value to continue processing on when the expected one is
   // not found in the JSON AST, to avoid value_ becoming null. It
   // needs to be thread local because it is a global that's modified
   // potentially by every ongoing XDR invocation.
-  static thread_local JsonValue null_;
+  static thread_local rapidjson::Value null_;
 
   // All Xdr* functions take a XdrContext* and pass it on. We might
   // want to change this once we support asynchronous input/output
@@ -772,7 +774,7 @@ void XdrFilter(XdrContext* const xdr, V* const value) {
 // The items in the filter versions list are tried in turn until one succeeds.
 // The filter versions list must end with a nullptr entry to mark the end.
 template <typename D, typename V>
-bool XdrRead(JsonDoc* const doc, D* const data, XdrFilterList<V> filter_versions) {
+bool XdrRead(rapidjson::Document* const doc, D* const data, XdrFilterList<V> filter_versions) {
   std::vector<std::string> errors;
   for (XdrFilterList<V> filter = filter_versions; *filter; ++filter) {
     std::string error;
@@ -788,7 +790,8 @@ bool XdrRead(JsonDoc* const doc, D* const data, XdrFilterList<V> filter_versions
   }
 
   FXL_LOG(ERROR) << "XdrRead: No filter version succeeded"
-                 << " to extract data from JSON: " << JsonValueToPrettyString(*doc) << std::endl;
+                 << " to extract data from JSON: " << json_parser::JsonValueToPrettyString(*doc)
+                 << std::endl;
   for (const std::string& error : errors) {
     FXL_LOG(INFO) << "XdrRead error message: " << error;
   }
@@ -802,7 +805,7 @@ bool XdrRead(JsonDoc* const doc, D* const data, XdrFilterList<V> filter_versions
 // to either crash or recover e.g. by ignoring the value.
 template <typename D, typename V>
 bool XdrRead(const std::string& json, D* const data, XdrFilterList<V> filter_versions) {
-  JsonDoc doc;
+  rapidjson::Document doc;
   doc.Parse(json);
   if (doc.HasParseError()) {
     FXL_LOG(ERROR) << "Unable to parse data as JSON: " << json;
@@ -817,22 +820,22 @@ bool XdrRead(const std::string& json, D* const data, XdrFilterList<V> filter_ver
 // anyway for symmetry with XdrRead(), so that the same filter version list
 // constant can be passed to both XdrRead and XdrWrite.
 template <typename D, typename V>
-void XdrWrite(JsonDoc* const doc, D* const data, XdrFilterList<V> filter_versions) {
+void XdrWrite(rapidjson::Document* const doc, D* const data, XdrFilterList<V> filter_versions) {
   std::string error;
   XdrContext xdr(XdrOp::TO_JSON, doc, &error);
   xdr.Value(data, filter_versions[0]);
   FXL_DCHECK(error.empty()) << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
                             << error << std::endl
-                            << JsonValueToPrettyString(*doc) << std::endl;
+                            << json_parser::JsonValueToPrettyString(*doc) << std::endl;
 }
 
 // A wrapper function to write data as JSON to a string. This never fails.
 template <typename D, typename V>
 void XdrWrite(std::string* const json, D* const data, XdrFilterList<V> filter_versions) {
-  JsonDoc doc;
+  rapidjson::Document doc;
   doc.SetObject();  // Allows empty objects (produces "{}"), such as an uninitialized FIDL table
   XdrWrite(&doc, data, filter_versions);
-  *json = JsonValueToString(doc);
+  *json = json_parser::JsonValueToString(doc);
 }
 
 // A wrapper function to return data as a JSON string. This never fails.

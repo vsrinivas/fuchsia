@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include "src/lib/files/file.h"
+#include "garnet/bin/cpuperf/session_result_spec.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -12,8 +10,10 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
-#include "session_result_spec.h"
+#include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace cpuperf {
 
@@ -68,7 +68,7 @@ std::string SessionResultSpec::GetTraceFilePath(size_t iter_num, size_t trace_nu
 
 bool DecodeSessionResultSpec(const std::string& json, SessionResultSpec* out_spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = rapidjson_utils::InitSchema(kRootSchema);
+  auto root_schema = json_parser::InitSchema(kRootSchema);
   if (!root_schema) {
     return false;
   }
@@ -83,7 +83,7 @@ bool DecodeSessionResultSpec(const std::string& json, SessionResultSpec* out_spe
                    << GetParseError_En(code);
     return false;
   }
-  if (!rapidjson_utils::ValidateSchema(document, *root_schema, "session result spec")) {
+  if (!json_parser::ValidateSchema(document, *root_schema, "session result spec")) {
     return false;
   }
 

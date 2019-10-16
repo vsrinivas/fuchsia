@@ -120,7 +120,6 @@ source_set("test_harness_impl_unittest") {
 
   deps = [
     ":test_harness_impl",
-    "//peridot/lib/rapidjson",
     "//peridot/lib/util:pseudo_dir_server",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",

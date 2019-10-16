@@ -8,8 +8,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
+#include "src/lib/json_parser/json_parser.h"
 
 namespace component {
 namespace {

@@ -8,9 +8,10 @@
 
 #include <string>
 
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/macros.h"
 
-#include "peridot/lib/rapidjson/rapidjson.h"
+using JsonDoc = rapidjson::Document;
+using JsonValue = rapidjson::Value;
 
 namespace modular {
 

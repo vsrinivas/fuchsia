@@ -10,12 +10,12 @@
 
 #include <openssl/sha.h>
 
-#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/lib/firebase_auth/testing/credentials.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace {
 
@@ -199,9 +199,9 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
       return false;
     }
   }
-  auto sync_params_schema = rapidjson_utils::InitSchema(kSyncParamsSchema);
+  auto sync_params_schema = json_parser::InitSchema(kSyncParamsSchema);
   FXL_DCHECK(sync_params_schema);
-  if (!rapidjson_utils::ValidateSchema(document, *sync_params_schema)) {
+  if (!json_parser::ValidateSchema(document, *sync_params_schema)) {
     std::cerr << "Invalid schema at " << credentials_path << std::endl;
     return false;
   }

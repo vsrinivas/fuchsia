@@ -16,7 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include "peridot/lib/rapidjson/rapidjson.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/uuid/uuid.h"

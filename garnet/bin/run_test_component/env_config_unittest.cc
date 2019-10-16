@@ -13,7 +13,7 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "lib/json/json_parser.h"
+#include "src/lib/json_parser/json_parser.h"
 
 namespace run {
 namespace {

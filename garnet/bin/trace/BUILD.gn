@@ -73,7 +73,7 @@ source_set("spec") {
   ]
 
   deps = [
-    "//garnet/public/lib/rapidjson_utils",
+    "//src/lib/json_parser",
     "//third_party/rapidjson",
   ]
 }

@@ -12,7 +12,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <src/lib/fxl/logging.h>
 
-#include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
+#include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace tracing {
 namespace {
@@ -277,10 +277,10 @@ bool DecodeMeasureTimeBetween(const rapidjson::Value& value, measure::TimeBetwee
 
 bool DecodeSpec(const std::string& json, Spec* spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = rapidjson_utils::InitSchema(kRootSchema);
-  auto duration_schema = rapidjson_utils::InitSchema(kDurationSchema);
-  auto time_between_schema = rapidjson_utils::InitSchema(kTimeBetweenSchema);
-  auto argument_value_schema = rapidjson_utils::InitSchema(kArgumentValueSchema);
+  auto root_schema = json_parser::InitSchema(kRootSchema);
+  auto duration_schema = json_parser::InitSchema(kDurationSchema);
+  auto time_between_schema = json_parser::InitSchema(kTimeBetweenSchema);
+  auto argument_value_schema = json_parser::InitSchema(kArgumentValueSchema);
   if (!root_schema || !duration_schema || !time_between_schema || !argument_value_schema) {
     return false;
   }
@@ -295,7 +295,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
                    << GetParseError_En(code);
     return false;
   }
-  if (!rapidjson_utils::ValidateSchema(document, *root_schema)) {
+  if (!json_parser::ValidateSchema(document, *root_schema)) {
     return false;
   }
 
@@ -383,7 +383,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     if (type == kMeasureDurationType) {
       measure::DurationSpec spec;
       spec.common = std::move(common);
-      if (!rapidjson_utils::ValidateSchema(measurement, *duration_schema) ||
+      if (!json_parser::ValidateSchema(measurement, *duration_schema) ||
           !DecodeMeasureDuration(measurement, &spec)) {
         return false;
       }
@@ -391,7 +391,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureTimeBetweenType) {
       measure::TimeBetweenSpec spec;
       spec.common = std::move(common);
-      if (!rapidjson_utils::ValidateSchema(measurement, *time_between_schema) ||
+      if (!json_parser::ValidateSchema(measurement, *time_between_schema) ||
           !DecodeMeasureTimeBetween(measurement, &spec)) {
         return false;
       }
@@ -399,7 +399,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureArgumentValueType) {
       measure::ArgumentValueSpec spec;
       spec.common = std::move(common);
-      if (!rapidjson_utils::ValidateSchema(measurement, *argument_value_schema) ||
+      if (!json_parser::ValidateSchema(measurement, *argument_value_schema) ||
           !DecodeMeasureArgumentValue(measurement, &spec)) {
         return false;
       }
@@ -415,11 +415,9 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   return true;
 }
 
-const BufferingModeSpec kBufferingModes[] = {
-    {"oneshot", BufferingMode::kOneshot},
-    {"circular", BufferingMode::kCircular},
-    {"streaming", BufferingMode::kStreaming}
-};
+const BufferingModeSpec kBufferingModes[] = {{"oneshot", BufferingMode::kOneshot},
+                                             {"circular", BufferingMode::kCircular},
+                                             {"streaming", BufferingMode::kStreaming}};
 
 const BufferingModeSpec* LookupBufferingMode(const std::string& name) {
   for (const auto& mode : kBufferingModes) {

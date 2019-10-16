@@ -58,12 +58,10 @@ source_set("json_xdr") {
     "json_xdr.h",
   ]
 
-  # MUST be public so clients pick up the defines from
-  # //third_party/rapidjson:rapidjson_config
   public_deps = [
-    "//peridot/lib/rapidjson",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/lib/json_parser",
     "//third_party/rapidjson",
   ]
 }

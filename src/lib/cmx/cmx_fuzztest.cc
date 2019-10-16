@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include "garnet/public/lib/json/json_parser.h"
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/json_parser/json_parser.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   auto char_size = sizeof(uint8_t) / sizeof(char);

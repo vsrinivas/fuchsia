@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Temporary redirect to temp fix bad merge.
+# Do not use - depend directly on //src/lib/json_parser instead.
+# This is a transitional target and will be removed soon.
+# Bug: 36759
 group("json") {
   public_deps = [
-    ":json_parser"
+    ":json_parser",
   ]
 }
 
@@ -13,16 +15,17 @@ source_set("json_parser") {
   sources = [
     "json_parser.cc",
     "json_parser.h",
+    "pretty_print.h",
+    "rapidjson_validation.cc",
+    "rapidjson_validation.h",
   ]
 
-  deps = [
+  public_deps = [
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 executable("json_parser_unittests_bin") {
@@ -32,6 +35,7 @@ executable("json_parser_unittests_bin") {
 
   sources = [
     "json_parser_unittest.cc",
+    "rapidjson_validation_unittest.cc",
   ]
 
   deps = [

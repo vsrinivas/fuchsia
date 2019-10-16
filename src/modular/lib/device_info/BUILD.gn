@@ -22,10 +22,10 @@ source_set("device_profile") {
 
   public_deps = [
     ":device_info",
+    "//src/lib/fxl",
   ]
 
   deps = [
-    "//peridot/lib/rapidjson",
-    "//src/lib/fxl",
+    "//third_party/rapidjson",
   ]
 }

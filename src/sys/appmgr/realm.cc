@@ -11,7 +11,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
-#include <lib/json/json_parser.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/process.h>
 #include <unistd.h>
@@ -40,6 +39,7 @@
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/json_parser/json_parser.h"
 #include "src/lib/pkg_url/url_resolver.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"

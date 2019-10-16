@@ -63,9 +63,6 @@ exceptions = {
         '//topaz/public',
         '//topaz/runtime',
     ],
-    '//src/identity': [
-        '//peridot/lib/rapidjson',
-    ],
     '//src/ledger': [
         '//peridot/lib/',
         '//peridot/third_party/modp_b64:modp_b64',

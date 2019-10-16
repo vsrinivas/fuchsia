@@ -11,9 +11,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include "lib/json/json_parser.h"
 #include "rapidjson/document.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/json_parser/json_parser.h"
 
 namespace sysmgr {
 

@@ -25,7 +25,6 @@
 #include <string>
 #include <vector>
 
-#include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/component/cpp/service_provider_impl.h"
 #include "src/lib/fxl/macros.h"
