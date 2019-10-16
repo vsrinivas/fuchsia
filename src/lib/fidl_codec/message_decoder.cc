@@ -183,7 +183,9 @@ MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
       start_byte_pos_(bytes),
       end_handle_pos_(handles + num_handles),
       handle_pos_(handles),
-      output_errors_(output_errors) {}
+      output_errors_(output_errors),
+      unions_are_xunions_(fidl::should_decode_union_from_xunion(
+          *reinterpret_cast<const fidl_message_header_t*>(bytes))) {}
 
 MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t offset, uint64_t num_bytes,
                                uint64_t num_handles)
@@ -191,7 +193,8 @@ MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t offset,
       start_byte_pos_(container->start_byte_pos_ + offset),
       end_handle_pos_(container->handle_pos_ + num_handles),
       handle_pos_(container->handle_pos_),
-      output_errors_(container->output_errors_) {}
+      output_errors_(container->output_errors_),
+      unions_are_xunions_(container->unions_are_xunions_) {}
 
 std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_format) {
   // Set the offset for the next object (just after this one).

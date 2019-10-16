@@ -90,6 +90,8 @@ class MessageDecoder {
 
   bool output_errors() const { return output_errors_; }
 
+  bool unions_are_xunions() const { return unions_are_xunions_; }
+
   bool HasError() const { return error_count_ > 0; }
 
   // Used by numeric types to retrieve a numeric value. If there is not enough
@@ -167,6 +169,9 @@ class MessageDecoder {
 
   // True if we display the errors we find.
   bool output_errors_;
+
+  // True if we must decode unions as xunions.
+  const bool unions_are_xunions_;
 
   // Errors found during the message decoding.
   int error_count_ = 0;

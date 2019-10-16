@@ -1153,4 +1153,226 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   delete[] handle_infos;
 }
 
+namespace {
+
+}  // namespace
+
+// TODO(fidlcat): Remove this test and its dependencies when the union migration will be finished.
+
+// Test that we will be able to decode unions as xunion.
+TEST_F(WireParserTest, UnionsAreXUnions) {
+  std::vector<std::unique_ptr<std::istream>> library_files;
+  // This is a copy of the json for xunionmigration.fidl. However, SendAfterMigration now
+  // refers to OriginalUnion and the xunion_ordinal fields of OriginalUnion have been copied
+  // from the ordinal fields of NowAsXUnion.
+  std::string future_schema = R"FIDL({
+  "version": "0.0.1",
+  "name": "test.fidlcodec.examples",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.fidlcodec.examples/FidlCodecXUnion",
+      "location": {
+        "filename": "../../src/lib/fidl_codec/testdata/xunionmigration.fidl",
+        "line": 7,
+        "column": 10
+      },
+      "methods": [
+        {
+          "ordinal": 7678173679997419520,
+          "generated_ordinal": 5589963516716936935,
+          "name": "SendAfterMigration",
+          "location": {
+            "filename": "../../src/lib/fidl_codec/testdata/xunionmigration.fidl",
+            "line": 8,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "test.fidlcodec.examples/OriginalUnion",
+                "nullable": false
+              },
+              "name": "u",
+              "location": {
+                "filename": "../../src/lib/fidl_codec/testdata/xunionmigration.fidl",
+                "line": 8,
+                "column": 36
+              },
+              "size": 24,
+              "max_out_of_line": 8,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int32"
+              },
+              "name": "i",
+              "location": {
+                "filename": "../../src/lib/fidl_codec/testdata/xunionmigration.fidl",
+                "line": 8,
+                "column": 45
+              },
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 40,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 48,
+          "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": true,
+          "has_response": false,
+          "is_composed": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [
+    {
+      "name": "test.fidlcodec.examples/OriginalUnion",
+      "location": {
+        "filename": "../../src/lib/fidl_codec/testdata/xunionmigration.fidl",
+        "line": 16,
+        "column": 7
+      },
+      "members": [
+        {
+          "name": "variant_u8",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "xunion_ordinal": 917437055,
+          "location": {
+            "filename": "../../src/lib/fidl_codec/testdata/xunionmigration.fidl",
+            "line": 17,
+            "column": 11
+          },
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "offset": 4
+        },
+        {
+          "name": "variant_u16",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "xunion_ordinal": 949805239,
+          "location": {
+            "filename": "../../src/lib/fidl_codec/testdata/xunionmigration.fidl",
+            "line": 18,
+            "column": 12
+          },
+          "size": 2,
+          "max_out_of_line": 0,
+          "alignment": 2,
+          "offset": 4
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0
+    }
+  ],
+  "xunion_declarations": []
+})FIDL";
+  std::unique_ptr<std::istream> file =
+      std::make_unique<std::istringstream>(std::istringstream(future_schema));
+  library_files.push_back(std::move(file));
+  LibraryReadError err;
+  LibraryLoader loader(&library_files, &err);
+  ASSERT_TRUE(err.value == LibraryReadError::ErrorValue::kOk);
+
+  // Encode a message using the unmodified fidl description. That means that we
+  // encode a xunion.
+  fidl::MessageBuffer buffer;
+  fidl::Message message = buffer.CreateEmptyMessage();
+  InterceptRequest<test::fidlcodec::examples::FidlCodecXUnion>(
+      message, [&](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecXUnion>& ptr) {
+        ptr->SendAfterMigration(test::fidlcodec::examples::NowAsXUnion::WithVariantU16(1024), 1);
+      });
+
+  fidl_message_header_t header = message.header();
+
+  const std::vector<const InterfaceMethod*>* methods = loader.GetByOrdinal(header.ordinal);
+  ASSERT_NE(methods, nullptr);
+  ASSERT_TRUE(!methods->empty());
+  const InterfaceMethod* method = (*methods)[0];
+  ASSERT_NE(method, nullptr);
+  ASSERT_EQ("SendAfterMigration", method->name());
+
+  {
+    // Decode the message using the modified description (the xunion is now a union).
+    MessageDecoder decoder(message.bytes().data(), message.bytes().size(), nullptr, 0,
+                           /*output_errors=*/true);
+    std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());
+    ASSERT_FALSE(decoder.HasError()) << "Could not decode message";
+    rapidjson::Document actual;
+    if (object != nullptr) {
+      object->ExtractJson(actual.GetAllocator(), actual);
+    }
+    rapidjson::StringBuffer actual_string;
+    rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);
+    actual.Accept(actual_w);
+
+    // Without setting the unions_are_xunions flag, we can't decode the message.
+    rapidjson::Document expected;
+    std::string expected_source = R"({"u":{"unknown$949805239":""}, "i":"1"})";
+    expected.Parse(expected_source.c_str());
+    rapidjson::StringBuffer expected_string;
+    rapidjson::Writer<rapidjson::StringBuffer> expected_w(expected_string);
+    expected.Accept(expected_w);
+
+    ASSERT_EQ(expected, actual) << "expected = " << expected_string.GetString() << " ("
+                                << expected_source << ")"
+                                << " and actual = " << actual_string.GetString();
+  }
+
+  {
+    message.header().flags[0] = TXN_HEADER_UNION_FROM_XUNION_FLAG;
+
+    // Decode the message using the modified description (the xunion is now a union).
+    MessageDecoder decoder(message.bytes().data(), message.bytes().size(), nullptr, 0,
+                           /*output_errors=*/true);
+    std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());
+    ASSERT_FALSE(decoder.HasError()) << "Could not decode message";
+    rapidjson::Document actual;
+    if (object != nullptr) {
+      object->ExtractJson(actual.GetAllocator(), actual);
+    }
+    rapidjson::StringBuffer actual_string;
+    rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);
+    actual.Accept(actual_w);
+
+    // Because we set the unions_are_xunions flag, we can now decode the message correctly.
+    rapidjson::Document expected;
+    std::string expected_source = R"({"u":{"variant_u16":"1024"}, "i":"1"})";
+    expected.Parse(expected_source.c_str());
+    rapidjson::StringBuffer expected_string;
+    rapidjson::Writer<rapidjson::StringBuffer> expected_w(expected_string);
+    expected.Accept(expected_w);
+
+    ASSERT_EQ(expected, actual) << "expected = " << expected_string.GetString() << " ("
+                                << expected_source << ")"
+                                << " and actual = " << actual_string.GetString();
+  }
+}
+
 }  // namespace fidl_codec

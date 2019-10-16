@@ -55,7 +55,10 @@ UnionMember::UnionMember(Library* enclosing_library, const rapidjson::Value& val
       size_(enclosing_library->ExtractUint64(value, "union member", name_, "size")),
       ordinal_(for_xunion
                    ? enclosing_library->ExtractUint32(value, "union member", name_, "ordinal")
-                   : 0),
+                   : (value.HasMember("xunion_ordinal")
+                          ? enclosing_library->ExtractUint32(value, "union member", name_,
+                                                             "xunion_ordinal")
+                          : 0)),
       type_(enclosing_library->ExtractType(value, "union member", name_, "type", size_)) {}
 
 UnionMember::~UnionMember() = default;
@@ -108,6 +111,32 @@ std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder, std::str
   } else {
     result->DecodeAt(decoder, offset);
   }
+  return result;
+}
+
+std::unique_ptr<XUnionField> Union::DecodeXUnion(MessageDecoder* decoder, std::string_view name,
+                                                 const Type* type, uint64_t offset,
+                                                 bool nullable) const {
+  uint32_t ordinal = 0;
+  if (decoder->GetValueAt(offset, &ordinal)) {
+    if ((ordinal == 0) && !nullable) {
+      FXL_LOG(ERROR) << "null envelope for a non nullable extensible union";
+    }
+  }
+  offset += sizeof(uint64_t);  // Skips ordinal + padding.
+
+  std::unique_ptr<XUnionField> result = std::make_unique<XUnionField>(name, type, *this);
+
+  std::unique_ptr<EnvelopeField> envelope;
+  const UnionMember* member = MemberWithOrdinal(ordinal);
+  if (member == nullptr) {
+    std::string key_name = std::string("unknown$") + std::to_string(ordinal);
+    envelope = std::make_unique<EnvelopeField>(key_name, nullptr);
+  } else {
+    envelope = std::make_unique<EnvelopeField>(member->name(), member->type());
+  }
+  envelope->DecodeAt(decoder, offset);
+  result->set_field(std::move(envelope));
   return result;
 }
 

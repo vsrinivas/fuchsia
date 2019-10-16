@@ -178,116 +178,91 @@ action("list_for_test") {
   args = [
     rebase_path(target_gen_dir, root_build_dir) + "/list_test_data.h",
     "SdkExamples",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.accessibility.semantics/fuchsia.accessibility.semantics.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.auth.oldtokens/fuchsia.auth.oldtokens.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.bluetooth.gatt/fuchsia.bluetooth.gatt.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.bluetooth.le/fuchsia.bluetooth.le.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.accessibility.semantics/fuchsia.accessibility.semantics.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.camera/fuchsia.camera.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.auth.oldtokens/fuchsia.auth.oldtokens.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.camera2/fuchsia.camera2.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.camera2.hal/fuchsia.camera2.hal.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.bluetooth.gatt/fuchsia.bluetooth.gatt.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.castauth/fuchsia.castauth.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.bluetooth.le/fuchsia.bluetooth.le.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.castconfig/fuchsia.castconfig.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.camera/fuchsia.camera.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.castsetup/fuchsia.castsetup.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.castsysteminfo/fuchsia.castsysteminfo.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.deprecatedtimezone/fuchsia.deprecatedtimezone.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.developer.tiles/fuchsia.developer.tiles.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.camera2/fuchsia.camera2.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.factory/fuchsia.factory.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.camera2.hal/fuchsia.camera2.hal.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.feedback/fuchsia.feedback.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.castauth/fuchsia.castauth.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.fonts/fuchsia.fonts.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.castconfig/fuchsia.castconfig.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.hwinfo/fuchsia.hwinfo.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.castsetup/fuchsia.castsetup.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.images/fuchsia.images.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.castsysteminfo/fuchsia.castsysteminfo.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.math/fuchsia.math.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.deprecatedtimezone/fuchsia.deprecatedtimezone.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.media/fuchsia.media.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.media.audio/fuchsia.media.audio.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.developer.tiles/fuchsia.developer.tiles.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.media.drm/fuchsia.media.drm.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.media.playback/fuchsia.media.playback.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.media.sessions2/fuchsia.media.sessions2.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.factory/fuchsia.factory.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.mediacodec/fuchsia.mediacodec.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.feedback/fuchsia.feedback.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.net.http/fuchsia.net.http.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.fonts/fuchsia.fonts.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.net.mdns/fuchsia.net.mdns.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.net.oldhttp/fuchsia.net.oldhttp.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.hwinfo/fuchsia.hwinfo.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.netstack/fuchsia.netstack.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.images/fuchsia.images.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.settings/fuchsia.settings.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.simplecamera/fuchsia.simplecamera.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.math/fuchsia.math.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.media/fuchsia.media.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.sys.test/fuchsia.sys.test.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.media.audio/fuchsia.media.audio.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.ui.app/fuchsia.ui.app.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.media.drm/fuchsia.media.drm.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.ui.gfx/fuchsia.ui.gfx.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.media.playback/fuchsia.media.playback.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.ui.input/fuchsia.ui.input.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.media.sessions2/fuchsia.media.sessions2.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.ui.input2/fuchsia.ui.input2.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.mediacodec/fuchsia.mediacodec.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.ui.policy/fuchsia.ui.policy.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.net.http/fuchsia.net.http.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.ui.scenic/fuchsia.ui.scenic.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.net.mdns/fuchsia.net.mdns.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.ui.types/fuchsia.ui.types.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.net.oldhttp/fuchsia.net.oldhttp.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.ui.views/fuchsia.ui.views.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.update.channel/fuchsia.update.channel.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.update.channelcontrol/fuchsia.update.channelcontrol.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.netstack/fuchsia.netstack.fidl.json",
+        "/fidling/gen/sdk/fidl/fuchsia.web/fuchsia.web.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.wlan.service/fuchsia.wlan.service.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-cobalt/fuchsia-cobalt.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-hardware-goldfish-address-space/fuchsia-hardware-goldfish-address-space.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-hardware-goldfish-control/fuchsia-hardware-goldfish-control.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-hardware-goldfish-pipe/fuchsia-hardware-goldfish-pipe.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-logger/fuchsia-logger.fidl.json",
     rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.settings/fuchsia.settings.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.simplecamera/fuchsia.simplecamera.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.sys.test/fuchsia.sys.test.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.ui.app/fuchsia.ui.app.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.ui.gfx/fuchsia.ui.gfx.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.ui.input/fuchsia.ui.input.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.ui.input2/fuchsia.ui.input2.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.ui.policy/fuchsia.ui.policy.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.ui.scenic/fuchsia.ui.scenic.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.ui.types/fuchsia.ui.types.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.ui.views/fuchsia.ui.views.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.update.channel/fuchsia.update.channel.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.update.channelcontrol/fuchsia.update.channelcontrol.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.web/fuchsia.web.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/sdk/fidl/fuchsia.wlan.service/fuchsia.wlan.service.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-cobalt/fuchsia-cobalt.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-hardware-goldfish-address-space/fuchsia-hardware-goldfish-address-space.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-hardware-goldfish-control/fuchsia-hardware-goldfish-control.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-hardware-goldfish-pipe/fuchsia-hardware-goldfish-pipe.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-logger/fuchsia-logger.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-mem/fuchsia-mem.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-posix-socket/fuchsia-posix-socket.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-process/fuchsia-process.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-sysinfo/fuchsia-sysinfo.fidl.json",
-    rebase_path(root_build_dir) +
-    "/fidling/gen/zircon/system/fidl/fuchsia-tracing-provider/fuchsia-tracing-provider.fidl.json",
+        "/fidling/gen/zircon/system/fidl/fuchsia-mem/fuchsia-mem.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-posix-socket/fuchsia-posix-socket.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-process/fuchsia-process.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-sysinfo/fuchsia-sysinfo.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-tracing-provider/fuchsia-tracing-provider.fidl.json",
   ]
 }
 
@@ -298,6 +273,7 @@ fidl("fidl") {
     "testdata/empty.test.fidl",
     "testdata/reserved_member.test.fidl",
     "testdata/types.test.fidl",
+    "testdata/xunionmigration.fidl",
   ]
 }
 

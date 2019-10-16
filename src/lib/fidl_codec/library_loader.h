@@ -64,6 +64,7 @@ class Type;
 class Union;
 class UnionField;
 class XUnion;
+class XUnionField;
 
 class Enum {
  public:
@@ -137,6 +138,8 @@ class Union {
 
   std::unique_ptr<UnionField> DecodeUnion(MessageDecoder* decoder, std::string_view name,
                                           const Type* type, uint64_t offset, bool nullable) const;
+  std::unique_ptr<XUnionField> DecodeXUnion(MessageDecoder* decoder, std::string_view name,
+                                            const Type* type, uint64_t offset, bool nullable) const;
 
  private:
   Union(Library* enclosing_library, const rapidjson::Value& value);

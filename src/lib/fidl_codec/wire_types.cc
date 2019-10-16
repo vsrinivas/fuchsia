@@ -88,37 +88,17 @@ size_t UnionType::InlineSize() const { return union_.size(); }
 
 std::unique_ptr<Field> UnionType::Decode(MessageDecoder* decoder, std::string_view name,
                                          uint64_t offset) const {
-  return union_.DecodeUnion(decoder, name, this, offset, nullable_);
+  return decoder->unions_are_xunions() ? union_.DecodeXUnion(decoder, name, this, offset, nullable_)
+                                       : union_.DecodeUnion(decoder, name, this, offset, nullable_);
 }
 
-XUnionType::XUnionType(const XUnion& uni, bool is_nullable)
-    : xunion_(uni), is_nullable_(is_nullable) {}
+XUnionType::XUnionType(const XUnion& uni, bool nullable) : xunion_(uni), nullable_(nullable) {}
 
 size_t XUnionType::InlineSize() const { return xunion_.size(); }
 
 std::unique_ptr<Field> XUnionType::Decode(MessageDecoder* decoder, std::string_view name,
                                           uint64_t offset) const {
-  uint32_t ordinal = 0;
-  if (decoder->GetValueAt(offset, &ordinal)) {
-    if ((ordinal == 0) && !is_nullable_) {
-      FXL_LOG(ERROR) << "null envelope for a non nullable extensible union";
-    }
-  }
-  offset += sizeof(uint64_t);  // Skips ordinal + padding.
-
-  std::unique_ptr<XUnionField> result = std::make_unique<XUnionField>(name, this, xunion_);
-
-  std::unique_ptr<EnvelopeField> envelope;
-  const UnionMember* member = xunion_.MemberWithOrdinal(ordinal);
-  if (member == nullptr) {
-    std::string key_name = std::string("unknown$") + std::to_string(ordinal);
-    envelope = std::make_unique<EnvelopeField>(key_name, nullptr);
-  } else {
-    envelope = std::make_unique<EnvelopeField>(member->name(), member->type());
-  }
-  envelope->DecodeAt(decoder, offset);
-  result->set_field(std::move(envelope));
-  return result;
+  return xunion_.DecodeXUnion(decoder, name, this, offset, nullable_);
 }
 
 ElementSequenceType::ElementSequenceType(std::unique_ptr<Type>&& component_type)

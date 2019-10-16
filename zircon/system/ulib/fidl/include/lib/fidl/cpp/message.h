@@ -13,6 +13,11 @@
 
 namespace fidl {
 
+// TODO: put in txn_header.c when it will be created.
+inline bool should_decode_union_from_xunion(const fidl_message_header_t& hdr) {
+  return (hdr.flags[0] & TXN_HEADER_UNION_FROM_XUNION_FLAG) != 0;
+}
+
 // A FIDL message.
 //
 // A FIDL message has two parts: the bytes and the handles. The bytes are
@@ -65,7 +70,7 @@ class Message {
   uint64_t ordinal() const { return header().ordinal; }
 
   bool should_decode_union_from_xunion() const {
-    return (header().flags[0] & TXN_HEADER_UNION_FROM_XUNION_FLAG) != 0;
+    return fidl::should_decode_union_from_xunion(header());
   }
 
   // Whether this message is in a supported version of the wire format.

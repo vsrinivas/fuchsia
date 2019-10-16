@@ -281,7 +281,7 @@ class UnionField : public NullableField {
 // An xunion.
 class XUnionField : public UnionField {
  public:
-  XUnionField(std::string_view name, const Type* type, const XUnion& xunion_definition)
+  XUnionField(std::string_view name, const Type* type, const Union& xunion_definition)
       : UnionField(name, type, xunion_definition) {}
 
   void Visit(Visitor* visitor) const override;

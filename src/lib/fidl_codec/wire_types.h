@@ -245,7 +245,7 @@ class UnionType : public Type {
 
 class XUnionType : public Type {
  public:
-  XUnionType(const XUnion& uni, bool is_nullable);
+  XUnionType(const XUnion& uni, bool nullable);
 
   std::string Name() const override { return xunion_.name(); }
 
@@ -256,7 +256,7 @@ class XUnionType : public Type {
 
  private:
   const XUnion& xunion_;
-  const bool is_nullable_;
+  const bool nullable_;
 };
 
 class ElementSequenceType : public Type {
