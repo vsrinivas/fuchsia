@@ -4,14 +4,23 @@
 
 driver("fake") {
   sources = [
-    "fake-display.cc",
+    "bind.cc",
   ]
   deps = [
+    ":fake-lib",
+  ]
+}
+
+static_library("fake-lib") {
+  sources = [
+    "fake-display.cc",
+  ]
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

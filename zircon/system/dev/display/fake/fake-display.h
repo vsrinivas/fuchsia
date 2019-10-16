@@ -31,7 +31,8 @@ using DeviceType = ddk::Device<FakeDisplay, ddk::UnbindableNew>;
 class FakeDisplay : public DeviceType,
                     public ddk::DisplayControllerImplProtocol<FakeDisplay, ddk::base_protocol> {
  public:
-  FakeDisplay(zx_device_t* parent) : DeviceType(parent) {}
+  FakeDisplay(zx_device_t* parent)
+      : DeviceType(parent), dcimpl_proto_({&display_controller_impl_protocol_ops_, this}) {}
 
   // This function is called from the c-bind function upon driver matching
   zx_status_t Bind();
@@ -63,6 +64,8 @@ class FakeDisplay : public DeviceType,
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
+  const display_controller_impl_protocol_t* dcimpl_proto() const { return &dcimpl_proto_; }
+
  private:
   enum {
     COMPONENT_PDEV,
@@ -75,6 +78,7 @@ class FakeDisplay : public DeviceType,
   int VSyncThread();
   void PopulateAddedDisplayArgs(added_display_args_t* args);
 
+  display_controller_impl_protocol_t dcimpl_proto_ = {};
   pdev_protocol_t pdev_ = {};
   sysmem_protocol_t sysmem_ = {};
 
