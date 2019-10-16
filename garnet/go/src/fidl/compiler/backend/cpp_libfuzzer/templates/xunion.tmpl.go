@@ -28,7 +28,7 @@ struct Allocate<{{ .Name }}> {
     switch (selector % {{ len .Members }}) {
       {{- range $memberIdx, $member := .Members }}
       case {{ $memberIdx }}: {
-        out.set_{{ $member.Name }}(std::move(Allocate<{{ $member.Type.Decl }}>{}(src, size)));
+        out.set_{{ $member.Name }}(Allocate<{{ $member.Type.Decl }}>{}(src, size));
         break;
       }
       {{- end }}

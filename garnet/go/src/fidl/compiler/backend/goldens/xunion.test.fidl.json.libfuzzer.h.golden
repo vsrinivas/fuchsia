@@ -62,15 +62,15 @@ struct Allocate<StrictSimpleXUnion> {
     StrictSimpleXUnion out;
     switch (selector % 3) {
       case 0: {
-        out.set_i(std::move(Allocate<int32_t>{}(src, size)));
+        out.set_i(Allocate<int32_t>{}(src, size));
         break;
       }
       case 1: {
-        out.set_f(std::move(Allocate<float>{}(src, size)));
+        out.set_f(Allocate<float>{}(src, size));
         break;
       }
       case 2: {
-        out.set_s(std::move(Allocate<::std::string>{}(src, size)));
+        out.set_s(Allocate<::std::string>{}(src, size));
         break;
       }
     }
@@ -99,7 +99,7 @@ struct Allocate<StrictBoundedXUnion> {
     StrictBoundedXUnion out;
     switch (selector % 1) {
       case 0: {
-        out.set_v(std::move(Allocate<::std::vector<uint8_t>>{}(src, size)));
+        out.set_v(Allocate<::std::vector<uint8_t>>{}(src, size));
         break;
       }
     }
@@ -128,11 +128,11 @@ struct Allocate<OlderSimpleUnion> {
     OlderSimpleUnion out;
     switch (selector % 2) {
       case 0: {
-        out.set_i(std::move(Allocate<int64_t>{}(src, size)));
+        out.set_i(Allocate<int64_t>{}(src, size));
         break;
       }
       case 1: {
-        out.set_f(std::move(Allocate<float>{}(src, size)));
+        out.set_f(Allocate<float>{}(src, size));
         break;
       }
     }
@@ -161,15 +161,15 @@ struct Allocate<NewerSimpleUnion> {
     NewerSimpleUnion out;
     switch (selector % 3) {
       case 0: {
-        out.set_i(std::move(Allocate<int64_t>{}(src, size)));
+        out.set_i(Allocate<int64_t>{}(src, size));
         break;
       }
       case 1: {
-        out.set_s(std::move(Allocate<::std::string>{}(src, size)));
+        out.set_s(Allocate<::std::string>{}(src, size));
         break;
       }
       case 2: {
-        out.set_v(std::move(Allocate<::std::vector<::std::string>>{}(src, size)));
+        out.set_v(Allocate<::std::vector<::std::string>>{}(src, size));
         break;
       }
     }
@@ -216,7 +216,7 @@ struct Allocate<XUnionContainingEmptyStruct> {
     XUnionContainingEmptyStruct out;
     switch (selector % 1) {
       case 0: {
-        out.set_empty(std::move(Allocate<Empty>{}(src, size)));
+        out.set_empty(Allocate<Empty>{}(src, size));
         break;
       }
     }
