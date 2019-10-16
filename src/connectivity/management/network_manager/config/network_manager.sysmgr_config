@@ -1,4 +1,8 @@
 {
-  "apps": [ "fuchsia-pkg://fuchsia.com/network_manager#meta/network_manager.cmx" ]
+  "startup_services": [
+    "fuchsia.router.config.RouterAdmin",
+    "fuchsia.router.config.RouterSystem",
+    "fuchsia.router.config.RouterState"
+  ]
 }
 
