@@ -25,6 +25,8 @@ library("fidl-async-cpp") {
     "lib/fidl-async/cpp/channel_transaction.h",
   ]
   sources = [
+    "llcpp_async_bind.cc",
+    "llcpp_async_transaction.cc",
     "llcpp_bind.cc",
     "llcpp_channel_transaction.cc",
   ]

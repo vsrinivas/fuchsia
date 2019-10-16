@@ -6,6 +6,14 @@ extern "C" {
 
 
 
+extern const fidl_type_t fidl_test_simple_SimpleEchoRequestTable;
+static const ::fidl::FidlStructField Fields34fidl_test_simple_SimpleEchoRequest[] = {};
+const fidl_type_t fidl_test_simple_SimpleEchoRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34fidl_test_simple_SimpleEchoRequest, 0u, 24u, "fidl.test.simple/SimpleEchoRequest"));
+
+extern const fidl_type_t fidl_test_simple_SimpleEchoResponseTable;
+static const ::fidl::FidlStructField Fields35fidl_test_simple_SimpleEchoResponse[] = {};
+const fidl_type_t fidl_test_simple_SimpleEchoResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_simple_SimpleEchoResponse, 0u, 24u, "fidl.test.simple/SimpleEchoResponse"));
+
 extern const fidl_type_t fidl_test_simple_SimpleCloseRequestTable;
 static const ::fidl::FidlStructField Fields35fidl_test_simple_SimpleCloseRequest[] = {};
 const fidl_type_t fidl_test_simple_SimpleCloseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_simple_SimpleCloseRequest, 0u, 16u, "fidl.test.simple/SimpleCloseRequest"));

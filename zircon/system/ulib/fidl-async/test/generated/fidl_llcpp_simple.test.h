@@ -22,11 +22,41 @@ namespace simple {
 
 class Simple;
 
+extern "C" const fidl_type_t fidl_test_simple_SimpleEchoRequestTable;
+extern "C" const fidl_type_t fidl_test_simple_SimpleEchoResponseTable;
 extern "C" const fidl_type_t fidl_test_simple_SimpleCloseResponseTable;
 
 class Simple final {
   Simple() = delete;
  public:
+
+  struct EchoResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t reply;
+
+    static constexpr const fidl_type_t* Type = &fidl_test_simple_SimpleEchoResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct EchoRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t request;
+
+    static constexpr const fidl_type_t* Type = &fidl_test_simple_SimpleEchoRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = EchoResponse;
+  };
 
   struct CloseResponse final {
     FIDL_ALIGNDECL
@@ -49,6 +79,22 @@ class Simple final {
     ResultOf() = delete;
    private:
     template <typename ResponseType>
+    class Echo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Echo_Impl(zx::unowned_channel _client_end, int32_t request);
+      ~Echo_Impl() = default;
+      Echo_Impl(Echo_Impl&& other) = default;
+      Echo_Impl& operator=(Echo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -66,6 +112,7 @@ class Simple final {
     };
 
    public:
+    using Echo = Echo_Impl<EchoResponse>;
     using Close = Close_Impl<CloseResponse>;
   };
 
@@ -74,6 +121,22 @@ class Simple final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
    private:
+    template <typename ResponseType>
+    class Echo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Echo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer);
+      ~Echo_Impl() = default;
+      Echo_Impl(Echo_Impl&& other) = default;
+      Echo_Impl& operator=(Echo_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
     template <typename ResponseType>
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
@@ -92,6 +155,7 @@ class Simple final {
     };
 
    public:
+    using Echo = Echo_Impl<EchoResponse>;
     using Close = Close_Impl<CloseResponse>;
   };
 
@@ -105,6 +169,14 @@ class Simple final {
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Replies with the value requested.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Echo Echo(int32_t request);
+
+    // Replies with the value requested.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Echo Echo(::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer);
 
     // Never actually replies.  Just closes instead.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -123,6 +195,14 @@ class Simple final {
     Call() = delete;
    public:
 
+    // Replies with the value requested.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Echo Echo(zx::unowned_channel _client_end, int32_t request);
+
+    // Replies with the value requested.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Echo Echo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer);
+
     // Never actually replies.  Just closes instead.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Close Close(zx::unowned_channel _client_end);
@@ -139,6 +219,9 @@ class Simple final {
     InPlace() = delete;
    public:
 
+    // Replies with the value requested.
+    static ::fidl::DecodeResult<EchoResponse> Echo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoRequest> params, ::fidl::BytePart response_buffer);
+
     // Never actually replies.  Just closes instead.
     static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
@@ -151,6 +234,20 @@ class Simple final {
     virtual ~Interface() = default;
     using _Outer = Simple;
     using _Base = ::fidl::CompleterBase;
+
+    class EchoCompleterBase : public _Base {
+     public:
+      void Reply(int32_t reply);
+      void Reply(::fidl::BytePart _buffer, int32_t reply);
+      void Reply(::fidl::DecodedMessage<EchoResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using EchoCompleter = ::fidl::Completer<EchoCompleterBase>;
+
+    virtual void Echo(int32_t request, EchoCompleter::Sync _completer) = 0;
 
     class CloseCompleterBase : public _Base {
      public:
@@ -191,6 +288,8 @@ class Simple final {
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
    public:
+    static void EchoRequest(const ::fidl::DecodedMessage<Simple::EchoRequest>& _msg);
+    static void EchoResponse(const ::fidl::DecodedMessage<Simple::EchoResponse>& _msg);
     static void CloseRequest(const ::fidl::DecodedMessage<Simple::CloseRequest>& _msg);
     static void CloseResponse(const ::fidl::DecodedMessage<Simple::CloseResponse>& _msg);
   };
@@ -202,6 +301,22 @@ class Simple final {
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::simple::Simple::EchoRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fidl::test::simple::Simple::EchoRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::simple::Simple::EchoRequest)
+    == ::llcpp::fidl::test::simple::Simple::EchoRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::simple::Simple::EchoRequest, request) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::simple::Simple::EchoResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fidl::test::simple::Simple::EchoResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::simple::Simple::EchoResponse)
+    == ::llcpp::fidl::test::simple::Simple::EchoResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::simple::Simple::EchoResponse, reply) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::simple::Simple::CloseResponse> : public std::true_type {};

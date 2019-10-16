@@ -5,7 +5,7 @@ due to the Golang-based `fidlgen` not accessible from Zircon yet.
 To generate these files, first build Zircon and Garnet using `fx`, then run this command:
 
 ```bash
-fx exec zircon/system/ulib/fidl-async/gen_llcpp.sh
+fx exec zircon/system/ulib/fidl-async/test/gen_llcpp.sh
 ```
 
 It can be run from any location.
