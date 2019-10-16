@@ -99,6 +99,9 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const raw::Ordinal32& value);
   void Generate(const raw::Ordinal64& value);
 
+  void Generate(const TypeShape& type_shape);
+  void Generate(const FieldShape& type_shape);
+
   void Generate(const flat::Name& value);
   void Generate(const flat::Type* value);
   void Generate(const flat::Constant& value);
@@ -133,6 +136,9 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl);
   void GenerateDeclarationsMember(const flat::Library* library,
                                   Position position = Position::kSubsequent);
+  void GenerateTypeShapes(const flat::Object& object);
+  void GenerateTypeShapes(std::string prefix, const flat::Object& object);
+  void GenerateFieldShapes(const flat::Struct::Member& struct_member);
 
   const flat::Library* library_;
   std::ostringstream json_file_;

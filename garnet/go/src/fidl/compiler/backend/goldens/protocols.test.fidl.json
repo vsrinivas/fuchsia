@@ -74,6 +74,24 @@
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": false,
           "is_composed": false
         },
@@ -92,12 +110,48 @@
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -115,6 +169,24 @@
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -132,13 +204,39 @@
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -167,13 +265,39 @@
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": false,
           "is_composed": false
         },
@@ -203,19 +327,63 @@
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -244,13 +412,39 @@
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -268,13 +462,39 @@
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -293,6 +513,24 @@
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -322,13 +560,39 @@
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         }
       ]
@@ -356,6 +620,24 @@
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -374,13 +656,39 @@
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 48,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 48,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 24,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -398,6 +706,24 @@
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -416,13 +742,39 @@
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 8,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -440,6 +792,24 @@
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -458,13 +828,39 @@
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 8,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         }
       ]
@@ -509,7 +905,15 @@
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             },
             {
               "type": {
@@ -526,13 +930,39 @@
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 24,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 24,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 24,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": false,
           "is_composed": false
         },
@@ -563,7 +993,15 @@
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             },
             {
               "type": {
@@ -580,13 +1018,39 @@
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 24,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 24,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 24,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -615,7 +1079,15 @@
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             },
             {
               "type": {
@@ -632,13 +1104,39 @@
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 24,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 24,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 24,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -656,13 +1154,39 @@
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -692,13 +1216,39 @@
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 1
+              "max_handles": 1,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 4
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 4
+              }
             }
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -717,13 +1267,39 @@
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 1
+              "max_handles": 1,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 4
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 4
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         }
       ]
@@ -755,7 +1331,15 @@
           "max_out_of_line": 0,
           "alignment": 8,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -772,7 +1356,15 @@
           "max_out_of_line": 0,
           "alignment": 8,
           "offset": 8,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 8,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -789,14 +1381,40 @@
           "max_out_of_line": 0,
           "alignment": 8,
           "offset": 16,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 16,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 16,
+            "padding": 0
+          }
         }
       ],
       "size": 24,
       "max_out_of_line": 0,
       "alignment": 8,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     },
     {
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
@@ -811,7 +1429,25 @@
       "max_out_of_line": 0,
       "alignment": 1,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     },
     {
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
@@ -826,7 +1462,25 @@
       "max_out_of_line": 0,
       "alignment": 1,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -884,7 +1538,25 @@
       "size": 32,
       "max_out_of_line": 0,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "type_shape_old": {
+        "inline_size": 32,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     },
     {
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Result",
@@ -939,7 +1611,25 @@
       "size": 8,
       "max_out_of_line": 0,
       "alignment": 4,
-      "max_handles": 0
+      "max_handles": 0,
+      "type_shape_old": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     },
     {
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Result",
@@ -995,7 +1685,25 @@
       "size": 8,
       "max_out_of_line": 0,
       "alignment": 4,
-      "max_handles": 0
+      "max_handles": 0,
+      "type_shape_old": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "xunion_declarations": [],

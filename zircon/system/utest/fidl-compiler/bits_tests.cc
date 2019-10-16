@@ -184,37 +184,6 @@ bits non_power_of_two : uint64 {
   END_TEST;
 }
 
-bool GoodBitsTestShape() {
-  BEGIN_TEST;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-bits Bits16 : uint16 {
-    VALUE = 1;
-};
-
-bits BitsImplicit {
-    VALUE = 1;
-};
-)FIDL");
-  ASSERT_TRUE(library.Compile());
-
-  auto bits16 = library.LookupBits("Bits16");
-  EXPECT_NONNULL(bits16);
-  EXPECT_EQ(bits16->typeshape().InlineSize(), 2);
-  EXPECT_EQ(bits16->typeshape().Alignment(), 2);
-  EXPECT_EQ(bits16->typeshape().MaxOutOfLine(), 0);
-
-  auto bits_implicit = library.LookupBits("BitsImplicit");
-  EXPECT_NONNULL(bits_implicit);
-  EXPECT_EQ(bits_implicit->typeshape().InlineSize(), 4);
-  EXPECT_EQ(bits_implicit->typeshape().Alignment(), 4);
-  EXPECT_EQ(bits_implicit->typeshape().MaxOutOfLine(), 0);
-
-  END_TEST;
-}
-
 bool GoodBitsTestMask() {
   BEGIN_TEST;
 
@@ -248,7 +217,6 @@ RUN_TEST(BadBitsTestUnsignedWithNegativeMember)
 RUN_TEST(BadBitsTestMemberOverflow)
 RUN_TEST(BadBitsTestDuplicateMember)
 RUN_TEST(GoodBitsTestKeywordNames)
-RUN_TEST(GoodBitsTestShape)
 RUN_TEST(BadBitsTestNonPowerOfTwo)
 RUN_TEST(GoodBitsTestMask)
 END_TEST_CASE(bits_tests)

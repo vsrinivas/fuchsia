@@ -108,7 +108,15 @@ struct Simple {
           "max_out_of_line": 0,
           "alignment": 1,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -125,14 +133,40 @@ struct Simple {
           "max_out_of_line": 0,
           "alignment": 1,
           "offset": 1,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 1,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 1,
+            "padding": 0
+          }
         }
       ],
       "size": 2,
       "max_out_of_line": 0,
       "alignment": 1,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 2,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 2,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -145,8 +179,7 @@ struct Simple {
   "declarations": {
     "fidl.test.json/Simple": "struct"
   }
-}
-)JSON"));
+})JSON"));
   }
 
   END_TEST;
@@ -212,13 +245,39 @@ protocol EmptyProtocol {
               "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 7
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 7
+              }
             }
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": false,
           "is_composed": false
         },
@@ -250,13 +309,39 @@ protocol EmptyProtocol {
               "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 7
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 7
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         },
         {
@@ -286,13 +371,39 @@ protocol EmptyProtocol {
               "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 7
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 7
+              }
             }
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -311,13 +422,39 @@ protocol EmptyProtocol {
               "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 7
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 7
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         }
       ]
@@ -338,7 +475,25 @@ protocol EmptyProtocol {
       "max_out_of_line": 0,
       "alignment": 1,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -393,7 +548,8 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
 
     EXPECT_TRUE(checkJSONGenerator(std::move(library),
-                                   R"JSON({
+                                   R"JSON(
+{
   "version": "0.0.1",
   "name": "example",
   "library_dependencies": [
@@ -439,14 +595,40 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         }
       ],
       "size": 4,
       "max_out_of_line": 0,
       "alignment": 4,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -550,7 +732,25 @@ table Simple {
       "max_out_of_line": 48,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
     }
   ],
   "union_declarations": [],
@@ -630,14 +830,40 @@ union PizzaOrPasta {
           "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         }
       ],
       "size": 16,
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
-      "has_padding": true
+      "has_padding": true,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     },
     {
       "name": "fidl.test.json/Pasta",
@@ -664,14 +890,40 @@ union PizzaOrPasta {
           "max_out_of_line": 16,
           "alignment": 8,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         }
       ],
       "size": 16,
       "max_out_of_line": 16,
       "alignment": 8,
       "max_handles": 0,
-      "has_padding": true
+      "has_padding": true,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 16,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 16,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -724,7 +976,25 @@ union PizzaOrPasta {
       "size": 24,
       "max_out_of_line": 4294967295,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "xunion_declarations": [],
@@ -825,7 +1095,25 @@ strict xunion StrictFoo {
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
     },
     {
       "name": "fidl.test.json/StrictFoo",
@@ -874,7 +1162,25 @@ strict xunion StrictFoo {
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
-      "strict": true
+      "strict": true,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "type_alias_declarations": [],
@@ -960,13 +1266,39 @@ protocol Protocol {
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 40,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -985,13 +1317,39 @@ protocol Protocol {
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 40,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": true,
+          "maybe_response_type_shape_old": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
           "is_composed": false
         },
         {
@@ -1021,13 +1379,39 @@ protocol Protocol {
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 40,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": true,
+          "maybe_request_type_shape_old": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -1046,13 +1430,39 @@ protocol Protocol {
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 40,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         }
       ]
@@ -1110,7 +1520,25 @@ protocol Protocol {
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
     },
     {
       "name": "fidl.test.json/StrictFoo",
@@ -1159,7 +1587,25 @@ protocol Protocol {
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
-      "strict": true
+      "strict": true,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "type_alias_declarations": [],
@@ -1199,7 +1645,8 @@ protocol sub {
 };
 
 )FIDL",
-                                   R"JSON({
+                                   R"JSON(
+{
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
@@ -1247,13 +1694,39 @@ protocol sub {
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -1271,13 +1744,39 @@ protocol sub {
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         }
       ]
@@ -1316,13 +1815,39 @@ protocol sub {
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -1340,13 +1865,39 @@ protocol sub {
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "is_composed": true
         }
       ]
@@ -1366,7 +1917,8 @@ protocol sub {
     "fidl.test.json/super": "interface",
     "fidl.test.json/sub": "interface"
   }
-})JSON"));
+}
+)JSON"));
   }
 
   END_TEST;
@@ -1390,7 +1942,8 @@ protocol Child {
 };
 
 )FIDL",
-                                   R"JSON({
+                                   R"JSON(
+{
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
@@ -1439,13 +1992,39 @@ protocol Child {
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 1
+              "max_handles": 1,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 4
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 4
+              }
             }
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": false,
           "is_composed": false
         }
@@ -1486,13 +2065,39 @@ protocol Child {
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 1
+              "max_handles": 1,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 4
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 4
+              }
             }
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": false,
           "is_composed": true
         },
@@ -1523,13 +2128,39 @@ protocol Child {
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 1
+              "max_handles": 1,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 4
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 4
+              }
             }
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": false,
           "is_composed": false
         }
@@ -1550,7 +2181,8 @@ protocol Child {
     "fidl.test.json/Parent": "interface",
     "fidl.test.json/Child": "interface"
   }
-})JSON"));
+}
+)JSON"));
   }
 
   END_TEST;
@@ -1568,7 +2200,8 @@ protocol Example {
 };
 
 )FIDL",
-                                   R"JSON({
+                                   R"JSON(
+{
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
@@ -1610,13 +2243,39 @@ protocol Example {
               "max_out_of_line": 4294967295,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -1635,13 +2294,39 @@ protocol Example {
               "max_out_of_line": 0,
               "alignment": 8,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
             }
           ],
           "maybe_response_size": 32,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 8,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": false
         }
       ]
@@ -1673,14 +2358,40 @@ protocol Example {
           "max_out_of_line": 0,
           "alignment": 8,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         }
       ],
       "size": 8,
       "max_out_of_line": 0,
       "alignment": 8,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -1738,7 +2449,25 @@ protocol Example {
       "size": 16,
       "max_out_of_line": 0,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "xunion_declarations": [],
@@ -1753,7 +2482,8 @@ protocol Example {
     "fidl.test.json/Example_foo_Response": "struct",
     "fidl.test.json/Example_foo_Result": "union"
   }
-})JSON"));
+}
+)JSON"));
   }
 
   END_TEST;
@@ -1774,7 +2504,8 @@ struct ByteAndBytes {
 };
 
 )FIDL",
-                                   R"JSON({
+                                   R"JSON(
+{
   "version": "0.0.1",
   "name": "example",
   "library_dependencies": [],
@@ -1808,7 +2539,15 @@ struct ByteAndBytes {
           "max_out_of_line": 0,
           "alignment": 1,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 7
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 7
+          }
         },
         {
           "type": {
@@ -1829,7 +2568,15 @@ struct ByteAndBytes {
           "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 8,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 8,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -1851,7 +2598,15 @@ struct ByteAndBytes {
           "max_out_of_line": 1024,
           "alignment": 8,
           "offset": 24,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 24,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 24,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -1873,14 +2628,40 @@ struct ByteAndBytes {
           "max_out_of_line": 1024,
           "alignment": 8,
           "offset": 40,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 40,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 40,
+            "padding": 0
+          }
         }
       ],
       "size": 56,
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
-      "has_padding": true
+      "has_padding": true,
+      "type_shape_old": {
+        "inline_size": 56,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 56,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -1893,7 +2674,8 @@ struct ByteAndBytes {
   "declarations": {
     "example/ByteAndBytes": "struct"
   }
-})JSON"));
+}
+)JSON"));
   }
 
   END_TEST;
@@ -2578,7 +3360,15 @@ struct Struct {
           "max_out_of_line": 0,
           "alignment": 8,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -2603,7 +3393,15 @@ struct Struct {
           "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 8,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 8,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -2628,7 +3426,15 @@ struct Struct {
           "max_out_of_line": 0,
           "alignment": 1,
           "offset": 24,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 24,
+            "padding": 3
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 24,
+            "padding": 3
+          }
         },
         {
           "type": {
@@ -2650,7 +3456,15 @@ struct Struct {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 28,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 28,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 28,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -2672,14 +3486,40 @@ struct Struct {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 32,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 32,
+            "padding": 4
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 32,
+            "padding": 4
+          }
         }
       ],
       "size": 40,
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0,
-      "has_padding": true
+      "has_padding": true,
+      "type_shape_old": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -2824,14 +3664,40 @@ struct Baz {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         }
       ],
       "size": 4,
       "max_out_of_line": 0,
       "alignment": 4,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],
@@ -2945,6 +3811,24 @@ protocol Top {
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -2963,13 +3847,39 @@ protocol Top {
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 4
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 4
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": true
         }
       ]
@@ -3082,6 +3992,24 @@ protocol Top {
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "has_response": true,
           "maybe_response": [
             {
@@ -3100,13 +4028,39 @@ protocol Top {
               "max_out_of_line": 0,
               "alignment": 4,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 4
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 4
+              }
             }
           ],
           "maybe_response_size": 24,
           "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "is_composed": true
         }
       ]
@@ -3204,7 +4158,8 @@ xunion ExampleXUnion {
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
     EXPECT_TRUE(checkJSONGenerator(std::move(library),
-                                   R"JSON({
+                                   R"JSON(
+{
   "version": "0.0.1",
   "name": "example",
   "maybe_attributes": [
@@ -3389,13 +4344,39 @@ xunion ExampleXUnion {
               "max_out_of_line": 0,
               "alignment": 1,
               "offset": 16,
-              "max_handles": 0
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 7
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 7
+              }
             }
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
           "has_response": false,
           "is_composed": false
         }
@@ -3440,14 +4421,40 @@ xunion ExampleXUnion {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
         }
       ],
       "size": 4,
       "max_out_of_line": 0,
       "alignment": 4,
       "max_handles": 0,
-      "has_padding": false
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [
@@ -3494,7 +4501,25 @@ xunion ExampleXUnion {
       "max_out_of_line": 24,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
     }
   ],
   "union_declarations": [
@@ -3539,7 +4564,25 @@ xunion ExampleXUnion {
       "size": 8,
       "max_out_of_line": 0,
       "alignment": 4,
-      "max_handles": 0
+      "max_handles": 0,
+      "type_shape_old": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "xunion_declarations": [
@@ -3585,7 +4628,25 @@ xunion ExampleXUnion {
       "max_out_of_line": 8,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
     }
   ],
   "type_alias_declarations": [
@@ -3631,7 +4692,8 @@ xunion ExampleXUnion {
     "example/ExampleXUnion": "xunion",
     "example/TypeAlias": "type_alias"
   }
-})JSON"));
+}
+)JSON"));
   }
 
   END_TEST;
@@ -3727,7 +4789,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 0,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 4
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 4
+          }
         },
         {
           "type": {
@@ -3756,7 +4826,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 8,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 8,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -3785,7 +4863,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 24,
           "alignment": 8,
           "offset": 24,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 24,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 24,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -3811,7 +4897,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 40,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 40,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 40,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -3839,7 +4933,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 56,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 56,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 56,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -3866,7 +4968,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 72,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 72,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 72,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -3896,7 +5006,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 8,
           "alignment": 8,
           "offset": 88,
-          "max_handles": 0
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 88,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 88,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -3919,7 +5037,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 104,
-          "max_handles": 1
+          "max_handles": 1,
+          "field_shape_old": {
+            "offset": 104,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 104,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -3942,7 +5068,15 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 108,
-          "max_handles": 1
+          "max_handles": 1,
+          "field_shape_old": {
+            "offset": 108,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 108,
+            "padding": 0
+          }
         },
         {
           "type": {
@@ -3965,14 +5099,40 @@ struct ExampleOfUseOfAliases {
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 112,
-          "max_handles": 1
+          "max_handles": 1,
+          "field_shape_old": {
+            "offset": 112,
+            "padding": 4
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 112,
+            "padding": 4
+          }
         }
       ],
       "size": 120,
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 3,
-      "has_padding": true
+      "has_padding": true,
+      "type_shape_old": {
+        "inline_size": 120,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 3,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 120,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 3,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
     }
   ],
   "table_declarations": [],

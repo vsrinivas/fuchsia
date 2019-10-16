@@ -496,7 +496,7 @@ struct Decl {
 struct Object {
   virtual ~Object() = default;
 
-  TypeShape typeshape() const { return TypeShape(*this); }
+  TypeShape typeshape(fidl::WireFormat wire_format) const { return TypeShape(*this, wire_format); }
 
   // |Visitor|, and the corresponding |Accept()| method below, enable the visitor pattern to be used
   // for derived classes of Object. See <https://en.wikipedia.org/wiki/Visitor_pattern> for
@@ -879,7 +879,7 @@ struct StructMember : public Object {
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
-  FieldShape fieldshape() const;
+  FieldShape fieldshape(WireFormat wire_format) const;
 
   const Struct* parent = nullptr;
 };
@@ -924,7 +924,7 @@ struct TableMemberUsed : public Object {
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
-  FieldShape fieldshape() const;
+  FieldShape fieldshape(WireFormat wire_format) const;
 };
 
 // See the comment on the StructMember class for why this is a top-level class.
@@ -970,17 +970,20 @@ struct Union;
 // TODO(fxb/37535): Move this to a nested class inside Union.
 struct UnionMember : public Object {
   UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal,
-  std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+              std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
               std::unique_ptr<raw::AttributeList> attributes)
-      : xunion_ordinal(std::move(xunion_ordinal)), type_ctor(std::move(type_ctor)), name(std::move(name)), attributes(std::move(attributes)) {}
-    std::unique_ptr<raw::Ordinal32> xunion_ordinal;
+      : xunion_ordinal(std::move(xunion_ordinal)),
+        type_ctor(std::move(type_ctor)),
+        name(std::move(name)),
+        attributes(std::move(attributes)) {}
+  std::unique_ptr<raw::Ordinal32> xunion_ordinal;
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceLocation name;
   std::unique_ptr<raw::AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
-  FieldShape fieldshape() const;
+  FieldShape fieldshape(WireFormat wire_format) const;
 
   const Union* parent = nullptr;
 };
@@ -1002,7 +1005,8 @@ struct Union final : public TypeDecl {
   std::any AcceptAny(VisitorAny* visitor) const override;
 
   // Returns the offset from the start of union where the union data resides. (Either 4, or 8.)
-  uint32_t DataOffset() const;
+  // This may only be queried for the old wire format (`WireFormat::kOld`).
+  uint32_t DataOffset(WireFormat wire_format) const;
 };
 
 struct XUnion;
@@ -1023,7 +1027,7 @@ struct XUnionMember : public Object {
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
-  FieldShape fieldshape() const;
+  FieldShape fieldshape(WireFormat wire_format) const;
 
   const XUnion* parent = nullptr;
 };

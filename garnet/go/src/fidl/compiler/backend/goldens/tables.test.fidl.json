@@ -21,7 +21,25 @@
       "max_out_of_line": 0,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      }
     },
     {
       "name": "test.name/SimpleTable",
@@ -99,7 +117,25 @@
       "max_out_of_line": 48,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      }
     },
     {
       "name": "test.name/OlderSimpleTable",
@@ -141,7 +177,25 @@
       "max_out_of_line": 24,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      }
     },
     {
       "name": "test.name/NewerSimpleTable",
@@ -246,7 +300,25 @@
       "max_out_of_line": 72,
       "alignment": 8,
       "max_handles": 0,
-      "strict": false
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 72,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 72,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      }
     }
   ],
   "union_declarations": [],

@@ -20,9 +20,15 @@ struct XUnionMember;
 
 }  // namespace flat
 
+enum class WireFormat {
+  kOld,     // The v0 wire format, where "union" is a static union on-the-wire.
+  kV1NoEe,  // The v1-no-ee wire format, where "union" is an extensible union on-the-wire,
+            // but without efficient envelope support.
+};
+
 struct TypeShape {
-  TypeShape() = default;
-  explicit TypeShape(const flat::Object& object);
+  explicit TypeShape(const flat::Object& object, WireFormat wire_format);
+  explicit TypeShape(const flat::Object* object, WireFormat wire_format);
 
   // The inline size of this type, including padding for the type's minimum alignment. For example,
   // "struct S { uint32 a; uint16 b; };" will have an inline_size of 8, not 6: the "packed" size of
@@ -65,24 +71,22 @@ struct TypeShape {
 // TODO(fxb/36337): We can update |FieldShape| to be a simple offset+padding struct, and remove the
 // getter/setter methods since they're purely for backward-compatibility with existing code.
 struct FieldShape {
-  FieldShape() = default;
-  explicit FieldShape(const flat::StructMember&);
-  explicit FieldShape(const flat::TableMemberUsed&);
-  explicit FieldShape(const flat::UnionMember&);
-  explicit FieldShape(const flat::XUnionMember&);
+  explicit FieldShape(const flat::StructMember&, const WireFormat wire_format);
+  explicit FieldShape(const flat::TableMemberUsed&, const WireFormat wire_format);
+  explicit FieldShape(const flat::UnionMember&, const WireFormat wire_format);
+  explicit FieldShape(const flat::XUnionMember&, const WireFormat wire_format);
 
-  uint32_t Offset() const { return offset_; }
+  uint32_t Offset() const { return offset; }
   // Padding after this field until the next field or the end of the container.
   // See
   // https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/wire-format/README.md#size-and-alignment
-  uint32_t Padding() const { return padding_; }
+  uint32_t Padding() const { return padding; }
 
-  void SetOffset(uint32_t offset) { offset_ = offset; }
-  void SetPadding(uint32_t padding) { padding_ = padding; }
+  void SetOffset(uint32_t updated_offset) { offset = updated_offset; }
+  void SetPadding(uint32_t updated_padding) { padding = updated_padding; }
 
- private:
-  uint32_t offset_ = 0;
-  uint32_t padding_ = 0;
+  uint32_t offset = 0;
+  uint32_t padding = 0;
 };
 
 constexpr uint32_t kMessageAlign = 8u;

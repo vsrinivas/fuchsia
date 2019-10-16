@@ -345,11 +345,13 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& va
 
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
   GenerateObjectMember(prefix, value.members);
-  GenerateObjectMember(prefix + "_size", value.typeshape().InlineSize());
-  GenerateObjectMember(prefix + "_alignment", value.typeshape().Alignment());
-  GenerateObjectMember(prefix + "_has_padding", value.typeshape().HasPadding());
+  auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+  GenerateObjectMember(prefix + "_size", deprecated_type_shape.InlineSize());
+  GenerateObjectMember(prefix + "_alignment", deprecated_type_shape.Alignment());
+  GenerateObjectMember(prefix + "_has_padding", deprecated_type_shape.HasPadding());
   GenerateObjectMember("experimental_" + prefix + "_has_flexible_envelope",
-                       value.typeshape().HasFlexibleEnvelope());
+                       deprecated_type_shape.HasFlexibleEnvelope());
+  GenerateTypeShapes(prefix, value);
 }
 
 void JSONGenerator::Generate(const flat::Service& value) {
@@ -380,11 +382,13 @@ void JSONGenerator::Generate(const flat::Struct& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape().InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape().Alignment());
-    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
-    GenerateObjectMember("has_padding", value.typeshape().HasPadding());
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
+    GenerateObjectMember("has_padding", deprecated_type_shape.HasPadding());
+    GenerateTypeShapes(value);
   });
 }
 
@@ -397,11 +401,14 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_default_value)
       GenerateObjectMember("maybe_default_value", value.maybe_default_value);
-    GenerateObjectMember("size", value.typeshape().InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape().Alignment());
-    GenerateObjectMember("offset", value.fieldshape().Offset());
-    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    auto deprecated_field_shape = value.fieldshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+    GenerateObjectMember("offset", deprecated_field_shape.Offset());
+    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
+    GenerateFieldShapes(value);
   });
 }
 
@@ -412,11 +419,13 @@ void JSONGenerator::Generate(const flat::Table& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape().InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape().Alignment());
-    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    GenerateTypeShapes(value);
   });
 }
 
@@ -432,15 +441,35 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
       // TODO(FIDL-609): Support defaults on tables.
-      GenerateObjectMember("size", value.maybe_used->typeshape().InlineSize());
-      GenerateObjectMember("max_out_of_line", value.maybe_used->typeshape().MaxOutOfLine());
-      GenerateObjectMember("alignment", value.maybe_used->typeshape().Alignment());
-      GenerateObjectMember("max_handles", value.maybe_used->typeshape().MaxHandles());
+      auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+      GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+      GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+      GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+      GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     } else {
       assert(value.maybe_location);
       GenerateObjectMember("reserved", true);
       GenerateObjectMember("location", NameLocation(*value.maybe_location));
     }
+  });
+}
+
+void JSONGenerator::Generate(const TypeShape& type_shape) {
+  GenerateObject([&]() {
+    GenerateObjectMember("inline_size", type_shape.inline_size, Position::kFirst);
+    GenerateObjectMember("alignment", type_shape.alignment);
+    GenerateObjectMember("depth", type_shape.depth);
+    GenerateObjectMember("max_handles", type_shape.max_handles);
+    GenerateObjectMember("max_out_of_line", type_shape.max_out_of_line);
+    GenerateObjectMember("has_padding", type_shape.has_padding);
+    GenerateObjectMember("has_flexible_envelope", type_shape.has_flexible_envelope);
+  });
+}
+
+void JSONGenerator::Generate(const FieldShape& field_shape) {
+  GenerateObject([&]() {
+    GenerateObjectMember("offset", field_shape.offset, Position::kFirst);
+    GenerateObjectMember("padding", field_shape.padding);
   });
 }
 
@@ -451,10 +480,12 @@ void JSONGenerator::Generate(const flat::Union& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape().InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape().Alignment());
-    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
+    GenerateTypeShapes(value);
   });
 }
 
@@ -466,10 +497,12 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("size", value.typeshape().InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape().Alignment());
-    GenerateObjectMember("offset", value.fieldshape().Offset());
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    auto deprecated_field_shape = value.fieldshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+    GenerateObjectMember("offset", deprecated_field_shape.Offset());
   });
 }
 
@@ -480,11 +513,13 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("size", value.typeshape().InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape().Alignment());
-    GenerateObjectMember("max_handles", value.typeshape().MaxHandles());
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    GenerateTypeShapes(value);
   });
 }
 
@@ -496,10 +531,12 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("size", value.typeshape().InlineSize());
-    GenerateObjectMember("max_out_of_line", value.typeshape().MaxOutOfLine());
-    GenerateObjectMember("alignment", value.typeshape().Alignment());
-    GenerateObjectMember("offset", value.fieldshape().Offset());
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    auto deprecated_field_shape = value.fieldshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+    GenerateObjectMember("offset", deprecated_field_shape.Offset());
   });
 }
 
@@ -573,6 +610,24 @@ void JSONGenerator::Generate(const flat::Library* library) {
     GenerateObjectMember("name", library_name, Position::kFirst);
     GenerateDeclarationsMember(library);
   });
+}
+
+void JSONGenerator::GenerateTypeShapes(const flat::Object& object) {
+  GenerateTypeShapes("", object);
+}
+
+void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Object& object) {
+  if (prefix.size() > 0) {
+    prefix.push_back('_');
+  }
+
+  GenerateObjectMember(prefix + "type_shape_old", TypeShape(object, WireFormat::kOld));
+  GenerateObjectMember(prefix + "type_shape_v1_no_ee", TypeShape(object, WireFormat::kV1NoEe));
+}
+
+void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member) {
+  GenerateObjectMember("field_shape_old", FieldShape(struct_member, WireFormat::kOld));
+  GenerateObjectMember("field_shape_v1_no_ee", FieldShape(struct_member, WireFormat::kV1NoEe));
 }
 
 void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name,

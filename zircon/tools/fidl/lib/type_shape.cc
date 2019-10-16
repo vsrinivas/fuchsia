@@ -59,33 +59,51 @@ namespace {
 
 namespace flat = fidl::flat;
 namespace types = fidl::types;
+using WireFormat = fidl::WireFormat;
 
 constexpr uint32_t kSizeOfTransactionHeader = 16;
 constexpr uint32_t kHandleSize = 4;
 
-DataSize UnalignedSize(const flat::Object& object);
-DataSize UnalignedSize(const flat::Object* object);
-DataSize Alignment(const flat::Object& object);
-DataSize Alignment(const flat::Object* object);
-DataSize Depth(const flat::Object& object);
-DataSize Depth(const flat::Object* object);
+DataSize UnalignedSize(const flat::Object& object, const WireFormat wire_format);
+DataSize UnalignedSize(const flat::Object* object, const WireFormat wire_format);
+DataSize Alignment(const flat::Object& object, const WireFormat wire_format);
+DataSize Alignment(const flat::Object* object, const WireFormat wire_format);
+DataSize Depth(const flat::Object& object, const WireFormat wire_format);
+DataSize Depth(const flat::Object* object, const WireFormat wire_format);
 DataSize MaxHandles(const flat::Object& object);
 DataSize MaxHandles(const flat::Object* object);
-DataSize MaxOutOfLine(const flat::Object& object);
-DataSize MaxOutOfLine(const flat::Object* object);
-bool HasPadding(const flat::Object& object);
-bool HasPadding(const flat::Object* object);
+DataSize MaxOutOfLine(const flat::Object& object, const WireFormat wire_format);
+DataSize MaxOutOfLine(const flat::Object* object, const WireFormat wire_format);
+bool HasPadding(const flat::Object& object, const WireFormat wire_format);
+bool HasPadding(const flat::Object* object, const WireFormat wire_format);
 bool HasFlexibleEnvelope(const flat::Object& object);
 bool HasFlexibleEnvelope(const flat::Object* object);
 
-DataSize AlignedSize(const flat::Object& object) {
-  return AlignTo(UnalignedSize(object), Alignment(object));
+DataSize AlignedSize(const flat::Object& object, const WireFormat wire_format) {
+  return AlignTo(UnalignedSize(object, wire_format), Alignment(object, wire_format));
 }
 
-DataSize AlignedSize(const flat::Object* object) { return AlignedSize(*object); }
+DataSize AlignedSize(const flat::Object* object, const WireFormat wire_format) {
+  return AlignedSize(*object, wire_format);
+}
 
-class UnalignedSizeVisitor final : public flat::Object::Visitor<DataSize> {
+template <typename T>
+class TypeShapeVisitor : public flat::Object::Visitor<T> {
  public:
+  TypeShapeVisitor() = delete;
+  explicit TypeShapeVisitor(const WireFormat wire_format) : wire_format_(wire_format) {}
+
+ protected:
+  WireFormat wire_format() const { return wire_format_; }
+
+ private:
+  const WireFormat wire_format_;
+};
+
+class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
+ public:
+  using TypeShapeVisitor<DataSize>::TypeShapeVisitor;
+
   std::any Visit(const flat::ArrayType& object) override {
     return UnalignedSize(object.element_type) * object.element_count->value;
   }
@@ -167,7 +185,8 @@ class UnalignedSizeVisitor final : public flat::Object::Visitor<DataSize> {
     }
 
     for (const auto& member : object.members) {
-      const DataSize member_size = UnalignedSize(member) + member.fieldshape().Padding();
+      const DataSize member_size =
+          UnalignedSize(member) + member.fieldshape(wire_format()).Padding();
       size += member_size;
     }
 
@@ -189,27 +208,35 @@ class UnalignedSizeVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Union& object) override {
-    DataSize max_member_size = 0;
+    switch (wire_format()) {
+      case WireFormat::kOld: {
+        DataSize max_member_size = 0;
 
-    for (const auto& member : object.members) {
-      max_member_size = std::max(max_member_size, UnalignedSize(member));
+        for (const auto& member : object.members) {
+          max_member_size = std::max(max_member_size, UnalignedSize(member));
+        }
+
+        // * The size of the union's tag is always 4 bytes.
+        // * However, the _aligned_ size of the union's tag (which is the unaligned size + padding)
+        // will
+        //   be:
+        //   * 4 iff all union members have alignment <= 4, or
+        //   * 8 iff any of the union members have alignment 8.
+        // * In other words, the size of the union's tag is the same as the alignment for the union.
+        // * It would be more readable to call object.DataOffset() here, but we cannot do that,
+        // since
+        //   object.Offset() calls this code--Alignment()--internally.
+        const DataSize tag_size = Alignment(object, wire_format());
+
+        // TODO(fxb/38129): The code in the line below returns the _aligned_ size of the union, not
+        // the _unaligned_ size. To fix this, we need to remove the call to AlignTo(), so this
+        // should just be "return tag_size + max_member_size". The current code is like this to
+        // preserve backward-compatibility with the previous typeshape implementation.
+        return tag_size + AlignTo(max_member_size, tag_size);
+      }
+      case WireFormat::kV1NoEe:
+        return DataSize(24);
     }
-
-    // * The size of the union's tag is always 4 bytes.
-    // * However, the _aligned_ size of the union's tag (which is the unaligned size + padding) will
-    //   be:
-    //   * 4 iff all union members have alignment <= 4, or
-    //   * 8 iff any of the union members have alignment 8.
-    // * In other words, the size of the union's tag is the same as the alignment for the union.
-    // * It would be more readable to call object.DataOffset() here, but we cannot do that, since
-    //   object.Offset() calls this code--Alignment()--internally.
-    const DataSize tag_size = Alignment(object);
-
-    // TODO(fxb/38129): The code in the line below returns the _aligned_ size of the union, not the
-    // _unaligned_ size. To fix this, we need to remove the call to AlignTo(), so this should just
-    // be "return tag_size + max_member_size". The current code is like this to preserve
-    // backward-compatibility with the previous typeshape implementation.
-    return tag_size + AlignTo(max_member_size, tag_size);
   }
 
   std::any Visit(const flat::Union::Member& object) override {
@@ -223,10 +250,17 @@ class UnalignedSizeVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(kHandleSize); }
+
+ private:
+  DataSize UnalignedSize(const flat::Object& object) { return object.Accept(this); }
+
+  DataSize UnalignedSize(const flat::Object* object) { return UnalignedSize(*object); }
 };
 
-class AlignmentVisitor final : public flat::Object::Visitor<DataSize> {
+class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
  public:
+  using TypeShapeVisitor<DataSize>::TypeShapeVisitor;
+
   std::any Visit(const flat::ArrayType& object) override { return Alignment(object.element_type); }
 
   std::any Visit(const flat::VectorType& object) override { return DataSize(8); }
@@ -235,7 +269,9 @@ class AlignmentVisitor final : public flat::Object::Visitor<DataSize> {
 
   std::any Visit(const flat::HandleType& object) override { return DataSize(kHandleSize); }
 
-  std::any Visit(const flat::PrimitiveType& object) override { return UnalignedSize(object); }
+  std::any Visit(const flat::PrimitiveType& object) override {
+    return UnalignedSize(object, wire_format());
+  }
 
   std::any Visit(const flat::IdentifierType& object) override {
     switch (object.nullability) {
@@ -314,16 +350,22 @@ class AlignmentVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Union& object) override {
-    // Union member alignment is either 4 or 8, depending on whether any union members have
-    // alignment 8.
+    switch (wire_format()) {
+      case WireFormat::kOld: {
+        // Union member alignment is either 4 or 8, depending on whether any union members have
+        // alignment 8.
 
-    for (const auto& member : object.members) {
-      if (Alignment(member) == 8) {
-        return DataSize(8);
+        for (const auto& member : object.members) {
+          if (Alignment(member) == 8) {
+            return DataSize(8);
+          }
+        }
+
+        return DataSize(4);
       }
+      case WireFormat::kV1NoEe:
+        return DataSize(8);
     }
-
-    return DataSize(4);
   }
 
   std::any Visit(const flat::Union::Member& object) override {
@@ -337,10 +379,17 @@ class AlignmentVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(kHandleSize); }
+
+ private:
+  DataSize Alignment(const flat::Object& object) { return object.Accept(this); }
+
+  DataSize Alignment(const flat::Object* object) { return Alignment(*object); }
 };
 
-class DepthVisitor final : public flat::Object::Visitor<DataSize> {
+class DepthVisitor final : public TypeShapeVisitor<DataSize> {
  public:
+  using TypeShapeVisitor<DataSize>::TypeShapeVisitor;
+
   std::any Visit(const flat::ArrayType& object) override { return Depth(object.element_type); }
 
   std::any Visit(const flat::VectorType& object) override {
@@ -448,7 +497,12 @@ class DepthVisitor final : public flat::Object::Visitor<DataSize> {
       max_depth = std::max(max_depth, Depth(member));
     }
 
-    return max_depth;
+    switch (wire_format()) {
+      case WireFormat::kOld:
+        return max_depth;
+      case WireFormat::kV1NoEe:
+        return DataSize(1) + max_depth;
+    }
   }
 
   std::any Visit(const flat::Union::Member& object) override {
@@ -470,6 +524,11 @@ class DepthVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(0); }
+
+ private:
+  DataSize Depth(const flat::Object& object) { return object.Accept(this); }
+
+  DataSize Depth(const flat::Object* object) { return Depth(*object); }
 };
 
 class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
@@ -598,14 +657,17 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   std::any Visit(const flat::Protocol& object) override { return DataSize(1); }
 };
 
-class MaxOutOfLineVisitor final : public flat::Object::Visitor<DataSize> {
+class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
  public:
+  using TypeShapeVisitor<DataSize>::TypeShapeVisitor;
+
   std::any Visit(const flat::ArrayType& object) override {
     return MaxOutOfLine(object.element_type) * DataSize(object.element_count->value);
   }
 
   std::any Visit(const flat::VectorType& object) override {
-    return ObjectAlign(UnalignedSize(object.element_type) * object.element_count->value) +
+    return ObjectAlign(UnalignedSize(object.element_type, wire_format()) *
+                       object.element_count->value) +
            ObjectAlign(MaxOutOfLine(object.element_type)) * object.element_count->value;
   }
 
@@ -631,7 +693,8 @@ class MaxOutOfLineVisitor final : public flat::Object::Visitor<DataSize> {
             return DataSize(0);
           case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kUnion:
-            return ObjectAlign(UnalignedSize(object.type_decl)) + MaxOutOfLine(object.type_decl);
+            return ObjectAlign(UnalignedSize(object.type_decl, wire_format())) +
+                   MaxOutOfLine(object.type_decl);
           case flat::Decl::Kind::kXUnion:
             return MaxOutOfLine(object.type_decl);
           case flat::Decl::Kind::kBits:
@@ -679,7 +742,7 @@ class MaxOutOfLineVisitor final : public flat::Object::Visitor<DataSize> {
     size_t envelope_array_size = 0;
 
     for (const auto& member : object.members) {
-      max_out_of_line += ObjectAlign(UnalignedSize(member)) + MaxOutOfLine(member);
+      max_out_of_line += ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member);
 
       // TODO(fxb/35773): The following if() check excludes reserved table members from the
       // out-of-line calculation, which is incorrect. The correct thing to do is to _include_
@@ -706,7 +769,15 @@ class MaxOutOfLineVisitor final : public flat::Object::Visitor<DataSize> {
     DataSize max_out_of_line;
 
     for (const auto& member : object.members) {
-      max_out_of_line = std::max(max_out_of_line, MaxOutOfLine(member));
+      max_out_of_line = std::max(max_out_of_line, [&] {
+        switch (wire_format()) {
+          case WireFormat::kOld:
+            return MaxOutOfLine(member);
+          case WireFormat::kV1NoEe:
+            // Same as XUnions.
+            return ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member);
+        }
+      }());
     }
 
     return max_out_of_line;
@@ -721,7 +792,8 @@ class MaxOutOfLineVisitor final : public flat::Object::Visitor<DataSize> {
 
     for (const auto& member : object.members) {
       max_out_of_line =
-          std::max(max_out_of_line, ObjectAlign(UnalignedSize(member)) + MaxOutOfLine(member));
+          std::max(max_out_of_line,
+                   ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member));
     }
 
     return max_out_of_line;
@@ -732,10 +804,17 @@ class MaxOutOfLineVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(0); }
+
+ private:
+  DataSize MaxOutOfLine(const flat::Object& object) { return object.Accept(this); }
+
+  DataSize MaxOutOfLine(const flat::Object* object) { return MaxOutOfLine(*object); }
 };
 
-class HasPaddingVisitor final : public flat::Object::Visitor<bool> {
+class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
  public:
+  using TypeShapeVisitor<bool>::TypeShapeVisitor;
+
   std::any Visit(const flat::ArrayType& object) override { return HasPadding(object.element_type); }
 
   std::any Visit(const flat::VectorType& object) override {
@@ -744,7 +823,7 @@ class HasPaddingVisitor final : public flat::Object::Visitor<bool> {
     auto element_has_trailing_padding = [&] {
       // A vector will always have padding out-of-line for its contents unless its element_type's
       // natural size is a multiple of 8.
-      if (Padding(UnalignedSize(object.element_type), 8) == 0) {
+      if (Padding(UnalignedSize(object.element_type, wire_format()), 8) == 0) {
         return false;
       }
 
@@ -776,7 +855,8 @@ class HasPaddingVisitor final : public flat::Object::Visitor<bool> {
             return false;
           case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kUnion:
-            return Padding(UnalignedSize(object.type_decl), 8) > 0 || HasPadding(object.type_decl);
+            return Padding(UnalignedSize(object.type_decl, wire_format()), 8) > 0 ||
+                   HasPadding(object.type_decl);
           case flat::Decl::Kind::kXUnion:
             return HasPadding(object.type_decl);
           case flat::Decl::Kind::kBits:
@@ -815,7 +895,7 @@ class HasPaddingVisitor final : public flat::Object::Visitor<bool> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return object.fieldshape().Padding() > 0 || HasPadding(object.type_ctor->type);
+    return object.fieldshape(wire_format()).Padding() > 0 || HasPadding(object.type_ctor->type);
   }
 
   std::any Visit(const flat::Table& object) override {
@@ -833,29 +913,38 @@ class HasPaddingVisitor final : public flat::Object::Visitor<bool> {
   }
 
   std::any Visit(const flat::Table::Member::Used& object) override {
-    return Padding(UnalignedSize(object.type_ctor->type), 8) > 0 ||
-           HasPadding(object.type_ctor->type) || object.fieldshape().Padding() > 0;
+    return Padding(UnalignedSize(object.type_ctor->type, wire_format()), 8) > 0 ||
+           HasPadding(object.type_ctor->type) || object.fieldshape(wire_format()).Padding() > 0;
   }
 
   std::any Visit(const flat::Union& object) override {
-    if (Alignment(object) == 8) {
-      // Unions have a 32-bit tag, so if a union's alignment is 8, it is necessarily padded.
-      return true;
-    }
+    switch (wire_format()) {
+      case WireFormat::kOld: {
+        if (Alignment(object, wire_format()) == 8) {
+          // Unions have a 32-bit tag, so if a union's alignment is 8, it is necessarily padded.
+          return true;
+        }
 
-    for (const auto& member : object.members) {
-      if (HasPadding(member)) {
+        for (const auto& member : object.members) {
+          if (HasPadding(member)) {
+            return true;
+          }
+        }
+
+        return false;
+      }
+      case WireFormat::kV1NoEe: {
+        // TODO(fxb/36332): XUnions currently return true for has_padding in all cases, which should
+        // be fixed.
         return true;
       }
     }
-
-    return false;
   }
 
   std::any Visit(const flat::Union::Member& object) override {
     // TODO(fxb/36331): This code only accounts for inline padding for the union member. We also
     // need to account for out-of-line padding.
-    return object.fieldshape().Padding() > 0;
+    return object.fieldshape(wire_format()).Padding() > 0;
   }
 
   std::any Visit(const flat::XUnion& object) override {
@@ -867,10 +956,15 @@ class HasPaddingVisitor final : public flat::Object::Visitor<bool> {
   std::any Visit(const flat::XUnion::Member& object) override {
     // TODO(fxb/36332): This code only accounts for inline padding for the xunion member. We should
     // also account for out-of-line padding.
-    return object.fieldshape().Padding() > 0;
+    return object.fieldshape(wire_format()).Padding() > 0;
   }
 
   std::any Visit(const flat::Protocol& object) override { return false; }
+
+ private:
+  bool HasPadding(const flat::Object& object) { return object.Accept(this); }
+
+  bool HasPadding(const flat::Object* object) { return HasPadding(*object); }
 };
 
 class HasFlexibleEnvelopeVisitor final : public flat::Object::Visitor<bool> {
@@ -983,26 +1077,32 @@ class HasFlexibleEnvelopeVisitor final : public flat::Object::Visitor<bool> {
   std::any Visit(const flat::Protocol& object) override { return false; }
 };
 
-DataSize UnalignedSize(const flat::Object& object) {
-  UnalignedSizeVisitor v;
+DataSize UnalignedSize(const flat::Object& object, const WireFormat wire_format) {
+  UnalignedSizeVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-DataSize UnalignedSize(const flat::Object* object) { return UnalignedSize(*object); }
+DataSize UnalignedSize(const flat::Object* object, const WireFormat wire_format) {
+  return UnalignedSize(*object, wire_format);
+}
 
-DataSize Alignment(const flat::Object& object) {
-  AlignmentVisitor v;
+DataSize Alignment(const flat::Object& object, const WireFormat wire_format) {
+  AlignmentVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-DataSize Alignment(const flat::Object* object) { return Alignment(*object); }
+DataSize Alignment(const flat::Object* object, const WireFormat wire_format) {
+  return Alignment(*object, wire_format);
+}
 
-DataSize Depth(const flat::Object& object) {
-  DepthVisitor v;
+DataSize Depth(const flat::Object& object, const WireFormat wire_format) {
+  DepthVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-DataSize Depth(const flat::Object* object) { return Depth(*object); }
+DataSize Depth(const flat::Object* object, const WireFormat wire_format) {
+  return Depth(*object, wire_format);
+}
 
 DataSize MaxHandles(const flat::Object& object) {
   MaxHandlesVisitor v;
@@ -1011,19 +1111,23 @@ DataSize MaxHandles(const flat::Object& object) {
 
 DataSize MaxHandles(const flat::Object* object) { return MaxHandles(*object); }
 
-DataSize MaxOutOfLine(const flat::Object& object) {
-  MaxOutOfLineVisitor v;
+DataSize MaxOutOfLine(const flat::Object& object, const WireFormat wire_format) {
+  MaxOutOfLineVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-DataSize MaxOutOfLine(const flat::Object* object) { return MaxOutOfLine(*object); }
+DataSize MaxOutOfLine(const flat::Object* object, const WireFormat wire_format) {
+  return MaxOutOfLine(*object, wire_format);
+}
 
-bool HasPadding(const flat::Object& object) {
-  HasPaddingVisitor v;
+bool HasPadding(const flat::Object& object, const WireFormat wire_format) {
+  HasPaddingVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-bool HasPadding(const flat::Object* object) { return HasPadding(*object); }
+bool HasPadding(const flat::Object* object, const WireFormat wire_format) {
+  return HasPadding(*object, wire_format);
+}
 
 bool HasFlexibleEnvelope(const flat::Object& object) {
   HasFlexibleEnvelopeVisitor v;
@@ -1036,16 +1140,19 @@ bool HasFlexibleEnvelope(const flat::Object* object) { return HasFlexibleEnvelop
 
 namespace fidl {
 
-TypeShape::TypeShape(const flat::Object& object)
-    : inline_size(::AlignedSize(object)),
-      alignment(::Alignment(object)),
-      depth(::Depth(object)),
+TypeShape::TypeShape(const flat::Object& object, WireFormat wire_format)
+    : inline_size(::AlignedSize(object, wire_format)),
+      alignment(::Alignment(object, wire_format)),
+      depth(::Depth(object, wire_format)),
       max_handles(::MaxHandles(object)),
-      max_out_of_line(::MaxOutOfLine(object)),
-      has_padding(::HasPadding(object)),
+      max_out_of_line(::MaxOutOfLine(object, wire_format)),
+      has_padding(::HasPadding(object, wire_format)),
       has_flexible_envelope(::HasFlexibleEnvelope(object)) {}
 
-FieldShape::FieldShape(const flat::StructMember& member) {
+TypeShape::TypeShape(const flat::Object* object, WireFormat wire_format)
+    : TypeShape(*object, wire_format) {}
+
+FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_format) {
   assert(member.parent);
   const flat::Struct& parent = *member.parent;
 
@@ -1055,7 +1162,7 @@ FieldShape::FieldShape(const flat::StructMember& member) {
   const std::vector<flat::StructMember>& members = parent.members;
 
   if (parent.is_request_or_response) {
-    offset_ += kSizeOfTransactionHeader;
+    offset += kSizeOfTransactionHeader;
   }
 
   for (size_t i = 0; i < members.size(); i++) {
@@ -1064,29 +1171,48 @@ FieldShape::FieldShape(const flat::StructMember& member) {
     DataSize alignment;
     if (i + 1 < members.size()) {
       const auto& next = members.at(i + 1);
-      alignment = Alignment(next);
+      alignment = Alignment(next, wire_format);
     } else {
-      alignment = Alignment(parent);
+      alignment = Alignment(parent, wire_format);
     }
 
-    const uint32_t size = UnalignedSize(*it);
-    padding_ = ::Padding(offset_ + size, alignment);
+    uint32_t size = UnalignedSize(*it, wire_format);
+
+    padding = ::Padding(offset + size, alignment);
 
     if (it == &member)
       break;
 
-    offset_ += size + padding_;
+    offset += size + padding;
   }
 }
 
-FieldShape::FieldShape(const flat::TableMemberUsed& member)
-    : padding_(::Padding(UnalignedSize(member), 8)) {}
+FieldShape::FieldShape(const flat::TableMemberUsed& member, const WireFormat wire_format)
+    : padding(::Padding(UnalignedSize(member, wire_format), 8)) {}
 
-FieldShape::FieldShape(const flat::UnionMember& member)
-    : offset_(Alignment(member.parent)),
-      padding_(AlignedSize(member.parent) - offset_ - UnalignedSize(member)) {}
+FieldShape::FieldShape(const flat::UnionMember& member, const WireFormat wire_format)
+    : offset([&] {
+        switch (wire_format) {
+          case WireFormat::kOld:
+            return Alignment(member.parent, wire_format).RawValue();
+          case WireFormat::kV1NoEe:
+            return 0u;
+        }
+      }()),
+      padding([&] {
+        switch (wire_format) {
+          case WireFormat::kOld:
+            return AlignedSize(member.parent, wire_format) - offset -
+                   UnalignedSize(member, wire_format).RawValue();
+          case WireFormat::kV1NoEe:
+            // Same as XUnions.
+            return ::Padding(UnalignedSize(member, wire_format),
+                             Alignment(member.parent, wire_format));
+        }
+      }()) {}
 
-FieldShape::FieldShape(const flat::XUnionMember& member)
-    : padding_(::Padding(UnalignedSize(member), Alignment(member.parent))) {}
+FieldShape::FieldShape(const flat::XUnionMember& member, const WireFormat wire_format)
+    : padding(
+          ::Padding(UnalignedSize(member, wire_format), Alignment(member.parent, wire_format))) {}
 
 }  // namespace fidl

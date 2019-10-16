@@ -183,15 +183,26 @@ bool IsSimple(const Type* type, const TypeShape& typeshape) {
   }
 }
 
-FieldShape Struct::Member::fieldshape() const { return FieldShape(*this); }
+FieldShape Struct::Member::fieldshape(WireFormat wire_format) const {
+  return FieldShape(*this, wire_format);
+}
 
-FieldShape Table::Member::Used::fieldshape() const { return FieldShape(*this); }
+FieldShape Table::Member::Used::fieldshape(WireFormat wire_format) const {
+  return FieldShape(*this, wire_format);
+}
 
-FieldShape Union::Member::fieldshape() const { return FieldShape(*this); }
+FieldShape Union::Member::fieldshape(WireFormat wire_format) const {
+  return FieldShape(*this, wire_format);
+}
 
-FieldShape XUnion::Member::fieldshape() const { return FieldShape(*this); }
+FieldShape XUnion::Member::fieldshape(WireFormat wire_format) const {
+  return FieldShape(*this, wire_format);
+}
 
-uint32_t Union::DataOffset() const { return TypeShape(*this).Alignment(); }
+uint32_t Union::DataOffset(WireFormat wire_format) const {
+  assert(wire_format == WireFormat::kOld && "no union data offset concept for other formats");
+  return TypeShape(*this, wire_format).Alignment();
+}
 
 bool Typespace::Create(const flat::Name& name, const Type* arg_type,
                        const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
@@ -659,7 +670,7 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute&
   auto struct_decl = static_cast<const Struct*>(decl);
   bool ok = true;
   for (const auto& member : struct_decl->members) {
-    if (!IsSimple(member.type_ctor.get()->type, member.typeshape())) {
+    if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld))) {
       std::string message("member '");
       message.append(member.name.data());
       message.append("' is not simple");
@@ -689,6 +700,7 @@ bool ParseBound(ErrorReporter* error_reporter, const SourceLocation& location,
   }
 }
 
+// TODO(fxb/38601): Move to new format once migraiton is done.
 bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
                         const Decl* decl) {
   uint32_t bound;
@@ -698,22 +710,26 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(decl);
-      max_bytes = struct_decl->typeshape().InlineSize() + struct_decl->typeshape().MaxOutOfLine();
+      max_bytes = struct_decl->typeshape(WireFormat::kOld).InlineSize() +
+                  struct_decl->typeshape(WireFormat::kOld).MaxOutOfLine();
       break;
     }
     case Decl::Kind::kTable: {
       auto table_decl = static_cast<const Table*>(decl);
-      max_bytes = table_decl->typeshape().InlineSize() + table_decl->typeshape().MaxOutOfLine();
+      max_bytes = table_decl->typeshape(WireFormat::kOld).InlineSize() +
+                  table_decl->typeshape(WireFormat::kOld).MaxOutOfLine();
       break;
     }
     case Decl::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(decl);
-      max_bytes = union_decl->typeshape().InlineSize() + union_decl->typeshape().MaxOutOfLine();
+      max_bytes = union_decl->typeshape(WireFormat::kOld).InlineSize() +
+                  union_decl->typeshape(WireFormat::kOld).MaxOutOfLine();
       break;
     }
     case Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const XUnion*>(decl);
-      max_bytes = xunion_decl->typeshape().InlineSize() + xunion_decl->typeshape().MaxOutOfLine();
+      max_bytes = xunion_decl->typeshape(WireFormat::kOld).InlineSize() +
+                  xunion_decl->typeshape(WireFormat::kOld).MaxOutOfLine();
       break;
     }
     default:
@@ -733,6 +749,7 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
   return true;
 }
 
+// TODO(fxb/38601): Move to new format once migraiton is done.
 bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
                           const Decl* decl) {
   uint32_t bound;
@@ -742,22 +759,22 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& a
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(decl);
-      max_handles = struct_decl->typeshape().MaxHandles();
+      max_handles = struct_decl->typeshape(WireFormat::kOld).MaxHandles();
       break;
     }
     case Decl::Kind::kTable: {
       auto table_decl = static_cast<const Table*>(decl);
-      max_handles = table_decl->typeshape().MaxHandles();
+      max_handles = table_decl->typeshape(WireFormat::kOld).MaxHandles();
       break;
     }
     case Decl::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(decl);
-      max_handles = union_decl->typeshape().MaxHandles();
+      max_handles = union_decl->typeshape(WireFormat::kOld).MaxHandles();
       break;
     }
     case Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const XUnion*>(decl);
-      max_handles = xunion_decl->typeshape().MaxHandles();
+      max_handles = xunion_decl->typeshape(WireFormat::kOld).MaxHandles();
       break;
     }
     default:
