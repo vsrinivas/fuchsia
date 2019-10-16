@@ -2,15 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <audio-utils/audio-device-stream.h>
-#include <audio-utils/audio-input.h>
-#include <audio-utils/audio-output.h>
-#include <fbl/algorithm.h>
-#include <fbl/unique_fd.h>
-#include <fuchsia/hardware/audio/c/fidl.h>
-#include <limits>
-#include <fbl/auto_call.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/audio/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
@@ -25,6 +18,15 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <limits>
+
+#include <audio-utils/audio-device-stream.h>
+#include <audio-utils/audio-input.h>
+#include <audio-utils/audio-output.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
 
 namespace audio {
 namespace utils {
@@ -325,7 +327,7 @@ zx_status_t AudioDeviceStream::GetString(audio_stream_string_id_t id,
   return DoNoFailCall(stream_ch_, req, out_str);
 }
 
-zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
+zx_status_t AudioDeviceStream::PlugMonitor(float duration, PlugMonitorCallback* monitor) {
   const double duration_ns = static_cast<double>(duration) * ZX_SEC(1);
   const zx_time_t deadline = zx_deadline_after(static_cast<zx_duration_t>(duration_ns));
   audio_stream_cmd_plug_detect_resp resp;
@@ -342,7 +344,8 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
     return ZX_OK;
   }
 
-  auto ReportPlugState = [&last_plug_time, &last_plug_state](bool plug_state, zx_time_t plug_time) {
+  auto ReportPlugState = [&last_plug_time, &last_plug_state, &monitor](
+                             bool plug_state, zx_time_t plug_time) -> bool {
     printf("Plug State now : %s (%.3lf sec since last change).\n",
            plug_state ? "plugged" : "unplugged",
            static_cast<double>(zx_time_sub_time(plug_time, last_plug_time)) /
@@ -350,6 +353,10 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
 
     last_plug_state = plug_state;
     last_plug_time = plug_time;
+    if (monitor) {
+      return (*monitor)(plug_state, plug_time);
+    }
+    return true;  // Continue monitoring.
   };
 
   if (resp.flags & AUDIO_PDNF_CAN_NOTIFY) {
@@ -390,7 +397,10 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
       }
 
       bool plug_state = (state.flags & AUDIO_PDNF_PLUGGED);
-      ReportPlugState(plug_state, state.plug_state_time);
+      if (!ReportPlugState(plug_state, state.plug_state_time)) {
+        printf("Monitoring finished after callback reported.\n");
+        return ZX_OK;
+      }
     }
   } else {
     printf("Stream is not capable of async notification.  Polling for %.2f seconds\n", duration);
@@ -422,8 +432,12 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
       }
 
       bool plug_state = (resp.flags & AUDIO_PDNF_PLUGGED);
-      if (plug_state != last_plug_state)
-        ReportPlugState(resp.flags, resp.plug_state_time);
+      if (plug_state != last_plug_state) {
+        if (!ReportPlugState(resp.flags, resp.plug_state_time)) {
+          printf("Monitoring finished after callback reported.\n");
+          return ZX_OK;
+        }
+      }
     }
   }
 

@@ -6,6 +6,9 @@ driver("as370-pdm-input") {
   sources = [
     "audio-stream-in.cc",
   ]
+
+  # TODO(32708): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.codec",

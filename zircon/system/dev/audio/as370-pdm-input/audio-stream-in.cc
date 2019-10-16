@@ -174,7 +174,7 @@ zx_status_t As370AudioStreamIn::Start(uint64_t* out_start_time) {
     ring_buffer_vmo_.get_size(&size);
     notification_rate_ =
         zx::duration(zx_duration_from_msec(size / (frame_size_ * kMaxRate / 1000 * notifs)));
-    notify_timer_->Arm(zx::deadline_after(notification_rate_).get());
+    notify_timer_.PostDelayed(dispatcher(), notification_rate_);
   } else {
     notification_rate_ = {};
   }
@@ -182,36 +182,22 @@ zx_status_t As370AudioStreamIn::Start(uint64_t* out_start_time) {
 }
 
 // Timer handler for sending out position notifications.
-zx_status_t As370AudioStreamIn::ProcessRingNotification() {
+void As370AudioStreamIn::ProcessRingNotification() {
   ZX_ASSERT(notification_rate_ != zx::duration());
 
-  notify_timer_->Arm(zx::deadline_after(notification_rate_).get());
+  notify_timer_.PostDelayed(dispatcher(), notification_rate_);
 
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
   resp.ring_buffer_pos = lib_->GetRingPosition();
-  return NotifyPosition(resp);
-}
-
-zx_status_t As370AudioStreamIn::InitPost() {
-  notify_timer_ = dispatcher::Timer::Create();
-  if (notify_timer_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  dispatcher::Timer::ProcessHandler thandler([pdm = this](dispatcher::Timer* timer) -> zx_status_t {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(t, pdm->domain_);
-    return pdm->ProcessRingNotification();
-  });
-
-  return notify_timer_->Activate(domain_, std::move(thandler));
+  NotifyPosition(resp);
 }
 
 void As370AudioStreamIn::ShutdownHook() { lib_->Shutdown(); }
 
 zx_status_t As370AudioStreamIn::Stop() {
-  notify_timer_->Cancel();
+  notify_timer_.Cancel();
   notification_rate_ = {};
   lib_->Stop();
   return ZX_OK;

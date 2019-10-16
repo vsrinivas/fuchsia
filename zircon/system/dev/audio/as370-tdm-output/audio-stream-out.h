@@ -23,7 +23,6 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/platform/device.h>
-#include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/mutex.h>
 #include <soc/as370/syn-audio-out.h>
 
@@ -34,16 +33,14 @@ namespace as370 {
 
 class As370AudioStreamOut : public SimpleAudioStream {
  protected:
-  zx_status_t Init() TA_REQ(domain_->token()) override;
-  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
-      TA_REQ(domain_->token()) override;
+  zx_status_t Init() TA_REQ(domain_token()) override;
+  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req) TA_REQ(domain_token()) override;
   zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
-                        zx::vmo* out_buffer) TA_REQ(domain_->token()) override;
-  zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_->token()) override;
-  zx_status_t Stop() TA_REQ(domain_->token()) override;
-  zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_->token()) override;
-  void ShutdownHook() TA_REQ(domain_->token()) override;
-  zx_status_t InitPost() TA_REQ(domain_->token()) override;
+                        zx::vmo* out_buffer) TA_REQ(domain_token()) override;
+  zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_token()) override;
+  zx_status_t Stop() TA_REQ(domain_token()) override;
+  zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_token()) override;
+  void ShutdownHook() TA_REQ(domain_token()) override;
 
  private:
   enum {
@@ -58,18 +55,19 @@ class As370AudioStreamOut : public SimpleAudioStream {
   As370AudioStreamOut(zx_device_t* parent);
   ~As370AudioStreamOut() {}
 
-  zx_status_t AddFormats() TA_REQ(domain_->token());
-  zx_status_t InitBuffer(size_t size) TA_REQ(domain_->token());
-  zx_status_t InitPdev() TA_REQ(domain_->token());
-  zx_status_t ProcessRingNotification();
+  zx_status_t AddFormats() TA_REQ(domain_token());
+  zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
+  zx_status_t InitPdev() TA_REQ(domain_token());
+  void ProcessRingNotification() TA_REQ(domain_token());
 
   uint32_t us_per_notification_ = 0;
-  fbl::RefPtr<dispatcher::Timer> notify_timer_;
-  ddk::PDev pdev_ TA_GUARDED(domain_->token());
-  zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
+  async::TaskClosureMethod<As370AudioStreamOut, &As370AudioStreamOut::ProcessRingNotification>
+      notify_timer_ TA_GUARDED(domain_token()){this};
+  ddk::PDev pdev_ TA_GUARDED(domain_token());
+  zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
   std::unique_ptr<SynAudioOutDevice> lib_;
-  ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_->token());
-  Codec codec_ TA_GUARDED(domain_->token());
+  ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_token());
+  Codec codec_ TA_GUARDED(domain_token());
 };
 
 }  // namespace as370

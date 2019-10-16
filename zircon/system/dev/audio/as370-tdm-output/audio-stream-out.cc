@@ -198,33 +198,19 @@ zx_status_t As370AudioStreamOut::Init() {
 
   return ZX_OK;
 }
-zx_status_t As370AudioStreamOut::InitPost() {
-  notify_timer_ = dispatcher::Timer::Create();
-  if (notify_timer_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  dispatcher::Timer::ProcessHandler thandler(
-      [thiz = this](dispatcher::Timer* timer) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, thiz->domain_);
-        return thiz->ProcessRingNotification();
-      });
-
-  return notify_timer_->Activate(domain_, std::move(thandler));
-}
 
 // Timer handler for sending out position notifications.
-zx_status_t As370AudioStreamOut::ProcessRingNotification() {
+void As370AudioStreamOut::ProcessRingNotification() {
   ZX_ASSERT(us_per_notification_ != 0);
 
-  notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
+  notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
 
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
   resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = lib_->GetRingPosition();
-  return NotifyPosition(resp);
+  NotifyPosition(resp);
 }
 
 zx_status_t As370AudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
@@ -279,7 +265,7 @@ zx_status_t As370AudioStreamOut::Start(uint64_t* out_start_time) {
     size_t size = 0;
     ring_buffer_vmo_.get_size(&size);
     us_per_notification_ = static_cast<uint32_t>(1000 * size / (frame_size_ * 48 * notifs));
-    notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
+    notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
   } else {
     us_per_notification_ = 0;
   }
@@ -287,7 +273,7 @@ zx_status_t As370AudioStreamOut::Start(uint64_t* out_start_time) {
 }
 
 zx_status_t As370AudioStreamOut::Stop() {
-  notify_timer_->Cancel();
+  notify_timer_.Cancel();
   us_per_notification_ = 0;
   lib_->Stop();
   return ZX_OK;

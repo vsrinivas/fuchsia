@@ -4,6 +4,8 @@
 
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/clock.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <zircon/device/audio.h>
 
 #include <limits>
@@ -11,26 +13,26 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
-
 namespace audio {
 
 void SimpleAudioStream::Shutdown() {
   if (!is_shutdown_) {
-    if (domain_ != nullptr) {
-      domain_->Deactivate();
-    }
+    loop_.Shutdown();
+
+    // We have shutdown our loop, it is now safe to assert we are holding the domain token.
+    ScopedToken t(domain_token());
 
     {
-      // Now that we know our domain has been deactivated, it should be safe to
-      // assert that we are holding the domain token (assuming that users of
-      // Shutdown behave in a single threaded fashion)
-      OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
+      // Now we explicitly destroy the channels.
+      fbl::AutoLock channel_lock(&channel_lock_);
+      DeactivateRingBufferChannel(rb_channel_.get());
 
-      // Channels-to-notify should already be empty. Explicitly clear it, to be safe.
       plug_notify_channels_.clear();
-
-      ShutdownHook();
+      stream_channels_.clear();
+      stream_channel_ = nullptr;
     }
+
+    ShutdownHook();
     is_shutdown_ = true;
   }
 }
@@ -38,12 +40,11 @@ void SimpleAudioStream::Shutdown() {
 zx_status_t SimpleAudioStream::CreateInternal() {
   zx_status_t res;
 
-  ZX_DEBUG_ASSERT(domain_ == nullptr);
   {
     // We have not created the domain yet, it should be safe to pretend that
     // we have the token (since we know that no dispatches are going to be
     // invoked from the non-existent domain at this point)
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
+    ScopedToken t(domain_token());
     res = Init();
     if (res != ZX_OK) {
       zxlogf(ERROR, "Init failure in %s (res %d)\n", __PRETTY_FUNCTION__, res);
@@ -55,17 +56,8 @@ zx_status_t SimpleAudioStream::CreateInternal() {
     }
   }
 
-  domain_ = dispatcher::ExecutionDomain::Create();
-  if (domain_ == nullptr) {
-    zxlogf(ERROR, "Failed to create execution domain in %s\n", __PRETTY_FUNCTION__);
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  res = InitPost();
-  if (res != ZX_OK) {
-    zxlogf(ERROR, "InitPost failure in %s (res %d)\n", __PRETTY_FUNCTION__, res);
-    return res;
-  }
+  // TODO(37372): Add profile configuration.
+  loop_.StartThread("simple-audio-stream-loop");
 
   res = PublishInternal();
   if (res != ZX_OK) {
@@ -146,8 +138,6 @@ zx_status_t SimpleAudioStream::NotifyPlugDetect() {
 }
 
 zx_status_t SimpleAudioStream::NotifyPosition(const audio_proto::RingBufPositionNotify& notif) {
-  fbl::AutoLock channel_lock(&channel_lock_);
-
   if (!expected_notifications_per_ring_.load() || (rb_channel_ == nullptr)) {
     return ZX_ERR_BAD_STATE;
   }
@@ -179,42 +169,72 @@ zx_status_t SimpleAudioStream::DdkSuspend(uint32_t flags) {
 
 void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
-
   // Attempt to allocate a new driver channel and bind it to us.  If we don't
   // already have an stream_channel_, flag this channel is the privileged
   // connection (The connection which is allowed to do things like change
   // formats).
   bool privileged = (stream_channel_ == nullptr);
-  auto channel = dispatcher::Channel::Create<AudioStreamChannel>();
-  if (channel == nullptr) {
-    zxlogf(ERROR, "Could not allocate dispatcher::channel in %s\n", __PRETTY_FUNCTION__);
+
+  zx::channel stream_channel_local;
+  zx::channel stream_channel_remote;
+  auto status = zx::channel::create(0, &stream_channel_local, &stream_channel_remote);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not create channel in %s\n", __PRETTY_FUNCTION__);
     completer.Close(ZX_ERR_NO_MEMORY);
     return;
   }
 
-  dispatcher::Channel::ProcessHandler phandler(
-      [stream = fbl::RefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain_);
-        return stream->ProcessStreamChannel(channel, privileged);
-      });
+  auto stream_channel = StreamChannel::Create<StreamChannel>(std::move(stream_channel_local));
+  // We keep alive all channels in stream_channels_ (protected by channel_lock_).
+  stream_channels_.push_back(stream_channel);
+  // We only use the channels outside channel_lock_ when passing it into the channel handler
+  // below, this handler processing is protected by the domain.
+  stream_channel->SetHandler([stream = fbl::RefPtr(this), channel = stream_channel.get(),
+                              privileged](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                          zx_status_t status, const zx_packet_signal_t* signal) {
+    ScopedToken t(stream->domain_token());
+    stream->StreamChannelSignalled(dispatcher, wait, status, signal, channel, privileged);
+  });
+  status = stream_channel->BeginWait(loop_.dispatcher());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not begin wait in %s\n", __PRETTY_FUNCTION__);
+    completer.Close(ZX_ERR_NO_MEMORY);
+    // We let stream_channel_remote go out of scope to trigger channel deactivation via peer close.
+    return;
+  }
+  if (privileged) {
+    ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
+    stream_channel_ = stream_channel;
+  }
+  completer.Reply(std::move(stream_channel_remote));
+}
 
-  dispatcher::Channel::ChannelClosedHandler chandler = dispatcher::Channel::ChannelClosedHandler(
-      [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain_);
-        fbl::AutoLock channel_lock(&stream->channel_lock_);
-        stream->DeactivateStreamChannel(channel);
-      });
-
-  zx::channel client_endpoint;
-  zx_status_t res =
-      channel->Activate(&client_endpoint, domain_, std::move(phandler), std::move(chandler));
-  if (res == ZX_OK) {
-    if (privileged) {
-      ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
-      stream_channel_ = channel;
+void SimpleAudioStream::StreamChannelSignalled(async_dispatcher_t* dispatcher,
+                                               async::WaitBase* wait, zx_status_t status,
+                                               const zx_packet_signal_t* signal,
+                                               StreamChannel* channel, bool privileged) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      zxlogf(ERROR, "%s handler error %d\n", __PRETTY_FUNCTION__, status);
+    }
+    return;
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    zx_status_t status = ProcessStreamChannel(channel, privileged);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s processing stream channel error %d\n", __PRETTY_FUNCTION__, status);
+      return;
+    }
+    if (!peer_closed_asserted) {
+      wait->Begin(dispatcher);
     }
   }
-  completer.Reply(std::move(client_endpoint));
+  if (peer_closed_asserted) {
+    fbl::AutoLock channel_lock(&this->channel_lock_);
+    DeactivateStreamChannel(channel);
+  }
 }
 
 #define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                    \
@@ -228,10 +248,9 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
       zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "\n");              \
       return ZX_ERR_INVALID_ARGS;                                            \
     }                                                                        \
-    return _handler(channel, req._payload, ##__VA_ARGS__);
-zx_status_t SimpleAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, bool privileged) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
+    return _handler(std::move(channel), req._payload, ##__VA_ARGS__);
 
+zx_status_t SimpleAudioStream::ProcessStreamChannel(StreamChannel* channel, bool privileged) {
   union {
     audio_proto::CmdHdr hdr;
     audio_proto::StreamGetFmtsReq get_formats;
@@ -272,7 +291,7 @@ zx_status_t SimpleAudioStream::ProcessStreamChannel(dispatcher::Channel* channel
   }
 }
 
-zx_status_t SimpleAudioStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
+zx_status_t SimpleAudioStream::ProcessRingBufferChannel(Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   union {
@@ -310,31 +329,29 @@ zx_status_t SimpleAudioStream::ProcessRingBufferChannel(dispatcher::Channel* cha
 }
 #undef HREQ
 
-void SimpleAudioStream::DeactivateStreamChannel(const dispatcher::Channel* channel) {
+void SimpleAudioStream::DeactivateStreamChannel(StreamChannel* channel) {
   if (stream_channel_.get() == channel) {
     stream_channel_ = nullptr;
   }
-
-  auto audio_stream_channel =
-      static_cast<AudioStreamChannel*>(const_cast<dispatcher::Channel*>(channel));
-  if (audio_stream_channel->InContainer()) {
-    plug_notify_channels_.erase(*audio_stream_channel);
+  if (channel->in_plug_notify_list()) {
+    plug_notify_channels_.erase(*channel);
   }
+  stream_channels_.erase(*channel);  // Must be last since we may destruct *channel.
 }
 
-void SimpleAudioStream::DeactivateRingBufferChannel(const dispatcher::Channel* channel) {
-  if (channel == rb_channel_.get()) {
+void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
+  if (rb_channel_.get() == channel) {
     if (rb_started_) {
       Stop();
       rb_started_ = false;
     }
     rb_fetched_ = false;
     expected_notifications_per_ring_.store(0);
-    rb_channel_.reset();
+    rb_channel_ = nullptr;
   }
 }
 
-zx_status_t SimpleAudioStream::OnGetStreamFormats(dispatcher::Channel* channel,
+zx_status_t SimpleAudioStream::OnGetStreamFormats(StreamChannel* channel,
                                                   const audio_proto::StreamGetFmtsReq& req) const {
   ZX_DEBUG_ASSERT(channel != nullptr);
   uint16_t formats_sent = 0;
@@ -372,12 +389,13 @@ zx_status_t SimpleAudioStream::OnGetStreamFormats(dispatcher::Channel* channel,
   return ZX_OK;
 }
 
-zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
+zx_status_t SimpleAudioStream::OnSetStreamFormat(StreamChannel* channel,
                                                  const audio_proto::StreamSetFmtReq& req,
                                                  bool privileged) {
   ZX_DEBUG_ASSERT(channel != nullptr);
+  zx::channel rb_channel_local;
+  zx::channel rb_channel_remote;
 
-  zx::channel client_rb_channel;
   audio_proto::StreamSetFmtResp resp = {};
   bool found_one = false;
   resp.hdr = req.hdr;
@@ -418,7 +436,6 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
   {
     fbl::AutoLock channel_lock(&channel_lock_);
     if (rb_channel_ != nullptr) {
-      rb_channel_->Deactivate();
       DeactivateRingBufferChannel(rb_channel_.get());
       ZX_DEBUG_ASSERT(rb_channel_ == nullptr);
     }
@@ -433,53 +450,75 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
 
   // Create a new ring buffer channel which can be used to move bulk data and
   // bind it to us.
+  resp.result = zx::channel::create(0, &rb_channel_local, &rb_channel_remote);
+  if (resp.result != ZX_OK) {
+    zxlogf(ERROR, "Could not create channel in %s\n", __PRETTY_FUNCTION__);
+    goto finished;
+  }
   {
     fbl::AutoLock channel_lock(&channel_lock_);
-    rb_channel_ = dispatcher::Channel::Create();
-    if (rb_channel_ == nullptr) {
-      zxlogf(ERROR, "Failed to create rb_channel in %s\n", __PRETTY_FUNCTION__);
-      resp.result = ZX_ERR_NO_MEMORY;
-    } else {
-      dispatcher::Channel::ProcessHandler phandler(
-          [stream = fbl::RefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain_);
-            return stream->ProcessRingBufferChannel(channel);
-          });
-
-      dispatcher::Channel::ChannelClosedHandler chandler(
-          [stream = fbl::RefPtr(this)](const dispatcher::Channel* channel) -> void {
-            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->domain_);
-            fbl::AutoLock channel_lock(&stream->channel_lock_);
-            stream->DeactivateRingBufferChannel(channel);
-          });
-
-      resp.result = rb_channel_->Activate(&client_rb_channel, domain_, std::move(phandler),
-                                          std::move(chandler));
-      if (resp.result != ZX_OK) {
-        zxlogf(ERROR, "rb_channel Activate failed in %s\n", __PRETTY_FUNCTION__);
-        rb_channel_.reset();
-      }
+    rb_channel_ = Channel::Create<Channel>(std::move(rb_channel_local));
+    // We only use the rb_channel outside channel_lock_ when passing it into the channel handler
+    // below, this handler processing is protected by the domain.
+    rb_channel_->SetHandler([stream = fbl::RefPtr(this), channel = rb_channel_.get()](
+                                async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                zx_status_t status, const zx_packet_signal_t* signal) {
+      ScopedToken t(stream->domain_token());
+      stream->RingBufferSignalled(dispatcher, wait, status, signal, channel);
+    });
+    resp.result = rb_channel_->BeginWait(loop_.dispatcher());
+    if (resp.result != ZX_OK) {
+      zxlogf(ERROR, "Could not begin wait %s\n", __PRETTY_FUNCTION__);
+      // We let rb_channel_remote go out of scope to trigger channel deactivation via closing.
     }
   }
-
 finished:
   if (resp.result == ZX_OK) {
     resp.external_delay_nsec = external_delay_nsec_;
-    return channel->Write(&resp, sizeof(resp), std::move(client_rb_channel));
+    return channel->Write(&resp, sizeof(resp), std::move(rb_channel_remote));
   } else {
     return channel->Write(&resp, sizeof(resp));
   }
 }
 
-zx_status_t SimpleAudioStream::OnGetGain(dispatcher::Channel* channel,
+void SimpleAudioStream::RingBufferSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                            zx_status_t status, const zx_packet_signal_t* signal,
+                                            Channel* channel) {
+  if (status != ZX_OK) {
+    if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
+      zxlogf(ERROR, "%s handler error %d\n", __PRETTY_FUNCTION__, status);
+    }
+    return;
+  }
+  bool readable_asserted = signal->observed & ZX_CHANNEL_READABLE;
+  bool peer_closed_asserted = signal->observed & ZX_CHANNEL_PEER_CLOSED;
+  if (readable_asserted) {
+    {
+      zx_status_t status = ProcessRingBufferChannel(channel);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s processing ring buffer channel error %d\n", __PRETTY_FUNCTION__, status);
+        return;
+      }
+    }
+    if (!peer_closed_asserted) {
+      wait->Begin(dispatcher);
+    }
+  }
+  if (peer_closed_asserted) {
+    fbl::AutoLock channel_lock(&channel_lock_);
+    DeactivateRingBufferChannel(rb_channel_.get());
+    ZX_DEBUG_ASSERT(rb_channel_ == nullptr);
+  }
+}
+
+zx_status_t SimpleAudioStream::OnGetGain(StreamChannel* channel,
                                          const audio_proto::GetGainReq& req) const {
-  ZX_DEBUG_ASSERT(channel != nullptr);
   audio_proto::GetGainResp resp = cur_gain_state_;
   resp.hdr = req.hdr;
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t SimpleAudioStream::OnSetGain(dispatcher::Channel* channel,
+zx_status_t SimpleAudioStream::OnSetGain(StreamChannel* channel,
                                          const audio_proto::SetGainReq& req) {
   audio_proto::SetGainResp resp;
   resp.hdr = req.hdr;
@@ -513,25 +552,24 @@ finished:
 }
 
 // Called when receiving a AUDIO_STREAM_CMD_PLUG_DETECT message from a client.
-zx_status_t SimpleAudioStream::OnPlugDetect(dispatcher::Channel* channel,
+zx_status_t SimpleAudioStream::OnPlugDetect(StreamChannel* channel,
                                             const audio_proto::PlugDetectReq& req) {
   // It should never be the case that both bits are set -- but if so, DISABLE notifications.
   bool disable = ((req.flags & AUDIO_PDF_DISABLE_NOTIFICATIONS) != 0);
   bool enable = ((req.flags & AUDIO_PDF_ENABLE_NOTIFICATIONS) != 0) && !disable;
 
-  auto audio_stream_channel = static_cast<AudioStreamChannel*>(channel);
   {
     fbl::AutoLock channel_lock(&channel_lock_);
     if (enable) {
       if (plug_notify_channels_.is_empty()) {
         EnableAsyncNotification(true);
       }
-      if (!audio_stream_channel->InContainer()) {
-        plug_notify_channels_.push_back(fbl::RefPtr(audio_stream_channel));
+      if (!channel->in_plug_notify_list()) {
+        plug_notify_channels_.push_back(fbl::RefPtr(channel));
       }
     } else if (disable) {
-      if (audio_stream_channel->InContainer()) {
-        plug_notify_channels_.erase(*audio_stream_channel);
+      if (channel->in_plug_notify_list()) {
+        plug_notify_channels_.erase(*channel);
       }
       if (plug_notify_channels_.is_empty()) {
         EnableAsyncNotification(false);
@@ -551,7 +589,7 @@ zx_status_t SimpleAudioStream::OnPlugDetect(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t SimpleAudioStream::OnGetUniqueId(dispatcher::Channel* channel,
+zx_status_t SimpleAudioStream::OnGetUniqueId(StreamChannel* channel,
                                              const audio_proto::GetUniqueIdReq& req) const {
   audio_proto::GetUniqueIdResp resp;
 
@@ -561,7 +599,7 @@ zx_status_t SimpleAudioStream::OnGetUniqueId(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t SimpleAudioStream::OnGetString(dispatcher::Channel* channel,
+zx_status_t SimpleAudioStream::OnGetString(StreamChannel* channel,
                                            const audio_proto::GetStringReq& req) const {
   audio_proto::GetStringResp resp;
 
@@ -594,7 +632,7 @@ zx_status_t SimpleAudioStream::OnGetString(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t SimpleAudioStream::OnGetFifoDepth(dispatcher::Channel* channel,
+zx_status_t SimpleAudioStream::OnGetFifoDepth(Channel* channel,
                                               const audio_proto::RingBufGetFifoDepthReq& req) {
   audio_proto::RingBufGetFifoDepthResp resp = {};
 
@@ -605,7 +643,7 @@ zx_status_t SimpleAudioStream::OnGetFifoDepth(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t SimpleAudioStream::OnGetBuffer(dispatcher::Channel* channel,
+zx_status_t SimpleAudioStream::OnGetBuffer(Channel* channel,
                                            const audio_proto::RingBufGetBufferReq& req) {
   audio_proto::RingBufGetBufferResp resp = {};
   resp.hdr = req.hdr;
@@ -631,8 +669,7 @@ zx_status_t SimpleAudioStream::OnGetBuffer(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t SimpleAudioStream::OnStart(dispatcher::Channel* channel,
-                                       const audio_proto::RingBufStartReq& req) {
+zx_status_t SimpleAudioStream::OnStart(Channel* channel, const audio_proto::RingBufStartReq& req) {
   audio_proto::RingBufStartResp resp = {};
   resp.hdr = req.hdr;
 
@@ -648,8 +685,7 @@ zx_status_t SimpleAudioStream::OnStart(dispatcher::Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t SimpleAudioStream::OnStop(dispatcher::Channel* channel,
-                                      const audio_proto::RingBufStopReq& req) {
+zx_status_t SimpleAudioStream::OnStop(Channel* channel, const audio_proto::RingBufStopReq& req) {
   audio_proto::RingBufStopResp resp = {};
   resp.hdr = req.hdr;
 

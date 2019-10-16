@@ -21,7 +21,6 @@
 #include <ddktl/device.h>
 #include <ddktl/metadata/audio.h>
 #include <ddktl/protocol/gpio.h>
-#include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-tdm-audio.h>
@@ -36,36 +35,35 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
   SherlockAudioStreamOut(zx_device_t* parent);
 
  protected:
-  zx_status_t Init() TA_REQ(domain_->token()) override;
-  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
-      TA_REQ(domain_->token()) override;
+  zx_status_t Init() TA_REQ(domain_token()) override;
+  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req) TA_REQ(domain_token()) override;
   zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
-                        zx::vmo* out_buffer) TA_REQ(domain_->token()) override;
-  zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_->token()) override;
-  zx_status_t Stop() TA_REQ(domain_->token()) override;
-  zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_->token()) override;
-  void ShutdownHook() TA_REQ(domain_->token()) override;
-  zx_status_t InitPost() override;
+                        zx::vmo* out_buffer) TA_REQ(domain_token()) override;
+  zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_token()) override;
+  zx_status_t Stop() TA_REQ(domain_token()) override;
+  zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_token()) override;
+  void ShutdownHook() TA_REQ(domain_token()) override;
 
  private:
   friend class fbl::RefPtr<SherlockAudioStreamOut>;
 
-  zx_status_t AddFormats() TA_REQ(domain_->token());
-  zx_status_t InitBuffer(size_t size) TA_REQ(domain_->token());
-  zx_status_t InitPdev() TA_REQ(domain_->token());
-  zx_status_t ProcessRingNotification();
+  zx_status_t AddFormats() TA_REQ(domain_token());
+  zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
+  zx_status_t InitPdev() TA_REQ(domain_token());
+  void ProcessRingNotification() TA_REQ(domain_token());
 
   uint32_t us_per_notification_ = 0;
-  fbl::RefPtr<dispatcher::Timer> notify_timer_;
-  ddk::PDev pdev_ TA_GUARDED(domain_->token());
-  metadata::Codec codecs_types_ TA_GUARDED(domain_->token());
-  fbl::Array<fbl::unique_ptr<Tas5720>> codecs_ TA_GUARDED(domain_->token());
-  zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
-  fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
+  async::TaskClosureMethod<SherlockAudioStreamOut, &SherlockAudioStreamOut::ProcessRingNotification>
+      notify_timer_ TA_GUARDED(domain_token()){this};
+  ddk::PDev pdev_ TA_GUARDED(domain_token());
+  metadata::Codec codecs_types_ TA_GUARDED(domain_token());
+  fbl::Array<fbl::unique_ptr<Tas5720>> codecs_ TA_GUARDED(domain_token());
+  zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
+  fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_token());
   fbl::unique_ptr<AmlTdmDevice> aml_audio_;
-  ddk::GpioProtocolClient audio_en_ TA_GUARDED(domain_->token());
-  ddk::GpioProtocolClient audio_fault_ TA_GUARDED(domain_->token());
-  zx::bti bti_ TA_GUARDED(domain_->token());
+  ddk::GpioProtocolClient audio_en_ TA_GUARDED(domain_token());
+  ddk::GpioProtocolClient audio_fault_ TA_GUARDED(domain_token());
+  zx::bti bti_ TA_GUARDED(domain_token());
 };
 
 }  // namespace sherlock

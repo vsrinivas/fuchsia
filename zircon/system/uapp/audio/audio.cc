@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include <zircon/types.h>
+
+#include <audio-proto-utils/format-utils.h>
 #include <audio-utils/audio-device-stream.h>
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
-#include <audio-proto-utils/format-utils.h>
-#include <ctype.h>
-#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "sine-source.h"
 #include "wav-sink.h"
@@ -531,7 +532,7 @@ int main(int argc, const char** argv) {
     case Command::AGC:
       return stream->SetAgc(enb_agc);
     case Command::PLUG_MONITOR:
-      return stream->PlugMonitor(duration);
+      return stream->PlugMonitor(duration, nullptr);
 
     case Command::TONE: {
       if (stream->input()) {

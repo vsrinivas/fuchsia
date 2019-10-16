@@ -7,6 +7,7 @@ driver("as370-tdm-output") {
     "audio-stream-out.cc",
     "codec.cc",
   ]
+  deprecated_inhibit_driver_shlib_allowlist = true
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.codec",

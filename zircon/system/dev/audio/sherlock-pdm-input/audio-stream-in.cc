@@ -145,7 +145,7 @@ zx_status_t SherlockAudioStreamIn::Start(uint64_t* out_start_time) {
   if (notifs) {
     us_per_notification_ = static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
                                                  (frame_size_ * 48 * notifs));
-    notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
+    notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
   } else {
     us_per_notification_ = 0;
   }
@@ -153,35 +153,21 @@ zx_status_t SherlockAudioStreamIn::Start(uint64_t* out_start_time) {
 }
 
 // Timer handler for sending out position notifications.
-zx_status_t SherlockAudioStreamIn::ProcessRingNotification() {
+void SherlockAudioStreamIn::ProcessRingNotification() {
   ZX_ASSERT(us_per_notification_ != 0);
 
-  notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
+  notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
 
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
   resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = pdm_->GetRingPosition();
-  return NotifyPosition(resp);
-}
-
-zx_status_t SherlockAudioStreamIn::InitPost() {
-  notify_timer_ = dispatcher::Timer::Create();
-  if (notify_timer_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  dispatcher::Timer::ProcessHandler thandler([pdm = this](dispatcher::Timer* timer) -> zx_status_t {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(t, pdm->domain_);
-    return pdm->ProcessRingNotification();
-  });
-
-  return notify_timer_->Activate(domain_, std::move(thandler));
+  NotifyPosition(resp);
 }
 
 zx_status_t SherlockAudioStreamIn::Stop() {
-  notify_timer_->Cancel();
+  notify_timer_.Cancel();
   us_per_notification_ = 0;
   pdm_->Stop();
   return ZX_OK;

@@ -26,8 +26,6 @@ fbl::RefPtr<VirtualAudioStream> VirtualAudioStream::CreateStream(VirtualAudioDev
   }
 }
 
-VirtualAudioStream::~VirtualAudioStream() { ZX_DEBUG_ASSERT(domain_->deactivated()); }
-
 zx_status_t VirtualAudioStream::Init() {
   if (!strlcpy(device_name_, parent_->device_name_.c_str(), sizeof(device_name_))) {
     return ZX_ERR_INTERNAL;
@@ -77,135 +75,6 @@ zx_status_t VirtualAudioStream::Init() {
   return ZX_OK;
 }
 
-zx_status_t VirtualAudioStream::InitPost() {
-  plug_change_wakeup_ = dispatcher::WakeupEvent::Create();
-  if (plug_change_wakeup_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dispatcher::WakeupEvent::ProcessHandler plug_wake_handler(
-      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        HandlePlugChanges();
-        return ZX_OK;
-      });
-  zx_status_t status = plug_change_wakeup_->Activate(domain_, std::move(plug_wake_handler));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Plug WakeupEvent activate failed (%d)\n", status);
-    return status;
-  }
-
-  gain_request_wakeup_ = dispatcher::WakeupEvent::Create();
-  if (gain_request_wakeup_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dispatcher::WakeupEvent::ProcessHandler gain_wake_handler(
-      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        HandleGainRequests();
-        return ZX_OK;
-      });
-  status = gain_request_wakeup_->Activate(domain_, std::move(gain_wake_handler));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "GetGain WakeupEvent activate failed (%d)\n", status);
-    return status;
-  }
-
-  format_request_wakeup_ = dispatcher::WakeupEvent::Create();
-  if (format_request_wakeup_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dispatcher::WakeupEvent::ProcessHandler format_wake_handler(
-      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        HandleFormatRequests();
-        return ZX_OK;
-      });
-  status = format_request_wakeup_->Activate(domain_, std::move(format_wake_handler));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "GetFormat WakeupEvent activate failed (%d)\n", status);
-    return status;
-  }
-
-  buffer_request_wakeup_ = dispatcher::WakeupEvent::Create();
-  if (buffer_request_wakeup_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dispatcher::WakeupEvent::ProcessHandler buffer_wake_handler(
-      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        HandleBufferRequests();
-        return ZX_OK;
-      });
-  status = buffer_request_wakeup_->Activate(domain_, std::move(buffer_wake_handler));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "GetBuffer WakeupEvent activate failed (%d)\n", status);
-    return status;
-  }
-
-  position_request_wakeup_ = dispatcher::WakeupEvent::Create();
-  if (position_request_wakeup_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dispatcher::WakeupEvent::ProcessHandler position_wake_handler(
-      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        HandlePositionRequests();
-        return ZX_OK;
-      });
-  status = position_request_wakeup_->Activate(domain_, std::move(position_wake_handler));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "GetPosition WakeupEvent activate failed (%d)\n", status);
-    return status;
-  }
-
-  set_notifications_wakeup_ = dispatcher::WakeupEvent::Create();
-  if (set_notifications_wakeup_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dispatcher::WakeupEvent::ProcessHandler notifications_wake_handler(
-      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        HandleSetNotifications();
-        return ZX_OK;
-      });
-  status = set_notifications_wakeup_->Activate(domain_, std::move(notifications_wake_handler));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "SetNotifications WakeupEvent activate failed (%d)\n", status);
-    return status;
-  }
-
-  notify_timer_ = dispatcher::Timer::Create();
-  if (notify_timer_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dispatcher::Timer::ProcessHandler timer_handler([this](dispatcher::Timer* timer) -> zx_status_t {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-    return ProcessRingNotification();
-  });
-  status = notify_timer_->Activate(domain_, std::move(timer_handler));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "PositionNotify Timer activate failed (%d)\n", status);
-    return status;
-  }
-
-  alt_notify_timer_ = dispatcher::Timer::Create();
-  if (alt_notify_timer_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  dispatcher::Timer::ProcessHandler alt_timer_handler(
-      [this](dispatcher::Timer* timer) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        return ProcessAltRingNotification();
-      });
-  status = alt_notify_timer_->Activate(domain_, std::move(alt_timer_handler));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "AlternatePositionNotify Timer activate failed (%d)\n", status);
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
   {
     fbl::AutoLock lock(&wakeup_queue_lock_);
@@ -213,7 +82,7 @@ void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
     plug_queue_.push_back(plug_change);
   }
 
-  plug_change_wakeup_->Signal();
+  plug_change_wakeup_.Post(dispatcher());
 }
 
 void VirtualAudioStream::EnqueueGainRequest(
@@ -223,7 +92,7 @@ void VirtualAudioStream::EnqueueGainRequest(
     gain_queue_.push_back(std::move(gain_callback));
   }
 
-  gain_request_wakeup_->Signal();
+  gain_request_wakeup_.Post(dispatcher());
 }
 
 void VirtualAudioStream::EnqueueFormatRequest(
@@ -233,7 +102,7 @@ void VirtualAudioStream::EnqueueFormatRequest(
     format_queue_.push_back(std::move(format_callback));
   }
 
-  format_request_wakeup_->Signal();
+  format_request_wakeup_.Post(dispatcher());
 }
 
 void VirtualAudioStream::EnqueueBufferRequest(
@@ -243,7 +112,7 @@ void VirtualAudioStream::EnqueueBufferRequest(
     buffer_queue_.push_back(std::move(buffer_callback));
   }
 
-  buffer_request_wakeup_->Signal();
+  buffer_request_wakeup_.Post(dispatcher());
 }
 
 void VirtualAudioStream::EnqueuePositionRequest(
@@ -253,7 +122,7 @@ void VirtualAudioStream::EnqueuePositionRequest(
     position_queue_.push_back(std::move(position_callback));
   }
 
-  position_request_wakeup_->Signal();
+  position_request_wakeup_.Post(dispatcher());
 }
 
 void VirtualAudioStream::EnqueueNotificationOverride(uint32_t notifications_per_ring) {
@@ -262,7 +131,7 @@ void VirtualAudioStream::EnqueueNotificationOverride(uint32_t notifications_per_
     notifs_queue_.push_back(notifications_per_ring);
   }
 
-  set_notifications_wakeup_->Signal();
+  set_notifications_wakeup_.Post(dispatcher());
 }
 
 void VirtualAudioStream::HandlePlugChanges() {
@@ -444,10 +313,10 @@ void VirtualAudioStream::HandleSetNotifications() {
   }
   if (using_alt_notifications_ && (alt_notification_period_.get() > 0)) {
     target_alt_notification_time_ = zx::clock::get_monotonic();
-    alt_notify_timer_->Arm(target_alt_notification_time_.get());
+    alt_notify_timer_.PostForTime(dispatcher(), target_alt_notification_time_);
   } else {
     target_alt_notification_time_ = zx::time(0);
-    alt_notify_timer_->Cancel();
+    alt_notify_timer_.Cancel();
   }
 }
 
@@ -573,11 +442,11 @@ zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
 
   // Set the timer here (if notifications are enabled).
   if (notification_period_.get() > 0) {
-    notify_timer_->Arm(start_time_.get());
+    notify_timer_.PostForTime(dispatcher(), start_time_);
     target_notification_time_ = start_time_;
   }
   if (using_alt_notifications_ && alt_notification_period_.get() > 0) {
-    alt_notify_timer_->Arm(start_time_.get());
+    alt_notify_timer_.PostForTime(dispatcher(), start_time_);
     target_alt_notification_time_ = start_time_;
   }
 
@@ -590,7 +459,7 @@ zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
 // Timer handler for sending out position notifications: to AudioCore, to VAD clients that do not
 // override the notification frequency, and to VAD clients that set it to the same value that
 // AudioCore has selected.
-zx_status_t VirtualAudioStream::ProcessRingNotification() {
+void VirtualAudioStream::ProcessRingNotification() {
   ZX_DEBUG_ASSERT(notification_period_.get() > 0);
 
   auto monotonic_time = target_notification_time_.get();
@@ -606,21 +475,19 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
   resp.monotonic_time = monotonic_time;
   resp.ring_buffer_pos = ring_buffer_position;
 
-  zx_status_t status = NotifyPosition(resp);
+  NotifyPosition(resp);
 
   if (!using_alt_notifications_) {
     parent_->NotifyPosition(monotonic_time, ring_buffer_position);
   }
 
   target_notification_time_ += notification_period_;
-  notify_timer_->Arm(target_notification_time_.get());
-
-  return status;
+  notify_timer_.PostForTime(dispatcher(), target_notification_time_);
 }
 
 // Handler for sending alternate position notifications: those going to VAD clients that specified a
 // different notification frequency. These are not sent to AudioCore.
-zx_status_t VirtualAudioStream::ProcessAltRingNotification() {
+void VirtualAudioStream::ProcessAltRingNotification() {
   ZX_DEBUG_ASSERT(using_alt_notifications_);
   ZX_DEBUG_ASSERT(alt_notification_period_.get() > 0);
 
@@ -635,16 +502,14 @@ zx_status_t VirtualAudioStream::ProcessAltRingNotification() {
   parent_->NotifyPosition(monotonic_time, ring_buffer_position);
 
   target_alt_notification_time_ += alt_notification_period_;
-  alt_notify_timer_->Arm(target_alt_notification_time_.get());
-
-  return ZX_OK;
+  alt_notify_timer_.PostForTime(dispatcher(), target_alt_notification_time_);
 }
 
 zx_status_t VirtualAudioStream::Stop() {
   auto stop_time = zx::clock::get_monotonic();
 
-  notify_timer_->Cancel();
-  alt_notify_timer_->Cancel();
+  notify_timer_.Cancel();
+  alt_notify_timer_.Cancel();
 
   zx::duration running_duration = stop_time - start_time_;
   uint64_t frames = (running_duration * frame_rate_) / zx::sec(1);

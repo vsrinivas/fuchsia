@@ -5,10 +5,11 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_SPDIF_AUDIO_STREAM_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_SPDIF_AUDIO_STREAM_H_
 
-#include <fbl/ref_ptr.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <zircon/device/audio.h>
+
+#include <fbl/ref_ptr.h>
 
 #include "vim-audio-utils.h"
 
@@ -37,21 +38,21 @@ class Vim2SpdifAudioStream : public SimpleAudioStream {
 
   ~Vim2SpdifAudioStream() override { Shutdown(); }
 
-  zx_status_t Init() __TA_REQUIRES(domain_->token()) override;
-  void ShutdownHook() __TA_REQUIRES(domain_->token()) override;
-  void RingBufferShutdown() __TA_REQUIRES(domain_->token()) override;
+  zx_status_t Init() __TA_REQUIRES(domain_token()) override;
+  void ShutdownHook() __TA_REQUIRES(domain_token()) override;
+  void RingBufferShutdown() __TA_REQUIRES(domain_token()) override;
 
   zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
-      __TA_REQUIRES(domain_->token()) override;
-  zx_status_t SetGain(const audio_proto::SetGainReq& req) __TA_REQUIRES(domain_->token()) override;
+      __TA_REQUIRES(domain_token()) override;
+  zx_status_t SetGain(const audio_proto::SetGainReq& req) __TA_REQUIRES(domain_token()) override;
 
   zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
-                        zx::vmo* out_buffer) __TA_REQUIRES(domain_->token()) override;
-  zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_->token()) override;
-  zx_status_t Stop() __TA_REQUIRES(domain_->token()) override;
+                        zx::vmo* out_buffer) __TA_REQUIRES(domain_token()) override;
+  zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_token()) override;
+  zx_status_t Stop() __TA_REQUIRES(domain_token()) override;
 
  private:
-  zx_status_t CreateFormatList() __TA_REQUIRES(domain_->token());
+  zx_status_t CreateFormatList() __TA_REQUIRES(domain_token());
 
   void Enable();
   void SetupBuffer();

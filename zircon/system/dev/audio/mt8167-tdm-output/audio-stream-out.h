@@ -5,6 +5,12 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_MT8167_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_MT8167_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 
+#include <lib/device-protocol/pdev.h>
+#include <lib/fzl/pinned-vmo.h>
+#include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
+
 #include <memory>
 #include <optional>
 
@@ -16,13 +22,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/platform/device.h>
-#include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/mutex.h>
-#include <lib/device-protocol/pdev.h>
-#include <lib/fzl/pinned-vmo.h>
-#include <lib/simple-audio-stream/simple-audio-stream.h>
-#include <lib/sync/completion.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <soc/mt8167/mt8167-audio-out.h>
 
 #include "codec.h"
@@ -32,16 +32,14 @@ namespace mt8167 {
 
 class Mt8167AudioStreamOut : public SimpleAudioStream {
  protected:
-  zx_status_t Init() TA_REQ(domain_->token()) override;
-  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
-      TA_REQ(domain_->token()) override;
+  zx_status_t Init() TA_REQ(domain_token()) override;
+  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req) TA_REQ(domain_token()) override;
   zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
-                        zx::vmo* out_buffer) TA_REQ(domain_->token()) override;
-  zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_->token()) override;
-  zx_status_t Stop() TA_REQ(domain_->token()) override;
-  zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_->token()) override;
-  void ShutdownHook() TA_REQ(domain_->token()) override;
-  zx_status_t InitPost() override;
+                        zx::vmo* out_buffer) TA_REQ(domain_token()) override;
+  zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_token()) override;
+  zx_status_t Stop() TA_REQ(domain_token()) override;
+  zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_token()) override;
+  void ShutdownHook() TA_REQ(domain_token()) override;
 
   Codec codec_;  // Protected for unit tests.
 
@@ -52,18 +50,19 @@ class Mt8167AudioStreamOut : public SimpleAudioStream {
   Mt8167AudioStreamOut(zx_device_t* parent);
   ~Mt8167AudioStreamOut() {}
 
-  zx_status_t AddFormats() TA_REQ(domain_->token());
-  zx_status_t InitBuffer(size_t size) TA_REQ(domain_->token());
-  zx_status_t InitPdev() TA_REQ(domain_->token());
-  zx_status_t ProcessRingNotification();
+  zx_status_t AddFormats() TA_REQ(domain_token());
+  zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
+  zx_status_t InitPdev() TA_REQ(domain_token());
+  void ProcessRingNotification() TA_REQ(domain_token());
 
   uint32_t us_per_notification_ = 0;
-  fbl::RefPtr<dispatcher::Timer> notify_timer_;
-  ddk::PDev pdev_ TA_GUARDED(domain_->token());
-  zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
-  fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
+  async::TaskClosureMethod<Mt8167AudioStreamOut, &Mt8167AudioStreamOut::ProcessRingNotification>
+      notify_timer_ TA_GUARDED(domain_token()){this};
+  ddk::PDev pdev_ TA_GUARDED(domain_token());
+  zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
+  fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_token());
   std::unique_ptr<MtAudioOutDevice> mt_audio_;
-  zx::bti bti_ TA_GUARDED(domain_->token());
+  zx::bti bti_ TA_GUARDED(domain_token());
 };
 
 }  // namespace mt8167

@@ -6,6 +6,9 @@ driver("astro-pdm-input") {
   sources = [
     "audio-stream-in.cc",
   ]
+
+  # TODO(32708): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -19,7 +22,6 @@ driver("astro-pdm-input") {
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",

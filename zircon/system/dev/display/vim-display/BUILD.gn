@@ -43,6 +43,9 @@ driver("vim-display") {
     "vim-spdif-audio-stream.cc",
     "vpp.cc",
   ]
+
+  # TODO(32708): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
   deps = common_deps
 }
 

@@ -14,7 +14,6 @@
 
 #include <audio-proto/audio-proto.h>
 #include <ddktl/protocol/clock.h>
-#include <dispatcher-pool/dispatcher-timer.h>
 #include <soc/as370/syn-audio-in.h>
 
 namespace audio {
@@ -25,16 +24,14 @@ class As370AudioStreamIn : public SimpleAudioStream {
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
  protected:
-  zx_status_t Init() TA_REQ(domain_->token()) override;
-  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
-      TA_REQ(domain_->token()) override;
+  zx_status_t Init() TA_REQ(domain_token()) override;
+  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req) TA_REQ(domain_token()) override;
   zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
-                        zx::vmo* out_buffer) TA_REQ(domain_->token()) override;
-  zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_->token()) override;
-  zx_status_t Stop() TA_REQ(domain_->token()) override;
-  zx_status_t InitPost() override;
-  void RingBufferShutdown() TA_REQ(domain_->token()) override;
-  void ShutdownHook() TA_REQ(domain_->token()) override;
+                        zx::vmo* out_buffer) TA_REQ(domain_token()) override;
+  zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_token()) override;
+  zx_status_t Stop() TA_REQ(domain_token()) override;
+  void RingBufferShutdown() TA_REQ(domain_token()) override;
+  void ShutdownHook() TA_REQ(domain_token()) override;
 
  private:
   static constexpr size_t kMaxRate = 48000;
@@ -49,17 +46,18 @@ class As370AudioStreamIn : public SimpleAudioStream {
   explicit As370AudioStreamIn(zx_device_t* parent);
   ~As370AudioStreamIn() = default;
 
-  zx_status_t AddFormats() TA_REQ(domain_->token());
-  zx_status_t InitPDev() TA_REQ(domain_->token());
-  zx_status_t ProcessRingNotification();
+  zx_status_t AddFormats() TA_REQ(domain_token());
+  zx_status_t InitPDev() TA_REQ(domain_token());
+  void ProcessRingNotification() TA_REQ(domain_token());
 
   zx::duration notification_rate_ = {};
-  fbl::RefPtr<dispatcher::Timer> notify_timer_;
-  ddk::PDev pdev_ TA_GUARDED(domain_->token());
-  zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
+  async::TaskClosureMethod<As370AudioStreamIn, &As370AudioStreamIn::ProcessRingNotification>
+      notify_timer_ TA_GUARDED(domain_token()){this};
+  ddk::PDev pdev_ TA_GUARDED(domain_token());
+  zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
   fbl::unique_ptr<SynAudioInDevice> lib_;
-  ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_->token());
-  zx::vmo dma_buffer_ TA_GUARDED(domain_->token());
+  ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_token());
+  zx::vmo dma_buffer_ TA_GUARDED(domain_token());
 };
 }  // namespace as370
 }  // namespace audio

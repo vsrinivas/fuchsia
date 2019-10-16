@@ -7,6 +7,9 @@ driver("mt8167-tdm-input") {
     "audio-stream-in.cc",
     "tlv320adc.cc",
   ]
+
+  # TODO(32708): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -23,7 +26,6 @@ driver("mt8167-tdm-input") {
     "$zx/system/ulib/audio-proto-utils",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
