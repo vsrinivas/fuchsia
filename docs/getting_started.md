@@ -224,7 +224,7 @@ Fuchsia shows multiple tabs after booting [with graphics
 enabled](#enabling-graphics). The currently selected tab is highlighted in
 yellow at the top of the screen.
 
-The following keyborad shortcuts help you navigate the terminal:
+The following keyboard shortcuts help you navigate the terminal:
 
 - Alt+Tab switches between tabs.
 - Alt+F{1,2,...} switches directly to a tab.
