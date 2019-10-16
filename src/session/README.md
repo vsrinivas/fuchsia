@@ -1,17 +1,26 @@
 # Session Manager Usage Guide
 
-## To launch session_manager
+## Build a configuration that boots into a session
 
 ```
-fx set core.x64 --with //src/session:session_framework
-fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_manager_sfw.cmx fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm
+fx set core.x64 --with-base=//src/session:session_framework,//src/session:examples,//src/session/session_manager:session_manager.config,//src/ui/scenic:scenic_pkg
+fx build
+fx reboot
 ```
 
-In order to launch a specific example session, update the `session_manager.cml` file:
+Specify which session to launch in [`session_manager.cml`](session_manager/meta/session_manager.cml):
 
 ```
 "args": [ "-s", "fuchsia-pkg://fuchsia.com/element_session#meta/element_session.cm" ],
 ```
+
+To launch a session manually (e.g., if you don't include `session_manager.config` in `--with-base`) you can run the following command:
+
+```
+fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_manager_sfw.cmx fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm
+```
+
+TODO(37237): Multiple calls to `run` will not work correctly when launching graphical sessions ("display has been claimed by another compositor" - Scenic). This will be resolved by introducing a command line tool for launching sessions "properly."
 
 ## To run the tests
 

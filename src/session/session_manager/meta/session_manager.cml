@@ -2,7 +2,7 @@
     "program": {
         "binary": "bin/session_manager",
         // The root session.
-        "args": [ "-s", "fuchsia-pkg://fuchsia.com/element_session#meta/element_session.cm" ],
+        "args": [ "-s", "fuchsia-pkg://fuchsia.com/graphical_session#meta/graphical_session.cm" ],
     },
     "use": [
         {
