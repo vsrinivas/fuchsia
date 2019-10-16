@@ -87,7 +87,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
       break;
 
     if (res != ZX_OK) {
-      printf("Failed to wait for notificiation (res %d)\n", res);
+      printf("Failed to wait for notification (res %d)\n", res);
       break;
     }
 
