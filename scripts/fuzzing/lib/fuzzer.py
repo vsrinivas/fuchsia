@@ -88,12 +88,12 @@ class Fuzzer(object):
         matches = Fuzzer.filter(device.host.fuzzers, args.name)
 
         if not matches:
-            sys.exit("No matching fuzzers found. Try `fx fuzz list`.")
+            sys.exit('No matching fuzzers found. Try `fx fuzz list`.')
 
         if len(matches) > 1:
-            print("More than one match found, please pick one from the list:")
+            print('More than one match found, please pick one from the list:')
             choices = ["/".join(m) for m in matches]
-            fuzzer_name = show_menu(choices).split("/")
+            fuzzer_name = show_menu(choices).split('/')
         else:
             fuzzer_name = matches[0]
 
@@ -298,14 +298,30 @@ class Fuzzer(object):
       run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
         -artifact_prefix=data -jobs=1 data/<artifact>...
 
+      If host artifact paths are specified, they will be copied to the device
+      instance and used. Otherwise, the fuzzer will use all artifacts present
+      on the device.
+
       See also: https://llvm.org/docs/LibFuzzer.html#options
 
       Returns: Number of test input artifacts found.
     """
-        artifacts = self.list_artifacts()
-        if len(artifacts) == 0:
+        options = []
+        artifacts = []
+        for arg in fuzzer_args:
+            if arg.startswith('-'):
+                options.append(arg)
+            elif os.path.exists(arg):
+                artifact = os.path.basename(arg)
+                self.device.store(arg, self.data_path())
+                artifacts.append(artifact)
+            else:
+                print('File not found, skipping: ' + arg)
+        if not artifacts:
+            artifacts = self.list_artifacts()
+        if not artifacts:
             return 0
-        self._create(fuzzer_args + ['data/' + a for a in artifacts]).call()
+        self._create(options + ['data/' + a for a in artifacts]).call()
         return len(artifacts)
 
     def merge(self, fuzzer_args):
