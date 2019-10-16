@@ -131,15 +131,31 @@ bool TestLoop::BlockCurrentSubLoopAndRunOthersUntil(fit::function<bool()> condit
   locked_subloops_.push_back(current_subloop_);
   bool success = false;
 
+  // Store initial deadline.
+  auto initial_deadline = deadline_;
+
+  // Control advancing time. It is necessary to prevent Run() from advancing the
+  // time if |condition()| becomes true in the current run.
+  deadline_ = Now();
   while (!success) {
+    // Run tasks, which may advance the current time up to |deadline_| but no further.
     bool did_work = Run();
 
     success = condition();
     if (!did_work) {
-      break;
+      // No work happened and the loop caught up with its deadline, no more
+      // event should be handled.
+      if (initial_deadline <= Now()) {
+        break;
+      }
+      // Advance the time to the next task due time.
+      deadline_ = std::min(GetNextTaskDueTime(), initial_deadline);
     }
   }
 
+  // Restore the initial deadline.
+  ZX_ASSERT(deadline_ <= initial_deadline);
+  deadline_ = initial_deadline;
   ZX_ASSERT(locked_subloops_.back() == current_subloop_);
   locked_subloops_.pop_back();
   return success;
@@ -219,7 +235,7 @@ bool TestLoop::IsLockedSubLoop(TestSubloop* subloop) {
 bool TestLoop::Run() {
   TestSubloop* initial_loop = current_subloop_;
   bool did_work = false;
-  while (!has_quit_) {
+  while (!has_quit_ || !locked_subloops_.empty()) {
     if (!HasPendingWork()) {
       zx::time next_due_time = GetNextTaskDueTime();
       if (next_due_time > deadline_) {

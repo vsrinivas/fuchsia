@@ -721,6 +721,51 @@ bool BlockCurrentSubLoopAndRunOthersUntilOtherLoop() {
   END_TEST;
 }
 
+bool BlocksFinishWhenOtherLoopQuitFor(uint32_t random_seed) {
+  BEGIN_HELPER;
+  std::unique_ptr<async::TestLoop> loop;
+
+  EXPECT_TRUE(SeedTestLoopWithEnv(random_seed, &loop));
+  auto loopB = loop->StartNewLoop();
+  auto loopC = loop->StartNewLoop();
+
+  async::PostTask(loop->dispatcher(), [&] { loop->Quit(); });
+  bool loopB_called = false;
+  async::PostTask(loopB->dispatcher(), [&] { loopB_called = true; });
+  async::PostTask(loopC->dispatcher(), [&] {
+    EXPECT_TRUE(loop->BlockCurrentSubLoopAndRunOthersUntil([&] { return loopB_called; }));
+  });
+
+  auto time = loop->Now();
+  loop->RunFor(zx::sec(1));
+  // Run until Idle for the case where the Quit() task is scheduled before the
+  // blocking task. This ensure that all task have been run, but doesn't advance
+  // the time.
+  loop->RunUntilIdle();
+
+  EXPECT_TRUE(loopB_called);
+  // Time should not have flown, as a Quit() has been posted.
+  EXPECT_EQ(time.get(), loop->Now().get());
+
+  END_HELPER;
+}
+
+bool BlocksFinishWhenOtherLoopQuit() {
+  BEGIN_TEST;
+
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(1));
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(43));
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(893));
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(39408));
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(844018));
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(83018299));
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(3213));
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(139133113));
+  EXPECT_TRUE(BlocksFinishWhenOtherLoopQuitFor(1323234373));
+
+  END_TEST;
+}
+
 // Test that non-async-dispatcher loops run fine.
 struct ExternalLoop : async_test_subloop_t {
   ExternalLoop() { ops = &kOps; }
@@ -878,4 +923,5 @@ RUN_TEST(TasksAreDispatchedOnManyLoops)
 RUN_TEST(WaitsAreDispatchedOnManyLoops)
 RUN_TEST(DispatchOrderIsDeterministic)
 RUN_TEST(BlockCurrentSubLoopAndRunOthersUntilOtherLoop)
+RUN_TEST(BlocksFinishWhenOtherLoopQuit)
 END_TEST_CASE(MultiLoopTests)
