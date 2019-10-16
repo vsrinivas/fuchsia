@@ -159,7 +159,13 @@ where
         stash_prefix: &'a str,
     ) -> Result<Server<F>, Error> {
         let stash = Stash::new(stash_id, stash_prefix).context("failed to instantiate stash")?;
-        let cache = stash.load().await?;
+        let cache = match stash.load().await {
+            Ok(c) => c,
+            Err(e) => {
+                log::info!("attempted to load stored leases from an empty stash: {}", e);
+                HashMap::new()
+            }
+        };
         let mut server = Server { cache, pool: AddressPool::new(), config, time_provider, stash };
         server.pool.load_pool(&server.config.managed_addrs);
         Ok(server)
@@ -1277,8 +1283,8 @@ pub mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     #[should_panic(expected = "tried to release unallocated ip")]
-    async fn test_dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated(
-    ) {
+    async fn test_dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated()
+    {
         let mut server = new_test_minimal_server(server_time_provider).await.unwrap();
         let disc = new_test_discover();
 

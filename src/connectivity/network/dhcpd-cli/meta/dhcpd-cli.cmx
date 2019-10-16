@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/dhcpd-cli"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.dhcp.Server"
+        ]
+    }
+}

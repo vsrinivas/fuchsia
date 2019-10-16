@@ -1,0 +1,18 @@
+{
+    "program": {
+        "args": [
+            "--test"
+        ],
+        "binary": "bin/dhcpd"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.stash.Store"
+        ]
+    }
+}

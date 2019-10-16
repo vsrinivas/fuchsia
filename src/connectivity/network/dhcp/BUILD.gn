@@ -8,7 +8,8 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("dhcp") {
+rustc_library("lib") {
+  name = "dhcp"
   with_unit_tests = true
   edition = "2018"
   deps = [
@@ -34,7 +35,7 @@ rustc_library("dhcp") {
 
 test_package("dhcp_tests") {
   deps = [
-    ":dhcp_test",
+    ":lib_test",
   ]
 
   tests = [
@@ -51,13 +52,14 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    ":dhcp",
+    ":lib",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
+    "//src/lib/argh",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:getopts",
@@ -80,6 +82,10 @@ package("dhcpd") {
     {
       path = rebase_path("meta/dhcpd.cmx")
       dest = "dhcpd.cmx"
+    },
+    {
+      path = rebase_path("meta/dhcpd_test.cmx")
+      dest = "dhcpd_test.cmx"
     },
   ]
   resources = [
@@ -105,5 +111,13 @@ test_package("dhcpd_tests") {
       name = "dhcpd_bin_test"
       environments = [ qemu_env ]
     },
+  ]
+}
+
+group("dhcp") {
+  testonly = true
+  public_deps = [
+    ":dhcpd",
+    "//src/connectivity/network/dhcp/config",
   ]
 }

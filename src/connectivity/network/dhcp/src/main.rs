@@ -5,21 +5,20 @@
 #![deny(warnings)]
 
 use {
+    argh::FromArgs,
     dhcp::{
         configuration,
         protocol::{Message, SERVER_PORT},
         server::{Server, ServerAction, ServerDispatcher, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX},
     },
-    failure::{Error, Fail, ResultExt},
+    failure::{Error, ResultExt},
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
     fuchsia_zircon::{self as zx, DurationNum, Status},
     futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
-    getopts::Options,
     std::{
         cell::RefCell,
-        env,
         net::{IpAddr, SocketAddr},
     },
     void::Void,
@@ -37,16 +36,27 @@ enum IncomingService {
     Server(fidl_fuchsia_net_dhcp::Server_RequestStream),
 }
 
+/// The Fuchsia DHCP server.
+#[derive(Debug, FromArgs)]
+#[argh(name = "dhcpd")]
+pub struct Args {
+    /// flag to enable test only mode, where dhcpd implements fuchsia.net.dhcp.Server but does not
+    /// serve DHCP transactions.
+    #[argh(switch, long = "test", short = 't')]
+    pub test_only: bool,
+
+    /// the path to configuration file consumed by dhcpd.
+    #[argh(option, default = "DEFAULT_CONFIG_PATH.to_string()")]
+    pub config: String,
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fx_syslog::init_with_tags(&["dhcpd"])?;
 
-    let path = get_server_config_file_path()?;
-    let config = configuration::load_server_config_from_file(path)?;
+    let args: Args = argh::from_env();
+    let config = configuration::load_server_config_from_file(args.config)?;
     let server_ip = config.server_ip;
-    let socket_addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
-    let udp_socket = UdpSocket::bind(&socket_addr).context("unable to bind socket")?;
-    udp_socket.set_broadcast(true).context("unable to set broadcast")?;
     let server = Server::from_config(
         config,
         || zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000,
@@ -56,8 +66,6 @@ async fn main() -> Result<(), Error> {
     .await
     .context("failed to create server")?;
     let server = RefCell::new(server);
-    let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
-    let lease_expiration_handler = define_lease_expiration_handler_future(&server);
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Server);
@@ -78,28 +86,20 @@ async fn main() -> Result<(), Error> {
         })
         .try_for_each_concurrent(None, |()| futures::future::ok(()));
 
-    fx_log_info!("starting server");
-    let (_void, (), ()) =
-        futures::try_join!(msg_handling_loop, admin_fut, lease_expiration_handler)?;
-    Ok(())
-}
-
-fn get_server_config_file_path() -> Result<String, Error> {
-    let args: Vec<String> = env::args().collect();
-    let program = &args[0];
-    let mut opts = Options::new();
-    opts.optopt("c", "config", "dhcpd configuration file path", "FILE");
-    let matches = match opts.parse(args[1..].iter()) {
-        Ok(m) => m,
-        Err(e) => {
-            opts.short_usage(program);
-            return Err(e.context("failed to parse options").into());
-        }
-    };
-    match matches.opt_str("c") {
-        Some(p) => Ok(p),
-        None => Ok(DEFAULT_CONFIG_PATH.to_string()),
+    if args.test_only {
+        fx_log_info!("starting server in test only mode");
+        let () = admin_fut.await?;
+    } else {
+        let socket_addr = SocketAddr::new(IpAddr::V4(server_ip), SERVER_PORT);
+        let udp_socket = UdpSocket::bind(&socket_addr).context("unable to bind socket")?;
+        let () = udp_socket.set_broadcast(true).context("unable to set broadcast")?;
+        let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
+        let lease_expiration_handler = define_lease_expiration_handler_future(&server);
+        fx_log_info!("starting server");
+        let (_void, (), ()) =
+            futures::try_join!(msg_handling_loop, admin_fut, lease_expiration_handler)?;
     }
+    Ok(())
 }
 
 async fn define_msg_handling_loop_future<F: Fn() -> i64>(
