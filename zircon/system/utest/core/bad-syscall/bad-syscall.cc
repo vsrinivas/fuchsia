@@ -12,6 +12,7 @@
 #include <zxtest/zxtest.h>
 
 extern "C" zx_status_t bad_syscall(uint64_t num);
+extern "C" zx_handle_t get_root_resource(void);
 
 namespace {
 
@@ -51,5 +52,14 @@ TEST(BadAccessTest, SyscallNumTest) {
   ASSERT_DEATH(([]() { bad_syscall(0xff00ff0000000000ull); }));
   ASSERT_DEATH(([]() { bad_syscall(0xff00ff0000000010ull); }));
 }
+
+#if defined(__x86_64__)
+TEST(BadAccessTest, PciCfgPioRw) {
+  EXPECT_EQ(zx_pci_cfg_pio_rw(
+                get_root_resource(), 0, 0, 0, 0,
+                const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(unmapped_addr)), 0, true),
+            ZX_ERR_INVALID_ARGS);
+}
+#endif
 
 }  // namespace

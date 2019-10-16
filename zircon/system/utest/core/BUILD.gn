@@ -6,7 +6,6 @@ import("$zx/public/gn/test/zbi_test.gni")
 
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
-  "bad-syscall",
   "debug",
   "c11-condvar",
   "c11-mutex",
@@ -48,6 +47,7 @@ core_tests = [
 # These tests need get_root_resource(), which is only available in the
 # unified core-tests binary.
 unified_only = [
+  "bad-syscall",
   "bti",
   "debug:unified-only",
   "interrupt",
