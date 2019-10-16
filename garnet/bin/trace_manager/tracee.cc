@@ -562,7 +562,7 @@ TransferStatus Tracee::WriteProviderIdRecord(const zx::socket& socket) const {
 }
 
 TransferStatus Tracee::WriteProviderInfoRecord(const zx::socket& socket) const {
-  FXL_VLOG(2) << *bundle_ << ": writing provider info record";
+  FXL_VLOG(5) << *bundle_ << ": writing provider info record";
   std::string label("");  // TODO(ZX-1875): Provide meaningful labels or remove
                           // labels from the trace wire format altogether.
   size_t num_words = 1u + trace::BytesToWords(trace::Pad(label.size()));

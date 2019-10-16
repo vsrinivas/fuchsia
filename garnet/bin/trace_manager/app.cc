@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <src/lib/fxl/logging.h>
+
 namespace tracing {
 
 TraceManagerApp::TraceManagerApp(const Config& config)
@@ -13,6 +15,8 @@ TraceManagerApp::TraceManagerApp(const Config& config)
   context_->outgoing()->AddPublicService(trace_registry_bindings_.GetHandler(&trace_manager_));
 
   context_->outgoing()->AddPublicService(trace_controller_bindings_.GetHandler(&trace_manager_));
+
+  FXL_VLOG(2) << "TraceManager services registered";
 }
 
 TraceManagerApp::~TraceManagerApp() = default;

@@ -142,7 +142,7 @@ void TraceSession::CheckAllProvidersStarted() {
                       // TODO(TO-530): We should still record what providers
                       // failed to start.
                       tracee->state() == Tracee::State::kStopped);
-        FXL_VLOG(2) << "tracee " << *tracee->bundle() << (ready ? "" : " not") << " ready";
+        FXL_VLOG(5) << "tracee " << *tracee->bundle() << (ready ? "" : " not") << " ready";
         return value && ready;
       });
 
@@ -218,7 +218,7 @@ void TraceSession::QueueTraceInfo() {
   async::PostTask(async_get_default_dispatcher(), [this]() {
     auto status = WriteMagicNumberRecord();
     if (status != TransferStatus::kComplete) {
-      FXL_LOG(ERROR) << "Failed to write magic number record";
+      FXL_LOG(ERROR) << "Failed to write magic number record: " << status;
     }
   });
 }

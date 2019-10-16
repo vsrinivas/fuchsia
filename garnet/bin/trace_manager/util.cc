@@ -41,4 +41,23 @@ TransferStatus WriteBufferToSocket(const zx::socket& socket, const void* buffer,
   return TransferStatus::kComplete;
 }
 
+std::ostream& operator<<(std::ostream& out, TransferStatus status) {
+  switch (status) {
+    case TransferStatus::kComplete:
+      out << "complete";
+      break;
+    case TransferStatus::kProviderError:
+      out << "provider error";
+      break;
+    case TransferStatus::kWriteError:
+      out << "write error";
+      break;
+    case TransferStatus::kReceiverDead:
+      out << "receiver dead";
+      break;
+  }
+
+  return out;
+}
+
 }  // namespace tracing

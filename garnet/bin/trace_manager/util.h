@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_UTIL_H_
 #define GARNET_BIN_TRACE_MANAGER_UTIL_H_
 
+#include <iosfwd>
+
 #include <lib/zx/socket.h>
 
 namespace tracing {
@@ -20,6 +22,8 @@ enum class TransferStatus {
   // The receiver of the transfer went away.
   kReceiverDead,
 };
+
+std::ostream& operator<<(std::ostream& out, TransferStatus status);
 
 // Writes |len| bytes from |buffer| to |socket|. Returns
 // TransferStatus::kComplete if the entire buffer has been
