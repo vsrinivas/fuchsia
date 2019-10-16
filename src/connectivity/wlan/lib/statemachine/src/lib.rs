@@ -268,6 +268,19 @@ mod tests {
     }
 
     #[test]
+    fn state_transition_self_transition() {
+        let state = State::new(A);
+
+        let state = state.transition_to(B(SharedStateData {foo: 5 }));
+        let (transition, data) = state.release_data();
+        assert_eq!(data.0.foo, 5);
+
+        let state = transition.to(B(SharedStateData { foo: 2 }));
+        let (_, data) = state.release_data();
+        assert_eq!(data.0.foo, 2);
+    }
+
+    #[test]
     fn statemachine() {
         let mut statemachine = StateMachine::new(States::A(State::new(A)));
         statemachine.replace_state(|state| match state {

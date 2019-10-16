@@ -151,11 +151,15 @@ pub fn process(input: TokenStream) -> TokenStream {
     for transition in &args.transitions {
         state_set.insert(transition.from_name.clone());
         state_set.extend(transition.to_names.iter().map(|x| x.clone()));
-
         transitions
             .entry(transition.from_name.clone())
             .or_insert(HashSet::new())
             .extend(transition.to_names.iter().map(|x| x.clone()));
+    }
+
+    // Add self transitions.
+    for state in &state_set {
+        transitions.entry(state.clone()).or_insert(HashSet::new()).insert(state.clone());
     }
 
     // Check if every state is reachable.
