@@ -5,6 +5,7 @@
 test("fvm") {
   sources = [
     "fvm.cc",
+    "resize-tests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
@@ -19,12 +20,15 @@ test("fvm") {
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/blobfs",
     "$zx/system/ulib/block-client",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fvm/test:devices",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/memfs",
@@ -33,24 +37,11 @@ test("fvm") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace",
     "$zx/system/ulib/trace-engine",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/uboringssl",
-  ]
-}
-
-test("fvm-integration") {
-  sources = [
-    "resize-tests.cc",
-  ]
-
-  deps = [
-    "$zx/system/ulib/fvm/test:devices",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/zxtest",
   ]
 }
