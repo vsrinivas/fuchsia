@@ -5,6 +5,7 @@
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 
 #include <fuchsia/inspect/deprecated/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -52,16 +53,19 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   ~LedgerRepositoryFactoryImplTest() override = default;
 
   void TearDown() override {
-    bool called = false;
-    repository_factory_->Close(callback::SetWhenCalled(&called));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
+    // Closing the factory, as the destruction must happen on the loop.
+    CloseFactory(std::move(repository_factory_));
   }
 
  protected:
   ::testing::AssertionResult CreateDirectory(const std::string& name);
   ::testing::AssertionResult CallGetRepository(
       const std::string& name, ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr);
+
+  // Helper function to call the |Close| method on a
+  // |LedgerRepositoryFactoryImpl|. This is needed as the |Close| method must be
+  // called while the loop is running.
+  void CloseFactory(std::unique_ptr<LedgerRepositoryFactoryImpl> factory);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   inspect_deprecated::Node top_level_inspect_node_;
@@ -102,6 +106,12 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
            << "Status of GetRepository call was " << static_cast<int32_t>(status) << "!";
   }
   return ::testing::AssertionSuccess();
+}
+
+void LedgerRepositoryFactoryImplTest::CloseFactory(
+    std::unique_ptr<LedgerRepositoryFactoryImpl> factory) {
+  async::PostTask(dispatcher(), [factory = std::move(factory)]() mutable { factory.reset(); });
+  RunLoopUntilIdle();
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
@@ -278,12 +288,8 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseFactory) {
   EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(channel_closed);
 
-  bool factory_close_called;
-  repository_factory->Close(callback::SetWhenCalled(&factory_close_called));
+  CloseFactory(std::move(repository_factory));
 
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(factory_close_called);
   EXPECT_TRUE(channel_closed);
 }
 

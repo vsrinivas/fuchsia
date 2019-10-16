@@ -29,7 +29,5 @@ void FakeDbFactory::GetOrCreateDb(ledger::DetachedPath db_path,
   callback(Status::OK, std::make_unique<FakeDb>(dispatcher_));
 }
 
-void FakeDbFactory::Close(fit::closure callback) { callback(); }
-
 }  // namespace fake
 }  // namespace storage

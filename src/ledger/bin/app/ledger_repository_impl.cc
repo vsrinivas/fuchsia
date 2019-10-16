@@ -47,9 +47,9 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)),
       page_usage_listeners_(std::move(page_usage_listeners)),
-      ledger_managers_(environment_->dispatcher()),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       background_sync_manager_(std::move(background_sync_manager)),
+      ledger_managers_(environment_->dispatcher()),
       coroutine_manager_(environment_->coroutine_service()),
       inspect_node_(std::move(inspect_node)),
       requests_metric_(
@@ -200,16 +200,6 @@ void LedgerRepositoryImpl::Attach(std::string ledger_name,
   callback(ledger_manager->CreateDetacher());
 };
 
-std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
-LedgerRepositoryImpl::Unbind() {
-  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> handles;
-  for (auto& binding : bindings_) {
-    handles.push_back(binding.Unbind());
-  }
-  bindings_.clear();
-  return handles;
-}
-
 Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger_name,
                                               LedgerManager** ledger_manager) {
   FXL_DCHECK(!ledger_name.empty());
@@ -306,30 +296,16 @@ void LedgerRepositoryImpl::CheckDiscardable() {
   }
 
   closing_ = true;
+  closed_ = true;
 
-  // Only run the following code once. |db_| is used as a sentinel.
-  if (db_) {
-    // Both PageUsageDb and DbFactory use the filesystem. We need to close them before we can
-    // close ourselves, as well as DiskCleanupManager and BackgroungSyncManager, since they use
-    // filesystem via pointer to PageUsageDb.
-    coroutine_manager_.Shutdown();
-    ledger_managers_.clear();
-    disk_cleanup_manager_.reset();
-    background_sync_manager_.reset();
-    db_.reset();
-    db_factory_->Close(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this]() {
-      closed_ = true;
+  if (on_discardable_) {
+    on_discardable_();
+  }
 
-      if (on_discardable_) {
-        on_discardable_();
-      }
-
-      auto callbacks = std::move(close_callbacks_);
-      close_callbacks_.clear();
-      for (auto& callback : callbacks) {
-        callback(Status::OK);
-      }
-    }));
+  auto callbacks = std::move(close_callbacks_);
+  close_callbacks_.clear();
+  for (auto& callback : callbacks) {
+    callback(Status::OK);
   }
 }
 

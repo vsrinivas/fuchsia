@@ -34,9 +34,6 @@ class DbFactory {
   // exist, it either returns with NOT_FOUND status, or creates a new one.
   virtual void GetOrCreateDb(ledger::DetachedPath db_path, OnDbNotFound on_db_not_found,
                              fit::function<void(Status, std::unique_ptr<Db>)> callback) = 0;
-
-  // Closes the factory. The factory is only effectively closed after |callback| is executed.
-  virtual void Close(fit::closure callback) = 0;
 };
 
 }  // namespace storage

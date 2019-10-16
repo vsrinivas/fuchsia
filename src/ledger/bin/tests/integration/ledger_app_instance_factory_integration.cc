@@ -112,8 +112,6 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
           inspect_binding_(inspect_impl, std::move(inspect_request)) {}
     ~LedgerRepositoryFactoryContainer() = default;
 
-    void Close(fit::closure callback) { factory_impl_.Close(std::move(callback)); }
-
    private:
     Environment* environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
@@ -126,7 +124,6 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
   std::string GetUserId() override;
 
-  LoopController* const loop_controller_;
   std::unique_ptr<SubLoop> loop_;
   std::unique_ptr<SubLoop> io_loop_;
   std::unique_ptr<Environment> environment_;
@@ -152,7 +149,6 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
                                                   std::move(repository_factory_ptr),
                                                   std::move(inspect_ptr)),
-      loop_controller_(loop_controller),
       loop_(std::move(loop)),
       io_loop_(std::move(io_loop)),
       environment_(std::move(environment)),
@@ -192,11 +188,6 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
 std::string LedgerAppInstanceImpl::GetUserId() { return kUserId; }
 
 LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
-  auto waiter = loop_controller_->NewWaiter();
-  async::PostTask(loop_->dispatcher(), [this, cb = waiter->GetCallback()]() mutable {
-    factory_container_->Close(std::move(cb));
-  });
-  EXPECT_TRUE(waiter->RunUntilCalled());
   async::PostTask(loop_->dispatcher(), [this] { factory_container_.reset(); });
   loop_->DrainAndQuit();
   loop_.release();

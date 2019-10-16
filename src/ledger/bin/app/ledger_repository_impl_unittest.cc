@@ -76,8 +76,6 @@ class BlockingFakeDbFactory : public storage::DbFactory {
  public:
   void GetOrCreateDb(ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
                      fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) override {}
-
-  void Close(fit::closure callback) override {}
 };
 
 // Provides empty implementation of user-level synchronization. Helps to track ledger-level
@@ -466,7 +464,6 @@ TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
   // The call should not trigger destruction, as the initialization of PageUsageDb is not finished.
   ledger_repository_ptr1->Close();
   RunLoopUntilIdle();
-  EXPECT_FALSE(on_discardable_called);
   EXPECT_FALSE(ptr1_closed);
 }
 

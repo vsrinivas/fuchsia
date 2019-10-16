@@ -4,8 +4,11 @@
 
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 
+#include <lib/async/cpp/task.h>
+
 #include <memory>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
@@ -20,13 +23,38 @@
 namespace storage {
 namespace {
 
+using testing::AnyOf;
+
 class LevelDbFactoryTest : public ledger::TestWithEnvironment {
  public:
+  // Wrapper around LevelDbFactory. This class is needed because LevelDbFactory
+  // can only be deleted while the loop is running so that it can synchronized
+  // with the io dispatcher.
+  class LevelDbFactoryWrapper {
+   public:
+    LevelDbFactoryWrapper(async::TestLoop* loop, ledger::Environment* environment,
+                          ledger::DetachedPath cache_path)
+        : loop_(loop),
+          environment_(environment),
+          db_factory_(std::make_unique<LevelDbFactory>(environment, std::move(cache_path))) {}
+    ~LevelDbFactoryWrapper() {
+      async::PostTask(environment_->dispatcher(), [this] { db_factory_.reset(); });
+      loop_->RunUntilIdle();
+    }
+
+    LevelDbFactory* operator->() const { return db_factory_.get(); };
+
+   private:
+    async::TestLoop* loop_;
+    ledger::Environment* environment_;
+    std::unique_ptr<LevelDbFactory> db_factory_;
+  };
+
   LevelDbFactoryTest()
       : base_path_(tmpfs_.root_fd()),
         cache_path_(base_path_.SubPath("cache")),
         db_path_(base_path_.SubPath("databases")),
-        db_factory_(&environment_, cache_path_) {}
+        db_factory_(&test_loop(), &environment_, cache_path_) {}
 
   ~LevelDbFactoryTest() override = default;
 
@@ -37,15 +65,8 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
     ASSERT_TRUE(files::CreateDirectoryAt(cache_path_.root_fd(), cache_path_.path()));
     ASSERT_TRUE(files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path()));
 
-    db_factory_.Init();
+    db_factory_->Init();
     RunLoopUntilIdle();
-  }
-
-  void TearDown() override {
-    bool called = false;
-    db_factory_.Close(callback::SetWhenCalled(&called));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
   }
 
  private:
@@ -55,7 +76,7 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
  protected:
   ledger::DetachedPath cache_path_;
   ledger::DetachedPath db_path_;
-  LevelDbFactory db_factory_;
+  LevelDbFactoryWrapper db_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LevelDbFactoryTest);
 };
@@ -65,8 +86,8 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
   Status status;
   std::unique_ptr<Db> db;
   bool called;
-  db_factory_.GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::CREATE,
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+  db_factory_->GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::CREATE,
+                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -81,8 +102,8 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
 
   // Close the previous instance and open it again.
   db.reset();
-  db_factory_.GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+  db_factory_->GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
+                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -100,8 +121,8 @@ TEST_F(LevelDbFactoryTest, GetDbOnNotFound) {
   Status status;
   std::unique_ptr<Db> db;
   bool called;
-  db_factory_.GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+  db_factory_->GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
+                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
@@ -120,8 +141,8 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
     ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
     EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
 
-    db_factory_.GetOrCreateDb(path, DbFactory::OnDbNotFound::CREATE,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+    db_factory_->GetOrCreateDb(path, DbFactory::OnDbNotFound::CREATE,
+                               callback::Capture(callback::SetWhenCalled(&called), &status, &db));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -145,7 +166,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
     ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
     EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
 
-    db_factory_.GetOrCreateDb(
+    db_factory_->GetOrCreateDb(
         db_path_.SubPath(fxl::NumberToString(i)), DbFactory::OnDbNotFound::CREATE,
         callback::Capture(callback::SetWhenCalled(&called[i]), &statuses[i], &dbs[i]));
   }
@@ -170,12 +191,12 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDbInCallback) {
   Status status2;
   std::unique_ptr<Db> db2;
 
-  db_factory_.GetOrCreateDb(
+  db_factory_->GetOrCreateDb(
       path1, DbFactory::OnDbNotFound::CREATE, [&](Status status1, std::unique_ptr<Db> db1) {
         called1 = true;
         EXPECT_EQ(status1, Status::OK);
         EXPECT_NE(nullptr, db1);
-        db_factory_.GetOrCreateDb(
+        db_factory_->GetOrCreateDb(
             path2, DbFactory::OnDbNotFound::CREATE,
             callback::Capture(callback::SetWhenCalled(&called2), &status2, &db2));
       });
@@ -199,73 +220,59 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   // Must be the same as |kCachedDbPath| in leveldb_factory.cc.
   ledger::DetachedPath cached_db_path = cache_path.SubPath("cached_db");
 
-  auto db_factory = std::make_unique<LevelDbFactory>(&environment_, cache_path);
+  auto db_factory =
+      std::make_unique<LevelDbFactoryWrapper>(&test_loop(), &environment_, cache_path);
 
   // The cached db directory should not be created, yet.
   EXPECT_FALSE(files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
 
   // Initialize and wait for the cached instance to be created.
-  db_factory->Init();
+  (*db_factory)->Init();
   RunLoopUntilIdle();
-
-  bool close_called = false;
-  db_factory->Close(callback::SetWhenCalled(&close_called));
-  RunLoopUntilIdle();
-  EXPECT_TRUE(close_called);
 
   // Close the factory. This will not affect the created cached instance, which
   // was created under |cached_db_path|.
   db_factory.reset();
   EXPECT_TRUE(files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
 
-  // Reset and re-initialize the factory object. It should now use the
-  // previously created instance.
-  db_factory = std::make_unique<LevelDbFactory>(&environment_, cache_path);
-  db_factory->Init();
+  // Re-initialize the factory object. It should now use the previously created
+  // instance.
+  db_factory = std::make_unique<LevelDbFactoryWrapper>(&test_loop(), &environment_, cache_path);
+  (*db_factory)->Init();
   RunLoopUntilIdle();
-
-  db_factory->Close(callback::SetWhenCalled(&close_called));
-  RunLoopUntilIdle();
-  EXPECT_TRUE(close_called);
 }
 
 // Make sure we can destroy the factory while a request is in progress.
 TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
-  std::unique_ptr<LevelDbFactory> db_factory_ptr =
-      std::make_unique<LevelDbFactory>(&environment_, cache_path_);
-  db_factory_ptr->Init();
+  auto db_factory_ptr =
+      std::make_unique<LevelDbFactoryWrapper>(&test_loop(), &environment_, cache_path_);
+  (*db_factory_ptr)->Init();
   RunLoopUntilIdle();
 
-  Status status_0, status_1;
-  std::unique_ptr<Db> db_0, db_1;
-  bool called_0, called_1;
+  Status status;
+  std::unique_ptr<Db> db;
+  bool called;
 
   // Post the initialization code to the I/O loop.
-  db_factory_ptr->GetOrCreateDb(
-      db_path_.SubPath(fxl::NumberToString(0)), DbFactory::OnDbNotFound::CREATE,
-      callback::Capture(callback::SetWhenCalled(&called_0), &status_0, &db_0));
+  (*db_factory_ptr)
+      ->GetOrCreateDb(db_path_.SubPath(fxl::NumberToString(0)), DbFactory::OnDbNotFound::CREATE,
+                      callback::Capture(callback::SetWhenCalled(&called), &status, &db));
 
-  // Delete the factory before any code is run on the I/O loop.
-  bool close_called = false;
-  db_factory_ptr->Close(callback::SetWhenCalled(&close_called));
-
-  db_factory_ptr->GetOrCreateDb(
-      db_path_.SubPath(fxl::NumberToString(1)), DbFactory::OnDbNotFound::CREATE,
-      callback::Capture(callback::SetWhenCalled(&called_1), &status_1, &db_1));
+  // Delete the factory before any code is run on the I/O loop. The destructor
+  // will block until all I/O operation are cancelled.
+  db_factory_ptr.reset();
 
   // Pump all loops.
   RunLoopUntilIdle();
 
-  // The database is now closed;
-  EXPECT_TRUE(close_called);
-
-  EXPECT_TRUE(called_0);
-  EXPECT_TRUE(called_1);
-
-  EXPECT_EQ(status_1, Status::ILLEGAL_STATE);
-
-  // We can safely delete the database factory.
-  db_factory_ptr.reset();
+  // The behavior depends on what code is run on the I/O loop, vs main loop. If
+  // the destruction happens first, no callback is ever called and |called| is
+  // false. Otherwise, the callback can be called with either an OK status or a
+  // ILLEGAL_STATE status, depending on how far the operation progressed on the
+  // IO thread.
+  if (called) {
+    EXPECT_THAT(status, AnyOf(Status::OK, Status::ILLEGAL_STATE));
+  }
 }
 
 }  // namespace

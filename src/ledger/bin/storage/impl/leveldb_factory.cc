@@ -172,11 +172,10 @@ class LevelDbFactory::IOLevelDbFactory {
   // |io_executor_| can't be destroyed when a task is in progress, and
   // |io_executor_| tasks use member variables to operate. Thus, by scheduling
   // the deletion of this class on the same dispatcher as the |io_executor_|, we
-  // ensure that |io_executor_| is destroyed when no task is running, that
-  // no task will access member variables after their destruction, and that we
-  // are not blocking the main thread while doing this. |callback| will be called on the main thread
-  // when this is done.
-  void SelfDestruct(std::unique_ptr<LevelDbFactory::IOLevelDbFactory> self, fit::closure callback);
+  // ensure that |io_executor_| is destroyed when no task is running and that
+  // no task will access member variables after their destruction.
+  // This method will block the main thread while doing this.
+  void SelfDestruct(std::unique_ptr<LevelDbFactory::IOLevelDbFactory> self);
 
  private:
   // Gets or creates a new LevelDb instance in the given |db_path|,
@@ -249,15 +248,16 @@ void LevelDbFactory::IOLevelDbFactory::GetOrCreateDb(
 }
 
 void LevelDbFactory::IOLevelDbFactory::SelfDestruct(
-    std::unique_ptr<LevelDbFactory::IOLevelDbFactory> self, fit::closure callback) {
+    std::unique_ptr<LevelDbFactory::IOLevelDbFactory> self) {
   FXL_DCHECK(self.get() == this);
   io_executor_.Stop();
+  std::unique_ptr<ledger::Notification> notification = environment_->MakeNotification();
   async::PostTask(environment_->io_dispatcher(),
-                  [main_dispatcher = environment_->dispatcher(), self = std::move(self),
-                   callback = std::move(callback)]() mutable {
+                  [self = std::move(self), notification = notification.get()]() mutable {
                     self.reset();
-                    async::PostTask(main_dispatcher, std::move(callback));
+                    notification->Notify();
                   });
+  notification->WaitForNotification();
 }
 
 fit::promise<> LevelDbFactory::IOLevelDbFactory::GetOrCreateDbOnIOThread(
@@ -393,22 +393,25 @@ LevelDbFactory::IOLevelDbFactory::ReturnPrecachedDbOnIOThread(
 }
 
 LevelDbFactory::LevelDbFactory(ledger::Environment* environment, ledger::DetachedPath cache_path)
-    : state_(InternalState::CREATED), main_executor_(environment->dispatcher()) {
+    : initialized_(false), main_executor_(environment->dispatcher()) {
   io_level_db_factory_ = std::make_unique<IOLevelDbFactory>(environment, cache_path);
 }
 
-LevelDbFactory::~LevelDbFactory() { FXL_DCHECK(state_ == InternalState::CLOSED); }
+LevelDbFactory::~LevelDbFactory() {
+  FXL_DCHECK(initialized_);
+  io_level_db_factory_->SelfDestruct(std::move(io_level_db_factory_));
+}
 
 void LevelDbFactory::Init() {
-  FXL_DCHECK(state_ == InternalState::CREATED);
+  FXL_DCHECK(!initialized_);
   io_level_db_factory_->Init();
-  state_ = InternalState::INITIALIZED;
+  initialized_ = true;
 }
 
 void LevelDbFactory::GetOrCreateDb(ledger::DetachedPath db_path,
                                    DbFactory::OnDbNotFound on_db_not_found,
                                    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
-  if (state_ != InternalState::INITIALIZED) {
+  if (!initialized_) {
     callback(Status::ILLEGAL_STATE, nullptr);
     return;
   }
@@ -430,16 +433,6 @@ void LevelDbFactory::GetOrCreateDb(ledger::DetachedPath db_path,
                 return;
             }
           }));
-}
-
-void LevelDbFactory::Close(fit::closure callback) {
-  FXL_DCHECK(state_ == InternalState::INITIALIZED);
-  state_ = InternalState::CLOSING;
-  io_level_db_factory_->SelfDestruct(std::move(io_level_db_factory_),
-                                     [this, callback = std::move(callback)]() {
-                                       state_ = InternalState::CLOSED;
-                                       callback();
-                                     });
 }
 
 }  // namespace storage

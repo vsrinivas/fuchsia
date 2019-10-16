@@ -47,9 +47,6 @@ class LedgerRepositoryFactoryImpl
                      fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
                      fit::function<void(Status)> callback) override;
 
-  // Close all repositories. Used for testing.
-  void Close(fit::closure callback);
-
  private:
   class LedgerRepositoryContainer;
   struct RepositoryInformation;
@@ -57,8 +54,8 @@ class LedgerRepositoryFactoryImpl
   // Binds |repository_request| to the repository stored in the directory opened
   // in |root_fd|.
   void GetRepositoryByFD(
-      fbl::unique_fd root_fd, fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-      std::string user_id,
+      std::shared_ptr<fbl::unique_fd> root_fd,
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
       fit::function<void(Status)> callback);
   std::unique_ptr<sync_coordinator::UserSyncImpl> CreateUserSync(

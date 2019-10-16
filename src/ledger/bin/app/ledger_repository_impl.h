@@ -60,9 +60,6 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
 
   void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request);
 
-  // Releases all handles bound to this repository impl.
-  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> Unbind();
-
   // PageEvictionManager::Delegate:
   void PageIsClosedAndSynced(fxl::StringView ledger_name, storage::PageIdView page_id,
                              fit::function<void(Status, PagePredicateResult)> callback) override;
@@ -113,11 +110,12 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
   std::vector<PageUsageListener*> page_usage_listeners_;
-  callback::AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator>
-      ledger_managers_;
-  // The DiskCleanupManager relies on the |ledger_managers_| being still alive.
   std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<BackgroundSyncManager> background_sync_manager_;
+  // The LedgerManager depends on disk_cleanup_manager_ and background_sync_manager_ in its
+  // |page_usage_listeners_|.
+  callback::AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator>
+      ledger_managers_;
   fit::closure on_discardable_;
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;

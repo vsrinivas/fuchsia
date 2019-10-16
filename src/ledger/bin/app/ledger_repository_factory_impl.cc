@@ -119,12 +119,13 @@ bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path, st
 // requests and callbacks and fires them when the repository is available.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
-  explicit LedgerRepositoryContainer(fbl::unique_fd root_fd) : root_fd_(std::move(root_fd)) {
+  explicit LedgerRepositoryContainer(std::shared_ptr<fbl::unique_fd> root_fd)
+      : root_fd_(std::move(root_fd)) {
     // Ensure that we close the repository if the underlying filesystem closes
     // too. This prevents us from trying to write on disk when there's no disk
     // anymore. This situation can happen when the Ledger is shut down, if the
     // storage is shut down at the same time.
-    fd_chan_ = fsl::CloneChannelFromFileDescriptor(root_fd_.get());
+    fd_chan_ = fsl::CloneChannelFromFileDescriptor(root_fd_->get());
     fd_wait_ = std::make_unique<async::Wait>(
         fd_chan_.get(), ZX_CHANNEL_PEER_CLOSED, 0,
         [](async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
@@ -186,25 +187,6 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
   }
 
-  // Shuts down the repository impl (if already initialized) and detaches all
-  // handles bound to it, moving their ownership to the container.
-  void Detach(fit::closure callback) {
-    if (ledger_repository_) {
-      detached_handles_ = ledger_repository_->Unbind();
-      ledger_repository_->Close([callback = std::move(callback)](Status status) {
-        FXL_DCHECK(status == Status::OK);
-        callback();
-      });
-    }
-    for (auto& request : requests_) {
-      detached_handles_.push_back(std::move(request.first));
-    }
-
-    // TODO(ppi): rather than failing all already pending and future requests,
-    // we should stash them and fulfill them once the deletion is finished.
-    status_ = Status::INTERNAL_ERROR;
-  }
-
  private:
   void OnDiscardable() const {
     if (on_discardable_) {
@@ -212,7 +194,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
   }
 
-  fbl::unique_fd root_fd_;
+  std::shared_ptr<fbl::unique_fd> root_fd_;
   zx::channel fd_chan_;
   std::unique_ptr<async::Wait> fd_wait_;
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
@@ -228,8 +210,9 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
-  explicit RepositoryInformation(int root_fd, std::string user_id)
-      : base_path(root_fd),
+  explicit RepositoryInformation(std::shared_ptr<fbl::unique_fd> root_fd, std::string user_id)
+      : root_fd_(std::move(root_fd)),
+        base_path(root_fd_->get()),
         content_path(base_path.SubPath(kSerializationVersion)),
         cache_path(content_path.SubPath(kCachePath)),
         page_usage_db_path(content_path.SubPath(kPageUsageDbPath)),
@@ -242,6 +225,10 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 
   bool Init(rng::Random* random) { return GetRepositoryName(random, content_path, &name); }
 
+ private:
+  std::shared_ptr<fbl::unique_fd> root_fd_;
+
+ public:
   DetachedPath base_path;
   DetachedPath content_path;
   DetachedPath cache_path;
@@ -274,18 +261,18 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     callback(Status::IO_ERROR);
     return;
   }
-  GetRepositoryByFD(std::move(root_fd), std::move(cloud_provider), user_id,
-                    std::move(repository_request), std::move(callback));
+  GetRepositoryByFD(std::make_shared<fbl::unique_fd>(std::move(root_fd)), std::move(cloud_provider),
+                    user_id, std::move(repository_request), std::move(callback));
 }
 
 void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
-    fbl::unique_fd root_fd, fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-    std::string user_id,
+    std::shared_ptr<fbl::unique_fd> root_fd,
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
     fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
 
-  RepositoryInformation repository_information(root_fd.get(), std::move(user_id));
+  RepositoryInformation repository_information(root_fd, std::move(user_id));
   if (!repository_information.Init(environment_->random())) {
     callback(Status::IO_ERROR);
     return;
@@ -397,11 +384,8 @@ void LedgerRepositoryFactoryImpl::OnVersionMismatch(RepositoryInformation reposi
   // not running.
   auto find_repository = repositories_.find(repository_information.name);
   FXL_DCHECK(find_repository != repositories_.end());
-  find_repository->second.Detach(
-      [this, repository_information = std::move(repository_information), find_repository]() {
-        DeleteRepositoryDirectory(repository_information);
-        repositories_.erase(find_repository);
-      });
+  repositories_.erase(find_repository);
+  DeleteRepositoryDirectory(repository_information);
 }
 
 void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
@@ -423,18 +407,6 @@ void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
     FXL_LOG(ERROR) << "Unable to delete repository staging storage at " << destination;
     return;
   }
-}
-
-void LedgerRepositoryFactoryImpl::Close(fit::closure callback) {
-  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
-  for (auto& repository : repositories_) {
-    repository.second.Detach(waiter->NewCallback());
-  }
-  waiter->Finalize(
-      callback::MakeScoped(weak_factory_.GetWeakPtr(), [this, callback = std::move(callback)]() {
-        repositories_.clear();
-        callback();
-      }));
 }
 
 }  // namespace ledger
