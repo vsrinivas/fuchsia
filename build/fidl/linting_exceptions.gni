@@ -20,6 +20,5 @@ unlinted_libraries = [
   "fuchsia.hardware.goldfish.address.space",
   "fuchsia.hardware.usb.peripheral",
   "fuchsia.hardware.usb.virtual.bus",
-  "fuchsia.net.stack",
   "fuchsia.sysmem",
 ]

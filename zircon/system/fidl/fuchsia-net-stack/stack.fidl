@@ -7,6 +7,18 @@ library fuchsia.net.stack;
 using fuchsia.hardware.ethernet;
 using fuchsia.net;
 
+/// A list of IP addresses for an interface.
+using interface_address_list = vector<InterfaceAddress>:255;
+
+/// A path to a device node.
+using device_path = string:255;
+
+/// A list of interface descriptors.
+using interface_list = vector<InterfaceInfo>:255;
+
+/// An alias that may be used to refer to an interface.
+using interface_name = string:32;
+
 enum PresenceStatus {
     /// The interface is added.
     ADDED = 1;
@@ -36,10 +48,10 @@ union InterfaceStatus {
 
 struct InterfaceAddress {
     /// The IP address of the interface.
-    fuchsia.net.IpAddress ipAddress;
+    fuchsia.net.IpAddress ip_address;
 
     /// The length of the network portion of the interface IP address.
-    uint8 prefixLen;
+    uint8 prefix_len;
 };
 
 struct InterfaceInfo {
@@ -54,15 +66,15 @@ struct InterfaceInfo {
 
 struct InterfaceProperties {
     /// Human friendly name of the interface. eg. eth001, wlanx35.
-    string name;
+    interface_name name;
 
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.
-    string topopath;
+    device_path topopath;
 
     /// An unstable file path corresponding to the interface. Used in watching the creation
     /// and destruction of the interface, or in accessing the interface using netdump.
-    string filepath;
+    device_path filepath;
 
     /// The MAC address of the interface, if available.
     fuchsia.hardware.ethernet.MacAddress? mac;
@@ -75,23 +87,23 @@ struct InterfaceProperties {
     uint32 features;
 
     /// The administrative status of the interface.
-    AdministrativeStatus administrativeStatus;
+    AdministrativeStatus administrative_status;
 
     /// The physical link status of the interface.
-    PhysicalStatus physicalStatus;
+    PhysicalStatus physical_status;
 
     /// The list of addresses currently assigned to the interface.
-    vector<InterfaceAddress> addresses;
+    interface_address_list addresses;
 };
 
 /// A ForwardingDestination represents either the device that should transmit a packet or the address
 /// of the next hop in the route.
 union ForwardingDestination {
     /// The opaque identifier of the device to which packets should be forwarded.
-    uint64 deviceId;
+    uint64 device_id;
 
     /// The IP address of the next hop, used to look up the next forwarding entry.
-    fuchsia.net.IpAddress nextHop;
+    fuchsia.net.IpAddress next_hop;
 };
 
 /// An entry in the forwarding table for the network stack.
@@ -126,13 +138,13 @@ enum Error {
 protocol Stack {
     /// Add an Ethernet interface to the network stack. On success, returns the identifier assigned
     /// by the stack for use in subsequent calls.
-    AddEthernetInterface(string topological_path, fuchsia.hardware.ethernet.Device device) -> (uint64 id) error Error;
+    AddEthernetInterface(device_path topological_path, fuchsia.hardware.ethernet.Device device) -> (uint64 id) error Error;
 
     /// Remove an Ethernet interface from the network stack.
     DelEthernetInterface(uint64 id) -> () error Error;
 
     /// List all the interfaces available in the network stack.
-    ListInterfaces() -> (vector<InterfaceInfo> ifs);
+    ListInterfaces() -> (interface_list ifs);
 
     /// Retrieve info about a specific interface.
     GetInterfaceInfo(uint64 id) -> (InterfaceInfo info) error Error;
@@ -152,7 +164,9 @@ protocol Stack {
     DelInterfaceAddress(uint64 id, InterfaceAddress addr) -> () error Error;
 
     /// List all the entries in the forwarding table for the network stack.
-    GetForwardingTable() -> (vector<ForwardingEntry> table);
+    // TODO(fxbug.dev/38528): This is unbounded for now, until we change the API to allow for
+    // pagination.
+    GetForwardingTable() -> (vector<ForwardingEntry>:MAX table);
 
     /// Add a new entry to the forwarding table. If the table already contains an entry with the same
     /// subnet, an error is returned. The entry may be deleted using DelForwardingEntry first.
