@@ -63,13 +63,33 @@ executable("main") {
   ]
 
   deps = [
+    ":feedback_agent_src",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("feedback_agent_src") {
+  sources = [
+    "feedback_agent.cc",
+    "feedback_agent.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
   ]
 }
@@ -80,7 +100,7 @@ executable("data_provider") {
   ]
 
   deps = [
-    ":src",
+    ":data_provider_src",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -92,7 +112,7 @@ executable("data_provider") {
   ]
 }
 
-source_set("src") {
+source_set("data_provider_src") {
   sources = [
     "annotations.cc",
     "annotations.h",

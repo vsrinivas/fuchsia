@@ -65,6 +65,7 @@ TEST_F(FeedbackAgentIntegrationTest, InvalidOverrideConfig_SmokeTest) {
   EXPECT_THAT(data.attachments(), testing::UnorderedElementsAreArray({
                                       MatchesKey(kAttachmentAnnotations),
                                       MatchesKey(kAttachmentBuildSnapshot),
+                                      MatchesKey(kAttachmentInspect),
                                       MatchesKey(kAttachmentLogKernel),
                                   }));
 
@@ -76,6 +77,7 @@ TEST_F(FeedbackAgentIntegrationTest, InvalidOverrideConfig_SmokeTest) {
   EXPECT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
                                         MatchesKey(kAttachmentAnnotations),
                                         MatchesKey(kAttachmentBuildSnapshot),
+                                        MatchesKey(kAttachmentInspect),
                                         MatchesKey(kAttachmentLogKernel),
                                     }));
 }

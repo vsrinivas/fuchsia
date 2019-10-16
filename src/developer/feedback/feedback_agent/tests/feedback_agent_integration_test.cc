@@ -6,10 +6,14 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/update/channel/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/job.h>
@@ -21,12 +25,16 @@
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/feedback_agent/feedback_agent.h"
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/utils/archive.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/glob.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -38,9 +46,18 @@ namespace {
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::DataProvider_GetData_Result;
+using fuchsia::feedback::DataProviderPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
+using inspect::testing::PropertyList;
+using inspect::testing::UintIs;
+
+bool PropEquals(const inspect::PropertyValue& value, const std::string& expected_name,
+                uint64_t expected_value) {
+  return value.name() == expected_name &&
+         value.Get<inspect::UintPropertyValue>().value() == expected_value;
+}
 
 class LogListener : public fuchsia::logger::LogListener {
  public:
@@ -68,6 +85,9 @@ class LogListener : public fuchsia::logger::LogListener {
 // connecting through FIDL.
 class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment {
  public:
+  FeedbackAgentIntegrationTest()
+      : test_name_(testing::UnitTest::GetInstance()->current_test_info()->name()) {}
+
   void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
   void TearDown() override {
@@ -85,6 +105,41 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
   }
 
  protected:
+  void CheckFeedbackAgentInspectTree(const uint64_t expected_total_num_connections,
+                                     const uint64_t expected_current_num_connections) {
+    const std::string glob_pattern =
+        fxl::Substitute("/hub/r/$0/*/c/feedback_agent.cmx/*/*/inspect/root.inspect", test_name_);
+    // Wait until the |root.inspect| file is created.
+    RunLoopUntil([&glob_pattern] {
+      files::Glob glob(glob_pattern);
+      return glob.size() > 0;
+    });
+
+    files::Glob glob(glob_pattern);
+    EXPECT_EQ(glob.size(), 1u);
+
+    RunLoopUntil([&] {
+      inspect::Hierarchy tree = ReadInspectTree(*glob.begin());
+      tree.Sort();
+      const auto& props = tree.node().properties();
+      return PropEquals(props[0], "current_num_connections", expected_current_num_connections) &&
+             PropEquals(props[1], "total_num_connections", expected_total_num_connections);
+    });
+
+    inspect::Hierarchy tree = ReadInspectTree(*glob.begin());
+    EXPECT_THAT(tree.node(),
+                PropertyList(testing::UnorderedElementsAreArray({
+                    UintIs("total_num_connections", expected_total_num_connections),
+                    UintIs("current_num_connections", expected_current_num_connections),
+                })));
+  }
+
+  inspect::Hierarchy ReadInspectTree(const std::string& path) {
+    std::vector<uint8_t> buffer;
+    EXPECT_TRUE(files::ReadFileToVector(path, &buffer));
+    return inspect::ReadFromBuffer(std::move(buffer)).take_value();
+  }
+
   // Makes sure the component serving fuchsia.logger.Log is up and running as the DumpLogs() request
   // could time out on machines where the component is too slow to start.
   //
@@ -135,11 +190,119 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
     RunLoopUntil([&ready] { return ready; });
   }
 
+  // Create an enclosing environment for the test to run in isolation, and return it. Use this
+  // |EnclosingEnvironment| to connect to its DataProvider service. This environment does not
+  // support |*SyncPtr|.
+  //
+  // Using this environment provides a fresh copy of |feedback_agent.cmx|, and resets Inspect
+  // across test cases (especially |total_num_connections|).
+  std::unique_ptr<sys::testing::EnclosingEnvironment> CreateDataProviderEnvironment() {
+    const struct {
+      const char* name;
+      const char* url;
+    } kAvailableServices[] = {
+        {"fuchsia.feedback.DataProvider",
+         "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
+        {"fuchsia.logger.Log", "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"},
+        {"fuchsia.process.Launcher", "fuchsia-pkg://fuchsia.com/launcher#meta/launcher.cmx"},
+    };
+    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
+    for (const auto& service : kAvailableServices) {
+      fuchsia::sys::LaunchInfo launch_info;
+      launch_info.url = service.url;
+      services->AddServiceWithLaunchInfo(std::move(launch_info), service.name);
+    }
+    services->AllowParentService("fuchsia.update.channel.Provider");
+
+    auto env = CreateNewEnclosingEnvironment(test_name_, std::move(services));
+    WaitForEnclosingEnvToStart(env.get());
+    return env;
+  }
+
+  void WaitForDataProvider(DataProviderPtr* provider) {
+    ASSERT_NE(provider, nullptr);
+    // As the connection is asynchronous, we make a call and wait for a response to make sure the
+    // connection is established and the process for the service spawned.
+    bool done = false;
+    (*provider)->GetData([&done](DataProvider_GetData_Result res) { done = true; });
+    RunLoopUntil([&done] { return done; });
+  }
+
+  // EXPECTs that there is a feedback_agent.cmx process running in a child job of the test
+  // environment job and that this process has sibling processes with the names in
+  // |expected_proc_names|.
+  void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_providers) {
+    // We want to check how many data_provider subprocesses feedback_agent has spawned.
+    //
+    // The job and process hierarchy looks like this under the test environment:
+    // j: 109762 OneDataProviderPerRequest
+    //   j: 109993
+    //     p: 109998 feedback_agent_integration_test
+    //   j: 112299
+    //     p: 112304 vulkan_loader.cmx
+    //   j: 115016
+    //     p: 115021 feedback_agent.cmx
+    //     p: 115022 feedback_data_provider
+    //     p: 115023 feedback_data_provider
+    //     p: 115024 feedback_data_provider
+    //   j: 116540
+    //     p: 116545 archivist.cmx
+    //
+    // There is basically a job the for the test component and a job for each injected service. The
+    // one of interest is feedback_agent.cmx and we check the number of sibling processes named
+    // "feedback_data_provider".
+    uint32_t num_feedback_agents = 0;
+    uint32_t num_data_providers = 0;
+    RunLoopUntil([&] {
+      GetNumberOfDataProviderProcesses(&num_feedback_agents, &num_data_providers);
+      return num_data_providers == expected_num_data_providers;
+    });
+    EXPECT_EQ(num_data_providers, expected_num_data_providers);
+    EXPECT_EQ(num_feedback_agents, 1u);
+  }
+
+  void GetNumberOfDataProviderProcesses(uint32_t* num_feedback_agents,
+                                        uint32_t* num_data_providers) {
+    fuchsia::sys::JobProviderSyncPtr job_provider;
+    files::Glob glob(fxl::Substitute("/hub/r/$0/*/job", test_name_));
+    ASSERT_EQ(glob.size(), 1u);
+    ASSERT_EQ(
+        fdio_service_connect(*glob.begin(), job_provider.NewRequest().TakeChannel().release()),
+        ZX_OK);
+    zx::job env_for_test_job;
+    ASSERT_EQ(job_provider->GetJob(&env_for_test_job), ZX_OK);
+    ASSERT_THAT(fsl::GetObjectName(env_for_test_job.get()), testing::StartsWith(test_name_));
+
+    // Child jobs are for the test component and each injected service.
+    auto child_jobs = GetChildJobs(env_for_test_job.get());
+    ASSERT_GE(child_jobs.size(), 1u);
+
+    *num_feedback_agents = 0;
+    *num_data_providers = 0;
+    for (const auto& child_job : child_jobs) {
+      auto processes = GetChildProcesses(child_job.get());
+      ASSERT_GE(processes.size(), 1u);
+
+      bool contains_feedback_agent = false;
+      for (const auto& process : processes) {
+        const std::string process_name = fsl::GetObjectName(process.get());
+        if (process_name == "feedback_agent.cmx") {
+          contains_feedback_agent = true;
+          (*num_feedback_agents)++;
+        } else if (process_name == "feedback_data_provider") {
+          (*num_data_providers)++;
+        }
+      }
+    }
+  }
+
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
 
  private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::sys::ComponentControllerPtr controller_;
+
+  std::string test_name_;
 };
 
 // We use VK_TEST instead of the regular TEST macro because Scenic needs Vulkan to operate properly
@@ -209,88 +372,62 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                     }));
 }
 
-// EXPECTs that there is a feedback_agent.cmx process running in a child job of the test environment
-// job and that this process has |expected_num_data_providers| sibling processes.
-void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_providers) {
-  // We want to check how many data_provider subprocesses feedback_agent has spawned.
-  //
-  // The job and process hierarchy looks like this under the test environment:
-  // j: 109762 env_for_test_42bc5f2a
-  //   j: 109993
-  //     p: 109998 feedback_agent_integration_test
-  //   j: 112299
-  //     p: 112304 vulkan_loader.cmx
-  //   j: 115016
-  //     p: 115021 feedback_agent.cmx
-  //     p: 115022 feedback_data_provider
-  //     p: 115023 feedback_data_provider
-  //     p: 115024 feedback_data_provider
-  //   j: 116540
-  //     p: 116545 archivist.cmx
-  //
-  // There is basically a job the for the test component and a job for each injected service. The
-  // one of interest is feedback_agent.cmx and we check the number of sibling processes named
-  // "feedback_data_provider".
-
-  fuchsia::sys::JobProviderSyncPtr job_provider;
-  ASSERT_EQ(fdio_service_connect("/hub/job", job_provider.NewRequest().TakeChannel().release()),
-            ZX_OK);
-  zx::job env_for_test_job;
-  ASSERT_EQ(job_provider->GetJob(&env_for_test_job), ZX_OK);
-  ASSERT_THAT(fsl::GetObjectName(env_for_test_job.get()), testing::StartsWith("env_for_test"));
-
-  // Child jobs are for the test component and each injected service.
-  auto child_jobs = GetChildJobs(env_for_test_job.get());
-  ASSERT_GE(child_jobs.size(), 1u);
-
-  uint32_t num_feedback_agents = 0u;
-  for (const auto& child_job : child_jobs) {
-    auto processes = GetChildProcesses(child_job.get());
-    ASSERT_GE(processes.size(), 1u);
-
-    bool contains_feedback_agent = false;
-    uint32_t num_data_providers = 0u;
-    for (const auto& process : processes) {
-      const std::string process_name = fsl::GetObjectName(process.get());
-      if (process_name == "feedback_agent.cmx") {
-        contains_feedback_agent = true;
-        num_feedback_agents++;
-      } else if (process_name == "feedback_data_provider") {
-        num_data_providers++;
-      }
-    }
-
-    if (contains_feedback_agent) {
-      EXPECT_EQ(num_data_providers, expected_num_data_providers);
-    }
-  }
-  EXPECT_EQ(num_feedback_agents, 1u);
-}
-
 TEST_F(FeedbackAgentIntegrationTest, OneDataProviderPerRequest) {
-  DataProviderSyncPtr data_provider_1;
-  environment_services_->Connect(data_provider_1.NewRequest());
-  // As the connection is asynchronous, we make a call with the SyncPtr to make sure the connection
-  // is established and the process for the service spawned before checking its existence.
-  DataProvider_GetData_Result out_result;
-  ASSERT_EQ(data_provider_1->GetData(&out_result), ZX_OK);
+  auto env = CreateDataProviderEnvironment();
+
+  DataProviderPtr data_provider_1;
+  env->ConnectToService(data_provider_1.NewRequest());
+  WaitForDataProvider(&data_provider_1);
   CheckNumberOfDataProviderProcesses(1u);
 
-  DataProviderSyncPtr data_provider_2;
-  environment_services_->Connect(data_provider_2.NewRequest());
-  ASSERT_EQ(data_provider_2->GetData(&out_result), ZX_OK);
+  DataProviderPtr data_provider_2;
+  env->ConnectToService(data_provider_2.NewRequest());
+  WaitForDataProvider(&data_provider_2);
   CheckNumberOfDataProviderProcesses(2u);
 
-  DataProviderSyncPtr data_provider_3;
-  environment_services_->Connect(data_provider_3.NewRequest());
-  ASSERT_EQ(data_provider_3->GetData(&out_result), ZX_OK);
+  DataProviderPtr data_provider_3;
+  env->ConnectToService(data_provider_3.NewRequest());
+  WaitForDataProvider(&data_provider_3);
   CheckNumberOfDataProviderProcesses(3u);
 
   data_provider_1.Unbind();
   data_provider_2.Unbind();
   data_provider_3.Unbind();
-  // Ideally we would check after each Unbind() that there is one less data_provider process, but
-  // the process clean up is asynchronous.
+
+  CheckNumberOfDataProviderProcesses(0u);
+
+  DataProviderPtr data_provider_4;
+  env->ConnectToService(data_provider_4.NewRequest());
+  WaitForDataProvider(&data_provider_4);
+  CheckNumberOfDataProviderProcesses(1u);
+}
+
+TEST_F(FeedbackAgentIntegrationTest, Inspect) {
+  auto env = CreateDataProviderEnvironment();
+
+  DataProviderPtr data_provider_1;
+  env->ConnectToService(data_provider_1.NewRequest());
+  WaitForDataProvider(&data_provider_1);
+  CheckFeedbackAgentInspectTree(1, 1);
+
+  DataProviderPtr data_provider_2;
+  env->ConnectToService(data_provider_2.NewRequest());
+  WaitForDataProvider(&data_provider_2);
+  CheckFeedbackAgentInspectTree(2, 2);
+
+  data_provider_1.Unbind();
+  CheckFeedbackAgentInspectTree(2, 1);
+
+  DataProviderPtr data_provider_3;
+  env->ConnectToService(data_provider_3.NewRequest());
+  WaitForDataProvider(&data_provider_3);
+  CheckFeedbackAgentInspectTree(3, 2);
+
+  data_provider_2.Unbind();
+  CheckFeedbackAgentInspectTree(3, 1);
+
+  data_provider_3.Unbind();
+  CheckFeedbackAgentInspectTree(3, 0);
 }
 
 }  // namespace

@@ -140,7 +140,7 @@ executable("channel_ptr_unittest") {
     ":stub_channel_provider",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/feedback/feedback_agent:src",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",
@@ -161,7 +161,7 @@ executable("config_unittest") {
   ]
 
   deps = [
-    "//src/developer/feedback/feedback_agent:src",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
@@ -190,7 +190,7 @@ executable("data_provider_unittest") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/feedback_agent:src",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/utils:archive",
@@ -229,9 +229,8 @@ executable("kernel_log_ptr_integration_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/developer/feedback/feedback_agent:src",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
@@ -258,9 +257,11 @@ executable("feedback_agent_integration_test") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/feedback_agent:feedback_agent_src",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
@@ -329,7 +330,7 @@ executable("screenshot_ptr_unittest") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/feedback/feedback_agent:src",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",
@@ -352,7 +353,7 @@ executable("system_log_ptr_unittest") {
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/feedback/feedback_agent:src",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/lib/fsl",
