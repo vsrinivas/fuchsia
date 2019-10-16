@@ -22,6 +22,26 @@ enum class RegisterID : uint32_t;  // Forward declaration.
 
 enum class SpecialRegisterType { kNone, kIP, kSP };
 
+struct RegisterInfo {
+  RegisterID id;
+  std::string name;
+  Arch arch;
+
+  // Some registers refer to a subset of another register, e.g. "al" (low byte of "rax") on X86 or
+  // "w0" (low 32-bits of "x0") on ARM. This ID will be the larger canonical ID. For registers that
+  // are themselves canonical, this will be the same as "id".
+  RegisterID canonical_id;
+
+  // When asking for a name-to-register mapping, sometimes they map to a part of a register. For
+  // example "al" on x64 is the low 8 bits of rax. These will both be 0 for the "canonical" register
+  // record.
+  int bits = 0;
+  int shift = 0;  // How many bits shited to the right is the low bit of the value.
+};
+
+const RegisterInfo* InfoForRegister(RegisterID id);
+const RegisterInfo* InfoForRegister(Arch arch, const std::string& name);
+
 const char* RegisterIDToString(debug_ipc::RegisterID);
 debug_ipc::RegisterID StringToRegisterID(const std::string&);
 
@@ -57,9 +77,9 @@ constexpr uint32_t kX64GeneralEnd = 2099;
 constexpr uint32_t kX64FPBegin = 2100;
 constexpr uint32_t kX64FPEnd = 2199;
 constexpr uint32_t kX64VectorBegin = 2200;
-constexpr uint32_t kX64VectorEnd = 2499;
-constexpr uint32_t kX64DebugBegin = 2500;
-constexpr uint32_t kX64DebugEnd = 2599;
+constexpr uint32_t kX64VectorEnd = 2599;
+constexpr uint32_t kX64DebugBegin = 2600;
+constexpr uint32_t kX64DebugEnd = 2699;
 
 enum class RegisterID : uint32_t {
   kUnknown = 0,
@@ -104,6 +124,41 @@ enum class RegisterID : uint32_t {
   // This register doesn't exist in ARMv8, but it's used as an abstraction for
   // accessing the PSTATE. It's functionally equivalent to SPSR_EL1.
   kARMv8_cpsr = 1034,
+
+  // General-purpose aliases (low 32-bits).
+  kARMv8_w0 = 1035,
+  kARMv8_w1 = 1036,
+  kARMv8_w2 = 1037,
+  kARMv8_w3 = 1038,
+  kARMv8_w4 = 1039,
+  kARMv8_w5 = 1040,
+  kARMv8_w6 = 1041,
+  kARMv8_w7 = 1042,
+  kARMv8_w8 = 1043,
+  kARMv8_w9 = 1044,
+  kARMv8_w10 = 1045,
+  kARMv8_w11 = 1046,
+  kARMv8_w12 = 1047,
+  kARMv8_w13 = 1048,
+  kARMv8_w14 = 1049,
+  kARMv8_w15 = 1050,
+  kARMv8_w16 = 1051,
+  kARMv8_w17 = 1052,
+  kARMv8_w18 = 1053,
+  kARMv8_w19 = 1054,
+  kARMv8_w20 = 1055,
+  kARMv8_w21 = 1056,
+  kARMv8_w22 = 1057,
+  kARMv8_w23 = 1058,
+  kARMv8_w24 = 1059,
+  kARMv8_w25 = 1060,
+  kARMv8_w26 = 1061,
+  kARMv8_w27 = 1062,
+  kARMv8_w28 = 1063,
+  kARMv8_w29 = 1064,
+  kARMv8_w30 = 1065,
+
+  kARMv8_x30 = 1066,  // Alias for "LR" above.
 
   // FP (None on ARMv8).
 
@@ -207,6 +262,34 @@ enum class RegisterID : uint32_t {
   kX64_rip = 2016,
   kX64_rflags = 2017,
 
+  // General purpose aliases.
+
+  kX64_ah = 2018,
+  kX64_al = 2019,
+  kX64_ax = 2020,
+  kX64_eax = 2021,
+
+  kX64_bh = 2022,
+  kX64_bl = 2023,
+  kX64_bx = 2024,
+  kX64_ebx = 2025,
+
+  kX64_ch = 2026,
+  kX64_cl = 2027,
+  kX64_cx = 2028,
+  kX64_ecx = 2029,
+
+  kX64_dh = 2030,
+  kX64_dl = 2031,
+  kX64_dx = 2032,
+  kX64_edx = 2033,
+
+  kX64_si = 2034,
+  kX64_esi = 2035,
+
+  kX64_di = 2036,
+  kX64_edi = 2037,
+
   // FP (x87 FPU/MMX).
 
   kX64_fcw = 2100,  // Control word.
@@ -233,54 +316,126 @@ enum class RegisterID : uint32_t {
 
   kX64_mxcsr = 2200,  // Control and Status register.
 
-  // SSE/SSE2 (128 bit).
-  kX64_xmm0 = 2300,
-  kX64_xmm1 = 2301,
-  kX64_xmm2 = 2302,
-  kX64_xmm3 = 2303,
-  kX64_xmm4 = 2304,
-  kX64_xmm5 = 2305,
-  kX64_xmm6 = 2306,
-  kX64_xmm7 = 2307,
-  kX64_xmm8 = 2308,
-  kX64_xmm9 = 2309,
-  kX64_xmm10 = 2310,
-  kX64_xmm11 = 2311,
-  kX64_xmm12 = 2312,
-  kX64_xmm13 = 2313,
-  kX64_xmm14 = 2314,
-  kX64_xmm15 = 2315,
+  // SSE/AVX (512 bit, 128- and 256-bit variants will use the low bits of these).
+  kX64_zmm0 = 2400,
+  kX64_zmm1 = 2401,
+  kX64_zmm2 = 2402,
+  kX64_zmm3 = 2403,
+  kX64_zmm4 = 2404,
+  kX64_zmm5 = 2405,
+  kX64_zmm6 = 2406,
+  kX64_zmm7 = 2407,
+  kX64_zmm8 = 2408,
+  kX64_zmm9 = 2409,
+  kX64_zmm10 = 2410,
+  kX64_zmm11 = 2411,
+  kX64_zmm12 = 2412,
+  kX64_zmm13 = 2413,
+  kX64_zmm14 = 2414,
+  kX64_zmm15 = 2415,
+  kX64_zmm16 = 2416,
+  kX64_zmm17 = 2417,
+  kX64_zmm18 = 2418,
+  kX64_zmm19 = 2419,
+  kX64_zmm20 = 2420,
+  kX64_zmm21 = 2421,
+  kX64_zmm22 = 2422,
+  kX64_zmm23 = 2423,
+  kX64_zmm24 = 2424,
+  kX64_zmm25 = 2425,
+  kX64_zmm26 = 2426,
+  kX64_zmm27 = 2427,
+  kX64_zmm28 = 2428,
+  kX64_zmm29 = 2429,
+  kX64_zmm30 = 2430,
+  kX64_zmm31 = 2431,
 
-  // AVX (256 bit).
-  kX64_ymm0 = 2400,
-  kX64_ymm1 = 2401,
-  kX64_ymm2 = 2402,
-  kX64_ymm3 = 2403,
-  kX64_ymm4 = 2404,
-  kX64_ymm5 = 2405,
-  kX64_ymm6 = 2406,
-  kX64_ymm7 = 2407,
-  kX64_ymm8 = 2408,
-  kX64_ymm9 = 2409,
-  kX64_ymm10 = 2410,
-  kX64_ymm11 = 2411,
-  kX64_ymm12 = 2412,
-  kX64_ymm13 = 2413,
-  kX64_ymm14 = 2414,
-  kX64_ymm15 = 2415,
+  // Vector aliases.
+  kX64_xmm0 = 2432,
+  kX64_xmm1 = 2433,
+  kX64_xmm2 = 2434,
+  kX64_xmm3 = 2435,
+  kX64_xmm4 = 2436,
+  kX64_xmm5 = 2437,
+  kX64_xmm6 = 2438,
+  kX64_xmm7 = 2439,
+  kX64_xmm8 = 2440,
+  kX64_xmm9 = 2441,
+  kX64_xmm10 = 2442,
+  kX64_xmm11 = 2443,
+  kX64_xmm12 = 2444,
+  kX64_xmm13 = 2445,
+  kX64_xmm14 = 2446,
+  kX64_xmm15 = 2447,
+  kX64_xmm16 = 2448,
+  kX64_xmm17 = 2449,
+  kX64_xmm18 = 2450,
+  kX64_xmm19 = 2451,
+  kX64_xmm20 = 2452,
+  kX64_xmm21 = 2453,
+  kX64_xmm22 = 2454,
+  kX64_xmm23 = 2455,
+  kX64_xmm24 = 2456,
+  kX64_xmm25 = 2457,
+  kX64_xmm26 = 2458,
+  kX64_xmm27 = 2459,
+  kX64_xmm28 = 2460,
+  kX64_xmm29 = 2461,
+  kX64_xmm30 = 2462,
+  kX64_xmm31 = 2463,
 
-  // TODO(donosoc): Add AVX-512 support.
+  kX64_ymm0 = 2464,
+  kX64_ymm1 = 2465,
+  kX64_ymm2 = 2466,
+  kX64_ymm3 = 2467,
+  kX64_ymm4 = 2468,
+  kX64_ymm5 = 2469,
+  kX64_ymm6 = 2470,
+  kX64_ymm7 = 2471,
+  kX64_ymm8 = 2472,
+  kX64_ymm9 = 2473,
+  kX64_ymm10 = 2474,
+  kX64_ymm11 = 2475,
+  kX64_ymm12 = 2476,
+  kX64_ymm13 = 2477,
+  kX64_ymm14 = 2478,
+  kX64_ymm15 = 2479,
+  kX64_ymm16 = 2480,
+  kX64_ymm17 = 2481,
+  kX64_ymm18 = 2482,
+  kX64_ymm19 = 2483,
+  kX64_ymm20 = 2484,
+  kX64_ymm21 = 2485,
+  kX64_ymm22 = 2486,
+  kX64_ymm23 = 2487,
+  kX64_ymm24 = 2488,
+  kX64_ymm25 = 2489,
+  kX64_ymm26 = 2490,
+  kX64_ymm27 = 2491,
+  kX64_ymm28 = 2492,
+  kX64_ymm29 = 2493,
+  kX64_ymm30 = 2494,
+  kX64_ymm31 = 2495,
+
+  kX64_mm0 = 2496,
+  kX64_mm1 = 2497,
+  kX64_mm2 = 2498,
+  kX64_mm3 = 2499,
+  kX64_mm4 = 2500,
+  kX64_mm5 = 2501,
+  kX64_mm6 = 2502,
+  kX64_mm7 = 2503,
 
   // Debug.
 
-  kX64_dr0 = 2500,
-  kX64_dr1 = 2501,
-  kX64_dr2 = 2502,
-  kX64_dr3 = 2503,
+  kX64_dr0 = 2600,
+  kX64_dr1 = 2601,
+  kX64_dr2 = 2602,
+  kX64_dr3 = 2603,
   // dr4 is reserved.
   // dr5 is reserved.
-  kX64_dr6 = 2506,
-  kX64_dr7 = 2507,
+  kX64_dr6 = 2606,
+  kX64_dr7 = 2607,
 };
 
 }  // namespace debug_ipc

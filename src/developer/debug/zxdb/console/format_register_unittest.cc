@@ -487,20 +487,18 @@ TEST(FormatRegisters, DebugRegisters_arm64) {
   err = FormatRegisters(options, filtered_set, &out);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
+  // clang-format off
   EXPECT_EQ(
       "Debug Registers\n"
-      "   kARMv8_dbgbcr0_el1          0x000f2006 E=0, PMC=3, BAS=0, HMC=1, "
-      "SSC=0, LBN=15, BT=0\n"
-      "   kARMv8_dbgbvr0_el1  0xdeadbeefaabbccdd \n"
-      "  kARMv8_dbgbcr15_el1          0x00f0c1e1 E=1, PMC=0, BAS=15, HMC=0, "
-      "SSC=3, LBN=0, BT=15\n"
-      "   kARMv8_dbgbvr0_el1  0xaabbccdd11223344 \n"
-      "      id_aa64dfr0_el1         0xf00f0ff0f DV=15, TV=0, PMUV=15, BRP=16, "
-      "WRP=16, CTX_CMP=1, PMSV=15\n"
-      "            mdscr_el1          0x44009001 SS=1, TDCC=1, KDE=0, HDE=0, "
-      "MDE=1, RAZ/WI=0, TDA=0, INTdis=0, TXU=1, RXO=0, TXfull=0, RXfull=1\n"
+      "      dbgbcr0_el1          0x000f2006 E=0, PMC=3, BAS=0, HMC=1, SSC=0, LBN=15, BT=0\n"
+      "      dbgbvr0_el1  0xdeadbeefaabbccdd \n"
+      "     dbgbcr15_el1          0x00f0c1e1 E=1, PMC=0, BAS=15, HMC=0, SSC=3, LBN=0, BT=15\n"
+      "      dbgbvr0_el1  0xaabbccdd11223344 \n"
+      "  id_aa64dfr0_el1         0xf00f0ff0f DV=15, TV=0, PMUV=15, BRP=16, WRP=16, CTX_CMP=1, PMSV=15\n"
+      "        mdscr_el1          0x44009001 SS=1, TDCC=1, KDE=0, HDE=0, MDE=1, RAZ/WI=0, TDA=0, INTdis=0, TXU=1, RXO=0, TXfull=0, RXfull=1\n"
       "\n",
       out.AsString());
+  // clang-format on
 }
 
 }  // namespace zxdb
