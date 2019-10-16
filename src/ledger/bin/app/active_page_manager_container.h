@@ -83,8 +83,6 @@ class ActivePageManagerContainer {
   // Stores whether the page is currently opened by an external request.
   bool has_external_requests_ = false;
 
-  // Manages internal requests for the page.
-  TokenManager token_manager_;
   // page_impls_ is only populated before active_page_manager_ is set. Once the
   // ActivePageManager is created and assigned to active_page_manager_, the
   // PageImpls stored in page_impls_ are handed off to that ActivePageManager
@@ -93,6 +91,9 @@ class ActivePageManagerContainer {
   std::vector<fit::function<void(Status, ExpiringToken, ActivePageManager*)>>
       internal_request_callbacks_;
   fit::closure on_discardable_;
+
+  // Manages internal requests for the page.
+  TokenManager token_manager_;
 
   // Must be the last member.
   fxl::WeakPtrFactory<ActivePageManagerContainer> weak_factory_;

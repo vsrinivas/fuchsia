@@ -40,8 +40,8 @@ class HeadsChildrenManager final : public inspect_deprecated::ChildrenManager {
   inspect_deprecated::Node* heads_node_;
   InspectablePage* inspectable_page_;
   fit::closure on_discardable_;
-  TokenManager token_manager_;
   callback::AutoCleanableMap<storage::CommitId, InspectedHead> inspected_heads_;
+  TokenManager token_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HeadsChildrenManager);
 };

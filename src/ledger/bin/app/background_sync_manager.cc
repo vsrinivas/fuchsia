@@ -51,8 +51,7 @@ BackgroundSyncManager::BackgroundSyncManager(Environment* environment, PageUsage
     : environment_(environment),
       db_(db),
       coroutine_manager_(environment_->coroutine_service()),
-      open_pages_limit_(open_pages_limit),
-      weak_factory_(this) {}
+      open_pages_limit_(open_pages_limit) {}
 
 void BackgroundSyncManager::SetDelegate(Delegate* delegate) {
   FXL_DCHECK(delegate);
@@ -86,10 +85,10 @@ void BackgroundSyncManager::OnInternallyUnused(fxl::StringView ledger_name,
   OnExternallyUnused(ledger_name, page_id);
 }
 
-bool BackgroundSyncManager::IsDiscardable() const { return pending_operations_ == 0; }
+bool BackgroundSyncManager::IsDiscardable() const { return token_manager_.IsDiscardable(); }
 
 void BackgroundSyncManager::SetOnDiscardable(fit::closure on_discardable) {
-  on_discardable_ = std::move(on_discardable);
+  token_manager_.SetOnDiscardable(std::move(on_discardable));
 }
 
 void BackgroundSyncManager::HandlePageIfUnused(
@@ -105,7 +104,7 @@ void BackgroundSyncManager::TrySync() {
   FXL_DCHECK(sync_delegate_);
   coroutine_manager_.StartCoroutine([this](coroutine::CoroutineHandler* handler) {
     // Ensure |this| is not destructed until the coroutine has completed.
-    ExpiringToken token = NewExpiringToken();
+    ExpiringToken token = token_manager_.CreateToken();
     std::unique_ptr<storage::Iterator<const PageInfo>> pages_it;
     Status status = db_->GetPages(handler, &pages_it);
     if (status != Status::OK) {
@@ -120,22 +119,6 @@ void BackgroundSyncManager::TrySync() {
       }
     }
   });
-}
-
-ExpiringToken BackgroundSyncManager::NewExpiringToken() {
-  ++pending_operations_;
-  return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-    --pending_operations_;
-    // We need to post a task here: Tokens expire while a coroutine is being executed, and if
-    // |on_discardable_| is executed directly, it might end up deleting the
-    // backgroundSyncManager object, which will delete the |coroutine_manager_|.
-    async::PostTask(environment_->dispatcher(),
-                    callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-                      if (on_discardable_ && pending_operations_ == 0) {
-                        on_discardable_();
-                      }
-                    }));
-  }));
 }
 
 }  // namespace ledger

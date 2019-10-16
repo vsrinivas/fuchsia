@@ -9,7 +9,6 @@
 #include "src/ledger/bin/app/token_manager.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -52,22 +51,11 @@ class BackgroundSyncManager : public PageUsageListener {
   // Triggers the start of the synchronization of closed pages.
   void TrySync();
 
-  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=35654): Replace this with
-  // TokenManager, once it supports dispatching a task.
-  //
-  // Preserves the object as long as it has a live token to avoid this class getting destructed in
-  // the middle of call to Db.
-  ExpiringToken NewExpiringToken();
-  // A counter of currently outgoing calls to Db.
-  ssize_t pending_operations_ = 0;
-
   Environment* environment_;
   Delegate* sync_delegate_ = nullptr;
   PageUsageDb* db_;
 
   coroutine::CoroutineManager coroutine_manager_;
-
-  fit::closure on_discardable_;
 
   // Holds information about the state of pages that are currently open by internal or external
   // connections. Entries are removed if there are no active connections.
@@ -76,8 +64,9 @@ class BackgroundSyncManager : public PageUsageListener {
   // synchronization if current number of open pages is not less than the given limit.
   const size_t open_pages_limit_;
 
-  // Must be the last member.
-  fxl::WeakPtrFactory<BackgroundSyncManager> weak_factory_;
+  // Preserves the object as long as it has a live token to avoid this class getting destructed in
+  // the middle of call to Db.
+  TokenManager token_manager_;
 };
 
 }  // namespace ledger

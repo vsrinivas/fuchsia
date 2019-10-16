@@ -13,12 +13,12 @@
 #include "src/ledger/bin/app/page_eviction_manager.h"
 #include "src/ledger/bin/app/page_usage_db.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/bin/app/token_manager.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -72,18 +72,11 @@ class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionD
                                  storage::PageId page_id, PageEvictionCondition condition,
                                  PageWasEvicted* was_evicted);
 
-  ExpiringToken NewExpiringToken();
-
   Environment* environment_;
-  // A closure to be called every time all pending operations are completed.
-  fit::closure on_discardable_;
-  ssize_t pending_operations_ = 0;
   PageEvictionManager::Delegate* delegate_ = nullptr;
   PageUsageDb* db_;
   coroutine::CoroutineManager coroutine_manager_;
-
-  // Must be the last member.
-  fxl::WeakPtrFactory<PageEvictionManagerImpl> weak_factory_;
+  TokenManager token_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManagerImpl);
 };

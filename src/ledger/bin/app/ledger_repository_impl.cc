@@ -93,9 +93,22 @@ void LedgerRepositoryImpl::SetOnDiscardable(fit::closure on_discardable) {
 }
 
 bool LedgerRepositoryImpl::IsDiscardable() const {
-  return ledger_managers_.IsDiscardable() && (closing_ || bindings_.IsDiscardable()) &&
-         (!disk_cleanup_manager_ || disk_cleanup_manager_->IsDiscardable()) &&
-         (!background_sync_manager_ || background_sync_manager_->IsDiscardable());
+  // Even if the LedgerRepository is closed, it should still serve currently
+  // connected Ledgers.
+  if (!ledger_managers_.IsDiscardable()) {
+    return false;
+  }
+
+  // The repository has been forced closed and dependencies are now closed, it
+  // can be discarded.
+  if (closing_) {
+    return true;
+  }
+
+  // If the repository has not been forced closed, it can be discarded if all
+  // dependencies are discardable.
+  return bindings_.IsDiscardable() && disk_cleanup_manager_->IsDiscardable() &&
+         background_sync_manager_->IsDiscardable();
 }
 
 void LedgerRepositoryImpl::BindRepository(
@@ -344,6 +357,7 @@ void LedgerRepositoryImpl::Close(fit::function<void(Status)> callback) {
     return;
   }
   close_callbacks_.push_back(std::move(callback));
+
   closing_ = true;
   CheckDiscardable();
 }

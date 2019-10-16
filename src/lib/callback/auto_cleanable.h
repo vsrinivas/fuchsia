@@ -74,7 +74,10 @@ class AutoCleanableSet {
   size_t size() const { return set_.size(); }
   bool empty() const { return set_.empty(); }
 
-  void clear() { set_.clear(); }
+  void clear() {
+    task_runner_.Reset();
+    set_.clear();
+  }
 
   template <class... Args>
   V& emplace(Args&&... args) {
@@ -214,7 +217,10 @@ class AutoCleanableMap {
 
   bool empty() const { return map_.empty(); }
 
-  void clear() { map_.clear(); }
+  void clear() {
+    task_runner_.Reset();
+    map_.clear();
+  }
 
  private:
   void CheckDiscardable() {

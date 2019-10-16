@@ -43,8 +43,7 @@ void LogOnPageUpdateError(fxl::StringView operation_description, Status status,
 PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment, PageUsageDb* db)
     : environment_(environment),
       db_(db),
-      coroutine_manager_(environment_->coroutine_service()),
-      weak_factory_(this) {}
+      coroutine_manager_(environment_->coroutine_service()) {}
 
 PageEvictionManagerImpl::~PageEvictionManagerImpl() = default;
 
@@ -55,17 +54,17 @@ void PageEvictionManagerImpl::SetDelegate(PageEvictionManager::Delegate* delegat
 }
 
 void PageEvictionManagerImpl::SetOnDiscardable(fit::closure on_discardable) {
-  on_discardable_ = std::move(on_discardable);
+  token_manager_.SetOnDiscardable(std::move(on_discardable));
 }
 
-bool PageEvictionManagerImpl::IsDiscardable() const { return pending_operations_ == 0; }
+bool PageEvictionManagerImpl::IsDiscardable() const { return token_manager_.IsDiscardable(); }
 
 void PageEvictionManagerImpl::TryEvictPages(PageEvictionPolicy* policy,
                                             fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback), [this, policy](coroutine::CoroutineHandler* handler,
                                           fit::function<void(Status)> callback) mutable {
-        ExpiringToken token = NewExpiringToken();
+        ExpiringToken token = token_manager_.CreateToken();
         std::unique_ptr<storage::Iterator<const PageInfo>> pages_it;
         Status status = db_->GetPages(handler, &pages_it);
         if (status != Status::OK) {
@@ -81,7 +80,7 @@ void PageEvictionManagerImpl::MarkPageOpened(fxl::StringView ledger_name,
   coroutine_manager_.StartCoroutine(
       [this, ledger_name = ledger_name.ToString(),
        page_id = page_id.ToString()](coroutine::CoroutineHandler* handler) {
-        ExpiringToken token = NewExpiringToken();
+        ExpiringToken token = token_manager_.CreateToken();
         Status status = db_->MarkPageOpened(handler, ledger_name, page_id);
         LogOnPageUpdateError("mark page as opened", status, ledger_name, page_id);
       });
@@ -92,7 +91,7 @@ void PageEvictionManagerImpl::MarkPageClosed(fxl::StringView ledger_name,
   coroutine_manager_.StartCoroutine(
       [this, ledger_name = ledger_name.ToString(),
        page_id = page_id.ToString()](coroutine::CoroutineHandler* handler) {
-        ExpiringToken token = NewExpiringToken();
+        ExpiringToken token = token_manager_.CreateToken();
         Status status = db_->MarkPageClosed(handler, ledger_name, page_id);
         LogOnPageUpdateError("mark page as closed", status, ledger_name, page_id);
       });
@@ -106,7 +105,7 @@ void PageEvictionManagerImpl::TryEvictPage(fxl::StringView ledger_name, storage:
       [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(), condition](
           coroutine::CoroutineHandler* handler,
           fit::function<void(Status, PageWasEvicted)> callback) mutable {
-        ExpiringToken token = NewExpiringToken();
+        ExpiringToken token = token_manager_.CreateToken();
         PageWasEvicted was_evicted;
         Status status =
             SynchronousTryEvictPage(handler, ledger_name, page_id, condition, &was_evicted);
@@ -235,23 +234,6 @@ Status PageEvictionManagerImpl::SynchronousTryEvictPage(coroutine::CoroutineHand
   }
   *was_evicted = PageWasEvicted(status == Status::OK);
   return status;
-}
-
-ExpiringToken PageEvictionManagerImpl::NewExpiringToken() {
-  ++pending_operations_;
-  return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-    --pending_operations_;
-    // We need to post a task here: Tokens expire while a coroutine is being
-    // executed, and if |on_discardable_| is executed directly, it might end
-    // up deleting the PageEvictionManagerImpl object, which will delete the
-    // |coroutine_manager_|.
-    async::PostTask(environment_->dispatcher(),
-                    callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-                      if (on_discardable_ && pending_operations_ == 0) {
-                        on_discardable_();
-                      }
-                    }));
-  }));
 }
 
 }  // namespace ledger
