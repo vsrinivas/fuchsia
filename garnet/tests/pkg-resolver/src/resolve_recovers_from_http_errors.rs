@@ -9,10 +9,7 @@ use {
     super::*,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{serve::UriPathHandler, RepositoryBuilder},
-    futures::{
-        compat::Stream01CompatExt,
-        future::{ready, BoxFuture},
-    },
+    futures::future::{ready, BoxFuture},
     hyper::{header::CONTENT_LENGTH, Body, Response},
     matches::assert_matches,
     parking_lot::Mutex,
@@ -116,10 +113,6 @@ async fn second_resolve_succeeds_when_blob_404() -> Result<(), Error> {
         Status::UNAVAILABLE,
     )
     .await
-}
-
-async fn body_to_bytes(body: Body) -> Vec<u8> {
-    body.compat().try_concat().await.expect("body stream to complete").to_vec()
 }
 
 struct OneByteShortThenErrorUriPathHandler;

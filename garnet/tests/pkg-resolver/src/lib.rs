@@ -25,7 +25,8 @@ use {
     },
     fuchsia_pkg_testing::{pkgfs::TestPkgFs, Package, PackageBuilder},
     fuchsia_zircon::{self as zx, Status},
-    futures::prelude::*,
+    futures::{compat::Stream01CompatExt, prelude::*},
+    hyper::Body,
     std::fs::File,
     tempfile::TempDir,
 };
@@ -229,22 +230,8 @@ impl<P: PkgFs> TestEnv<P> {
             .expect("experiment state to toggle");
     }
 
-    async fn resolve_package(&self, url: &str) -> Result<DirectoryProxy, Status> {
-        let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
-        let selectors: Vec<&str> = vec![];
-        let status = self
-            .proxies
-            .resolver
-            .resolve(
-                url,
-                &mut selectors.into_iter(),
-                &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-                package_server_end,
-            )
-            .await
-            .expect("package resolve fidl call");
-        Status::ok(status)?;
-        Ok(package)
+    fn resolve_package(&self, url: &str) -> impl Future<Output = Result<DirectoryProxy, Status>> {
+        resolve_package(&self.proxies.resolver, url)
     }
 }
 
@@ -264,4 +251,27 @@ async fn make_rolldice_pkg_with_extra_blobs(n: u32) -> Result<Package, Error> {
         pkg = pkg.add_resource_at(format!("data/file{}", i), extra_blob_contents(i).as_slice())?;
     }
     pkg.build().await
+}
+
+fn resolve_package(
+    resolver: &PackageResolverProxy,
+    url: &str,
+) -> impl Future<Output = Result<DirectoryProxy, Status>> {
+    let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
+    let selectors: Vec<&str> = vec![];
+    let status_fut = resolver.resolve(
+        url,
+        &mut selectors.into_iter(),
+        &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
+        package_server_end,
+    );
+    async move {
+        let status = status_fut.await.expect("package resolve fidl call");
+        Status::ok(status)?;
+        Ok(package)
+    }
+}
+
+async fn body_to_bytes(body: Body) -> Vec<u8> {
+    body.compat().try_concat().await.expect("body stream to complete").to_vec()
 }

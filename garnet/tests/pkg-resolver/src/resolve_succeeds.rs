@@ -10,11 +10,18 @@ use {
     super::*,
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fuchsia_merkle::{Hash, MerkleTree},
-    fuchsia_pkg_testing::RepositoryBuilder,
+    fuchsia_pkg_testing::{serve::UriPathHandler, RepositoryBuilder, VerificationError},
+    futures::{
+        channel::oneshot,
+        future::{ready, BoxFuture},
+    },
+    hyper::{header::CONTENT_LENGTH, Body, Response},
     matches::assert_matches,
+    parking_lot::Mutex,
     std::{
         fs::File,
         io::{self, Read},
+        path::Path,
         sync::Arc,
     },
 };
@@ -411,4 +418,147 @@ async fn meta_far_installed_one_blob_partially_installed() -> Result<(), Error> 
         },
     )
     .await
+}
+
+struct OneShotSenderWrapper {
+    sender: Mutex<Option<oneshot::Sender<Box<dyn FnOnce() + Send>>>>,
+}
+
+impl OneShotSenderWrapper {
+    fn send(&self, unblocking_closure: Box<dyn FnOnce() + Send>) {
+        self.sender
+            .lock()
+            .take()
+            .expect("a single request for this path")
+            .send(unblocking_closure)
+            .map_err(|_err| ())
+            .expect("receiver is present");
+    }
+}
+
+struct BlockGetRequestOnceUriPathHandler {
+    unblocking_closure_sender: OneShotSenderWrapper,
+    path_to_block: String,
+}
+
+impl BlockGetRequestOnceUriPathHandler {
+    pub fn new_path_handler_and_channels(
+        path_to_block: String,
+    ) -> (Self, oneshot::Receiver<Box<dyn FnOnce() + Send>>) {
+        let (unblocking_closure_sender, unblocking_closure_receiver) = oneshot::channel();
+        let blocking_uri_path_handler = BlockGetRequestOnceUriPathHandler {
+            unblocking_closure_sender: OneShotSenderWrapper {
+                sender: Mutex::new(Some(unblocking_closure_sender)),
+            },
+            path_to_block,
+        };
+        (blocking_uri_path_handler, unblocking_closure_receiver)
+    }
+}
+
+impl UriPathHandler for BlockGetRequestOnceUriPathHandler {
+    fn handle(&self, uri_path: &Path, mut response: Response<Body>) -> BoxFuture<Response<Body>> {
+        // Only block requests for the duplicate blob
+        let duplicate_blob_uri = Path::new(&self.path_to_block);
+        if uri_path != duplicate_blob_uri {
+            return ready(response).boxed();
+        }
+
+        async move {
+            // By only sending the content length header, this will guarantee the
+            // duplicate blob remains open and truncated until the content is sent
+            let (mut sender, new_body) = Body::channel();
+            let old_body = std::mem::replace(response.body_mut(), new_body);
+            let contents = body_to_bytes(old_body).await;
+            response.headers_mut().insert(CONTENT_LENGTH, contents.len().into());
+
+            // Send a closure to the test that will unblock when executed
+            self.unblocking_closure_sender
+                .send(Box::new(move || sender.send_data(contents.into()).expect("sending body")));
+            response
+        }
+            .boxed()
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_concurrent_blob_writes() -> Result<(), Error> {
+    // Create our test packages and find out the merkle of the duplicate blob
+    let duplicate_blob_path = "blob/duplicate";
+    let duplicate_blob_contents = &b"I am the duplicate"[..];
+    let pkg1 = PackageBuilder::new("package1")
+        .add_resource_at(duplicate_blob_path, duplicate_blob_contents)?
+        .build()
+        .await?;
+    let pkg2 = PackageBuilder::new("package2")
+        .add_resource_at(duplicate_blob_path, duplicate_blob_contents)?
+        .add_resource_at("blob/unique", &b"I am unique"[..])?
+        .build()
+        .await?;
+    let duplicate_blob_merkle = pkg1.meta_contents().expect("extracted contents").contents()
+        [duplicate_blob_path]
+        .to_string();
+
+    // Create the path handler and the channel to communicate with it
+    let (blocking_uri_path_handler, unblocking_closure_receiver) =
+        BlockGetRequestOnceUriPathHandler::new_path_handler_and_channels(format!(
+            "/blobs/{}",
+            duplicate_blob_merkle
+        ));
+
+    // Construct the repo
+    let env = TestEnv::new();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg1)
+            .add_package(&pkg2)
+            .build()
+            .await?,
+    );
+    let served_repository =
+        repo.build_server().uri_path_override_handler(blocking_uri_path_handler).start()?;
+    let repo_config = served_repository.make_repo_config("fuchsia-pkg://test".parse().unwrap());
+    env.proxies.repo_manager.add(repo_config.into()).await?;
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+
+    // Construct the resolver proxies (clients)
+    let resolver_proxy_1 =
+        env.env.connect_to_service::<PackageResolverMarker>().expect("connect to package resolver");
+    let resolver_proxy_2 =
+        env.env.connect_to_service::<PackageResolverMarker>().expect("connect to package resolver");
+
+    // Create a GET request to the hyper server for the duplicate blob
+    let package1_resolution_fut =
+        resolve_package(&resolver_proxy_1, &"fuchsia-pkg://test/package1");
+
+    // Wait for GET request to be received by hyper server
+    let unblocking_closure =
+        unblocking_closure_receiver.await.expect("received unblocking future from hyper server");
+
+    // Wait for duplicate blob to be truncated -- we know it is truncated when we get a
+    // permission denied error when trying to update the blob in blobfs.
+    let duplicate_blob_uri = Path::new(&duplicate_blob_merkle);
+    let blobfs_dir = env.pkgfs.blobfs().as_dir().expect("blobfs has root dir");
+    while blobfs_dir.update_file(duplicate_blob_uri, 0).is_ok() {
+        fasync::Timer::new(fasync::Time::after(fuchsia_zircon::Duration::from_millis(10))).await;
+    }
+
+    // At this point, we are confident that the duplicate blob is truncated.
+    // What happens if we try and write to the duplicate blob again, by trying to resolve package 2?
+    // Right now, it doesn't fail so we must check that verify_contents of package 2 produces an error.
+    // TODO(36718) concurrent writes should cause resolve_package to fail
+    let package2_dir = resolve_package(&resolver_proxy_2, &"fuchsia-pkg://test/package2")
+        .await
+        .expect("package to resolve");
+    assert_matches!(
+        pkg2.verify_contents(&package2_dir).await,
+        Err(VerificationError::UnreadableBlob)
+    );
+
+    // When we unblock the server, we should observe that package 1 is successfully resolved
+    unblocking_closure();
+    let package1_dir = package1_resolution_fut.await.expect("package to resolve");
+    pkg1.verify_contents(&package1_dir).await.expect("correct package contents");
+    env.stop().await;
+    Ok(())
 }

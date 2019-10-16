@@ -7,11 +7,11 @@
 use {
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryProxy, FileMarker},
+    fidl_fuchsia_io::{DirectoryProxy, FileMarker, FileObject, NodeInfo},
     fuchsia_component::client::{launcher, AppBuilder},
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg::{MetaContents, MetaPackage},
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{self as zx, prelude::*, Status},
     futures::{join, prelude::*},
     maplit::btreeset,
     std::{
@@ -103,7 +103,8 @@ impl Package {
         Ok(pkg.build().await?)
     }
 
-    fn meta_contents(&self) -> Result<MetaContents, Error> {
+    /// Returns the parsed contents of the meta/contents file.
+    pub fn meta_contents(&self) -> Result<MetaContents, Error> {
         let mut raw_meta_far = self.meta_far()?;
         let mut meta_far = fuchsia_archive::Reader::new(&mut raw_meta_far)?;
         let raw_meta_contents = meta_far.read_file("meta/contents")?;
@@ -161,18 +162,37 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
     let (file, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
 
     let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_RIGHT_READABLE;
-    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
-    dir.open(flags, mode, path, ServerEnd::new(server_end.into_channel()))
+    dir.open(flags, 0, path, ServerEnd::new(server_end.into_channel()))
         .expect("open request to send");
 
     let mut events = file.take_event_stream();
     let open = async move {
-        let fidl_fuchsia_io::FileEvent::OnOpen_ { s, info: _ } =
+        let fidl_fuchsia_io::FileEvent::OnOpen_ { s, info } =
             events.next().await.expect("Some(event)").expect("no fidl error");
+
         match Status::ok(s) {
             Err(Status::NOT_FOUND) => Err(VerificationError::MissingFile { path: path.to_owned() }),
             Err(status) => Err(format_err!("unable to open {:?}: {:?}", path, status).into()),
             Ok(()) => Ok(()),
+        }?;
+
+        let event = match *info.expect("FileEvent to have NodeInfo") {
+            NodeInfo::File(FileObject { event }) => event,
+            other => {
+                panic!("NodeInfo from FileEventStream to be File variant with event: {:?}", other)
+            }
+        };
+
+        if let Some(event) = event {
+            match event.wait_handle(zx::Signals::USER_0, zx::Time::after(0.seconds())) {
+                Err(Status::TIMED_OUT) => Err(VerificationError::UnreadableBlob),
+                Err(other_status) => {
+                    Err(format_err!("wait_handle failed with status: {:?}", other_status).into())
+                }
+                Ok(_) => Ok(()),
+            }
+        } else {
+            Ok(())
         }
     };
 
@@ -195,11 +215,27 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
     open.and(read)
 }
 
+/// An error that can occur while verifying the contents of a directory.
 #[derive(Debug)]
 pub enum VerificationError {
-    ExtraFile { path: String },
-    MissingFile { path: String },
-    DifferentFileData { path: String },
+    /// The directory is serving a file that isn't in the package.
+    ExtraFile {
+        /// Path to the extra file.
+        path: String,
+    },
+    /// The directory is not serving a particular file that it should be serving.
+    MissingFile {
+        /// Path to the missing file.
+        path: String,
+    },
+    /// The actual merkle of the file does not match the merkle listed in the meta FAR.
+    DifferentFileData {
+        /// Path to the file.
+        path: String,
+    },
+    /// We failed to read from a blob that should have been readable.
+    UnreadableBlob,
+    /// Anything else.
     Other(Error),
 }
 
