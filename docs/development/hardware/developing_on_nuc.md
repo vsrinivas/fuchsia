@@ -64,20 +64,17 @@ NUCs don’t come with RAM or an SSD so you need to install them.
 1. Press F2 while booting to enter BIOS.
 1. In the Boot Order window on the left, click the Legacy tab.
 1. Uncheck ‘Legacy Boot’.
-<br/><center><img width="50%" src="/docs/images/developing_on_nuc/bios.jpg"/></center><br/><br/>
+
+   <img width="50%" src="/docs/images/developing_on_nuc/bios.jpg"/>
 1. Click the `Advanced` button and confirm the following boot configuration:
-
-    1.1. Select the `Boot Priority` tab.
-        1.1.1. Check `UEFI Boot`.
-        1.1.2. Set `USB` the first entry in the boot order.
-
-    1.2. Select the `Boot configuration` tab.
-
-        1.2.1. Check `Boot Network Devices Last`.
-        1.2.2. Check `Unlimited Network Boot Attepts`.
-        1.2.3. Check `USB boot devices`.
-        1.2.4. Set `Network boot` to `UEFI PXE & iSCSI`.
-
+    1. Select the `Boot Priority` tab.
+       1. Check `UEFI Boot`.
+       1. Set `USB` the first entry in the boot order.
+    1. Select the `Boot configuration` tab.
+       1. Check `Boot Network Devices Last`.
+       1. Check `Unlimited Network Boot Attepts`.
+       1. Check `USB boot devices`.
+       1. Set `Network boot` to `UEFI PXE & iSCSI`.
 2. Select the `Secure Boot` tab and uncheck `Secure Boot`.
 3. Press F10 to save the changes and exit BIOS.
 
