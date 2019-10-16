@@ -229,18 +229,11 @@ if (internal_access) {
   if (board_name == "astro") {
     copy("brcmfmac-firmware-copy") {
       sources = [
-        "firmware/brcmfmac43455-sdio-astro.bin",
+        "firmware/brcmfmac43455-sdio.bin",
+        "firmware/brcmfmac43455-sdio.txt",
       ]
       outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin",
-      ]
-    }
-    copy("brcmfmac-nvram-copy") {
-      sources = [
-        "firmware/brcmfmac43455-sdio-astro.txt",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt",
+        "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
       ]
     }
     copy("brcmfmac-clm-copy") {
@@ -254,18 +247,11 @@ if (internal_access) {
   } else if (board_name == "sherlock") {
     copy("brcmfmac-firmware-copy") {
       sources = [
-        "firmware/brcmfmac43455-sdio-sherlock.bin",
+        "firmware/brcmfmac43455-sdio.bin",
+        "firmware/brcmfmac43455-sdio.txt",
       ]
       outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin",
-      ]
-    }
-    copy("brcmfmac-nvram-copy") {
-      sources = [
-        "firmware/brcmfmac43455-sdio-sherlock.txt",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt",
+        "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
       ]
     }
     copy("brcmfmac-clm-copy") {
@@ -312,7 +298,20 @@ package("brcmfmac") {
       # were libraries which always use the shared-library toolchain to build.
       ":brcmfmac-firmware-copy($shlib_toolchain)",
     ]
-    if ((board_name == "astro") || (board_name == "sherlock")) {
+    if (board_name == "astro") {
+      deps += [ ":brcmfmac-clm-copy($shlib_toolchain)" ]
+      libraries = [
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.bin"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.txt"
+        },
+        {
+          name = "firmware/brcmfmac/brcmfmac43455-sdio.clm_blob"
+        },
+      ]
+    } else if (board_name == "sherlock") {
       deps += [ ":brcmfmac-clm-copy($shlib_toolchain)" ]
       libraries = [
         {
