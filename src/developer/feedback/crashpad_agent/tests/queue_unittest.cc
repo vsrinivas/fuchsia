@@ -13,17 +13,20 @@
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
 namespace {
 
-using crashpad::FileReader;
+using crashpad::CrashReportDatabase;
 using crashpad::UUID;
 using inspect::testing::ChildrenMatch;
 using inspect::testing::NameMatches;
@@ -38,23 +41,44 @@ using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
+constexpr uint64_t kMaxTotalReportsSizeInKb = 1024u;
+
 constexpr uint64_t kMaxUploadAttempts = 9;
 
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
 
+constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
+
 constexpr char kAttachmentKey[] = "attachment.key";
+constexpr char kAttachmentValue[] = "attachment.value";
 constexpr char kAnnotationKey[] = "annotation.key";
 constexpr char kAnnotationValue[] = "annotation.value";
+constexpr char kMinidumpKey[] = "uploadFileMinidump";
+constexpr char kMinidumpValue[] = "minidump";
+
+fuchsia::mem::Buffer BuildAttachment(const std::string& value) {
+  fuchsia::mem::Buffer attachment;
+  FXL_CHECK(fsl::VmoFromString(value, &attachment));
+  return attachment;
+}
+
+std::map<std::string, fuchsia::mem::Buffer> MakeAttachments() {
+  std::map<std::string, fuchsia::mem::Buffer> attachments;
+  attachments[kAttachmentKey] = BuildAttachment(kAttachmentValue);
+  return attachments;
+}
 
 std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
 
-std::map<std::string, FileReader*> MakeAttachments() { return {{kAttachmentKey, nullptr}}; }
-
 class QueueTest : public ::testing::Test {
  public:
+  void TearDown() override {
+    ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
+  }
+
   void SetUpQueue(std::vector<bool> upload_attempt_results = std::vector<bool>{}) {
     program_id_ = 1;
     state_ = QueueOps::SetStateToLeaveAsPending;
@@ -64,14 +88,16 @@ class QueueTest : public ::testing::Test {
 
     clock_ = std::make_unique<timekeeper::TestClock>();
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
-    database_ =
-        crashpad::CrashReportDatabase::Initialize(base::FilePath(database_path_.path()));
     inspector_ = std::make_unique<inspect::Inspector>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    queue_ = std::make_unique<Queue>(Queue::Config{
-                                         /*max_upload_attempts=*/kMaxUploadAttempts,
-                                     },
-                                     database_.get(), crash_server_.get(), inspect_manager_.get());
+    queue_ = Queue::TryCreate(
+        Queue::Config{
+            CrashpadDatabaseConfig{/*max_size_in_kb=*/kMaxTotalReportsSizeInKb},
+            /*max_upload_attempts=*/kMaxUploadAttempts,
+        },
+        crash_server_.get(), inspect_manager_.get());
+
+    ASSERT_TRUE(queue_);
   }
 
  protected:
@@ -88,16 +114,24 @@ class QueueTest : public ::testing::Test {
     for (auto const& op : ops) {
       switch (op) {
         case QueueOps::AddNewReport:
-          expected_queue_contents_.push_back(CreateNewReportEntry());
-          queue_->Add(expected_queue_contents_.back(), MakeAnnotations(), MakeAttachments());
-          ProcessAll();
+          ASSERT_TRUE(queue_->Add(
+              /*attachments=*/MakeAttachments(),
+              /*minidump=*/BuildAttachment(kMinidumpValue), /*annotations=*/MakeAnnotations()));
+          if (!queue_->IsEmpty()) {
+            AddExpectedReport(queue_->LatestReport());
+          }
+          SetExpectedQueueContents();
           break;
         case QueueOps::DeleteOneReport:
           if (!expected_queue_contents_.empty()) {
+            // Create a database in order to delete a report.
+            auto database_ = CrashReportDatabase::InitializeWithoutCreating(
+                base::FilePath(kCrashpadDatabasePath));
+            ASSERT_TRUE(database_);
             database_->DeleteReport(expected_queue_contents_.back());
             expected_queue_contents_.pop_back();
           }
-          ProcessAll();
+          SetExpectedQueueContents();
           break;
         case QueueOps::SetStateToArchive:
           state_ = QueueOps::SetStateToArchive;
@@ -112,7 +146,7 @@ class QueueTest : public ::testing::Test {
           queue_->SetStateToLeaveAsPending();
           break;
         case QueueOps::ProcessAll:
-          ProcessAll();
+          SetExpectedQueueContents();
           queue_->ProcessAll();
           break;
       }
@@ -134,7 +168,8 @@ class QueueTest : public ::testing::Test {
 
   void CheckAttachmentKeysOnServer() {
     FXL_CHECK(crash_server_);
-    EXPECT_THAT(crash_server_->latest_attachment_keys(), UnorderedElementsAre(kAttachmentKey));
+    EXPECT_THAT(crash_server_->latest_attachment_keys(),
+                UnorderedElementsAre(kAttachmentKey, kMinidumpKey));
   }
 
   inspect::Hierarchy InspectTree() {
@@ -147,7 +182,20 @@ class QueueTest : public ::testing::Test {
   std::vector<UUID> expected_queue_contents_;
 
  private:
-  void ProcessAll() {
+  void AddExpectedReport(const UUID& uuid) {
+    inspect_manager_->AddReport(fxl::StringPrintf("program_%ld", program_id_), uuid.ToString());
+    ++program_id_;
+    // Add a report to the back of the expected queue contents if and only if it is expected
+    // to be in the queue after processing.
+    if (state_ != QueueOps::SetStateToUpload) {
+      expected_queue_contents_.push_back(uuid);
+    } else if (!*next_upload_attempt_result_) {
+      expected_queue_contents_.push_back(uuid);
+      ++next_upload_attempt_result_;
+    }
+  }
+
+  void SetExpectedQueueContents() {
     if (state_ == QueueOps::SetStateToArchive) {
       expected_queue_contents_.clear();
     } else if (state_ == QueueOps::SetStateToUpload) {
@@ -163,29 +211,12 @@ class QueueTest : public ::testing::Test {
     }
   }
 
-  // Create a new report and add it to the |InspectManager|.
-  UUID CreateNewReportEntry() {
-    UUID local_report_id;
-    std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
-
-    database_->PrepareNewCrashReport(&report);
-    database_->FinishedWritingCrashReport(std::move(report), &local_report_id);
-
-    inspect_manager_->AddReport(fxl::StringPrintf("program_%ld", program_id_),
-                                local_report_id.ToString());
-    ++program_id_;
-
-    return local_report_id;
-  }
-
   size_t program_id_ = 1;
   QueueOps state_ = QueueOps::SetStateToLeaveAsPending;
   std::vector<bool> upload_attempt_results_;
   std::vector<bool>::const_iterator next_upload_attempt_result_;
 
   std::unique_ptr<timekeeper::TestClock> clock_;
-  std::unique_ptr<crashpad::CrashReportDatabase> database_;
-  files::ScopedTempDir database_path_;
   std::unique_ptr<StubCrashServer> crash_server_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::unique_ptr<InspectManager> inspect_manager_;
@@ -197,7 +228,7 @@ TEST_F(QueueTest, Check_EmptyQueue_OnZeroAdds) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_NonIsEmptyQueue_OnStateSetToLeaveAsPending_MultipleReports) {
+TEST_F(QueueTest, Check_NotIsEmptyQueue_OnStateSetToLeaveAsPending_MultipleReports) {
   SetUpQueue();
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::ProcessAll});
@@ -242,7 +273,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_NonIsEmptyQueue_OnFailedUpload) {
+TEST_F(QueueTest, Check_NotIsEmptyQueue_OnFailedUpload) {
   SetUpQueue({kUploadFailed});
   ApplyQueueOps({
       QueueOps::SetStateToUpload,
@@ -263,7 +294,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleReports) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_NonIsEmptyQueue_OneFailedUpload_MultipleReports) {
+TEST_F(QueueTest, Check_NotIsEmptyQueue_OneFailedUpload_MultipleReports) {
   SetUpQueue(std::vector<bool>(5u, kUploadFailed));
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
                  QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::SetStateToUpload,
@@ -294,7 +325,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultiplePruned_MultipleR
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_NonIsEmptyQueue_OnMixedUploadResults_MultipleReports) {
+TEST_F(QueueTest, Check_NotIsEmptyQueue_OnMixedUploadResults_MultipleReports) {
   SetUpQueue(
       {kUploadSuccessful, kUploadSuccessful, kUploadFailed, kUploadFailed, kUploadSuccessful});
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,
@@ -306,7 +337,7 @@ TEST_F(QueueTest, Check_NonIsEmptyQueue_OnMixedUploadResults_MultipleReports) {
   EXPECT_EQ(queue_->Size(), 2u);
 }
 
-TEST_F(QueueTest, Check_NonIsEmptyQueue_OnMixedUploadResults_MultiplePruned_MultipleReports) {
+TEST_F(QueueTest, Check_NotIsEmptyQueue_OnMixedUploadResults_MultiplePruned_MultipleReports) {
   SetUpQueue(
       {kUploadSuccessful, kUploadSuccessful, kUploadFailed, kUploadFailed, kUploadSuccessful});
   ApplyQueueOps({QueueOps::AddNewReport, QueueOps::AddNewReport, QueueOps::AddNewReport,

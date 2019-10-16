@@ -289,6 +289,7 @@ executable("queue_unittest") {
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",
     "//src/developer/feedback/crashpad_agent:src",
+    "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",

@@ -6,13 +6,12 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
 
 #include <map>
-#include <unordered_map>
 #include <vector>
 
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
+#include "src/developer/feedback/crashpad_agent/database.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
-#include "third_party/crashpad/client/crash_report_database.h"
-#include "third_party/crashpad/util/file/file_reader.h"
+#include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
 namespace feedback {
@@ -21,20 +20,19 @@ namespace feedback {
 class Queue {
  public:
   struct Config {
+    CrashpadDatabaseConfig database_config;
+
     // Maximum number of times to attempt to upload a report.
     uint64_t max_upload_attempts;
   };
 
-  Queue(Config config, crashpad::CrashReportDatabase* database, CrashServer* crash_server,
-        InspectManager* inspect_manager)
-      : config_(config),
-        database_(database),
-        crash_server_(crash_server),
-        inspect_manager_(inspect_manager) {}
+  static std::unique_ptr<Queue> TryCreate(Config config, CrashServer* crash_server,
+                                          InspectManager* inspect_manager);
 
   // Add a report to the queue.
-  bool Add(crashpad::UUID local_report_id, std::map<std::string, std::string> annotations,
-           std::map<std::string, crashpad::FileReader*> attachments);
+  bool Add(std::map<std::string, fuchsia::mem::Buffer> atttachments,
+           std::optional<fuchsia::mem::Buffer> minidump,
+           std::map<std::string, std::string> annotations);
 
   // Process the pending reports based on the queue's internal state.
   void ProcessAll();
@@ -42,12 +40,16 @@ class Queue {
   uint64_t Size() const { return pending_reports_.size(); }
   bool IsEmpty() const { return pending_reports_.empty(); }
   bool Contains(const crashpad::UUID& uuid) const;
+  const crashpad::UUID& LatestReport() { return pending_reports_.back(); }
 
   void SetStateToArchive() { state_ = State::Archive; }
   void SetStateToUpload() { state_ = State::Upload; }
   void SetStateToLeaveAsPending() { state_ = State::LeaveAsPending; }
 
  private:
+  Queue(Config config, std::unique_ptr<Database> database, CrashServer* crash_server,
+        InspectManager* inspect_manager);
+
   // How the queue should handle processing existing pending reports and new reports.
   enum class State {
     Archive,
@@ -55,19 +57,8 @@ class Queue {
     LeaveAsPending,
   };
 
-  // Contains the parameters needed by |crash_server_| to attempt an upload.
-  struct RequestParameters {
-    std::map<std::string, std::string> annotations;
-    std::map<std::string, crashpad::FileReader*> attachments;
-  };
-
   // Archives all pending reports and clears the queue.
   void ArchiveAll();
-
-  // Archives a report.
-  //
-  // Returns false if there is an error with the database.
-  bool Archive(const crashpad::UUID& local_report_id);
 
   // Attempts to upload all pending reports and removes the successfully uploaded reports from the
   // queue.
@@ -79,14 +70,13 @@ class Queue {
   bool Upload(const crashpad::UUID& local_report_id);
 
   const Config config_;
-  crashpad::CrashReportDatabase* database_;
+  std::unique_ptr<Database> database_;
   CrashServer* crash_server_;
   InspectManager* inspect_manager_;
 
   State state_ = State::LeaveAsPending;
 
   std::vector<crashpad::UUID> pending_reports_;
-  std::unordered_map<std::string, RequestParameters> pending_report_request_parameters_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);
 };
