@@ -91,7 +91,7 @@ struct OpResult {
     ParameterSet parameter_set;
 };
 
-[Discoverable, Layout = "Simple"]
+[Discoverable]
 protocol Device {
     // Obtain information about the TEE OS
     GetOsInfo() -> (OsInfo info);
