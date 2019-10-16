@@ -26,8 +26,17 @@ pub struct Ast {
 #[derive(Debug, PartialEq)]
 pub struct Declaration {
     pub identifier: CompoundIdentifier,
+    pub value_type: ValueType,
     pub extends: bool,
     pub values: Vec<Value>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ValueType {
+    Number,
+    Str,
+    Bool,
+    Enum,
 }
 
 #[derive(Debug, PartialEq)]
@@ -53,32 +62,35 @@ impl FromStr for Ast {
     }
 }
 
+impl Value {
+    pub fn identifier(&self) -> &str {
+        match self {
+            Value::Number(identifier, _)
+            | Value::Str(identifier, _)
+            | Value::Bool(identifier, _)
+            | Value::Enum(identifier) => &identifier,
+        }
+    }
+}
+
 fn keyword_extend(input: &str) -> IResult<&str, &str, BindParserError> {
     ws(tag("extend"))(input)
 }
 
-#[derive(Clone, Debug)]
-enum Type {
-    Number,
-    Str,
-    Bool,
-    Enum,
+fn keyword_uint(input: &str) -> IResult<&str, ValueType> {
+    value(ValueType::Number, ws(tag("uint")))(input)
 }
 
-fn keyword_uint(input: &str) -> IResult<&str, Type> {
-    value(Type::Number, ws(tag("uint")))(input)
+fn keyword_string(input: &str) -> IResult<&str, ValueType> {
+    value(ValueType::Str, ws(tag("string")))(input)
 }
 
-fn keyword_string(input: &str) -> IResult<&str, Type> {
-    value(Type::Str, ws(tag("string")))(input)
+fn keyword_bool(input: &str) -> IResult<&str, ValueType> {
+    value(ValueType::Bool, ws(tag("bool")))(input)
 }
 
-fn keyword_bool(input: &str) -> IResult<&str, Type> {
-    value(Type::Bool, ws(tag("bool")))(input)
-}
-
-fn keyword_enum(input: &str) -> IResult<&str, Type> {
-    value(Type::Enum, ws(tag("enum")))(input)
+fn keyword_enum(input: &str) -> IResult<&str, ValueType> {
+    value(ValueType::Enum, ws(tag("enum")))(input)
 }
 
 fn value_list<'a, O, F>(f: F) -> impl Fn(&'a str) -> IResult<&'a str, Vec<O>, BindParserError>
@@ -134,23 +146,23 @@ fn enum_value_list(input: &str) -> IResult<&str, Vec<Value>, BindParserError> {
 fn declaration(input: &str) -> IResult<&str, Declaration, BindParserError> {
     let (input, extends) = opt(keyword_extend)(input)?;
 
-    let (input, typ) = map_err(
+    let (input, value_type) = map_err(
         alt((keyword_uint, keyword_string, keyword_bool, keyword_enum)),
         BindParserError::Type,
     )(input)?;
 
     let (input, identifier) = ws(compound_identifier)(input)?;
 
-    let value_parser = match typ {
-        Type::Number => number_value_list,
-        Type::Str => string_value_list,
-        Type::Bool => bool_value_list,
-        Type::Enum => enum_value_list,
+    let value_parser = match value_type {
+        ValueType::Number => number_value_list,
+        ValueType::Str => string_value_list,
+        ValueType::Bool => bool_value_list,
+        ValueType::Enum => enum_value_list,
     };
 
     let (input, vals) = value_parser(input)?;
 
-    Ok((input, Declaration { identifier, extends: extends.is_some(), values: vals }))
+    Ok((input, Declaration { identifier, value_type, extends: extends.is_some(), values: vals }))
 }
 
 fn library_name(input: &str) -> IResult<&str, CompoundIdentifier, BindParserError> {
@@ -598,6 +610,7 @@ mod test {
                     "",
                     Declaration {
                         identifier: make_identifier!["test"],
+                        value_type: ValueType::Number,
                         extends: false,
                         values: vec![],
                     }
@@ -614,6 +627,7 @@ mod test {
                     "",
                     Declaration {
                         identifier: make_identifier!["test"],
+                        value_type: ValueType::Number,
                         extends: false,
                         values: vec![Value::Number("x".to_string(), 1)],
                     }
@@ -630,6 +644,7 @@ mod test {
                     "",
                     Declaration {
                         identifier: make_identifier!["test"],
+                        value_type: ValueType::Str,
                         extends: false,
                         values: vec![Value::Str("x".to_string(), "a".to_string())],
                     }
@@ -646,6 +661,7 @@ mod test {
                     "",
                     Declaration {
                         identifier: make_identifier!["test"],
+                        value_type: ValueType::Bool,
                         extends: false,
                         values: vec![Value::Bool("x".to_string(), false)],
                     }
@@ -662,6 +678,7 @@ mod test {
                     "",
                     Declaration {
                         identifier: make_identifier!["test"],
+                        value_type: ValueType::Enum,
                         extends: false,
                         values: vec![Value::Enum("x".to_string())],
                     }
@@ -678,6 +695,7 @@ mod test {
                     "",
                     Declaration {
                         identifier: make_identifier!["test"],
+                        value_type: ValueType::Number,
                         extends: true,
                         values: vec![Value::Number("x".to_string(), 1)],
                     }
@@ -722,6 +740,7 @@ mod test {
                     "",
                     Declaration {
                         identifier: make_identifier!["this", "is", "a", "test"],
+                        value_type: ValueType::Number,
                         extends: false,
                         values: vec![Value::Number("x".to_string(), 1)],
                     }
@@ -831,6 +850,7 @@ mod test {
                         using: vec![],
                         declarations: vec![Declaration {
                             identifier: make_identifier!["t"],
+                            value_type: ValueType::Number,
                             extends: false,
                             values: vec![(Value::Number("x".to_string(), 1))],
                         }]
@@ -854,6 +874,7 @@ mod test {
                         }],
                         declarations: vec![Declaration {
                             identifier: make_identifier!["d", "t"],
+                            value_type: ValueType::Enum,
                             extends: true,
                             values: vec![Value::Enum("x".to_string())],
                         }]
@@ -875,11 +896,13 @@ mod test {
                         declarations: vec![
                             Declaration {
                                 identifier: make_identifier!["d", "t"],
+                                value_type: ValueType::Enum,
                                 extends: true,
                                 values: vec![Value::Enum("x".to_string())],
                             },
                             Declaration {
                                 identifier: make_identifier!["e"],
+                                value_type: ValueType::Bool,
                                 extends: false,
                                 values: vec![],
                             }

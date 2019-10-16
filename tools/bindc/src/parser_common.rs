@@ -23,6 +23,28 @@ pub struct CompoundIdentifier {
     pub name: String,
 }
 
+impl CompoundIdentifier {
+    pub fn nest(&self, name: String) -> CompoundIdentifier {
+        let mut namespace = self.namespace.clone();
+        namespace.push(self.name.clone());
+        CompoundIdentifier { namespace, name }
+    }
+
+    pub fn parent(&self) -> Option<CompoundIdentifier> {
+        let mut namespace = self.namespace.clone();
+        let name = namespace.pop()?;
+        Some(CompoundIdentifier { namespace, name })
+    }
+}
+
+impl ToString for CompoundIdentifier {
+    fn to_string(&self) -> String {
+        let mut temp = self.namespace.clone();
+        temp.push(self.name.clone());
+        temp.join(".")
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Include {
     pub name: CompoundIdentifier,
@@ -154,28 +176,28 @@ where
     }
 }
 
+#[macro_export]
+macro_rules! make_identifier{
+    ( $name:tt ) => {
+        {
+            CompoundIdentifier {
+                namespace: Vec::new(),
+                name: String::from($name),
+            }
+        }
+    };
+    ( $namespace:tt , $($rest:tt)* ) => {
+        {
+            let mut identifier = make_identifier!($($rest)*);
+            identifier.namespace.insert(0, String::from($namespace));
+            identifier
+        }
+    };
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[macro_export]
-    macro_rules! make_identifier{
-        ( $name:tt ) => {
-            {
-                CompoundIdentifier {
-                    namespace: Vec::new(),
-                    name: String::from($name),
-                }
-            }
-        };
-        ( $namespace:tt , $($rest:tt)* ) => {
-            {
-                let mut identifier = make_identifier!($($rest)*);
-                identifier.namespace.insert(0, String::from($namespace));
-                identifier
-            }
-        };
-    }
 
     mod string_literal {
         use super::*;
