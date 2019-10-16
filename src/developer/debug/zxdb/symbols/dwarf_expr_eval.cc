@@ -286,11 +286,17 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
 
 DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_register_number,
                                                                 int64_t offset) {
-  auto reg = debug_ipc::DWARFToRegisterID(data_provider_->GetArch(), dwarf_register_number);
+  const debug_ipc::RegisterInfo* reg_info =
+      debug_ipc::DWARFToRegisterInfo(data_provider_->GetArch(), dwarf_register_number);
+  if (!reg_info) {
+    ReportError(fxl::StringPrintf("Register %d not known.", dwarf_register_number));
+    return Completion::kSync;
+  }
+
   // This function doesn't set the result_type_ because it is called from
   // different contexts. The callers should set the result_type_ as appropriate
   // for their operation.
-  if (std::optional<uint64_t> reg_data; data_provider_->GetRegister(reg, &reg_data)) {
+  if (std::optional<uint64_t> reg_data; data_provider_->GetRegister(reg_info->id, &reg_data)) {
     // State known synchronously (could be available or known unavailable).
     if (!reg_data) {
       ReportError(fxl::StringPrintf("Register %d not available.", dwarf_register_number));
@@ -301,19 +307,19 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
   }
 
   // Must request async.
-  data_provider_->GetRegisterAsync(
-      reg, [weak_eval = weak_factory_.GetWeakPtr(), offset](const Err& err, uint64_t value) {
-        if (!weak_eval)
-          return;
-        if (err.has_error()) {
-          weak_eval->ReportError(err);
-          return;
-        }
-        weak_eval->Push(static_cast<uint64_t>(value + offset));
+  data_provider_->GetRegisterAsync(reg_info->id, [weak_eval = weak_factory_.GetWeakPtr(), offset](
+                                                     const Err& err, uint64_t value) {
+    if (!weak_eval)
+      return;
+    if (err.has_error()) {
+      weak_eval->ReportError(err);
+      return;
+    }
+    weak_eval->Push(static_cast<uint64_t>(value + offset));
 
-        // Picks up processing at the next instruction.
-        weak_eval->ContinueEval();
-      });
+    // Picks up processing at the next instruction.
+    weak_eval->ContinueEval();
+  });
 
   return Completion::kAsync;
 }

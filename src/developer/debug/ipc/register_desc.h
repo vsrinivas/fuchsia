@@ -37,6 +37,10 @@ struct RegisterInfo {
   // record.
   int bits = 0;
   int shift = 0;  // How many bits shited to the right is the low bit of the value.
+
+  // DWARF register ID if there is one.
+  static constexpr uint32_t kNoDwarfId = 0xffffffff;
+  uint32_t dwarf_id = kNoDwarfId;
 };
 
 const RegisterInfo* InfoForRegister(RegisterID id);
@@ -51,9 +55,8 @@ debug_ipc::RegisterID GetSpecialRegisterID(debug_ipc::Arch, SpecialRegisterType)
 // Returns the special register type for a register ID.
 SpecialRegisterType GetSpecialRegisterType(RegisterID id);
 
-// Converts RegisterID to/from the ID numbers used by DWARF.
-RegisterID DWARFToRegisterID(Arch, uint32_t dwarf_reg_id);
-std::optional<uint32_t> RegisterIDToDWARF(RegisterID);
+// Converts the ID number used by DWARF to our register info. Returns null if not found.
+const RegisterInfo* DWARFToRegisterInfo(Arch, uint32_t dwarf_reg_id);
 
 // Find out what arch a register ID belongs to
 Arch GetArchForRegisterID(RegisterID);
