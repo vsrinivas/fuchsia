@@ -29,11 +29,11 @@ source_set("impl") {
   ]
 
   deps = [
-    "//garnet/public/lib/backoff",
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.modular.auth",
     "//src/ledger/bin/environment",
     "//src/ledger/lib/firebase_auth",
+    "//src/lib/backoff",
     "//src/lib/callback",
     "//src/lib/component/cpp:deprecated_service_provider",
   ]
@@ -48,11 +48,11 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/bin/testing/overnet",
+    "//src/lib/backoff/testing",
     "//src/lib/fxl",
 
     # gtest matchers are in gmock.

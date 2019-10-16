@@ -11,7 +11,6 @@ executable("unittests") {
   output_name = "garnet_lib_unittests"
 
   deps = [
-    "//garnet/public/lib/backoff:unittests",
     "//garnet/public/lib/callback:unittests",
     "//garnet/public/lib/gtest:unittests",
     "//garnet/public/lib/timekeeper:unittests",
