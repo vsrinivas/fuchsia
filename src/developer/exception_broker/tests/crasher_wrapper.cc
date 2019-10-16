@@ -44,7 +44,7 @@ bool SpawnCrasher(ExceptionContext* pe) {
           fdio_spawn_etc(pe->job.get(), FDIO_SPAWN_CLONE_ALL, kCrasherPath, argv, nullptr, 0,
                          nullptr, pe->process.reset_and_get_address(), err_msg);
       res != ZX_OK) {
-    FX_PLOGS(ERROR, res);
+    FX_PLOGS(ERROR, res) << err_msg;
     return false;
   }
 
