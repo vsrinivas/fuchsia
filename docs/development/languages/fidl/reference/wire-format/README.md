@@ -582,8 +582,10 @@ The header has the following form:
       require a response from the other side.
     * See [**zx_channel_call()**][channel call] for more details on
       `txid` allocation
-*   `uint32 reserved0`, reserved for future use, must be zero
-*   `uint32 flags`, all unused bits must be set to zero
+*   `uint8[3] flags`, MUST NOT be checked by bindings. These flags can be used
+    to enable soft transitions of the wire format. See [Header Flags](#flags)
+    for a description of the current flag definitions.
+*   `uint8 magic number`, determines if two wire formats are compatible.
 *   `uint32 ordinal`
     *   The zero ordinal is invalid.
     *   Ordinals with the most significant bit set are reserved for
@@ -850,7 +852,49 @@ Conformant FIDL bindings must check all of the following integrity constraints:
     *   All present / not-present flags for referenced handles hold the value
         **0** or **UINT32_MAX** only.
 
---------------------------------------------------------------------------------------------------
+#### Header Flags {#flags}
+
+*Flags[0]*
+
+| Bit     | Current Usage                                                                                                                                                                   | Past Usages |
+|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
+| 1       | Unused                                                                                                                                                                          |             |
+| 1       | Unused                                                                                                                                                                          |             |
+| 1       | Unused                                                                                                                                                                          |             |
+| 7 (MSB) | Unused                                                                                                                                                                          |             |
+| 6       | Unused                                                                                                                                                                          |             |
+| 5       | Unused                                                                                                                                                                          |             |
+| 4       | Unused                                                                                                                                                                          |             |
+| 3       | Unused                                                                                                                                                                          |             |
+| 2       | Unused                                                                                                                                                                          |             |
+| 1       | Unused                                                                                                                                                                          |             |
+| 0 (LSB) | Indicates whether static unions should be encoded as xunions, to soft transition [FTP-015](/docs/development/languages/fidl/reference/ftp/ftp-015.md) |             |
+
+*Flags[1]*
+
+| Bit     | Current Usage                                                | Past Usages |
+|---------|--------------------------------------------------------------|-------------|
+| 7 (MSB) | Unused                                                       |             |
+| 6       | Unused                                                       |             |
+| 5       | Unused                                                       |             |
+| 4       | Unused                                                       |             |
+| 3       | Unused                                                       |             |
+| 2       | Unused                                                       |             |
+| 1       | Unused                                                       |             |
+| 0       | Unused                                                       |             |
+
+*Flags[2]*
+
+| Bit     | Current Usage                                                | Past Usages |
+|---------|--------------------------------------------------------------|-------------|
+| 7 (MSB) | Unused                                                       |             |
+| 6       | Unused                                                       |             |
+| 5       | Unused                                                       |             |
+| 4       | Unused                                                       |             |
+| 3       | Unused                                                       |             |
+| 2       | Unused                                                       |             |
+| 1       | Unused                                                       |             |
+| 0       | Unused                                                       |             |
 
 #### Footnote 1
 
