@@ -643,6 +643,68 @@ impl<'a> ValidationContext<'a> {
         self.validate_storage_target(decl, storage_source_name, target);
     }
 
+    /// Check a `ChildRef` contains a valid child that exists.
+    ///
+    /// We ensure the target child is statically defined (i.e., not a dynamic child inside
+    /// a collection).
+    fn validate_child_ref(&mut self, decl: &str, field_name: &str, child: &fsys::ChildRef) -> bool {
+        // Ensure the name is valid, and the reference refers to a static child.
+        //
+        // We attempt to list all errors if possible.
+        let mut valid = true;
+        if !check_name(
+            Some(&child.name),
+            decl,
+            &format!("{}.child.name", field_name),
+            &mut self.errors,
+        ) {
+            valid = false;
+        }
+        if child.collection.is_some() {
+            self.errors
+                .push(Error::extraneous_field(decl, format!("{}.child.collection", field_name)));
+            valid = false;
+        }
+        if !valid {
+            return false;
+        }
+
+        // Ensure the child exists.
+        let name: &str = &child.name;
+        if !self.all_children.contains(name) {
+            self.errors.push(Error::invalid_child(decl, field_name, name));
+            return false;
+        }
+
+        true
+    }
+
+    /// Check a `CollectionRef` is valid and refers to an existing collection.
+    fn validate_collection_ref(
+        &mut self,
+        decl: &str,
+        field_name: &str,
+        collection: &fsys::CollectionRef,
+    ) -> bool {
+        // Ensure the name is valid.
+        if !check_name(
+            Some(&collection.name),
+            decl,
+            &format!("{}.collection.name", field_name),
+            &mut self.errors,
+        ) {
+            return false;
+        }
+
+        // Ensure the collection exists.
+        if !self.all_collections.contains(&collection.name as &str) {
+            self.errors.push(Error::invalid_collection(decl, field_name, &collection.name as &str));
+            return false;
+        }
+
+        true
+    }
+
     fn validate_target_child(
         &mut self,
         decl: &str,
@@ -651,21 +713,10 @@ impl<'a> ValidationContext<'a> {
         source: Option<&fsys::Ref>,
         target_path: Option<&'a String>,
     ) {
-        let mut valid = true;
-        valid &= check_name(Some(&child.name), decl, "target.child.name", &mut self.errors);
-        valid &= if child.collection.is_some() {
-            self.errors.push(Error::extraneous_field(decl, "target.child.collection"));
-            false
-        } else {
-            true
-        };
-        if !valid {
+        if !self.validate_child_ref(decl, "target", child) {
             return;
         }
         if let Some(target_path) = target_path {
-            if !self.all_children.contains(&child.name as &str) {
-                self.errors.push(Error::invalid_child(decl, "target", &child.name as &str));
-            }
             let paths_for_target =
                 self.child_target_paths.entry(child.name.to_string()).or_insert(HashMap::new());
             if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
@@ -695,17 +746,10 @@ impl<'a> ValidationContext<'a> {
         collection: &fsys::CollectionRef,
         target_path: Option<&'a String>,
     ) {
-        if !check_name(Some(&collection.name), decl, "target.collection.name", &mut self.errors) {
+        if !self.validate_collection_ref(decl, "target", &collection) {
             return;
         }
         if let Some(target_path) = target_path {
-            if !self.all_collections.contains(&collection.name as &str) {
-                self.errors.push(Error::invalid_collection(
-                    decl,
-                    "target",
-                    &collection.name as &str,
-                ));
-            }
             let paths_for_target = self
                 .collection_target_paths
                 .entry(collection.name.to_string())
@@ -730,17 +774,10 @@ impl<'a> ValidationContext<'a> {
     ) {
         match target {
             Some(fsys::Ref::Child(c)) => {
-                if !check_name(Some(&c.name), decl, "target.child.name", &mut self.errors) {
+                if !self.validate_child_ref(decl, "target", &c) {
                     return;
                 }
-                if c.collection.is_some() {
-                    self.errors.push(Error::extraneous_field(decl, "target.child.collection"));
-                    return;
-                }
-                let name: &str = &c.name;
-                if !self.all_children.contains(name) {
-                    self.errors.push(Error::invalid_child(decl, "target", name));
-                }
+                let name = &c.name;
                 if let Some(source_name) = storage_source_name {
                     if self.all_storage_and_sources.get(source_name) == Some(&Some(name)) {
                         self.errors.push(Error::offer_target_equals_source(decl, name));
@@ -748,13 +785,7 @@ impl<'a> ValidationContext<'a> {
                 }
             }
             Some(fsys::Ref::Collection(c)) => {
-                if !check_name(Some(&c.name), decl, "target.collection.name", &mut self.errors) {
-                    return;
-                }
-                let name: &str = &c.name;
-                if !self.all_collections.contains(name) {
-                    self.errors.push(Error::invalid_collection(decl, "target", name));
-                }
+                self.validate_collection_ref(decl, "target", &c);
             }
             Some(_) => self.errors.push(Error::invalid_field(decl, "target")),
             None => self.errors.push(Error::missing_field(decl, "target")),
