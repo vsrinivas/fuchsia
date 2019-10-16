@@ -161,7 +161,16 @@ impl Options {
                 }
             }
         }
-        Ok(if opts.mode == ModeCommand::Report { opts.transform_for_report() } else { opts })
+
+        if opts.mode == ModeCommand::Report {
+            Ok(opts.transform_for_report())
+        } else if opts.path.is_empty() {
+            // Print usage if path is empty
+            println!("{}", usage());
+            std::process::exit(0);
+        } else {
+            Ok(opts)
+        }
     }
 
     /// Get the formatter.

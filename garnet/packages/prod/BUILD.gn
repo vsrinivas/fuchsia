@@ -262,6 +262,7 @@ group("all") {
     "//src/connectivity/wlan:service",
     "//src/connectivity/wlan:tools",
     "//src/developer/memory/mem",
+    "//src/diagnostics/iquery_rs",
     "//src/fonts",
     "//src/ui/a11y:a11y",
   ]
