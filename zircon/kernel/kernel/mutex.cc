@@ -20,6 +20,8 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/affine/ratio.h>
+#include <lib/affine/utils.h>
 #include <lib/ktrace.h>
 #include <platform.h>
 #include <trace.h>
@@ -143,8 +145,9 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
   // Faster path: Spin on the mutex until it is either released, contested, or
   // the max spin time is reached.
   // TODO(ZX-4873): Optimize cache pressure of spinners and default spin max.
-  // TODO(35437): Convert spin loop to use ticks instead of mono.
-  const zx_time_t spin_until_time = zx_time_add_duration(current_time(), spin_max_duration);
+  const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
+  const zx_ticks_t spin_until_ticks =
+      affine::utils::ClampAdd(current_ticks(), time_to_ticks.Scale(spin_max_duration));
   do {
     old_mutex_state = STATE_FREE;
     if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
@@ -164,7 +167,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
 
     // Give the arch a chance to relax the CPU.
     arch_spinloop_pause();
-  } while (current_time() < spin_until_time);
+  } while (current_ticks() < spin_until_ticks);
 
   if ((LK_DEBUGLEVEL > 0) && unlikely(this->IsHeld())) {
     panic("Mutex::Acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n", ct,

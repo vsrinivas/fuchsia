@@ -18,6 +18,7 @@ source_set("tests") {
     "mem_tests.cc",
     "mmu_tests.cc",
     "mp_hotplug_tests.cc",
+    "mutex_spin_time_tests.cc",
     "pi_tests.cc",
     "popcount.cc",
     "pow2_tests.cc",
@@ -40,5 +41,7 @@ source_set("tests") {
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/unittest",
     "$zx/kernel/object",
+    "$zx/system/ulib/affine",
+    "$zx/system/ulib/zx",
   ]
 }
