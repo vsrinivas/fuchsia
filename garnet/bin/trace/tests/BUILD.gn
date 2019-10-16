@@ -422,7 +422,6 @@ executable("provider_destruction_tests") {
 }
 
 test_package("trace_tests") {
-  deprecated_shell = "//build"
   rootjob_svc = "//build"
 
   deps = [

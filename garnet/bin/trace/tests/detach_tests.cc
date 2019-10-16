@@ -9,7 +9,6 @@
 
 #include "garnet/bin/trace/tests/run_test.h"
 
-const char kTracePath[] = "/bin/trace";
 const char kChildPath[] = "/pkg/bin/run_awhile";
 
 // Only run tracing for this long, not the default 10 seconds.
@@ -20,17 +19,16 @@ const char kChildDurationArg[] = "60";
 
 // TODO(FLK-193): Disabled until fixed.
 TEST(DetachTest, DISABLED_SpawnedAppNotDetached) {
-  zx::job job;
+  zx::job job{};
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
-  zx::process child;
-  std::vector<std::string> argv{kTracePath,        "record",   "--spawn",
-                                kTraceDurationArg, kChildPath, kChildDurationArg};
-  ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
-
-  int64_t return_code;
-  ASSERT_TRUE(WaitAndGetReturnCode(argv[0], child, &return_code));
-  EXPECT_EQ(return_code, 0);
+  std::vector<std::string> args{
+    "record",
+    "--spawn",
+    kTraceDurationArg,
+    kChildPath,
+    kChildDurationArg};
+  ASSERT_TRUE(RunTraceAndWait(job, args));
 
   FXL_LOG(INFO) << "Trace exited, checking for helper presence";
 
@@ -46,17 +44,17 @@ TEST(DetachTest, DISABLED_SpawnedAppNotDetached) {
 
 // TODO(FLK-193): Disabled until fixed.
 TEST(DetachTest, DISABLED_SpawnedAppDetached) {
-  zx::job job;
+  zx::job job{};
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
-  zx::process child;
-  std::vector<std::string> argv{kTracePath,        "record",   "--detach",       "--spawn",
-                                kTraceDurationArg, kChildPath, kChildDurationArg};
-  ASSERT_EQ(SpawnProgram(job, argv, ZX_HANDLE_INVALID, &child), ZX_OK);
-
-  int64_t return_code;
-  ASSERT_TRUE(WaitAndGetReturnCode(argv[0], child, &return_code));
-  EXPECT_EQ(return_code, 0);
+  std::vector<std::string> args{
+    "record",
+    "--detach",
+    "--spawn",
+    kTraceDurationArg,
+    kChildPath,
+    kChildDurationArg};
+  ASSERT_TRUE(RunTraceAndWait(job, args));
 
   FXL_LOG(INFO) << "Trace exited, checking for helper presence";
 

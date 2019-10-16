@@ -4,13 +4,17 @@
 
 #include "garnet/bin/trace/tests/run_test.h"
 
+#include <fbl/algorithm.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -33,11 +37,6 @@ const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx"
 const char kTraceProgramPath[] = "/bin/trace";
 // The path of the trace program from within the trace package.
 // const char kTracePackageProgramPath[] = "/pkg/bin/trace";
-
-// Package path to use for spawned processes.
-const char kSystemPackageTestPrefix[] = "/pkgfs/packages/trace_tests/0/";
-// Package path to use for launched processes.
-const char kPackageTestPrefix[] = "/pkg/";
 
 void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix) {
   // Transfer our log settings to the subprogram.
@@ -82,38 +81,63 @@ static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
 }
 
 static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
-                                  const std::string& output_file_path,
+                                  const std::string& relative_output_file_path,
                                   std::vector<std::string>* args) {
   tracing::Spec spec;
-  if (!ReadTspec(kPackageTestPrefix + relative_tspec_path, &spec)) {
+  if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
     return false;
   }
 
   AppendLoggingArgs(args, "");
   args->push_back("record");
-  args->push_back(fxl::StringPrintf("--spec-file=%s",
-                                    (kSystemPackageTestPrefix + relative_tspec_path).c_str()));
-  args->push_back(fxl::StringPrintf("--output-file=%s", output_file_path.c_str()));
+  args->push_back(fxl::StringPrintf(
+                      "--spec-file=%s",
+                      (std::string(kSpawnedTestPackagePath) + "/" + relative_tspec_path).c_str()));
+  args->push_back(fxl::StringPrintf(
+                      "--output-file=%s",
+                      (std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path).c_str()));
 
   AppendLoggingArgs(args, "--append-args=");
 
   // Note that |relative_tspec_path| cannot have a comma.
   args->push_back(fxl::StringPrintf(
       "--append-args=run,%s",
-      ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) + relative_tspec_path)
+      (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) + "/" + relative_tspec_path)
           .c_str()));
 
   return true;
 }
 
-static void BuildVerificationProgramArgs(const std::string& relative_tspec_path,
+static void BuildVerificationProgramArgs(const std::string& tspec_path,
                                          const std::string& output_file_path,
                                          std::vector<std::string>* args) {
   AppendLoggingArgs(args, "");
 
   args->push_back("verify");
-  args->push_back(relative_tspec_path);
+  args->push_back(tspec_path);
   args->push_back(output_file_path);
+}
+
+static zx_status_t AddAuxDirToSpawnAction(const char* local_path, const char* remote_path,
+                                          fdio_spawn_action_t* actions) {
+  zx::channel dir, server;
+
+  zx_status_t status = zx::channel::create(0, &dir, &server);
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Could not create channel aux directory";
+    return false;
+  }
+
+  status = fdio_open(local_path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, server.release());
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Could not open " << local_path;
+    return false;
+  }
+
+  actions->action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY;
+  actions->ns.prefix = remote_path;
+  actions->ns.handle = dir.release();
+  return ZX_OK;
 }
 
 zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& argv,
@@ -124,18 +148,34 @@ zx_status_t SpawnProgram(const zx::job& job, const std::vector<std::string>& arg
   FXL_VLOG(1) << "Running " << fxl::JoinStrings(argv, " ");
 
   size_t action_count = 0;
-  fdio_spawn_action_t spawn_actions[1];
+  fdio_spawn_action_t spawn_actions[3];
+
   if (arg_handle != ZX_HANDLE_INVALID) {
-    spawn_actions[0].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
-    spawn_actions[0].h.id = PA_HND(PA_USER0, 0);
-    spawn_actions[0].h.handle = arg_handle;
-    action_count = 1;
+    spawn_actions[action_count].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+    spawn_actions[action_count].h.id = PA_HND(PA_USER0, 0);
+    spawn_actions[action_count].h.handle = arg_handle;
+    ++action_count;
   }
 
+  // Add a path to our /pkg so trace can read tspec files.
+  zx_status_t status = AddAuxDirToSpawnAction(kTestPackagePath, kSpawnedTestPackagePath,
+                                              &spawn_actions[action_count++]);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Add a path to our /tmp so trace can write trace files there.
+  status = AddAuxDirToSpawnAction(kTestTmpPath, kSpawnedTestTmpPath,
+                                  &spawn_actions[action_count++]);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  FXL_CHECK(action_count <= fbl::count_of(spawn_actions));
+
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  auto status = fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, c_argv[0], c_argv.data(), nullptr,
-                               action_count, &spawn_actions[0],
-                               out_process->reset_and_get_address(), err_msg);
+  status = fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, c_argv[0], c_argv.data(), nullptr,
+                          action_count, &spawn_actions[0],
+                          out_process->reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg << ", " << status;
     return status;
@@ -205,12 +245,43 @@ bool RunTraceAndWait(const zx::job& job, const std::vector<std::string>& args) {
   return RunProgramAndWait(job, argv);
 }
 
+static bool AddAuxDirToLaunchInfo(const char* local_path, const char* remote_path,
+                                  fuchsia::sys::LaunchInfo* launch_info) {
+  zx::channel dir, server;
+
+  zx_status_t status = zx::channel::create(0, &dir, &server);
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Could not create channel aux directory";
+    return false;
+  }
+
+  status = fdio_open(local_path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, server.release());
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Could not open " << local_path;
+    return false;
+  }
+
+  launch_info->flat_namespace->paths.push_back(remote_path);
+  launch_info->flat_namespace->directories.push_back(std::move(dir));
+  return true;
+}
+
 static bool RunComponent(sys::ComponentContext* context, const std::string& app,
                          const std::vector<std::string>& args,
                          fuchsia::sys::ComponentControllerPtr* component_controller) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = std::string(app);
   launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(args);
+
+  launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+  // Add a path to our /pkg so trace can read tspec files.
+  if (!AddAuxDirToLaunchInfo(kTestPackagePath, kSpawnedTestPackagePath, &launch_info)) {
+    return false;
+  }
+  // Add a path to our /tmp so trace can write trace files there.
+  if (!AddAuxDirToLaunchInfo(kTestTmpPath, kSpawnedTestTmpPath, &launch_info)) {
+    return false;
+  }
 
   FXL_LOG(INFO) << "Launching: " << launch_info.url << " " << fxl::JoinStrings(args, " ");
 
@@ -283,22 +354,25 @@ static bool RunComponentAndWait(async::Loop* loop, sys::ComponentContext* contex
   return return_code == 0;
 }
 
-bool RunTspec(const std::string& relative_tspec_path, const std::string& output_file_path) {
+bool RunTspec(const std::string& relative_tspec_path,
+              const std::string& relative_output_file_path) {
   std::vector<std::string> args;
-  if (!BuildTraceProgramArgs(relative_tspec_path, output_file_path, &args)) {
+  if (!BuildTraceProgramArgs(relative_tspec_path, relative_output_file_path, &args)) {
     return false;
   }
 
-  FXL_LOG(INFO) << "Running tspec " << relative_tspec_path << ", output file " << output_file_path;
+  FXL_LOG(INFO) << "Running tspec " << relative_tspec_path << ", output file "
+                << relative_output_file_path;
 
   async::Loop loop{&kAsyncLoopConfigAttachToCurrentThread};
   sys::ComponentContext* context = tracing::test::GetComponentContext();
   return RunComponentAndWait(&loop, context, kTraceProgramUrl, args);
 }
 
-bool VerifyTspec(const std::string& relative_tspec_path, const std::string& output_file_path) {
+bool VerifyTspec(const std::string& relative_tspec_path,
+                 const std::string& relative_output_file_path) {
   tracing::Spec spec;
-  if (!ReadTspec(kPackageTestPrefix + relative_tspec_path, &spec)) {
+  if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
     return false;
   }
 
@@ -307,11 +381,11 @@ bool VerifyTspec(const std::string& relative_tspec_path, const std::string& outp
 
   std::vector<std::string> args;
   BuildVerificationProgramArgs(
-      ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) + relative_tspec_path),
-      output_file_path, &args);
+      (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) + "/" + relative_tspec_path),
+      std::string(kTestTmpPath) + "/" + relative_output_file_path, &args);
 
   FXL_LOG(INFO) << "Verifying tspec " << relative_tspec_path << ", output file "
-                << output_file_path;
+                << relative_output_file_path;
 
   // For consistency we do the exact same thing that the trace program does.
   if (spec.spawn) {

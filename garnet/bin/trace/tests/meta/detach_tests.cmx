@@ -17,6 +17,10 @@
         "binary": "test/detach_tests"
     },
     "sandbox": {
+        "features": [
+	    "isolated-temp",
+	    "shell-commands"
+        ],
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.process.Launcher",

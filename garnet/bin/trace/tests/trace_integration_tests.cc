@@ -17,14 +17,15 @@
 #include "garnet/bin/trace/tests/run_test.h"
 
 // Note: /data is no longer large enough in qemu sessions
-const char kOutputFilePath[] = "/tmp/test.trace";
+// This file is a relative path, from the tmp directory.
+const char kRelativeOutputFilePath[] = "test.trace";
 
 static std::unique_ptr<sys::ComponentContext> g_context;
 
 // |relative_tspec_path| is a relative path, from /pkg.
 static void RunAndVerify(const char* relative_tspec_path) {
-  ASSERT_TRUE(RunTspec(relative_tspec_path, kOutputFilePath));
-  ASSERT_TRUE(VerifyTspec(relative_tspec_path, kOutputFilePath));
+  ASSERT_TRUE(RunTspec(relative_tspec_path, kRelativeOutputFilePath));
+  ASSERT_TRUE(VerifyTspec(relative_tspec_path, kRelativeOutputFilePath));
 }
 
 TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot.tspec"); }
@@ -34,7 +35,7 @@ TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
 TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
 
 TEST(NestedTestEnvironment, Test) {
-  ASSERT_TRUE(RunTspec("data/nested_environment_test.tspec", kOutputFilePath));
+  ASSERT_TRUE(RunTspec("data/nested_environment_test.tspec", kRelativeOutputFilePath));
 }
 
 // A class for adding an extra provider to the test.

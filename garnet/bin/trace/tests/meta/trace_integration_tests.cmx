@@ -22,7 +22,6 @@
     "sandbox": {
         "features": [
             "isolated-persistent-storage",
-            "deprecated-shell",
             "system-temp"
         ],
         "services": [

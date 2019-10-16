@@ -13,7 +13,7 @@
 const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/shared_provider_app.cmx";
 
 // Note: /data is no longer large enough in qemu sessions
-const char kOutputFile[] = "/tmp/test.trace";
+const char kRelativeOutputFilePath[] = "test.trace";
 
 // We don't enable all categories, we just need a kernel category we know we'll
 // receive. Syscalls are a good choice. We also need the sched category to get
@@ -30,12 +30,13 @@ TEST(SharedProvider, IntegrationTest) {
   std::vector<std::string> args{
     "record",
     kCategoriesArg,
-    std::string("--output-file=") + kOutputFile,
+    std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath,
     kAppUrl};
   ASSERT_TRUE(RunTraceAndWait(job, args));
 
   size_t num_events;
-  EXPECT_TRUE(VerifyTestEvents(kOutputFile, &num_events));
+  EXPECT_TRUE(VerifyTestEvents(std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath,
+                               &num_events));
   FXL_VLOG(1) << "Got " << num_events << " events";
 }
 

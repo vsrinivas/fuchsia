@@ -13,6 +13,22 @@
 #include <string>
 #include <vector>
 
+// Our component's tmp directory.
+constexpr char kTestTmpPath[] = "/tmp";
+
+// Path to use for package-relative paths.
+constexpr char kTestPackagePath[] = "/pkg";
+
+// Path to our package for use in spawned processes.
+// Our component's /pkg directory is bound to this path in the spawned process.
+// This is useful when wanting the trace program to be able to read our tspec files.
+constexpr char kSpawnedTestPackagePath[] = "/test-pkg";
+
+// Path to our tmp directory for use in spawned processes.
+// Our component's /tmp directory is bound to this path in the spawned process.
+// This is useful when wanting the trace program to write output to our /tmp directory.
+constexpr char kSpawnedTestTmpPath[] = "/test-tmp";
+
 void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix);
 
 // If |arg_handle| is not ZX_HANDLE_INVALID, then it is passed to the
@@ -40,10 +56,12 @@ bool RunTraceAndWait(const zx::job& job, const std::vector<std::string>& args);
 // We don't need to pass a context to RunTspec because the trace program
 // is currently a system app. If that changes then we will need a context
 // to run the trace too.
-bool RunTspec(const std::string& relative_tspec_path, const std::string& output_file_path);
+bool RunTspec(const std::string& relative_tspec_path,
+              const std::string& relative_output_file_path);
 
 // N.B. This is a synchronous call that uses an internal async loop.
 // ("synchronous" meaning that it waits for the verifier to complete).
-bool VerifyTspec(const std::string& relative_tspec_path, const std::string& output_file_path);
+bool VerifyTspec(const std::string& relative_tspec_path,
+                 const std::string& relative_output_file_path);
 
 #endif  // GARNET_BIN_TRACE_TESTS_RUN_TEST_H_

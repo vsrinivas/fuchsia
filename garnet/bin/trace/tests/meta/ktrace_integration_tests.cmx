@@ -18,7 +18,8 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+	    "isolated-temp",
+	    "shell-commands"
         ],
         "services": [
             "fuchsia.sys.Launcher",

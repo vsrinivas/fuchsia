@@ -15,7 +15,7 @@
 const char kChildPath[] = "/bin/trace";
 
 // Note: /data is no longer large enough in qemu sessions
-const char kOutputFile[] = "/tmp/test.trace";
+const char kRelativeOutputFilePath[] = "test.trace";
 
 // We don't enable all categories, we just need a kernel category we know we'll
 // receive. Syscalls are a good choice. We also need the sched category to get
@@ -36,7 +36,7 @@ TEST(Ktrace, DISABLED_IntegrationTest) {
     "--spawn",
     "--binary",
     kCategoriesArg,
-    std::string("--output-file=") + kOutputFile,
+    std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath,
     kChildPath,
     kChildArg};
   ASSERT_TRUE(RunTraceAndWait(job, args));
@@ -64,8 +64,10 @@ TEST(Ktrace, DISABLED_IntegrationTest) {
   };
 
   std::unique_ptr<trace::FileReader> reader;
-  ASSERT_TRUE(trace::FileReader::Create(kOutputFile, std::move(record_consumer),
-                                        std::move(error_handler), &reader));
+  ASSERT_TRUE(trace::FileReader::Create(
+                  (std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath).c_str(),
+                  std::move(record_consumer), std::move(error_handler),
+                  &reader));
   reader->ReadFile();
   ASSERT_FALSE(got_error);
 

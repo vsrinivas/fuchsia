@@ -18,7 +18,8 @@
 #include "garnet/bin/trace/tests/run_test.h"
 
 // Note: /data is no longer large enough in qemu sessions
-const char kOutputFilePath[] = "/tmp/test.trace";
+// This file is a relative path, from the tmp directory.
+const char kRelativeOutputFilePath[] = "test.trace";
 
 const char kUsageString[] = {
     "Usage: run "
@@ -54,11 +55,11 @@ int main(int argc, char *argv[]) {
 
   tracing::test::InitComponentContext();
 
-  if (!RunTspec(relative_tspec_path, kOutputFilePath)) {
+  if (!RunTspec(relative_tspec_path, kRelativeOutputFilePath)) {
     return EXIT_FAILURE;
   }
 
-  if (!VerifyTspec(relative_tspec_path, kOutputFilePath)) {
+  if (!VerifyTspec(relative_tspec_path, kRelativeOutputFilePath)) {
     return EXIT_FAILURE;
   }
 
