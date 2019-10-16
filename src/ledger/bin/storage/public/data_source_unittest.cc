@@ -8,8 +8,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/socket/socket_pair.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
+#include "src/ledger/lib/socket/socket_pair.h"
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
 

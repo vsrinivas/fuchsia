@@ -59,8 +59,8 @@ source_set("unittests") {
 
   deps = [
     ":public",
-    "//peridot/lib/socket",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/socket",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
-#define PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
-
-#include <functional>
-#include <memory>
-#include <string>
+#ifndef SRC_LEDGER_LIB_SOCKET_SOCKET_WRITER_H_
+#define SRC_LEDGER_LIB_SOCKET_SOCKET_WRITER_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
+
+#include <functional>
+#include <memory>
+#include <string>
+
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_view.h>
 
@@ -75,4 +76,4 @@ class StringSocketWriter : public SocketWriter::Client {
 
 }  // namespace socket
 
-#endif  // PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
+#endif  // SRC_LEDGER_LIB_SOCKET_SOCKET_WRITER_H_

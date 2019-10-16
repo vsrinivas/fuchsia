@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/socket/socket_drainer_client.h"
+#include "src/ledger/lib/socket/socket_drainer_client.h"
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "peridot/lib/socket/socket_pair.h"
+#include "src/ledger/lib/socket/socket_pair.h"
 
 namespace socket {
 namespace {

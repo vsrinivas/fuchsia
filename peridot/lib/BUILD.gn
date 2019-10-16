@@ -14,7 +14,6 @@ group("lib") {
     "rapidjson",
     "rng",
     "scoped_tmpfs",
-    "socket",
     "util",
   ]
 }
@@ -28,7 +27,6 @@ executable("peridot_lib_unittests") {
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/rng:unittests",
     "//peridot/lib/scoped_tmpfs:unittests",
-    "//peridot/lib/socket:unittests",
     "//peridot/lib/util:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]

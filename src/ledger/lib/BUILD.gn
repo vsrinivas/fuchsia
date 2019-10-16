@@ -8,6 +8,7 @@ group("lib") {
     ":ledger_lib_unittests",
     "coroutine",
     "firebase_auth",
+    "socket",
   ]
 }
 
@@ -20,6 +21,7 @@ executable("ledger_lib_unittests") {
     "//src/ledger/lib/coroutine/context:unittests",
     "//src/ledger/lib/firebase_auth:unittests",
     "//src/ledger/lib/firebase_auth/testing:unittests",
+    "//src/ledger/lib/socket:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

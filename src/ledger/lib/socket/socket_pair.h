@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
-#define PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
+#ifndef SRC_LEDGER_LIB_SOCKET_SOCKET_PAIR_H_
+#define SRC_LEDGER_LIB_SOCKET_SOCKET_PAIR_H_
 
 #include <lib/zx/socket.h>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 
@@ -30,4 +31,4 @@ inline SocketPair::~SocketPair() {}
 
 }  // namespace socket
 
-#endif  // PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
+#endif  // SRC_LEDGER_LIB_SOCKET_SOCKET_PAIR_H_
