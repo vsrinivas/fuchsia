@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 TEST(UnsafeTest, BorrowChannel) {
@@ -24,7 +24,9 @@ TEST(UnsafeTest, BorrowChannel) {
 
   zx::channel h1, h2;
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  ASSERT_OK(fuchsia_io_NodeClone(dir->get(), fuchsia_io_CLONE_FLAG_SAME_RIGHTS, h1.release()));
+  auto result = ::llcpp::fuchsia::io::Node::Call::Clone(
+      std::move(dir), ::llcpp::fuchsia::io::CLONE_FLAG_SAME_RIGHTS, std::move(h1));
+  ASSERT_OK(result.status());
 
   fdio_unsafe_release(io);
   fd.reset();

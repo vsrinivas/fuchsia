@@ -22,7 +22,7 @@ test("fdio") {
     "fdio_watcher.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/fidl/fuchsia-posix-socket:llcpp",
     "$zx/system/fidl/fuchsia-process:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
