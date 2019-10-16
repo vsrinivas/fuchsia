@@ -19,10 +19,10 @@ enum DataElementType {
 
 union DataElementData {
     int64 integer;
-    string? str;
-    string? uuid;
+    string str;
+    string uuid;
     bool b;
-    bytes? bytes;
+    bytes bytes;
     vector<DataElement?> sequence;
 };
 

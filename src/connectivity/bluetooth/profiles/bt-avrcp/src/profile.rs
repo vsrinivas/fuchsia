@@ -244,23 +244,20 @@ impl ProfileService for ProfileServiceImpl {
                             match attr.id {
                                 ATTR_SERVICE_CLASS_ID_LIST => {
                                     if let DataElementData::Sequence(seq) = attr.element.data {
-                                        let mut uuids = vec![];
-                                        for item in seq {
-                                            if let Some(element) = item {
-                                                if let DataElementData::Uuid(Some(uuid)) =
-                                                    element.data
-                                                {
-                                                    uuids.push(uuid);
+                                        let uuids: Vec<String> = seq
+                                            .into_iter()
+                                            .flatten()
+                                            .filter_map(|item| {
+                                                if let DataElementData::Uuid(uuid) = item.data {
+                                                    Some(uuid)
+                                                } else {
+                                                    None
                                                 }
-                                            }
-                                        }
+                                            })
+                                            .collect();
                                         if uuids.len() > 0 {
                                             service_uuids = Some(uuids);
-                                        } else {
-                                            service_uuids = None;
                                         }
-                                    } else {
-                                        service_uuids = None;
                                     }
                                 }
                                 SDP_SUPPORTED_FEATURES => {
