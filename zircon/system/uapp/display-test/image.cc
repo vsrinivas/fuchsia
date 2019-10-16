@@ -29,13 +29,13 @@
 static constexpr uint32_t kRenderPeriod = 120;
 
 Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
-             zx_handle_t vmo, void* buf, uint32_t fg_color, uint32_t bg_color,
+             uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color,
              bool use_intel_y_tiling)
     : width_(width),
       height_(height),
       stride_(stride),
       format_(format),
-      vmo_(vmo),
+      collection_id_(collection_id),
       buf_(buf),
       fg_color_(fg_color),
       bg_color_(bg_color),
@@ -86,6 +86,10 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
     return nullptr;
   }
 
+  static uint32_t next_collection_id = INVALID_ID + 1;
+
+  uint32_t collection_id = next_collection_id++;
+
   status = fuchsia_sysmem_BufferCollectionTokenSync(token_client_1.get());
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to sync token\n");
@@ -93,7 +97,7 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
   }
   fuchsia_hardware_display_ControllerImportBufferCollectionRequest import_msg = {};
   import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportBufferCollectionOrdinal;
-  import_msg.collection_id = 0;
+  import_msg.collection_id = collection_id;
   import_msg.collection_token = FIDL_HANDLE_PRESENT;
 
   fuchsia_hardware_display_ControllerImportBufferCollectionResponse import_rsp = {};
@@ -127,7 +131,7 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
   }
   // Planes aren't initialized because they're determined once sysmem has
   // allocated the image.
-  constraints_msg.collection_id = 0;
+  constraints_msg.collection_id = collection_id;
 
   fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponse constraints_rsp = {};
   zx_channel_call_args_t constraints_call = {};
@@ -219,12 +223,6 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
     return nullptr;
   }
 
-  fuchsia_hardware_display_ControllerReleaseBufferCollectionRequest close_msg = {};
-  close_msg.hdr.ordinal = fuchsia_hardware_display_ControllerReleaseBufferCollectionOrdinal;
-  close_msg.collection_id = 0;
-
-  zx_channel_write(dc_handle, 0, &close_msg, sizeof(close_msg), nullptr, 0);
-
   uint32_t buffer_size = buffer_collection_info.settings.buffer_settings.size_bytes;
   zx::vmo vmo(buffer_collection_info.buffers[0].vmo);
   uint32_t stride_pixels =
@@ -247,7 +245,7 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
   }
   zx_cache_flush(ptr, buffer_size, ZX_CACHE_FLUSH_DATA);
 
-  return new Image(width, height, stride_pixels, format, vmo.release(), ptr, fg_color, bg_color,
+  return new Image(width, height, stride_pixels, format, collection_id, ptr, fg_color, bg_color,
                    use_intel_y_tiling);
 }
 
@@ -381,24 +379,17 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
     info_out->event_ids[i] = import_evt_msg.id;
   }
 
-  fuchsia_hardware_display_ControllerImportVmoImageRequest import_msg = {};
-  import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportVmoImageOrdinal;
+  fuchsia_hardware_display_ControllerImportImageRequest import_msg = {};
+  import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportImageOrdinal;
   GetConfig(&import_msg.image_config);
-  import_msg.vmo = FIDL_HANDLE_PRESENT;
-  import_msg.offset = 0;
-  zx_handle_t vmo_dup;
-  if (zx_handle_duplicate(vmo_, ZX_RIGHT_SAME_RIGHTS, &vmo_dup) != ZX_OK) {
-    printf("Failed to dup handle\n");
-    return false;
-  }
+  import_msg.collection_id = collection_id_;
+  import_msg.index = 0;
 
-  fuchsia_hardware_display_ControllerImportVmoImageResponse import_rsp = {};
+  fuchsia_hardware_display_ControllerImportImageResponse import_rsp = {};
   zx_channel_call_args_t import_call = {};
   import_call.wr_bytes = &import_msg;
-  import_call.wr_handles = &vmo_dup;
   import_call.rd_bytes = &import_rsp;
   import_call.wr_num_bytes = sizeof(import_msg);
-  import_call.wr_num_handles = 1;
   import_call.rd_num_bytes = sizeof(import_rsp);
   uint32_t actual_bytes, actual_handles;
   if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &import_call, &actual_bytes,
@@ -408,7 +399,7 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
   }
 
   if (import_rsp.res != ZX_OK) {
-    printf("Failed to import vmo\n");
+    printf("Failed to import image\n");
     return false;
   }
 

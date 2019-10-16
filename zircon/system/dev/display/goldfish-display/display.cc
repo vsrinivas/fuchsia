@@ -41,8 +41,6 @@ constexpr uint32_t FB_FPS = 5;
 constexpr uint32_t GL_BGRA_EXT = 0x80E1;
 constexpr uint32_t GL_UNSIGNED_BYTE = 0x1401;
 
-constexpr uint32_t IMAGE_TYPE_OPTIMAL = 1;
-
 struct GetFbParamCmd {
   uint32_t op;
   uint32_t size;
@@ -407,13 +405,6 @@ zx_status_t Display::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo
 
 zx_status_t Display::DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
                                                       uint32_t index) {
-  if (image->type != IMAGE_TYPE_OPTIMAL) {
-    zxlogf(ERROR, "%s: invalid image type\n", kTag);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  auto color_buffer = std::make_unique<ColorBuffer>();
-
   zx_status_t status, status2;
   fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
   status =
@@ -425,25 +416,33 @@ zx_status_t Display::DisplayControllerImplImportImage(image_t* image, zx_unowned
     return status2;
   }
 
+  zx::vmo vmo;
   if (index < collection_info.buffer_count) {
-    color_buffer->vmo = zx::vmo(collection_info.buffers[index].vmo);
+    vmo = zx::vmo(collection_info.buffers[index].vmo);
     collection_info.buffers[index].vmo = ZX_HANDLE_INVALID;
   }
   for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
     zx_handle_close(collection_info.buffers[i].vmo);
   }
 
-  if (!collection_info.settings.has_image_format_constraints || !color_buffer->vmo.is_valid()) {
-    zxlogf(ERROR, "%s: invalid image format or index\n", kTag);
+  if (!vmo.is_valid()) {
+    zxlogf(ERROR, "%s: invalid index\n", kTag);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   uint64_t offset = collection_info.buffers[index].vmo_usable_start;
-  if (offset) {
-    zxlogf(ERROR, "%s: invalid offset\n", kTag);
-    return ZX_ERR_INVALID_ARGS;
+
+  if (image->type == IMAGE_TYPE_SIMPLE) {
+    return DisplayControllerImplImportVmoImage(image, std::move(vmo), offset);
   }
 
+  if (!collection_info.settings.has_image_format_constraints || offset) {
+    zxlogf(ERROR, "%s: invalid image format or offset\n", kTag);
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  auto color_buffer = std::make_unique<ColorBuffer>();
+  color_buffer->vmo = std::move(vmo);
   image->handle = reinterpret_cast<uint64_t>(color_buffer.release());
   return ZX_OK;
 }

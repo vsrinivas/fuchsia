@@ -48,7 +48,7 @@ class Image {
 
  private:
   Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
-        zx_handle_t handle, void* buf, uint32_t fg_color, uint32_t bg_color,
+        uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color,
         bool use_intel_y_tiling);
 
   uint32_t width_;
@@ -56,7 +56,7 @@ class Image {
   uint32_t stride_;
   zx_pixel_format_t format_;
 
-  zx_handle_t vmo_;
+  uint32_t collection_id_;
   void* buf_;
 
   uint32_t fg_color_;

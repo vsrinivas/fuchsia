@@ -59,13 +59,6 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   bool IsReady() const { return wait_fence_ == nullptr; }
 
   bool HasSameConfig(const image_t& config) const {
-    for (uint32_t i = 0; i < countof(info_.planes); i++) {
-      if (info_.planes[i].bytes_per_row != config.planes[i].bytes_per_row ||
-          info_.planes[i].byte_offset != config.planes[i].byte_offset) {
-        return false;
-      }
-    }
-
     return info_.width == config.width && info_.height == config.height &&
            info_.pixel_format == config.pixel_format && info_.type == config.type;
   }
