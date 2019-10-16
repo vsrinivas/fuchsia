@@ -16,21 +16,25 @@ constexpr char kSyslogFileName[] = "syslog.txt";
 
 const char* kDefaultTestDirs[] = {
     // zircon builds place everything in ramdisks so tests are located in /boot
+    "/boot/test/c",
     "/boot/test/core",
     "/boot/test/libc",
     "/boot/test/ddk",
     "/boot/test/sys",
     "/boot/test/fs",
+    "/boot/test/storage",
     // /pkgfs is where test binaries should be found in garnet and above.
     "/pkgfs/packages/*/*/test",
     // Moreover, for the higher layers, there are still tests using the deprecated /system image.
     // Soon they will all be moved under /pkgfs.
     "/system/test",
+    "/system/test/c",
     "/system/test/core",
     "/system/test/libc",
     "/system/test/ddk",
     "/system/test/sys",
     "/system/test/fs",
+    "/system/test/storage",
 };
 
 class FuchsiaStopwatch final : public runtests::Stopwatch {
