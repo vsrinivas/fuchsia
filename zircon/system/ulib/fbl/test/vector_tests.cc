@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/tests/lfsr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-#include <utility>
-
-namespace fbl::tests {
 namespace {
 
 // Different container classes for the types of objects
@@ -82,7 +81,7 @@ struct UniquePtrTraits {
   using ItemType = fbl::unique_ptr<TestObject>;
 
   static ItemType Create(ValueType val) {
-    AllocChecker ac;
+    fbl::AllocChecker ac;
     ItemType ptr(new (&ac) TestObject(val));
     ZX_ASSERT(ac.check());
     return ptr;
@@ -103,7 +102,7 @@ struct RefPtrTraits {
   using ItemType = fbl::RefPtr<RefCountedItem<TestObject>>;
 
   static ItemType Create(ValueType val) {
-    AllocChecker ac;
+    fbl::AllocChecker ac;
     auto ptr = AdoptRef(new (&ac) RefCountedItem<TestObject>(TestObject(val)));
     ZX_ASSERT(ac.check());
     return ptr;
@@ -123,10 +122,10 @@ struct Generator {
   ValueType NextValue() { return key_lfsr_.GetNext(); }
   ItemType NextItem() { return ItemTraits::Create(NextValue()); }
   void Reset() { key_lfsr_.SetCore(seed); }
-  Lfsr<ValueType> key_lfsr_ = Lfsr<ValueType>(seed);
+  fbl::tests::Lfsr<ValueType> key_lfsr_{seed};
 };
 
-struct TestAllocatorTraits : public DefaultAllocatorTraits {
+struct TestAllocatorTraits : public fbl::DefaultAllocatorTraits {
   static void* Allocate(size_t size) {
     void* result = DefaultAllocatorTraits::Allocate(size);
     // Intentionally fill the allocated portion of memory
@@ -144,10 +143,8 @@ struct TestAllocatorTraits : public DefaultAllocatorTraits {
 // Actual tests
 
 template <typename ItemTraits, size_t size>
-bool VectorTestAccessRelease() {
+void AccessRelease() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
   Generator<ItemTraits> gen;
@@ -183,8 +180,6 @@ bool VectorTestAccessRelease() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 struct CountedAllocatorTraits : public TestAllocatorTraits {
@@ -198,10 +193,8 @@ struct CountedAllocatorTraits : public TestAllocatorTraits {
 size_t CountedAllocatorTraits::allocation_count = 0;
 
 template <typename ItemTraits, size_t size>
-bool VectorTestPushBackInCapacity() {
+void PushBackInCapacity() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
 
@@ -231,15 +224,11 @@ bool VectorTestPushBackInCapacity() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestPushBackByConstRefInCapacity() {
+void PushBackByConstRefInCapacity() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
 
@@ -270,15 +259,11 @@ bool VectorTestPushBackByConstRefInCapacity() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestPushBackBeyondCapacity() {
+void PushBackBeyondCapacity() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
 
@@ -301,15 +286,11 @@ bool VectorTestPushBackBeyondCapacity() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestPushBackByConstRefBeyondCapacity() {
+void PushBackByConstRefBeyondCapacity() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
 
@@ -333,15 +314,11 @@ bool VectorTestPushBackByConstRefBeyondCapacity() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestPopBack() {
+void PopBack() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
 
@@ -375,8 +352,6 @@ bool VectorTestPopBack() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 struct FailingAllocatorTraits {
@@ -385,7 +360,7 @@ struct FailingAllocatorTraits {
 };
 
 template <typename ItemType, size_t S>
-struct PartiallyFailingAllocatorTraits : public DefaultAllocatorTraits {
+struct PartiallyFailingAllocatorTraits : public fbl::DefaultAllocatorTraits {
   static void* Allocate(size_t size) {
     if (size <= sizeof(ItemType) * S) {
       return DefaultAllocatorTraits::Allocate(size);
@@ -395,10 +370,8 @@ struct PartiallyFailingAllocatorTraits : public DefaultAllocatorTraits {
 };
 
 template <typename ItemTraits, size_t size>
-bool VectorTestAllocationFailure() {
+void AllocationFailure() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
@@ -457,15 +430,11 @@ bool VectorTestAllocationFailure() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestMove() {
+void Move() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
@@ -522,15 +491,11 @@ bool VectorTestMove() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestSwap() {
+void Swap() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
 
@@ -575,15 +540,11 @@ bool VectorTestSwap() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestIterator() {
+void Iterator() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
@@ -616,15 +577,11 @@ bool VectorTestIterator() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestInsertDelete() {
+void InsertDelete() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
@@ -684,15 +641,11 @@ bool VectorTestInsertDelete() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits, size_t size>
-bool VectorTestNoAllocCheck() {
+void NoAllocCheck() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 
@@ -741,15 +694,11 @@ bool VectorTestNoAllocCheck() {
 
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
 template <typename ItemTraits>
-bool VectorTestInitializerList() {
+void InitializerList() {
   using ItemType = typename ItemTraits::ItemType;
-
-  BEGIN_TEST;
 
   Generator<ItemTraits> gen;
 
@@ -781,13 +730,9 @@ bool VectorTestInitializerList() {
   }
   ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
-
-  END_TEST;
 }
 
-bool VectorTestImplicitConversion() {
-  BEGIN_TEST;
-
+TEST(VectorTest, ImplicitConversion) {
   {
     fbl::Vector<fbl::String> v;
     v.push_back(fbl::String("First"));
@@ -818,13 +763,9 @@ bool VectorTestImplicitConversion() {
     ASSERT_EQ(strcmp(v[2].c_str(), "Third"), 0);
     ASSERT_EQ(strcmp(v[3].c_str(), "Fourth"), 0);
   }
-
-  END_TEST;
 }
 
-bool VectorDataConstness() {
-  BEGIN_TEST;
-
+TEST(VectorTest, VectorDataConstness) {
   fbl::Vector<int> vector_int;
 
   auto& ref_vector_int = vector_int;
@@ -835,17 +776,19 @@ bool VectorDataConstness() {
 
   static_assert(!std::is_const_v<std::remove_pointer_t<decltype(int_ptr)>>);
   static_assert(std::is_const_v<std::remove_pointer_t<decltype(const_int_ptr)>>);
-
-  END_TEST;
 }
 
-}  // namespace
+#define RUN_TRAIT_TEST(test_base, test_trait, test_size)         \
+  TEST(VectorTest, test_base##_##test_trait##_Size##test_size) { \
+    auto fn = test_base<test_trait, test_size>;                  \
+    ASSERT_NO_FAILURES(fn());                                    \
+  }
 
-#define RUN_FOR_ALL_TRAITS(test_base, test_size)     \
-  RUN_TEST((test_base<ValueTypeTraits, test_size>))  \
-  RUN_TEST((test_base<StructTypeTraits, test_size>)) \
-  RUN_TEST((test_base<UniquePtrTraits, test_size>))  \
-  RUN_TEST((test_base<RefPtrTraits, test_size>))
+#define RUN_FOR_ALL_TRAITS(test_base, test_size)         \
+  RUN_TRAIT_TEST(test_base, ValueTypeTraits, test_size)  \
+  RUN_TRAIT_TEST(test_base, StructTypeTraits, test_size) \
+  RUN_TRAIT_TEST(test_base, UniquePtrTraits, test_size)  \
+  RUN_TRAIT_TEST(test_base, RefPtrTraits, test_size)
 
 #define RUN_FOR_ALL(test_base)      \
   RUN_FOR_ALL_TRAITS(test_base, 1)  \
@@ -855,23 +798,23 @@ bool VectorDataConstness() {
   RUN_FOR_ALL_TRAITS(test_base, 64) \
   RUN_FOR_ALL_TRAITS(test_base, 100)
 
-BEGIN_TEST_CASE(vector_tests)
-RUN_FOR_ALL(VectorTestAccessRelease)
-RUN_FOR_ALL(VectorTestPushBackInCapacity)
-RUN_TEST((VectorTestPushBackByConstRefInCapacity<ValueTypeTraits, 100>))
-RUN_FOR_ALL(VectorTestPushBackBeyondCapacity)
-RUN_TEST((VectorTestPushBackByConstRefBeyondCapacity<ValueTypeTraits, 100>))
-RUN_FOR_ALL(VectorTestPopBack)
-RUN_FOR_ALL(VectorTestAllocationFailure)
-RUN_FOR_ALL(VectorTestMove)
-RUN_FOR_ALL(VectorTestSwap)
-RUN_FOR_ALL(VectorTestIterator)
-RUN_FOR_ALL(VectorTestInsertDelete)
-RUN_FOR_ALL(VectorTestNoAllocCheck)
-RUN_TEST(VectorTestInitializerList<ValueTypeTraits>)
-RUN_TEST(VectorTestInitializerList<RefPtrTraits>)
-RUN_TEST(VectorTestImplicitConversion)
-RUN_TEST(VectorDataConstness)
-END_TEST_CASE(vector_tests)
+RUN_FOR_ALL(AccessRelease)
+RUN_FOR_ALL(PushBackInCapacity)
+RUN_TRAIT_TEST(PushBackByConstRefInCapacity, ValueTypeTraits, 100)
+RUN_FOR_ALL(PushBackBeyondCapacity)
+RUN_TRAIT_TEST(PushBackByConstRefBeyondCapacity, ValueTypeTraits, 100)
+RUN_FOR_ALL(PopBack)
+RUN_FOR_ALL(AllocationFailure)
+RUN_FOR_ALL(Move)
+RUN_FOR_ALL(Swap)
+RUN_FOR_ALL(Iterator)
+RUN_FOR_ALL(InsertDelete)
+RUN_FOR_ALL(NoAllocCheck)
 
-}  // namespace fbl::tests
+TEST(VectorTest, InitializerListValueType) {
+  ASSERT_NO_FAILURES(InitializerList<ValueTypeTraits>());
+}
+
+TEST(VectorTest, InitializerListRefPtr) { ASSERT_NO_FAILURES(InitializerList<RefPtrTraits>()); }
+
+}  // namespace
