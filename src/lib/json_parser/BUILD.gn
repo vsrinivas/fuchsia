@@ -2,6 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Temporary redirect to temp fix bad merge.
+group("json") {
+  public_deps = [
+    ":json_parser"
+  ]
+}
+
 source_set("json_parser") {
   sources = [
     "json_parser.cc",
