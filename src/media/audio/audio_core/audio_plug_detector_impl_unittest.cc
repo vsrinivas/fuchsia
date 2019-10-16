@@ -86,6 +86,8 @@ class AudioPlugDetectorImplTest : public gtest::RealLoopFixture {
     ASSERT_EQ(fdio_ns_bind(ns_, "/dev/class/audio-output", c2.release()), ZX_OK);
   }
   void TearDown() override {
+    ASSERT_TRUE(input_dir_->IsEmpty());
+    ASSERT_TRUE(output_dir_->IsEmpty());
     vfs_loop_.Shutdown();
     vfs_loop_.JoinThreads();
     ASSERT_NE(ns_, nullptr);
@@ -93,20 +95,32 @@ class AudioPlugDetectorImplTest : public gtest::RealLoopFixture {
     ASSERT_EQ(fdio_ns_unbind(ns_, "/dev/class/audio-output"), ZX_OK);
   }
 
+  // Holds a reference to a pseudo dir entry that removes the entry when this object goes out of
+  // scope.
+  struct ScopedDirent {
+    std::string name;
+    fbl::RefPtr<fs::PseudoDir> dir;
+    ~ScopedDirent() {
+      if (dir) {
+        dir->RemoveEntry(name);
+      }
+    }
+  };
+
   // Adds a |FakeAudioDevice| to the emulated 'audio-input' directory that has been installed in
   // the local namespace at /dev/class/audio-input.
-  uint32_t AddInputDevice(FakeAudioDevice* device) {
-    auto n = next_input_device_number_++;
-    FXL_CHECK(ZX_OK == input_dir_->AddEntry(std::to_string(n), device->AsService()));
-    return n;
+  ScopedDirent AddInputDevice(FakeAudioDevice* device) {
+    auto name = std::to_string(next_input_device_number_++);
+    FXL_CHECK(ZX_OK == input_dir_->AddEntry(name, device->AsService()));
+    return {name, input_dir_};
   }
 
   // Adds a |FakeAudioDevice| to the emulated 'audio-output' directory that has been installed in
   // the local namespace at /dev/class/audio-output.
-  uint32_t AddOutputDevice(FakeAudioDevice* device) {
-    auto n = next_output_device_number_++;
-    FXL_CHECK(ZX_OK == output_dir_->AddEntry(std::to_string(n), device->AsService()));
-    return n;
+  ScopedDirent AddOutputDevice(FakeAudioDevice* device) {
+    auto name = std::to_string(next_output_device_number_++);
+    FXL_CHECK(ZX_OK == output_dir_->AddEntry(name, device->AsService()));
+    return {name, output_dir_};
   }
 
  private:
@@ -132,11 +146,11 @@ class AudioPlugDetectorImplTest : public gtest::RealLoopFixture {
 TEST_F(AudioPlugDetectorImplTest, DetectExistingDevices) {
   // Add some devices that will exist before the plug detector starts.
   FakeAudioDevice input0, input1;
-  AddInputDevice(&input0);
-  AddInputDevice(&input1);
+  auto d1 = AddInputDevice(&input0);
+  auto d2 = AddInputDevice(&input1);
   FakeAudioDevice output0, output1;
-  AddOutputDevice(&output0);
-  AddOutputDevice(&output1);
+  auto d3 = AddOutputDevice(&output0);
+  auto d4 = AddOutputDevice(&output1);
 
   // Create the plug detector; no events should be sent until |Start|.
   DeviceTracker tracker;
@@ -152,6 +166,8 @@ TEST_F(AudioPlugDetectorImplTest, DetectExistingDevices) {
   EXPECT_TRUE(input1.is_bound());
   EXPECT_TRUE(output0.is_bound());
   EXPECT_TRUE(output1.is_bound());
+
+  plug_detector.Stop();
 }
 
 TEST_F(AudioPlugDetectorImplTest, DetectHotplugDevices) {
@@ -163,12 +179,14 @@ TEST_F(AudioPlugDetectorImplTest, DetectHotplugDevices) {
 
   // Hotplug a device.
   FakeAudioDevice input0;
-  AddInputDevice(&input0);
+  auto d1 = AddInputDevice(&input0);
   RunLoopWithTimeoutOrUntil([&tracker] { return tracker.size() == 1; });
   ASSERT_EQ(1u, tracker.size());
   auto device = std::move(*tracker.take_devices().begin());
   EXPECT_TRUE(device.is_input);
   EXPECT_TRUE(input0.is_bound());
+
+  plug_detector.Stop();
 }
 
 }  // namespace
