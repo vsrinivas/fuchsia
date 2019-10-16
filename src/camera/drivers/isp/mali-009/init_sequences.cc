@@ -1095,7 +1095,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
 
   ping::Top_BypassFr::Get()
       .ReadFrom(&isp_mmio_local_)
-      .set_bypass_fr_crop(1)
+      .set_bypass_fr_crop(0)
       .set_bypass_fr_gamma_rgb(1)
       .set_bypass_fr_sharpen(1)
       .set_bypass_fr_cs_conv(1)
@@ -2371,6 +2371,21 @@ void ArmIspDevice::IspLoadCustomSequence() {
   ping::SquareBe_BlackLevelOut::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_value(16384)
+      .WriteTo(&isp_mmio_local_);
+
+  ping::FullResolution::Crop_EnableCrop::Get()
+      .ReadFrom(&isp_mmio_local_)
+      .set_value(1)
+      .WriteTo(&isp_mmio_local_);
+
+  ping::FullResolution::Crop_SizeX::Get()
+      .ReadFrom(&isp_mmio_local_)
+      .set_value(2176)
+      .WriteTo(&isp_mmio_local_);
+
+  ping::FullResolution::Crop_SizeY::Get()
+      .ReadFrom(&isp_mmio_local_)
+      .set_value(2720)
       .WriteTo(&isp_mmio_local_);
 }
 

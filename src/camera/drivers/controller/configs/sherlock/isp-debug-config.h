@@ -23,9 +23,9 @@ namespace {
 
 // IspDebugStream Parameters
 constexpr uint32_t kIspStreamMinBufferForCamping = 5;
-constexpr uint32_t kIspStreamWidth = 1920;
-constexpr uint32_t kIspStreamHeight = 1080;
-constexpr uint32_t kIspStreamMaxBytesPerRow = 0xfffffff;
+constexpr uint32_t kIspStreamWidth = 2176;
+constexpr uint32_t kIspStreamHeight = 2720;
+constexpr uint32_t kIspStreamStride = 2176;
 constexpr uint32_t kIspStreamLayers = 1;
 constexpr uint32_t kIspStreamBytesPerRowDivisor = 128;
 constexpr uint32_t kIspStreamColorSpaceCount = 1;
@@ -56,8 +56,8 @@ static constexpr fuchsia::sysmem::BufferCollectionConstraints IspDebugStreamCons
   image_constraints.max_coded_width = kIspStreamWidth;
   image_constraints.min_coded_height = kIspStreamHeight;
   image_constraints.max_coded_height = kIspStreamHeight;
-  image_constraints.min_bytes_per_row = kIspStreamWidth;
-  image_constraints.max_bytes_per_row = kIspStreamMaxBytesPerRow;
+  image_constraints.min_bytes_per_row = kIspStreamStride;
+  image_constraints.max_bytes_per_row = kIspStreamStride;
   image_constraints.layers = kIspStreamLayers;
   image_constraints.bytes_per_row_divisor = kIspStreamBytesPerRowDivisor;
   image_constraints.color_spaces_count = kIspStreamColorSpaceCount;
@@ -71,7 +71,7 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> IspDebugStreamImageFormats() 
       .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
       .coded_width = kIspStreamWidth,
       .coded_height = kIspStreamHeight,
-      .bytes_per_row = kIspStreamWidth,
+      .bytes_per_row = kIspStreamStride,
   };
   std::vector<fuchsia::sysmem::ImageFormat_2> ret_vec;
   ret_vec.push_back(format);

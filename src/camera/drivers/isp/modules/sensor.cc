@@ -12,6 +12,10 @@
 #include "../mali-009/global_regs.h"
 #include "../mali-009/pingpong_regs.h"
 
+namespace {
+static constexpr uint8_t kDefaultSensorMode = 0;
+}
+
 namespace camera {
 
 zx_status_t Sensor::HwInit() {
@@ -160,8 +164,7 @@ zx_status_t Sensor::Init() {
     return status;
   }
 
-  // Default mode is 1
-  status = SetMode(1);
+  status = SetMode(kDefaultSensorMode);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "", "%s: Sensor SetMode failed %d\n", __func__, status);
     return status;

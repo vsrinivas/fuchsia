@@ -17,8 +17,8 @@ namespace {
 static const auto kDmaPixelFormat = camera::DmaFormat::PixelType::NV12_YUV;
 static const auto kPixelFormat = fuchsia::sysmem::PixelFormatType::NV12;
 static const auto kColorSpace = fuchsia::sysmem::ColorSpaceType::SRGB;
-static const uint32_t kWidth = 1920;
-static const uint32_t kHeight = 1080;
+static const uint32_t kWidth = 2176;
+static const uint32_t kHeight = 2720;
 static const uint32_t kBufferCount = 8;
 static const uint32_t kFramesToHold = kBufferCount - 2;
 }  // namespace
@@ -62,15 +62,14 @@ zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* se
     }
     // Initialize chroma channels to 128 (grayscale).
     uintptr_t chroma = 0;
-    size_t map_size = format.GetImageSize() - format.GetBank0Offset();
-    status = zx::vmar::root_self()->map(0, buffers.vmos[i], format.GetBank0Offset(), map_size,
+    status = zx::vmar::root_self()->map(0, buffers.vmos[i], 0, format.GetImageSize(),
                                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &chroma);
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Error mapping vmo";
       return status;
     }
-    memset(reinterpret_cast<void*>(chroma), 128, map_size);
-    status = zx::vmar::root_self()->unmap(chroma, map_size);
+    memset(reinterpret_cast<void*>(chroma), 128, format.GetImageSize());
+    status = zx::vmar::root_self()->unmap(chroma, format.GetImageSize());
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Error unmapping vmo";
       return status;
