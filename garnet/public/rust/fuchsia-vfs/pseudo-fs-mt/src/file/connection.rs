@@ -19,7 +19,7 @@ use {
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
         NodeMarker, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -522,6 +522,11 @@ impl FileConnection {
     where
         R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
     {
+        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+            responder(Status::ACCESS_DENIED, 0)?;
+            return Ok(());
+        }
+
         let new_seek = match start {
             SeekOrigin::Start => offset as i128,
 

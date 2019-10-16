@@ -1155,10 +1155,28 @@ fn clone_can_not_remove_node_reference() {
                     assert_write_fidl_err_closed!(third_proxy, "Write attempt");
                 }
 
+                {
+                    // We now try without OPEN_RIGHT_READABLE, as we might still be able to Seek.
+                    let forth_proxy =
+                        clone_get_file_proxy_assert_ok!(&first_proxy, OPEN_FLAG_DESCRIBE);
+                    assert_seek_err!(forth_proxy, 0, Current, Status::ACCESS_DENIED, 0);
+                    assert_close!(forth_proxy);
+                }
+
                 assert_close!(first_proxy);
             }
         },
     );
+}
+
+#[test]
+fn node_reference_can_not_seek() {
+    run_server_client(OPEN_FLAG_NODE_REFERENCE, read_only_static(b"Content"), |proxy| {
+        async move {
+            assert_seek_err!(proxy, 0, Current, Status::ACCESS_DENIED, 0);
+            assert_close!(proxy);
+        }
+    });
 }
 
 /// This test checks a somewhat non-trivial case. Two clients are connected to the same file, and
