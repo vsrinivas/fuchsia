@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/iquery_rs_example_component"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

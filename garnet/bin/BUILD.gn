@@ -22,6 +22,7 @@ group("bin") {
     "glob",
     "http",
     "insntrace",
+    "iquery",
     "kms",
     "ktrace_provider",
     "log_listener",

@@ -29,7 +29,7 @@ source_set("lib") {
 }
 
 executable("bin") {
-  output_name = "iquery_deprecated"
+  output_name = "iquery"
 
   sources = [
     "main.cc",
@@ -52,7 +52,7 @@ package("iquery") {
 
   binaries = [
     {
-      name = "iquery_deprecated"
+      name = "iquery"
       shell = true
     },
   ]

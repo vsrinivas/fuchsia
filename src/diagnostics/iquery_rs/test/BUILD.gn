@@ -1,0 +1,191 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("iquery_rs_golden_test") {
+  edition = "2018"
+  source_root = "main.rs"
+
+  deps = [
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/cstr",
+    "//third_party/rust_crates:difference",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:glob",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:tempfile",
+  ]
+}
+
+test_package("iquery_rs_golden_tests") {
+  deps = [
+    ":iquery_rs_golden_test",
+    "//src/diagnostics/iquery_rs:bin",
+    "//src/diagnostics/iquery_rs/test/example_component:iquery_rs_example_component",
+  ]
+
+  binaries = [
+    {
+      name = "iquery_rs_example_component"
+    },
+    {
+      name = "iquery_rs"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/iquery_rs_example_component.cmx")
+      dest = "iquery_rs_example_component.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "iquery_rs_golden_test"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("goldens/cat-recursive-absolute.txt")
+      dest = "iquery_goldens/cat-recursive-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-full.txt")
+      dest = "iquery_goldens/cat-recursive-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json-absolute.txt")
+      dest = "iquery_goldens/cat-recursive-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json-full.txt")
+      dest = "iquery_goldens/cat-recursive-json-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json.txt")
+      dest = "iquery_goldens/cat-recursive-json.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive.txt")
+      dest = "iquery_goldens/cat-recursive.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single-absolute.txt")
+      dest = "iquery_goldens/cat-single-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single-full.txt")
+      dest = "iquery_goldens/cat-single-full.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-single.txt")
+      dest = "iquery_goldens/cat-single.txt"
+    },
+    {
+      path = rebase_path("goldens/explicit-file-full.txt")
+      dest = "iquery_goldens/explicit-file-full.txt"
+    },
+    {
+      path = rebase_path("goldens/explicit-file.txt")
+      dest = "iquery_goldens/explicit-file.txt"
+    },
+    {
+      path = rebase_path("goldens/find-recursive-json.txt")
+      dest = "iquery_goldens/find-recursive-json.txt"
+    },
+    {
+      path = rebase_path("goldens/find-recursive.txt")
+      dest = "iquery_goldens/find-recursive.txt"
+    },
+    {
+      path = rebase_path("goldens/find.txt")
+      dest = "iquery_goldens/find.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json-absolute.txt")
+      dest = "iquery_goldens/ls-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json-full.txt")
+      dest = "iquery_goldens/ls-json-full.txt"
+    },
+    {
+      path = rebase_path("goldens/ls-json.txt")
+      dest = "iquery_goldens/ls-json.txt"
+    },
+    {
+      path = rebase_path("goldens/ls.txt")
+      dest = "iquery_goldens/ls.txt"
+    },
+    {
+      path = rebase_path("goldens/report-json.txt")
+      dest = "iquery_goldens/report-json.txt"
+    },
+    {
+      path = rebase_path("goldens/report.txt")
+      dest = "iquery_goldens/report.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-single.txt")
+      dest = "iquery_goldens/vmo-cat-single.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-single-full.txt")
+      dest = "iquery_goldens/vmo-cat-single-full.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-single-absolute.txt")
+      dest = "iquery_goldens/vmo-cat-single-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-ls.txt")
+      dest = "iquery_goldens/vmo-ls.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-recursive.txt")
+      dest = "iquery_goldens/vmo-cat-recursive.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-recursive-full.txt")
+      dest = "iquery_goldens/vmo-cat-recursive-full.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-recursive-absolute.txt")
+      dest = "iquery_goldens/vmo-cat-recursive-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-recursive-json.txt")
+      dest = "iquery_goldens/vmo-cat-recursive-json.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-recursive-json-full.txt")
+      dest = "iquery_goldens/vmo-cat-recursive-json-full.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-recursive-json-absolute.txt")
+      dest = "iquery_goldens/vmo-cat-recursive-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-ls-json.txt")
+      dest = "iquery_goldens/vmo-ls-json.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-ls-json-full.txt")
+      dest = "iquery_goldens/vmo-ls-json-full.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-ls-json-absolute.txt")
+      dest = "iquery_goldens/vmo-ls-json-absolute.txt"
+    },
+  ]
+}

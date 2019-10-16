@@ -875,7 +875,7 @@ group("ralink") {
 group("iquery") {
   testonly = true
   public_deps = [
-    "//src/diagnostics/iquery",
+    "//garnet/bin/iquery",
   ]
 }
 

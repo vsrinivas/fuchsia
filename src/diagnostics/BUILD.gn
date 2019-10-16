@@ -14,7 +14,7 @@ group("tests") {
     "archivist:tests",
     "inspect_validator:tests",
     "inspect_validator/lib/rust:tests",
-    "iquery:tests",
+    "iquery_rs:tests",
     "lib:tests",
 
     # "transit_bench",

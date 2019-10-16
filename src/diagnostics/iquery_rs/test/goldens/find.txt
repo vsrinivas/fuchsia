@@ -1,0 +1,4 @@
+# Find from the base objects directory retrieves only the top level.
+iquery_rs --find .
+./objects/root.inspect
+./objects
