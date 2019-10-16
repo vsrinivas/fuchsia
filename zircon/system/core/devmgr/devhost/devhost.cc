@@ -534,9 +534,11 @@ __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
 
 namespace devmgr {
 
+zx_handle_t root_resource_handle;
+
 static void devhost_io_init() {
   zx::debuglog handle;
-  if (zx::debuglog::create(zx::resource(), 0, &handle) != ZX_OK) {
+  if (zx::debuglog::create(*zx::unowned_resource(root_resource_handle), 0, &handle) != ZX_OK) {
     return;
   }
   zxio_storage_t* storage;
@@ -1071,14 +1073,17 @@ zx_status_t devhost_schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*ca
   return ZX_OK;
 }
 
-zx_handle_t root_resource_handle;
-
 zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> conn, zx::channel h) {
   conn->set_channel(std::move(h));
   return DevfsConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
 }
 
 int device_host_main(int argc, char** argv) {
+  root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
+  if (root_resource_handle == ZX_HANDLE_INVALID) {
+    log(TRACE, "devhost: no root resource handle!\n");
+  }
+
   devhost_io_init();
 
   log(TRACE, "devhost: main()\n");
@@ -1087,11 +1092,6 @@ int device_host_main(int argc, char** argv) {
   if (!root_conn_channel.is_valid()) {
     log(ERROR, "devhost: rpc handle invalid\n");
     return -1;
-  }
-
-  root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
-  if (root_resource_handle == ZX_HANDLE_INVALID) {
-    log(TRACE, "devhost: no root resource handle!\n");
   }
 
   zx_status_t r;
