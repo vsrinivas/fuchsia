@@ -101,8 +101,9 @@ static void MapHandleToValue(ProcessDispatcher* up, const Handle* handle, zx_han
 }
 
 template <typename HandleT>
-static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
-                            user_out_ptr<HandleT> handles, uint32_t num_handles) {
+static __WARN_UNUSED_RESULT zx_status_t msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
+                                                        user_out_ptr<HandleT> handles,
+                                                        uint32_t num_handles) {
   Handle* const* handle_list = msg->handles();
   msg->set_owns_handles(false);
 
@@ -111,7 +112,10 @@ static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
     MapHandleToValue(up, handle_list[i], &hvs[i]);
   }
 
-  handles.copy_array_to_user(hvs, num_handles);
+  zx_status_t status = handles.copy_array_to_user(hvs, num_handles);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   for (size_t i = 0; i < num_handles; ++i) {
     if (handle_list[i]->dispatcher()->is_waitable())
@@ -120,6 +124,8 @@ static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
     // TODO(ZX-969): This takes a lock per call. Consider doing these in a batch.
     up->AddHandle(ktl::move(handle));
   }
+
+  return ZX_OK;
 }
 
 template <typename HandleInfoT>
@@ -172,7 +178,10 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
   // The documented public API states that that writing to the handles buffer
   // must happen after writing to the data buffer.
   if (num_handles > 0u) {
-    msg_get_handles(up, msg.get(), handles, num_handles);
+    zx_status_t status = msg_get_handles(up, msg.get(), handles, num_handles);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   record_recv_msg_sz(num_bytes);
@@ -224,7 +233,10 @@ static zx_status_t channel_read_out(ProcessDispatcher* up, MessagePacketPtr repl
   }
 
   if (num_handles > 0u) {
-    msg_get_handles(up, reply.get(), make_user_out_ptr(args->rd_handles), num_handles);
+    status = msg_get_handles(up, reply.get(), make_user_out_ptr(args->rd_handles), num_handles);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
   return ZX_OK;
 }
@@ -245,9 +257,9 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up, MessagePacketPtr
 // handles are closed whether success or failure. For zx_handle_write_etc
 // with the ZX_HANDLE_OP_DUPLICATE flag, handles always remain open.
 template <typename UserHandles>
-static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
-                                   UserHandles user_handles, uint32_t num_handles,
-                                   Dispatcher* channel) {
+static __WARN_UNUSED_RESULT zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
+                                                        UserHandles user_handles,
+                                                        uint32_t num_handles, Dispatcher* channel) {
   DEBUG_ASSERT(num_handles <= kMaxMessageHandles);  // This must be checked before calling.
 
   typename UserHandles::ValueType handles[kMaxMessageHandles] = {};
@@ -275,7 +287,10 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
   // to save cycles for the success case.
   if constexpr (UserHandles::is_out) {
     if (status != ZX_OK) {
-      user_handles.copy_array_to_user(handles, num_handles);
+      zx_status_t copy_status = user_handles.copy_array_to_user(handles, num_handles);
+      if (copy_status != ZX_OK) {
+        status = copy_status;
+      }
     }
   }
 

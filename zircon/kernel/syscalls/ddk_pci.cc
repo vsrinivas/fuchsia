@@ -544,7 +544,7 @@ zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uin
   } else {
     status = Pci::PioCfgRead(bus, dev, func, offset, &val_, width);
     if (status == ZX_OK) {
-      val.copy_to_user(val_);
+      status = val.copy_to_user(val_);
     }
   }
 

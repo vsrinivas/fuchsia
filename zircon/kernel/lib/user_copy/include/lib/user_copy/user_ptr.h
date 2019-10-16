@@ -69,7 +69,7 @@ class user_ptr {
 
   // Copies a single T to user memory. T must not be |void|.
   template <typename S>
-  zx_status_t copy_to_user(const S& src) const {
+  __WARN_UNUSED_RESULT zx_status_t copy_to_user(const S& src) const {
     static_assert(!std::is_void<S>::value, "Source type must not be void.");
     static_assert(std::is_same<S, T>::value, "S and T must be the same type.");
     static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
@@ -81,7 +81,8 @@ class user_ptr {
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
   template <typename S>
-  zx_status_t copy_to_user_capture_faults(const S& src, vaddr_t* pf_va, uint* pf_flags) const {
+  __WARN_UNUSED_RESULT zx_status_t copy_to_user_capture_faults(const S& src, vaddr_t* pf_va,
+                                                               uint* pf_flags) const {
     static_assert(!std::is_void<S>::value, "Source type must not be void.");
     static_assert(std::is_same<S, T>::value, "S and T must be the same type.");
     static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
@@ -89,7 +90,7 @@ class user_ptr {
   }
 
   // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
-  zx_status_t copy_array_to_user(const T* src, size_t count) const {
+  __WARN_UNUSED_RESULT zx_status_t copy_array_to_user(const T* src, size_t count) const {
     static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
@@ -102,8 +103,9 @@ class user_ptr {
   //
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
-  zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count, vaddr_t* pf_va,
-                                                uint* pf_flags) const {
+  __WARN_UNUSED_RESULT zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count,
+                                                                     vaddr_t* pf_va,
+                                                                     uint* pf_flags) const {
     static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
@@ -113,7 +115,8 @@ class user_ptr {
   }
 
   // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
-  zx_status_t copy_array_to_user(const T* src, size_t count, size_t offset) const {
+  __WARN_UNUSED_RESULT zx_status_t copy_array_to_user(const T* src, size_t count,
+                                                      size_t offset) const {
     static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
@@ -126,8 +129,9 @@ class user_ptr {
   //
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
-  zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count, size_t offset,
-                                                vaddr_t* pf_va, uint* pf_flags) const {
+  __WARN_UNUSED_RESULT zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count,
+                                                                     size_t offset, vaddr_t* pf_va,
+                                                                     uint* pf_flags) const {
     static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
