@@ -31,6 +31,8 @@ use std::{
 pub enum ViewMessages {
     /// Message that requests that a view redraw itself.
     Update,
+    /// Sent when a scenic present has completed
+    ScenicPresentDone,
 }
 
 /// enum that defines the animation behavior of the view
@@ -160,6 +162,7 @@ pub struct ScenicResources {
     view: View,
     root_node: EntityNode,
     session: SessionPtr,
+    pending_present_count: usize,
 }
 
 impl ScenicResources {
@@ -174,7 +177,7 @@ impl ScenicResources {
                 delivery_request: true,
             }),
         ));
-        ScenicResources { view, root_node, session: session.clone() }
+        ScenicResources { view, root_node, session: session.clone(), pending_present_count: 0 }
     }
 }
 
@@ -186,6 +189,12 @@ trait ViewStrategy {
     fn setup(&mut self, _view_details: &ViewDetails, _view_assistant: &mut ViewAssistantPtr);
     fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr);
     fn present(&mut self, view_details: &ViewDetails);
+    fn present_done(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+    ) {
+    }
     fn validate_root_node_id(&self, _: u32) -> bool {
         true
     }
@@ -208,15 +217,27 @@ struct ScenicViewStrategy {
     scenic_resources: ScenicResources,
 }
 
-fn scenic_present(scenic_resources: &ScenicResources) {
-    fasync::spawn_local(
-        scenic_resources
-            .session
-            .lock()
-            .present(0)
-            .map_ok(|_| ())
-            .unwrap_or_else(|e| panic!("present error: {:?}", e)),
-    );
+fn scenic_present(scenic_resources: &mut ScenicResources, key: ViewKey) {
+    if scenic_resources.pending_present_count < 3 {
+        fasync::spawn_local(
+            scenic_resources
+                .session
+                .lock()
+                .present(0)
+                .map_ok(move |_| {
+                    App::with(|app| {
+                        app.queue_message(key, make_message(ViewMessages::ScenicPresentDone));
+                    })
+                })
+                .unwrap_or_else(|e| panic!("present error: {:?}", e)),
+        );
+        scenic_resources.pending_present_count += 1;
+    }
+}
+
+fn scenic_present_done(scenic_resources: &mut ScenicResources) {
+    assert_ne!(scenic_resources.pending_present_count, 0);
+    scenic_resources.pending_present_count -= 1;
 }
 
 impl ScenicViewStrategy {
@@ -250,8 +271,16 @@ impl ViewStrategy for ScenicViewStrategy {
         view_assistant.update(&context).unwrap_or_else(|e| panic!("Update error: {:?}", e));
     }
 
-    fn present(&mut self, _view_details: &ViewDetails) {
-        scenic_present(&self.scenic_resources);
+    fn present(&mut self, view_details: &ViewDetails) {
+        scenic_present(&mut self.scenic_resources, view_details.key);
+    }
+
+    fn present_done(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+    ) {
+        scenic_present_done(&mut self.scenic_resources);
     }
 
     fn handle_input_event(
@@ -351,8 +380,16 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
         }
     }
 
-    fn present(&mut self, _view_details: &ViewDetails) {
-        scenic_present(&self.scenic_resources);
+    fn present(&mut self, view_details: &ViewDetails) {
+        scenic_present(&mut self.scenic_resources, view_details.key);
+    }
+
+    fn present_done(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+    ) {
+        scenic_present_done(&mut self.scenic_resources);
     }
 
     fn handle_input_event(
@@ -610,9 +647,15 @@ impl ViewController {
 
         self.strategy.update(&self.make_view_details(), &mut self.assistant);
         self.present();
-        if let Some(sender) = self.test_sender.take() {
-            sender.send(Ok(())).unwrap_or_else(|err| println!("sending failed {:?}", err));
+        if let Some(sender) = self.test_sender.as_ref() {
+            sender
+                .unbounded_send(Ok(()))
+                .unwrap_or_else(|err| println!("sending failed {:?}", err));
         }
+    }
+
+    pub(crate) fn present_done(&mut self) {
+        self.strategy.present_done(&self.make_view_details(), &mut self.assistant);
     }
 
     fn handle_metrics_changed(&mut self, metrics: &Metrics) {
@@ -689,6 +732,9 @@ impl ViewController {
             match view_msg {
                 ViewMessages::Update => {
                     self.update();
+                }
+                ViewMessages::ScenicPresentDone => {
+                    self.present_done();
                 }
             }
         } else {

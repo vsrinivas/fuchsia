@@ -20,8 +20,8 @@ use fuchsia_scenic::{Session, SessionPtr, ViewTokenPair};
 use fuchsia_trace_provider;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
-    channel::{mpsc::unbounded, oneshot},
-    future::{self, FutureExt},
+    channel::mpsc::unbounded,
+    future::{self, Either},
     StreamExt, TryFutureExt, TryStreamExt,
 };
 use std::{
@@ -93,7 +93,7 @@ pub trait AppAssistant {
     }
 }
 
-pub type TestSender = futures::channel::oneshot::Sender<Result<(), Error>>;
+pub type TestSender = futures::channel::mpsc::UnboundedSender<Result<(), Error>>;
 
 pub type AppAssistantPtr = Box<dyn AppAssistant>;
 
@@ -327,7 +327,7 @@ impl App {
     pub fn test(assistant: Box<dyn AppAssistant>) -> Result<(), Error> {
         let mut executor = fasync::Executor::new().context("Error creating executor")?;
         let presenter = connect_to_service::<PresenterMarker>()?;
-        let (create_view_sender, create_view_receiver) = oneshot::channel::<Result<(), Error>>();
+        let (create_view_sender, mut create_view_receiver) = unbounded::<Result<(), Error>>();
         let mut token = ViewTokenPair::new().context("ViewTokenPair::new")?;
         let supports_scenic =
             App::with(|app| Self::app_init_common(assistant, &mut executor, app))?;
@@ -348,21 +348,22 @@ impl App {
             });
         }
 
-        let (timeout_sender, timeout_receiver) = oneshot::channel::<Result<(), Error>>();
-        let timeout = Timer::new(5_i64.second().after_now()).map(|_| {
-            let timeout_err = format_err!("Carnelian test failed due to timeout");
-            timeout_sender.send(Err(timeout_err)).expect("timeout_sender failed");
-        });
-        fasync::spawn_local(timeout);
-
-        let either = futures::future::select(timeout_receiver, create_view_receiver);
-        let resolved = executor.run_singlethreaded(either);
-        match resolved.factor_first().0 {
-            Err(err) => bail!("Carnelian test got err {:#?}", err),
-            Ok(a) => match a {
-                Err(err) => bail!("Carnelian test got err {:#?}", err),
-                Ok(_) => {}
-            },
+        let mut frame_count = 0;
+        loop {
+            let timeout = Timer::new(500_i64.millis().after_now());
+            let either = futures::future::select(timeout, create_view_receiver.next());
+            let resolved = executor.run_singlethreaded(either);
+            match resolved {
+                Either::Left(_) => {
+                    return Err(format_err!("Carnelian test got timeout before seeing 10 frames"));
+                }
+                Either::Right(_) => {
+                    frame_count += 1;
+                    if frame_count >= 10 {
+                        break;
+                    }
+                }
+            }
         }
 
         Ok(())

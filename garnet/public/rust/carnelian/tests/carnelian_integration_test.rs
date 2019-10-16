@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    App, AppAssistant, Color, Point, Rect, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
-    ViewKey, ViewMode,
+    AnimationMode, App, AppAssistant, Color, Point, Rect, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey, ViewMode,
 };
 use failure::Error;
+use fuchsia_zircon::Duration;
 
 struct IntegrationTestAppAssistant;
 
@@ -40,6 +41,10 @@ impl ViewAssistant for IntegrationTestViewAssistant {
         let bounds = Rect::new(Point::zero(), context.size);
         canvas.fill_rect(&bounds, self.bg_color);
         Ok(())
+    }
+
+    fn initial_animation_mode(&mut self) -> AnimationMode {
+        return AnimationMode::RefreshRate(Duration::from_millis(1));
     }
 }
 
