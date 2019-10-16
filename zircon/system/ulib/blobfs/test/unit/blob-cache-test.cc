@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/blob-cache.h>
-#include <blobfs/cache-node.h>
+#include "blob-cache.h"
+
 #include <zxtest/zxtest.h>
 
+#include "cache-node.h"
 #include "utils.h"
 
 namespace blobfs {

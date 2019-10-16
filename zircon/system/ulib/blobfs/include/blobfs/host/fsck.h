@@ -5,16 +5,15 @@
 // This file contains functionality for checking the consistency of
 // Blobfs.
 
-#ifndef BLOBFS_FSCK_H_
-#define BLOBFS_FSCK_H_
+#ifndef BLOBFS_HOST_FSCK_H_
+#define BLOBFS_HOST_FSCK_H_
 
-#include <blobfs/mount.h>
-#include <block-client/cpp/block-device.h>
+#include <blobfs/host.h>
 
 namespace blobfs {
 
-zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions* options);
+zx_status_t Fsck(fbl::unique_ptr<Blobfs> blob, bool apply_journal);
 
 }  // namespace blobfs
 
-#endif  // BLOBFS_FSCK_H_
+#endif  // BLOBFS_HOST_FSCK_H_

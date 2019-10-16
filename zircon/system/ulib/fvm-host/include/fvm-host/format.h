@@ -2,25 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_HOST_FORMAT_H_
+#define FVM_HOST_FORMAT_H_
 
 #include <fcntl.h>
-#include <optional>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <time.h>
 
+#include <optional>
+
 #include <blobfs/format.h>
-#include <blobfs/fsck.h>
 #include <blobfs/host.h>
 #include <fbl/unique_fd.h>
+#include <fbl/vector.h>
 #include <fs-management/mount.h>
 #include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
 #include <minfs/bcache.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
-#include <fbl/vector.h>
 
 #define TRACE 0
 
@@ -268,3 +269,5 @@ class BlobfsFormat final : public Format {
   zx_status_t ComputeSlices(uint64_t inode_count, uint64_t data_blocks,
                             uint64_t journal_block_count);
 };
+
+#endif  // FVM_HOST_FORMAT_H_

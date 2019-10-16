@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "utils.h"
-
 #include <fcntl.h>
 #include <limits.h>
 #include <stdint.h>
@@ -11,10 +9,13 @@
 
 #include <climits>
 
-#include <blobfs/blobfs.h>
 #include <blobfs/format.h>
+#include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <zxtest/zxtest.h>
+
+#include "blobfs.h"
+#include "utils.h"
 
 namespace blobfs {
 namespace {

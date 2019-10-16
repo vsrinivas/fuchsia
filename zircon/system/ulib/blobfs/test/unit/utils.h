@@ -8,11 +8,12 @@
 #include <optional>
 
 #include <blobfs/allocator.h>
-#include <blobfs/transaction-manager.h>
 #include <block-client/cpp/block-device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
+
+#include "transaction-manager.h"
 
 namespace blobfs {
 

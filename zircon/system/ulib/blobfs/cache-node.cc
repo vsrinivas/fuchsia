@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "cache-node.h"
+
 #include <digest/digest.h>
 
-#include <blobfs/blob-cache.h>
-#include <blobfs/cache-node.h>
+#include "blob-cache.h"
 
 using digest::Digest;
 

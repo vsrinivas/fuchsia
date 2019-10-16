@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "blobfs-checker.h"
+
 #include <inttypes.h>
 
-#include <blobfs/fsck.h>
+#include <utility>
+
 #include <blobfs/iterator/extent-iterator.h>
 #include <fs/trace.h>
 
@@ -13,9 +16,6 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <zircon/status.h>
 
-#include <utility>
-
-#include <blobfs/blobfs.h>
 #include <fs/journal/replay.h>
 
 #else
@@ -24,8 +24,6 @@
 
 #endif
 
-// TODO(planders): Add more checks for fsck.
-// TODO(planders): Potentially check the state of the journal.
 namespace blobfs {
 
 void BlobfsChecker::TraverseInodeBitmap() {
@@ -144,21 +142,6 @@ zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
   }
 #endif
   return ZX_OK;
-}
-
-zx_status_t Fsck(fbl::unique_ptr<Blobfs> blob, bool apply_journal) {
-  BlobfsChecker checker(std::move(blob));
-
-  // Apply writeback and validate FVM data before walking the contents of the filesystem.
-  zx_status_t status = checker.Initialize(apply_journal);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize filesystem; not checking internals\n");
-    return status;
-  }
-
-  checker.TraverseInodeBitmap();
-  checker.TraverseBlockBitmap();
-  return checker.CheckAllocatedCounts();
 }
 
 #ifdef __Fuchsia__

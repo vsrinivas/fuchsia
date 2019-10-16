@@ -15,6 +15,11 @@
 #include <optional>
 #include <utility>
 
+#include <blobfs/compression/compressor.h>
+#include <blobfs/compression/zstd.h>
+#include <blobfs/format.h>
+#include <blobfs/host.h>
+#include <blobfs/host/fsck.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
@@ -26,14 +31,6 @@
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
-
-#define ZXDEBUG 0
-
-#include <blobfs/compression/compressor.h>
-#include <blobfs/compression/zstd.h>
-#include <blobfs/format.h>
-#include <blobfs/fsck.h>
-#include <blobfs/host.h>
 
 using digest::Digest;
 using digest::MerkleTree;

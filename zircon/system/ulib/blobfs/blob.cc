@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "blob.h"
+
 #include <assert.h>
 #include <ctype.h>
 #include <fuchsia/device/c/fidl.h>
@@ -16,7 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include <blobfs/blobfs.h>
 #include <blobfs/compression/lz4.h>
 #include <blobfs/compression/zstd.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
@@ -24,7 +25,6 @@
 #include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/iterator/node-populator.h>
 #include <blobfs/iterator/vector-extent-iterator.h>
-#include <blobfs/metrics.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
@@ -34,6 +34,9 @@
 #include <fs/metrics/events.h>
 #include <fs/transaction/writeback.h>
 #include <fs/vfs_types.h>
+
+#include "blobfs.h"
+#include "metrics.h"
 
 namespace blobfs {
 namespace {

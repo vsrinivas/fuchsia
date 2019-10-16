@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include <blobfs/fsck.h>
+#include <blobfs/host/fsck.h>
 #include <fbl/auto_call.h>
 
 #include "blobfs.h"

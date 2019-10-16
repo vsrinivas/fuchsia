@@ -10,12 +10,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <blobfs/blobfs.h>
+#include <utility>
+
 #include <blobfs/fsck.h>
+#include <blobfs/mkfs.h>
+#include <blobfs/mount.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
+#include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -24,8 +28,6 @@
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-
-#include <utility>
 
 namespace {
 
@@ -58,12 +60,7 @@ int Mkfs(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
 }
 
 int Fsck(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
-  std::unique_ptr<blobfs::Blobfs> blobfs;
-  if (blobfs::Blobfs::Create(std::move(device), options, &blobfs) != ZX_OK) {
-    return -1;
-  }
-
-  return blobfs::Fsck(std::move(blobfs), options->journal);
+  return blobfs::Fsck(std::move(device), options);
 }
 
 typedef int (*CommandFunction)(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options);

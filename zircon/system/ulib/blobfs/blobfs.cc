@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "blobfs.h"
+
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
@@ -19,8 +21,8 @@
 #include <zircon/syscalls.h>
 
 #include <limits>
+#include <utility>
 
-#include <blobfs/blobfs.h>
 #include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/fsck.h>
@@ -38,9 +40,7 @@
 #include <fs/vfs_types.h>
 #include <fvm/client.h>
 
-#define ZXDEBUG 0
-
-#include <utility>
+#include "blob.h"
 
 using block_client::RemoteBlockDevice;
 using digest::Digest;

@@ -2,44 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_BLOB_CACHE_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_BLOB_CACHE_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
 
+#include <blobfs/cache-policy.h>
 #include <digest/digest.h>
 #include <fbl/condition_variable.h>
-#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/function.h>
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <fs/trace.h>
 #include <fs/vnode.h>
 
-#include <blobfs/cache-node.h>
-#include <blobfs/metrics.h>
+#include "cache-node.h"
+#include "metrics.h"
 
 namespace blobfs {
 
 using digest::Digest;
-
-// CachePolicy describes the techniques used to cache blobs in memory, avoiding
-// re-reading and re-verifying them from disk.
-enum class CachePolicy {
-  // When all strong references to a node are closed, |ActivateLowMemory()| is invoked.
-  //
-  // This option avoids using memory for any longer than it needs to, but
-  // may result in higher performance penalties for blobs that are frequently
-  // opened and closed.
-  EvictImmediately,
-
-  // The node is never evicted from memory, unless it has been fully deleted and there are no
-  // additional references.
-  //
-  // This option costs a significant amount of memory, but it results in high performance.
-  NeverEvict,
-};
 
 // BlobCache contains a collection of weak pointers to vnodes.
 //
@@ -174,3 +159,5 @@ class BlobCache {
 };
 
 }  // namespace blobfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_BLOB_CACHE_H_

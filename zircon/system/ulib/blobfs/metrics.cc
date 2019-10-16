@@ -4,10 +4,12 @@
 
 // This file contains information for gathering Blobfs metrics.
 
-#include <blobfs/metrics.h>
-#include <fs/trace.h>
+#include "metrics.h"
+
 #include <lib/fzl/time.h>
 #include <lib/zx/time.h>
+
+#include <fs/trace.h>
 
 namespace blobfs {
 namespace {

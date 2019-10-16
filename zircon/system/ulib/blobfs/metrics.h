@@ -4,8 +4,8 @@
 
 // This file contains information for gathering Blobfs metrics.
 
-#ifndef BLOBFS_METRICS_H_
-#define BLOBFS_METRICS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_METRICS_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_METRICS_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -138,4 +138,4 @@ class BlobfsMetrics {
 
 }  // namespace blobfs
 
-#endif  // BLOBFS_METRICS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_METRICS_H_

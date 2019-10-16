@@ -4,8 +4,8 @@
 
 // This file contains Vnodes which back a Blobfs filesystem.
 
-#ifndef BLOBFS_BLOB_H_
-#define BLOBFS_BLOB_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_BLOB_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_BLOB_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -21,14 +21,11 @@
 #include <atomic>
 
 #include <blobfs/allocator.h>
-#include <blobfs/blob-cache.h>
 #include <blobfs/common.h>
 #include <blobfs/compression/blob-compressor.h>
 #include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
-#include <blobfs/format-assertions.h>
 #include <blobfs/format.h>
-#include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
@@ -41,9 +38,9 @@
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
-#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
-static_assert(false, "blobfs/format-assertions.h not included");
-#endif
+#include "blob-cache.h"
+#include "format-assertions.h"
+#include "metrics.h"
 
 namespace blobfs {
 
@@ -283,4 +280,4 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
 }  // namespace blobfs
 
-#endif  // BLOBFS_BLOB_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_BLOB_H_

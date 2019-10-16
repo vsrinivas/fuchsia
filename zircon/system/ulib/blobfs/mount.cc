@@ -4,9 +4,10 @@
 
 #include <utility>
 
-#include <blobfs/blobfs.h>
-#include <blobfs/fsck.h>
+#include <blobfs/mount.h>
 #include <fbl/ref_ptr.h>
+
+#include "blobfs-checker.h"
 
 namespace blobfs {
 

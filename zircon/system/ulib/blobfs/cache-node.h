@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_CACHE_NODE_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_CACHE_NODE_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
 
 #include <digest/digest.h>
-#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/function.h>
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <fs/vnode.h>
@@ -87,3 +88,5 @@ class CacheNode : public fs::Vnode, fbl::Recyclable<CacheNode> {
 };
 
 }  // namespace blobfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_CACHE_NODE_H_

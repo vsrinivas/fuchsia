@@ -4,8 +4,8 @@
 
 // This file contains a directory which contains blobs.
 
-#ifndef BLOBFS_DIRECTORY_H_
-#define BLOBFS_DIRECTORY_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_DIRECTORY_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_DIRECTORY_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -14,13 +14,14 @@
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 
-#include <blobfs/blob-cache.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
+
+#include "blob-cache.h"
 
 namespace blobfs {
 
@@ -71,4 +72,4 @@ class Directory final : public fs::Vnode {
 
 }  // namespace blobfs
 
-#endif  // BLOBFS_DIRECTORY_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_DIRECTORY_H_

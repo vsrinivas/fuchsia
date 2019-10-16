@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_TRANSACTION_MANAGER_H_
-#define BLOBFS_TRANSACTION_MANAGER_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_TRANSACTION_MANAGER_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_TRANSACTION_MANAGER_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
 
 #include <blobfs/allocator.h>
-#include <blobfs/blob.h>
-#include <blobfs/metrics.h>
 #include <fbl/unique_ptr.h>
 #include <fs/journal/journal.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vnode.h>
+
+#include "metrics.h"
 
 namespace blobfs {
 
@@ -42,4 +42,4 @@ class TransactionManager : public fs::TransactionHandler, public SpaceManager {
 
 }  // namespace blobfs
 
-#endif  // BLOBFS_TRANSACTION_MANAGER_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_TRANSACTION_MANAGER_H_

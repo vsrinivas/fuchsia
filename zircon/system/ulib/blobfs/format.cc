@@ -6,9 +6,11 @@
 
 #include <utility>
 
-#include <blobfs/blobfs.h>
-#include <blobfs/fsck.h>
+#include <blobfs/common.h>
+#include <blobfs/format.h>
+#include <blobfs/mkfs.h>
 #include <fbl/ref_ptr.h>
+#include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>
 

@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/blobfs.h>
+#include "blobfs.h"
 
 #include <lib/sync/completion.h>
 
-#include <blobfs/directory.h>
 #include <blobfs/format.h>
+#include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 #include <storage/buffer/vmo-buffer.h>
 #include <zxtest/zxtest.h>
 
+#include "directory.h"
 #include "utils.h"
 
 namespace blobfs {
