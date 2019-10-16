@@ -35,8 +35,6 @@ test("fbl") {
     "string_traits_tests.cc",
     "type_info_tests.cc",
     "unique_fd_tests.cc",
-    "unique_free_ptr_tests.cc",
-    "unique_ptr_tests.cc",
     "vector_tests.cc",
   ]
   deps = [

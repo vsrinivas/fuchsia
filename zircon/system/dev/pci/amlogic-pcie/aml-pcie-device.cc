@@ -9,10 +9,10 @@
 #include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_free_ptr.h>
 #include <lib/zx/bti.h>
 #include <zircon/driver/binding.h>
 
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -21,6 +21,12 @@
 
 namespace pcie {
 namespace aml {
+
+namespace {
+struct FreeDeleter {
+  void operator()(void* ptr) const { ::free(ptr); }
+};
+}
 
 const size_t kElbMmio = 0;
 const size_t kCfgMmio = 1;
@@ -258,7 +264,7 @@ zx_status_t AmlPcieDevice::Init() {
   }
 
   // Automatically release this object when it goes out of scope.
-  fbl::unique_free_ptr<zx_pci_init_arg_t> deleter;
+  std::unique_ptr<zx_pci_init_arg_t, FreeDeleter> deleter;
   deleter.reset(arg);
 
   arg->num_irqs = 0;

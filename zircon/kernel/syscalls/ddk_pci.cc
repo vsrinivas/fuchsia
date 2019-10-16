@@ -19,7 +19,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_free_ptr.h>
 #include <ktl/limits.h>
 #include <ktl/unique_ptr.h>
 #include <object/handle.h>
@@ -45,6 +44,12 @@ static inline void shutdown_early_init_console() { gfxconsole_bind_display(nullp
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_root.h>
 #include <object/pci_device_dispatcher.h>
+
+namespace {
+struct FreeDeleter {
+  void operator()(void* ptr) const { ::free(ptr); }
+};
+}
 
 // Implementation of a PcieRoot with a look-up table based legacy IRQ swizzler
 // suitable for use with ACPI style swizzle definitions.
@@ -158,7 +163,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
     return status;
   }
 
-  fbl::unique_free_ptr<zx_pci_init_arg_t> arg;
+  ktl::unique_ptr<zx_pci_init_arg_t, FreeDeleter> arg;
 
   if (len < sizeof(*arg) || len > ZX_PCI_INIT_ARG_MAX_SIZE) {
     return ZX_ERR_INVALID_ARGS;

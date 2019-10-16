@@ -40,7 +40,6 @@ library("fbl") {
     "fbl/string_traits.h",
     "fbl/type_info.h",
     "fbl/unique_fd.h",
-    "fbl/unique_free_ptr.h",
     "fbl/unique_ptr.h",
     "fbl/vector.h",
   ]
