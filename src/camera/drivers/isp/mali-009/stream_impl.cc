@@ -14,7 +14,7 @@ zx_status_t StreamImpl::Create(zx::channel channel, async_dispatcher_t* dispatch
                                std::unique_ptr<StreamImpl>* stream_out) {
   auto stream = std::make_unique<StreamImpl>();
   zx_status_t status = stream->binding_.Bind(
-      fidl::InterfaceRequest<fuchsia::camera::common::Stream>(std::move(channel)), dispatcher);
+      fidl::InterfaceRequest<fuchsia::camera2::Stream>(std::move(channel)), dispatcher);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to bind stream";
     return status;
@@ -31,10 +31,10 @@ void StreamImpl::FrameAvailable(uint32_t id) {
   if (!streaming_) {
     return;
   }
-  fuchsia::camera::common::FrameAvailableEvent event{};
-  event.frame_status = fuchsia::camera::common::FrameStatus::OK;
+  fuchsia::camera2::FrameAvailableInfo event{};
+  event.frame_status = fuchsia::camera2::FrameStatus::OK;
   event.buffer_id = id;
-  binding_.events().OnFrameAvailable(event);
+  binding_.events().OnFrameAvailable(std::move(event));
   outstanding_buffers_.insert(id);
 }
 

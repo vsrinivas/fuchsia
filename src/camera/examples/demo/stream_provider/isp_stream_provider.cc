@@ -5,13 +5,13 @@
 #include "isp_stream_provider.h"
 
 #include <fcntl.h>
-#include <fuchsia/camera/common/cpp/fidl.h>
 #include <fuchsia/camera/test/cpp/fidl.h>
+#include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 
 #include <src/lib/fxl/logging.h>
 
-#include "camera_common_stream_shim.h"
+#include "streamptr_wrapper.h"
 
 static constexpr const char* kDevicePath = "/dev/class/isp-device-test/000";
 
@@ -48,28 +48,19 @@ std::unique_ptr<fuchsia::camera2::Stream> IspStreamProvider::ConnectToStream(
   // Bind the tester interface and create a stream.
   fuchsia::camera::test::IspTesterSyncPtr tester;
   tester.Bind(std::move(channel));
-  fuchsia::camera::common::StreamPtr stream;
-  fuchsia::sysmem::BufferCollectionInfo buffers;
-  status = tester->CreateStream(stream.NewRequest(), &buffers);
+  fuchsia::camera2::StreamPtr stream;
+  stream.set_error_handler(
+      [](zx_status_t status) { FXL_PLOG(ERROR, status) << "Server disconnected"; });
+  stream.events().OnFrameAvailable =
+      fit::bind_member(event_handler, &fuchsia::camera2::Stream::EventSender_::OnFrameAvailable);
+  status = tester->CreateStream(stream.NewRequest(), buffers_out, format_out);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to create stream";
     return nullptr;
   }
 
-  // Populate output parameters with ISP-provided values and known parameters.
-  format_out->pixel_format.type = buffers.format.image.pixel_format.type;
-  format_out->display_width = buffers.format.image.width;
-  format_out->display_height = buffers.format.image.height;
-  format_out->bytes_per_row = buffers.format.image.planes[0].bytes_per_row;
-  buffers_out->buffer_count = buffers.buffer_count;
-  buffers_out->settings.buffer_settings.size_bytes = buffers.vmo_size;
-  for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
-    buffers_out->buffers[i].vmo = std::move(buffers.vmos[i]);
-    buffers_out->buffers[i].vmo_usable_start = 0;
-  }
-
   // The stream coming directly from the ISP is not oriented properly.
   *should_rotate_out = true;
 
-  return std::make_unique<camera::CameraCommonStreamShim>(std::move(stream), event_handler);
+  return std::make_unique<StreamPtrWrapper>(std::move(stream));
 }

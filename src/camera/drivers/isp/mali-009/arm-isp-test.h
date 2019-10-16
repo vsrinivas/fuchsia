@@ -111,6 +111,8 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
   output_stream_protocol stream_protocol_;
   output_stream_protocol_ops_t stream_protocol_ops_;
 
+  fuchsia_sysmem_ImageFormat_2 image_format_;
+
   friend class camera::StreamServer;
 };
 

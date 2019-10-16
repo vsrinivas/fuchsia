@@ -28,10 +28,11 @@ class StreamServer {
 
   // Create a server and return writable buffer handles.
   static zx_status_t Create(zx::bti* bti, std::unique_ptr<StreamServer>* server_out,
-                            fuchsia_sysmem_BufferCollectionInfo* buffers_out);
+                            fuchsia_sysmem_BufferCollectionInfo_2* buffers_out,
+                            fuchsia_sysmem_ImageFormat_2* format_out);
 
   // Add a client and return read-only buffer handles.
-  zx_status_t AddClient(zx::channel channel, fuchsia_sysmem_BufferCollectionInfo* buffers_out);
+  zx_status_t AddClient(zx::channel channel, fuchsia_sysmem_BufferCollectionInfo_2* buffers_out);
 
   // Called when a new frame is available from the ISP.
   void FrameAvailable(uint32_t id, std::list<uint32_t>* out_frames_to_be_released);
@@ -40,12 +41,12 @@ class StreamServer {
   size_t GetNumClients() { return streams_.size(); }
 
  private:
-  zx_status_t GetBuffers(fuchsia_sysmem_BufferCollectionInfo* buffers_out);
+  zx_status_t GetBuffers(fuchsia_sysmem_BufferCollectionInfo_2* buffers_out);
 
   uint32_t next_stream_id_ = 1;
   std::map<uint32_t, std::unique_ptr<camera::StreamImpl>> streams_;
   async::Loop loop_;
-  fuchsia::sysmem::BufferCollectionInfo buffers_;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffers_;
   std::unordered_set<uint32_t> read_locked_buffers_;
 };
 

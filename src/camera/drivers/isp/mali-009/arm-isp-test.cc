@@ -300,11 +300,11 @@ zx_status_t ArmIspDeviceTester::RunTests(fidl_txn_t* txn) {
 }
 
 zx_status_t ArmIspDeviceTester::CreateStreamServer() {
-  fuchsia_sysmem_BufferCollectionInfo buffers{};
+  fuchsia_sysmem_BufferCollectionInfo_2 buffers{};
   zx_status_t status;
   {
     fbl::AutoLock guard(&isp_lock_);
-    status = StreamServer::Create(&GetBti(), &server_, &buffers);
+    status = StreamServer::Create(&GetBti(), &server_, &buffers, &image_format_);
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Failed to create StreamServer";
       return status;
@@ -339,7 +339,17 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
     return ZX_ERR_BAD_STATE;
   }
 
-  status = isp_->IspCreateOutputStream(&buffers, &rate, STREAM_TYPE_FULL_RESOLUTION, &cb,
+  fuchsia_sysmem_BufferCollectionInfo buffers_for_isp{};
+  buffers_for_isp.buffer_count = buffers.buffer_count;
+  buffers_for_isp.vmo_size = buffers.settings.buffer_settings.size_bytes;
+  for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
+    buffers_for_isp.vmos[i] = buffers.buffers[i].vmo;
+  }
+  buffers_for_isp.format.image.width = image_format_.coded_width;
+  buffers_for_isp.format.image.height = image_format_.coded_height;
+  buffers_for_isp.format.image.pixel_format = image_format_.pixel_format;
+  buffers_for_isp.format.image.color_space = image_format_.color_space;
+  status = isp_->IspCreateOutputStream(&buffers_for_isp, &rate, STREAM_TYPE_FULL_RESOLUTION, &cb,
                                        &stream_protocol_);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "IspCreateOutputStream failed";
@@ -369,14 +379,14 @@ zx_status_t ArmIspDeviceTester::CreateStream(zx_handle_t stream, fidl_txn_t* txn
   }
 
   // Register the client with the primary stream.
-  fuchsia_sysmem_BufferCollectionInfo buffers{};
+  fuchsia_sysmem_BufferCollectionInfo_2 buffers{};
   status = server_->AddClient(zx::channel(stream), &buffers);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to add client";
     return status;
   }
 
-  return fuchsia_camera_test_IspTesterCreateStream_reply(txn, &buffers);
+  return fuchsia_camera_test_IspTesterCreateStream_reply(txn, &buffers, &image_format_);
 }
 
 }  // namespace camera

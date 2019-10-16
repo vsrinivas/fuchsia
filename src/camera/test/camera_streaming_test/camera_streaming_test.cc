@@ -4,8 +4,8 @@
 
 #include <button_checker.h>
 #include <fcntl.h>
-#include <fuchsia/camera/common/cpp/fidl.h>
 #include <fuchsia/camera/test/cpp/fidl.h>
+#include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>  // For RecursiveWaitForFile
 #include <lib/fdio/fdio.h>
 #include <lib/zx/vmar.h>
@@ -78,9 +78,10 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
   ASSERT_TRUE(tester.is_bound());
 
   // Request a stream.
-  fuchsia::camera::common::StreamPtr stream;
-  fuchsia::sysmem::BufferCollectionInfo buffers;
-  ASSERT_EQ(tester->CreateStream(stream.NewRequest(), &buffers), ZX_OK);
+  fuchsia::camera2::StreamPtr stream;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffers;
+  fuchsia::sysmem::ImageFormat_2 format;
+  ASSERT_EQ(tester->CreateStream(stream.NewRequest(), &buffers, &format), ZX_OK);
   std::atomic_bool stream_alive = true;
   stream.set_error_handler([&](zx_status_t status) {
     ADD_FAILURE_AT(__FILE__, __LINE__) << "Stream disconnected: " << zx_status_get_string(status);
@@ -90,7 +91,7 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
   // Populate a set of known hashes to constant-value frame data.
   std::map<std::string, uint8_t> known_hashes;
   {
-    std::vector<uint8_t> known_frame(buffers.vmo_size);
+    std::vector<uint8_t> known_frame(buffers.settings.buffer_settings.size_bytes);
     for (uint32_t value = 0; value <= UINT8_MAX; ++value) {
       memset(known_frame.data(), value, known_frame.size());
       known_hashes[Hash(known_frame.data(), known_frame.size())] = value;
@@ -101,7 +102,7 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
   std::map<std::string, uint32_t> frame_hashes;
   std::vector<bool> buffer_owned(buffers.buffer_count, false);
   std::atomic_uint32_t frames_received{0};
-  stream.events().OnFrameAvailable = [&](fuchsia::camera::common::FrameAvailableEvent event) {
+  stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo event) {
     ++frames_received;
 
     // Check ownership validity of the buffer.
@@ -112,11 +113,15 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
 
     // Map and hash the entire contents of the buffer.
     uintptr_t mapped_addr = 0;
-    ASSERT_EQ(zx::vmar::root_self()->map(0, buffers.vmos[event.buffer_id], 0, buffers.vmo_size,
+    ASSERT_EQ(zx::vmar::root_self()->map(0, buffers.buffers[event.buffer_id].vmo, 0,
+                                         buffers.settings.buffer_settings.size_bytes,
                                          ZX_VM_PERM_READ, &mapped_addr),
               ZX_OK);
-    auto hash = Hash(reinterpret_cast<void*>(mapped_addr), buffers.vmo_size);
-    ASSERT_EQ(zx::vmar::root_self()->unmap(mapped_addr, buffers.vmo_size), ZX_OK);
+    auto hash =
+        Hash(reinterpret_cast<void*>(mapped_addr), buffers.settings.buffer_settings.size_bytes);
+    ASSERT_EQ(
+        zx::vmar::root_self()->unmap(mapped_addr, buffers.settings.buffer_settings.size_bytes),
+        ZX_OK);
 
     // Verify the hash does not match a prior or known hash. Even with a static scene, thermal
     // noise should prevent any perfectly identical frames. As a result, this check should only

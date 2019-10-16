@@ -26,8 +26,10 @@ static const uint32_t kFramesToHold = kBufferCount - 2;
 namespace camera {
 
 zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* server_out,
-                                 fuchsia_sysmem_BufferCollectionInfo* buffers_out) {
-  *buffers_out = fuchsia_sysmem_BufferCollectionInfo{};
+                                 fuchsia_sysmem_BufferCollectionInfo_2* buffers_out,
+                                 fuchsia_sysmem_ImageFormat_2* format_out) {
+  *buffers_out = fuchsia_sysmem_BufferCollectionInfo_2{};
+  *format_out = fuchsia_sysmem_ImageFormat_2{};
 
   auto server = std::make_unique<StreamServer>();
 
@@ -40,29 +42,26 @@ zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* se
 
   // Construct the buffers to pass to the ISP.
   auto format = DmaFormat(kWidth, kHeight, kDmaPixelFormat, false);
-  fuchsia::sysmem::BufferCollectionInfo buffers{};
-  buffers.format.image.width = kWidth;
-  buffers.format.image.height = kHeight;
-  buffers.format.image.layers = 2;
-  buffers.format.image.pixel_format.type = kPixelFormat;
-  buffers.format.image.color_space.type = kColorSpace;
-  buffers.format.image.planes[0].bytes_per_row =
+  fuchsia::sysmem::BufferCollectionInfo_2 buffers{};
+  fuchsia::sysmem::ImageFormat_2 image_format{};
+  image_format.pixel_format.type = kPixelFormat;
+  image_format.coded_width = kWidth;
+  image_format.coded_height = kHeight;
+  image_format.color_space.type = kColorSpace;
+  image_format.bytes_per_row =
       std::abs(static_cast<int32_t>(format.GetLineOffset()));  // May be 'negative'.
-  buffers.format.image.planes[1].bytes_per_row =
-      buffers.format.image.planes[0].bytes_per_row / 2;
   buffers.buffer_count = kBufferCount;
-  buffers.vmo_size = format.GetImageSize();
+  buffers.settings.buffer_settings.size_bytes = format.GetImageSize();
 
   for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
-    status = zx::vmo::create_contiguous(*bti, buffers.vmo_size, 0,
-                                        &buffers.vmos[i]);
+    status = zx::vmo::create_contiguous(*bti, format.GetImageSize(), 0, &buffers.buffers[i].vmo);
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Failed to create vmo";
       return status;
     }
     // Initialize chroma channels to 128 (grayscale).
     uintptr_t chroma = 0;
-    status = zx::vmar::root_self()->map(0, buffers.vmos[i], 0, format.GetImageSize(),
+    status = zx::vmar::root_self()->map(0, buffers.buffers[i].vmo, 0, format.GetImageSize(),
                                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &chroma);
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Error mapping vmo";
@@ -83,13 +82,14 @@ zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* se
     return status;
   }
 
+  *format_out = *reinterpret_cast<fuchsia_sysmem_ImageFormat_2*>(&image_format);
   *server_out = std::move(server);
 
   return ZX_OK;
 }
 
 zx_status_t StreamServer::AddClient(zx::channel channel,
-                                    fuchsia_sysmem_BufferCollectionInfo* buffers_out) {
+                                    fuchsia_sysmem_BufferCollectionInfo_2* buffers_out) {
   std::unique_ptr<camera::StreamImpl> stream;
   zx_status_t status = camera::StreamImpl::Create(std::move(channel), loop_.dispatcher(), &stream);
   if (status != ZX_OK) {
@@ -106,22 +106,12 @@ zx_status_t StreamServer::AddClient(zx::channel channel,
   return ZX_OK;
 }
 
-zx_status_t StreamServer::GetBuffers(fuchsia_sysmem_BufferCollectionInfo* buffers_out) {
-  buffers_out->format.image.width = buffers_.format.image.width;
-  buffers_out->format.image.height = buffers_.format.image.height;
-  buffers_out->format.image.layers = buffers_.format.image.layers;
-  buffers_out->format.image.pixel_format.type =
-      static_cast<uint32_t>(buffers_.format.image.pixel_format.type);
-  buffers_out->format.image.color_space.type =
-      static_cast<uint32_t>(buffers_.format.image.color_space.type);
-  memcpy(buffers_out->format.image.planes, buffers_.format.image.planes.data(),
-         sizeof(buffers_out->format.image.planes));
-  buffers_out->buffer_count = buffers_.buffer_count;
-  buffers_out->vmo_size = buffers_.vmo_size;
+zx_status_t StreamServer::GetBuffers(fuchsia_sysmem_BufferCollectionInfo_2* buffers_out) {
+  *buffers_out = *reinterpret_cast<fuchsia_sysmem_BufferCollectionInfo_2*>(&buffers_);
   std::vector<zx::vmo> vmos(buffers_.buffer_count);
   for (uint32_t i = 0; i < buffers_.buffer_count; ++i) {
     zx::vmo vmo;
-    zx_status_t status = buffers_.vmos[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+    zx_status_t status = buffers_.buffers[i].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Failed to duplicate VMO";
       return status;
@@ -129,7 +119,7 @@ zx_status_t StreamServer::GetBuffers(fuchsia_sysmem_BufferCollectionInfo* buffer
     vmos[i] = std::move(vmo);
   }
   for (uint32_t i = 0; i < vmos.size(); ++i) {
-    buffers_out->vmos[i] = vmos[i].release();
+    buffers_out->buffers[i].vmo = vmos[i].release();
   }
   return ZX_OK;
 }
