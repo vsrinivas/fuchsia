@@ -41,7 +41,14 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
   }
 
   static void WaitForChannelClosure(const zx::channel& channel) {
-    ASSERT_EQ(channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr), ZX_OK);
+    // TODO(fxb/38554): allow unidirectional message processing
+    // Currently, running a loop associated with fidl::InterfacePtr handles both inbound and
+    // outbound messages. Depending on how quickly the server handles such requests, the
+    // channel may or may not be closed by the time a single call to RunUntilIdle returns.
+    zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+    if (status != ZX_OK) {
+      EXPECT_EQ(status, ZX_ERR_BAD_HANDLE);
+    }
   }
 
   template <class T>
@@ -53,10 +60,9 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
       epitaph_received = true;
       epitaph_status = status;
     });
-    ASSERT_EQ(ptr.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr), ZX_OK);
+    WaitForChannelClosure(ptr.channel());
     RunLoopUntilIdle();
-    EXPECT_TRUE(epitaph_received);
-    if (epitaph_received) {
+    if (epitaph_received) {  // Epitaphs are not guaranteed to be returned.
       EXPECT_EQ(epitaph_status, expected_epitaph);
     }
   }
@@ -90,10 +96,10 @@ TEST_F(ControllerDeviceTest, GetChannel) {
   EXPECT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
   EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
   ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
-  camera_protocol_.set_error_handler(FailErrorHandler);
   camera_protocol_->GetChannel(controller_protocol_.NewRequest().TakeChannel());
   RunLoopUntilIdle();
   WaitForChannelClosure(controller_protocol_.channel());
+  WaitForInterfaceClosure(camera_protocol_, ZX_ERR_PEER_CLOSED);
 }
 
 // Verifies that GetChannel2 works correctly.
@@ -112,11 +118,9 @@ TEST_F(ControllerDeviceTest, GetChannel2InvokeTwice) {
   EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
   ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
   camera_protocol_->GetChannel2(controller_protocol_.NewRequest().TakeChannel());
-  camera_protocol_.set_error_handler(FailErrorHandler);
   RunLoopUntilIdle();
   fuchsia::camera2::hal::ControllerPtr other_controller_protocol;
   camera_protocol_->GetChannel2(other_controller_protocol.NewRequest().TakeChannel());
-  camera_protocol_.set_error_handler(FailErrorHandler);
   RunLoopUntilIdle();
   WaitForChannelClosure(other_controller_protocol.channel());
 }
