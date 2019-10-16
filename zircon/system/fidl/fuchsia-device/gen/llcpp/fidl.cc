@@ -236,12 +236,10 @@ void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::DecodedM
 
 
 void NameProvider::SetTransactionHeaderFor::GetDeviceNameRequest(const ::fidl::DecodedMessage<NameProvider::GetDeviceNameRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNameProvider_GetDeviceName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameProvider_GetDeviceName_Ordinal);
 }
 void NameProvider::SetTransactionHeaderFor::GetDeviceNameResponse(const ::fidl::DecodedMessage<NameProvider::GetDeviceNameResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNameProvider_GetDeviceName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameProvider_GetDeviceName_Ordinal);
 }
 
 ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::Controller_GetPowerStateMapping_Result() {
@@ -2454,147 +2452,115 @@ void Controller::Interface::ResumeCompleterBase::Reply(::fidl::DecodedMessage<Re
 
 
 void Controller::SetTransactionHeaderFor::BindRequest(const ::fidl::DecodedMessage<Controller::BindRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_Bind_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Bind_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::BindResponse(const ::fidl::DecodedMessage<Controller::BindResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_Bind_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Bind_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::ScheduleUnbindRequest(const ::fidl::DecodedMessage<Controller::ScheduleUnbindRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ScheduleUnbind_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ScheduleUnbind_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::ScheduleUnbindResponse(const ::fidl::DecodedMessage<Controller::ScheduleUnbindResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_ScheduleUnbind_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ScheduleUnbind_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetDriverNameRequest(const ::fidl::DecodedMessage<Controller::GetDriverNameRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetDriverName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDriverName_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::GetDriverNameResponse(const ::fidl::DecodedMessage<Controller::GetDriverNameResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetDriverName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDriverName_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetDeviceNameRequest(const ::fidl::DecodedMessage<Controller::GetDeviceNameRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetDeviceName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDeviceName_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::GetDeviceNameResponse(const ::fidl::DecodedMessage<Controller::GetDeviceNameResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetDeviceName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDeviceName_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetTopologicalPathRequest(const ::fidl::DecodedMessage<Controller::GetTopologicalPathRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetTopologicalPath_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetTopologicalPath_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::GetTopologicalPathResponse(const ::fidl::DecodedMessage<Controller::GetTopologicalPathResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetTopologicalPath_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetTopologicalPath_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetEventHandleRequest(const ::fidl::DecodedMessage<Controller::GetEventHandleRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetEventHandle_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetEventHandle_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::GetEventHandleResponse(const ::fidl::DecodedMessage<Controller::GetEventHandleResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetEventHandle_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetEventHandle_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetDriverLogFlagsRequest(const ::fidl::DecodedMessage<Controller::GetDriverLogFlagsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetDriverLogFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDriverLogFlags_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::GetDriverLogFlagsResponse(const ::fidl::DecodedMessage<Controller::GetDriverLogFlagsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetDriverLogFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDriverLogFlags_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::SetDriverLogFlagsRequest(const ::fidl::DecodedMessage<Controller::SetDriverLogFlagsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetDriverLogFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetDriverLogFlags_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::SetDriverLogFlagsResponse(const ::fidl::DecodedMessage<Controller::SetDriverLogFlagsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_SetDriverLogFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetDriverLogFlags_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::DebugSuspendRequest(const ::fidl::DecodedMessage<Controller::DebugSuspendRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_DebugSuspend_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_DebugSuspend_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::DebugSuspendResponse(const ::fidl::DecodedMessage<Controller::DebugSuspendResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_DebugSuspend_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_DebugSuspend_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::DebugResumeRequest(const ::fidl::DecodedMessage<Controller::DebugResumeRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_DebugResume_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_DebugResume_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::DebugResumeResponse(const ::fidl::DecodedMessage<Controller::DebugResumeResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_DebugResume_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_DebugResume_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::RunCompatibilityTestsRequest(const ::fidl::DecodedMessage<Controller::RunCompatibilityTestsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_RunCompatibilityTests_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_RunCompatibilityTests_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::RunCompatibilityTestsResponse(const ::fidl::DecodedMessage<Controller::RunCompatibilityTestsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_RunCompatibilityTests_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_RunCompatibilityTests_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetDevicePowerCapsRequest(const ::fidl::DecodedMessage<Controller::GetDevicePowerCapsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetDevicePowerCaps_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDevicePowerCaps_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::GetDevicePowerCapsResponse(const ::fidl::DecodedMessage<Controller::GetDevicePowerCapsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetDevicePowerCaps_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetDevicePowerCaps_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::UpdatePowerStateMappingRequest(const ::fidl::DecodedMessage<Controller::UpdatePowerStateMappingRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_UpdatePowerStateMapping_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_UpdatePowerStateMapping_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::UpdatePowerStateMappingResponse(const ::fidl::DecodedMessage<Controller::UpdatePowerStateMappingResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_UpdatePowerStateMapping_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_UpdatePowerStateMapping_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetPowerStateMappingRequest(const ::fidl::DecodedMessage<Controller::GetPowerStateMappingRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetPowerStateMapping_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetPowerStateMapping_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::GetPowerStateMappingResponse(const ::fidl::DecodedMessage<Controller::GetPowerStateMappingResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_GetPowerStateMapping_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetPowerStateMapping_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::SuspendRequest(const ::fidl::DecodedMessage<Controller::SuspendRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_Suspend_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Suspend_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<Controller::SuspendResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_Suspend_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Suspend_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::ResumeRequest(const ::fidl::DecodedMessage<Controller::ResumeRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_Resume_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Resume_Ordinal);
 }
 void Controller::SetTransactionHeaderFor::ResumeResponse(const ::fidl::DecodedMessage<Controller::ResumeResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kController_Resume_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Resume_Ordinal);
 }
 
 }  // namespace device

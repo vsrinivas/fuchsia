@@ -1998,144 +1998,113 @@ void Filesystems::Interface::WatchCompleterBase::Reply(::fidl::DecodedMessage<Wa
 
 
 void Filesystems::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Filesystems::CloneRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Clone_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Clone_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Filesystems::CloseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Close_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Close_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Filesystems::CloseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Close_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Close_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<Filesystems::DescribeRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Describe_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Describe_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<Filesystems::DescribeResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Describe_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Describe_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<Filesystems::OnOpenResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_OnOpen_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_OnOpen_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<Filesystems::SyncRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Sync_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Sync_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<Filesystems::SyncResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Sync_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Sync_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<Filesystems::GetAttrRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_GetAttr_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_GetAttr_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<Filesystems::GetAttrResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_GetAttr_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_GetAttr_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<Filesystems::SetAttrRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_SetAttr_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_SetAttr_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Filesystems::SetAttrResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_SetAttr_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_SetAttr_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<Filesystems::NodeGetFlagsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_NodeGetFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_NodeGetFlags_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<Filesystems::NodeGetFlagsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_NodeGetFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_NodeGetFlags_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<Filesystems::NodeSetFlagsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_NodeSetFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_NodeSetFlags_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<Filesystems::NodeSetFlagsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_NodeSetFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_NodeSetFlags_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<Filesystems::OpenRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Open_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Open_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::UnlinkRequest(const ::fidl::DecodedMessage<Filesystems::UnlinkRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Unlink_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Unlink_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::UnlinkResponse(const ::fidl::DecodedMessage<Filesystems::UnlinkResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Unlink_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Unlink_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::ReadDirentsRequest(const ::fidl::DecodedMessage<Filesystems::ReadDirentsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_ReadDirents_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_ReadDirents_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::ReadDirentsResponse(const ::fidl::DecodedMessage<Filesystems::ReadDirentsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_ReadDirents_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_ReadDirents_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::RewindRequest(const ::fidl::DecodedMessage<Filesystems::RewindRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Rewind_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Rewind_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::RewindResponse(const ::fidl::DecodedMessage<Filesystems::RewindResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Rewind_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Rewind_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::GetTokenRequest(const ::fidl::DecodedMessage<Filesystems::GetTokenRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_GetToken_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_GetToken_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::GetTokenResponse(const ::fidl::DecodedMessage<Filesystems::GetTokenResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_GetToken_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_GetToken_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::RenameRequest(const ::fidl::DecodedMessage<Filesystems::RenameRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Rename_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Rename_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::RenameResponse(const ::fidl::DecodedMessage<Filesystems::RenameResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Rename_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Rename_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::LinkRequest(const ::fidl::DecodedMessage<Filesystems::LinkRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Link_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Link_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::LinkResponse(const ::fidl::DecodedMessage<Filesystems::LinkResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Link_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Link_Ordinal);
 }
 
 void Filesystems::SetTransactionHeaderFor::WatchRequest(const ::fidl::DecodedMessage<Filesystems::WatchRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Watch_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Watch_Ordinal);
 }
 void Filesystems::SetTransactionHeaderFor::WatchResponse(const ::fidl::DecodedMessage<Filesystems::WatchResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFilesystems_Watch_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFilesystems_Watch_Ordinal);
 }
 
 namespace {
@@ -2286,12 +2255,10 @@ void Registry::Interface::RegisterFilesystemCompleterBase::Reply(::fidl::Decoded
 
 
 void Registry::SetTransactionHeaderFor::RegisterFilesystemRequest(const ::fidl::DecodedMessage<Registry::RegisterFilesystemRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kRegistry_RegisterFilesystem_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRegistry_RegisterFilesystem_Ordinal);
 }
 void Registry::SetTransactionHeaderFor::RegisterFilesystemResponse(const ::fidl::DecodedMessage<Registry::RegisterFilesystemResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kRegistry_RegisterFilesystem_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRegistry_RegisterFilesystem_Ordinal);
 }
 
 }  // namespace fshost

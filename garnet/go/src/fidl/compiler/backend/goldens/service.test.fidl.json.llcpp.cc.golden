@@ -97,8 +97,7 @@ bool SecondProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
 
 
 void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kSecondProtocol_MethodOnSecond_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecondProtocol_MethodOnSecond_Ordinal);
 }
 
 namespace {
@@ -190,8 +189,7 @@ bool FirstProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
 
 
 void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kFirstProtocol_MethodOnFirst_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFirstProtocol_MethodOnFirst_Ordinal);
 }
 
 }  // namespace name

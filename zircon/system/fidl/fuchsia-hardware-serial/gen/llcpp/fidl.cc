@@ -270,21 +270,17 @@ void Device::Interface::SetConfigCompleterBase::Reply(::fidl::DecodedMessage<Set
 
 
 void Device::SetTransactionHeaderFor::GetClassRequest(const ::fidl::DecodedMessage<Device::GetClassRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetClass_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetClass_Ordinal);
 }
 void Device::SetTransactionHeaderFor::GetClassResponse(const ::fidl::DecodedMessage<Device::GetClassResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetClass_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetClass_Ordinal);
 }
 
 void Device::SetTransactionHeaderFor::SetConfigRequest(const ::fidl::DecodedMessage<Device::SetConfigRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_SetConfig_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfig_Ordinal);
 }
 void Device::SetTransactionHeaderFor::SetConfigResponse(const ::fidl::DecodedMessage<Device::SetConfigResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_SetConfig_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfig_Ordinal);
 }
 
 }  // namespace serial

@@ -911,48 +911,38 @@ void TestDevice::Interface::GetChannelCompleterBase::Reply(::fidl::DecodedMessag
 
 
 void TestDevice::SetTransactionHeaderFor::ScheduleWorkRequest(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_ScheduleWork_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduleWork_Ordinal);
 }
 void TestDevice::SetTransactionHeaderFor::ScheduleWorkResponse(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_ScheduleWork_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduleWork_Ordinal);
 }
 
 void TestDevice::SetTransactionHeaderFor::ScheduleWorkDifferentThreadRequest(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkDifferentThreadRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_ScheduleWorkDifferentThread_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduleWorkDifferentThread_Ordinal);
 }
 void TestDevice::SetTransactionHeaderFor::ScheduleWorkDifferentThreadResponse(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkDifferentThreadResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_ScheduleWorkDifferentThread_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduleWorkDifferentThread_Ordinal);
 }
 
 void TestDevice::SetTransactionHeaderFor::GetDoneEventRequest(const ::fidl::DecodedMessage<TestDevice::GetDoneEventRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_GetDoneEvent_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetDoneEvent_Ordinal);
 }
 void TestDevice::SetTransactionHeaderFor::GetDoneEventResponse(const ::fidl::DecodedMessage<TestDevice::GetDoneEventResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_GetDoneEvent_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetDoneEvent_Ordinal);
 }
 
 void TestDevice::SetTransactionHeaderFor::ScheduledWorkRanRequest(const ::fidl::DecodedMessage<TestDevice::ScheduledWorkRanRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_ScheduledWorkRan_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduledWorkRan_Ordinal);
 }
 void TestDevice::SetTransactionHeaderFor::ScheduledWorkRanResponse(const ::fidl::DecodedMessage<TestDevice::ScheduledWorkRanResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_ScheduledWorkRan_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduledWorkRan_Ordinal);
 }
 
 void TestDevice::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::DecodedMessage<TestDevice::GetChannelRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_GetChannel_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetChannel_Ordinal);
 }
 void TestDevice::SetTransactionHeaderFor::GetChannelResponse(const ::fidl::DecodedMessage<TestDevice::GetChannelResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestDevice_GetChannel_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetChannel_Ordinal);
 }
 
 ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::OwnedChannelDevice_ScheduleWork_Result() {
@@ -1178,12 +1168,10 @@ void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::Dec
 
 
 void OwnedChannelDevice::SetTransactionHeaderFor::ScheduleWorkRequest(const ::fidl::DecodedMessage<OwnedChannelDevice::ScheduleWorkRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kOwnedChannelDevice_ScheduleWork_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kOwnedChannelDevice_ScheduleWork_Ordinal);
 }
 void OwnedChannelDevice::SetTransactionHeaderFor::ScheduleWorkResponse(const ::fidl::DecodedMessage<OwnedChannelDevice::ScheduleWorkResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kOwnedChannelDevice_ScheduleWork_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kOwnedChannelDevice_ScheduleWork_Ordinal);
 }
 
 }  // namespace test

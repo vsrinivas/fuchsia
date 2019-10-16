@@ -332,21 +332,17 @@ void TestInterface::Interface::ConsumeSimpleUnionCompleterBase::Reply(::fidl::De
 
 
 void TestInterface::SetTransactionHeaderFor::ConsumeSimpleStructRequest(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestInterface_ConsumeSimpleStruct_Ordinal);
 }
 void TestInterface::SetTransactionHeaderFor::ConsumeSimpleStructResponse(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestInterface_ConsumeSimpleStruct_Ordinal);
 }
 
 void TestInterface::SetTransactionHeaderFor::ConsumeSimpleUnionRequest(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestInterface_ConsumeSimpleUnion_Ordinal);
 }
 void TestInterface::SetTransactionHeaderFor::ConsumeSimpleUnionResponse(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestInterface_ConsumeSimpleUnion_Ordinal);
 }
 
 }  // namespace basictypes

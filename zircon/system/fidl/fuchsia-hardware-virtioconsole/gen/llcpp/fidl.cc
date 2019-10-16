@@ -121,8 +121,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 
 void Device::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::DecodedMessage<Device::GetChannelRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetChannel_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetChannel_Ordinal);
 }
 
 }  // namespace virtioconsole

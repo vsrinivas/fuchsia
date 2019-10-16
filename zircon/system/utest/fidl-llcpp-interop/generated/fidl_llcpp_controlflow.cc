@@ -271,22 +271,18 @@ void ControlFlow::Interface::MustSendAccessDeniedEpitaphCompleterBase::Reply(::f
 
 
 void ControlFlow::SetTransactionHeaderFor::ShutdownRequest(const ::fidl::DecodedMessage<ControlFlow::ShutdownRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControlFlow_Shutdown_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControlFlow_Shutdown_Ordinal);
 }
 
 void ControlFlow::SetTransactionHeaderFor::NoReplyMustSendAccessDeniedEpitaphRequest(const ::fidl::DecodedMessage<ControlFlow::NoReplyMustSendAccessDeniedEpitaphRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControlFlow_NoReplyMustSendAccessDeniedEpitaph_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControlFlow_NoReplyMustSendAccessDeniedEpitaph_Ordinal);
 }
 
 void ControlFlow::SetTransactionHeaderFor::MustSendAccessDeniedEpitaphRequest(const ::fidl::DecodedMessage<ControlFlow::MustSendAccessDeniedEpitaphRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControlFlow_MustSendAccessDeniedEpitaph_Ordinal);
 }
 void ControlFlow::SetTransactionHeaderFor::MustSendAccessDeniedEpitaphResponse(const ::fidl::DecodedMessage<ControlFlow::MustSendAccessDeniedEpitaphResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControlFlow_MustSendAccessDeniedEpitaph_Ordinal);
 }
 
 }  // namespace controlflow

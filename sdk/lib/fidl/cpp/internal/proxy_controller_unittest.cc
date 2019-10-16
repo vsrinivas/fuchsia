@@ -12,6 +12,7 @@
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/fidl_types.h"
+#include "lib/fidl/txn_header.h"
 
 namespace fidl {
 namespace internal {
@@ -97,8 +98,7 @@ TEST(ProxyController, Callback) {
 
   zx_txid_t txid = message.txid();
   fidl_message_header_t header = {};
-  header.txid = txid;
-  header.ordinal = 42u;
+  fidl_init_txn_header(&header, txid, 42u);
 
   EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -162,8 +162,7 @@ TEST(ProxyController, BadReply) {
   });
 
   fidl_message_header_t header = {};
-  header.txid = 0;
-  header.ordinal = 42u;
+  fidl_init_txn_header(&header, 0, 42u);
 
   EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -201,8 +200,7 @@ TEST(ProxyController, ShortReply) {
   });
 
   fidl_message_header_t header = {};
-  header.txid = 0;
-  header.ordinal = 42u;
+  fidl_init_txn_header(&header, 0, 42u);
 
   EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -263,8 +261,7 @@ TEST(ProxyController, Move) {
 
   zx_txid_t txid = message.txid();
   fidl_message_header_t header = {};
-  header.txid = txid;
-  header.ordinal = 42u;
+  fidl_init_txn_header(&header, txid, 42u);
 
   EXPECT_EQ(ZX_OK, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 
@@ -312,8 +309,7 @@ TEST(ProxyController, Reset) {
 
   zx_txid_t txid = message.txid();
   fidl_message_header_t header = {};
-  header.txid = txid;
-  header.ordinal = 42u;
+  fidl_init_txn_header(&header, txid, 42u);
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, &header, sizeof(fidl_message_header_t), nullptr, 0));
 

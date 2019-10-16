@@ -163,12 +163,10 @@ void Provider::Interface::SocketCompleterBase::Reply(::fidl::DecodedMessage<Sock
 
 
 void Provider::SetTransactionHeaderFor::SocketRequest(const ::fidl::DecodedMessage<Provider::SocketRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProvider_Socket_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_Socket_Ordinal);
 }
 void Provider::SetTransactionHeaderFor::SocketResponse(const ::fidl::DecodedMessage<Provider::SocketResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kProvider_Socket_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_Socket_Ordinal);
 }
 
 namespace {
@@ -2203,148 +2201,116 @@ void Control::Interface::GetSockOptCompleterBase::Reply(::fidl::DecodedMessage<G
 
 
 void Control::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Control::CloneRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Clone_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Clone_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Control::CloseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Close_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Close_Ordinal);
 }
 void Control::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Control::CloseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Close_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Close_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<Control::DescribeRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Describe_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Describe_Ordinal);
 }
 void Control::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<Control::DescribeResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Describe_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Describe_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<Control::OnOpenResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_OnOpen_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_OnOpen_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<Control::SyncRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Sync_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Sync_Ordinal);
 }
 void Control::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<Control::SyncResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Sync_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Sync_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<Control::GetAttrRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_GetAttr_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetAttr_Ordinal);
 }
 void Control::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<Control::GetAttrResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_GetAttr_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetAttr_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<Control::SetAttrRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_SetAttr_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_SetAttr_Ordinal);
 }
 void Control::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Control::SetAttrResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_SetAttr_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_SetAttr_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<Control::NodeGetFlagsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_NodeGetFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_NodeGetFlags_Ordinal);
 }
 void Control::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<Control::NodeGetFlagsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_NodeGetFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_NodeGetFlags_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<Control::NodeSetFlagsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_NodeSetFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_NodeSetFlags_Ordinal);
 }
 void Control::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<Control::NodeSetFlagsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_NodeSetFlags_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_NodeSetFlags_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::BindRequest(const ::fidl::DecodedMessage<Control::BindRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Bind_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Bind_Ordinal);
 }
 void Control::SetTransactionHeaderFor::BindResponse(const ::fidl::DecodedMessage<Control::BindResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Bind_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Bind_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::ConnectRequest(const ::fidl::DecodedMessage<Control::ConnectRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Connect_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Connect_Ordinal);
 }
 void Control::SetTransactionHeaderFor::ConnectResponse(const ::fidl::DecodedMessage<Control::ConnectResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Connect_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Connect_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::ListenRequest(const ::fidl::DecodedMessage<Control::ListenRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Listen_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Listen_Ordinal);
 }
 void Control::SetTransactionHeaderFor::ListenResponse(const ::fidl::DecodedMessage<Control::ListenResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Listen_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Listen_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::AcceptRequest(const ::fidl::DecodedMessage<Control::AcceptRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Accept_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Accept_Ordinal);
 }
 void Control::SetTransactionHeaderFor::AcceptResponse(const ::fidl::DecodedMessage<Control::AcceptResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_Accept_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Accept_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::GetSockNameRequest(const ::fidl::DecodedMessage<Control::GetSockNameRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_GetSockName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetSockName_Ordinal);
 }
 void Control::SetTransactionHeaderFor::GetSockNameResponse(const ::fidl::DecodedMessage<Control::GetSockNameResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_GetSockName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetSockName_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::GetPeerNameRequest(const ::fidl::DecodedMessage<Control::GetPeerNameRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_GetPeerName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetPeerName_Ordinal);
 }
 void Control::SetTransactionHeaderFor::GetPeerNameResponse(const ::fidl::DecodedMessage<Control::GetPeerNameResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_GetPeerName_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetPeerName_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::SetSockOptRequest(const ::fidl::DecodedMessage<Control::SetSockOptRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_SetSockOpt_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_SetSockOpt_Ordinal);
 }
 void Control::SetTransactionHeaderFor::SetSockOptResponse(const ::fidl::DecodedMessage<Control::SetSockOptResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_SetSockOpt_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_SetSockOpt_Ordinal);
 }
 
 void Control::SetTransactionHeaderFor::GetSockOptRequest(const ::fidl::DecodedMessage<Control::GetSockOptRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_GetSockOpt_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetSockOpt_Ordinal);
 }
 void Control::SetTransactionHeaderFor::GetSockOptResponse(const ::fidl::DecodedMessage<Control::GetSockOptResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kControl_GetSockOpt_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetSockOpt_Ordinal);
 }
 
 }  // namespace socket

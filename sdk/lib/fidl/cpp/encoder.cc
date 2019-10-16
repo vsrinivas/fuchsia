@@ -4,6 +4,7 @@
 
 #include "lib/fidl/cpp/encoder.h"
 
+#include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
@@ -54,11 +55,7 @@ void Encoder::Reset(uint64_t ordinal) {
 void Encoder::EncodeMessageHeader(uint64_t ordinal) {
   size_t offset = Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
-  header->flags[0] = 0;
-  header->flags[1] = 0;
-  header->flags[2] = 0;
-  header->magic_number = kFidlWireFormatMagicNumberInitial;
-  header->ordinal = ordinal;
+  fidl_init_txn_header(header, 0, ordinal);
 }
 
 }  // namespace fidl

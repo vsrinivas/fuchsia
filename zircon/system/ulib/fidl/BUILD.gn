@@ -10,6 +10,7 @@ library("fidl_base") {
   sdk_publishable = true
   sdk_headers = [
     "lib/fidl/coding.h",
+    "lib/fidl/txn_header.h",
     "lib/fidl/cpp/builder.h",
     "lib/fidl/cpp/message.h",
     "lib/fidl/cpp/message_buffer.h",
@@ -31,6 +32,7 @@ library("fidl_base") {
     "message.cc",
     "message_buffer.cc",
     "message_builder.cc",
+    "txn_header.c",
     "validating.cc",
     "walker.cc",
   ]

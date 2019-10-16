@@ -587,31 +587,25 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::Decode
 
 
 void ChannelProtocol::SetTransactionHeaderFor::MethodARequest(const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kChannelProtocol_MethodA_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MethodA_Ordinal);
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::EventAResponse(const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kChannelProtocol_EventA_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_EventA_Ordinal);
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MethodBRequest(const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kChannelProtocol_MethodB_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MethodB_Ordinal);
 }
 void ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kChannelProtocol_MethodB_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MethodB_Ordinal);
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketRequest(const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MutateSocket_Ordinal);
 }
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kChannelProtocol_MutateSocket_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MutateSocket_Ordinal);
 }
 
 namespace {
@@ -1371,59 +1365,47 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned
 
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestNoResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestEmptyResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestWithResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestNoResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestEmptyResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestWithResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::OnEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::OnWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_OnWithResponse_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
 }
 
 ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result() {
@@ -1906,30 +1888,24 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::Decoded
 
 
 void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithErrorSyntax_ResponseAsStruct_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ResponseAsStruct_Ordinal);
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithErrorSyntax_ResponseAsStruct_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ResponseAsStruct_Ordinal);
 }
 
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
 }
 
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
 }
 
 }  // namespace name

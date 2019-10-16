@@ -345,11 +345,8 @@ size_t CountSecondaryObjects(const std::vector<CGenerator::Member>& params) {
 
 void EmitTxnHeader(std::ostream* file, const std::string& msg_name,
                    const std::string& ordinal_name) {
-  *file << kIndent << msg_name << "->hdr.ordinal = " << ordinal_name << ";\n";
-  *file << kIndent << msg_name << "->hdr.flags[0] = 0;\n";
-  *file << kIndent << msg_name << "->hdr.flags[1] = 0;\n";
-  *file << kIndent << msg_name << "->hdr.flags[2] = 0;\n";
-  *file << kIndent << msg_name << "->hdr.magic_number = kFidlWireFormatMagicNumberInitial;\n";
+  *file << kIndent << "fidl_init_txn_header(&" << msg_name << "->hdr, 0, " << ordinal_name
+        << ");\n";
 }
 
 void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::string_view bytes,
@@ -1719,6 +1716,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 std::ostringstream CGenerator::ProduceClient() {
   EmitFileComment(&file_);
   EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+  EmitIncludeHeader(&file_, "<lib/fidl/txn_header.h>");
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
   EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
@@ -1758,6 +1756,7 @@ std::ostringstream CGenerator::ProduceClient() {
 std::ostringstream CGenerator::ProduceServer() {
   EmitFileComment(&file_);
   EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+  EmitIncludeHeader(&file_, "<lib/fidl/txn_header.h>");
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
   EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");

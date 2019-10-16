@@ -3,6 +3,7 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/string_view.h>

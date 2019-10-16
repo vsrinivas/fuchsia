@@ -594,40 +594,32 @@ zx_status_t DirEntTestInterface::SendOnDirentsEvent(::zx::unowned_channel _chan,
 
 
 void DirEntTestInterface::SetTransactionHeaderFor::CountNumDirectoriesRequest(const ::fidl::DecodedMessage<DirEntTestInterface::CountNumDirectoriesRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirEntTestInterface_CountNumDirectories_Ordinal);
 }
 void DirEntTestInterface::SetTransactionHeaderFor::CountNumDirectoriesResponse(const ::fidl::DecodedMessage<DirEntTestInterface::CountNumDirectoriesResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirEntTestInterface_CountNumDirectories_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirEntTestInterface_CountNumDirectories_Ordinal);
 }
 
 void DirEntTestInterface::SetTransactionHeaderFor::ReadDirRequest(const ::fidl::DecodedMessage<DirEntTestInterface::ReadDirRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirEntTestInterface_ReadDir_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirEntTestInterface_ReadDir_Ordinal);
 }
 void DirEntTestInterface::SetTransactionHeaderFor::ReadDirResponse(const ::fidl::DecodedMessage<DirEntTestInterface::ReadDirResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirEntTestInterface_ReadDir_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirEntTestInterface_ReadDir_Ordinal);
 }
 
 void DirEntTestInterface::SetTransactionHeaderFor::ConsumeDirectoriesRequest(const ::fidl::DecodedMessage<DirEntTestInterface::ConsumeDirectoriesRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirEntTestInterface_ConsumeDirectories_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirEntTestInterface_ConsumeDirectories_Ordinal);
 }
 void DirEntTestInterface::SetTransactionHeaderFor::ConsumeDirectoriesResponse(const ::fidl::DecodedMessage<DirEntTestInterface::ConsumeDirectoriesResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirEntTestInterface_ConsumeDirectories_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirEntTestInterface_ConsumeDirectories_Ordinal);
 }
 
 void DirEntTestInterface::SetTransactionHeaderFor::OnDirentsResponse(const ::fidl::DecodedMessage<DirEntTestInterface::OnDirentsResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirEntTestInterface_OnDirents_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirEntTestInterface_OnDirents_Ordinal);
 }
 
 void DirEntTestInterface::SetTransactionHeaderFor::OneWayDirentsRequest(const ::fidl::DecodedMessage<DirEntTestInterface::OneWayDirentsRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDirEntTestInterface_OneWayDirents_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirEntTestInterface_OneWayDirents_Ordinal);
 }
 
 }  // namespace dirent

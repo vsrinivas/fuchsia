@@ -152,8 +152,7 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
 
 
 void Connectivity::SetTransactionHeaderFor::OnNetworkReachableResponse(const ::fidl::DecodedMessage<Connectivity::OnNetworkReachableResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kConnectivity_OnNetworkReachable_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kConnectivity_OnNetworkReachable_Ordinal);
 }
 
 ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::NameLookup_LookupHostname_Result() {
@@ -663,21 +662,17 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMe
 
 
 void NameLookup::SetTransactionHeaderFor::LookupIpRequest(const ::fidl::DecodedMessage<NameLookup::LookupIpRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNameLookup_LookupIp_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupIp_Ordinal);
 }
 void NameLookup::SetTransactionHeaderFor::LookupIpResponse(const ::fidl::DecodedMessage<NameLookup::LookupIpResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNameLookup_LookupIp_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupIp_Ordinal);
 }
 
 void NameLookup::SetTransactionHeaderFor::LookupHostnameRequest(const ::fidl::DecodedMessage<NameLookup::LookupHostnameRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupHostname_Ordinal);
 }
 void NameLookup::SetTransactionHeaderFor::LookupHostnameResponse(const ::fidl::DecodedMessage<NameLookup::LookupHostnameResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kNameLookup_LookupHostname_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupHostname_Ordinal);
 }
 
 }  // namespace net

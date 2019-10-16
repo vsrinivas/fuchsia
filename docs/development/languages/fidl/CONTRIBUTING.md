@@ -257,9 +257,11 @@ To exit, use **`Ctrl-A x`**.
 
 Alternatively, if you build including the shell you can run these commands from
 the shell:
+
 ```sh
 Tab 1> fx set core.x64 --with-base //garnet/packages/tests:zircon
 Tab 1> fx build && fx run -kN
+
 Tab 2> fx shell
 Tab 2(shell)> runtests -t fidl-simple-test
 Tab 2(shell)> runtests -t fidl-test

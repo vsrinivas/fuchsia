@@ -271,21 +271,17 @@ void Simple::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseRe
 
 
 void Simple::SetTransactionHeaderFor::EchoRequest(const ::fidl::DecodedMessage<Simple::EchoRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kSimple_Echo_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Echo_Ordinal);
 }
 void Simple::SetTransactionHeaderFor::EchoResponse(const ::fidl::DecodedMessage<Simple::EchoResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kSimple_Echo_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Echo_Ordinal);
 }
 
 void Simple::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Simple::CloseRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kSimple_Close_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Close_Ordinal);
 }
 void Simple::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Simple::CloseResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kSimple_Close_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Close_Ordinal);
 }
 
 }  // namespace simple

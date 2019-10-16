@@ -249,17 +249,14 @@ void DebugData::Interface::LoadConfigCompleterBase::Reply(::fidl::DecodedMessage
 
 
 void DebugData::SetTransactionHeaderFor::PublishRequest(const ::fidl::DecodedMessage<DebugData::PublishRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDebugData_Publish_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugData_Publish_Ordinal);
 }
 
 void DebugData::SetTransactionHeaderFor::LoadConfigRequest(const ::fidl::DecodedMessage<DebugData::LoadConfigRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugData_LoadConfig_Ordinal);
 }
 void DebugData::SetTransactionHeaderFor::LoadConfigResponse(const ::fidl::DecodedMessage<DebugData::LoadConfigResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDebugData_LoadConfig_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugData_LoadConfig_Ordinal);
 }
 
 }  // namespace debugdata

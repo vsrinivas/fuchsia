@@ -159,12 +159,10 @@ void Device::Interface::GetSecureMemoryPhysicalAddressCompleterBase::Reply(::fid
 
 
 void Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressRequest(const ::fidl::DecodedMessage<Device::GetSecureMemoryPhysicalAddressRequest>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetSecureMemoryPhysicalAddress_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetSecureMemoryPhysicalAddress_Ordinal);
 }
 void Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressResponse(const ::fidl::DecodedMessage<Device::GetSecureMemoryPhysicalAddressResponse>& _msg) {
-  ::fidl::InitializeTransactionHeader(&_msg.message()->_hdr);
-  _msg.message()->_hdr.ordinal = kDevice_GetSecureMemoryPhysicalAddress_Ordinal;
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetSecureMemoryPhysicalAddress_Ordinal);
 }
 
 }  // namespace securemem
