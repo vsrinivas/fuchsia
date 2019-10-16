@@ -83,7 +83,8 @@ fn main() {
 }
 
 fn run(opt: Opt) -> Result<(), Error> {
-    let input_files = &opt.input;
+    let mut input_files = opt.input;
+    normalize_input_files(&mut input_files);
 
     let output = &opt.output;
     let output_path = PathBuf::from(output);
@@ -338,6 +339,12 @@ fn create_output_dir(path: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
+// Pre-processes the list of input files by removing duplicates.
+fn normalize_input_files(input: &mut Vec<PathBuf>) {
+    input.sort_unstable();
+    input.dedup();
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -490,5 +497,24 @@ mod test {
         // Read in file
         let fidl_config = read_fidldoc_config(&fidl_config_file.path()).unwrap();
         assert_eq!(fidl_config["title"], "Fuchsia FIDLs".to_string());
+    }
+
+    #[test]
+    fn normalize_input_files_test() {
+        let mut input_files = vec![
+            PathBuf::from(r"/tmp/file1"),
+            PathBuf::from(r"/file2"),
+            PathBuf::from(r"/usr/file1"),
+        ];
+        normalize_input_files(&mut input_files);
+        assert_eq!(input_files.len(), 3);
+
+        let mut dup_input_files = vec![
+            PathBuf::from(r"/tmp/file1"),
+            PathBuf::from(r"/file2"),
+            PathBuf::from(r"/tmp/file1"),
+        ];
+        normalize_input_files(&mut dup_input_files);
+        assert_eq!(dup_input_files.len(), 2);
     }
 }
