@@ -16,7 +16,6 @@ group("ulib") {
   deps = [
     "$zx/system/dev/audio/lib",
     "$zx/system/dev/lib",
-    "$zx/system/fidl/fuchsia-net-stack:c",
     "$zx/third_party/ulib",
     "async",
     "async:async-cpp",
