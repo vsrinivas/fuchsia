@@ -372,20 +372,18 @@ impl Opt {
 
 #[cfg(test)]
 mod tests {
-    extern crate timebomb;
-
-    use self::timebomb::timeout_ms;
-    use super::*;
-    use std::sync::atomic::{AtomicBool, Ordering};
-
-    use crate::logs::logger::fx_log_packet_t;
-    use fidl::encoding::OutOfLine;
-    use fidl_fuchsia_logger::{
-        LogFilterOptions, LogListenerMarker, LogListenerRequest, LogListenerRequestStream,
-        LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
+    use {
+        super::*,
+        crate::logs::logger::fx_log_packet_t,
+        fidl::encoding::OutOfLine,
+        fidl_fuchsia_logger::{
+            LogFilterOptions, LogListenerMarker, LogListenerRequest, LogListenerRequestStream,
+            LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
+        },
+        fuchsia_zircon as zx,
+        futures::channel::oneshot::{channel as make_oneshot, Sender},
+        std::collections::HashSet,
     };
-    use fuchsia_async::DurationExt;
-    use fuchsia_zircon::{self as zx, prelude::*};
 
     mod memory_bounded_buffer {
         use super::*;
@@ -421,30 +419,393 @@ mod tests {
         }
     }
 
-    struct LogListenerState {
-        expected: Vec<LogMessage>,
-        done: Arc<AtomicBool>,
-        closed: Arc<AtomicBool>,
-        test_name: String,
+    #[fasync::run_singlethreaded(test)]
+    async fn test_log_manager_simple() {
+        TestHarness::new().manager_test(false).await;
     }
-    impl LogListenerState {
-        fn log(&mut self, msg: LogMessage) {
-            let len = self.expected.len();
-            assert_ne!(len, 0, "got extra message: {:?}", msg);
-            // we can receive messages out of order
-            self.expected.retain(|e| e != &msg);
-            assert_eq!(
-                self.expected.len(),
-                len - 1,
-                "expected: {:?},\nmsg: {:?}",
-                self.expected,
-                msg
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_log_manager_dump() {
+        TestHarness::new().manager_test(true).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_filter_by_pid() {
+        let p = setup_default_packet();
+        let mut p2 = p.clone();
+        p2.metadata.pid = 0;
+        let lm = LogMessage {
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            dropped_logs: p.metadata.dropped_logs,
+            severity: p.metadata.severity,
+            msg: String::from("BBBBB"),
+            tags: vec![String::from("AAAAA")],
+        };
+        let options = &mut LogFilterOptions {
+            filter_by_pid: true,
+            pid: 1,
+            filter_by_tid: false,
+            tid: 0,
+            min_severity: LogLevelFilter::None,
+            verbosity: 0,
+            tags: vec![],
+        };
+
+        TestHarness::new()
+            .filter_test(
+                "test_filter_by_pid",
+                vec![lm].into_iter().collect(),
+                vec![p, p2],
+                Some(options),
+            )
+            .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_filter_by_tid() {
+        let mut p = setup_default_packet();
+        p.metadata.pid = 0;
+        let mut p2 = p.clone();
+        p2.metadata.tid = 0;
+        let lm = LogMessage {
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            dropped_logs: p.metadata.dropped_logs,
+            severity: p.metadata.severity,
+            msg: String::from("BBBBB"),
+            tags: vec![String::from("AAAAA")],
+        };
+        let options = &mut LogFilterOptions {
+            filter_by_pid: false,
+            pid: 1,
+            filter_by_tid: true,
+            tid: 1,
+            min_severity: LogLevelFilter::None,
+            verbosity: 0,
+            tags: vec![],
+        };
+
+        TestHarness::new()
+            .filter_test(
+                "test_filter_by_tid",
+                vec![lm].into_iter().collect(),
+                vec![p, p2],
+                Some(options),
+            )
+            .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_filter_by_min_severity() {
+        let p = setup_default_packet();
+        let mut p2 = p.clone();
+        p2.metadata.pid = 0;
+        p2.metadata.tid = 0;
+        p2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
+        let lm = LogMessage {
+            pid: p2.metadata.pid,
+            tid: p2.metadata.tid,
+            time: p2.metadata.time,
+            dropped_logs: p2.metadata.dropped_logs,
+            severity: p2.metadata.severity,
+            msg: String::from("BBBBB"),
+            tags: vec![String::from("AAAAA")],
+        };
+        let options = &mut LogFilterOptions {
+            filter_by_pid: false,
+            pid: 1,
+            filter_by_tid: false,
+            tid: 1,
+            min_severity: LogLevelFilter::Error,
+            verbosity: 0,
+            tags: vec![],
+        };
+
+        TestHarness::new()
+            .filter_test(
+                "test_filter_by_min_severity",
+                vec![lm].into_iter().collect(),
+                vec![p, p2],
+                Some(options),
+            )
+            .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_filter_by_combination() {
+        let mut p = setup_default_packet();
+        p.metadata.pid = 0;
+        p.metadata.tid = 0;
+        let mut p2 = p.clone();
+        p2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
+        let mut p3 = p.clone();
+        p3.metadata.pid = 1;
+        let lm = LogMessage {
+            pid: p2.metadata.pid,
+            tid: p2.metadata.tid,
+            time: p2.metadata.time,
+            dropped_logs: p2.metadata.dropped_logs,
+            severity: p2.metadata.severity,
+            msg: String::from("BBBBB"),
+            tags: vec![String::from("AAAAA")],
+        };
+        let options = &mut LogFilterOptions {
+            filter_by_pid: true,
+            pid: 0,
+            filter_by_tid: false,
+            tid: 1,
+            min_severity: LogLevelFilter::Error,
+            verbosity: 0,
+            tags: vec![],
+        };
+
+        TestHarness::new()
+            .filter_test(
+                "test_filter_by_combination",
+                vec![lm].into_iter().collect(),
+                vec![p, p2, p3],
+                Some(options),
+            )
+            .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_filter_by_tags() {
+        let mut p = setup_default_packet();
+        let mut p2 = p.clone();
+        // p tags - "DDDDD"
+        memset(&mut p.data[..], 1, 68, 5);
+
+        p2.metadata.pid = 0;
+        p2.metadata.tid = 0;
+        p2.data[6] = 5;
+        // p2 tag - "AAAAA", "BBBBB"
+        // p2 msg - "CCCCC"
+        memset(&mut p2.data[..], 13, 67, 5);
+
+        let lm1 = LogMessage {
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            dropped_logs: p.metadata.dropped_logs,
+            severity: p.metadata.severity,
+            msg: String::from("BBBBB"),
+            tags: vec![String::from("DDDDD")],
+        };
+        let lm2 = LogMessage {
+            pid: p2.metadata.pid,
+            tid: p2.metadata.tid,
+            time: p2.metadata.time,
+            dropped_logs: p2.metadata.dropped_logs,
+            severity: p2.metadata.severity,
+            msg: String::from("CCCCC"),
+            tags: vec![String::from("AAAAA"), String::from("BBBBB")],
+        };
+        let options = &mut LogFilterOptions {
+            filter_by_pid: false,
+            pid: 1,
+            filter_by_tid: false,
+            tid: 1,
+            min_severity: LogLevelFilter::None,
+            verbosity: 0,
+            tags: vec![String::from("BBBBB"), String::from("DDDDD")],
+        };
+
+        TestHarness::new()
+            .filter_test(
+                "test_filter_by_tags",
+                vec![lm1, lm2].into_iter().collect(),
+                vec![p, p2],
+                Some(options),
+            )
+            .await;
+    }
+
+    struct TestHarness {
+        log_proxy: LogProxy,
+        log_sink_proxy: LogSinkProxy,
+        sin: zx::Socket,
+    }
+
+    impl TestHarness {
+        fn new() -> Self {
+            let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+            let shared_members = Arc::new(Mutex::new(LogManagerShared {
+                listeners: Vec::new(),
+                log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
+            }));
+
+            let lm = LogManager { shared_members: shared_members };
+
+            let (log_proxy, log_stream) =
+                fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
+            lm.spawn_log_manager(log_stream);
+
+            let (log_sink_proxy, log_sink_stream) =
+                fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
+            lm.spawn_log_sink(log_sink_stream);
+
+            log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
+
+            Self { log_proxy, log_sink_proxy, sin }
+        }
+
+        async fn filter_test(
+            self,
+            name: &str,
+            expected: HashSet<LogMessage>,
+            packets: Vec<fx_log_packet_t>,
+            filter_options: Option<&mut LogFilterOptions>,
+        ) {
+            let (send_done, done) = make_oneshot();
+
+            ValidatingListener::new(name, expected, Some(send_done), None).start(
+                self.log_proxy,
+                filter_options,
+                false,
             );
-            if self.expected.len() == 0 {
-                self.done.store(true, Ordering::Relaxed);
-                println!("DEBUG: {}: setting done=true", self.test_name);
+
+            for mut p in packets {
+                self.sin.write(to_u8_slice(&mut p)).unwrap();
+            }
+
+            done.await.expect("test should signal successful completion");
+        }
+
+        async fn manager_test(self, test_dump_logs: bool) {
+            let mut p = setup_default_packet();
+            self.sin.write(to_u8_slice(&mut p)).unwrap();
+
+            p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
+            self.sin.write(to_u8_slice(&mut p)).unwrap();
+
+            let mut lm1 = LogMessage {
+                time: p.metadata.time,
+                pid: p.metadata.pid,
+                tid: p.metadata.tid,
+                dropped_logs: p.metadata.dropped_logs,
+                severity: p.metadata.severity,
+                msg: String::from("BBBBB"),
+                tags: vec![String::from("AAAAA")],
+            };
+            let lm2 = copy_log_message(&lm1);
+            lm1.severity = LogLevelFilter::Warn.into_primitive().into();
+            let mut lm3 = copy_log_message(&lm2);
+            lm3.pid = 2;
+
+            let (send_done, done_signal) = make_oneshot();
+            let (send_closed, closed_signal) = make_oneshot();
+            ValidatingListener::new(
+                "log_manager_test",
+                vec![lm1, lm2, lm3],
+                Some(send_done),
+                Some(send_closed),
+            )
+            .start(self.log_proxy, None, test_dump_logs);
+
+            p.metadata.pid = 2;
+            self.sin.write(to_u8_slice(&mut p)).unwrap();
+
+            if test_dump_logs {
+                closed_signal.await.expect("done message should have been sent");
+            } else {
+                done_signal.await.expect("done message should have been sent");
             }
         }
+    }
+
+    /// Listens to all log messages sent during test, and verifies that they match what's expected.
+    struct ValidatingListener {
+        expected: HashSet<LogMessage>,
+        done: Option<Sender<()>>,
+        closed: Option<Sender<()>>,
+        test_name: String,
+    }
+
+    impl ValidatingListener {
+        fn new(
+            name: &str,
+            expected: impl IntoIterator<Item = LogMessage>,
+            done: Option<Sender<()>>,
+            closed: Option<Sender<()>>,
+        ) -> Self {
+            Self {
+                test_name: name.to_string(),
+                done,
+                closed,
+                expected: expected.into_iter().collect(),
+            }
+        }
+
+        fn start(
+            self,
+            proxy: LogProxy,
+            filter_options: Option<&mut LogFilterOptions>,
+            dump_logs: bool,
+        ) {
+            let (client_end, stream) =
+                fidl::endpoints::create_request_stream::<LogListenerMarker>().unwrap();
+            self.handle_stream(stream);
+
+            let filter_options = filter_options.map(OutOfLine);
+
+            if dump_logs {
+                proxy.dump_logs(client_end, filter_options).expect("failed to register listener");
+            } else {
+                proxy.listen(client_end, filter_options).expect("failed to register listener");
+            }
+        }
+
+        fn handle_stream(mut self, stream: LogListenerRequestStream) {
+            fasync::spawn(
+                stream
+                    .map_ok(move |req| self.handle_request(req))
+                    .try_collect::<()>()
+                    .unwrap_or_else(|e| panic!("test fail {:?}", e)),
+            )
+        }
+
+        fn handle_request(&mut self, req: LogListenerRequest) {
+            match req {
+                LogListenerRequest::Log { log, .. } => {
+                    self.log(log);
+                }
+                LogListenerRequest::LogMany { log, .. } => {
+                    for msg in log {
+                        self.log(msg);
+                    }
+                }
+                LogListenerRequest::Done { .. } => {
+                    if let Some(closed) = self.closed.take() {
+                        closed.send(()).expect("sending closed signal");
+                    }
+                }
+            }
+        }
+
+        fn log(&mut self, msg: LogMessage) {
+            assert!(self.expected.remove(&msg), "removing received message from list of expected");
+            if self.expected.is_empty() {
+                if let Some(done) = self.done.take() {
+                    done.send(()).expect("sending closed signal");
+                }
+            }
+        }
+    }
+
+    fn setup_default_packet() -> fx_log_packet_t {
+        let mut p: fx_log_packet_t = Default::default();
+        p.metadata.pid = 1;
+        p.metadata.tid = 1;
+        p.metadata.severity = LogLevelFilter::Warn.into_primitive().into();
+        p.metadata.dropped_logs = 2;
+        p.data[0] = 5;
+        memset(&mut p.data[..], 1, 65, 5);
+        memset(&mut p.data[..], 7, 66, 5);
+        return p;
     }
 
     fn copy_log_message(log_message: &LogMessage) -> LogMessage {
@@ -475,387 +836,5 @@ mod tests {
 
     fn memset<T: Copy>(x: &mut [T], offset: usize, value: T, size: usize) {
         x[offset..(offset + size)].iter_mut().for_each(|x| *x = value);
-    }
-
-    fn spawn_log_listener(ll: LogListenerState, stream: LogListenerRequestStream) {
-        let state = Arc::new(Mutex::new(ll));
-        fasync::spawn(
-            stream
-                .map_ok(move |req| {
-                    let state = state.clone();
-                    let mut state = state.lock();
-                    match req {
-                        LogListenerRequest::Log { log, .. } => {
-                            println!("DEBUG: {}: log called", state.test_name);
-                            state.log(log);
-                        }
-                        LogListenerRequest::LogMany { log, .. } => {
-                            println!(
-                                "DEBUG: {}: logMany called, msgs.len(): {}",
-                                state.test_name,
-                                log.len()
-                            );
-                            for msg in log {
-                                state.log(msg);
-                            }
-                        }
-                        LogListenerRequest::Done { .. } => {
-                            println!("DEBUG: {}: done called", state.test_name);
-                            state.closed.store(true, Ordering::Relaxed);
-                        }
-                    }
-                })
-                .try_collect::<()>()
-                .unwrap_or_else(|e| panic!("test fail {:?}", e)),
-        )
-    }
-
-    fn setup_listener(
-        ll: LogListenerState,
-        lp: LogProxy,
-        filter_options: Option<&mut LogFilterOptions>,
-        dump_logs: bool,
-    ) {
-        let (client_end, stream) =
-            fidl::endpoints::create_request_stream::<LogListenerMarker>().unwrap();
-        spawn_log_listener(ll, stream);
-
-        let filter_options = filter_options.map(OutOfLine);
-
-        if dump_logs {
-            lp.dump_logs(client_end, filter_options).expect("failed to register listener");
-        } else {
-            lp.listen(client_end, filter_options).expect("failed to register listener");
-        }
-    }
-
-    fn setup_test() -> (fasync::Executor, LogProxy, LogSinkProxy, zx::Socket, zx::Socket) {
-        let executor = fasync::Executor::new().expect("unable to create executor");
-        let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let shared_members = Arc::new(Mutex::new(LogManagerShared {
-            listeners: Vec::new(),
-            log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
-        }));
-
-        let lm = LogManager { shared_members: shared_members };
-
-        let (log_proxy, log_stream) =
-            fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-        lm.spawn_log_manager(log_stream);
-
-        let (log_sink_proxy, log_sink_stream) =
-            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        lm.spawn_log_sink(log_sink_stream);
-
-        (executor, log_proxy, log_sink_proxy, sin, sout)
-    }
-
-    fn setup_default_packet() -> fx_log_packet_t {
-        let mut p: fx_log_packet_t = Default::default();
-        p.metadata.pid = 1;
-        p.metadata.tid = 1;
-        p.metadata.severity = LogLevelFilter::Warn.into_primitive().into();
-        p.metadata.dropped_logs = 2;
-        p.data[0] = 5;
-        memset(&mut p.data[..], 1, 65, 5);
-        memset(&mut p.data[..], 7, 66, 5);
-        return p;
-    }
-
-    fn test_log_manager_helper(test_dump_logs: bool) {
-        let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
-        let mut p = setup_default_packet();
-        sin.write(to_u8_slice(&mut p)).unwrap();
-        log_sink_proxy.connect(sout).expect("unable to connect");
-        p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
-        sin.write(to_u8_slice(&mut p)).unwrap();
-
-        let mut lm1 = LogMessage {
-            time: p.metadata.time,
-            pid: p.metadata.pid,
-            tid: p.metadata.tid,
-            dropped_logs: p.metadata.dropped_logs,
-            severity: p.metadata.severity,
-            msg: String::from("BBBBB"),
-            tags: vec![String::from("AAAAA")],
-        };
-        let lm2 = copy_log_message(&lm1);
-        lm1.severity = LogLevelFilter::Warn.into_primitive().into();
-        let mut lm3 = copy_log_message(&lm2);
-        lm3.pid = 2;
-        let done = Arc::new(AtomicBool::new(false));
-        let closed = Arc::new(AtomicBool::new(false));
-        let ls = LogListenerState {
-            expected: vec![lm1, lm2, lm3],
-            done: done.clone(),
-            closed: closed.clone(),
-            test_name: "log_manager_test".to_string(),
-        };
-
-        setup_listener(ls, log_proxy, None, test_dump_logs);
-
-        p.metadata.pid = 2;
-        sin.write(to_u8_slice(&mut p)).unwrap();
-
-        let tries = 10;
-        for _ in 0..tries {
-            if done.load(Ordering::Relaxed) || (test_dump_logs && closed.load(Ordering::Relaxed)) {
-                break;
-            }
-            let timeout = fasync::Timer::new(100.millis().after_now());
-            executor.run(timeout, 2);
-        }
-
-        if test_dump_logs {
-            assert!(closed.load(Ordering::Relaxed), "done fn should have been called");
-        } else {
-            assert!(done.load(Ordering::Relaxed), "task should have completed by now");
-        }
-    }
-
-    #[test]
-    fn test_log_manager_simple() {
-        test_log_manager_helper(false);
-    }
-
-    #[test]
-    fn test_log_manager_dump() {
-        test_log_manager_helper(true);
-    }
-
-    fn filter_test_helper(
-        expected: Vec<LogMessage>,
-        packets: Vec<fx_log_packet_t>,
-        filter_options: Option<&mut LogFilterOptions>,
-        test_name: &str,
-    ) {
-        println!("DEBUG: {}: setup test", test_name);
-        let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
-        println!("DEBUG: {}: call connect", test_name);
-        log_sink_proxy.connect(sout).expect("unable to connect");
-        let done = Arc::new(AtomicBool::new(false));
-        let ls = LogListenerState {
-            expected: expected,
-            done: done.clone(),
-            closed: Arc::new(AtomicBool::new(false)),
-            test_name: test_name.clone().to_string(),
-        };
-        println!("DEBUG: {}: call setup_listener", test_name);
-        setup_listener(ls, log_proxy, filter_options, false);
-        println!("DEBUG: {}: call write", test_name);
-        for mut p in packets {
-            sin.write(to_u8_slice(&mut p)).unwrap();
-        }
-        println!("DEBUG: {}: write returned", test_name);
-        let tries = 10;
-
-        for _ in 0..tries {
-            if done.load(Ordering::Relaxed) {
-                break;
-            }
-            let timeout = fasync::Timer::new(100.millis().after_now());
-            println!("DEBUG: {}: wait on executor", test_name);
-            executor.run(timeout, 2);
-            println!("DEBUG: {}: executor returned", test_name);
-        }
-        assert!(done.load(Ordering::Relaxed), "task should have completed by now");
-        println!("DEBUG: {}: assert done", test_name);
-    }
-
-    const TEST_TIMEOUT: u32 = 5000; // in ms
-
-    #[test]
-    fn test_filter_by_pid() {
-        timeout_ms(
-            || {
-                let p = setup_default_packet();
-                let mut p2 = p.clone();
-                p2.metadata.pid = 0;
-                let lm = LogMessage {
-                    pid: p.metadata.pid,
-                    tid: p.metadata.tid,
-                    time: p.metadata.time,
-                    dropped_logs: p.metadata.dropped_logs,
-                    severity: p.metadata.severity,
-                    msg: String::from("BBBBB"),
-                    tags: vec![String::from("AAAAA")],
-                };
-                let options = &mut LogFilterOptions {
-                    filter_by_pid: true,
-                    pid: 1,
-                    filter_by_tid: false,
-                    tid: 0,
-                    min_severity: LogLevelFilter::None,
-                    verbosity: 0,
-                    tags: vec![],
-                };
-                filter_test_helper(vec![lm], vec![p, p2], Some(options), "test_filter_by_pid");
-            },
-            TEST_TIMEOUT,
-        );
-    }
-
-    #[test]
-    fn test_filter_by_tid() {
-        timeout_ms(
-            || {
-                let mut p = setup_default_packet();
-                p.metadata.pid = 0;
-                let mut p2 = p.clone();
-                p2.metadata.tid = 0;
-                let lm = LogMessage {
-                    pid: p.metadata.pid,
-                    tid: p.metadata.tid,
-                    time: p.metadata.time,
-                    dropped_logs: p.metadata.dropped_logs,
-                    severity: p.metadata.severity,
-                    msg: String::from("BBBBB"),
-                    tags: vec![String::from("AAAAA")],
-                };
-                let options = &mut LogFilterOptions {
-                    filter_by_pid: false,
-                    pid: 1,
-                    filter_by_tid: true,
-                    tid: 1,
-                    min_severity: LogLevelFilter::None,
-                    verbosity: 0,
-                    tags: vec![],
-                };
-                filter_test_helper(vec![lm], vec![p, p2], Some(options), "test_filter_by_tid");
-            },
-            TEST_TIMEOUT,
-        );
-    }
-
-    #[test]
-    fn test_filter_by_min_severity() {
-        timeout_ms(
-            || {
-                let p = setup_default_packet();
-                let mut p2 = p.clone();
-                p2.metadata.pid = 0;
-                p2.metadata.tid = 0;
-                p2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
-                let lm = LogMessage {
-                    pid: p2.metadata.pid,
-                    tid: p2.metadata.tid,
-                    time: p2.metadata.time,
-                    dropped_logs: p2.metadata.dropped_logs,
-                    severity: p2.metadata.severity,
-                    msg: String::from("BBBBB"),
-                    tags: vec![String::from("AAAAA")],
-                };
-                let options = &mut LogFilterOptions {
-                    filter_by_pid: false,
-                    pid: 1,
-                    filter_by_tid: false,
-                    tid: 1,
-                    min_severity: LogLevelFilter::Error,
-                    verbosity: 0,
-                    tags: vec![],
-                };
-                filter_test_helper(
-                    vec![lm],
-                    vec![p, p2],
-                    Some(options),
-                    "test_filter_by_min_severity",
-                );
-            },
-            TEST_TIMEOUT,
-        );
-    }
-
-    #[test]
-    fn test_filter_by_combination() {
-        timeout_ms(
-            || {
-                let mut p = setup_default_packet();
-                p.metadata.pid = 0;
-                p.metadata.tid = 0;
-                let mut p2 = p.clone();
-                p2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
-                let mut p3 = p.clone();
-                p3.metadata.pid = 1;
-                let lm = LogMessage {
-                    pid: p2.metadata.pid,
-                    tid: p2.metadata.tid,
-                    time: p2.metadata.time,
-                    dropped_logs: p2.metadata.dropped_logs,
-                    severity: p2.metadata.severity,
-                    msg: String::from("BBBBB"),
-                    tags: vec![String::from("AAAAA")],
-                };
-                let options = &mut LogFilterOptions {
-                    filter_by_pid: true,
-                    pid: 0,
-                    filter_by_tid: false,
-                    tid: 1,
-                    min_severity: LogLevelFilter::Error,
-                    verbosity: 0,
-                    tags: vec![],
-                };
-                filter_test_helper(
-                    vec![lm],
-                    vec![p, p2, p3],
-                    Some(options),
-                    "test_filter_by_combination",
-                );
-            },
-            TEST_TIMEOUT,
-        );
-    }
-
-    #[test]
-    fn test_filter_by_tags() {
-        timeout_ms(
-            || {
-                let mut p = setup_default_packet();
-                let mut p2 = p.clone();
-                // p tags - "DDDDD"
-                memset(&mut p.data[..], 1, 68, 5);
-
-                p2.metadata.pid = 0;
-                p2.metadata.tid = 0;
-                p2.data[6] = 5;
-                // p2 tag - "AAAAA", "BBBBB"
-                // p2 msg - "CCCCC"
-                memset(&mut p2.data[..], 13, 67, 5);
-
-                let lm1 = LogMessage {
-                    pid: p.metadata.pid,
-                    tid: p.metadata.tid,
-                    time: p.metadata.time,
-                    dropped_logs: p.metadata.dropped_logs,
-                    severity: p.metadata.severity,
-                    msg: String::from("BBBBB"),
-                    tags: vec![String::from("DDDDD")],
-                };
-                let lm2 = LogMessage {
-                    pid: p2.metadata.pid,
-                    tid: p2.metadata.tid,
-                    time: p2.metadata.time,
-                    dropped_logs: p2.metadata.dropped_logs,
-                    severity: p2.metadata.severity,
-                    msg: String::from("CCCCC"),
-                    tags: vec![String::from("AAAAA"), String::from("BBBBB")],
-                };
-                let options = &mut LogFilterOptions {
-                    filter_by_pid: false,
-                    pid: 1,
-                    filter_by_tid: false,
-                    tid: 1,
-                    min_severity: LogLevelFilter::None,
-                    verbosity: 0,
-                    tags: vec![String::from("BBBBB"), String::from("DDDDD")],
-                };
-                filter_test_helper(
-                    vec![lm1, lm2],
-                    vec![p, p2],
-                    Some(options),
-                    "test_filter_by_tags",
-                );
-            },
-            TEST_TIMEOUT,
-        );
     }
 }
