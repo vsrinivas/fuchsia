@@ -87,6 +87,17 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   void Attach(std::string ledger_name, fit::function<void(fit::closure)> callback) override;
 
  private:
+  // The internal state of LedgerRepositoryImpl.
+  enum class InternalState {
+    // The initial state is always |ACTIVE|. Reqests to any of the |LedgerRepository| interface
+    // methods can only succeed while on this state.
+    ACTIVE,
+    // The state is CLOSING when any of the connected clients calls |Close()|.
+    CLOSING,
+    // The state is CLOSED when this |LedgerRepositoryImpl| is discardable.
+    CLOSED,
+  };
+
   // Retrieves the existing, or creates a new LedgerManager object with the
   // given |ledger_name|.
   Status GetLedgerManager(convert::ExtendedStringView ledger_name, LedgerManager** ledger_manager);
@@ -97,10 +108,8 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
 
   const DetachedPath content_path_;
   Environment* const environment_;
-  // True if the LedgerRepository is currently shutting down because it was either requested by
-  // calling Close() or because this was empty.
-  bool closing_ = false;
-  bool closed_ = false;
+
+  InternalState state_ = InternalState::ACTIVE;
   callback::AutoCleanableSet<
       SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
       bindings_;

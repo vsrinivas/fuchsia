@@ -101,7 +101,7 @@ bool LedgerRepositoryImpl::IsDiscardable() const {
 
   // The repository has been forced closed and dependencies are now closed, it
   // can be discarded.
-  if (closing_) {
+  if (state_ != InternalState::ACTIVE) {
     return true;
   }
 
@@ -253,7 +253,7 @@ void LedgerRepositoryImpl::GetLedger(std::vector<uint8_t> ledger_name,
                                      fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
 
-  if (closing_) {
+  if (state_ != InternalState::ACTIVE) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.
     callback(Status::ILLEGAL_STATE);
@@ -279,7 +279,7 @@ void LedgerRepositoryImpl::GetLedger(std::vector<uint8_t> ledger_name,
 void LedgerRepositoryImpl::Duplicate(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
     fit::function<void(Status)> callback) {
-  if (closing_) {
+  if (state_ != InternalState::ACTIVE) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.
     callback(Status::ILLEGAL_STATE);
@@ -292,7 +292,7 @@ void LedgerRepositoryImpl::Duplicate(
 
 void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                                                fit::function<void(Status)> callback) {
-  if (closing_) {
+  if (state_ != InternalState::ACTIVE) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.
     callback(Status::ILLEGAL_STATE);
@@ -308,8 +308,7 @@ void LedgerRepositoryImpl::CheckDiscardable() {
     return;
   }
 
-  closing_ = true;
-  closed_ = true;
+  state_ = InternalState::CLOSED;
 
   if (on_discardable_) {
     on_discardable_();
@@ -323,7 +322,7 @@ void LedgerRepositoryImpl::CheckDiscardable() {
 }
 
 void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
-  if (closing_) {
+  if (state_ != InternalState::ACTIVE) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.
     callback(Status::ILLEGAL_STATE);
@@ -351,14 +350,14 @@ DetachedPath LedgerRepositoryImpl::GetPathFor(fxl::StringView ledger_name) {
 }
 
 void LedgerRepositoryImpl::Close(fit::function<void(Status)> callback) {
-  if (closed_) {
+  if (state_ == InternalState::CLOSED) {
     // Closing the repository.
     callback(Status::OK);
     return;
   }
   close_callbacks_.push_back(std::move(callback));
 
-  closing_ = true;
+  state_ = InternalState::CLOSING;
   CheckDiscardable();
 }
 
