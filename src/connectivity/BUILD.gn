@@ -7,6 +7,7 @@ group("connectivity") {
   deps = [
     ":tests",
     "bluetooth",
+    "location",
     "openthread",
     "overnet",
     "ppp",
@@ -30,6 +31,7 @@ group("tests") {
     "//src/connectivity/bluetooth/tools/bt-cli:tests",
     "//src/connectivity/bluetooth/tools/tests",
     "//src/connectivity/lib:tests",
+    "//src/connectivity/location:tests",
     "//src/connectivity/management/reachability:tests",
     "//src/connectivity/management/tests",
     "//src/connectivity/network/dhcp:dhcp_tests",
