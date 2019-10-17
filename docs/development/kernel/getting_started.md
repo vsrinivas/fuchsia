@@ -20,7 +20,7 @@ For example, to build Zircon for arm64:
 fx set bringup.arm64
 ```
 
-Fucshia uses the concept of [products](/docs/development/build/boards_and_products.md#products) to
+Fuchsia uses the concept of [products](/docs/development/build/boards_and_products.md#products) to
 create a collection of build targets. The "bringup" product is the smallest product,
 other product configurations can be listed by running:
 
