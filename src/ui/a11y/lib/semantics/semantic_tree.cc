@@ -110,7 +110,7 @@ bool SemanticTree::ApplyCommit() {
   // Semantic tree must be acyclic. Delete if cycle found.
   // This also ensures that every node has exactly one parent.
   std::unordered_set<uint32_t> visited;
-  if (CheckTreeIsWellFormed(std::move(root_node), &visited)) {
+  if (!IsTreeWellFormed(std::move(root_node), &visited)) {
     FX_LOGS(ERROR) << "Semantic tree with View Id:" << GetKoid(view_ref_) << " is not well formed.";
     nodes_.clear();
     return false;
@@ -246,31 +246,31 @@ std::string SemanticTree::LogSemanticTree() {
   return tree_log;
 }
 
-bool SemanticTree::CheckTreeIsWellFormed(fuchsia::accessibility::semantics::NodePtr node,
+bool SemanticTree::IsTreeWellFormed(fuchsia::accessibility::semantics::NodePtr node,
                                          std::unordered_set<uint32_t>* visited) {
   FXL_CHECK(node);
   FXL_CHECK(visited);
 
   if (visited->count(node->node_id()) > 0) {
     // Cycle Found.
-    return true;
+    return false;
   }
   visited->insert(node->node_id());
 
   if (!node->has_child_ids()) {
-    return false;
+    return true;
   }
   for (const auto& child : node->child_ids()) {
     fuchsia::accessibility::semantics::NodePtr child_ptr = GetAccessibilityNode(child);
 
     if (!NodeExists(child_ptr, child)) {
-      return true;
+      return false;
     }
-    if (CheckTreeIsWellFormed(std::move(child_ptr), visited)) {
-      return true;
+    if (!IsTreeWellFormed(std::move(child_ptr), visited)) {
+      return false;
     }
   }
-  return false;
+  return true;
 }
 
 bool SemanticTree::NodeExists(const fuchsia::accessibility::semantics::NodePtr& node_ptr,

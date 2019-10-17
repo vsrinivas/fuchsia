@@ -100,10 +100,10 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
                              int current_level, std::string* tree_log);
 
   // Detect directed and undirected cycles in the tree rooted at "node".
-  // For a tree to have cycles there should be atleast one node which should have multiple parents.
+  // For a tree to have cycles there should be at least one node which should have multiple parents.
   // And because of multiple parents it will be visited twice through different paths.
   // In a tree without cycles every node should have just 1 path from root node.
-  bool CheckTreeIsWellFormed(fuchsia::accessibility::semantics::NodePtr node,
+  bool IsTreeWellFormed(fuchsia::accessibility::semantics::NodePtr node,
                              std::unordered_set<uint32_t>* visited);
 
   // Checks if there are multiple disjoint subtrees in the semantic tree. In other words it
