@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
 # NOTE(nathaniel): We don't like having this target at all and we intend to keep
 # it very, very small.
 source_set("crossplatform") {
@@ -52,7 +55,7 @@ source_set("callback") {
   ]
 }
 
-source_set("unittests") {
+executable("callback_unittests") {
   testonly = true
 
   sources = [
@@ -74,8 +77,30 @@ source_set("unittests") {
     ":callback",
     ":crossplatform",
     "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",
+  ]
+}
+
+unittest_package("callback_tests") {
+  deps = [
+    ":callback_unittests",
+  ]
+
+  tests = [
+    {
+      name = "callback_unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":callback_tests",
   ]
 }
