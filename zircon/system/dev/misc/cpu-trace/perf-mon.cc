@@ -4,25 +4,28 @@
 
 // See the README.md in this directory for documentation.
 
+#include "perf-mon.h"
+
 #include <assert.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <lib/zircon-internal/mtrace.h>
 #include <stddef.h>
-#include <limits>
-#include <memory>
 #include <stdint.h>
 #include <stdlib.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include <cstdint>
+#include <limits>
+#include <memory>
 
 #include <ddk/debug.h>
 #include <ddk/protocol/platform/device.h>
-
+#include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
-#include <lib/zircon-internal/mtrace.h>
-#include <zircon/syscalls.h>
-
 #include "cpu-trace-private.h"
-#include "perf-mon.h"
 
 namespace perfmon {
 
@@ -103,9 +106,10 @@ static void DumpHwProperties(const PmuHwProperties& props) {
 
 PerfmonDevice::PerfmonDevice(zx_device_t* parent, zx::bti bti, perfmon::PmuHwProperties props,
                              mtrace_control_func_t* mtrace_control)
-    : DeviceType(parent), bti_(std::move(bti)), pmu_hw_properties_(props),
-      mtrace_control_(mtrace_control) {
-}
+    : DeviceType(parent),
+      bti_(std::move(bti)),
+      pmu_hw_properties_(props),
+      mtrace_control_(mtrace_control) {}
 
 zx_status_t PerfmonDevice::GetHwProperties(mtrace_control_func_t* mtrace_control,
                                            PmuHwProperties* out_props) {
@@ -138,10 +142,10 @@ void PerfmonDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t nu
 void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
   zxlogf(TRACE, "%s called\n", __func__);
 
-  props->api_version = fuchsia_perfmon_cpu_API_VERSION;
+  props->api_version = fidl_perfmon::API_VERSION;
   props->pm_version = pmu_hw_properties_.pm_version;
-  static_assert(perfmon::kMaxNumEvents == fuchsia_perfmon_cpu_MAX_NUM_EVENTS);
-  props->max_num_events = fuchsia_perfmon_cpu_MAX_NUM_EVENTS;
+  static_assert(perfmon::kMaxNumEvents == fidl_perfmon::MAX_NUM_EVENTS);
+  props->max_num_events = fidl_perfmon::MAX_NUM_EVENTS;
 
   // These numbers are for informational/debug purposes. There can be
   // further restrictions and limitations.
@@ -154,10 +158,10 @@ void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
   props->max_num_misc_events = pmu_hw_properties_.max_num_misc_events;
   props->max_misc_counter_width = pmu_hw_properties_.max_misc_counter_width;
 
-  props->flags = 0;
+  props->flags = fidl_perfmon::PropertyFlags();
 #ifdef __x86_64__
   if (pmu_hw_properties_.lbr_stack_size > 0) {
-    props->flags |= fuchsia_perfmon_cpu_PropertyFlags_HAS_LAST_BRANCH;
+    props->flags |= fidl_perfmon::PropertyFlags::HAS_LAST_BRANCH;
   }
 #endif
 }
@@ -270,9 +274,9 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
       break;
     }
     EventRate rate = icfg->events[ii].rate;
-    uint32_t flags = icfg->events[ii].flags;
+    fidl_perfmon::EventConfigFlags flags = icfg->events[ii].flags;
 
-    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_IS_TIMEBASE) {
+    if (flags & fidl_perfmon::EventConfigFlags::IS_TIMEBASE) {
       if (ocfg->timebase_event != kEventIdNone) {
         zxlogf(ERROR, "%s: multiple timebases [%u]\n", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
@@ -280,14 +284,14 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
       ocfg->timebase_event = icfg->events[ii].event;
     }
 
-    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_PC) {
+    if (flags & fidl_perfmon::EventConfigFlags::COLLECT_PC) {
       if (rate == 0) {
         zxlogf(ERROR, "%s: PC flag requires own timebase, event [%u]\n", __func__, ii);
         return ZX_ERR_INVALID_ARGS;
       }
     }
 
-    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_LAST_BRANCH) {
+    if (flags & fidl_perfmon::EventConfigFlags::COLLECT_LAST_BRANCH) {
       // Further verification is architecture specific.
       if (icfg->events[ii].rate == 0) {
         zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]\n", __func__, ii);
@@ -353,7 +357,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) 
   }
 
   unsigned ii;  // ii: input index
-  for (ii = 0; ii < fbl::count_of(icfg->events); ++ii) {
+  for (ii = 0; ii < icfg->events.size(); ++ii) {
     EventId id = icfg->events[ii].event;
     zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
     if (id == kEventIdNone) {
@@ -499,106 +503,67 @@ void PerfmonDevice::PmuStop() {
 
 // Fidl interface.
 
-static zx_status_t fidl_GetProperties(void* ctx, fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+void PerfmonDevice::GetProperties(GetPropertiesCompleter::Sync completer) {
   FidlPerfmonProperties props{};
-  dev->PmuGetProperties(&props);
-  return fuchsia_perfmon_cpu_ControllerGetProperties_reply(txn, &props);
+  PmuGetProperties(&props);
+  completer.Reply(std::move(props));
 }
 
-static zx_status_t fidl_Initialize(void* ctx, const FidlPerfmonAllocation* allocation,
-                                   fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
-  zx_status_t status = dev->PmuInitialize(allocation);
-  fuchsia_perfmon_cpu_Controller_Initialize_Result result{};
+void PerfmonDevice::Initialize(FidlPerfmonAllocation allocation,
+                               InitializeCompleter::Sync completer) {
+  zx_status_t status = PmuInitialize(&allocation);
   if (status == ZX_OK) {
-    result.tag = fuchsia_perfmon_cpu_Controller_Initialize_ResultTag_response;
+    completer.ReplySuccess();
   } else {
-    result.tag = fuchsia_perfmon_cpu_Controller_Initialize_ResultTag_err;
-    result.err = status;
+    completer.ReplyError(status);
   }
-  return fuchsia_perfmon_cpu_ControllerInitialize_reply(txn, &result);
 }
 
-static zx_status_t fidl_Terminate(void* ctx, fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
-  dev->PmuTerminate();
-  return fuchsia_perfmon_cpu_ControllerTerminate_reply(txn);
+void PerfmonDevice::Terminate(TerminateCompleter::Sync completer) {
+  PmuTerminate();
+  completer.Reply();
 }
 
-static zx_status_t fidl_GetAllocation(void* ctx, fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+void PerfmonDevice::GetAllocation(GetAllocationCompleter::Sync completer) {
   FidlPerfmonAllocation alloc{};
-  zx_status_t status = dev->PmuGetAllocation(&alloc);
-  if (status != ZX_OK) {
-    return fuchsia_perfmon_cpu_ControllerGetAllocation_reply(txn, nullptr);
-  }
-  return fuchsia_perfmon_cpu_ControllerGetAllocation_reply(txn, &alloc);
+  zx_status_t status = PmuGetAllocation(&alloc);
+  completer.Reply(status != ZX_OK ? nullptr : &alloc);
 }
 
-static zx_status_t fidl_StageConfig(void* ctx, const FidlPerfmonConfig* config, fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
-  zx_status_t status = dev->PmuStageConfig(config);
-  fuchsia_perfmon_cpu_Controller_StageConfig_Result result{};
+void PerfmonDevice::StageConfig(FidlPerfmonConfig config, StageConfigCompleter::Sync completer) {
+  zx_status_t status = PmuStageConfig(&config);
   if (status == ZX_OK) {
-    result.tag = fuchsia_perfmon_cpu_Controller_StageConfig_ResultTag_response;
+    completer.ReplySuccess();
   } else {
-    result.tag = fuchsia_perfmon_cpu_Controller_StageConfig_ResultTag_err;
-    result.err = status;
+    completer.ReplyError(status);
   }
-  return fuchsia_perfmon_cpu_ControllerStageConfig_reply(txn, &result);
 }
 
-static zx_status_t fidl_GetConfig(void* ctx, fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+void PerfmonDevice::GetConfig(GetConfigCompleter::Sync completer) {
   FidlPerfmonConfig config{};
-  zx_status_t status = dev->PmuGetConfig(&config);
-  if (status != ZX_OK) {
-    return fuchsia_perfmon_cpu_ControllerGetConfig_reply(txn, nullptr);
-  }
-  return fuchsia_perfmon_cpu_ControllerGetConfig_reply(txn, &config);
+  zx_status_t status = PmuGetConfig(&config);
+  completer.Reply(status != ZX_OK ? nullptr : &config);
 }
 
-static zx_status_t fidl_GetBufferHandle(void* ctx, uint32_t descriptor, fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+void PerfmonDevice::GetBufferHandle(uint32_t descriptor, GetBufferHandleCompleter::Sync completer) {
   zx_handle_t handle;
-  zx_status_t status = dev->PmuGetBufferHandle(descriptor, &handle);
-  if (status != ZX_OK) {
-    return fuchsia_perfmon_cpu_ControllerGetBufferHandle_reply(txn, ZX_HANDLE_INVALID);
-  }
-  return fuchsia_perfmon_cpu_ControllerGetBufferHandle_reply(txn, handle);
+  zx_status_t status = PmuGetBufferHandle(descriptor, &handle);
+  completer.Reply(zx::vmo(status != ZX_OK ? ZX_HANDLE_INVALID : handle));
 }
 
-static zx_status_t fidl_Start(void* ctx, fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
-  zx_status_t status = dev->PmuStart();
-  fuchsia_perfmon_cpu_Controller_Start_Result result{};
+void PerfmonDevice::Start(StartCompleter::Sync completer) {
+  zx_status_t status = PmuStart();
   if (status == ZX_OK) {
-    result.tag = fuchsia_perfmon_cpu_Controller_Start_ResultTag_response;
+    completer.ReplySuccess();
   } else {
-    result.tag = fuchsia_perfmon_cpu_Controller_Start_ResultTag_err;
-    result.err = status;
+    completer.ReplyError(status);
   }
-  return fuchsia_perfmon_cpu_ControllerStart_reply(txn, &result);
 }
 
-static zx_status_t fidl_Stop(void* ctx, fidl_txn_t* txn) {
-  auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
-  dev->PmuStop();
-  return fuchsia_perfmon_cpu_ControllerStop_reply(txn);
+void PerfmonDevice::Stop(StopCompleter::Sync completer) {
+  PmuStop();
+  completer.Reply();
 }
-
-static const fuchsia_perfmon_cpu_Controller_ops_t fidl_ops = {
-    .GetProperties = fidl_GetProperties,
-    .Initialize = fidl_Initialize,
-    .Terminate = fidl_Terminate,
-    .GetAllocation = fidl_GetAllocation,
-    .StageConfig = fidl_StageConfig,
-    .GetConfig = fidl_GetConfig,
-    .GetBufferHandle = fidl_GetBufferHandle,
-    .Start = fidl_Start,
-    .Stop = fidl_Stop,
-};
 
 // Devhost interface.
 
@@ -617,11 +582,12 @@ zx_status_t PerfmonDevice::DdkClose(uint32_t flags) {
 }
 
 zx_status_t PerfmonDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
   mtx_lock(&lock_);
-  zx_status_t status = fuchsia_perfmon_cpu_Controller_dispatch(this, txn, msg, &fidl_ops);
+  fidl_perfmon::Controller::Dispatch(this, msg, &transaction);
   mtx_unlock(&lock_);
 
-  return status;
+  return transaction.Status();
 }
 
 void PerfmonDevice::DdkRelease() {

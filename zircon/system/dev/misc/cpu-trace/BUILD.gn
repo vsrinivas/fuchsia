@@ -23,7 +23,7 @@ source_set("perf-mon") {
 
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/fidl/fuchsia-perfmon-cpu:c",
+    "$zx/system/fidl/fuchsia-perfmon-cpu:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
@@ -36,9 +36,7 @@ driver("cpu-trace") {
   ]
 
   if (current_cpu == "x64") {
-    sources += [
-      "intel-pt.cc",
-    ]
+    sources += [ "intel-pt.cc" ]
   }
 
   deps = [
@@ -70,7 +68,7 @@ test("perf-mon-tests") {
     ":perf-mon",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/fidl/fuchsia-perfmon-cpu:c",
+    "$zx/system/fidl/fuchsia-perfmon-cpu:llcpp",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",

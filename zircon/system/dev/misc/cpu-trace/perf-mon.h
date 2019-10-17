@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_MISC_CPU_TRACE_PERF_MON_H_
+#define ZIRCON_SYSTEM_DEV_MISC_CPU_TRACE_PERF_MON_H_
 
-#include <memory>
+#include <fuchsia/perfmon/cpu/llcpp/fidl.h>
+#include <lib/zx/bti.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <fuchsia/perfmon/cpu/c/fidl.h>
-#include <lib/zx/bti.h>
+#include <memory>
 
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
@@ -19,9 +20,11 @@
 
 #if defined(__x86_64__)
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
+
 #include "intel-pm-impl.h"
 #elif defined(__aarch64__)
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm.h>
+
 #include "arm64-pm-impl.h"
 #else
 #error "unsupported architecture"
@@ -31,10 +34,12 @@
 
 namespace perfmon {
 
+namespace fidl_perfmon = ::llcpp::fuchsia::perfmon::cpu;
+
 // Shorten some long FIDL names.
-using FidlPerfmonAllocation = fuchsia_perfmon_cpu_Allocation;
-using FidlPerfmonConfig = fuchsia_perfmon_cpu_Config;
-using FidlPerfmonProperties = fuchsia_perfmon_cpu_Properties;
+using FidlPerfmonAllocation = fidl_perfmon::Allocation;
+using FidlPerfmonConfig = fidl_perfmon::Config;
+using FidlPerfmonProperties = fidl_perfmon::Properties;
 
 #if defined(__x86_64__)
 using PmuHwProperties = X86PmuProperties;
@@ -114,7 +119,7 @@ struct PmuPerTraceState {
 class PerfmonDevice;
 using DeviceType = ddk::Device<PerfmonDevice, ddk::Openable, ddk::Closable, ddk::Messageable>;
 
-class PerfmonDevice : public DeviceType {
+class PerfmonDevice : public DeviceType, public fidl_perfmon::Controller::Interface {
  public:
   // The page size we use.
   static constexpr uint32_t kLog2PageSize = 12;
@@ -148,6 +153,17 @@ class PerfmonDevice : public DeviceType {
   zx_status_t PmuGetConfig(FidlPerfmonConfig* config);
   zx_status_t PmuStart();
   void PmuStop();
+
+  // FIDL server methods
+  void GetProperties(GetPropertiesCompleter::Sync completer) override;
+  void Initialize(FidlPerfmonAllocation allocation, InitializeCompleter::Sync completer) override;
+  void Terminate(TerminateCompleter::Sync completer) override;
+  void GetAllocation(GetAllocationCompleter::Sync completer) override;
+  void StageConfig(FidlPerfmonConfig config, StageConfigCompleter::Sync completer) override;
+  void GetConfig(GetConfigCompleter::Sync completer) override;
+  void GetBufferHandle(uint32_t descriptor, GetBufferHandleCompleter::Sync completer) override;
+  void Start(StartCompleter::Sync completer) override;
+  void Stop(StopCompleter::Sync completer) override;
 
   // Device protocol implementation
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
@@ -198,3 +214,5 @@ class PerfmonDevice : public DeviceType {
 };
 
 }  // namespace perfmon
+
+#endif  // ZIRCON_SYSTEM_DEV_MISC_CPU_TRACE_PERF_MON_H_
