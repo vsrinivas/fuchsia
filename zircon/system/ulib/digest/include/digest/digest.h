@@ -10,31 +10,28 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#ifndef SHA256_DIGEST_LENGTH
-#define SHA256_DIGEST_LENGTH 32
-#endif
-
-#define DIGEST_LENGTH SHA256_DIGEST_LENGTH
-
 #ifdef __cplusplus
 
 #include <fbl/unique_ptr.h>
 
 namespace digest {
 
+constexpr size_t kSha256Length = 32;
+constexpr size_t kSha256HexLength = (kSha256Length * 2) + 1;
+
 // This class represents a digest produced by a hash algorithm.
 // This class is not thread safe.
 class Digest final {
  public:
-  // The length of a digest in bytes; this matches sizeof(this->data).
-  static constexpr size_t kLength = DIGEST_LENGTH;
-
   Digest();
   explicit Digest(const uint8_t* other);
   Digest(Digest&& o);
   Digest& operator=(Digest&& o);
   Digest& operator=(const uint8_t* rhs);
   ~Digest();
+
+  const uint8_t* get() const { return bytes_; }
+  constexpr size_t len() const { return sizeof(bytes_); }
 
   // Initializes the hash algorithm context.  It must be called before Update,
   // and after Final when reusing the Digest object.
@@ -77,11 +74,6 @@ class Digest final {
   // succeed.
   zx_status_t CopyTo(uint8_t* out, size_t len) const;
 
-  // Returns a pointer to a buffer containing the current digest value.  This
-  // will always have |kLength| bytes. This pointer is only valid for the
-  // lifetime of this object.
-  const uint8_t* get() const { return bytes_; }
-
   // Equality operators.  Those that take |const uint8_t *| arguments will
   // read |kLength| bytes; callers MUST ensure there are sufficient bytes
   // present.
@@ -98,7 +90,7 @@ class Digest final {
   fbl::unique_ptr<Context> ctx_;
   // The raw bytes of the current digest.  This is filled in either by the
   // assignment operators or the Parse and Final methods.
-  uint8_t bytes_[kLength];
+  uint8_t bytes_[kSha256Length];
 };
 
 }  // namespace digest

@@ -21,10 +21,10 @@ using digest::MerkleTree;
 
 // The MerkleTree tests below are naturally sensitive to the shape of the Merkle
 // tree. These determine those sizes in a consistent way.  The only requirement
-// here is that |kSmall * Digest::kLength| should be less than |kNodeSize|.
+// here is that |kSmall * digest::kSha256Length| should be less than |kNodeSize|.
 const uint64_t kNodeSize = MerkleTree::kNodeSize;
 const uint64_t kSmall = 8 * kNodeSize;
-const uint64_t kLarge = ((kNodeSize / Digest::kLength) + 1) * kNodeSize;
+const uint64_t kLarge = ((kNodeSize / digest::kSha256Length) + 1) * kNodeSize;
 const uint64_t kUnalignedLarge = kLarge + (kNodeSize / 2);
 
 // The hard-coded trees used for testing were created by using sha256sum on
@@ -32,7 +32,7 @@ const uint64_t kUnalignedLarge = kLarge + (kNodeSize / 2);
 struct TreeParam {
   size_t data_len;
   size_t tree_len;
-  const char digest[(Digest::kLength * 2) + 1];
+  const char digest[digest::kSha256HexLength];
 } kTreeParams[] = {
     {0, 0, "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"},
     {1, 0, "0967e0f62a104d1595610d272dfab3d2fa2fe07be0eebce13ef5d79db142610e"},
@@ -201,7 +201,7 @@ TEST_F(MerkleTreeTestCase, CreateFinal) {
     EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
     EXPECT_OK(mt_.CreateUpdate(data_, data_len_, tree_));
     EXPECT_OK(mt_.CreateFinal(tree_, &actual_));
-    EXPECT_BYTES_EQ(actual_.get(), expected_.get(), Digest::kLength);
+    EXPECT_BYTES_EQ(actual_.get(), expected_.get(), digest::kSha256Length);
   }
   EXPECT_NE(no_data, 0);
   EXPECT_NE(no_tree, 0);
@@ -225,7 +225,7 @@ TEST_F(MerkleTreeTestCase, Create) {
   for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
     ASSERT_STATUS(rc, ZX_ERR_NEXT);
     EXPECT_OK(MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_));
-    EXPECT_BYTES_EQ(actual_.get(), expected_.get(), Digest::kLength);
+    EXPECT_BYTES_EQ(actual_.get(), expected_.get(), digest::kSha256Length);
   }
 }
 
@@ -243,18 +243,18 @@ TEST_F(MerkleTreeTestCase, CreateFinalCAll) {
     }
     EXPECT_OK(merkle_tree_create_update(mt, data_ + i, data_len_ - i, tree_));
     // Final
-    uint8_t actual[Digest::kLength];
+    uint8_t actual[digest::kSha256Length];
     EXPECT_OK(merkle_tree_create_final(mt, tree_, &actual, sizeof(actual)));
-    EXPECT_BYTES_EQ(expected_.get(), actual, Digest::kLength);
+    EXPECT_BYTES_EQ(expected_.get(), actual, digest::kSha256Length);
   }
 }
 
 TEST_F(MerkleTreeTestCase, CreateC) {
   for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
     ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    uint8_t actual[Digest::kLength];
+    uint8_t actual[digest::kSha256Length];
     EXPECT_OK(merkle_tree_create(data_, data_len_, tree_, tree_len_, &actual, sizeof(actual)));
-    EXPECT_BYTES_EQ(expected_.get(), actual, Digest::kLength);
+    EXPECT_BYTES_EQ(expected_.get(), actual, digest::kSha256Length);
   }
 }
 
@@ -266,7 +266,7 @@ TEST_F(MerkleTreeTestCase, CreateByteByByte) {
   }
   EXPECT_OK(mt_.CreateFinal(tree_, &actual_));
   EXPECT_OK(MerkleTree::Create(data_, data_len_, tree_, tree_len_, &expected_));
-  EXPECT_BYTES_EQ(actual_.get(), expected_.get(), Digest::kLength);
+  EXPECT_BYTES_EQ(actual_.get(), expected_.get(), digest::kSha256Length);
 }
 
 TEST_F(MerkleTreeTestCase, CreateMissingData) {
@@ -287,7 +287,7 @@ TEST_F(MerkleTreeTestCase, CreateTreeTooSmall) {
                 ZX_ERR_BUFFER_TOO_SMALL);
 
   // The maximum amount of data representable by a one-node tree.
-  size_t max_data_one_node = kNodeSize * (kNodeSize / Digest::kLength);
+  size_t max_data_one_node = kNodeSize * (kNodeSize / digest::kSha256Length);
   EXPECT_STATUS(MerkleTree::Create(data_, max_data_one_node + 1, tree_, kNodeSize, &actual_),
                 ZX_ERR_BUFFER_TOO_SMALL);
 }
@@ -303,7 +303,7 @@ TEST_F(MerkleTreeTestCase, VerifyC) {
   for (auto rc = NextVerify(); rc != ZX_ERR_STOP; rc = NextVerify()) {
     ASSERT_STATUS(rc, ZX_ERR_NEXT);
     EXPECT_OK(merkle_tree_verify(data_, data_len_, tree_, tree_len_, 0, data_len_, expected_.get(),
-                                 Digest::kLength));
+                                 digest::kSha256Length));
   }
 }
 
@@ -368,7 +368,7 @@ TEST_F(MerkleTreeTestCase, VerifyZeroLength) {
 TEST_F(MerkleTreeTestCase, VerifyBadRoot) {
   ASSERT_OK(InitVerify(kLarge));
   // Modify digest
-  char str[(Digest::kLength * 2) + 1];
+  char str[digest::kSha256HexLength];
   EXPECT_OK(actual_.ToString(str, sizeof(str)));
   str[0] = (str[0] == '0' ? '1' : '0');
   EXPECT_OK(actual_.Parse(str, strlen(str)));
@@ -406,7 +406,7 @@ TEST_F(MerkleTreeTestCase, VerifyBadLeaves) {
 }
 
 TEST_F(MerkleTreeTestCase, CreateAndVerifyHugePRNGData) {
-  uint8_t buffer[Digest::kLength];
+  uint8_t buffer[digest::kSha256Length];
   for (size_t data_len = kNodeSize; data_len <= sizeof(data_); data_len <<= 1) {
     ASSERT_OK(InitCreate(data_len));
     // Generate random data
@@ -421,7 +421,7 @@ TEST_F(MerkleTreeTestCase, CreateAndVerifyHugePRNGData) {
       case 1: {
         EXPECT_OK(actual_.CopyTo(buffer, sizeof(buffer)));
         // Flip a bit in root digest
-        buffer[rand() % Digest::kLength] ^= flip;
+        buffer[rand() % digest::kSha256Length] ^= flip;
         actual_ = buffer;
         EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
                       ZX_ERR_IO_DATA_INTEGRITY);
@@ -437,7 +437,7 @@ TEST_F(MerkleTreeTestCase, CreateAndVerifyHugePRNGData) {
       case 3: {
         // Flip a bit in tree (if large enough to have a tree)
         if (tree_len_ != 0) {
-          tree_[rand() % (data_len_ / Digest::kLength)] ^= flip;
+          tree_[rand() % (data_len_ / digest::kSha256Length)] ^= flip;
           EXPECT_STATUS(
               MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
               ZX_ERR_IO_DATA_INTEGRITY);

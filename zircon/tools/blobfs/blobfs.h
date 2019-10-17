@@ -49,7 +49,7 @@ class BlobfsCreator : public FsCreator {
     inline bool operator()(const blobfs::MerkleInfo& lhs, const blobfs::MerkleInfo& rhs) const {
       const uint8_t* lhs_bytes = lhs.digest.get();
       const uint8_t* rhs_bytes = rhs.digest.get();
-      for (size_t i = 0; i < digest::Digest::kLength; i++) {
+      for (size_t i = 0; i < digest::kSha256Length; i++) {
         if (lhs_bytes[i] < rhs_bytes[i]) {
           return true;
         }

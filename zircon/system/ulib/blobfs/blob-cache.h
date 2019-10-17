@@ -124,15 +124,15 @@ class BlobCache {
   void ResetLocked() __TA_REQUIRES(hash_lock_);
 
   // We need to define this structure to allow the CacheNodes to be indexable by a key
-  // which is larger than a primitive type: the keys are 'Digest::kLength'
+  // which is larger than a primitive type: the keys are 'digest::kSha256Length'
   // bytes long.
   struct MerkleRootTraits {
     static const uint8_t* GetKey(const CacheNode& obj) { return obj.GetKey(); }
     static bool LessThan(const uint8_t* k1, const uint8_t* k2) {
-      return memcmp(k1, k2, Digest::kLength) < 0;
+      return memcmp(k1, k2, digest::kSha256Length) < 0;
     }
     static bool EqualTo(const uint8_t* k1, const uint8_t* k2) {
-      return memcmp(k1, k2, Digest::kLength) == 0;
+      return memcmp(k1, k2, digest::kSha256Length) == 0;
     }
   };
 

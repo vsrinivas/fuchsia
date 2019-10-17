@@ -281,7 +281,7 @@ zx_status_t Vim2SpdifAudioStream::Init() {
 
   // Finish the SHA and attempt to copy as much of the results to our internal
   // cached representation as we can.
-  uint8_t digest_out[digest::Digest::kLength];
+  uint8_t digest_out[digest::kSha256Length];
   sha.Final();
   res = sha.CopyTo(digest_out, sizeof(digest_out));
   if (res != ZX_OK) {

@@ -34,19 +34,19 @@ Digest::Digest(const uint8_t* other) : bytes_{0} { *this = other; }
 
 Digest::Digest(Digest&& o) {
   ctx_ = std::move(o.ctx_);
-  memcpy(bytes_, o.bytes_, kLength);
-  memset(o.bytes_, 0, kLength);
+  memcpy(bytes_, o.bytes_, sizeof(bytes_));
+  memset(o.bytes_, 0, sizeof(o.bytes_));
 }
 
 Digest::~Digest() {}
 
 Digest& Digest::operator=(Digest&& o) {
-  memcpy(bytes_, o.bytes_, kLength);
+  memcpy(bytes_, o.bytes_, sizeof(bytes_));
   return *this;
 }
 
 Digest& Digest::operator=(const uint8_t* rhs) {
-  memcpy(bytes_, rhs, kLength);
+  memcpy(bytes_, rhs, sizeof(bytes_));
   return *this;
 }
 
@@ -121,13 +121,13 @@ zx_status_t Digest::CopyTo(uint8_t* out, size_t len) const {
 }
 
 bool Digest::operator==(const Digest& rhs) const {
-  return memcmp(bytes_, rhs.bytes_, kLength) == 0;
+  return memcmp(bytes_, rhs.bytes_, sizeof(bytes_)) == 0;
 }
 
 bool Digest::operator!=(const Digest& rhs) const { return !(*this == rhs); }
 
 bool Digest::operator==(const uint8_t* rhs) const {
-  return rhs ? memcmp(bytes_, rhs, kLength) == 0 : false;
+  return rhs ? memcmp(bytes_, rhs, sizeof(bytes_)) == 0 : false;
 }
 
 bool Digest::operator!=(const uint8_t* rhs) const { return !(*this == rhs); }

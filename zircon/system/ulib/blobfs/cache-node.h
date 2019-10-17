@@ -84,7 +84,7 @@ class CacheNode : public fs::Vnode, fbl::Recyclable<CacheNode> {
  private:
   friend struct TypeWavlTraits;
   WAVLTreeNodeState type_wavl_state_ = {};
-  uint8_t digest_[Digest::kLength] = {};
+  uint8_t digest_[digest::kSha256Length] = {};
 };
 
 }  // namespace blobfs

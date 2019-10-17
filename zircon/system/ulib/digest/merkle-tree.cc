@@ -21,7 +21,7 @@ constexpr size_t MerkleTree::kNodeSize;
 // The number of digests that fit in a node.  Importantly, if L is a
 // node-aligned length in one level of the Merkle tree, |L / kDigestsPerNode| is
 // the corresponding digest-aligned length in the next level up.
-const size_t kDigestsPerNode = MerkleTree::kNodeSize / Digest::kLength;
+const size_t kDigestsPerNode = MerkleTree::kNodeSize / digest::kSha256Length;
 
 namespace {
 
@@ -193,10 +193,10 @@ zx_status_t MerkleTree::CreateUpdate(const void* data, size_t length, void* tree
       memset(out, 0, kNodeSize);
     }
     // Add the digest and ascend the tree.
-    digest_.CopyTo(out, Digest::kLength);
-    rc = next_->CreateUpdate(out, Digest::kLength, next);
-    out += Digest::kLength;
-    tree_off += Digest::kLength;
+    digest_.CopyTo(out, digest::kSha256Length);
+    rc = next_->CreateUpdate(out, digest::kSha256Length, next);
+    out += digest::kSha256Length;
+    tree_off += digest::kSha256Length;
   }
   return rc;
 }
@@ -319,7 +319,7 @@ zx_status_t MerkleTree::VerifyLevel(const void* data, size_t data_len, const voi
     if (actual != expected) {
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
-    expected += Digest::kLength;
+    expected += digest::kSha256Length;
   }
   return ZX_OK;
 }
@@ -404,7 +404,7 @@ zx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree, si
 zx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree, size_t tree_len,
                                size_t offset, size_t length, const void* root, size_t root_len) {
   // Must have a complete root digest.
-  if (root_len < Digest::kLength) {
+  if (root_len < digest::kSha256Length) {
     return ZX_ERR_INVALID_ARGS;
   }
   Digest digest(static_cast<const uint8_t*>(root));

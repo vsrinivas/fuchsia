@@ -273,7 +273,7 @@ struct ExtentContainer;
 
 struct Inode {
     NodePrelude header;
-    uint8_t  merkle_root_hash[Digest::kLength];
+    uint8_t  merkle_root_hash[digest::kSha256Length];
     uint64_t blob_size;
 
     // The total number of Blocks used to represent this blob.

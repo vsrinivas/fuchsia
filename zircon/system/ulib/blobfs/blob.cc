@@ -73,7 +73,7 @@ zx_status_t Blob::Verify() const {
   blobfs_->Metrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
 
   if (status != ZX_OK) {
-    char name[Digest::kLength * 2 + 1];
+    char name[digest::kSha256HexLength];
     ZX_ASSERT(digest.ToString(name, sizeof(name)) == ZX_OK);
     FS_TRACE_ERROR("blobfs verify(%s) Failure: %s\n", name, zx_status_get_string(status));
   }
@@ -308,7 +308,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   auto write_info = std::make_unique<WritebackInfo>();
 
   // Initialize the inode with known fields.
-  memset(inode_.merkle_root_hash, 0, Digest::kLength);
+  memset(inode_.merkle_root_hash, 0, sizeof(inode_.merkle_root_hash));
   inode_.blob_size = size_data;
   inode_.block_count = MerkleTreeBlocks(inode_) + static_cast<uint32_t>(BlobDataBlocks(inode_));
 
@@ -395,7 +395,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
   assert(GetState() == kBlobStateDataWrite);
 
   // Update the on-disk hash.
-  memcpy(inode_.merkle_root_hash, GetKey(), Digest::kLength);
+  memcpy(inode_.merkle_root_hash, GetKey(), digest::kSha256Length);
 
   // All data has been written to the containing VMO.
   SetState(kBlobStateReadable);
@@ -878,7 +878,7 @@ zx_status_t Blob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
 
   memset(info, 0, sizeof(*info));
   info->block_size = kBlobfsBlockSize;
-  info->max_filename_size = Digest::kLength * 2;
+  info->max_filename_size = digest::kSha256HexLength;
   info->fs_type = VFS_TYPE_BLOBFS;
   info->fs_id = blobfs_->GetFsId();
   info->total_bytes = blobfs_->Info().data_block_count * blobfs_->Info().block_size;

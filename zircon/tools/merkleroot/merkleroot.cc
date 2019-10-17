@@ -29,7 +29,7 @@ using digest::MerkleTree;
 
 struct FileEntry {
   std::string filename;
-  char digest[Digest::kLength * 2 + 1]{};
+  char digest[digest::kSha256HexLength]{};
 };
 
 void usage(char** argv) {

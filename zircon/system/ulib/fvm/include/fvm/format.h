@@ -88,7 +88,7 @@ struct Header {
   // one.
   uint64_t generation;
   // Integrity check.
-  uint8_t hash[SHA256_DIGEST_LENGTH];
+  uint8_t hash[digest::kSha256Length];
   // Fill remainder of the block.
   uint8_t reserved[0];
 };

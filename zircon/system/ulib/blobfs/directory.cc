@@ -131,7 +131,7 @@ zx_status_t Directory::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
 
   memset(info, 0, sizeof(*info));
   info->block_size = kBlobfsBlockSize;
-  info->max_filename_size = Digest::kLength * 2;
+  info->max_filename_size = digest::kSha256HexLength;
   info->fs_type = VFS_TYPE_BLOBFS;
   info->fs_id = blobfs_->GetFsId();
   info->total_bytes = blobfs_->Info().data_block_count * blobfs_->Info().block_size;

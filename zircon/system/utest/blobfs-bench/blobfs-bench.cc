@@ -165,7 +165,7 @@ bool MakeBlob(fbl::String fs_path, size_t blob_size, unsigned int* seed,
 // The generated path is 'root_path/0....0'.
 fbl::String GetNegativeLookupPath(const fbl::String& fs_path) {
   fbl::String negative_path =
-      fbl::StringPrintf("%s/%*d", fs_path.c_str(), static_cast<int>(2 * Digest::kLength), 0);
+      fbl::StringPrintf("%s/%*d", fs_path.c_str(), static_cast<int>(2 * digest::kSha256Length), 0);
   return negative_path;
 }
 

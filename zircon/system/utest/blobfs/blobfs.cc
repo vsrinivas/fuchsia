@@ -578,7 +578,7 @@ bool QueryInfo(size_t expected_nodes, size_t expected_bytes) {
   ASSERT_EQ(close(caller.release().release()), 0);
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
   ASSERT_EQ(info.block_size, blobfs::kBlobfsBlockSize);
-  ASSERT_EQ(info.max_filename_size, Digest::kLength * 2);
+  ASSERT_EQ(info.max_filename_size, digest::kSha256HexLength);
   ASSERT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
   ASSERT_NE(info.fs_id, 0);
 
@@ -1160,7 +1160,7 @@ static bool CorruptedDigest(BlobfsTest* blobfsTest) {
     ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
 
     char hexdigits[17] = "0123456789abcdef";
-    size_t idx = strlen(info->path) - 1 - (rand() % (2 * Digest::kLength));
+    size_t idx = strlen(info->path) - 1 - (rand() % (digest::kSha256HexLength - 1));
     char newchar = hexdigits[rand() % 16];
     while (info->path[idx] == newchar) {
       newchar = hexdigits[rand() % 16];
