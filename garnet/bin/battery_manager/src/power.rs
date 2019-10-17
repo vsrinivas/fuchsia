@@ -20,7 +20,7 @@ use std::marker::Send;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::BatteryInfoHelper;
+use crate::battery_manager::BatteryManager;
 
 // TODO (ZX-3385): binding the FIDL service via file descriptor is still
 // required for hardware FIDLs (implemented by ACPI battery driver).
@@ -116,7 +116,7 @@ where
 
 async fn process_watch_event(
     filepath: &PathBuf,
-    bsh: Arc<Mutex<BatteryInfoHelper>>,
+    battery_manager: Arc<Mutex<BatteryManager>>,
     battery_device_found: &mut bool,
     adapter_device_found: &mut bool,
 ) -> Result<WatchSuccess, failure::Error> {
@@ -138,10 +138,10 @@ async fn process_watch_event(
 
     // add the listener to wait on the signal/notification from
     // state event change interface provided by the hardware FIDL
-    let bsh2 = bsh.clone();
+    let battery_manager2 = battery_manager.clone();
     add_listener(&file, move |p_info, b_info| {
-        let mut bsh2 = bsh2.lock();
-        if let Err(e) = bsh2.update_status(p_info.clone(), b_info.clone()) {
+        let mut battery_manager2 = battery_manager2.lock();
+        if let Err(e) = battery_manager2.update_status(p_info.clone(), b_info.clone()) {
             fx_log_err!("{}", e);
         }
     })
@@ -151,14 +151,17 @@ async fn process_watch_event(
         *battery_device_found = true;
         // poll and update battery status to catch changes that might not
         // otherwise be notified (i.e. gradual charge/discharge)
-        let bsh = bsh.clone();
+        let battery_manager = battery_manager.clone();
         let mut timer = fasync::Interval::new(zx::Duration::from_seconds(60));
         fasync::spawn(async move {
             while let Some(()) = (timer.next()).await {
                 fx_log_info!("Getting periodic battery info update...");
+                let power_info = get_power_info(&file).await.unwrap();
                 battery_info = Some(get_battery_info(&file).await.unwrap());
-                let mut bsh = bsh.lock();
-                if let Err(e) = bsh.update_status(power_info.clone(), battery_info.clone()) {
+                let mut battery_manager = battery_manager.lock();
+                if let Err(e) =
+                    battery_manager.update_status(power_info.clone(), battery_info.clone())
+                {
                     fx_log_err!("{}", e);
                 }
             }
@@ -169,15 +172,16 @@ async fn process_watch_event(
 
     // update the status with the current state info from the watch event
     {
-        let mut bsh = bsh.lock();
-        bsh.update_status(power_info.clone(), battery_info.clone())
+        let mut battery_manager = battery_manager.lock();
+        battery_manager
+            .update_status(power_info.clone(), battery_info.clone())
             .context("adding watch events")?;
     }
 
     Ok(WatchSuccess::Completed)
 }
 
-pub async fn watch_power_device(bsh: Arc<Mutex<BatteryInfoHelper>>) -> Result<(), Error> {
+pub async fn watch_power_device(battery_manager: Arc<Mutex<BatteryManager>>) -> Result<(), Error> {
     let file = File::open(POWER_DEVICE).context("cannot find power device")?;
     let mut watcher = vfs_watcher::Watcher::new(&file).await?;
     let mut adapter_device_found = false;
@@ -190,7 +194,7 @@ pub async fn watch_power_device(bsh: Arc<Mutex<BatteryInfoHelper>>) -> Result<()
         filepath.push(msg.filename);
         match process_watch_event(
             &filepath,
-            bsh.clone(),
+            battery_manager.clone(),
             &mut battery_device_found,
             &mut adapter_device_found,
         )
