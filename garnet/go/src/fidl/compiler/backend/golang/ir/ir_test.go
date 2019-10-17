@@ -624,12 +624,17 @@ func TestCompileInterface(t *testing.T) {
 				HasRequest: true,
 				Request: []types.Parameter{
 					{
-						Type: PrimitiveType(types.Int16),
-						Name: types.Identifier("Value"),
+						Type:   PrimitiveType(types.Int16),
+						Name:   types.Identifier("Value"),
 						Offset: 16,
 					},
 				},
-				RequestSize: 18,
+				RequestTypeShapeOld: types.TypeShape{
+					InlineSize: 18,
+				},
+				RequestTypeShapeV1NoEE: types.TypeShape{
+					InlineSize: 18,
+				},
 			},
 			{
 				Ordinal:    2,
@@ -638,21 +643,31 @@ func TestCompileInterface(t *testing.T) {
 				HasRequest: true,
 				Request: []types.Parameter{
 					{
-						Type: Nullable(StringType(nil)),
-						Name: types.Identifier("Value"),
+						Type:   Nullable(StringType(nil)),
+						Name:   types.Identifier("Value"),
 						Offset: 16,
 					},
 				},
-				RequestSize: 32,
+				RequestTypeShapeOld: types.TypeShape{
+					InlineSize: 32,
+				},
+				RequestTypeShapeV1NoEE: types.TypeShape{
+					InlineSize: 32,
+				},
 				HasResponse: true,
 				Response: []types.Parameter{
 					{
-						Type: PrimitiveType(types.Uint32),
-						Name: types.Identifier("Value"),
+						Type:   PrimitiveType(types.Uint32),
+						Name:   types.Identifier("Value"),
 						Offset: 16,
 					},
 				},
-				ResponseSize: 20,
+				ResponseTypeShapeOld: types.TypeShape{
+					InlineSize: 20,
+				},
+				ResponseTypeShapeV1NoEE: types.TypeShape{
+					InlineSize: 20,
+				},
 			},
 		},
 	}, Interface{
@@ -692,7 +707,8 @@ func TestCompileInterface(t *testing.T) {
 							Tags:        "`" + `fidl:"0"` + "`",
 						},
 					},
-					Size: 2,
+					InlineSizeOld:    2,
+					InlineSizeV1NoEE: 2,
 				},
 				EventExpectName: "ExpectFirst",
 				IsEvent:         false,
@@ -717,7 +733,8 @@ func TestCompileInterface(t *testing.T) {
 							Tags:        "`" + `fidl:"0,"` + "`",
 						},
 					},
-					Size: 16,
+					InlineSizeOld:    16,
+					InlineSizeV1NoEE: 16,
 				},
 				Response: &Struct{
 					Name: "testSecondResponse",
@@ -729,7 +746,8 @@ func TestCompileInterface(t *testing.T) {
 							Tags:        "`" + `fidl:"0"` + "`",
 						},
 					},
-					Size: 4,
+					InlineSizeOld:    4,
+					InlineSizeV1NoEE: 4,
 				},
 				EventExpectName: "ExpectSecond",
 				IsEvent:         false,
@@ -752,12 +770,17 @@ func TestCompileInterface(t *testing.T) {
 				HasResponse: true,
 				Response: []types.Parameter{
 					{
-						Type: StringType(nil),
-						Name: types.Identifier("value"),
+						Type:   StringType(nil),
+						Name:   types.Identifier("value"),
 						Offset: 16,
 					},
 				},
-				ResponseSize: 32,
+				ResponseTypeShapeOld: types.TypeShape{
+					InlineSize: 32,
+				},
+				ResponseTypeShapeV1NoEE: types.TypeShape{
+					InlineSize: 32,
+				},
 			},
 		},
 	}, Interface{
@@ -797,7 +820,8 @@ func TestCompileInterface(t *testing.T) {
 							Tags:        "`" + `fidl:"0,"` + "`",
 						},
 					},
-					Size: 16,
+					InlineSizeOld:    16,
+					InlineSizeV1NoEE: 16,
 				},
 				EventExpectName: "ExpectFirst",
 				IsEvent:         true,
@@ -812,9 +836,15 @@ func TestCompileXUnion(t *testing.T) {
 		t,
 		"Basic",
 		types.XUnion{
-			Name:      types.EncodedCompoundIdentifier("MyExtensibleUnion"),
-			Size:      123,
-			Alignment: 456,
+			Name: types.EncodedCompoundIdentifier("MyExtensibleUnion"),
+			TypeShapeOld: types.TypeShape{
+				InlineSize: 123,
+				Alignment:  456,
+			},
+			TypeShapeV1NoEE: types.TypeShape{
+				InlineSize: 123,
+				Alignment:  456,
+			},
 			Members: []types.XUnionMember{
 				{
 					Ordinal: 2,
@@ -824,10 +854,12 @@ func TestCompileXUnion(t *testing.T) {
 			},
 		},
 		XUnion{
-			Name:      "MyExtensibleUnion",
-			TagName:   "I_myExtensibleUnionTag",
-			Size:      123,
-			Alignment: 456,
+			Name:             "MyExtensibleUnion",
+			TagName:          "I_myExtensibleUnionTag",
+			InlineSizeOld:    123,
+			InlineSizeV1NoEE: 123,
+			AlignmentOld:     456,
+			AlignmentV1NoEE:  456,
 			Members: []XUnionMember{
 				{
 					Type:        "[]uint32",
@@ -846,9 +878,15 @@ func TestCompileUnion(t *testing.T) {
 		t,
 		"Basic",
 		types.Union{
-			Name:      types.EncodedCompoundIdentifier("MyUnion"),
-			Size:      123,
-			Alignment: 456,
+			Name: types.EncodedCompoundIdentifier("MyUnion"),
+			TypeShapeOld: types.TypeShape{
+				InlineSize: 123,
+				Alignment:  456,
+			},
+			TypeShapeV1NoEE: types.TypeShape{
+				InlineSize: 123,
+				Alignment:  456,
+			},
 			Members: []types.UnionMember{
 				{
 					XUnionOrdinal: 2,
@@ -858,10 +896,12 @@ func TestCompileUnion(t *testing.T) {
 			},
 		},
 		Union{
-			Name:      "MyUnion",
-			TagName:   "I_myUnionTag",
-			Size:      123,
-			Alignment: 456,
+			Name:             "MyUnion",
+			TagName:          "I_myUnionTag",
+			InlineSizeOld:    123,
+			InlineSizeV1NoEE: 123,
+			AlignmentOld:     456,
+			AlignmentV1NoEE:  456,
 			Members: []UnionMember{
 				{
 					Type:          "[]uint32",
@@ -880,9 +920,15 @@ func TestCompileTable(t *testing.T) {
 		t,
 		"Basic",
 		types.Table{
-			Name:      types.EncodedCompoundIdentifier("Test"),
-			Size:      123,
-			Alignment: 456,
+			Name: types.EncodedCompoundIdentifier("Test"),
+			TypeShapeOld: types.TypeShape{
+				InlineSize: 123,
+				Alignment:  456,
+			},
+			TypeShapeV1NoEE: types.TypeShape{
+				InlineSize: 123,
+				Alignment:  456,
+			},
 			Members: []types.TableMember{
 				{
 					Reserved: true,
@@ -897,9 +943,11 @@ func TestCompileTable(t *testing.T) {
 			},
 		},
 		Table{
-			Name:      "Test",
-			Size:      123,
-			Alignment: 456,
+			Name:             "Test",
+			InlineSizeOld:    123,
+			InlineSizeV1NoEE: 123,
+			AlignmentOld:     456,
+			AlignmentV1NoEE:  456,
 			Members: []TableMember{
 				{
 					Type:              "[]uint32",
@@ -920,9 +968,15 @@ func TestCompileTable(t *testing.T) {
 		t,
 		"MoreComplex",
 		types.Table{
-			Name:      types.EncodedCompoundIdentifier("Test"),
-			Size:      123,
-			Alignment: 456,
+			Name: types.EncodedCompoundIdentifier("Test"),
+			TypeShapeOld: types.TypeShape{
+				InlineSize: 123,
+				Alignment:  456,
+			},
+			TypeShapeV1NoEE: types.TypeShape{
+				InlineSize: 123,
+				Alignment:  456,
+			},
 			Members: []types.TableMember{
 				{
 					Ordinal:  1,
@@ -945,9 +999,11 @@ func TestCompileTable(t *testing.T) {
 			},
 		},
 		Table{
-			Name:      "Test",
-			Size:      123,
-			Alignment: 456,
+			Name:             "Test",
+			InlineSizeOld:    123,
+			InlineSizeV1NoEE: 123,
+			AlignmentOld:     456,
+			AlignmentV1NoEE:  456,
 			Members: []TableMember{
 				{
 					Type:              "[][6][]uint32",

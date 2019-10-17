@@ -10,7 +10,7 @@ const Table = `
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	_ struct{} ` + "`" + `fidl:"t,{{ .Size }},{{ .Alignment }}" fidl2:"t,{{ .Size }},{{ .Alignment }}"` + "`" + `
+	_ struct{} ` + "`" + `fidl:"t,{{ .InlineSizeOld }},{{ .AlignmentOld }}" fidl_size_v1_no_ee:"{{.InlineSizeV1NoEE}}" fidl_alignment_v1_no_ee:"{{.AlignmentV1NoEE}}"` + "`" + `
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}

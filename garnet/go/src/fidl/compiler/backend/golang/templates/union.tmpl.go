@@ -18,7 +18,7 @@ const (
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	{{ .TagName }} ` + "`" + `fidl:"u,{{ .Size }},{{ .Alignment }}" fidl2:"u,{{ .Size }},{{ .Alignment }}"` + "`" + `
+	{{ .TagName }} ` + "`" + `fidl:"u,{{ .InlineSizeOld }},{{ .AlignmentOld }}" fidl_size_v1_no_ee:"{{.InlineSizeV1NoEE}}" fidl_alignment_v1_no_ee:"{{.AlignmentV1NoEE}}"` + "`" + `
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}

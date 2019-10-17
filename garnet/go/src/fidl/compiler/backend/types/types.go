@@ -342,15 +342,36 @@ func (el Attributes) Transports() map[string]bool {
 	return transports
 }
 
+// TypeShape represents the shape of the type on the wire.
+// See JSON IR schema, e.g. fidlc --json-schema
+type TypeShape struct {
+	InlineSize          int  `json:"inline_size"`
+	Alignment           int  `json:"alignment"`
+	Depth               int  `json:"depth"`
+	MaxHandles          int  `json:"max_handles"`
+	MaxOutOfLine        int  `json:"max_out_of_line"`
+	HasPadding          bool `json:"has_padding"`
+	HasFlexibleEnvelope bool `json:"has_flexible_envelope"`
+}
+
+// FieldShape represents the shape of the field on the wire.
+// See JSON IR schema, e.g. fidlc --json-schema
+type FieldShape struct {
+	Offset  int `json:"offset"`
+	Padding int `json:"padding"`
+}
+
 // Union represents the declaration of a FIDL union.
 type Union struct {
 	Attributes
-	Name         EncodedCompoundIdentifier `json:"name"`
-	Members      []UnionMember             `json:"members"`
-	Size         int                       `json:"size"`
-	Alignment    int                       `json:"alignment"`
-	MaxHandles   int                       `json:"max_handles"`
-	MaxOutOfLine int                       `json:"max_out_of_line"`
+	Name            EncodedCompoundIdentifier `json:"name"`
+	Members         []UnionMember             `json:"members"`
+	Size            int                       `json:"size"`
+	Alignment       int                       `json:"alignment"`
+	MaxHandles      int                       `json:"max_handles"`
+	MaxOutOfLine    int                       `json:"max_out_of_line"`
+	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
+	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL union.
@@ -366,13 +387,15 @@ type UnionMember struct {
 // XUnion represents the declaration of a FIDL extensible union.
 type XUnion struct {
 	Attributes
-	Name         EncodedCompoundIdentifier `json:"name"`
-	Members      []XUnionMember            `json:"members"`
-	Size         int                       `json:"size"`
-	Alignment    int                       `json:"alignment"`
-	MaxHandles   int                       `json:"max_handles"`
-	MaxOutOfLine int                       `json:"max_out_of_line"`
-	Strictness   `json:"strict"`
+	Name            EncodedCompoundIdentifier `json:"name"`
+	Members         []XUnionMember            `json:"members"`
+	Size            int                       `json:"size"`
+	Alignment       int                       `json:"alignment"`
+	MaxHandles      int                       `json:"max_handles"`
+	MaxOutOfLine    int                       `json:"max_out_of_line"`
+	Strictness      `json:"strict"`
+	TypeShapeOld    TypeShape `json:"type_shape_old"`
+	TypeShapeV1NoEE TypeShape `json:"type_shape_v1_no_ee"`
 }
 
 // XUnionMember represents the declaration of a field in a FIDL extensible
@@ -389,12 +412,14 @@ type XUnionMember struct {
 // Table represents a declaration of a FIDL table.
 type Table struct {
 	Attributes
-	Name         EncodedCompoundIdentifier `json:"name"`
-	Members      []TableMember             `json:"members"`
-	Size         int                       `json:"size"`
-	Alignment    int                       `json:"alignment"`
-	MaxHandles   int                       `json:"max_handles"`
-	MaxOutOfLine int                       `json:"max_out_of_line"`
+	Name            EncodedCompoundIdentifier `json:"name"`
+	Members         []TableMember             `json:"members"`
+	Size            int                       `json:"size"`
+	Alignment       int                       `json:"alignment"`
+	MaxHandles      int                       `json:"max_handles"`
+	MaxOutOfLine    int                       `json:"max_out_of_line"`
+	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
+	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
 }
 
 // TableMember represents the declaration of a field in a FIDL table.
@@ -411,13 +436,15 @@ type TableMember struct {
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Attributes
-	Name         EncodedCompoundIdentifier `json:"name"`
-	Members      []StructMember            `json:"members"`
-	Size         int                       `json:"size"`
-	Alignment    int                       `json:"alignment"`
-	MaxHandles   int                       `json:"max_handles"`
-	MaxOutOfLine int                       `json:"max_out_of_line"`
-	HasPadding   bool                      `json:"has_padding"`
+	Name            EncodedCompoundIdentifier `json:"name"`
+	Members         []StructMember            `json:"members"`
+	Size            int                       `json:"size"`
+	Alignment       int                       `json:"alignment"`
+	MaxHandles      int                       `json:"max_handles"`
+	MaxOutOfLine    int                       `json:"max_out_of_line"`
+	HasPadding      bool                      `json:"has_padding"`
+	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
+	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
@@ -429,6 +456,8 @@ type StructMember struct {
 	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
 	MaxHandles        int        `json:"max_handles"`
 	MaxOutOfLine      int        `json:"max_out_of_line"`
+	FieldShapeOld     FieldShape `json:"field_shape_old"`
+	FieldShapeV1NoEE  FieldShape `json:"field_shape_v1_no_ee"`
 }
 
 // EmptyStructMember returns a StructMember that's suitable as the sole member
@@ -502,19 +531,23 @@ type ServiceMember struct {
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
-	Ordinal          uint64      `json:"ordinal"`
-	GenOrdinal       uint64      `json:"generated_ordinal"`
-	Name             Identifier  `json:"name"`
-	HasRequest       bool        `json:"has_request"`
-	Request          []Parameter `json:"maybe_request,omitempty"`
-	RequestSize      int         `json:"maybe_request_size,omitempty"`
-	RequestPadding   bool        `json:"maybe_request_has_padding,omitempty"`
-	RequestFlexible  bool        `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
-	HasResponse      bool        `json:"has_response"`
-	Response         []Parameter `json:"maybe_response,omitempty"`
-	ResponseSize     int         `json:"maybe_response_size,omitempty"`
-	ResponsePadding  bool        `json:"maybe_response_has_padding,omitempty"`
-	ResponseFlexible bool        `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
+	Ordinal                 uint64      `json:"ordinal"`
+	GenOrdinal              uint64      `json:"generated_ordinal"`
+	Name                    Identifier  `json:"name"`
+	HasRequest              bool        `json:"has_request"`
+	Request                 []Parameter `json:"maybe_request,omitempty"`
+	RequestSize             int         `json:"maybe_request_size,omitempty"`
+	RequestTypeShapeOld     TypeShape   `json:"maybe_request_type_shape_old,omitempty"`
+	RequestTypeShapeV1NoEE  TypeShape   `json:"maybe_request_type_shape_v1_no_ee,omitempty"`
+	RequestPadding          bool        `json:"maybe_request_has_padding,omitempty"`
+	RequestFlexible         bool        `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
+	HasResponse             bool        `json:"has_response"`
+	Response                []Parameter `json:"maybe_response,omitempty"`
+	ResponseSize            int         `json:"maybe_response_size,omitempty"`
+	ResponseTypeShapeOld    TypeShape   `json:"maybe_response_type_shape_old,omitempty"`
+	ResponseTypeShapeV1NoEE TypeShape   `json:"maybe_response_type_shape_v1_no_ee,omitempty"`
+	ResponsePadding         bool        `json:"maybe_response_has_padding,omitempty"`
+	ResponseFlexible        bool        `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.

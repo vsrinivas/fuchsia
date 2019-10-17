@@ -821,6 +821,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 	return r
 }
 
+// TODO(fxb/38600) Remove these and use the type shape in the JSON ir.
 func (c *compiler) maxHandlesFromParameterArray(val []types.Parameter) int {
 	numHandles := int64(0)
 	for _, v := range val {
@@ -833,6 +834,7 @@ func (c *compiler) maxHandlesFromParameterArray(val []types.Parameter) int {
 	}
 }
 
+// TODO(fxb/38600) Remove these and use the type shape in the JSON ir.
 func (c *compiler) maxOutOfLineFromParameterArray(val []types.Parameter) int {
 	maxOutOfLine := int64(0)
 	for _, v := range val {

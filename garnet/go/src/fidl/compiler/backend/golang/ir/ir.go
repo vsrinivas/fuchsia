@@ -132,11 +132,15 @@ type Struct struct {
 	// Members is a list of the golang struct members.
 	Members []StructMember
 
-	// Size is the FIDL-encoded size of the struct.
-	Size int
+	// InlineSizeOld is the FIDL-encoded size of the struct.
+	InlineSizeOld int
+	// AlignmentOld is the alignment of the FIDL-encoded struct.
+	AlignmentOld int
 
-	// Alignment is the alignment of the FIDL-encoded struct.
-	Alignment int
+	// InlineSizeV1NoEE is the FIDL-encoded size of the struct.
+	InlineSizeV1NoEE int
+	// AlignmentV1NoEE is the alignment of the FIDL-encoded struct.
+	AlignmentV1NoEE int
 }
 
 // TODO(pascallouis): document, see `readTag` function in
@@ -246,11 +250,15 @@ type Union struct {
 	// Members is a list of FIDL union members represented as golang struct members.
 	Members []UnionMember
 
-	// Size is the size of the FIDL union on the wire in bytes.
-	Size int
+	// InlineSizeOld is the size of the FIDL union on the wire in bytes.
+	InlineSizeOld int
+	// AlignmentOld is the alignment factor of the FIDL union on the wire in bytes.
+	AlignmentOld int
 
-	// Alignment is the alignment factor of the FIDL union on the wire in bytes.
-	Alignment int
+	// InlineSizeV1NoEE is the size of the FIDL union on the wire in bytes.
+	InlineSizeV1NoEE int
+	// AlignmentV1NoEE is the alignment factor of the FIDL union on the wire in bytes.
+	AlignmentV1NoEE int
 }
 
 // UnionMember represents a FIDL union member as a golang struct member.
@@ -276,11 +284,13 @@ type UnionMember struct {
 
 type XUnion struct {
 	types.Attributes
-	Name      string
-	TagName   string
-	Members   []XUnionMember
-	Size      int
-	Alignment int
+	Name             string
+	TagName          string
+	Members          []XUnionMember
+	InlineSizeOld    int
+	AlignmentOld     int
+	InlineSizeV1NoEE int
+	AlignmentV1NoEE  int
 	types.Strictness
 }
 
@@ -296,10 +306,12 @@ type XUnionMember struct {
 // Table represents a FIDL table as a golang struct.
 type Table struct {
 	types.Attributes
-	Name      string
-	Members   []TableMember
-	Size      int
-	Alignment int
+	Name             string
+	Members          []TableMember
+	InlineSizeOld    int
+	AlignmentOld     int
+	InlineSizeV1NoEE int
+	AlignmentV1NoEE  int
 }
 
 // TableMember represents a FIDL table member as two golang struct members, one
@@ -814,10 +826,12 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		Size:       val.Size,
-		Alignment:  val.Alignment,
+		Attributes:       val.Attributes,
+		Name:             c.compileCompoundIdentifier(val.Name, true, ""),
+		InlineSizeOld:    val.TypeShapeOld.InlineSize,
+		AlignmentOld:     val.TypeShapeOld.Alignment,
+		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
+		AlignmentV1NoEE:  val.TypeShapeV1NoEE.Alignment,
 	}
 
 	for _, v := range val.Members {
@@ -842,11 +856,13 @@ func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) U
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		TagName:    "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
-		Size:       val.Size,
-		Alignment:  val.Alignment,
+		Attributes:       val.Attributes,
+		Name:             c.compileCompoundIdentifier(val.Name, true, ""),
+		TagName:          "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
+		InlineSizeOld:    val.TypeShapeOld.InlineSize,
+		AlignmentOld:     val.TypeShapeOld.Alignment,
+		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
+		AlignmentV1NoEE:  val.TypeShapeV1NoEE.Alignment,
 	}
 	for _, member := range val.Members {
 		r.Members = append(r.Members, c.compileUnionMember(r.Name, member))
@@ -870,13 +886,15 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		})
 	}
 	return XUnion{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		TagName:    "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
-		Size:       val.Size,
-		Alignment:  val.Alignment,
-		Members:    members,
-		Strictness: val.Strictness,
+		Attributes:       val.Attributes,
+		Name:             c.compileCompoundIdentifier(val.Name, true, ""),
+		TagName:          "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
+		InlineSizeOld:    val.TypeShapeOld.InlineSize,
+		AlignmentOld:     val.TypeShapeOld.Alignment,
+		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
+		AlignmentV1NoEE:  val.TypeShapeV1NoEE.Alignment,
+		Members:          members,
+		Strictness:       val.Strictness,
 	}
 }
 
@@ -908,18 +926,20 @@ func (c *compiler) compileTable(val types.Table) Table {
 		})
 	}
 	return Table{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		Size:       val.Size,
-		Alignment:  val.Alignment,
-		Members:    members,
+		Attributes:       val.Attributes,
+		Name:             c.compileCompoundIdentifier(val.Name, true, ""),
+		InlineSizeOld:    val.TypeShapeOld.InlineSize,
+		AlignmentOld:     val.TypeShapeOld.Alignment,
+		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
+		AlignmentV1NoEE:  val.TypeShapeV1NoEE.Alignment,
+		Members:          members,
 	}
 }
 
 func (c *compiler) compileParameter(p types.Parameter) StructMember {
 	ty, tag, tag2 := c.compileType(p.Type)
 	// TODO(fxb/7704): Remove special handling of requests/responses.
-	tag.reverseOfBounds = append(tag.reverseOfBounds, p.Offset - MessageHeaderSize)
+	tag.reverseOfBounds = append(tag.reverseOfBounds, p.Offset-MessageHeaderSize)
 	return StructMember{
 		Type:        ty,
 		Name:        c.compileIdentifier(p.Name, true, ""),
@@ -947,7 +967,8 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 			Name: c.compileCompoundIdentifier(ifaceName, false, methodName+"Request"),
 			// We want just the size of the parameter array as a struct, not
 			// including the message header size.
-			Size: val.RequestSize - MessageHeaderSize,
+			InlineSizeOld:    val.RequestTypeShapeOld.InlineSize - MessageHeaderSize,
+			InlineSizeV1NoEE: val.RequestTypeShapeV1NoEE.InlineSize - MessageHeaderSize,
 		}
 		for _, p := range val.Request {
 			req.Members = append(req.Members, c.compileParameter(p))
@@ -959,7 +980,8 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 			Name: c.compileCompoundIdentifier(ifaceName, false, methodName+"Response"),
 			// We want just the size of the parameter array as a struct, not
 			// including the message header size.
-			Size: val.ResponseSize - MessageHeaderSize,
+			InlineSizeOld:    val.ResponseTypeShapeOld.InlineSize - MessageHeaderSize,
+			InlineSizeV1NoEE: val.ResponseTypeShapeV1NoEE.InlineSize - MessageHeaderSize,
 		}
 		for _, p := range val.Response {
 			resp.Members = append(resp.Members, c.compileParameter(p))
