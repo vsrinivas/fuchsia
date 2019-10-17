@@ -58,6 +58,7 @@ def main():
                         action='append', default=[])
     parser.add_argument('--vet', help='Run go vet',
                         action='store_true')
+    parser.add_argument('--tag', help='Add a go build tag', default=[], action='append')
     args = parser.parse_args()
 
     try:
@@ -167,6 +168,11 @@ def main():
       cmd += ['build']
     if args.verbose:
       cmd += ['-x']
+    if args.tag:
+        # Separate tags by spaces. This behavior is actually deprecated in the
+        # go command line, but Fuchsia currently has an older version of go
+        # that hasn't switched to commas.
+        cmd += ['-tags', ' '.join(args.tag)]
     cmd += ['-pkgdir', os.path.join(project_path, 'pkg'), '-o',
             output_name, args.package]
     retcode = subprocess.call(cmd, env=env)
