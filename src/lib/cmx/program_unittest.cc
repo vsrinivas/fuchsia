@@ -108,6 +108,19 @@ TEST_F(ProgramMetadataTest, ParseData) {
   EXPECT_EQ("data/component", program.data());
 }
 
+TEST_F(ProgramMetadataTest, ParseDataWithArgs) {
+  ProgramMetadata program;
+  EXPECT_TRUE(program.IsBinaryNull());
+  EXPECT_TRUE(program.IsDataNull());
+  std::string error;
+  EXPECT_TRUE(ParseFrom(&program, R"JSON({ "data": "data/component", "args": ["-v", "-q"] })JSON", &error));
+  EXPECT_FALSE(program.IsDataNull());
+  EXPECT_TRUE(program.IsBinaryNull());
+  EXPECT_EQ("data/component", program.data());
+  std::vector<std::string> expected_args{"-v", "-q"};
+  EXPECT_EQ(expected_args, program.args());
+}
+
 TEST_F(ProgramMetadataTest, ParseBinaryAndData) {
   ProgramMetadata program;
   EXPECT_TRUE(program.IsBinaryNull());

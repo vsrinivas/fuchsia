@@ -35,7 +35,13 @@ bool ProgramMetadata::Parse(const rapidjson::Value& program_value, json::JSONPar
     return false;
   }
 
-  return true;
+  const auto args = program_value.FindMember(kArgs);
+  if (args != program_value.MemberEnd()) {
+    json_parser->CopyStringArray("args", args->value, &args_);
+    args_null_ = false;
+  }
+
+  return !json_parser->HasError();
 }
 
 bool ProgramMetadata::ParseBinary(const rapidjson::Value& program_value,
@@ -50,12 +56,6 @@ bool ProgramMetadata::ParseBinary(const rapidjson::Value& program_value,
   }
   binary_ = binary->value.GetString();
   binary_null_ = false;
-
-  const auto args = program_value.FindMember(kArgs);
-  if (args != program_value.MemberEnd()) {
-    json_parser->CopyStringArray("args", args->value, &args_);
-    args_null_ = false;
-  }
 
   const auto env_vars = program_value.FindMember(kEnvVars);
   if (env_vars != program_value.MemberEnd()) {

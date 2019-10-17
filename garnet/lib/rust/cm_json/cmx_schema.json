@@ -52,9 +52,6 @@
           ]
         }
       },
-      "dependencies": {
-        "args": [ "binary" ]
-      },
       "oneOf": [
         {
           "required": [ "binary" ]

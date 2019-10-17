@@ -29,8 +29,7 @@ class ProgramMetadata {
   // an ELF binary or shell script.
   const std::string& binary() const { return binary_; }
 
-  // Returns the "args" attribute. Only applicable if this program is run as
-  // an ELF binary or shell script.
+  // Returns the "args" attribute.
   const std::vector<std::string>& args() const { return args_; }
 
   // Returns the "vars" attribute. Only applicable if this program is run as

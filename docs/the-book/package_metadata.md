@@ -28,7 +28,7 @@ Here's a simple example of a cmx for an ELF binary component:
 {
     "program": {
         "binary": "bin/example_app",
-    "args": [ "--example", "args" ]
+        "args": [ "--example", "args" ]
     },
     "sandbox": {
         "system": [ "data/sysmgr" ],
