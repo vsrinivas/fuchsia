@@ -124,8 +124,13 @@ macro_rules! assert_vmo_content {
             Err(AssertVmoContentError::UnexpectedContent(buffer)) => panic!(
                 "Unpexpected content:\n\
                  Expected: {:x?}\n\
-                 Actual:   {:x?}",
-                expected, &buffer
+                 Actual:   {:x?}\n\
+                 Expected as UTF-8 lossy: {:?}\n\
+                 Actual as UTF-8 lossy:   {:?}",
+                expected,
+                &buffer,
+                String::from_utf8_lossy(expected),
+                String::from_utf8_lossy(&buffer),
             ),
         }
     }};
