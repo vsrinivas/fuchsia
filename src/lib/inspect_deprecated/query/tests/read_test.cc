@@ -136,6 +136,8 @@ TEST_F(ReadTest, ReadLocationsChild) {
 }
 
 TEST_F(ReadTest, ReadLocationsError) {
+  // TODO(38674): Flaky test, but this library is being deleted.
+  GTEST_SKIP();
   const std::vector<std::string> paths = {
       "/test/root.inspect#missing", "/test#missing", "/", "/test/missing.inspect", "/test/missing",
   };
