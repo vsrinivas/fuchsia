@@ -21,6 +21,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/cmx",
     "//garnet/public/lib/json",
+    "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/fidl/fuchsia.ui.policy",
@@ -36,7 +37,6 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-hardware-pty",
     "//zircon/system/fidl/fuchsia-kernel",
     "//zircon/system/fidl/fuchsia-net",
-    "//zircon/system/fidl/fuchsia-net-stack",
     "//zircon/system/fidl/fuchsia-posix-socket",
     "//zircon/system/fidl/fuchsia-scheduler",
     "//zircon/system/fidl/fuchsia-sysmem",

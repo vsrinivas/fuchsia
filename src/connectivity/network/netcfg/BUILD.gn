@@ -29,6 +29,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.net.dns:fuchsia.net.dns-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.policy:fuchsia.net.policy-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
@@ -41,7 +42,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
-    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 
   name = "netcfg"
