@@ -351,8 +351,7 @@ uint32_t brcmf_sdiod_func1_rl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, zx_
 
   retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
   if (retval == ZX_OK) {
-    addr &= SBSDIO_SB_OFT_ADDR_MASK;
-    addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
+    SBSDIO_FORMAT_ADDR(addr);
     retval = brcmf_sdiod_transfer(sdiodev, SDIO_FN_1, addr, false, &data, sizeof(data), false);
   }
   if (ret) {
@@ -368,8 +367,7 @@ void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_
 
   retval = brcmf_sdiod_set_backplane_window(sdiodev, addr);
   if (retval == ZX_OK) {
-    addr &= SBSDIO_SB_OFT_ADDR_MASK;
-    addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
+    SBSDIO_FORMAT_ADDR(addr);
     retval = brcmf_sdiod_transfer(sdiodev, SDIO_FN_1, addr, true, &data, sizeof(data), false);
   }
   if (ret) {
@@ -389,10 +387,10 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint3
                                            uint32_t addr, struct brcmf_netbuf* netbuf) {
   unsigned int req_sz;
   zx_status_t err;
-
   TRACE_DURATION("brcmfmac:isr", "netbuf_read", "func", TA_UINT32((uint32_t)func), "len",
                  TA_UINT32(netbuf->len));
 
+  SBSDIO_FORMAT_ADDR(addr);
   /* Single netbuf use the standard mmc interface */
   req_sz = netbuf->len + 3;
   req_sz &= (uint)~3;
@@ -425,6 +423,7 @@ static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint
   TRACE_DURATION("brcmfmac:isr", "sdiod_netbuf_write", "func", TA_UINT32((uint32_t)func), "len",
                  TA_UINT32(netbuf->len));
 
+  SBSDIO_FORMAT_ADDR(addr);
   /* Single netbuf use the standard mmc interface */
   req_sz = netbuf->len + 3;
   req_sz &= (uint)~3;
@@ -439,21 +438,22 @@ static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint
 }
 
 zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
-  struct brcmf_netbuf* mypkt;
-  zx_status_t err;
+  uint32_t addr = sdiodev->cc_core->base;
+  zx_status_t err = ZX_OK;
+  unsigned int req_sz;
 
-  mypkt = brcmu_pkt_buf_get_netbuf(nbytes);
-  if (!mypkt) {
-    BRCMF_ERR("brcmu_pkt_buf_get_netbuf failed: len %d\n", nbytes);
-    return ZX_ERR_NO_MEMORY;
+  err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
+  if (err != ZX_OK) {
+    return err;
   }
 
-  err = brcmf_sdiod_recv_pkt(sdiodev, mypkt);
-  if (err == ZX_OK) {
-    memcpy(buf, mypkt->data, nbytes);
-  }
+  SBSDIO_FORMAT_ADDR(addr);
 
-  brcmu_pkt_buf_free_netbuf(mypkt);
+  req_sz = nbytes + 3;
+  req_sz &= (uint)~3;
+
+  err = brcmf_sdiod_transfer(sdiodev, SDIO_FN_2, addr, false, buf, req_sz, true);
+
   return err;
 }
 
@@ -467,9 +467,6 @@ zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
   if (err != ZX_OK) {
     goto done;
   }
-
-  addr &= SBSDIO_SB_OFT_ADDR_MASK;
-  addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
   err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, pkt);
 
@@ -493,9 +490,6 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
   if (err != ZX_OK) {
     goto done;
   }
-
-  addr &= SBSDIO_SB_OFT_ADDR_MASK;
-  addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
   if (list_len == 1) {
     err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, brcmf_netbuf_list_peek_head(pktq));
@@ -521,34 +515,29 @@ done:
 }
 
 zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes) {
-  struct brcmf_netbuf* mypkt;
   uint32_t addr = sdiodev->cc_core->base;
   zx_status_t err;
+  uint32_t req_sz;
 
   TRACE_DURATION("brcmfmac:isr", "sdiod_send_buf");
-
-  mypkt = brcmu_pkt_buf_get_netbuf(nbytes);
-
-  if (!mypkt) {
-    BRCMF_ERR("brcmu_pkt_buf_get_netbuf failed: len %d\n", nbytes);
-    return ZX_ERR_IO;
-  }
-
-  memcpy(mypkt->data, buf, nbytes);
 
   err = brcmf_sdiod_set_backplane_window(sdiodev, addr);
   if (err != ZX_OK) {
     return err;
   }
 
-  addr &= SBSDIO_SB_OFT_ADDR_MASK;
-  addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
+  SBSDIO_FORMAT_ADDR(addr);
+
+  req_sz = nbytes + 3;
+  req_sz &= (uint)~3;
 
   if (err == ZX_OK) {
-    err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_2, addr, mypkt);
+    err = brcmf_sdiod_transfer(sdiodev, SDIO_FN_2, addr, true, buf, req_sz, false);
   }
 
-  brcmu_pkt_buf_free_netbuf(mypkt);
+  if (err == ZX_ERR_IO_REFUSED) {
+    brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
+  }
 
   return err;
 }
@@ -566,9 +555,6 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
   if (err != ZX_OK) {
     return err;
   }
-
-  addr &= SBSDIO_SB_OFT_ADDR_MASK;
-  addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
   brcmf_netbuf_list_for_every(pktq, netbuf) {
     err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_2, addr, netbuf);
@@ -621,8 +607,6 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
       break;
     }
 
-    transfer_address &= SBSDIO_SB_OFT_ADDR_MASK;
-    transfer_address |= SBSDIO_SB_ACCESS_2_4B_FLAG;
     brcmf_netbuf_grow_tail(pkt, transfer_size);
 
     if (write) {

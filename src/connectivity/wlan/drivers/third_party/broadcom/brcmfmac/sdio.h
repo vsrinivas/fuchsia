@@ -157,7 +157,11 @@
 #define SDIO_DEVICE_ID_BROADCOM_4339 0x4339
 #define SDIO_DEVICE_ID_BROADCOM_4335_4339 0x4335
 
-/**
+#define SBSDIO_FORMAT_ADDR(addr)          \
+  addr &= SBSDIO_SB_OFT_ADDR_MASK; \
+  addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
+
+/*
  * enum brcmf_sdiod_state - the state of the bus.
  *
  * @BRCMF_SDIOD_DOWN: Device can be accessed, no DPC.
