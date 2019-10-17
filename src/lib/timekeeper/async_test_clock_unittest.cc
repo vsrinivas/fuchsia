@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/timekeeper/test_loop_test_clock.h"
+#include "src/lib/timekeeper/async_test_clock.h"
 
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/time.h>
@@ -12,13 +12,13 @@
 namespace timekeeper {
 namespace {
 
-TEST(TestLoopTestClockTest, Increment) {
+TEST(AsyncTestClockTest, Increment) {
   async::TestLoop loop;
-  TestLoopTestClock clock(&loop);
+  AsyncTestClock clock(loop.dispatcher());
 
   auto time1 = clock.Now();
 
-  EXPECT_EQ(async::Now(loop.dispatcher()), time1 + zx::duration(1));
+  EXPECT_EQ(async::Now(loop.dispatcher()), time1);
 
   auto time2 = clock.Now();
   EXPECT_GT(time2, time1);

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/timekeeper/system_clock.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 #include "gtest/gtest.h"
 

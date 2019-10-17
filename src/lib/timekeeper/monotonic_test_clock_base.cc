@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/timekeeper/monotonic_test_clock_base.h"
+#include "src/lib/timekeeper/monotonic_test_clock_base.h"
 
 #include <algorithm>
 #include <type_traits>
