@@ -5,11 +5,13 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_LOGICAL_DEVICE_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_LOGICAL_DEVICE_H_
 
-#include <src/lib/fxl/macros.h>
 #include <vector>
-#include <vulkan/vulkan.hpp>
+
+#include <src/lib/fxl/macros.h>
 
 #include "surface_phys_device_params.h"
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanLogicalDevice {
  public:

@@ -18,8 +18,8 @@ TraceManagerApp::TraceManagerApp(const Config& config)
       context_->outgoing()->AddPublicService(trace_registry_bindings_.GetHandler(&trace_manager_));
   FXL_DCHECK(status == ZX_OK);
 
-  status =
-      context_->outgoing()->AddPublicService(trace_controller_bindings_.GetHandler(&trace_manager_));
+  status = context_->outgoing()->AddPublicService(
+      trace_controller_bindings_.GetHandler(&trace_manager_));
   FXL_DCHECK(status == ZX_OK);
 
   FXL_VLOG(2) << "TraceManager services registered";

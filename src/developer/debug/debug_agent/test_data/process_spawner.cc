@@ -4,9 +4,6 @@
 
 #include <lib/fdio/spawn.h>
 #include <lib/zx/job.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
@@ -16,6 +13,10 @@
 
 #include <iostream>
 #include <vector>
+
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 // ProcessSpawner is a simple utility that waits for user input on stdin and
 // creates a new process when anything that doens't say "exit" in it is entered.

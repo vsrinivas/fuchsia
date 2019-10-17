@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
+
 #include <src/lib/fxl/logging.h>
 
 HostVsockEndpoint::HostVsockEndpoint(AcceptorProvider acceptor_provider)

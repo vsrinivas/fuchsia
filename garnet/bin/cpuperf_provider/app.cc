@@ -4,11 +4,11 @@
 
 #include "garnet/bin/cpuperf_provider/app.h"
 
+#include <lib/async/default.h>
+
 #include <iostream>
 #include <limits>
 #include <memory>
-
-#include <lib/async/default.h>
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>

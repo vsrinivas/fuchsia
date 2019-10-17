@@ -6,10 +6,11 @@
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_COMMAND_POOL_H_
 
 #include <src/lib/fxl/macros.h>
-#include <vulkan/vulkan.hpp>
 
 #include "surface_phys_device_params.h"
 #include "vulkan_logical_device.h"
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanCommandPool {
  public:

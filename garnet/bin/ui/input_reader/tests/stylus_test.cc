@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/input_reader/stylus.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+
 #include <gtest/gtest.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>

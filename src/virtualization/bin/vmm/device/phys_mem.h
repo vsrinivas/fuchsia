@@ -6,6 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_PHYS_MEM_H_
 
 #include <lib/zx/vmo.h>
+
 #include <src/lib/fxl/logging.h>
 
 class PhysMem {

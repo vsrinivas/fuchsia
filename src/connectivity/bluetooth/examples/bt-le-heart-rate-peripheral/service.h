@@ -5,12 +5,13 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_SERVICE_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_SERVICE_H_
 
-#include <unordered_set>
-
 #include <fuchsia/bluetooth/gatt/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/vector.h>
+
+#include <unordered_set>
+
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 namespace bt_le_heart_rate {

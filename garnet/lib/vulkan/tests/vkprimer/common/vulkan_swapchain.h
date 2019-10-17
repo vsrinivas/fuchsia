@@ -5,13 +5,15 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_SWAPCHAIN_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_SWAPCHAIN_H_
 
-#include <src/lib/fxl/macros.h>
 #include <vector>
-#include <vulkan/vulkan.hpp>
+
+#include <src/lib/fxl/macros.h>
 
 #include "surface_phys_device_params.h"
 #include "vulkan_logical_device.h"
 #include "vulkan_surface.h"
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanSwapchain {
  public:

@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "test_server.h"
+
+#include <lib/sys/cpp/service_directory.h>
+#include <zircon/processargs.h>
+#include <zircon/syscalls.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
@@ -11,17 +17,11 @@
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/sys/cpp/service_directory.h>
-#include <zircon/processargs.h>
-#include <zircon/syscalls.h>
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/sysinfo.h"
 #include "garnet/lib/debugger_utils/util.h"
-
 #include "gtest/gtest.h"
-
-#include "test_server.h"
 
 namespace inferior_control {
 

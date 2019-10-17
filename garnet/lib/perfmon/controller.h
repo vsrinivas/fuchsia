@@ -5,12 +5,13 @@
 #ifndef GARNET_LIB_PERFMON_CONTROLLER_H_
 #define GARNET_LIB_PERFMON_CONTROLLER_H_
 
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <lib/zx/vmo.h>
+
 #include <cstdint>
 #include <memory>
 #include <string>
 
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
-#include <lib/zx/vmo.h>
 #include <src/lib/fxl/macros.h>
 
 #include "garnet/lib/perfmon/config.h"

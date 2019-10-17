@@ -5,26 +5,26 @@
 #ifndef GARNET_LIB_INFERIOR_CONTROL_PROCESS_H_
 #define GARNET_LIB_INFERIOR_CONTROL_PROCESS_H_
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/zx/process.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/time.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/debugger_utils/dso_list.h"
-#include "garnet/lib/debugger_utils/processes.h"
-#include "garnet/lib/debugger_utils/util.h"
-#include "garnet/lib/process/process_builder.h"
+#include <memory>
+#include <string>
+#include <unordered_map>
+
+#include <src/lib/fxl/macros.h>
 
 #include "breakpoint.h"
 #include "delegate.h"
 #include "exception_port.h"
+#include "garnet/lib/debugger_utils/dso_list.h"
+#include "garnet/lib/debugger_utils/processes.h"
+#include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/process/process_builder.h"
 #include "memory_process.h"
 #include "thread.h"
 

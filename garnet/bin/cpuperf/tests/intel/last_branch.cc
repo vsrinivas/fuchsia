@@ -6,7 +6,6 @@
 #include <src/lib/fxl/logging.h>
 
 #include "garnet/lib/perfmon/events.h"
-
 #include "intel_tests.h"
 
 class LastBranchVerifier : public Verifier {

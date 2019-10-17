@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_INFERIOR_CONTROL_REGISTERS_H_
+#define GARNET_LIB_INFERIOR_CONTROL_REGISTERS_H_
+
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <string>
 
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_view.h>
-#include <zircon/syscalls/debug.h>
-#include <zircon/syscalls/exception.h>
-#include <zircon/types.h>
 
 namespace inferior_control {
 
@@ -101,3 +103,5 @@ class Registers {
 };
 
 }  // namespace inferior_control
+
+#endif  // GARNET_LIB_INFERIOR_CONTROL_REGISTERS_H_

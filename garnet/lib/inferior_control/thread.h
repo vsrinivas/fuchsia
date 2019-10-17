@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_INFERIOR_CONTROL_THREAD_H_
+#define GARNET_LIB_INFERIOR_CONTROL_THREAD_H_
+
+#include <lib/zx/suspend_token.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <string>
 
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
-#include <lib/zx/suspend_token.h>
-#include <zircon/syscalls/exception.h>
-#include <zircon/types.h>
 
 #include "arch.h"
 #include "breakpoint.h"
@@ -201,3 +203,5 @@ class Thread final {
 };
 
 }  // namespace inferior_control
+
+#endif  // GARNET_LIB_INFERIOR_CONTROL_THREAD_H_

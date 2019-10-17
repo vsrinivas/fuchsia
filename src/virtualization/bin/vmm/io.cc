@@ -5,8 +5,9 @@
 #include "src/virtualization/bin/vmm/io.h"
 
 #include <lib/zx/port.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/syscalls/hypervisor.h>
+
+#include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
 

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "arch_x64.h"
+
 #include <src/lib/fxl/logging.h>
 
+#include "arch.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
-
-#include "arch.h"
-#include "arch_x64.h"
 #include "thread.h"
 
 namespace inferior_control {

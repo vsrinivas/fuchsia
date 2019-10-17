@@ -7,9 +7,10 @@
 
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include <memory>
+
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/connectivity/network/testing/netemul/lib/network/consumer.h"
 

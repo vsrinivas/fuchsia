@@ -11,8 +11,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <limits.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/process.h>
@@ -20,6 +18,9 @@
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "src/virtualization/bin/vmm/sysinfo.h"
 

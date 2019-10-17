@@ -5,10 +5,11 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MANAGED_LAUNCHER_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MANAGED_LAUNCHER_H_
 
-#include <string>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+
+#include <string>
+
 #include <src/lib/fxl/macros.h>
 
 #include "managed_logger.h"

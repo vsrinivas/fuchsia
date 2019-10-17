@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "session_spec.h"
+
 #include <gtest/gtest.h>
 #include <src/lib/fxl/arraysize.h>
 
 #include "garnet/lib/perfmon/events.h"
-
-#include "session_spec.h"
 
 namespace cpuperf {
 

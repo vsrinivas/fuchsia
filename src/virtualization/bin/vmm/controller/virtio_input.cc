@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/vmm/controller/virtio_input.h"
 
 #include <lib/svc/cpp/services.h>
+
 #include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/bin/vmm/device/input.h"

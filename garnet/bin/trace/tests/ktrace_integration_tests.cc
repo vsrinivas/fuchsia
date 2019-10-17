@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+
+#include <gtest/gtest.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
@@ -37,13 +38,13 @@ const char kChildArg[] = "--help";
 TEST(Ktrace, DISABLED_IntegrationTest) {
   zx::job job{};  // -> default job
   std::vector<std::string> args{
-    "record",
-    "--spawn",
-    "--binary",
-    kCategoriesArg,
-    std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath,
-    kChildPath,
-    kChildArg};
+      "record",
+      "--spawn",
+      "--binary",
+      kCategoriesArg,
+      std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath,
+      kChildPath,
+      kChildArg};
   ASSERT_TRUE(RunTraceAndWait(job, args));
 
   size_t record_count = 0;
@@ -69,10 +70,9 @@ TEST(Ktrace, DISABLED_IntegrationTest) {
   };
 
   std::unique_ptr<trace::FileReader> reader;
-  ASSERT_TRUE(trace::FileReader::Create(
-                  (std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath).c_str(),
-                  std::move(record_consumer), std::move(error_handler),
-                  &reader));
+  ASSERT_TRUE(
+      trace::FileReader::Create((std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath).c_str(),
+                                std::move(record_consumer), std::move(error_handler), &reader));
   reader->ReadFile();
   ASSERT_FALSE(got_error);
 

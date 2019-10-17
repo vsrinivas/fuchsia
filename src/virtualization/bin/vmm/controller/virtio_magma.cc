@@ -6,6 +6,7 @@
 
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/services.h>
+
 #include <src/lib/fxl/logging.h>
 
 static constexpr char kVirtioMagmaUrl[] =

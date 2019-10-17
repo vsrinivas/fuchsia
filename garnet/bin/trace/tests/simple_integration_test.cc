@@ -7,9 +7,10 @@
 // a provider that provides two of them.
 
 #include <lib/zx/time.h>
+#include <zircon/status.h>
+
 #include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
-#include <zircon/status.h>
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 

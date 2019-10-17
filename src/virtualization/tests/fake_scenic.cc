@@ -8,20 +8,21 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/defer.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
 #include <lib/svc/cpp/services.h>
-#include <src/lib/fxl/logging.h>
 #include <string.h>
 #include <zircon/errors.h>
 
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <src/lib/fxl/logging.h>
 
 // If true, print to log files received Session commands.
 constexpr bool kTraceCommands = false;

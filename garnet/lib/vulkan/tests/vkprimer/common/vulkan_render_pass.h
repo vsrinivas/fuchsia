@@ -6,9 +6,10 @@
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_RENDER_PASS_H_
 
 #include <src/lib/fxl/macros.h>
-#include <vulkan/vulkan.hpp>
 
 #include "vulkan_logical_device.h"
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanRenderPass {
  public:

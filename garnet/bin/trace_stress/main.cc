@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <memory>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
+#include <lib/zx/time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <zircon/status.h>
+
+#include <memory>
+
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
@@ -19,8 +21,6 @@
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
-#include <zircon/status.h>
-#include <lib/zx/time.h>
 
 static constexpr int kDefaultCount = 1;
 static constexpr int kDefaultDelaySeconds = 0;

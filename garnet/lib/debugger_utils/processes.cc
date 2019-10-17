@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "processes.h"
+
+#include <lib/zx/job.h>
+
 #include <memory>
 #include <string>
 
 #include <src/lib/fxl/logging.h>
-#include <lib/zx/job.h>
 
-#include "processes.h"
 #include "util.h"
 
 namespace debugger_utils {

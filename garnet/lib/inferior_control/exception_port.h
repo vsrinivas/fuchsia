@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_INFERIOR_CONTROL_EXCEPTION_PORT_H_
+#define GARNET_LIB_INFERIOR_CONTROL_EXCEPTION_PORT_H_
+
+#include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
+#include <lib/zx/port.h>
+#include <lib/zx/process.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include <atomic>
 #include <mutex>
 #include <thread>
 
-#include <lib/async/dispatcher.h>
-#include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
-#include <lib/zx/port.h>
-#include <lib/zx/process.h>
-#include <zircon/syscalls/exception.h>
-#include <zircon/types.h>
 
 namespace inferior_control {
 
@@ -96,3 +98,5 @@ class ExceptionPort final {
 };
 
 }  // namespace inferior_control
+
+#endif  // GARNET_LIB_INFERIOR_CONTROL_EXCEPTION_PORT_H_

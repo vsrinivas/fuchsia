@@ -6,9 +6,10 @@
 // registered. For host builds we want everything. For target builds we
 // only want that target.
 
+#include "garnet/lib/perfmon/event-registry.h"
+
 #include <src/lib/fxl/logging.h>
 
-#include "garnet/lib/perfmon/event-registry.h"
 #include "garnet/lib/perfmon/events.h"
 
 namespace perfmon {

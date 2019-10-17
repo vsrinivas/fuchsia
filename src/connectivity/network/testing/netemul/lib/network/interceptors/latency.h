@@ -7,9 +7,10 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <src/lib/fxl/macros.h>
 
 #include <random>
+
+#include <src/lib/fxl/macros.h>
 
 #include "interceptor.h"
 

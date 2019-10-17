@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+
+#include <gtest/gtest.h>
 #include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/trace/tests/run_test.h"
@@ -27,12 +28,8 @@ TEST(DetachTest, DISABLED_SpawnedAppNotDetached) {
   zx::job job{};
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
-  std::vector<std::string> args{
-    "record",
-    "--spawn",
-    kTraceDurationArg,
-    kChildPath,
-    kChildDurationArg};
+  std::vector<std::string> args{"record", "--spawn", kTraceDurationArg, kChildPath,
+                                kChildDurationArg};
   ASSERT_TRUE(RunTraceAndWait(job, args));
 
   FXL_LOG(INFO) << "Trace exited, checking for helper presence";
@@ -52,13 +49,8 @@ TEST(DetachTest, DISABLED_SpawnedAppDetached) {
   zx::job job{};
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
-  std::vector<std::string> args{
-    "record",
-    "--detach",
-    "--spawn",
-    kTraceDurationArg,
-    kChildPath,
-    kChildDurationArg};
+  std::vector<std::string> args{"record",          "--detach", "--spawn",
+                                kTraceDurationArg, kChildPath, kChildDurationArg};
   ASSERT_TRUE(RunTraceAndWait(job, args));
 
   FXL_LOG(INFO) << "Trace exited, checking for helper presence";

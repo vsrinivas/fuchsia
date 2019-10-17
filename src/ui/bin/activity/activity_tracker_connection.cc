@@ -47,8 +47,8 @@ void ActivityTrackerConnection::ReportDiscreteActivity(
   zx_status_t status = state_machine_driver_->ReceiveDiscreteActivity(activity, zx::time(time));
   if (status != ZX_OK) {
     if (status == ZX_ERR_OUT_OF_RANGE) {
-      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp ("
-                       << time << ")";
+      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
+                       << ")";
     } else {
       FXL_LOG(ERROR) << "activity-service: Failed to receive activity: "
                      << zx_status_get_string(status);
@@ -73,8 +73,8 @@ void ActivityTrackerConnection::StartOngoingActivity(
     callback(id);
   } else {
     if (status == ZX_ERR_OUT_OF_RANGE) {
-      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp ("
-                       << time << ")";
+      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
+                       << ")";
       // Ignore the activity (don't close the binding or send an error to the client)
     } else {
       FXL_LOG(ERROR) << "activity-service: Failed to start activity: "
@@ -102,8 +102,8 @@ void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time
     ongoing_activities_.erase(iter);
   } else {
     if (status == ZX_ERR_OUT_OF_RANGE) {
-      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp ("
-                       << time << ")";
+      FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
+                       << ")";
       // Ignore the activity (don't close the binding or send an error to the client)
     } else {
       FXL_LOG(ERROR) << "activity-service: Failed to end activity: "

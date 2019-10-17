@@ -8,9 +8,10 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sysmem-connector/sysmem-connector.h>
-#include <src/lib/fxl/macros.h>
 
 #include <memory>
+
+#include <src/lib/fxl/macros.h>
 
 // sysmem_connector's app
 class App {

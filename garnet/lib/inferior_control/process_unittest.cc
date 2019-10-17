@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/inferior_control/process.h"
+
 #include <lib/async/cpp/task.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 
-#include "garnet/lib/inferior_control/process.h"
+#include <src/lib/fxl/strings/string_printf.h>
+
 #include "garnet/lib/inferior_control/test_helper.h"
 #include "garnet/lib/inferior_control/test_server.h"
-
 #include "gtest/gtest.h"
 
 namespace inferior_control {

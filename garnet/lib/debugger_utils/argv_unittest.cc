@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/debugger_utils/argv.h"
+
 #include <gtest/gtest.h>
 #include <src/lib/fxl/arraysize.h>
-
-#include "garnet/lib/debugger_utils/argv.h"
 
 namespace debugger_utils {
 namespace {

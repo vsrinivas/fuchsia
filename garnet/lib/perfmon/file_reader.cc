@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "file_reader.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "src/lib/files/file.h"
 #include <src/lib/fxl/logging.h>
 
-#include "file_reader.h"
+#include "src/lib/files/file.h"
 
 namespace perfmon {
 

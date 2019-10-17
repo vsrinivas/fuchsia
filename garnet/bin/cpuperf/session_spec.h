@@ -5,13 +5,14 @@
 #ifndef GARNET_BIN_CPUPERF_SESSION_SPEC_H_
 #define GARNET_BIN_CPUPERF_SESSION_SPEC_H_
 
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <lib/zx/time.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <string>
 
 #include <src/lib/fxl/time/time_delta.h>
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
-#include <lib/zx/time.h>
 
 #include "garnet/lib/perfmon/config.h"
 #include "garnet/lib/perfmon/events.h"

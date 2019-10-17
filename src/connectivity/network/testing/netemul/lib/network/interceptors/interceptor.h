@@ -6,9 +6,10 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_INTERCEPTORS_INTERCEPTOR_H_
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/macros.h>
 
 #include <vector>
+
+#include <src/lib/fxl/macros.h>
 
 #include "../consumer.h"
 

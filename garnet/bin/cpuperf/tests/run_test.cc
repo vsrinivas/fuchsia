@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "run_test.h"
+
+#include <lib/fdio/spawn.h>
+#include <lib/zx/process.h>
+#include <lib/zx/time.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
+
 #include <string>
 #include <vector>
 
-#include <lib/fdio/spawn.h>
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/zx/process.h>
-#include <lib/zx/time.h>
-#include <zircon/processargs.h>
-#include <zircon/types.h>
-#include <zircon/status.h>
-
-#include "run_test.h"
 
 // The path of the trace program.
 // cpuperf is a "shell=true" program, and thus has a stub for it in /bin

@@ -5,10 +5,11 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 
-#include <memory>
-
 #include <fuchsia/netemul/environment/cpp/fidl.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
+
+#include <memory>
+
 #include <src/lib/fxl/macros.h>
 
 #include "log_listener.h"

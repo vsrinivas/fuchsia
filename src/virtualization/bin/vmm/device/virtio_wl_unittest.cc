@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/zx/socket.h>
-#include <src/lib/fxl/arraysize.h>
 #include <string.h>
+
+#include <fbl/algorithm.h>
+#include <src/lib/fxl/arraysize.h>
 #include <virtio/wl.h>
 
 #include "src/virtualization/bin/vmm/device/test_with_device.h"

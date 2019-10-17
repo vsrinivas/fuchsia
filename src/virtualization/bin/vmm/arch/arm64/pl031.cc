@@ -5,8 +5,9 @@
 #include "src/virtualization/bin/vmm/arch/arm64/pl031.h"
 
 #include <endian.h>
-#include <src/lib/fxl/logging.h>
 #include <stdio.h>
+
+#include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/rtc.h"

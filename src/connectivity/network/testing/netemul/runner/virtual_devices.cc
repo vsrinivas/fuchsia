@@ -4,11 +4,12 @@
 
 #include "virtual_devices.h"
 
-#include <fs/service.h>
 #include <lib/async/default.h>
+#include <zircon/status.h>
+
+#include <fs/service.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/split_string.h>
-#include <zircon/status.h>
 
 namespace netemul {
 

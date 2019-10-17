@@ -4,13 +4,14 @@
 
 #include "sandbox.h"
 
-#include <iostream>
-#include <unordered_set>
-
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fit/sequencer.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/sys/cpp/termination_reason.h>
+
+#include <iostream>
+#include <unordered_set>
+
 #include <src/lib/fxl/strings/join_strings.h>
 
 #include "lib/gtest/real_loop_fixture.h"

@@ -5,6 +5,7 @@
 #include "garnet/lib/debugger_utils/threads.h"
 
 #include <algorithm>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 

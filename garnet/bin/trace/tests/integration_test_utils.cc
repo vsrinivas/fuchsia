@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fstream>
+#include "garnet/bin/trace/tests/integration_test_utils.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
+#include <zircon/status.h>
+
+#include <fstream>
+
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 #include <trace/observer.h>
-#include <zircon/status.h>
 
 #include "garnet/bin/trace/spec.h"
-#include "garnet/bin/trace/tests/integration_test_utils.h"
 
 namespace tracing {
 namespace test {

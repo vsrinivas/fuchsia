@@ -5,6 +5,7 @@
 #include "logger_filter_options.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
+
 #include <src/lib/fxl/strings/string_printf.h>
 
 namespace netemul {

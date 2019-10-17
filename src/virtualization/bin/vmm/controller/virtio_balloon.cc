@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 
 #include <lib/svc/cpp/services.h>
+
 #include <src/lib/fxl/logging.h>
 
 static constexpr char kVirtioBalloonUrl[] =

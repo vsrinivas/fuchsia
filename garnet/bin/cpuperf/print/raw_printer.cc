@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "raw_printer.h"
+
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -17,8 +19,6 @@
 #include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/lib/perfmon/file_reader.h"
-
-#include "raw_printer.h"
 
 namespace cpuperf {
 

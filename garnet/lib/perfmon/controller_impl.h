@@ -6,6 +6,7 @@
 #define GARNET_LIB_PERFMON_CONTROLLER_IMPL_H_
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
+
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "garnet/lib/perfmon/controller.h"

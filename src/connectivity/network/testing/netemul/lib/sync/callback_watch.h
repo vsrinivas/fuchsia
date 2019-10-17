@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_SYNC_CALLBACK_WATCH_H_
 
 #include <lib/async/cpp/task.h>
+
 #include <src/lib/fxl/macros.h>
 
 namespace netemul {

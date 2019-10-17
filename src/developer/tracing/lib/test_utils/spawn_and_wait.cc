@@ -5,12 +5,13 @@
 #include "src/developer/tracing/lib/test_utils/spawn_and_wait.h"
 
 #include <lib/fdio/spawn.h>
-#include <src/lib/files/file.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/join_strings.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+
+#include <src/lib/files/file.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/join_strings.h>
 
 static void StringArgvToCArgv(const std::vector<std::string>& argv,
                               std::vector<const char*>* c_argv) {

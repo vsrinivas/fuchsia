@@ -5,22 +5,22 @@
 #ifndef GARNET_LIB_INFERIOR_CONTROL_TEST_SERVER_H_
 #define GARNET_LIB_INFERIOR_CONTROL_TEST_SERVER_H_
 
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/zx/channel.h>
+#include <zircon/syscalls.h>
+
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_view.h>
-#include <lib/sys/cpp/service_directory.h>
-#include <lib/zx/channel.h>
-#include <zircon/syscalls.h>
-
-#include "gtest/gtest.h"
 
 #include "garnet/lib/inferior_control/exception_port.h"
 #include "garnet/lib/inferior_control/process.h"
 #include "garnet/lib/inferior_control/server.h"
 #include "garnet/lib/inferior_control/thread.h"
+#include "gtest/gtest.h"
 
 namespace inferior_control {
 

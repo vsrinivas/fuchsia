@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
+#include "processes.h"
+
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/processargs.h>
 
+#include <gtest/gtest.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
+
 #include "jobs.h"
-#include "processes.h"
 #include "test_helper.h"
 #include "test_helper_fixture.h"
 #include "util.h"

@@ -4,10 +4,11 @@
 
 #include "garnet/bin/trace/tests/component_context.h"
 
-#include <memory>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+
+#include <memory>
+
 #include <src/lib/fxl/logging.h>
 
 namespace tracing {
@@ -24,9 +25,7 @@ void InitComponentContext() {
   }
 }
 
-sys::ComponentContext* GetComponentContext() {
-  return g_context.get();
-}
+sys::ComponentContext* GetComponentContext() { return g_context.get(); }
 
 }  // namespace test
 }  // namespace tracing

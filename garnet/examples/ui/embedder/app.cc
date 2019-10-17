@@ -12,9 +12,10 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
 #include <unistd.h>
 #include <zircon/types.h>
+
+#include <src/lib/fxl/logging.h>
 
 #include "example_view_provider_service.h"
 
@@ -36,9 +37,7 @@ namespace embedder {
 static fuchsia::sys::ComponentControllerPtr s_subview_controller;
 
 App::App(async::Loop* loop, AppType type)
-    : component_context_(sys::ComponentContext::Create()),
-      loop_(loop),
-      type_(type) {
+    : component_context_(sys::ComponentContext::Create()), loop_(loop), type_(type) {
   // Connect the ExampleViewProviderService.
   if (type_ == AppType::CONTAINER) {
     // Launch the subview app.  Clone our stdout and stderr file descriptors

@@ -4,12 +4,13 @@
 
 #include "garnet/lib/magma/include/virtio/virtio_magma.h"
 
-#include <fbl/algorithm.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/zx/socket.h>
-#include <src/lib/fxl/arraysize.h>
 #include <string.h>
+
+#include <fbl/algorithm.h>
+#include <src/lib/fxl/arraysize.h>
 
 #include "garnet/lib/magma/include/magma_abi/magma.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"

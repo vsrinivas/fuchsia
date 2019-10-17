@@ -60,7 +60,7 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
 
   *index = ring_.avail->ring[RingIndexLocked(ring_.index++)];
   if (*index >= ring_.size) {
-      return ZX_ERR_INTERNAL;
+    return ZX_ERR_INTERNAL;
   }
 
   // If we have event indices enabled, update the avail-event to notify us

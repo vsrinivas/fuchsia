@@ -7,12 +7,12 @@
 // The default behaviour, provided by the baseclass, is to run the inferior
 // and if it gets an exception then print a backtrace and kill it.
 
+#include "delegate.h"
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
-
-#include "delegate.h"
 #include "process.h"
 #include "server.h"
 #include "thread.h"

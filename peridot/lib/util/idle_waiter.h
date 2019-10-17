@@ -5,11 +5,12 @@
 #ifndef PERIDOT_LIB_UTIL_IDLE_WAITER_H_
 #define PERIDOT_LIB_UTIL_IDLE_WAITER_H_
 
-#include <vector>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
+
+#include <vector>
+
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 

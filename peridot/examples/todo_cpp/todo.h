@@ -11,10 +11,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
 
 #include <random>
+
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/examples/todo_cpp/generator.h"
 
@@ -22,14 +23,12 @@ namespace todo {
 
 using Key = std::vector<uint8_t>;
 
-class TodoApp : public fuchsia::ledger::PageWatcher,
-                fuchsia::modular::Lifecycle {
+class TodoApp : public fuchsia::ledger::PageWatcher, fuchsia::modular::Lifecycle {
  public:
   TodoApp(async::Loop* loop);
 
   // fuchsia::ledger::PageWatcher:
-  void OnChange(fuchsia::ledger::PageChange page_change,
-                fuchsia::ledger::ResultState result_state,
+  void OnChange(fuchsia::ledger::PageChange page_change, fuchsia::ledger::ResultState result_state,
                 OnChangeCallback callback) override;
 
  private:

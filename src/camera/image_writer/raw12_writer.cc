@@ -12,8 +12,8 @@
 namespace camera {
 
 // Helper methods.
-std::array<uint8_t, kBytesPerDoublePixel> PixelValuesToDoublePixel(
-    uint16_t first_pixel_val, uint16_t second_pixel_val) {
+std::array<uint8_t, kBytesPerDoublePixel> PixelValuesToDoublePixel(uint16_t first_pixel_val,
+                                                                   uint16_t second_pixel_val) {
   return std::array<uint8_t, kBytesPerDoublePixel>(
       {static_cast<uint8_t>(((first_pixel_val & kHighByteMask) >> kHalfByteShift)),
        static_cast<uint8_t>(((second_pixel_val & kHighByteMask) >> kHalfByteShift)),

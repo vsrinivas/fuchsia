@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <atomic>
-#include <thread>
+#ifndef GARNET_LIB_INFERIOR_CONTROL_IO_LOOP_H_
+#define GARNET_LIB_INFERIOR_CONTROL_IO_LOOP_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+
+#include <atomic>
+#include <thread>
 
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
@@ -106,3 +107,5 @@ class IOLoop {
 };
 
 }  // namespace inferior_control
+
+#endif  // GARNET_LIB_INFERIOR_CONTROL_IO_LOOP_H_

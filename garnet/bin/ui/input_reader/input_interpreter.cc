@@ -42,7 +42,6 @@ fuchsia::ui::input::InputReport CloneReport(const fuchsia::ui::input::InputRepor
 
 }  // namespace
 
-
 namespace ui_input {
 
 InputInterpreter::InputInterpreter(std::unique_ptr<HidDecoder> hid_decoder,
@@ -63,7 +62,6 @@ void InputInterpreter::DispatchReport(InputDevice* device) {
   TRACE_FLOW_BEGIN("input", "hid_read_to_listener", device->report->trace_id);
   device->input_device->DispatchReport(CloneReport(*device->report));
 }
-
 
 bool InputInterpreter::Initialize() {
   if (!hid_decoder_->Init())
@@ -371,7 +369,8 @@ bool InputInterpreter::ParseProtocol() {
   if (desc_size <= 0) {
     return false;
   }
-  hid::ParseResult parse_res = hid::ParseReportDescriptor(desc.data(), desc.size(), &hid_descriptor_);
+  hid::ParseResult parse_res =
+      hid::ParseReportDescriptor(desc.data(), desc.size(), &hid_descriptor_);
   if (parse_res != hid::ParseResult::kParseOk) {
     FXL_LOG(INFO) << "hid-parser: error " << int(parse_res) << " parsing report descriptor for "
                   << name();

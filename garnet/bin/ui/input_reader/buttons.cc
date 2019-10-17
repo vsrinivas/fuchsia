@@ -4,15 +4,16 @@
 
 #include "garnet/bin/ui/input_reader/buttons.h"
 
+#include <stdint.h>
+#include <stdio.h>
+
+#include <vector>
+
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
 #include <src/lib/fxl/logging.h>
-#include <stdint.h>
-#include <stdio.h>
-
-#include <vector>
 
 namespace ui_input {
 

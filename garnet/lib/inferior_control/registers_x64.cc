@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
+
 #include <cinttypes>
 #include <cstring>
 
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/debug.h>
 
-#include "garnet/lib/debugger_utils/util.h"
-
-#include "registers.h"
 #include "arch_x64.h"
+#include "garnet/lib/debugger_utils/util.h"
+#include "registers.h"
 #include "thread.h"
 
 namespace inferior_control {

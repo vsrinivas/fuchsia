@@ -6,10 +6,11 @@
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_GRAPHICS_PIPELINE_H_
 
 #include <src/lib/fxl/macros.h>
-#include <vulkan/vulkan.hpp>
 
 #include "vulkan_logical_device.h"
 #include "vulkan_render_pass.h"
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanGraphicsPipeline {
  public:

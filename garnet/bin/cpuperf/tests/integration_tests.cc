@@ -7,7 +7,6 @@
 #include <src/lib/fxl/test/test_settings.h>
 
 #include "garnet/lib/perfmon/controller.h"
-
 #include "run_test.h"
 #include "verify_test.h"
 
@@ -27,7 +26,7 @@ TEST(Cpuperf, ProgrammableCounters) { RunAndVerify("/pkg/data/programmable_count
 
 TEST(Cpuperf, UserFlag) { RunAndVerify("/pkg/data/user_flag.cpspec"); }
 
-//TODO(38183): Re-enable.
+// TODO(38183): Re-enable.
 TEST(Cpuperf, DISABLED_ValueRecords) { RunAndVerify("/pkg/data/value_records.cpspec"); }
 
 TEST(Cpuperf, LastBranchRecord) {

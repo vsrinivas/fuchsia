@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/zx/time.h>
+#include <zircon/status.h>
+
 #include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
-#include <zircon/status.h>
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 
@@ -55,8 +56,7 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
 }
 
 static bool VerifyFillBufferTest(const tracing::Spec& spec, const std::string& test_output_file) {
-  const tracing::BufferingModeSpec* mode_spec =
-      tracing::LookupBufferingMode(*spec.buffering_mode);
+  const tracing::BufferingModeSpec* mode_spec = tracing::LookupBufferingMode(*spec.buffering_mode);
   if (mode_spec == nullptr) {
     FXL_LOG(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
     return false;

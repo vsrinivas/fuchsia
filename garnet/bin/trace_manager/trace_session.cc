@@ -6,10 +6,11 @@
 
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
-#include <src/lib/fxl/logging.h>
-#include <trace-engine/fields.h>
 
 #include <numeric>
+
+#include <src/lib/fxl/logging.h>
+#include <trace-engine/fields.h>
 
 #include "garnet/bin/trace_manager/util.h"
 

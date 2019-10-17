@@ -5,8 +5,9 @@
 #include "virtual_data.h"
 
 #include <lib/async/default.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
+
+#include <src/lib/fxl/logging.h>
 
 namespace netemul {
 

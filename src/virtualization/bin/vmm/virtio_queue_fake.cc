@@ -4,8 +4,9 @@
 
 #include "src/virtualization/bin/vmm/virtio_queue_fake.h"
 
-#include <src/lib/fxl/logging.h>
 #include <string.h>
+
+#include <src/lib/fxl/logging.h>
 
 VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue, uint16_t queue_size)
     : queue_(queue),

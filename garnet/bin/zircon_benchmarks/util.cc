@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include "util.h"
-#include <src/lib/fxl/strings/string_printf.h>
+
 #include <random>
+
+#include <src/lib/fxl/strings/string_printf.h>
 
 namespace util {
 

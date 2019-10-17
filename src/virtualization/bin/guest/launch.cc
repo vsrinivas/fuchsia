@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/guest/launch.h"
 
 #include <fuchsia/virtualization/cpp/fidl.h>
+
 #include <src/lib/fxl/strings/string_printf.h>
 
 #include "src/virtualization/bin/guest/serial.h"

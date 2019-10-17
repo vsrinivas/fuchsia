@@ -2,15 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <thread>
+#include "test_helper.h"
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
@@ -20,10 +13,18 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <thread>
+
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
+
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/util.h"
-
-#include "test_helper.h"
 
 using debugger_utils::ZxErrorString;
 

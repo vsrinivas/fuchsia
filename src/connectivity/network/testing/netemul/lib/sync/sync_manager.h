@@ -8,9 +8,10 @@
 #include <fuchsia/netemul/sync/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/macros.h>
 
 #include <unordered_map>
+
+#include <src/lib/fxl/macros.h>
 
 #include "bus.h"
 #include "counter_barrier.h"

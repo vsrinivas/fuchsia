@@ -6,10 +6,11 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_NETDUMP_H_
 
 #include <fuchsia/netemul/network/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
 
 #include <iostream>
 #include <sstream>
+
+#include <src/lib/fxl/macros.h>
 
 namespace netemul {
 

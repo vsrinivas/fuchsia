@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+
+#include <gtest/gtest.h>
 #include <src/developer/tracing/lib/test_utils/spawn_and_wait.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>

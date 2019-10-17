@@ -8,32 +8,33 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <openssl/sha.h>
-#include <src/lib/fxl/logging.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <functional>
 #include <memory>
 
+#include <openssl/sha.h>
+#include <src/lib/fxl/logging.h>
+
 #define VLOG_ENABLED 0
 
 #if (VLOG_ENABLED)
-#define VLOGF(fmt, ...) \
-  do { \
-    printf(fmt "\n", ## __VA_ARGS__); \
-    fflush(stdout); \
+#define VLOGF(fmt, ...)              \
+  do {                               \
+    printf(fmt "\n", ##__VA_ARGS__); \
+    fflush(stdout);                  \
   } while (0)
 #else
 #define VLOGF(fmt, ...) \
-  do {             \
+  do {                  \
   } while (0)
 #endif
 
-#define LOGF(fmt, ...) \
-  do { \
-    printf(fmt "\n", ## __VA_ARGS__); \
-    fflush(stdout); \
+#define LOGF(fmt, ...)               \
+  do {                               \
+    printf(fmt "\n", ##__VA_ARGS__); \
+    fflush(stdout);                  \
   } while (0)
 
 void Exit(const char* format, ...);

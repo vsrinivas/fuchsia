@@ -5,10 +5,11 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_CONSUMER_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_CONSUMER_H_
 
-#include <src/lib/fxl/memory/weak_ptr.h>
 #include <stdlib.h>
 
 #include <memory>
+
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 namespace netemul {
 namespace data {

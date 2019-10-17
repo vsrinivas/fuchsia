@@ -4,9 +4,10 @@
 
 #include "src/virtualization/bin/vmm/guest_config.h"
 
+#include <zircon/compiler.h>
+
 #include <gtest/gtest.h>
 #include <src/lib/fxl/arraysize.h>
-#include <zircon/compiler.h>
 
 class GuestConfigParserTest : public ::testing::Test {
  protected:

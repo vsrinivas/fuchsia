@@ -5,11 +5,12 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_SHADER_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_SHADER_H_
 
-#include <src/lib/fxl/macros.h>
-#include <vulkan/vulkan.hpp>
-
 #include <string>
 #include <vector>
+
+#include <src/lib/fxl/macros.h>
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanShader {
  public:

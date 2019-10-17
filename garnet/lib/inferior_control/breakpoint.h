@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_INFERIOR_CONTROL_BREAKPOINT_H_
+#define GARNET_LIB_INFERIOR_CONTROL_BREAKPOINT_H_
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <unordered_map>
@@ -176,3 +178,5 @@ class ThreadBreakpointSet final {
 };
 
 }  // namespace inferior_control
+
+#endif  // GARNET_LIB_INFERIOR_CONTROL_BREAKPOINT_H_

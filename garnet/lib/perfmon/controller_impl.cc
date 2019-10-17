@@ -5,6 +5,7 @@
 #include "garnet/lib/perfmon/controller_impl.h"
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
+
 #include <src/lib/fxl/logging.h>
 
 #include "garnet/lib/perfmon/config_impl.h"

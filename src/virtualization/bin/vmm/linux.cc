@@ -5,11 +5,12 @@
 #include "src/virtualization/bin/vmm/linux.h"
 
 #include <endian.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <sys/stat.h>
 #include <zircon/boot/e820.h>
+
+#include <fbl/unique_fd.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"

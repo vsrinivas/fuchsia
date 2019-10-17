@@ -4,13 +4,14 @@
 
 #include "service.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <limits>
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 #include <src/lib/fxl/logging.h>
 
 using fuchsia::bluetooth::Status;

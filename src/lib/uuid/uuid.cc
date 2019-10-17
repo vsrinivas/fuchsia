@@ -4,12 +4,13 @@
 
 #include "src/lib/uuid/uuid.h"
 
-#include <src/lib/fxl/strings/string_printf.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/syscalls.h>
 
 #include <string>
+
+#include <src/lib/fxl/strings/string_printf.h>
 
 namespace uuid {
 namespace {

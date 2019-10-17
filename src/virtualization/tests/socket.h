@@ -6,9 +6,10 @@
 #define SRC_VIRTUALIZATION_TESTS_SOCKET_H_
 
 #include <lib/zx/socket.h>
-#include <src/lib/fxl/macros.h>
 
 #include <string>
+
+#include <src/lib/fxl/macros.h>
 
 class SocketInterface {
  public:

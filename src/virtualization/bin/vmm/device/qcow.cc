@@ -4,13 +4,14 @@
 
 #include "src/virtualization/bin/vmm/device/qcow.h"
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <fcntl.h>
-#include <src/lib/fxl/logging.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <src/lib/fxl/logging.h>
 
 // Implementation based on the spec located at:
 //

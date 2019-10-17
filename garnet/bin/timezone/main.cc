@@ -5,8 +5,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/timezone/timezone.h"
 

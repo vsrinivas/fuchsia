@@ -5,9 +5,10 @@
 #include "src/virtualization/tests/socket.h"
 
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
 
 #include <array>
+
+#include <src/lib/fxl/logging.h>
 
 static constexpr size_t kSerialBufferSize = 1024;
 

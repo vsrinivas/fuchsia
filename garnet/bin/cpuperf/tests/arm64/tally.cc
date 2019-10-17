@@ -4,9 +4,8 @@
 
 #include <src/lib/fxl/logging.h>
 
-#include "garnet/lib/perfmon/events.h"
-
 #include "arm64_tests.h"
+#include "garnet/lib/perfmon/events.h"
 
 class TallyVerifier : public Verifier {
  public:

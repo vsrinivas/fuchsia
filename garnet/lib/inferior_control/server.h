@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <memory>
+#ifndef GARNET_LIB_INFERIOR_CONTROL_SERVER_H_
+#define GARNET_LIB_INFERIOR_CONTROL_SERVER_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/job.h>
-#include <src/lib/files/unique_fd.h>
 
-#include "garnet/lib/process/process_builder.h"
+#include <memory>
+
+#include <src/lib/files/unique_fd.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "delegate.h"
 #include "exception_port.h"
+#include "garnet/lib/process/process_builder.h"
 #include "io_loop.h"
 #include "process.h"
 #include "thread.h"
@@ -171,3 +172,5 @@ class ServerWithIO : public Server, public IOLoop::Delegate {
 };
 
 }  // namespace inferior_control
+
+#endif  // GARNET_LIB_INFERIOR_CONTROL_SERVER_H_

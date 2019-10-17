@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "verify_test.h"
+
 #include <string.h>
 
 #include <string>
 
 #include <gtest/gtest.h>
 #include <src/lib/fxl/command_line.h>
-#include "src/lib/files/file.h"
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
@@ -18,8 +19,7 @@
 #include "garnet/bin/cpuperf/session_result_spec.h"
 #include "garnet/bin/cpuperf/session_spec.h"
 #include "garnet/lib/perfmon/file_reader.h"
-
-#include "verify_test.h"
+#include "src/lib/files/file.h"
 
 #if defined(__x86_64__)
 #include "intel/intel_tests.h"

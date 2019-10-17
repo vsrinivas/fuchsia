@@ -5,10 +5,6 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_TRACE_SESSION_H_
 #define GARNET_BIN_TRACE_MANAGER_TRACE_SESSION_H_
 
-#include <iosfwd>
-#include <list>
-#include <vector>
-
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/string.h>
@@ -17,6 +13,11 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+
+#include <iosfwd>
+#include <list>
+#include <vector>
+
 #include <src/lib/fxl/memory/ref_counted.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/memory/weak_ptr.h>

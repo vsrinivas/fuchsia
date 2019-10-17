@@ -77,8 +77,7 @@ class CameraManagerTest : public gtest::RealLoopFixture {
     client_token->Duplicate(std::numeric_limits<uint32_t>::max(), camera_token.NewRequest());
     ASSERT_EQ(ZX_OK, client_token->Sync());
     // Now convert our side into a Logical BufferCollection:
-    sysmem_allocator_->BindSharedCollection(client_token.Unbind(),
-                                            buffer_collection_.NewRequest());
+    sysmem_allocator_->BindSharedCollection(client_token.Unbind(), buffer_collection_.NewRequest());
     ASSERT_EQ(ZX_OK, buffer_collection_->SetConstraints(true, GetFakeConstraints()));
     *out_token = std::move(camera_token);
   }

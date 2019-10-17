@@ -5,13 +5,14 @@
 #ifndef GARNET_LIB_PERFMON_BUFFER_READER_H_
 #define GARNET_LIB_PERFMON_BUFFER_READER_H_
 
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <zircon/types.h>
+
 #include <cstdint>
 #include <memory>
 #include <string>
 
 #include <src/lib/fxl/macros.h>
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
-#include <zircon/types.h>
 
 #include "records.h"
 #include "types.h"

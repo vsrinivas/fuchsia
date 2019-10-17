@@ -6,8 +6,9 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/device/vfs.h>
+
+#include <src/lib/fxl/logging.h>
 
 namespace ledger {
 

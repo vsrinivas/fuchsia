@@ -9,13 +9,14 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
-#include <src/lib/fxl/macros.h>
 #include <stdlib.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <src/lib/fxl/macros.h>
 
 namespace netemul {
 

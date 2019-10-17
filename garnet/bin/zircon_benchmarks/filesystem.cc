@@ -7,9 +7,9 @@
 #include <unistd.h>
 
 #include <perftest/perftest.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/lib/files/unique_fd.h"
-#include <src/lib/fxl/logging.h>
 
 namespace {
 

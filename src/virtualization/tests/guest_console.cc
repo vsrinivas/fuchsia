@@ -5,11 +5,12 @@
 #include "src/virtualization/tests/guest_console.h"
 
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include <iostream>
 #include <regex>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "logger.h"
 

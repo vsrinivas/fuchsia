@@ -6,15 +6,15 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
-
 #include <lib/fdio/directory.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/channel.h>
+#include <unistd.h>
+#include <zircon/status.h>
+
 #include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <zircon/status.h>
 
 #include "garnet/lib/debugger_utils/util.h"
 

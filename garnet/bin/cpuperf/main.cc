@@ -3,29 +3,27 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/syscalls.h>
 
 #include <algorithm>
 #include <limits>
 
 #include <src/lib/fxl/command_line.h>
-#include "src/lib/files/file.h"
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/split_string.h>
 
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
-#include <zircon/syscalls.h>
-
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/perfmon/controller.h"
 #include "garnet/lib/perfmon/events.h"
-
 #include "print_tallies.h"
-#include "session_spec.h"
 #include "session_result_spec.h"
+#include "session_spec.h"
+#include "src/lib/files/file.h"
 
 const char kUsageString[] =
     "Usage: cpuperf [options]\n"

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+
+#include <gtest/gtest.h>
 #include <src/lib/fxl/logging.h>
 #include <trace-reader/file_reader.h>
 
@@ -37,15 +38,14 @@ TEST(ProviderDestruction, StressTest) {
   zx::job job{};  // -> default job
   for (size_t i = 0; i < kNumIterations; ++i) {
     std::vector<std::string> args{
-      "record",
-      kCategoriesArg,
-      std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath,
-      kAppUrl};
+        "record", kCategoriesArg,
+        std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath,
+        kAppUrl};
     ASSERT_TRUE(RunTraceAndWait(job, args));
 
     size_t num_events;
-    EXPECT_TRUE(VerifyTestEvents(std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath,
-                                 &num_events));
+    EXPECT_TRUE(
+        VerifyTestEvents(std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath, &num_events));
     FXL_VLOG(1) << "Got " << num_events << " events";
   }
 }

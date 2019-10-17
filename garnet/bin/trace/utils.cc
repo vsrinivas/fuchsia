@@ -9,19 +9,19 @@
 #include <stddef.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
 #include <fstream>
 #include <string>
 #include <utility>
 
-#include <src/lib/files/unique_fd.h>
 #include <src/lib/files/path.h>
+#include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/trim.h>
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
 
 namespace tracing {
 
@@ -125,8 +125,7 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(const fxl::StringView& 
   return ofstream;
 }
 
-std::unique_ptr<std::ostream> OpenOutputStream(const std::string& output_file_name,
-                                               bool compress) {
+std::unique_ptr<std::ostream> OpenOutputStream(const std::string& output_file_name, bool compress) {
   std::unique_ptr<std::ostream> out_stream;
   fxl::StringView address;
   if (BeginsWith(output_file_name, kTcpPrefix, &address)) {

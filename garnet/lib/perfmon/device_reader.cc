@@ -4,11 +4,12 @@
 
 #include "garnet/lib/perfmon/device_reader.h"
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 namespace perfmon {
 namespace internal {

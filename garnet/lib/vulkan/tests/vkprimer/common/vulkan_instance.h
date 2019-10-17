@@ -6,9 +6,10 @@
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_INSTANCE_H_
 
 #include <vector>
-#include <vulkan/vulkan.hpp>
 
 #include <src/lib/fxl/macros.h>
+
+#include <vulkan/vulkan.hpp>
 
 #if USE_GLFW
 #define GLFW_INCLUDE_VULKAN

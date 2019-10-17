@@ -4,10 +4,11 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/i8250.h"
 
-#include <libzbi/zbi.h>
-#include <src/lib/fxl/logging.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>
+
+#include <libzbi/zbi.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
 

@@ -4,11 +4,11 @@
 
 #include "garnet/lib/perfmon/controller.h"
 
+#include <fuchsia/perfmon/cpu/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <sys/stat.h>
 
 #include <fbl/algorithm.h>
-#include <fuchsia/perfmon/cpu/cpp/fidl.h>
-#include <lib/fdio/directory.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_DEBUGGER_UTILS_UTIL_H_
+#define GARNET_LIB_DEBUGGER_UTILS_UTIL_H_
 
 #include <cstdint>
 #include <cstdio>
@@ -119,3 +120,5 @@ bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max);
 #endif  // __Fuchsia__
 
 }  // namespace debugger_utils
+
+#endif  // GARNET_LIB_DEBUGGER_UTILS_UTIL_H_

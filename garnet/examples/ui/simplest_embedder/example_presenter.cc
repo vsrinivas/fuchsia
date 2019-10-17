@@ -5,6 +5,7 @@
 #include "garnet/examples/ui/simplest_embedder/example_presenter.h"
 
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
 #include <src/lib/fxl/logging.h>
 
 namespace simplest_embedder {

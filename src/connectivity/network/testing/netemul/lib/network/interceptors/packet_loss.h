@@ -5,10 +5,11 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_INTERCEPTORS_PACKET_LOSS_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_INTERCEPTORS_PACKET_LOSS_H_
 
-#include <src/lib/fxl/macros.h>
 #include <zircon/assert.h>
 
 #include <random>
+
+#include <src/lib/fxl/macros.h>
 
 #include "interceptor.h"
 

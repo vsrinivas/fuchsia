@@ -7,11 +7,12 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/termination_reason.h>
+
+#include <iostream>
+
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
-
-#include <iostream>
 
 #include "sandbox.h"
 #include "sandbox_service.h"

@@ -4,8 +4,9 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/io_port.h"
 
-#include <src/lib/fxl/logging.h>
 #include <time.h>
+
+#include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"

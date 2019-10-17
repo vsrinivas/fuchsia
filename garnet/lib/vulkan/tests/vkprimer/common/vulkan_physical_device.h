@@ -6,11 +6,13 @@
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_PHYSICAL_DEVICE_H_
 
 #include <memory>
-#include <src/lib/fxl/macros.h>
 #include <vector>
-#include <vulkan/vulkan.hpp>
+
+#include <src/lib/fxl/macros.h>
 
 #include "vulkan_instance.h"
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanPhysicalDevice {
  public:

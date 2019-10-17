@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "memory_process.h"
+
+#include <zircon/syscalls.h>
+
 #include <cinttypes>
 
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <zircon/syscalls.h>
 
 #include "garnet/lib/debugger_utils/util.h"
-
-#include "memory_process.h"
 #include "process.h"
 
 namespace inferior_control {

@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
+#include "test_helper.h"
+
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/types.h>
+
+#include <atomic>
 #include <thread>
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/event.h>
-#include <lib/zx/eventpair.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
-#include <zircon/types.h>
 
-#include "test_helper.h"
 #include "util.h"
 
 std::atomic_int g_num_threads_running = 0;

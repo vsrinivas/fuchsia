@@ -7,11 +7,12 @@
 
 #include <memory>
 #include <vector>
-#include <vulkan/vulkan.hpp>
 
 #include <src/lib/fxl/macros.h>
 
 #include "vulkan_instance.h"
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanLayer {
  public:

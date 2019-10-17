@@ -4,8 +4,9 @@
 
 #include "src/virtualization/bin/vmm/virtio_pci.h"
 
-#include <src/lib/fxl/logging.h>
 #include <stdio.h>
+
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>
 

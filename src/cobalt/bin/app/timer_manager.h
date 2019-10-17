@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_TIMER_MANAGER_H_
-#define GARNET_BIN_COBALT_APP_TIMER_MANAGER_H_
+#ifndef SRC_COBALT_BIN_APP_TIMER_MANAGER_H_
+#define SRC_COBALT_BIN_APP_TIMER_MANAGER_H_
 
+#include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/zx/time.h>
 #include <stdlib.h>
 
 #include <chrono>
@@ -14,10 +17,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/async/cpp/task.h>
 #include <src/lib/fxl/logging.h>
-#include <lib/zx/time.h>
 
 using fuchsia::cobalt::Status;
 
@@ -121,4 +121,4 @@ class TimerManager {
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_TIMER_MANAGER_H_
+#endif  // SRC_COBALT_BIN_APP_TIMER_MANAGER_H_

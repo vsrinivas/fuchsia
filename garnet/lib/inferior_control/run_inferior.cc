@@ -15,7 +15,6 @@
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/util.h"
-
 #include "process.h"
 #include "server.h"
 

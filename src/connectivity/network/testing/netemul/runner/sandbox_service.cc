@@ -6,10 +6,11 @@
 
 #include <lib/async/task.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/status.h>
 
 #include <random>
+
+#include <src/lib/fxl/strings/string_printf.h>
 
 namespace netemul {
 

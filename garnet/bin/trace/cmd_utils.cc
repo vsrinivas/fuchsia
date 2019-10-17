@@ -4,12 +4,12 @@
 
 #include "garnet/bin/trace/cmd_utils.h"
 
+#include <algorithm>
+#include <iostream>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <src/lib/fxl/strings/string_printf.h>
-
-#include <algorithm>
-#include <iostream>
 
 namespace tracing {
 
@@ -71,15 +71,15 @@ bool ParseProviderBufferSize(const std::vector<fxl::StringView>& values,
 
 controller::BufferingMode TranslateBufferingMode(BufferingMode mode) {
   switch (mode) {
-  case BufferingMode::kOneshot:
-    return controller::BufferingMode::ONESHOT;
-  case BufferingMode::kCircular:
-    return controller::BufferingMode::CIRCULAR;
-  case BufferingMode::kStreaming:
-    return controller::BufferingMode::STREAMING;
-  default:
-    FXL_NOTREACHED();
-    return controller::BufferingMode::ONESHOT;
+    case BufferingMode::kOneshot:
+      return controller::BufferingMode::ONESHOT;
+    case BufferingMode::kCircular:
+      return controller::BufferingMode::CIRCULAR;
+    case BufferingMode::kStreaming:
+      return controller::BufferingMode::STREAMING;
+    default:
+      FXL_NOTREACHED();
+      return controller::BufferingMode::ONESHOT;
   }
 }
 

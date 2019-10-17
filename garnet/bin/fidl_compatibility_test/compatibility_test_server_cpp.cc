@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/types.h>
 
 #include <cstdlib>
 #include <string>
+
+#include <fidl/test/compatibility/cpp/fidl.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
 

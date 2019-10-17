@@ -4,14 +4,15 @@
 
 #include "thread_interrupter.h"
 
-#include <fbl/function.h>
 #include <lib/async/cpp/task.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/syslog/global.h>
 #include <stdarg.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
-#include <lib/syslog/global.h>
+
+#include <fbl/function.h>
+#include <src/lib/fxl/logging.h>
 
 #define print_error(...)                                                \
   do {                                                                  \

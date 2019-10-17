@@ -9,10 +9,11 @@
 #include <fuchsia/netemul/environment/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <src/lib/fxl/macros.h>
 
 #include <iostream>
 #include <memory>
+
+#include <src/lib/fxl/macros.h>
 
 namespace netemul {
 namespace internal {

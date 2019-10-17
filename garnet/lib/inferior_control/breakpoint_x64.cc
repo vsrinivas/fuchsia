@@ -4,9 +4,8 @@
 
 #include <src/lib/fxl/logging.h>
 
-#include "garnet/lib/debugger_utils/breakpoints.h"
-
 #include "breakpoint.h"
+#include "garnet/lib/debugger_utils/breakpoints.h"
 #include "process.h"
 #include "registers.h"
 #include "thread.h"

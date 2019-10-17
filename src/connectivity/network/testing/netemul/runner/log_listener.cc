@@ -4,8 +4,9 @@
 
 #include "log_listener.h"
 
-#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
+
+#include <src/lib/fxl/logging.h>
 
 #include "log_listener_log_sink.h"
 #include "log_listener_ostream.h"

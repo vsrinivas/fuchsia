@@ -5,13 +5,14 @@
 #include "managed_logger.h"
 
 #include <lib/async/default.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/assert.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
 #include <iostream>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "format.h"
 

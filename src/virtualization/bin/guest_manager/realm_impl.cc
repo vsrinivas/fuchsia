@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/guest_manager/realm_impl.h"
 
 #include <lib/fit/function.h>
+
 #include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/bin/guest_manager/guest_services.h"

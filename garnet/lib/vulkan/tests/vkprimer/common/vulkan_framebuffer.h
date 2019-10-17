@@ -5,12 +5,14 @@
 #ifndef GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_FRAMEBUFFER_H_
 #define GARNET_LIB_VULKAN_TESTS_VKPRIMER_COMMON_VULKAN_FRAMEBUFFER_H_
 
-#include <src/lib/fxl/macros.h>
 #include <vector>
-#include <vulkan/vulkan.hpp>
+
+#include <src/lib/fxl/macros.h>
 
 #include "vulkan_logical_device.h"
 #include "vulkan_swapchain.h"
+
+#include <vulkan/vulkan.hpp>
 
 class VulkanFramebuffer {
  public:

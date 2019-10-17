@@ -7,15 +7,16 @@
 #include <lib/fit/function.h>
 #include <lib/zx/thread.h>
 #include <limits.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <stdio.h>
 #include <string.h>
-#include <trace/event.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
+
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <trace/event.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/io.h"

@@ -5,12 +5,13 @@
 #ifndef PERIDOT_LIB_CONVERT_CONVERT_H_
 #define PERIDOT_LIB_CONVERT_CONVERT_H_
 
+#include <lib/fidl/cpp/vector.h>
+
 #include <array>
 #include <string>
 
 #include <flatbuffers/flatbuffers.h>
 #include <leveldb/db.h>
-#include <lib/fidl/cpp/vector.h>
 #include <rapidjson/document.h>
 #include <src/lib/fxl/strings/string_view.h>
 

@@ -4,8 +4,9 @@
 
 #include "sliding_buffer.h"
 
-#include <src/lib/fxl/logging.h>
 #include <stdio.h>
+
+#include <src/lib/fxl/logging.h>
 
 namespace media_player {
 

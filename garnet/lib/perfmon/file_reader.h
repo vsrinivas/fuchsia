@@ -5,18 +5,19 @@
 #ifndef GARNET_LIB_PERFMON_FILE_READER_H_
 #define GARNET_LIB_PERFMON_FILE_READER_H_
 
+#include <lib/fit/function.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <zircon/types.h>
+
 #include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <string>
 
-#include <lib/fit/function.h>
-#include "src/lib/files/unique_fd.h"
 #include <src/lib/fxl/macros.h>
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
-#include <zircon/types.h>
 
 #include "reader.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace perfmon {
 

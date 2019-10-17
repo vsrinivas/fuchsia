@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_DEBUGGER_UTILS_TEST_HELPER_H_
 #define GARNET_LIB_DEBUGGER_UTILS_TEST_HELPER_H_
 
+#include <stdint.h>
+
 namespace debugger_utils {
 
 // We need a place to record this for use by various test files.

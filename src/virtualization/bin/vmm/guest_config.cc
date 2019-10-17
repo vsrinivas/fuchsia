@@ -5,14 +5,15 @@
 #include "src/virtualization/bin/vmm/guest_config.h"
 
 #include <libgen.h>
-#include <rapidjson/document.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
 
 #include <iostream>
+
+#include <rapidjson/document.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 
 static void print_usage(fxl::CommandLine& cl) {
   // clang-format off

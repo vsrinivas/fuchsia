@@ -20,8 +20,10 @@ std::string Base64UrlEncode(fxl::StringView input) {
   size_t written = modp_b64_encode(&output[0], input.data(), input.size());
   FXL_DCHECK(output_length == written);
   for (char& c : output) {
-    if (c == '+') c = '-';
-    else if (c == '/') c = '_';
+    if (c == '+')
+      c = '-';
+    else if (c == '/')
+      c = '_';
   }
   return output;
 }
@@ -29,8 +31,10 @@ std::string Base64UrlEncode(fxl::StringView input) {
 bool Base64UrlDecode(fxl::StringView input, std::string* output) {
   std::string input_copy = input.ToString();
   for (char& c : input_copy) {
-    if (c == '-') c = '+';
-    else if (c == '_') c = '/';
+    if (c == '-')
+      c = '+';
+    else if (c == '_')
+      c = '/';
   }
   std::string tmp_output;
   size_t output_maxlength = modp_b64_decode_len(input.size());

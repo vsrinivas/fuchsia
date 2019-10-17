@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "server.h"
+
+#include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
+
 #include <cstdlib>
 #include <limits>
 #include <string>
 #include <vector>
 
-#include <lib/async/cpp/task.h>
-#include <lib/fit/function.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
@@ -16,8 +19,6 @@
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/threads.h"
 #include "garnet/lib/debugger_utils/util.h"
-
-#include "server.h"
 
 namespace inferior_control {
 

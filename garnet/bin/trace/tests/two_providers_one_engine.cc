@@ -6,22 +6,23 @@
 // The test is to exercise graceful handling when a process contains
 // two providers.
 
-#include <memory>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <stdlib.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+
+#include <memory>
+
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
-#include <stdlib.h>
 #include <trace-provider/provider.h>
-#include <zircon/processargs.h>
-#include <zircon/status.h>
 
 int main(int argc, char* argv[]) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);

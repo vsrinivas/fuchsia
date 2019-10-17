@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <src/lib/fxl/arraysize.h>
 #include <zircon/syscalls/debug.h>
+
+#include <src/lib/fxl/arraysize.h>
 
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/inferior_control/thread.h"
-
 #include "registers.h"
 
 namespace debugserver {

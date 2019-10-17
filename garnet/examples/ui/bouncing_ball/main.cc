@@ -14,6 +14,7 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <math.h>
+
 #include <src/lib/fxl/logging.h>
 
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {

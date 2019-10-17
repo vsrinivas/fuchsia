@@ -6,12 +6,13 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <zircon/syscalls.h>
+
 #include <atomic>
 
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <src/lib/fxl/time/time_point.h>
-#include <zircon/syscalls.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/reader.h"

@@ -5,12 +5,13 @@
 #ifndef GARNET_BIN_HTTP_UPLOAD_ELEMENT_READER_H_
 #define GARNET_BIN_HTTP_UPLOAD_ELEMENT_READER_H_
 
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
+
 #include <array>
 #include <limits>
 
 #include <src/lib/fxl/macros.h>
-#include <lib/zx/socket.h>
-#include <lib/zx/vmo.h>
 
 namespace http {
 

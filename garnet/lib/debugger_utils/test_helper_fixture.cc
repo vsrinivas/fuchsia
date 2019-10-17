@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "test_helper_fixture.h"
+
 #include <lib/fdio/spawn.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/processargs.h>
 
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
+
 #include "test_helper.h"
-#include "test_helper_fixture.h"
 #include "util.h"
 
 namespace debugger_utils {

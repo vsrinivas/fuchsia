@@ -5,9 +5,10 @@
 #ifndef GARNET_BIN_CPUPERF_PROVIDER_APP_H_
 #define GARNET_BIN_CPUPERF_PROVIDER_APP_H_
 
+#include <lib/sys/cpp/component_context.h>
+
 #include <memory>
 
-#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <trace/observer.h>
 

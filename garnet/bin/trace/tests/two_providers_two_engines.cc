@@ -7,10 +7,10 @@
 // providers.
 
 #include <assert.h>
-#include <stdlib.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <stdlib.h>
+
 #include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
