@@ -130,6 +130,7 @@ ${GIDL} \
     -language go \
     -json "${json_path}" \
     ${GIDL_SRCS} | ${GOFMT} >> "${GO_TEST_PATH}"
+fx format-code --files="$GO_TEST_PATH"
 
 # C++
 echo "$generated_source_header" > "${CPP_TEST_PATH}"
@@ -152,6 +153,7 @@ ${GIDL} \
     -json "${json_path}" \
     ${GIDL_SRCS} >> "${DART_TEST_PATH}"
 ${FUCHSIA_DIR}/prebuilt/third_party/dart/linux-x64/bin/dartfmt -w ${DART_TEST_PATH} > /dev/null
+fx format-code --files="$DART_TEST_PATH"
 
 # LLCPP
 echo "${generated_source_header}" > "${LLCPP_TEST_PATH}"
