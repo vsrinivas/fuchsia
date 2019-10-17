@@ -8,14 +8,13 @@
 
 #include "styling_impl.h"
 
-#include "cb_pool.h"
-#include "common/vk/vk_assert.h"
+#include "common/vk/assert.h"
 #include "device.h"
 #include "queue_pool.h"
-#include "semaphore_pool.h"
-#include "spn_vk.h"
-#include "spn_vk_target.h"
+#include "spinel_assert.h"
 #include "state_assert.h"
+#include "vk.h"
+#include "vk_target.h"
 
 //
 // Styling states
@@ -47,11 +46,6 @@ struct spn_si_vk
     VkDescriptorBufferInfo dbi;
     VkDeviceMemory         dm;
   } d;
-
-  struct
-  {
-    VkSemaphore sealing;
-  } semaphore;
 };
 
 //
@@ -62,12 +56,14 @@ struct spn_styling_impl
 {
   struct spn_styling *                styling;
   struct spn_device *                 device;
-  struct spn_vk_target_config const * config;  // TODO: why are we storing this here?
+  struct spn_vk_target_config const * config;  // FIXME(allanmac): we don't need to duplicate this
   struct spn_si_vk                    vk;
 
-  SPN_ASSERT_STATE_DECLARE(spn_si_state_e);
-
   uint32_t lock_count;  // # of wip renders
+
+  SPN_ASSERT_STATE_DECLARE(spn_si_state_e);  // FIXME(allanmac): clean up this state tracking
+
+  spn_dispatch_id_t id;
 };
 
 //
@@ -77,23 +73,17 @@ struct spn_styling_impl
 struct spn_si_complete_payload
 {
   struct spn_styling_impl * impl;
-  VkCommandBuffer           cb;
 };
+
+//
+//
+//
 
 static void
 spn_si_complete(void * pfn_payload)
 {
-  //
-  // FENCE_POOL INVARIANT:
-  //
-  // COMPLETION ROUTINE MUST MAKE LOCAL COPIES OF PAYLOAD BEFORE ANY
-  // POTENTIAL INVOCATION OF SPN_DEVICE_YIELD/WAIT/DRAIN()
-  //
   struct spn_si_complete_payload const * const payload = pfn_payload;
   struct spn_styling_impl * const              impl    = payload->impl;
-
-  // release the copy semaphore
-  spn_device_semaphore_pool_release(impl->device, impl->vk.semaphore.sealing);
 
   // and we're sealed...
   impl->state = SPN_SI_STATE_SEALED;
@@ -103,7 +93,7 @@ spn_si_complete(void * pfn_payload)
 //
 //
 
-static spn_result
+static spn_result_t
 spn_si_seal(struct spn_styling_impl * const impl)
 {
   //
@@ -112,28 +102,31 @@ spn_si_seal(struct spn_styling_impl * const impl)
   if (impl->state >= SPN_SI_STATE_SEALING)
     return SPN_SUCCESS;
 
-  struct spn_device * const device = impl->device;
-
   //
   // otherwise, kick off the UNSEALED > SEALING > SEALED transition
   //
+  struct spn_device * const device = impl->device;
+
+  //
+  // If we're on a discrete GPU then copy styling data from the host to
+  // device.
+  //
   if (impl->config->styling.vk.d != 0)
     {
-      //
-      // We need to copy styling data from the host to device
-      //
-
       // move to SEALING state
       impl->state = SPN_SI_STATE_SEALING;
 
-      // acquire the semaphore associated with the copy
-      impl->vk.semaphore.sealing = spn_device_semaphore_pool_acquire(device);
+      // acquire a dispatch
+      spn(device_dispatch_acquire(device, SPN_DISPATCH_STAGE_STYLING, &impl->id));
 
       // get a cb
-      VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
+      VkCommandBuffer cb = spn_device_dispatch_get_cb(device, impl->id);
 
       //
-      // launch a copy and record a semaphore
+      // copy the styling buffer
+      //
+      // FIXME(allanmac): this can be made more sophisticated once
+      // random-access styling operations are added.
       //
       VkBufferCopy const bc = { .srcOffset = impl->vk.h.dbi.offset,
                                 .dstOffset = impl->vk.d.dbi.offset,
@@ -141,22 +134,18 @@ spn_si_seal(struct spn_styling_impl * const impl)
 
       vkCmdCopyBuffer(cb, impl->vk.h.dbi.buffer, impl->vk.d.dbi.buffer, 1, &bc);
 
-      struct spn_si_complete_payload payload = { .impl = impl, .cb = cb };
+      //
+      // set a completion payload
+      //
+      struct spn_si_complete_payload * const payload =
+        spn_device_dispatch_set_completion(device, impl->id, spn_si_complete, sizeof(*payload));
 
-      VkFence const fence =
-        spn_device_cb_end_fence_acquire(device, cb, spn_si_complete, &payload, sizeof(payload));
-      // boilerplate submit
-      struct VkSubmitInfo const si = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                       .pNext                = NULL,
-                                       .waitSemaphoreCount   = 0,
-                                       .pWaitSemaphores      = NULL,
-                                       .pWaitDstStageMask    = NULL,
-                                       .commandBufferCount   = 1,
-                                       .pCommandBuffers      = &cb,
-                                       .signalSemaphoreCount = 1,
-                                       .pSignalSemaphores    = &impl->vk.semaphore.sealing };
+      payload->impl = impl;
 
-      vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
+      //
+      // submit the dispatch
+      //
+      spn_device_dispatch_submit(device, impl->id);
     }
   else
     {
@@ -174,7 +163,7 @@ spn_si_seal(struct spn_styling_impl * const impl)
 //
 //
 
-static spn_result
+static spn_result_t
 spn_si_unseal(struct spn_styling_impl * const impl)
 {
   //
@@ -191,7 +180,7 @@ spn_si_unseal(struct spn_styling_impl * const impl)
   while (impl->state != SPN_SI_STATE_SEALED)
     {
       // wait for SEALING > SEALED transition ...
-      spn_device_wait(device);
+      SPN_DEVICE_WAIT(device);
     }
 
   //
@@ -199,11 +188,11 @@ spn_si_unseal(struct spn_styling_impl * const impl)
   //
   while (impl->lock_count > 0)
     {
-      spn_device_wait(device);
+      SPN_DEVICE_WAIT(device);
     }
 
   //
-  // and we're done
+  // transition to unsealed
   //
   impl->state = SPN_SI_STATE_UNSEALED;
 
@@ -214,11 +203,14 @@ spn_si_unseal(struct spn_styling_impl * const impl)
 //
 //
 
-static spn_result
+static spn_result_t
 spn_si_release(struct spn_styling_impl * const impl)
 {
   //
   // was this the last reference?
+  //
+  // FIXME(allanmac): it's probably wise to change top-level Spinel
+  // object reference counts to test for double releases
   //
   if (--impl->styling->ref_count != 0)
     return SPN_SUCCESS;
@@ -230,18 +222,17 @@ spn_si_release(struct spn_styling_impl * const impl)
   //
   while (impl->lock_count > 0)
     {
-      spn_device_wait(device);
+      SPN_DEVICE_WAIT(device);
     }
-
-  //
-  // Note that we don't have to unmap before freeing
-  //
 
   //
   // free device allocations
   //
   if (impl->config->styling.vk.d != 0)
     {
+      //
+      // Note that we don't have to unmap before freeing
+      //
       spn_allocator_device_perm_free(&device->allocator.device.perm.local,
                                      device->environment,
                                      &impl->vk.d.dbi,
@@ -268,38 +259,15 @@ spn_si_release(struct spn_styling_impl * const impl)
 //
 //
 
-#ifdef SPN_DISABLED_UNTIL_INTEGRATED
-
-static void
-spn_si_retain_and_lock(struct spn_styling_impl * const impl)
-{
-  impl->styling->ref_count += 1;
-
-  impl->lock_count += 1;
-}
-
-static void
-spn_styling_unlock_and_release(struct spn_styling_impl * const impl)
-{
-  impl->lock_count -= 1;
-
-  spn_si_release(impl);
-}
-
-#endif
-
-//
-//
-//
-
-spn_result
+spn_result_t
 spn_styling_impl_create(struct spn_device * const   device,
                         struct spn_styling ** const styling,
-                        uint32_t const              dwords_count,
-                        uint32_t const              layers_count)
+                        uint32_t const              layers_count,
+                        uint32_t const              cmds_count)
 {
   //
-  // retain the context
+  // FIXME(allanmac): retain the context
+  //
   // spn_context_retain(context);
   //
   struct spn_allocator_host_perm * const perm = &device->allocator.host.perm;
@@ -309,6 +277,7 @@ spn_styling_impl_create(struct spn_device * const   device,
   //
   struct spn_styling_impl * const impl =
     spn_allocator_host_perm_alloc(perm, SPN_MEM_FLAGS_READ_WRITE, sizeof(*impl));
+
   //
   // allocate styling
   //
@@ -336,10 +305,13 @@ spn_styling_impl_create(struct spn_device * const   device,
   s->unseal  = spn_si_unseal;
   s->release = spn_si_release;
 
-  s->dwords.count = dwords_count;
-  s->dwords.next  = layers_count * SPN_STYLING_LAYER_COUNT_DWORDS;
-
   s->layers.count = layers_count;
+
+  uint32_t const layers_dwords = layers_count * SPN_STYLING_LAYER_COUNT_DWORDS;
+  uint32_t const dwords_count  = layers_dwords + cmds_count;
+
+  s->dwords.count = dwords_count;
+  s->dwords.next  = layers_dwords;
 
   s->ref_count = 1;
 
@@ -368,12 +340,13 @@ spn_styling_impl_create(struct spn_device * const   device,
     }
   else
     {
-      impl->vk.d.dbi =
-        (VkDescriptorBufferInfo){ .buffer = VK_NULL_HANDLE, .offset = 0, .range = 0 };
-      impl->vk.d.dm = VK_NULL_HANDLE;
+      impl->vk.d.dbi = impl->vk.h.dbi;
+      impl->vk.d.dm  = impl->vk.h.dm;
     }
 
+  //
   // the styling impl starts out unsealed
+  //
   SPN_ASSERT_STATE_INIT(impl, SPN_SI_STATE_UNSEALED);
 
   return SPN_SUCCESS;
@@ -383,8 +356,58 @@ spn_styling_impl_create(struct spn_device * const   device,
 //
 //
 
+static void
+spn_si_retain_and_lock(struct spn_styling_impl * const impl)
+{
+  impl->styling->ref_count += 1;
+
+  impl->lock_count += 1;
+}
+
+static void
+spn_styling_unlock_and_release(struct spn_styling_impl * const impl)
+{
+  impl->lock_count -= 1;
+
+  spn_si_release(impl);
+}
+
+//
+//
+//
+
 void
-spn_styling_impl_pre_render_ds(struct spn_styling * const         styling,
+spn_styling_happens_before(struct spn_styling * const styling, spn_dispatch_id_t const id)
+{
+  struct spn_styling_impl * const impl = styling->impl;
+
+  assert(impl->state >= SPN_SI_STATE_SEALING);
+
+  //
+  // retain the styling
+  //
+  spn_si_retain_and_lock(impl);
+
+  //
+  // already sealed?
+  //
+  if (impl->state == SPN_SI_STATE_SEALED)
+    return;
+
+  //
+  // otherwise... styling happens before render
+  //
+  spn_device_dispatch_happens_after(impl->device,
+                                    id,         // after
+                                    impl->id);  // before
+}
+
+//
+//
+//
+
+void
+spn_styling_pre_render_bind_ds(struct spn_styling * const         styling,
                                struct spn_vk_ds_styling_t * const ds,
                                VkCommandBuffer                    cb)
 {
@@ -397,7 +420,6 @@ spn_styling_impl_pre_render_ds(struct spn_styling * const         styling,
   //
   // acquire STYLING descriptor set
   //
-
   spn_vk_ds_acquire_styling(instance, device, ds);
 
   // copy the dbi structs
@@ -415,22 +437,9 @@ spn_styling_impl_pre_render_ds(struct spn_styling * const         styling,
 //
 
 void
-spn_styling_impl_pre_render_wait(struct spn_styling * const   styling,
-                                 uint32_t * const             waitSemaphoreCount,
-                                 VkSemaphore * const          pWaitSemaphores,
-                                 VkPipelineStageFlags * const pWaitDstStageMask)
+spn_styling_post_render(struct spn_styling * const styling)
 {
-  struct spn_styling_impl * const impl = styling->impl;
-
-  assert(impl->state >= SPN_SI_STATE_SEALING);
-
-  if (impl->state == SPN_SI_STATE_SEALING)
-    {
-      uint32_t const idx = (*waitSemaphoreCount)++;
-
-      pWaitSemaphores[idx]   = impl->vk.semaphore.sealing;
-      pWaitDstStageMask[idx] = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
+  spn_styling_unlock_and_release(styling->impl);
 }
 
 //

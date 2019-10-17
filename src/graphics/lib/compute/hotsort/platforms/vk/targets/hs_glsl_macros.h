@@ -13,35 +13,192 @@
 #extension GL_KHR_shader_subgroup_basic : require
 #extension GL_KHR_shader_subgroup_shuffle : require
 
+//
+// Does this target support 64-bit shuffles?
+//
+// Requires: #define HS_EXT_ENABLE_SUBGROUP_EXTENDED_TYPES
+//
+
+#define HS_ENABLE_SHUFFLE_64                                                                       \
+  HS_EXT_ENABLE_SUBGROUP_EXTENDED_TYPES && HS_GL_EXT_shader_subgroup_extended_types_int64
+
+//
+// Does this target support 64-bit comparisons
+//
+// Requires: #define HS_DISABLE_COMPARE_64  1
+//
+
+//
+// sorting 64-bit keys requires additional extensions
+//
+
 #if HS_KEY_DWORDS == 2
-#extension GL_ARB_gpu_shader_int64 : require
+
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+
+#if HS_ENABLE_SHUFFLE_64
+
+#extension GL_EXT_shader_subgroup_extended_types_int64 : require
+
+#endif
+
 #endif
 
 //
-// Define the type based on key and val sizes
-//
-
-#if HS_KEY_DWORDS == 1
-#if HS_VAL_DWORDS == 0
-#define HS_KEY_TYPE uint
-#define HS_KEY_VAL_MAX HS_KEY_TYPE(-1)
-#endif
-#elif HS_KEY_DWORDS == 2  // FIXME -- some targets will use uint2
-#if HS_VAL_DWORDS == 0
-#define HS_KEY_TYPE uint64_t  // GL_ARB_gpu_shader_int64
-#define HS_KEY_VAL_MAX HS_KEY_TYPE(-1L)
-#endif
-#endif
-
-//
-// FYI, restrict shouldn't have any impact on these kernels and
-// benchmarks appear to prove that true
+// FIXME(allanmac): restrict shouldn't have any impact on these kernels
+// and benchmarks appear to prove that true but revisit this when we can
+// track performance.
 //
 
 #define HS_RESTRICT restrict
 
 //
+// DEFINE THE TYPE BASED ON KEY AND VAL SIZES
 //
+// FIXME(allanmac): Be aware that the 64-bit key size will be updated to
+// use uvec2 values on certain platforms.
+//
+// clang-format off
+//
+
+#if   (HS_KEY_DWORDS == 1) && (HS_VAL_DWORDS == 0)
+
+/////////////////////
+
+#define HS_KEY_TYPE          uint
+#define HS_KEY_VAL_MAX       HS_KEY_TYPE(-1)
+
+/////////////////////
+
+#elif (HS_KEY_DWORDS == 2) && (HS_VAL_DWORDS == 0)
+
+/////////////////////
+
+#if   (!HS_DISABLE_COMPARE_64 && HS_ENABLE_SHUFFLE_64)
+
+#define HS_KEY_TYPE          uint64_t
+#define HS_KEY_VAL_MAX       HS_KEY_TYPE(-1L)
+
+#else
+
+#define HS_KEY_TYPE          u32vec2
+#define HS_KEY_VAL_MAX       HS_KEY_TYPE(-1,-1)
+
+#endif
+
+/////////////////////
+
+#else
+#error "Unsupported values for HS_KEY_DWORDS and HS_VAL_DWORDS"
+#endif
+
+//
+// COMPARISON SUPPORT
+//
+
+#if   (HS_KEY_DWORDS == 1) && (HS_VAL_DWORDS == 0)
+
+/////////////////////
+
+#define HS_KV_COMPARABLE_SRC(src_) src_
+#define HS_KV_COMPARABLE_DST(dst_) dst_
+
+/////////////////////
+
+#elif (HS_KEY_DWORDS == 2) && (HS_VAL_DWORDS == 0)
+
+/////////////////////
+
+#if !HS_DISABLE_COMPARE_64
+
+#if HS_ENABLE_SHUFFLE_64
+
+#define HS_KV_COMPARABLE_SRC(src_) src_
+#define HS_KV_COMPARABLE_DST(dst_) dst_
+
+#else
+
+#define HS_KV_COMPARABLE_SRC(src_) pack64(src_)
+#define HS_KV_COMPARABLE_DST(dst_) unpack32(dst_)
+
+#endif
+
+#endif
+
+/////////////////////
+
+#else
+#error "Unsupported values for HS_KEY_DWORDS and HS_VAL_DWORDS"
+#endif
+
+//
+// SHUFFLE SUPPORT
+//
+
+#if   (HS_KEY_DWORDS == 1) && (HS_VAL_DWORDS == 0)
+
+/////////////////////
+
+#define HS_SUBGROUP_SHUFFLE(v, i)               \
+  subgroupShuffle(v,i)
+
+#define HS_SUBGROUP_SHUFFLE_XOR(v, m)           \
+  subgroupShuffleXor(v,m)
+
+#define HS_SUBGROUP_SHUFFLE_UP(v, d)            \
+  subgroupShuffleUp(v,d)
+
+#define HS_SUBGROUP_SHUFFLE_DOWN(v, d)          \
+  subgroupShuffleDown(v,d)
+
+/////////////////////
+
+#elif (HS_KEY_DWORDS == 2) && (HS_VAL_DWORDS == 0)
+
+/////////////////////
+
+#if   (!HS_DISABLE_COMPARE_64 && HS_ENABLE_SHUFFLE_64)
+
+#define HS_SUBGROUP_SHUFFLE(v, i)               \
+  subgroupShuffle(v,i)
+
+#define HS_SUBGROUP_SHUFFLE_XOR(v, m)           \
+  subgroupShuffleXor(v,m)
+
+#define HS_SUBGROUP_SHUFFLE_UP(v, d)            \
+  subgroupShuffleUp(v,d)
+
+#define HS_SUBGROUP_SHUFFLE_DOWN(v, d)          \
+  subgroupShuffleDown(v,d)
+
+#else // two 32-bit shuffles
+
+#define HS_SUBGROUP_SHUFFLE(v, i)               \
+  HS_KEY_TYPE(subgroupShuffle(v[0],i),          \
+              subgroupShuffle(v[1],i))
+
+#define HS_SUBGROUP_SHUFFLE_XOR(v, m)           \
+  HS_KEY_TYPE(subgroupShuffleXor(v[0],m),       \
+              subgroupShuffleXor(v[1],m))
+
+#define HS_SUBGROUP_SHUFFLE_UP(v, d)            \
+  HS_KEY_TYPE(subgroupShuffleUp(v[0],d),        \
+              subgroupShuffleUp(v[1],d))
+
+#define HS_SUBGROUP_SHUFFLE_DOWN(v, d)          \
+  HS_KEY_TYPE(subgroupShuffleDown(v[0],d),      \
+              subgroupShuffleDown(v[1],d))
+
+#endif
+
+/////////////////////
+
+#else
+#error "Unsupported values for HS_KEY_DWORDS and HS_VAL_DWORDS"
+#endif
+
+//
+// clang-format on
 //
 
 #define HS_GLSL_WORKGROUP_SIZE(_x, _y, _z)                                                         \
@@ -58,49 +215,91 @@
   }
 
 //
-// These can be overidden
+//
 //
 
+// clang-format off
+#define HS_BUFFER_2(name_) buffer _##name_
+#define HS_BUFFER(name_)   HS_BUFFER_2(name_)
+// clang-format on
+
+//
+// IS HOTSORT CONFIGURED TO SORT IN PLACE?
+//
+
+#if HS_IS_IN_PLACE
+
+//
+// BS KERNEL PROTO OPERATES ON ONE BUFFER
+//
+
+// clang-format off
 #ifndef HS_KV_IN
-#define HS_KV_IN kv_in
+#define HS_KV_IN                   kv_inout // can be overriden
 #endif
+#define HS_KV_IN_LOAD(_idx)        HS_KV_IN[_idx]
+#define HS_KV_IN_STORE(_idx, _kv)  HS_KV_IN[_idx]  = _kv
 
 #ifndef HS_KV_OUT
-#define HS_KV_OUT kv_out
+#define HS_KV_OUT                  kv_inout // can be overriden
 #endif
-
-//
-//
-//
-
-#define HS_KV_IN_LOAD(_idx) HS_KV_IN[_idx]
-#define HS_KV_OUT_LOAD(_idx) HS_KV_OUT[_idx]
-
-#define HS_KV_IN_STORE(_idx, _kv) HS_KV_IN[_idx] = _kv
+#define HS_KV_OUT_LOAD(_idx)       HS_KV_OUT[_idx]
 #define HS_KV_OUT_STORE(_idx, _kv) HS_KV_OUT[_idx] = _kv
+// clang-format on
 
-//
-// KERNEL PROTOS
-//
+#define HS_KV_INOUT kv_inout
 
 #define HS_BS_KERNEL_PROTO(slab_count, slab_count_ru_log2)                                         \
-  HS_GLSL_SUBGROUP_SIZE()                                                                          \
   HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS * slab_count, 1, 1);                                      \
-  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) writeonly buffer _kv_out                       \
+  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) HS_BUFFER(HS_KV_INOUT)                         \
+  {                                                                                                \
+    HS_KEY_TYPE HS_KV_INOUT[];                                                                     \
+  };                                                                                               \
+  HS_GLSL_PUSH();                                                                                  \
+  void main()
+
+#else  // NOT IN PLACE
+
+//
+// BS KERNEL PROTO OPERATES ON TWO BUFFERS
+//
+
+// clang-format off
+#ifndef HS_KV_IN
+#define HS_KV_IN                   kv_in  // can be overriden
+#endif
+#define HS_KV_IN_LOAD(_idx)        HS_KV_IN[_idx]
+#define HS_KV_IN_STORE(_idx, _kv)  HS_KV_IN[_idx]  = _kv
+
+#ifndef HS_KV_OUT
+#define HS_KV_OUT                  kv_out // can be overriden
+#endif
+#define HS_KV_OUT_LOAD(_idx)       HS_KV_OUT[_idx]
+#define HS_KV_OUT_STORE(_idx, _kv) HS_KV_OUT[_idx] = _kv
+// clang-format on
+
+#define HS_BS_KERNEL_PROTO(slab_count, slab_count_ru_log2)                                         \
+  HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS * slab_count, 1, 1);                                      \
+  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) writeonly HS_BUFFER(HS_KV_OUT)                 \
   {                                                                                                \
     HS_KEY_TYPE HS_KV_OUT[];                                                                       \
   };                                                                                               \
-  HS_GLSL_BINDING(HS_KV_IN_SET, HS_KV_IN_BINDING) readonly buffer _kv_in                           \
+  HS_GLSL_BINDING(HS_KV_IN_SET, HS_KV_IN_BINDING) readonly HS_BUFFER(HS_KV_IN)                     \
   {                                                                                                \
     HS_KEY_TYPE HS_KV_IN[];                                                                        \
   };                                                                                               \
   HS_GLSL_PUSH();                                                                                  \
   void main()
 
+#endif
+
+//
+// REMAINING KERNEL PROTOS ONLY OPERATE ON ONE BUFFER
+//
+
 #define HS_BC_KERNEL_PROTO(slab_count, slab_count_log2)                                            \
-  HS_GLSL_SUBGROUP_SIZE()                                                                          \
   HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS * slab_count, 1, 1);                                      \
-  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) buffer _kv_out                                 \
+  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) HS_BUFFER(HS_KV_OUT)                           \
   {                                                                                                \
     HS_KEY_TYPE HS_KV_OUT[];                                                                       \
   };                                                                                               \
@@ -108,9 +307,8 @@
   void main()
 
 #define HS_FM_KERNEL_PROTO(s, r)                                                                   \
-  HS_GLSL_SUBGROUP_SIZE()                                                                          \
   HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS, 1, 1);                                                   \
-  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) buffer _kv_out                                 \
+  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) HS_BUFFER(HS_KV_OUT)                           \
   {                                                                                                \
     HS_KEY_TYPE HS_KV_OUT[];                                                                       \
   };                                                                                               \
@@ -118,9 +316,8 @@
   void main()
 
 #define HS_HM_KERNEL_PROTO(s)                                                                      \
-  HS_GLSL_SUBGROUP_SIZE()                                                                          \
   HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS, 1, 1);                                                   \
-  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) buffer _kv_out                                 \
+  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) HS_BUFFER(HS_KV_OUT)                           \
   {                                                                                                \
     HS_KEY_TYPE HS_KV_OUT[];                                                                       \
   };                                                                                               \
@@ -128,9 +325,8 @@
   void main()
 
 #define HS_FILL_IN_KERNEL_PROTO()                                                                  \
-  HS_GLSL_SUBGROUP_SIZE()                                                                          \
   HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS, 1, 1);                                                   \
-  HS_GLSL_BINDING(HS_KV_IN_SET, HS_KV_IN_BINDING) writeonly buffer _kv_in                          \
+  HS_GLSL_BINDING(HS_KV_IN_SET, HS_KV_IN_BINDING) writeonly HS_BUFFER(HS_KV_IN)                    \
   {                                                                                                \
     HS_KEY_TYPE HS_KV_IN[];                                                                        \
   };                                                                                               \
@@ -138,9 +334,8 @@
   void main()
 
 #define HS_FILL_OUT_KERNEL_PROTO()                                                                 \
-  HS_GLSL_SUBGROUP_SIZE()                                                                          \
   HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS, 1, 1);                                                   \
-  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) writeonly buffer _kv_out                       \
+  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) writeonly HS_BUFFER(HS_KV_OUT)                 \
   {                                                                                                \
     HS_KEY_TYPE HS_KV_OUT[];                                                                       \
   };                                                                                               \
@@ -148,9 +343,8 @@
   void main()
 
 #define HS_TRANSPOSE_KERNEL_PROTO()                                                                \
-  HS_GLSL_SUBGROUP_SIZE()                                                                          \
   HS_GLSL_WORKGROUP_SIZE(HS_SLAB_THREADS, 1, 1);                                                   \
-  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) buffer _kv_out                                 \
+  HS_GLSL_BINDING(HS_KV_OUT_SET, HS_KV_OUT_BINDING) HS_BUFFER(HS_KV_OUT)                           \
   {                                                                                                \
     HS_KEY_TYPE HS_KV_OUT[];                                                                       \
   };                                                                                               \
@@ -174,45 +368,13 @@
 #define HS_BLOCK_BARRIER() barrier()
 
 //
-// SHUFFLES
-//
-
-//
-// Note that not all target architectures have support for uint64.
-// For this reason we will probably switch to a uvec2 representation
-// for 8-byte key-vals.
-//
-
-#if (HS_KEY_DWORDS == 1)
-#define HS_SHUFFLE_CAST_TO(v) v
-#define HS_SHUFFLE_CAST_FROM(v) v
-#elif (HS_KEY_DWORDS == 2)
-#define HS_SHUFFLE_CAST_TO(v) uint64BitsToDouble(v)
-#define HS_SHUFFLE_CAST_FROM(v) doubleBitsToUint64(v)
-#endif
-
-#define HS_SUBGROUP_SHUFFLE(v, i) HS_SHUFFLE_CAST_FROM(subgroupShuffle(HS_SHUFFLE_CAST_TO(v), i))
-#define HS_SUBGROUP_SHUFFLE_XOR(v, m)                                                              \
-  HS_SHUFFLE_CAST_FROM(subgroupShuffleXor(HS_SHUFFLE_CAST_TO(v), m))
-#define HS_SUBGROUP_SHUFFLE_UP(v, d)                                                               \
-  HS_SHUFFLE_CAST_FROM(subgroupShuffleUp(HS_SHUFFLE_CAST_TO(v), d))
-#define HS_SUBGROUP_SHUFFLE_DOWN(v, d)                                                             \
-  HS_SHUFFLE_CAST_FROM(subgroupShuffleDown(HS_SHUFFLE_CAST_TO(v), d))
-
-//
 // SLAB GLOBAL
 //
 
-//
-// In early versions of Vulkan 1.1, subgroup sizes weren't necessarily
-// known in advance -- at least on Intel GEN.
-//
-// Assume that a Vulkan API fix is forthcoming.
-//
 #define HS_SLAB_GLOBAL_BASE()                                                                      \
   const uint gmem_base = (gl_GlobalInvocationID.x & ~(HS_SLAB_THREADS - 1)) * HS_SLAB_HEIGHT
 
-#define HS_SLAB_GLOBAL_OFFSET() const uint gmem_offset = HS_SUBGROUP_LANE_ID()
+#define HS_SLAB_GLOBAL_OFFSET() const uint gmem_offset = gl_SubgroupInvocationID
 
 //
 //
@@ -240,9 +402,14 @@
 //
 //
 
-#define HS_SLAB_GLOBAL_LOAD_IN(_row_idx) HS_KV_IN_LOAD(gmem_in_idx + HS_SLAB_THREADS * _row_idx)
-
+// clang-format off
+#define HS_SLAB_GLOBAL_LOAD_IN(_row_idx)  HS_KV_IN_LOAD( gmem_in_idx  + HS_SLAB_THREADS * _row_idx)
 #define HS_SLAB_GLOBAL_LOAD_OUT(_row_idx) HS_KV_OUT_LOAD(gmem_out_idx + HS_SLAB_THREADS * _row_idx)
+// clang-format on
+
+//
+//
+//
 
 #define HS_SLAB_GLOBAL_STORE_OUT(_row_idx, _kv)                                                    \
   HS_KV_OUT_STORE((gmem_out_idx + HS_SLAB_THREADS * _row_idx), _kv)
@@ -267,9 +434,9 @@
 
 #define HS_BS_MERGE_H_PREAMBLE(slab_count)                                                         \
   const uint smem_l_idx =                                                                          \
-    HS_SUBGROUP_ID() * (HS_SLAB_THREADS * slab_count) + HS_SUBGROUP_LANE_ID();                     \
-  const uint smem_r_idx = (HS_SUBGROUP_ID() ^ 1) * (HS_SLAB_THREADS * slab_count) +                \
-                          (HS_SUBGROUP_LANE_ID() ^ (HS_SLAB_THREADS - 1))
+    gl_SubgroupID * (HS_SLAB_THREADS * slab_count) + gl_SubgroupInvocationID;                      \
+  const uint smem_r_idx = (gl_SubgroupID ^ 1) * (HS_SLAB_THREADS * slab_count) +                   \
+                          (gl_SubgroupInvocationID ^ (HS_SLAB_THREADS - 1))
 
 //
 // BLOCK CLEAN MERGE HORIZONTAL
@@ -277,61 +444,75 @@
 
 #define HS_BC_MERGE_H_PREAMBLE(slab_count)                                                         \
   const uint gmem_l_idx =                                                                          \
+    kv_offset_out +                                                                                \
     (gl_GlobalInvocationID.x & ~(HS_SLAB_THREADS * slab_count - 1)) * HS_SLAB_HEIGHT +             \
     gl_LocalInvocationID.x;                                                                        \
-  const uint smem_l_idx = HS_SUBGROUP_ID() * (HS_SLAB_THREADS * slab_count) + HS_SUBGROUP_LANE_ID()
+  const uint smem_l_idx = gl_SubgroupID * (HS_SLAB_THREADS * slab_count) + gl_SubgroupInvocationID
 
 #define HS_BC_GLOBAL_LOAD_L(slab_idx) HS_KV_OUT_LOAD(gmem_l_idx + (HS_SLAB_THREADS * slab_idx))
 
 //
 // SLAB FLIP AND HALF PREAMBLES
 //
+// NOTE(allanmac): A slab flip/half operations can use either a
+// shuffle() or shuffleXor().  Try both and steer appropriately.
+//
 
-#if 0
+#ifndef HS_SLAB_FLIP_USE_SHUFFLE_XOR
 
 #define HS_SLAB_FLIP_PREAMBLE(mask)                                                                \
-  const uint flip_lane_idx = HS_SUBGROUP_LANE_ID() ^ mask;                                         \
-  const bool t_lt          = HS_SUBGROUP_LANE_ID() < flip_lane_idx
+  const uint flip_lane_idx = gl_SubgroupInvocationID ^ mask;                                       \
+  const bool t_lt          = gl_SubgroupInvocationID < flip_lane_idx
 
 #define HS_SLAB_HALF_PREAMBLE(mask)                                                                \
-  const uint half_lane_idx = HS_SUBGROUP_LANE_ID() ^ mask;                                         \
-  const bool t_lt          = HS_SUBGROUP_LANE_ID() < half_lane_idx
+  const uint half_lane_idx = gl_SubgroupInvocationID ^ mask;                                       \
+  const bool t_lt          = gl_SubgroupInvocationID < half_lane_idx
 
 #else
 
 #define HS_SLAB_FLIP_PREAMBLE(mask)                                                                \
   const uint flip_lane_mask = mask;                                                                \
-  const bool t_lt           = gl_LocalInvocationID.x < (gl_LocalInvocationID.x ^ mask)
+  const bool t_lt           = gl_SubgroupInvocationID < (gl_SubgroupInvocationID ^ mask)
 
 #define HS_SLAB_HALF_PREAMBLE(mask)                                                                \
   const uint half_lane_mask = mask;                                                                \
-  const bool t_lt           = gl_LocalInvocationID.x < (gl_LocalInvocationID.x ^ mask)
+  const bool t_lt           = gl_SubgroupInvocationID < (gl_SubgroupInvocationID ^ mask)
 
 #endif
 
 //
-// Inter-lane compare exchange
+// INTRA-LANE COMPARE-EXCHANGE VARIANTS
+//
+// Try each variant when bringing up a new target device.
+//
+// clang-format off
 //
 
-// best on 32-bit keys
-#define HS_CMP_XCHG_V0(a, b)                                                                       \
-  {                                                                                                \
-    const HS_KEY_TYPE t = min(a, b);                                                               \
-    b                   = max(a, b);                                                               \
-    a                   = t;                                                                       \
+#if !(HS_DISABLE_COMPARE_64 && (HS_KEY_DWORDS == 2) && (HS_VAL_DWORDS == 0))
+
+/////////////////////
+
+// best on 32-bit keys and sometimes 64-bit keys
+#define HS_CMP_XCHG_V0(a, b)                                                    \
+  {                                                                             \
+    const HS_KEY_TYPE t = HS_KV_COMPARABLE_DST(min(HS_KV_COMPARABLE_SRC(a),     \
+                                                   HS_KV_COMPARABLE_SRC(b)));   \
+    b                   = HS_KV_COMPARABLE_DST(max(HS_KV_COMPARABLE_SRC(a),     \
+                                                   HS_KV_COMPARABLE_SRC(b)));   \
+    a                   = t;                                                    \
   }
 
-// good on Intel GEN 32-bit keys
+// ok
 #define HS_CMP_XCHG_V1(a, b)                                                                       \
   {                                                                                                \
-    const HS_KEY_TYPE tmp = a;                                                                     \
-    a                     = (a < b) ? a : b;                                                       \
-    b ^= a ^ tmp;                                                                                  \
+    const HS_KEY_TYPE a_prev = a;                                                                  \
+    a                        = (HS_KV_COMPARABLE_SRC(a) >= HS_KV_COMPARABLE_SRC(b)) ? b : a;       \
+    b                       ^= a_prev ^ a;                                                         \
   }
 
-// best on 64-bit keys
+// sometimes best on 64-bit keys
 #define HS_CMP_XCHG_V2(a, b)                                                                       \
-  if (a >= b)                                                                                      \
+  if (HS_KV_COMPARABLE_SRC(a) >= HS_KV_COMPARABLE_SRC(b))                                          \
     {                                                                                              \
       const HS_KEY_TYPE t = a;                                                                     \
       a                   = b;                                                                     \
@@ -341,91 +522,147 @@
 // ok
 #define HS_CMP_XCHG_V3(a, b)                                                                       \
   {                                                                                                \
-    const bool        ge = a >= b;                                                                 \
+    const bool        ge = HS_KV_COMPARABLE_SRC(a) >= HS_KV_COMPARABLE_SRC(b);                     \
+    const HS_KEY_TYPE t  = a;                                                                      \
+    a                    = ge ? b : a;                                                             \
+    b                    = ge ? t : b;                                                             \
+  }
+
+/////////////////////
+
+#endif
+
+//
+// clang-format on
+//
+
+//
+// INTRA-LANE COMPARE-EXCHANGE VARIANTS (UVEC2)
+//
+// Try each variant when bringing up a new target device.
+//
+
+#define HS_UVEC2_CMP_XCHG_V0(a, b)                                                                 \
+  {                                                                                                \
+    uint borrow_lo, borrow_hi;                                                                     \
+                                                                                                   \
+    usubBorrow(a[0], b[0], borrow_lo);                                                             \
+    usubBorrow(a[1], b[1] - borrow_lo, borrow_hi);                                                 \
+                                                                                                   \
+    const bool ge = (borrow_hi == 0);                                                              \
+                                                                                                   \
+    if (ge)                                                                                        \
+      {                                                                                            \
+        const HS_KEY_TYPE t = a;                                                                   \
+        a                   = b;                                                                   \
+        b                   = t;                                                                   \
+      }                                                                                            \
+  }
+
+#define HS_UVEC2_CMP_XCHG_V1(a, b)                                                                 \
+  {                                                                                                \
+    uint borrow_lo, borrow_hi;                                                                     \
+                                                                                                   \
+    usubBorrow(a[0], b[0], borrow_lo);                                                             \
+    usubBorrow(a[1], b[1] - borrow_lo, borrow_hi);                                                 \
+                                                                                                   \
+    const bool        ge = (borrow_hi == 0);                                                       \
     const HS_KEY_TYPE t  = a;                                                                      \
     a                    = ge ? b : a;                                                             \
     b                    = ge ? t : b;                                                             \
   }
 
 //
-// The flip/half comparisons rely on a "conditional min/max":
+// INTER-LANE COMPARE-EXCHANGE VARIANTS
 //
-//  - if the flag is false, return min(a,b)
-//  - otherwise, return max(a,b)
-//
-// What's a little surprising is that sequence (1) is faster than (2)
-// for 32-bit keys.
-//
-// I suspect either a code generation problem or that the sequence
-// maps well to the GEN instruction set.
-//
-// We mostly care about 64-bit keys and unsurprisingly sequence (2) is
-// fastest for this wider type.
+// If the shuffled lane is greater than the current lane return min(a,b)
+// If the shuffled lane is less    than the current lane return max(a,b)
 //
 
-#define HS_LOGICAL_XOR() !=
+#define HS_LOGICAL_XOR ^^  // the clang formatter mangles ^^
 
-// this is what you would normally use
-#define HS_COND_MIN_MAX_V0(lt, a, b) ((a <= b) HS_LOGICAL_XOR() lt) ? b : a
+#if !(HS_DISABLE_COMPARE_64 && (HS_KEY_DWORDS == 2) && (HS_VAL_DWORDS == 0))
 
-// this seems to be faster for 32-bit keys on Intel GEN
-#define HS_COND_MIN_MAX_V1(lt, a, b) (lt ? b : a) ^ ((a ^ b) & HS_LTE_TO_MASK(a, b))
+/////////////////////
+
+// this is the default
+#define HS_COND_MIN_MAX_V0(lt, a, b)                                                               \
+  {                                                                                                \
+    const bool ge    = (HS_KV_COMPARABLE_SRC(a) >= HS_KV_COMPARABLE_SRC(b));                       \
+    const bool ge_lt = (ge HS_LOGICAL_XOR lt);                                                     \
+    a                = ge_lt ? a : b;                                                              \
+  }
+
+// this is about the same but a little more divergent
+#define HS_COND_MIN_MAX_V1(lt, a, b)                                                               \
+  {                                                                                                \
+    if (lt)                                                                                        \
+      {                                                                                            \
+        a = HS_KV_COMPARABLE_DST(min(HS_KV_COMPARABLE_SRC(a), HS_KV_COMPARABLE_SRC(b)));           \
+      }                                                                                            \
+    else                                                                                           \
+      {                                                                                            \
+        a = HS_KV_COMPARABLE_DST(max(HS_KV_COMPARABLE_SRC(a), HS_KV_COMPARABLE_SRC(b)));           \
+      }                                                                                            \
+  }
+
+/////////////////////
+
+#endif
 
 //
-// Conditional inter-subgroup flip/half compare exchange
+// INTER-LANE COMPARE-EXCHANGE VARIANTS (UVEC2)
 //
 
-#if 0
+// this is the default
+#define HS_UVEC2_COND_MIN_MAX_V0(lt, a, b)                                                         \
+  {                                                                                                \
+    uint borrow_lo, borrow_hi;                                                                     \
+                                                                                                   \
+    usubBorrow(a[0], b[0], borrow_lo);                                                             \
+    usubBorrow(a[1], b[1] - borrow_lo, borrow_hi);                                                 \
+                                                                                                   \
+    const bool ge    = (borrow_hi == 0);                                                           \
+    const bool ge_lt = (ge HS_LOGICAL_XOR lt);                                                     \
+    a                = ge_lt ? a : b;                                                              \
+  }
+
+//
+// INTER-LANE FLIP/HALF COMPARE-EXCHANGE
+//
+
+#ifndef HS_SLAB_FLIP_USE_SHUFFLE_XOR
 
 #define HS_CMP_FLIP(i, a, b)                                                                       \
   {                                                                                                \
     const HS_KEY_TYPE ta = HS_SUBGROUP_SHUFFLE(a, flip_lane_idx);                                  \
     const HS_KEY_TYPE tb = HS_SUBGROUP_SHUFFLE(b, flip_lane_idx);                                  \
-    a                    = HS_COND_MIN_MAX(t_lt, a, tb);                                           \
-    b                    = HS_COND_MIN_MAX(t_lt, b, ta);                                           \
+    HS_COND_MIN_MAX(t_lt, a, tb);                                                                  \
+    HS_COND_MIN_MAX(t_lt, b, ta);                                                                  \
   }
 
 #define HS_CMP_HALF(i, a)                                                                          \
   {                                                                                                \
     const HS_KEY_TYPE ta = HS_SUBGROUP_SHUFFLE(a, half_lane_idx);                                  \
-    a                    = HS_COND_MIN_MAX(t_lt, a, ta);                                           \
+    HS_COND_MIN_MAX(t_lt, a, ta);                                                                  \
   }
 
-#else
+#else  // uses shuffle xor
 
 #define HS_CMP_FLIP(i, a, b)                                                                       \
   {                                                                                                \
     const HS_KEY_TYPE ta = HS_SUBGROUP_SHUFFLE_XOR(a, flip_lane_mask);                             \
     const HS_KEY_TYPE tb = HS_SUBGROUP_SHUFFLE_XOR(b, flip_lane_mask);                             \
-    a                    = HS_COND_MIN_MAX(t_lt, a, tb);                                           \
-    b                    = HS_COND_MIN_MAX(t_lt, b, ta);                                           \
+    HS_COND_MIN_MAX(t_lt, a, tb);                                                                  \
+    HS_COND_MIN_MAX(t_lt, b, ta);                                                                  \
   }
 
 #define HS_CMP_HALF(i, a)                                                                          \
   {                                                                                                \
     const HS_KEY_TYPE ta = HS_SUBGROUP_SHUFFLE_XOR(a, half_lane_mask);                             \
-    a                    = HS_COND_MIN_MAX(t_lt, a, ta);                                           \
+    HS_COND_MIN_MAX(t_lt, a, ta);                                                                  \
   }
 
-#endif
-
-//
-// The device's comparison operator might return what we actually
-// want.  For example, it appears GEN 'cmp' returns {true:-1,false:0}.
-//
-
-#define HS_CMP_IS_ZERO_ONE
-
-#ifdef HS_CMP_IS_ZERO_ONE
-// OpenCL requires a {true: +1, false: 0} scalar result
-// (a < b) -> { +1, 0 } -> NEGATE -> { 0, 0xFFFFFFFF }
-#define HS_LTE_TO_MASK(a, b) (HS_KEY_TYPE)(-(a <= b))
-#define HS_CMP_TO_MASK(a) (HS_KEY_TYPE)(-a)
-#else
-// However, OpenCL requires { -1, 0 } for vectors
-// (a < b) -> { 0xFFFFFFFF, 0 }
-#define HS_LTE_TO_MASK(a, b) (a <= b)  // FIXME for uint64
-#define HS_CMP_TO_MASK(a) (a)
 #endif
 
 //
@@ -438,7 +675,7 @@
   const uint span_idx    = gl_WorkGroupID.y;                                                       \
   const uint span_stride = gl_NumWorkGroups.x * gl_WorkGroupSize.x;                                \
   const uint span_size   = span_stride * half_span * 2;                                            \
-  const uint span_base   = span_idx * span_size;                                                   \
+  const uint span_base   = kv_offset_out + span_idx * span_size;                                   \
   const uint span_off    = gl_GlobalInvocationID.x;                                                \
   const uint span_l      = span_base + span_off
 
@@ -450,17 +687,15 @@
 //
 //
 
-#define HS_XM_GLOBAL_L(stride_idx) (span_l + span_stride * stride_idx)
-
-#define HS_XM_GLOBAL_LOAD_L(stride_idx) HS_KV_OUT_LOAD(HS_XM_GLOBAL_L(stride_idx))
-
+// clang-format off
+#define HS_XM_GLOBAL_L(stride_idx)            (span_l + span_stride * stride_idx)
+#define HS_XM_GLOBAL_LOAD_L(stride_idx)       HS_KV_OUT_LOAD(HS_XM_GLOBAL_L(stride_idx))
 #define HS_XM_GLOBAL_STORE_L(stride_idx, reg) HS_KV_OUT_STORE(HS_XM_GLOBAL_L(stride_idx), reg)
 
-#define HS_FM_GLOBAL_R(stride_idx) (span_r + span_stride * stride_idx)
-
-#define HS_FM_GLOBAL_LOAD_R(stride_idx) HS_KV_OUT_LOAD(HS_FM_GLOBAL_R(stride_idx))
-
+#define HS_FM_GLOBAL_R(stride_idx)            (span_r + span_stride * stride_idx)
+#define HS_FM_GLOBAL_LOAD_R(stride_idx)       HS_KV_OUT_LOAD(HS_FM_GLOBAL_R(stride_idx))
 #define HS_FM_GLOBAL_STORE_R(stride_idx, reg) HS_KV_OUT_STORE(HS_FM_GLOBAL_R(stride_idx), reg)
+// clang-format on
 
 //
 // TODO/OPTIMIZATION:
@@ -470,7 +705,6 @@
 //
 
 #define HS_FILL_IN_BODY()                                                                          \
-  HS_SUBGROUP_PREAMBLE()                                                                           \
   HS_SLAB_GLOBAL_BASE();                                                                           \
   HS_SLAB_GLOBAL_OFFSET();                                                                         \
   if (gmem_base >= kv_count)                                                                       \
@@ -503,7 +737,6 @@
     }
 
 #define HS_FILL_OUT_BODY()                                                                         \
-  HS_SUBGROUP_PREAMBLE()                                                                           \
   HS_SLAB_GLOBAL_IDX();                                                                            \
   const uint gmem_out_idx = kv_offset_out + gmem_idx;                                              \
   for (uint ii = 0; ii < HS_SLAB_HEIGHT; ii++)                                                     \
@@ -529,9 +762,20 @@
 // slab and eventually transpose and store the slab in linear order.
 //
 
-#define HS_TRANSPOSE_REG(prefix, row) prefix##row
+// clang-format off
+#define HS_TRANSPOSE_REG(prefix, row)  prefix##row
 #define HS_TRANSPOSE_DECL(prefix, row) const HS_KEY_TYPE HS_TRANSPOSE_REG(prefix, row)
-#define HS_TRANSPOSE_PRED(level) is_lo_##level
+#define HS_TRANSPOSE_PRED(level)       is_lo_##level
+// clang-format on
+
+//
+//
+//
+
+#define HS_TRANSPOSE_TMP_SEL_REG(prefix_curr, row_ll, row_ur) prefix_curr##row_ll##_##row_ur##_sel
+
+#define HS_TRANSPOSE_TMP_SEL_DECL(prefix_curr, level, row_ll, row_ur)                              \
+  const HS_KEY_TYPE HS_TRANSPOSE_TMP_SEL_REG(prefix_curr, row_ll, row_ur)
 
 #define HS_TRANSPOSE_TMP_REG(prefix_curr, row_ll, row_ur) prefix_curr##row_ll##_##row_ur
 
@@ -539,12 +783,20 @@
   const HS_KEY_TYPE HS_TRANSPOSE_TMP_REG(prefix_curr, row_ll, row_ur)
 
 #define HS_TRANSPOSE_STAGE(level)                                                                  \
-  const bool HS_TRANSPOSE_PRED(level) = (HS_SUBGROUP_LANE_ID() & (1 << (level - 1))) == 0;
+  const bool HS_TRANSPOSE_PRED(level) = (gl_SubgroupInvocationID & (1 << (level - 1))) == 0;
+
+//
+//
+//
 
 #define HS_TRANSPOSE_BLEND(prefix_prev, prefix_curr, level, row_ll, row_ur)                        \
+                                                                                                   \
+  HS_TRANSPOSE_TMP_SEL_DECL(prefix_curr, level, row_ll, row_ur) =                                  \
+    HS_TRANSPOSE_PRED(level) ? HS_TRANSPOSE_REG(prefix_prev, row_ll)                               \
+                             : HS_TRANSPOSE_REG(prefix_prev, row_ur);                              \
+                                                                                                   \
   HS_TRANSPOSE_TMP_DECL(prefix_curr, row_ll, row_ur) =                                             \
-    HS_SUBGROUP_SHUFFLE_XOR(HS_TRANSPOSE_PRED(level) ? HS_TRANSPOSE_REG(prefix_prev, row_ll)       \
-                                                     : HS_TRANSPOSE_REG(prefix_prev, row_ur),      \
+    HS_SUBGROUP_SHUFFLE_XOR(HS_TRANSPOSE_TMP_SEL_REG(prefix_curr, row_ll, row_ur),                 \
                             1 << (level - 1));                                                     \
                                                                                                    \
   HS_TRANSPOSE_DECL(prefix_curr, row_ll) = HS_TRANSPOSE_PRED(level)                                \
@@ -554,6 +806,10 @@
   HS_TRANSPOSE_DECL(prefix_curr, row_ur) = HS_TRANSPOSE_PRED(level)                                \
                                              ? HS_TRANSPOSE_REG(prefix_prev, row_ur)               \
                                              : HS_TRANSPOSE_TMP_REG(prefix_curr, row_ll, row_ur);
+
+//
+//
+//
 
 #define HS_TRANSPOSE_REMAP(prefix, row_from, row_to)                                               \
   HS_KV_OUT_STORE(gmem_out_idx + ((row_to - 1) << HS_SLAB_WIDTH_LOG2),                             \

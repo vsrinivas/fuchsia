@@ -25,8 +25,8 @@ struct spn_ring
 };
 
 //
-// Simpler than a ring when slot allocation is implicitly managed
-// elsewhere
+// A subsidiary ring for when space is known to be implicitly
+// available.
 //
 
 struct spn_next
@@ -52,6 +52,9 @@ bool
 spn_ring_is_tail(struct spn_ring const * const ring, uint32_t const idx);
 
 uint32_t
+spn_ring_dropped(struct spn_ring const * const ring);
+
+uint32_t
 spn_ring_rem_nowrap(struct spn_ring const * const ring);
 
 uint32_t
@@ -75,6 +78,9 @@ spn_next_init(struct spn_next * const next, uint32_t const size);
 
 uint32_t
 spn_next_acquire_1(struct spn_next * const next);
+
+uint32_t
+spn_next_acquire_2(struct spn_next * const next);
 
 void
 spn_next_drop_n(struct spn_next * const next, uint32_t const n);

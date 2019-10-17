@@ -21,7 +21,7 @@ struct spn_device;
 //
 //
 
-spn_result
+spn_result_t
 spn_render_impl(struct spn_device * const device, spn_render_submit_t const * const submit);
 
 //

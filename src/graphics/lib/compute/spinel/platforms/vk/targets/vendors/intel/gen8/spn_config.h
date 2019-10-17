@@ -17,11 +17,9 @@
 
 #ifdef VULKAN
 
-// #extension GL_AMD_gpu_shader_half_float                    : require
-// #extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
-// #extension GL_EXT_shader_explicit_arithmetic_types_int8    : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
 
-// #define SPN_ENABLE_EXTENSION_SUBGROUP_UNIFORM // useful on AMD GCN
+#define SPN_EXT_ENABLE_SUBGROUP_UNIFORM                           1
 
 #endif
 
@@ -30,32 +28,43 @@
 //
 
 #define SPN_DEVICE_INTEL_GEN8                                     1
-#define SPN_DEVICE_SUBGROUP_SIZE_LOG2                             3   // 8
+
+#define SPN_DEVICE_INTEL_SIMD8_LOG2                               3
+#define SPN_DEVICE_INTEL_SIMD16_LOG2                              4
+#define SPN_DEVICE_INTEL_SIMD32_LOG2                              5
+
 #define SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE                        128 // bytes
 
 //
 // TILE CONFIGURATION
 //
 
-#define SPN_TILE_WIDTH_LOG2                                       3 // 8
-#define SPN_TILE_HEIGHT_LOG2                                      3 // 8
+#define SPN_DEVICE_TILE_WIDTH_LOG2                                3 // 8
+#define SPN_DEVICE_TILE_HEIGHT_LOG2                               3 // 8
 
 //
 // BLOCK POOL CONFIGURATION
 //
 
 // e.g. NVIDIA, AMD, Intel, ARM Bifrost, etc.
-#define SPN_BLOCK_POOL_BLOCK_DWORDS_LOG2                          7
-#define SPN_BLOCK_POOL_SUBBLOCK_DWORDS_LOG2                       SPN_TILE_WIDTH_LOG2
-#define SPN_KERNEL_BLOCK_POOL_INIT_BP_IDS_PER_WORKGROUP           (SPN_KERNEL_BLOCK_POOL_INIT_WORKGROUP_SIZE *          \
-                                                                   SPN_KERNEL_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION)
+#define SPN_DEVICE_BLOCK_POOL_BLOCK_DWORDS_LOG2                   5
+#define SPN_DEVICE_BLOCK_POOL_SUBBLOCK_DWORDS_LOG2                SPN_DEVICE_TILE_HEIGHT_LOG2
+
+//
+// KERNEL: GET STATUS
+//
+
+#define SPN_DEVICE_GET_STATUS_SUBGROUP_SIZE_LOG2                  0
+#define SPN_DEVICE_GET_STATUS_WORKGROUP_SIZE                      2
 
 //
 // KERNEL: BLOCK POOL INIT
 //
 
-#define SPN_KERNEL_BLOCK_POOL_INIT_WORKGROUP_SIZE                 128
-#define SPN_KERNEL_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION          16
+#define SPN_DEVICE_BLOCK_POOL_INIT_SUBGROUP_SIZE_LOG2             0
+#define SPN_DEVICE_BLOCK_POOL_INIT_WORKGROUP_SIZE                 128
+
+#define SPN_DEVICE_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION          16
 
 //
 // KERNEL: PATHS ALLOC
@@ -64,132 +73,129 @@
 // target, it might be necessary to launch at least a subgroup.
 //
 
-#define SPN_KERNEL_PATHS_ALLOC_WORKGROUP_SIZE                     1
+#define SPN_DEVICE_PATHS_ALLOC_SUBGROUP_SIZE_LOG2                 0
+#define SPN_DEVICE_PATHS_ALLOC_WORKGROUP_SIZE                     1
 
 //
 // KERNEL: PATHS COPY
 //
 
-#define SPN_KERNEL_PATHS_COPY_SUBGROUP_SIZE                       SPN_DEVICE_SUBGROUP_SIZE
-#define SPN_KERNEL_PATHS_COPY_WORKGROUP_SIZE                      SPN_KERNEL_PATHS_COPY_SUBGROUP_SIZE
+#define SPN_DEVICE_PATHS_COPY_SUBGROUP_SIZE_LOG2                  SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_PATHS_COPY_WORKGROUP_SIZE                      ((1 << SPN_DEVICE_PATHS_COPY_SUBGROUP_SIZE_LOG2) * 1)
 
 //
 // KERNEL: FILLS SCAN
 //
 
 // e.g. NVIDIA, AMD, Intel, ARM Bifrost, etc.
-#define SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE                       SPN_DEVICE_SUBGROUP_SIZE
-#define SPN_KERNEL_FILLS_SCAN_WORKGROUP_SIZE                      SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE
+#define SPN_DEVICE_FILLS_SCAN_SUBGROUP_SIZE_LOG2                  SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_FILLS_SCAN_WORKGROUP_SIZE                      ((1 << SPN_DEVICE_FILLS_SCAN_SUBGROUP_SIZE_LOG2) * 1)
 
-#define SPN_KERNEL_FILLS_SCAN_EXPAND()                            SPN_EXPAND_4()
-#define SPN_KERNEL_FILLS_SCAN_EXPAND_I_LAST                       3
+#define SPN_DEVICE_FILLS_SCAN_ROWS                                4
+#define SPN_DEVICE_FILLS_SCAN_EXPAND()                            SPN_EXPAND_4()
+#define SPN_DEVICE_FILLS_SCAN_EXPAND_I_LAST                       3
 
 //
 // KERNEL: FILLS EXPAND
 //
 
 // e.g. NVIDIA, AMD, Intel, ARM Bifrost, etc.
-#define SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE                     SPN_DEVICE_SUBGROUP_SIZE
-#define SPN_KERNEL_FILLS_EXPAND_WORKGROUP_SIZE                    SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE
+#define SPN_DEVICE_FILLS_EXPAND_SUBGROUP_SIZE_LOG2                SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_FILLS_EXPAND_WORKGROUP_SIZE                    ((1 << SPN_DEVICE_FILLS_EXPAND_SUBGROUP_SIZE_LOG2) * 1)
 
 //
 // KERNEL: FILLS DISPATCH
 //
 
-#define SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE                   SPN_DEVICE_SUBGROUP_SIZE
+#define SPN_DEVICE_FILLS_DISPATCH_SUBGROUP_SIZE_LOG2              SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_FILLS_DISPATCH_WORKGROUP_SIZE                  ((1 << SPN_DEVICE_FILLS_DISPATCH_SUBGROUP_SIZE_LOG2) * 1)
 
 //
 // KERNEL: RASTERIZE
 //
 
 // e.g. NVIDIA, AMD, Intel, ARM Bifrost, etc.
-#define SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE                        SPN_DEVICE_SUBGROUP_SIZE
-#define SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE                       SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE
+#define SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2                   SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE                       ((1 << SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2) * 1)
+
+// can reduce this to force earlier launches of smaller grids
+#define SPN_DEVICE_RASTERIZE_COHORT_SIZE                          (SPN_RASTER_COHORT_METAS_SIZE - 1)
 
 //
 // KERNEL: SEGMENT TTRK
 //
 
-#define SPN_KERNEL_SEGMENT_TTRK_METAS_SIZE                        SPN_RASTER_COHORT_METAS_SIZE
+// -- DETERMINED BY HOTSORT --
 
 //
 // KERNEL: RASTERS ALLOC
 //
 
-#define SPN_KERNEL_RASTERS_ALLOC_SUBGROUP_SIZE                    SPN_DEVICE_SUBGROUP_SIZE
-#define SPN_KERNEL_RASTERS_ALLOC_WORKGROUP_SIZE                   SPN_KERNEL_RASTERS_ALLOC_SUBGROUP_SIZE
-
-// can reduce this to force earlier launches of smaller grids
-#define SPN_KERNEL_RASTERS_ALLOC_METAS_SIZE                       SPN_KERNEL_SEGMENT_TTRK_METAS_SIZE
+#define SPN_DEVICE_RASTERS_ALLOC_SUBGROUP_SIZE_LOG2               SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_RASTERS_ALLOC_WORKGROUP_SIZE                   ((1 << SPN_DEVICE_RASTERS_ALLOC_SUBGROUP_SIZE_LOG2) * 1)
 
 //
 // KERNEL: RASTERS PREFIX
 //
 
-#define SPN_KERNEL_RASTERS_PREFIX_SUBGROUP_SIZE_LOG2              SPN_DEVICE_SUBGROUP_SIZE_LOG2
-#define SPN_KERNEL_RASTERS_PREFIX_WORKGROUP_SIZE                  SPN_KERNEL_RASTERS_PREFIX_SUBGROUP_SIZE
-
-#define SPN_KERNEL_RASTERS_PREFIX_KEYS_LOAD_LOG2                  SPN_KERNEL_RASTERS_PREFIX_SUBGROUP_SIZE_LOG2
-#define SPN_KERNEL_RASTERS_PREFIX_EXPAND_SIZE                     SPN_KERNEL_RASTERS_PREFIX_KEYS_LOAD
+#define SPN_DEVICE_RASTERS_PREFIX_SUBGROUP_SIZE_LOG2              SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_RASTERS_PREFIX_WORKGROUP_SIZE                  ((1 << SPN_DEVICE_RASTERS_PREFIX_SUBGROUP_SIZE_LOG2) * 1)
 
 //
-// KERNEL: PLACE
+// KERNEL: PLACE TTPK & TTSK
 //
 
-#define SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2                       SPN_DEVICE_SUBGROUP_SIZE_LOG2
-#define SPN_KERNEL_PLACE_SUBGROUP_SIZE                            (1<<SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2)
-#define SPN_KERNEL_PLACE_WORKGROUP_SIZE                           SPN_KERNEL_PLACE_SUBGROUP_SIZE
-
-#define SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE                        ((SPN_BLOCK_POOL_BLOCK_DWORDS / 2) / SPN_KERNEL_PLACE_SUBGROUP_SIZE)
+#define SPN_DEVICE_PLACE_SUBGROUP_SIZE_LOG2                       SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_PLACE_WORKGROUP_SIZE                           ((1 << SPN_DEVICE_PLACE_SUBGROUP_SIZE_LOG2) * 1)
 
 //
 // KERNEL: SEGMENT TTCK
 //
 
+// -- DETERMINED BY HOTSORT --
+
 //
 // KERNEL: RENDER
 //
 
-#define SPN_KERNEL_RENDER_LGF_USE_SHUFFLE
-#define SPN_KERNEL_RENDER_TTCKS_USE_SHUFFLE
-#define SPN_KERNEL_RENDER_STYLING_CMDS_USE_SHUFFLE
+#define SPN_DEVICE_RENDER_LGF_USE_SHUFFLE
+#define SPN_DEVICE_RENDER_TTCKS_USE_SHUFFLE
+#define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
 
-#define SPN_KERNEL_RENDER_TILE_CHANNEL_IS_FLOAT
-// #define SPN_KERNEL_RENDER_TILE_CHANNEL_IS_FP16    // test once compiler supports VK_KHR_shader_float16_int8
-// #define SPN_KERNEL_RENDER_TILE_CHANNEL_IS_FP16X2  // test once compiler supports VK_KHR_shader_float16_int8
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT
+// #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16    // test once compiler supports VK_KHR_shader_float16_int8
+// #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16X2  // test once compiler supports VK_KHR_shader_float16_int8
 
-#define SPN_KERNEL_RENDER_SUBGROUP_SIZE_LOG2                      SPN_DEVICE_SUBGROUP_SIZE_LOG2
-#define SPN_KERNEL_RENDER_WORKGROUP_SIZE_LOG2                     SPN_DEVICE_SUBGROUP_SIZE_LOG2
+#define SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2                      SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_RENDER_WORKGROUP_SIZE                          ((1 << SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2) * 1)
 
-#define SPN_KERNEL_RENDER_STORAGE_STYLING                         readonly buffer // could also be a uniform
+#define SPN_DEVICE_RENDER_STORAGE_STYLING                         readonly buffer // could also be a uniform
 
-#ifdef SPN_KERNEL_RENDER_SURFACE_IS_IMAGE
-#define SPN_KERNEL_RENDER_SURFACE_TYPE                            rgba8
-#define SPN_KERNEL_RENDER_COLOR_ACC_PACK(rgba)                    rgba
+#ifdef SPN_DEVICE_RENDER_SURFACE_IS_IMAGE
+#define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
+#define SPN_DEVICE_RENDER_COLOR_ACC_PACK(rgba)                    rgba
 #else
-#define SPN_KERNEL_RENDER_SURFACE_TYPE                            uint
-#define SPN_KERNEL_RENDER_COLOR_ACC_PACK(rgba)                    packUnorm4x8(rgba)
+#define SPN_DEVICE_RENDER_SURFACE_TYPE                            uint
+#define SPN_DEVICE_RENDER_COLOR_ACC_PACK(rgba)                    packUnorm4x8(rgba.bgra)
 #endif
 
 //
 // KERNEL: PATHS RECLAIM
 //
 
-#define SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE                    SPN_DEVICE_SUBGROUP_SIZE
-#define SPN_KERNEL_PATHS_RECLAIM_WORKGROUP_SIZE                   SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE
-#define SPN_KERNEL_PATHS_RECLAIM_MAX_RECLAIM_IDS                  (SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE / 4 - 1)
+#define SPN_DEVICE_PATHS_RECLAIM_SUBGROUP_SIZE_LOG2               SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_PATHS_RECLAIM_WORKGROUP_SIZE                   ((1 << SPN_DEVICE_PATHS_RECLAIM_SUBGROUP_SIZE_LOG2) * 1)
 
-#define SPN_KERNEL_PATHS_RECLAIM_EXPAND_SIZE                      (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE)
+#define SPN_DEVICE_PATHS_RECLAIM_IDS_SIZE                         (SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE / 4 - 1)
 
 //
 // KERNEL: RASTERS RECLAIM
 //
 
-#define SPN_KERNEL_RASTERS_RECLAIM_SUBGROUP_SIZE                  SPN_DEVICE_SUBGROUP_SIZE
-#define SPN_KERNEL_RASTERS_RECLAIM_WORKGROUP_SIZE                 SPN_KERNEL_RASTERS_RECLAIM_SUBGROUP_SIZE
-#define SPN_KERNEL_RASTERS_RECLAIM_MAX_RECLAIM_IDS                (SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE / 4 - 1)
+#define SPN_DEVICE_RASTERS_RECLAIM_SUBGROUP_SIZE_LOG2             SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_RASTERS_RECLAIM_WORKGROUP_SIZE                 ((1 << SPN_DEVICE_RASTERS_RECLAIM_SUBGROUP_SIZE_LOG2) * 1)
 
-#define SPN_KERNEL_RASTERS_RECLAIM_EXPAND_SIZE                    (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_RASTERS_RECLAIM_SUBGROUP_SIZE / 2)
+#define SPN_DEVICE_RASTERS_RECLAIM_IDS_SIZE                       (SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE / 4 - 1)
 
 //
 // clang-format on

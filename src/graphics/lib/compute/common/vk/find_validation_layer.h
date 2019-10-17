@@ -9,7 +9,6 @@
 //
 //
 
-#include <stdbool.h>
 #include <vulkan/vulkan_core.h>
 
 //

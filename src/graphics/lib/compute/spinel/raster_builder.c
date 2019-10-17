@@ -8,39 +8,11 @@
 
 #include "raster_builder.h"
 
-#include "float.h"
-
-//
-// IDENTITY TRANSFORM
-//
-
-float const spn_transform_identity[8] = {
-  1.0f,  // sx
-  0.0f,  // shx
-  0.0f,  // shy
-  1.0f,  // sy
-  0.0f,  // tx
-  0.0f,  // ty
-  0.0f,  // w0
-  0.0f,  // w1
-};
-
-//
-// DEFAULT CLIP
-//
-
-float const spn_clip_default[4] = {
-  -FLT_MAX,  // lower left  corner of bounding box
-  -FLT_MAX,
-  +FLT_MAX,  // upper right corner of bounding box
-  +FLT_MAX,
-};
-
 //
 //
 //
 
-spn_result
+spn_result_t
 spn_raster_builder_retain(spn_raster_builder_t raster_builder)
 {
   raster_builder->refcount += 1;
@@ -48,7 +20,7 @@ spn_raster_builder_retain(spn_raster_builder_t raster_builder)
   return SPN_SUCCESS;
 }
 
-spn_result
+spn_result_t
 spn_raster_builder_release(spn_raster_builder_t raster_builder)
 {
   SPN_ASSERT_STATE_ASSERT(SPN_RASTER_BUILDER_STATE_READY, raster_builder);
@@ -62,8 +34,8 @@ spn_raster_builder_release(spn_raster_builder_t raster_builder)
 //
 //
 
-spn_result
-spn_raster_begin(spn_raster_builder_t raster_builder)
+spn_result_t
+spn_raster_builder_begin(spn_raster_builder_t raster_builder)
 {
   SPN_ASSERT_STATE_TRANSITION(SPN_RASTER_BUILDER_STATE_READY,
                               SPN_RASTER_BUILDER_STATE_BUILDING,
@@ -72,8 +44,8 @@ spn_raster_begin(spn_raster_builder_t raster_builder)
   return raster_builder->begin(raster_builder->impl);
 }
 
-spn_result
-spn_raster_end(spn_raster_builder_t raster_builder, spn_raster_t * raster)
+spn_result_t
+spn_raster_builder_end(spn_raster_builder_t raster_builder, spn_raster_t * raster)
 {
   SPN_ASSERT_STATE_TRANSITION(SPN_RASTER_BUILDER_STATE_BUILDING,
                               SPN_RASTER_BUILDER_STATE_READY,
@@ -86,8 +58,8 @@ spn_raster_end(spn_raster_builder_t raster_builder, spn_raster_t * raster)
 //
 //
 
-spn_result
-spn_raster_flush(spn_raster_builder_t raster_builder)
+spn_result_t
+spn_raster_builder_flush(spn_raster_builder_t raster_builder)
 {
   //
   // it doesn't matter what the state is
@@ -99,24 +71,19 @@ spn_raster_flush(spn_raster_builder_t raster_builder)
 //
 //
 
-spn_result
-spn_raster_fill(spn_raster_builder_t      raster_builder,
-                spn_path_t *              paths,
-                spn_transform_weakref_t * transform_weakrefs,
-                float const (*transforms)[8],
-                spn_clip_weakref_t * clip_weakrefs,
-                float const (*clips)[4],
-                uint32_t count)
+spn_result_t
+spn_raster_builder_add(spn_raster_builder_t      raster_builder,
+                       spn_path_t const *        paths,
+                       spn_transform_weakref_t * transform_weakrefs,
+                       spn_transform_t const *   transforms,
+                       spn_clip_weakref_t *      clip_weakrefs,
+                       spn_clip_t const *        clips,
+                       uint32_t                  count)
 {
   SPN_ASSERT_STATE_ASSERT(SPN_RASTER_BUILDER_STATE_BUILDING, raster_builder);
 
-  return raster_builder->fill(raster_builder->impl,
-                              paths,
-                              transform_weakrefs,
-                              transforms,
-                              clip_weakrefs,
-                              clips,
-                              count);
+  return raster_builder
+    ->add(raster_builder->impl, paths, transform_weakrefs, transforms, clip_weakrefs, clips, count);
 }
 
 //

@@ -6,10 +6,10 @@
 #include <stdlib.h>
 
 #include "common/macros.h"
+#include "common/vk/assert.h"
+#include "common/vk/cache.h"
+#include "common/vk/debug.h"
 #include "common/vk/find_validation_layer.h"
-#include "common/vk/vk_assert.h"
-#include "common/vk/vk_cache.h"
-#include "common/vk/vk_debug.h"
 #include "spinel_assert.h"
 #include "spinel_vk.h"
 #include "spinel_vk_find_target.h"
@@ -19,7 +19,17 @@
 //
 
 #if defined(SPN_VK_SHADER_INFO_AMD_STATISTICS) || defined(SPN_VK_SHADER_INFO_AMD_DISASSEMBLY)
-#include "common/vk/vk_shader_info_amd.h"
+#include "common/vk/shader_info_amd.h"
+#endif
+
+//
+// Define a platform-specific prefix
+//
+
+#ifdef __Fuchsia__
+#define VK_PIPELINE_CACHE_PREFIX_STRING "/cache/."
+#else
+#define VK_PIPELINE_CACHE_PREFIX_STRING "."
 #endif
 
 //
@@ -32,26 +42,45 @@ main(int argc, char const * argv[])
   //
   // create a Vulkan instances
   //
-  VkApplicationInfo const app_info = { .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-                                       .pNext              = NULL,
-                                       .pApplicationName   = "Fuchsia Spinel/VK Test",
-                                       .applicationVersion = 0,
-                                       .pEngineName        = "Fuchsia Spinel/VK",
-                                       .engineVersion      = 0,
-                                       .apiVersion         = VK_API_VERSION_1_1 };
+  VkApplicationInfo const app_info = {
 
-  char const * const instance_enabled_layers[] = { vk_find_validation_layer(), NULL };
+    .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+    .pNext              = NULL,
+    .pApplicationName   = "Fuchsia Spinel/VK Test",
+    .applicationVersion = 0,
+    .pEngineName        = "Fuchsia Spinel/VK",
+    .engineVersion      = 0,
+    .apiVersion         = VK_API_VERSION_1_1
+  };
 
-  char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME, NULL };
+  char const * const instance_enabled_layers[]     = { vk_find_validation_layer() };
+  char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
+
+  uint32_t const instance_enabled_layer_count =
+#ifndef NDEBUG
+    ARRAY_LENGTH_MACRO(instance_enabled_layers)
+#else
+    0
+#endif
+    ;
+
+  uint32_t const instance_enabled_extension_count =
+#ifndef NDEBUG
+    ARRAY_LENGTH_MACRO(instance_enabled_extensions)
+#else
+    0
+#endif
+    ;
 
   VkInstanceCreateInfo const instance_info = {
+
     .sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
     .pNext                   = NULL,
     .flags                   = 0,
     .pApplicationInfo        = &app_info,
-    .enabledLayerCount       = ARRAY_LENGTH_MACRO(instance_enabled_layers) - 1,
+    .enabledLayerCount       = instance_enabled_layer_count,
     .ppEnabledLayerNames     = instance_enabled_layers,
-    .enabledExtensionCount   = ARRAY_LENGTH_MACRO(instance_enabled_extensions) - 1,
+    .enabledExtensionCount   = instance_enabled_extension_count,
     .ppEnabledExtensionNames = instance_enabled_extensions
   };
 
@@ -72,6 +101,7 @@ main(int argc, char const * argv[])
                                                                "vkDestroyDebugReportCallbackEXT");
 
   struct VkDebugReportCallbackCreateInfoEXT const drcci = {
+
     .sType       = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
     .pNext       = NULL,
     .flags       = (VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
@@ -89,11 +119,14 @@ main(int argc, char const * argv[])
   //
   // Prepare Vulkan environment for Spinel
   //
-  struct spn_vk_environment environment = { .d   = VK_NULL_HANDLE,
-                                            .ac  = NULL,
-                                            .pc  = VK_NULL_HANDLE,
-                                            .pd  = VK_NULL_HANDLE,
-                                            .qfi = 0 };
+  struct spn_vk_environment environment = {
+
+    .d   = VK_NULL_HANDLE,
+    .ac  = NULL,
+    .pc  = VK_NULL_HANDLE,
+    .pd  = VK_NULL_HANDLE,
+    .qfi = 0
+  };
 
   //
   // acquire all physical devices
@@ -130,21 +163,24 @@ main(int argc, char const * argv[])
 
   for (uint32_t ii = 0; ii < pd_count; ii++)
     {
-      vkGetPhysicalDeviceProperties(pds[ii], &pdp);
+      VkPhysicalDeviceProperties pdp_tmp;
 
-      bool const is_match = (pdp.vendorID == vendor_id) && (pdp.deviceID == device_id);
+      vkGetPhysicalDeviceProperties(pds[ii], &pdp_tmp);
+
+      bool const is_match = (pdp_tmp.vendorID == vendor_id) && (pdp_tmp.deviceID == device_id);
 
       if (is_match)
         {
+          pdp            = pdp_tmp;
           environment.pd = pds[ii];
         }
 
       fprintf(stdout,
               "%c %X : %X : %s\n",
               is_match ? '*' : ' ',
-              pdp.vendorID,
-              pdp.deviceID,
-              pdp.deviceName);
+              pdp_tmp.vendorID,
+              pdp_tmp.deviceID,
+              pdp_tmp.deviceName);
     }
 
   if (environment.pd == VK_NULL_HANDLE)
@@ -182,12 +218,15 @@ main(int argc, char const * argv[])
   //
   float const qp[] = { 1.0f };
 
-  VkDeviceQueueCreateInfo const qi = { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                                       .pNext = NULL,
-                                       .flags = 0,
-                                       .queueFamilyIndex = environment.qfi,
-                                       .queueCount       = 1,
-                                       .pQueuePriorities = qp };
+  VkDeviceQueueCreateInfo const qi = {
+
+    .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+    .pNext            = NULL,
+    .flags            = 0,
+    .queueFamilyIndex = environment.qfi,
+    .queueCount       = 1,
+    .pQueuePriorities = qp
+  };
 
   //
   // clumsily enable AMD GCN shader info extension
@@ -230,36 +269,42 @@ main(int argc, char const * argv[])
       device_features.shaderFloat64 = true;
     }
 
-  VkDeviceCreateInfo const device_info = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                                           .pNext = NULL,
-                                           .flags = 0,
-                                           .queueCreateInfoCount  = 1,
-                                           .pQueueCreateInfos     = &qi,
-                                           .enabledLayerCount     = 0,
-                                           .ppEnabledLayerNames   = NULL,
-                                           .enabledExtensionCount = device_enabled_extension_count,
-                                           .ppEnabledExtensionNames = device_enabled_extensions,
-                                           .pEnabledFeatures        = &device_features };
+  VkDeviceCreateInfo const device_info = {
+
+    .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    .pNext                   = NULL,
+    .flags                   = 0,
+    .queueCreateInfoCount    = 1,
+    .pQueueCreateInfos       = &qi,
+    .enabledLayerCount       = 0,
+    .ppEnabledLayerNames     = NULL,
+    .enabledExtensionCount   = device_enabled_extension_count,
+    .ppEnabledExtensionNames = device_enabled_extensions,
+    .pEnabledFeatures        = &device_features
+  };
 
   vk(CreateDevice(environment.pd, &device_info, NULL, &environment.d));
 
   //
   // create the pipeline cache
   //
-  vk(_pipeline_cache_create(environment.d, NULL, ".vk_cache", &environment.pc));
+  vk_ok(vk_pipeline_cache_create(environment.d,
+                                 NULL,
+                                 VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache",
+                                 &environment.pc));
 
   //
   // find spinel target
   //
   struct spn_vk_context_create_info create_info = {
-    .block_pool_size = 17 << 20,  // 128 MiB
-    .handle_count    = 1 << 17,   // 128K handles
+    .block_pool_size = 1 << 26,  // 64 MB
+    .handle_count    = 1 << 17,  // 128K handles
   };
 
   char error_message[256];
   if (!spn_vk_find_target(vendor_id,
                           device_id,
-                          &create_info.spn,
+                          &create_info.spinel,
                           &create_info.hotsort,
                           error_message,
                           sizeof(error_message)))
@@ -283,7 +328,10 @@ main(int argc, char const * argv[])
   //
   // dispose of Vulkan resources
   //
-  vk(_pipeline_cache_destroy(environment.d, NULL, ".vk_cache", environment.pc));
+  vk_ok(vk_pipeline_cache_destroy(environment.d,
+                                  NULL,
+                                  VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache",
+                                  environment.pc));
 
   vkDestroyDevice(environment.d, NULL);
 

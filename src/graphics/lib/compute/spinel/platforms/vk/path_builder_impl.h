@@ -21,9 +21,16 @@ struct spn_device;
 //
 //
 
-spn_result
+spn_result_t
 spn_path_builder_impl_create(struct spn_device * const        device,
                              struct spn_path_builder ** const path_builder);
+
+//
+//
+//
+
+spn_result_t
+spn_pbi_flush(struct spn_path_builder_impl * const impl);
 
 //
 //

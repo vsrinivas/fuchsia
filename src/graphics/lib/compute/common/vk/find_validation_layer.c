@@ -6,6 +6,7 @@
 //
 //
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,7 +15,7 @@
 //
 
 #include "common/macros.h"
-#include "common/vk/vk_assert.h"
+#include "common/vk/assert.h"
 #include "find_validation_layer.h"
 
 //

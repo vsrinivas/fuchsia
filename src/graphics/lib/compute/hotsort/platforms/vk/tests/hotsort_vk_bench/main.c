@@ -10,16 +10,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 //
 //
 //
 
 #include "common/macros.h"
+#include "common/vk/assert.h"
+#include "common/vk/cache.h"
+#include "common/vk/find_mem_type_idx.h"
 #include "common/vk/find_validation_layer.h"
-#include "common/vk/vk_assert.h"
-#include "common/vk/vk_cache.h"
-#include "common/vk/vk_find_mem_type_idx.h"
 
 //
 //
@@ -27,7 +28,7 @@
 
 #if defined(HOTSORT_VK_SHADER_INFO_AMD_STATISTICS) ||                                              \
   defined(HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY)
-#include "common/vk/vk_shader_info_amd.h"
+#include "common/vk/shader_info_amd.h"
 #endif
 
 //
@@ -42,6 +43,8 @@
 
 #include "hs_amd_gcn3_u32/hs_target.h"
 #include "hs_amd_gcn3_u64/hs_target.h"
+#include "hs_google_swiftshader_u32/hs_target.h"
+#include "hs_google_swiftshader_u64/hs_target.h"
 #include "hs_intel_gen8_u32/hs_target.h"
 #include "hs_intel_gen8_u64/hs_target.h"
 #include "hs_nvidia_sm35_u32/hs_target.h"
@@ -54,7 +57,25 @@
 #include "targets/hotsort_vk_target.h"
 
 //
+// Define a platform-specific prefix
 //
+
+#ifdef __Fuchsia__
+#define VK_PIPELINE_CACHE_PREFIX_STRING "/cache/."
+#else
+#define VK_PIPELINE_CACHE_PREFIX_STRING "."
+#endif
+
+//
+// clang-format off
+//
+
+#define HS_BENCH_LOOPS      100
+#define HS_BENCH_WARMUP     100
+#define HS_BENCH_LOOPS_CPU  8
+
+//
+// clang-format on
 //
 
 char const *
@@ -287,6 +308,8 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
   if (phy_device_props->vendorID == 0x10DE)
     {
       //
+      // NVIDIA SM35+
+      //
       // FIXME -- for now, the kernels in this app are targeting
       // sm_35+ devices.  You could add some rigorous rejection by
       // device id here...
@@ -298,6 +321,8 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
     }
   else if (phy_device_props->vendorID == 0x8086)
     {
+      //
+      // INTEL GEN8+
       //
       // FIXME -- for now, the kernels in this app are targeting GEN8+
       // devices -- this does *not* include variants of GEN9LP+
@@ -313,12 +338,22 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
   else if (phy_device_props->vendorID == 0x1002)
     {
       //
-      // AMD GCN
+      // AMD GCN3+
       //
       if (key_val_words == 1)
         *hs_target = hs_amd_gcn3_u32;
       else
         *hs_target = hs_amd_gcn3_u64;
+    }
+  else if ((phy_device_props->vendorID == 0x1AE0) && (phy_device_props->deviceID == 0xC0DE))
+    {
+      //
+      // GOOGLE SWIFTSHADER
+      //
+      if (key_val_words == 1)
+        *hs_target = hs_google_swiftshader_u32;
+      else
+        *hs_target = hs_google_swiftshader_u64;
     }
   else
     {
@@ -327,18 +362,6 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
 
   return true;
 }
-
-//
-//
-//
-
-#ifdef NDEBUG
-#define HS_BENCH_LOOPS 100
-#define HS_BENCH_WARMUP 100
-#else
-#define HS_BENCH_LOOPS 1
-#define HS_BENCH_WARMUP 0
-#endif
 
 //
 //
@@ -363,16 +386,18 @@ main(int argc, char const * argv[])
   //
   // create a Vulkan instances
   //
-  VkApplicationInfo const app_info = { .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-                                       .pNext              = NULL,
-                                       .pApplicationName   = "HotSort Bench",
-                                       .applicationVersion = 0,
-                                       .pEngineName        = "HotSort",
-                                       .engineVersion      = 0,
-                                       .apiVersion         = VK_API_VERSION_1_1 };
+  VkApplicationInfo const app_info = {
 
-  char const * const instance_enabled_layers[] = { vk_find_validation_layer() };
+    .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+    .pNext              = NULL,
+    .pApplicationName   = "HotSort Bench",
+    .applicationVersion = 0,
+    .pEngineName        = "HotSort",
+    .engineVersion      = 0,
+    .apiVersion         = VK_API_VERSION_1_1
+  };
 
+  char const * const instance_enabled_layers[]     = { vk_find_validation_layer() };
   char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
 
   uint32_t const instance_enabled_layer_count =
@@ -391,16 +416,17 @@ main(int argc, char const * argv[])
 #endif
     ;
 
-  VkInstanceCreateInfo const instance_info = { .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-                                               .pNext = NULL,
-                                               .flags = 0,
-                                               .pApplicationInfo    = &app_info,
-                                               .enabledLayerCount   = instance_enabled_layer_count,
-                                               .ppEnabledLayerNames = instance_enabled_layers,
-                                               .enabledExtensionCount =
-                                                 instance_enabled_extension_count,
-                                               .ppEnabledExtensionNames =
-                                                 instance_enabled_extensions };
+  VkInstanceCreateInfo const instance_info = {
+
+    .sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+    .pNext                   = NULL,
+    .flags                   = 0,
+    .pApplicationInfo        = &app_info,
+    .enabledLayerCount       = instance_enabled_layer_count,
+    .ppEnabledLayerNames     = instance_enabled_layers,
+    .enabledExtensionCount   = instance_enabled_extension_count,
+    .ppEnabledExtensionNames = instance_enabled_extensions
+  };
 
   VkInstance instance;
 
@@ -419,9 +445,13 @@ main(int argc, char const * argv[])
                                                                "vkDestroyDebugReportCallbackEXT");
 
   struct VkDebugReportCallbackCreateInfoEXT const drcci = {
-    .sType       = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-    .pNext       = NULL,
-    .flags       = UINT32_MAX,  // enable everything for now
+    .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+    .pNext = NULL,
+    .flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT |          //
+             VK_DEBUG_REPORT_WARNING_BIT_EXT |              //
+             VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |  //
+             VK_DEBUG_REPORT_ERROR_BIT_EXT |                //
+             VK_DEBUG_REPORT_DEBUG_BIT_EXT,                 //
     .pfnCallback = vk_debug_report_cb,
     .pUserData   = NULL
   };
@@ -502,66 +532,68 @@ main(int argc, char const * argv[])
   //
   // get queue properties
   //
-  VkQueueFamilyProperties queue_fam_props[2];
-  uint32_t                queue_fam_count = ARRAY_LENGTH_MACRO(queue_fam_props);
+  uint32_t qfp_count;
 
-  vkGetPhysicalDeviceQueueFamilyProperties(phy_device, &queue_fam_count, queue_fam_props);
+  vkGetPhysicalDeviceQueueFamilyProperties(phy_device, &qfp_count, NULL);
 
-  //
-  // create device
-  //
-  float const queue_priorities[] = { 1.0f };
+  VkQueueFamilyProperties qfp[qfp_count];
 
-  VkDeviceQueueCreateInfo const queue_info = { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                                               .pNext = NULL,
-                                               .flags = 0,
-                                               .queueFamilyIndex = 0,
-                                               .queueCount       = 1,
-                                               .pQueuePriorities = queue_priorities };
+  vkGetPhysicalDeviceQueueFamilyProperties(phy_device, &qfp_count, qfp);
 
   //
-  // clumsily enable AMD GCN shader info extension
+  // HotSort only uses a single compute queue
   //
-  char const * const device_enabled_extensions[] = {
-#if defined(HOTSORT_VK_SHADER_INFO_AMD_STATISTICS) ||                                              \
-  defined(HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY)
-    VK_AMD_SHADER_INFO_EXTENSION_NAME
-#else
-    NULL
-#endif
+  float const qci_priorities[] = { 1.0f };
+
+  VkDeviceQueueCreateInfo const qci = {
+
+    .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+    .pNext            = NULL,
+    .flags            = 0,
+    .queueFamilyIndex = 0,
+    .queueCount       = 1,
+    .pQueuePriorities = qci_priorities
   };
 
-  uint32_t device_enabled_extension_count = 0;
+  //
+  // probe HotSort device requirements for this target
+  //
+  struct hotsort_vk_target_requirements hs_tr = { 0 };
 
-#if defined(HOTSORT_VK_SHADER_INFO_AMD_STATISTICS) ||                                              \
-  defined(HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY)
-  if (phy_device_props.vendorID == 0x1002)
-    {
-      device_enabled_extension_count = 1;
-      vk_shader_info_amd_statistics_enable();
-    }
-#endif
+  if (!hotsort_vk_target_get_requirements(hs_target, &hs_tr))
+    return EXIT_FAILURE;
 
   //
+  // populate accumulated device requirements
   //
+  char const *             ext_names[hs_tr.ext_name_count];
+  VkPhysicalDeviceFeatures pdf = { false };
+
   //
-  VkPhysicalDeviceFeatures device_features = { false };
+  // populate HotSort device requirements
+  //
+  hs_tr.ext_names = ext_names;
+  hs_tr.pdf       = &pdf;
 
-  if (key_val_words == 2)
-    {
-      device_features.shaderInt64 = true;
-    }
+  if (!hotsort_vk_target_get_requirements(hs_target, &hs_tr))
+    return EXIT_FAILURE;
 
-  VkDeviceCreateInfo const device_info = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                                           .pNext = NULL,
-                                           .flags = 0,
-                                           .queueCreateInfoCount  = 1,
-                                           .pQueueCreateInfos     = &queue_info,
-                                           .enabledLayerCount     = 0,
-                                           .ppEnabledLayerNames   = NULL,
-                                           .enabledExtensionCount = device_enabled_extension_count,
-                                           .ppEnabledExtensionNames = device_enabled_extensions,
-                                           .pEnabledFeatures        = &device_features };
+  //
+  // create VkDevice
+  //
+  VkDeviceCreateInfo const device_info = {
+
+    .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    .pNext                   = NULL,
+    .flags                   = 0,
+    .queueCreateInfoCount    = 1,
+    .pQueueCreateInfos       = &qci,
+    .enabledLayerCount       = 0,
+    .ppEnabledLayerNames     = NULL,
+    .enabledExtensionCount   = hs_tr.ext_name_count,
+    .ppEnabledExtensionNames = ext_names,
+    .pEnabledFeatures        = &pdf
+  };
 
   VkDevice device;
 
@@ -579,7 +611,7 @@ main(int argc, char const * argv[])
   //
   VkPipelineCache pc;
 
-  vk_pipeline_cache_create(device, NULL, ".vk_cache", &pc);
+  vk_pipeline_cache_create(device, NULL, VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache", &pc);
 
   //
   // create a descriptor set pool
@@ -612,16 +644,18 @@ main(int argc, char const * argv[])
     .flags        = 0,
     .bindingCount = 2,  // 0:vout[], 1:vin[]
     .pBindings =
-      (VkDescriptorSetLayoutBinding[]){ { .binding            = 0,  // vout
-                                          .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                                          .descriptorCount    = 1,
-                                          .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,
-                                          .pImmutableSamplers = NULL },
-                                        { .binding            = 1,  // vin
-                                          .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                                          .descriptorCount    = 1,
-                                          .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,
-                                          .pImmutableSamplers = NULL } }
+      (VkDescriptorSetLayoutBinding[]){
+
+        { .binding            = 0,  // vout
+          .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+          .descriptorCount    = 1,
+          .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,
+          .pImmutableSamplers = NULL },
+        { .binding            = 1,  // vin
+          .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+          .descriptorCount    = 1,
+          .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,
+          .pImmutableSamplers = NULL } }
   };
 
   VkDescriptorSetLayout dsl;
@@ -635,6 +669,7 @@ main(int argc, char const * argv[])
   // create pipeline layout
   //
   VkPipelineLayoutCreateInfo const plci = {
+
     .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     .pNext                  = NULL,
     .flags                  = 0,
@@ -642,9 +677,11 @@ main(int argc, char const * argv[])
     .pSetLayouts            = &dsl,
     .pushConstantRangeCount = 1,
     .pPushConstantRanges =
-      (VkPushConstantRange[]){ { .stageFlags = HOTSORT_VK_PUSH_CONSTANT_RANGE_STAGE_FLAGS,
-                                 .offset     = HOTSORT_VK_PUSH_CONSTANT_RANGE_OFFSET,
-                                 .size       = HOTSORT_VK_PUSH_CONSTANT_RANGE_SIZE } }
+      (VkPushConstantRange[]){
+
+        { .stageFlags = HOTSORT_VK_PUSH_CONSTANT_RANGE_STAGE_FLAGS,
+          .offset     = HOTSORT_VK_PUSH_CONSTANT_RANGE_OFFSET,
+          .size       = HOTSORT_VK_PUSH_CONSTANT_RANGE_SIZE } }
   };
 
   VkPipelineLayout pl;
@@ -657,12 +694,14 @@ main(int argc, char const * argv[])
   //
   // create a descriptor set
   //
-  VkDescriptorSetAllocateInfo const dsai = { .sType =
-                                               VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                                             .pNext              = NULL,
-                                             .descriptorPool     = dp,
-                                             .descriptorSetCount = 1,
-                                             .pSetLayouts        = &dsl };
+  VkDescriptorSetAllocateInfo const dsai = {
+
+    .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    .pNext              = NULL,
+    .descriptorPool     = dp,
+    .descriptorSetCount = 1,
+    .pSetLayouts        = &dsl
+  };
 
   VkDescriptorSet ds;
 
@@ -686,35 +725,50 @@ main(int argc, char const * argv[])
   //
   // create a query pool for benchmarking
   //
-  static VkQueryPoolCreateInfo const query_pool_info = { .sType =
-                                                           VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
-                                                         .pNext      = NULL,
-                                                         .flags      = 0,
-                                                         .queryType  = VK_QUERY_TYPE_TIMESTAMP,
-                                                         .queryCount = 4,
-                                                         .pipelineStatistics = 0 };
+  bool const is_vk_timestamp_supported = phy_device_props.limits.timestampComputeAndGraphics;
+
+  float const vk_timestamp_period =
+    is_vk_timestamp_supported ? phy_device_props.limits.timestampPeriod : 1.0f;
+
+#define QUERY_POOL_QUERY_COUNT 4
+
+  static VkQueryPoolCreateInfo const query_pool_info = {
+
+    .sType              = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+    .pNext              = NULL,
+    .flags              = 0,
+    .queryType          = VK_QUERY_TYPE_TIMESTAMP,
+    .queryCount         = QUERY_POOL_QUERY_COUNT,
+    .pipelineStatistics = 0
+  };
 
   VkQueryPool query_pool;
 
-  vk(CreateQueryPool(device, &query_pool_info, NULL, &query_pool));
+  if (is_vk_timestamp_supported)
+    {
+      vk(CreateQueryPool(device, &query_pool_info, NULL, &query_pool));
+    }
 
   //
   // create two big buffers -- buffer_out_count is always the largest
   //
-  uint32_t buffer_in_count, buffer_out_count;
+  uint32_t slabs_in, buffer_in_count, buffer_out_count;
 
-  hotsort_vk_pad(hs, count_hi, &buffer_in_count, &buffer_out_count);
+  hotsort_vk_pad(hs, count_hi, &slabs_in, &buffer_in_count, &buffer_out_count);
 
   size_t const buffer_out_size = buffer_out_count * key_val_words * sizeof(uint32_t);
 
-  VkBufferCreateInfo bci = { .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                             .pNext                 = NULL,
-                             .flags                 = 0,
-                             .size                  = buffer_out_size,
-                             .usage                 = 0,
-                             .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
-                             .queueFamilyIndexCount = 0,
-                             .pQueueFamilyIndices   = NULL };
+  VkBufferCreateInfo bci = {
+
+    .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+    .pNext                 = NULL,
+    .flags                 = 0,
+    .size                  = buffer_out_size,
+    .usage                 = 0,
+    .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
+    .queueFamilyIndexCount = 0,
+    .pQueueFamilyIndices   = NULL
+  };
 
   VkBuffer vin, vout, sorted, rand;
 
@@ -741,7 +795,7 @@ main(int argc, char const * argv[])
   vkGetBufferMemoryRequirements(device, vin, &mr_vin);
   vkGetBufferMemoryRequirements(device, vout, &mr_vout);
 
-  vkGetBufferMemoryRequirements(device, rand, &mr_sorted);
+  vkGetBufferMemoryRequirements(device, sorted, &mr_sorted);
   vkGetBufferMemoryRequirements(device, rand, &mr_rand);
 
   //
@@ -751,32 +805,57 @@ main(int argc, char const * argv[])
   //
   // vin and vout have the same usage
   //
-  VkMemoryAllocateInfo const mai_vin_vout = { .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-                                              .pNext = NULL,
-                                              .allocationSize  = mr_vin.size,
-                                              .memoryTypeIndex = vk_find_mem_type_idx(
-                                                &phy_device_mem_props,
-                                                mr_vin.memoryTypeBits,
-                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) };
+  VkMemoryAllocateInfo const mai_vin = {
 
-  VkMemoryAllocateInfo const mai_sorted_rand = { .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-                                                 .pNext = NULL,
-                                                 .allocationSize  = mr_sorted.size,
-                                                 .memoryTypeIndex = vk_find_mem_type_idx(
-                                                   &phy_device_mem_props,
-                                                   mr_sorted.memoryTypeBits,
-                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) };
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = NULL,
+    .allocationSize  = mr_vin.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(&phy_device_mem_props,
+                                            mr_vin.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+  };
+
+  VkMemoryAllocateInfo const mai_vout = {
+
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = NULL,
+    .allocationSize  = mr_vout.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(&phy_device_mem_props,
+                                            mr_vout.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+  };
+
+  VkMemoryAllocateInfo const mai_sorted = {
+
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = NULL,
+    .allocationSize  = mr_sorted.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(
+      &phy_device_mem_props,
+      mr_sorted.memoryTypeBits,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+  };
+
+  VkMemoryAllocateInfo const mai_rand = {
+
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = NULL,
+    .allocationSize  = mr_rand.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(
+      &phy_device_mem_props,
+      mr_rand.memoryTypeBits,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+  };
 
   VkDeviceMemory mem_vin, mem_vout, mem_sorted, mem_rand;
 
-  vk(AllocateMemory(device, &mai_vin_vout, NULL, &mem_vin));
+  vk(AllocateMemory(device, &mai_vin, NULL, &mem_vin));
 
-  vk(AllocateMemory(device, &mai_vin_vout, NULL, &mem_vout));
+  vk(AllocateMemory(device, &mai_vout, NULL, &mem_vout));
 
-  vk(AllocateMemory(device, &mai_sorted_rand, NULL, &mem_sorted));
+  vk(AllocateMemory(device, &mai_sorted, NULL, &mem_sorted));
 
-  vk(AllocateMemory(device, &mai_sorted_rand, NULL, &mem_rand));
+  vk(AllocateMemory(device, &mai_rand, NULL, &mem_rand));
 
   //
   // bind backing memory to the virtual allocations
@@ -828,32 +907,41 @@ main(int argc, char const * argv[])
     .pInheritanceInfo = NULL
   };
 
-  struct VkSubmitInfo const submit_info = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                            .pNext                = NULL,
-                                            .waitSemaphoreCount   = 0,
-                                            .pWaitSemaphores      = NULL,
-                                            .pWaitDstStageMask    = NULL,
-                                            .commandBufferCount   = 1,
-                                            .pCommandBuffers      = &cb,
-                                            .signalSemaphoreCount = 0,
-                                            .pSignalSemaphores    = NULL };
+  struct VkSubmitInfo const submit_info = {
+
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext                = NULL,
+    .waitSemaphoreCount   = 0,
+    .pWaitSemaphores      = NULL,
+    .pWaitDstStageMask    = NULL,
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &cb,
+    .signalSemaphoreCount = 0,
+    .pSignalSemaphores    = NULL
+  };
 
   //
   // update the descriptor set
   //
-  VkDescriptorBufferInfo const dbi[] = { { .buffer = vout, .offset = 0, .range = VK_WHOLE_SIZE },
-                                         { .buffer = vin, .offset = 0, .range = VK_WHOLE_SIZE } };
+  VkDescriptorBufferInfo const dbi[] = {
 
-  VkWriteDescriptorSet const wds[] = { { .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                                         .pNext            = NULL,
-                                         .dstSet           = ds,
-                                         .dstBinding       = 0,
-                                         .dstArrayElement  = 0,
-                                         .descriptorCount  = 2,
-                                         .descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                                         .pImageInfo       = NULL,
-                                         .pBufferInfo      = dbi,
-                                         .pTexelBufferView = NULL } };
+    { .buffer = vout, .offset = 0, .range = VK_WHOLE_SIZE },
+    { .buffer = vin, .offset = 0, .range = VK_WHOLE_SIZE }
+  };
+
+  VkWriteDescriptorSet const wds[] = {
+
+    { .sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .pNext            = NULL,
+      .dstSet           = ds,
+      .dstBinding       = 0,
+      .dstArrayElement  = 0,
+      .descriptorCount  = 2,
+      .descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+      .pImageInfo       = NULL,
+      .pBufferInfo      = dbi,
+      .pTexelBufferView = NULL }
+  };
 
   vkUpdateDescriptorSets(device, ARRAY_LENGTH_MACRO(wds), wds, 0, NULL);
 
@@ -899,18 +987,21 @@ main(int argc, char const * argv[])
       //
       // size the vin and vout arrays
       //
-      uint32_t count_padded_in, count_padded_out;
+      uint32_t slabs_in, count_padded_in, count_padded_out;
 
-      hotsort_vk_pad(hs, count, &count_padded_in, &count_padded_out);
+      hotsort_vk_pad(hs, count, &slabs_in, &count_padded_in, &count_padded_out);
 
       //
       // initialize vin with 'count' random keys
       //
       vkBeginCommandBuffer(cb, &cb_begin_info);
 
-      VkBufferCopy const copy_rand = { .srcOffset = 0,
-                                       .dstOffset = 0,
-                                       .size      = count * key_val_words * sizeof(uint32_t) };
+      VkBufferCopy const copy_rand = {
+
+        .srcOffset = 0,
+        .dstOffset = 0,
+        .size      = count * key_val_words * sizeof(uint32_t)
+      };
 
       vkCmdCopyBuffer(cb, rand, vin, 1, &copy_rand);
 
@@ -929,9 +1020,20 @@ main(int argc, char const * argv[])
       vkBeginCommandBuffer(cb, &cb_begin_info);
 
       //
+      // reset the query pool
+      //
+      if (is_vk_timestamp_supported)
+        {
+          vkCmdResetQueryPool(cb, query_pool, 0, QUERY_POOL_QUERY_COUNT);
+        }
+
+      //
       // starting timestamp
       //
-      vkCmdWriteTimestamp(cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, query_pool, 0);
+      if (is_vk_timestamp_supported)
+        {
+          vkCmdWriteTimestamp(cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, query_pool, 0);
+        }
 
       //
       // bind the vin/vout buffers early
@@ -946,7 +1048,10 @@ main(int argc, char const * argv[])
       //
       // end timestamp
       //
-      vkCmdWriteTimestamp(cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, query_pool, 1);
+      if (is_vk_timestamp_supported)
+        {
+          vkCmdWriteTimestamp(cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, query_pool, 1);
+        }
 
       //
       // end the command buffer
@@ -956,9 +1061,9 @@ main(int argc, char const * argv[])
       //
       // measure the min/max/avg execution time
       //
-      uint64_t elapsed_ns_min = UINT64_MAX;
-      uint64_t elapsed_ns_max = 0;
-      uint64_t elapsed_ns_sum = 0;
+      uint64_t elapsed_ns_min;
+      uint64_t elapsed_ns_max;
+      uint64_t elapsed_ns_sum;
 
       for (uint32_t ii = 0; ii < warmup + loops; ii++)
         {
@@ -969,23 +1074,43 @@ main(int argc, char const * argv[])
               elapsed_ns_sum = 0;
             }
 
-          vk(QueueSubmit(queue, 1, &submit_info,
-                         VK_NULL_HANDLE));  // FIXME -- put a fence here
+          // if the device doesn't support timestamps then measure wall-time
+          uint64_t timestamps[2];
+
+          if (!is_vk_timestamp_supported)
+            {
+              struct timespec ts;
+
+              timespec_get(&ts, TIME_UTC);
+
+              timestamps[0] = ts.tv_sec * 1000000000L + ts.tv_nsec;
+            }
+
+          // submit!
+          vk(QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
 
           // wait for queue to drain
           vk(QueueWaitIdle(queue));
 
-          // get results
-          uint64_t timestamps[2];
+          if (!is_vk_timestamp_supported)
+            {
+              struct timespec ts;
 
-          vk(GetQueryPoolResults(device,
-                                 query_pool,
-                                 0,
-                                 ARRAY_LENGTH_MACRO(timestamps),
-                                 sizeof(timestamps),
-                                 timestamps,
-                                 sizeof(timestamps[0]),
-                                 VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT));
+              timespec_get(&ts, TIME_UTC);
+
+              timestamps[1] = ts.tv_sec * 1000000000L + ts.tv_nsec;
+            }
+          else
+            {
+              vk(GetQueryPoolResults(device,
+                                     query_pool,
+                                     0,
+                                     ARRAY_LENGTH_MACRO(timestamps),
+                                     sizeof(timestamps),
+                                     timestamps,
+                                     sizeof(timestamps[0]),
+                                     VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT));
+            }
 
           uint64_t const t = timestamps[1] - timestamps[0];
 
@@ -1024,11 +1149,18 @@ main(int argc, char const * argv[])
 
           size_t const size_sorted_h = count * key_val_words * sizeof(uint32_t);
 
-          // copy and sort random data
-          memcpy(sorted_h, rand_h, size_sorted_h);
-          memset((uint8_t *)sorted_h + size_sorted_h, -1, size_padded_in - size_sorted_h);
-
-          cpu_algo = hs_cpu_sort(sorted_h, key_val_words, count_padded_in, &cpu_ns);
+          // run the cpu_algo N times and measure last
+          uint32_t cpu_loops = HS_BENCH_LOOPS_CPU;
+          do
+            {
+              // copy random data
+              memcpy(sorted_h, rand_h, size_sorted_h);
+              // fill
+              memset((uint8_t *)sorted_h + size_sorted_h, -1, size_padded_in - size_sorted_h);
+              // sort
+              cpu_algo = hs_cpu_sort(sorted_h, key_val_words, count_padded_in, &cpu_ns);
+            }
+          while (--cpu_loops > 0);
 
           void * sorted_map;
 
@@ -1087,8 +1219,6 @@ main(int argc, char const * argv[])
       //
       // REPORT
       //
-      float const timestamp_period = phy_device_props.limits.timestampPeriod;
-
       fprintf(
         stdout,
         "%s, %u.%u.%u.%u, %s, %s, %s, %8u, %8u, %8u, CPU, %s, %9.2f, %6.2f, GPU, %9u, %7.3f, %7.3f, %7.3f, %7.2f, %7.2f\n",
@@ -1109,11 +1239,11 @@ main(int argc, char const * argv[])
         verify ? (1000.0 * count / cpu_ns) : 0.0,  // mkeys / sec
         // GPU
         loops,
-        timestamp_period * elapsed_ns_sum / 1e6 / loops,               // avg msecs
-        timestamp_period * elapsed_ns_min / 1e6,                       // min msecs
-        timestamp_period * elapsed_ns_max / 1e6,                       // max msecs
-        1000.0 * count * loops / (timestamp_period * elapsed_ns_sum),  // mkeys / sec - avg
-        1000.0 * count / (timestamp_period * elapsed_ns_min));         // mkeys / sec - max
+        (vk_timestamp_period * elapsed_ns_sum) / 1e6 / loops,             // avg msecs
+        (vk_timestamp_period * elapsed_ns_min) / 1e6,                     // min msecs
+        (vk_timestamp_period * elapsed_ns_max) / 1e6,                     // max msecs
+        1000.0 * count * loops / (vk_timestamp_period * elapsed_ns_sum),  // mkeys / sec - avg
+        1000.0 * count / (vk_timestamp_period * elapsed_ns_min));         // mkeys / sec - max
     }
 
   //
@@ -1147,12 +1277,20 @@ main(int argc, char const * argv[])
   free(rand_h);
   free(sorted_h);
 
+  // destroy query pool
+  if (is_vk_timestamp_supported)
+    {
+      vkDestroyQueryPool(device, query_pool, NULL);
+    }
+
   // destroy remaining...
-  vkDestroyQueryPool(device, query_pool, NULL);
   vkFreeCommandBuffers(device, cmd_pool, 1, &cb);
   vkDestroyCommandPool(device, cmd_pool, NULL);
 
-  vk_pipeline_cache_destroy(device, NULL, ".vk_cache", pc);
+  //
+  // save the pipeline cache
+  //
+  vk_pipeline_cache_destroy(device, NULL, VK_PIPELINE_CACHE_PREFIX_STRING "vk_cache", pc);
 
   vkDestroyDevice(device, NULL);
 

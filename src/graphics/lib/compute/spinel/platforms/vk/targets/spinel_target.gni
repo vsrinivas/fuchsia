@@ -69,9 +69,10 @@ template("spinel_target") {
                            "${graphics_compute_dir}/spinel/core.h",
                            "${graphics_compute_dir}/spinel/core_c.h",
                            "${graphics_compute_dir}/spinel/platforms/vk/core_vk.h",
-                           "${graphics_compute_dir}/spinel/platforms/vk/spn_vk_target.h",
-                           "${graphics_compute_dir}/spinel/platforms/vk/spn_vk_layouts.h",
-                           "${graphics_compute_dir}/spinel/platforms/vk/targets/spn_target_push.inl",
+                           "${graphics_compute_dir}/spinel/platforms/vk/vk_layouts.h",
+                           "${graphics_compute_dir}/spinel/platforms/vk/vk_target.h",
+                           "${graphics_compute_dir}/spinel/platforms/vk/vk_target_requirements.h",
+                           "${graphics_compute_dir}/spinel/platforms/vk/targets/target_pipelines.inl",
                          ] + _spn_target_gen_includes
 
   _spn_target_sources = _spn_target_includes_public + _spn_target_includes +
@@ -106,8 +107,8 @@ template("spinel_target") {
 
   _spn_comp_includes = [
     _spn_target_dir + "/spn_config.h",
+    "${graphics_compute_dir}/spinel/platforms/vk/vk_layouts.h",
     "${graphics_compute_dir}/hotsort/platforms/vk/targets/hs_glsl_macros.h",
-    "${graphics_compute_dir}/spinel/platforms/vk/spn_vk_layouts.h",
   ]
 
   _spn_comp_include_dirs = [
@@ -122,7 +123,7 @@ template("spinel_target") {
     # <spinel shaders>
     "${graphics_compute_dir}/spinel/platforms/vk/shaders",
 
-    # <spinel/platforms/vk> -- spn_vk_layouts.h
+    # <spinel/platforms/vk> -- vk_layouts.h
     "${graphics_compute_dir}/spinel/platforms/vk",
     "${graphics_compute_dir}/spinel",  # <spinel> -- core.h
   ]

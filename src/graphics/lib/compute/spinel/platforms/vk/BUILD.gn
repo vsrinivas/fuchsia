@@ -5,32 +5,40 @@
 import("../../../gn/build_rules.gni")
 
 config("spinel_vk_public_config") {
-  # Clients use '#include "spinel_vk_xxx.h"' to include the headers.
-  include_dirs = [ "." ]
+  # The sources and clients use 'spinel_xxx.h' to include the headers.
+  include_dirs = [ "${graphics_compute_dir}/spinel/include/spinel" ]
 }
 
 source_set("vk") {
   public = [
-    "spinel_vk.h",
-    "spinel_vk_types.h",
+    "${graphics_compute_dir}/spinel/include/spinel/spinel_vk.h",
+    "${graphics_compute_dir}/spinel/include/spinel/spinel_vk_types.h",
+
+    #
+    # FIXME(allanmac): I do not want to make allocator_device.h public
+    # but there is an interaction between the friend=[] directive and
+    # the host/device toolchain that appeared in a recent version of the
+    # build tools.  FWIW, the plan is to move the allocator helpers out
+    # of Spinel which will solve this issue in another way.
+    #
+    "allocator_device.h",
   ]
+  include_dirs = [ "${graphics_compute_dir}/spinel" ]
   sources = [
+    "${graphics_compute_dir}/spinel/include/spinel/spinel_vk.h",
+    "${graphics_compute_dir}/spinel/include/spinel/spinel_vk_types.h",
     "allocator_device.c",
     "allocator_device.h",
     "block_pool.c",
     "block_pool.h",
-    "cb_pool.c",
-    "cb_pool.h",
     "composition_impl.c",
     "composition_impl.h",
     "core_vk.h",
     "device.c",
     "device.h",
+    "dispatch.c",
+    "dispatch.h",
     "expand_x.h",
-    "extent.c",
-    "extent.h",
-    "fence_pool.c",
-    "fence_pool.h",
     "handle_pool.c",
     "handle_pool.h",
     "path_builder_impl.c",
@@ -43,17 +51,21 @@ source_set("vk") {
     "render_impl.h",
     "ring.c",
     "ring.h",
-    "semaphore_pool.c",
-    "semaphore_pool.h",
-    "spinel_vk.h",
-    "spinel_vk_types.h",
-    "spn_vk.c",
-    "spn_vk.h",
-    "spn_vk_layouts.h",
-    "spn_vk_target.h",
+    "status.c",
+    "status.h",
     "styling_impl.c",
     "styling_impl.h",
+    "trace.h",
+    "vk.c",
+    "vk.h",
+    "vk_layouts.h",
+    "vk_target.h",
+    "vk_target_requirements.c",
+    "vk_target_requirements.h",
   ]
+  if (current_toolchain == host_toolchain) {
+    defines = [ "SPN_VK_SHADER_INFO_AMD_STATISTICS" ]
+  }
   deps = [
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",
@@ -63,8 +75,14 @@ source_set("vk") {
     "${graphics_compute_dir}/spinel",
     graphics_compute_vulkan_loader_target,
   ]
-
   public_configs = [ ":spinel_vk_public_config" ]
+}
+
+#
+#
+#
+config("spinel_vk_ext_public_config") {
+  include_dirs = [ "ext" ]
 }
 
 # A library used to load Spinel and Hotsort targets corresponding to a given
@@ -73,10 +91,6 @@ source_set("vk") {
 # filesystem, or customize the link to only include the targets required to
 # run on the final device that will run the client application.
 #
-config("spinel_vk_ext_public_config") {
-  include_dirs = [ "ext" ]
-}
-
 source_set("vk_find_target") {
   public = [
     "ext/spinel_vk_find_target.h",
@@ -85,7 +99,6 @@ source_set("vk_find_target") {
     "ext/spinel_vk_find_target.c",
     "ext/spinel_vk_find_target.h",
   ]
-
   include_dirs = [
     "$root_gen_dir/src/graphics/lib/compute/spinel/platforms/vk",
     ".",  # Necessary for the spn_target.h includes in the source file.

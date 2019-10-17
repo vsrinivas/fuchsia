@@ -7,16 +7,14 @@
 //
 // SEGMENT TTRK
 //
-// FIXME - The OpenCL and CUDA versions of this kernel are far more
+// FIXME(allanmac): The OpenCL and CUDA versions of this kernel are more
 // sophisticated but let's see how this performs.  Optimize this later
-// using the CUDA & OpenCL techniques.
+// using CUDA & OpenCL techniques.
 //
 
-#extension GL_GOOGLE_include_directive        : require
-#extension GL_ARB_gpu_shader_int64            : require
-#extension GL_KHR_shader_subgroup_arithmetic  : require
-#extension GL_KHR_shader_subgroup_ballot      : require
-#extension GL_KHR_shader_subgroup_shuffle     : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_shuffle_relative : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
 
 //
 // NOTE THAT THE SEGMENT TTRK KERNEL IS ENTIRELY DEPENDENT ON THE
@@ -32,7 +30,7 @@
 //  |    27   |  12  |  12  |        13        |
 //
 //
-// TTRK (32-BIT COMPARE) ( DEFAULT )
+// TTRK (32-BIT COMPARE)
 //
 //  0                                               63
 //  | TTSB ID | N/A |   X  |   Y  | RASTER COHORT ID |
@@ -45,11 +43,13 @@
 //
 
 #include "spn_config.h"
-#include "spn_vk_layouts.h"
+#include "vk_layouts.h"
 
 //
+// This shader expecte uvec2 keys
 //
-//
+
+#undef HS_ENABLE_SHUFFLE_64
 
 #include "hs_config.h"
 #include "hs_glsl_macros_config.h"
@@ -61,138 +61,195 @@
 layout(local_size_x = HS_SLAB_THREADS) in;
 
 //
-// main(buffer ulong vout[],
-//      buffer uvec4 metas[4][SPN_KERNEL_SEGMENT_TTRK_METAS_SIZE])
-//
-// THE ORDER OF THE META_IN COMPONENTS IS:
-//
-//   0: blocks
-//   1: offset
-//   2: pk
-//   3: rk
-//
-
-//
-// NOTE: THIS DESCRIPTOR IS COMPATIBLE WITH DS_RASTERIZE_POST
+// NOTE: THIS DESCRIPTOR IS COMPATIBLE WITH HOTSORT
 //
 
 SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTRK();
 
 //
-//
+// BLOCK POOL DEBUG
 //
 
-#define HS_KEY_TYPE_MAX  HS_KEY_TYPE(-1)
+SPN_VK_GLSL_DEBUG(0);
 
 //
-//
+// clang-format off
 //
 
 #undef  HS_KV_OUT
-#define HS_KV_OUT               ttrks_keys
+#define HS_KV_OUT                ttrks_keys
 
 #undef  HS_KV_OUT_LOAD
-#define HS_KV_OUT_LOAD(idx)     packUint2x32(HS_KV_OUT[idx])
+#define HS_KV_OUT_LOAD(idx)      HS_KV_OUT[idx]
 
 #undef  HS_KV_OUT_STORE
-#define HS_KV_OUT_STORE(idx,kv) HS_KV_OUT[idx] = unpackUint2x32(kv)
+#define HS_KV_OUT_STORE(idx, kv) HS_KV_OUT[idx] = kv
+
+//
+// clang-format on
+//
+
+//
+// TTRK macros
+//
+
+#if SPN_HS_ENABLE_COMPARE_64
+#define SPN_HS_IS_NOT_MAX(kv_) (pack64(kv_) != HS_KEY_VAL_MAX)
+#else
+#define SPN_HS_IS_NOT_MAX(kv_) ((kv_[0] != HS_KEY_VAL_MAX[0]) || (kv_[1] != HS_KEY_VAL_MAX[1]))
+#endif
 
 //
 //
 //
 
-void main()
+#define SPN_HS_TTRK_GET_COHORT_ID(row_)                                                            \
+  SPN_BITFIELD_EXTRACT(r##row_[1], SPN_TTRK_HI_OFFSET_COHORT, SPN_TTRK_HI_BITS_COHORT)
+
+#define SPN_HS_TTRK_IS_BLOCK(row_) SPN_BLOCK_ID_IS_BLOCK(r##row_[0])
+
+//
+// The YX bits are on a dword boundary so this may resolve to two bit
+// operations.
+//
+
+#define SPN_HS_TTRK_XY_XOR(row_, prev_) SPN_TTRK_GET_XY(r##row_ ^ r##prev_)
+
+#define SPN_HS_TTRK_IS_NEW_XY(xy_xor_) (xy_xor_ != 0)
+
+#define SPN_HS_TTRK_IS_NEW_X(xy_xor_) ((xy_xor_ - 1) < SPN_GLSL_BITS_TO_MASK(SPN_TTRK_LO_HI_BITS_X))
+
+//
+//
+//
+
+void
+main()
 {
-  HS_SUBGROUP_PREAMBLE(); // because we don't know the size of Intel subgroups
+  //
+  // Unlike the external HotSort shaders, this shader is compiled
+  // against the Spinel layout structures and therefore doesn't require
+  // use of an opaque "offset" to properly address the sorted keys.
+  //
+  HS_SLAB_GLOBAL_IDX();
 
-  HS_SLAB_GLOBAL_IDX_OUT();
-
-  const uint linear_idx = kv_offset_out + gmem_base + gmem_offset * HS_SLAB_HEIGHT;
+  const uint gmem_out_idx = gmem_idx;
+  const uint linear_idx   = gmem_base + gmem_offset * HS_SLAB_HEIGHT;
 
   //
   // LOAD ALL THE ROWS
   //
-#undef  HS_SLAB_ROW
-#define HS_SLAB_ROW(row,prev)                           \
-  HS_KEY_TYPE r##row = HS_KV_OUT_LOAD(gmem_idx + prev * HS_SLAB_WIDTH);
+#undef HS_SLAB_ROW
+#define HS_SLAB_ROW(row, prev) HS_KEY_TYPE r##row = HS_SLAB_GLOBAL_LOAD_OUT(prev);
 
   HS_SLAB_ROWS();
 
   //
-  // LOAD LAST REGISTER FROM COLUMN TO LEFT
+  // Shuffle up the last TTRK key from the column to the left.
   //
-  // shuffle up the last key from the column to the left
+  // Slab 0 and loading the last key from the previous slab are special
+  // cases.
   //
-  // note that column 0 is undefined
-  //
-  const uint  sgid = max(gl_SubgroupInvocationID,1) - 1; // clamp to 0
-  const HS_KEY_TYPE rN   = HS_REG_LAST(r);
-  HS_KEY_TYPE       r0   = HS_SUBGROUP_SHUFFLE(rN,sgid);
+  HS_KEY_TYPE r0 = HS_SUBGROUP_SHUFFLE_UP(HS_REG_LAST(r), 1);
 
-  if ((gmem_base > 0) && (gl_SubgroupInvocationID == 0))
+  const bool is_first_lane = (gl_SubgroupInvocationID == 0);
+
+  if (is_first_lane)
     {
-      //
-      // If this is the first key in any slab but the first then it
-      // broadcast loads the last key in previous slab from gmem
-      //
-      // Note that we only need the high dword...
-      //
-      r0 = HS_KV_OUT_LOAD(gmem_base - 1); // FIXME - we only need HS_KEY_TYPE[1]
-    }
-  else if (gl_GlobalInvocationID.x == 0)
-    {
-      //
-      // If this is the first lane and first slab then record a diff
-      //
-      r0 = ~r1;
+      if (gmem_base > 0)
+        {
+          //
+          // If this is the first key in any slab but the first then
+          // broadcast load the last key in previous slab from gmem.
+          //
+          // Note why this works: the last element in the previous slab
+          // is "stationary" in the extent -- it remains in the same
+          // location both before and after the slab transpose.
+          //
+          // FIXME(allanmac): note that we only need the high dword --
+          // fix this once we harmonize on uvec2 in this shader.
+          //
+          r0 = HS_KV_OUT_LOAD(gmem_base - 1);
+        }
+      else
+        {
+          //
+          // This is the first slab and first lane so we want to force
+          // recording of a diff and a new y.
+          //
+          const uint c = SPN_HS_TTRK_GET_COHORT_ID(1);
+
+          ttrks_meta.rk_off[c] = 0;
+
+          r0[0] = r1[0];
+          r0[1] = r1[1] ^ SPN_TTRK_HI_MASK_Y;  // twiddle y
+        }
     }
 
   //
   // FOR ALL VALID KEYS IN SLAB... GATHER META STATS
   //
-#define HS_KEY_TO_COHORT_ID(row)  (unpackUint2x32(r##row)[1] >> SPN_TTRK_HI_OFFSET_COHORT)
-#define SPN_IS_BLOCK(row)         ((unpackUint2x32(r##row)[0] & SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK) != 0)
-#define SPN_XY_XOR(row,prev)      uint(((r##row ^ r##prev) >> SPN_TTRK_LO_BITS_TTSB_ID))
-#define SPN_IS_PK(row,prev)       ((SPN_XY_XOR(row,prev) - 1) < SPN_GLSL_BITS_TO_MASK(SPN_TTRK_LO_HI_BITS_Y))
-
-  uint c      = SPN_GLSL_UINT_MAX;
-  uint c_prev = HS_KEY_TO_COHORT_ID(0);
+  uint c      = SPN_UINT_MAX;  // start with impossible value for cohort id
+  uint c_prev = SPN_HS_TTRK_GET_COHORT_ID(0);
   uint blocks = 0;
   uint pk     = 0;
   uint rk     = 0;
 
-#undef  HS_SLAB_ROW
-#define HS_SLAB_ROW(row,prev)                           \
-  if (r##row != HS_KEY_TYPE_MAX)                        \
-    {                                                   \
-      c = HS_KEY_TO_COHORT_ID(row);                     \
-                                                        \
-      if (c != c_prev)                                  \
-        {                                               \
-          if (blocks > 0)                               \
-            atomicAdd(ttrks_meta.blocks[c],blocks);     \
-                                                        \
-          ttrks_meta.offset[c] = linear_idx + prev;     \
-                                                        \
-          if (pk > 0)                                   \
-            atomicAdd(ttrks_meta.pk_keys[c],pk);        \
-                                                        \
-          if (rk > 0)                                   \
-            atomicAdd(ttrks_meta.rk[c],rk);             \
-                                                        \
-          c_prev = c;                                   \
-          blocks = 0;                                   \
-          pk     = 0;                                   \
-          rk     = 0;                                   \
-        }                                               \
-                                                        \
-      if (SPN_IS_BLOCK(row))                            \
-        blocks += 1;                                    \
-                                                        \
-      if (SPN_IS_PK(row,prev))                          \
-        pk += 1;                                        \
-                                                        \
-      rk += 1;                                          \
+  //
+  // FIXME(allanmac): the logic of setting NEW_X/Y bits can be
+  // streamlined a little.
+  //
+#undef HS_SLAB_ROW
+#define HS_SLAB_ROW(row, prev)                                                                     \
+  if (SPN_HS_IS_NOT_MAX(r##row))                                                                   \
+    {                                                                                              \
+      c = SPN_HS_TTRK_GET_COHORT_ID(row);                                                          \
+                                                                                                   \
+      if (c != c_prev)                                                                             \
+        {                                                                                          \
+          ttrks_meta.rk_off[c] = linear_idx + prev;                                                \
+                                                                                                   \
+          SPN_TTRK_SET_NEW_XY(r##row, SPN_TTRK_NEW_Y);                                             \
+                                                                                                   \
+          if (blocks > 0)                                                                          \
+            {                                                                                      \
+              atomicAdd(ttrks_meta.blocks[c_prev], blocks);                                        \
+              blocks = 0;                                                                          \
+            }                                                                                      \
+                                                                                                   \
+          if (pk > 0)                                                                              \
+            {                                                                                      \
+              atomicAdd(ttrks_meta.ttpks[c_prev], pk);                                             \
+              pk = 0;                                                                              \
+            }                                                                                      \
+                                                                                                   \
+          if (rk > 0)                                                                              \
+            {                                                                                      \
+              atomicAdd(ttrks_meta.ttrks[c_prev], rk);                                             \
+              rk = 0;                                                                              \
+            }                                                                                      \
+                                                                                                   \
+          c_prev = c;                                                                              \
+        }                                                                                          \
+      else                                                                                         \
+        {                                                                                          \
+          const uint xy_xor       = SPN_HS_TTRK_XY_XOR(row, prev);                                 \
+          const bool is_new_xy    = SPN_HS_TTRK_IS_NEW_XY(xy_xor);                                 \
+          const bool is_new_x     = SPN_HS_TTRK_IS_NEW_X(xy_xor);                                  \
+          const uint new_xy_mask  = is_new_x ? SPN_TTRK_NEW_X : SPN_TTRK_NEW_Y;                    \
+          const uint new_xyz_mask = is_new_xy ? new_xy_mask : 0;                                   \
+                                                                                                   \
+          SPN_TTRK_SET_NEW_XY(r##row, new_xyz_mask);                                               \
+                                                                                                   \
+          pk += is_new_x ? 1 : 0;                                                                  \
+        }                                                                                          \
+                                                                                                   \
+      if (SPN_HS_TTRK_IS_BLOCK(row))                                                               \
+        {                                                                                          \
+          blocks += 1;                                                                             \
+        }                                                                                          \
+                                                                                                   \
+      rk += 1;                                                                                     \
     }
 
   HS_SLAB_ROWS();
@@ -200,20 +257,24 @@ void main()
   //
   // IF THERE ARE STRAGGLERS THEN ADD THEM
   //
-  if (c != SPN_GLSL_UINT_MAX)
+  if (c != SPN_UINT_MAX)
     {
       if (blocks > 0)
-        atomicAdd(ttrks_meta.blocks[c],blocks);
+        {
+          atomicAdd(ttrks_meta.blocks[c], blocks);
+        }
 
       if (pk > 0)
-        atomicAdd(ttrks_meta.pk_keys[c],pk);
+        {
+          atomicAdd(ttrks_meta.ttpks[c], pk);
+        }
 
-      if (rk > 0)
-        atomicAdd(ttrks_meta.rk[c],rk);
+      // rk will always be > 0
+      atomicAdd(ttrks_meta.ttrks[c], rk);
     }
 
   //
-  // TRANSPOSE THE SLAB AND STORE IT -- FIXME -- pass in the buffer name
+  // TRANSPOSE THE SLAB AND STORE IT
   //
   HS_TRANSPOSE_SLAB();
 }

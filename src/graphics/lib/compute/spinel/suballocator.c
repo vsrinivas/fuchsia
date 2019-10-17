@@ -11,16 +11,16 @@
 #include <assert.h>
 #include <memory.h>
 
-// #include "context.h"
 #include "allocator_host.h"
 #include "common/macros.h"
 #include "spinel_assert.h"
+#include "trace.h"
 
 //
-//
+// FIXME(allanmac): remove these once tracing is reliable
 //
 
-#ifndef NDEBUG
+#if 0 && !defined(NDEBUG)
 
 #include <stdio.h>
 
@@ -86,6 +86,8 @@ spn_suballocator_create(struct spn_suballocator * const        suballocator,
   suballocator->alignment = (uint32_t)alignment;
   suballocator->count     = subbufs;
 
+  SPN_TRACE_SUBALLOCATOR_CREATE(name, suballocator, subbufs, size);
+
   //
   // allocate array of subbuf records
   //
@@ -93,6 +95,7 @@ spn_suballocator_create(struct spn_suballocator * const        suballocator,
 
   suballocator->subbufs =
     spn_allocator_host_perm_alloc(host_perm, SPN_MEM_FLAGS_READ_WRITE, subbufs_size);
+
   // zero subbufs
   memset(suballocator->subbufs, 0, subbufs_size);
 
@@ -128,7 +131,7 @@ spn_suballocator_dispose(struct spn_suballocator * const        suballocator,
 void
 spn_suballocator_subbuf_alloc(struct spn_suballocator * const suballocator,
                               struct spn_device * const       device,
-                              spn_result (*const wait)(struct spn_device * const device),
+                              spn_result_t (*const wait)(struct spn_device * const device),
                               uint64_t const          size,
                               spn_subbuf_id_t * const subbuf_id,
                               uint64_t * const        subbuf_origin,
@@ -237,11 +240,15 @@ spn_suballocator_subbuf_alloc(struct spn_suballocator * const suballocator,
               spare->inuse += 1;
 
               // update curr
-              avail->prev = spare;
-              avail->size -= size_ru;
+              // clang-format off
+              avail->prev    = spare;
+              avail->size   -= size_ru;
               avail->origin += size_ru;
+              // clang-format on
 
               assert(suballocator->rem.avail > 0);
+
+              SPN_TRACE_SUBALLOCATOR_ALLOC(suballocator, spare_id, size_ru);
 
               // return id & origin
               *subbuf_id     = spare_id;
@@ -275,6 +282,8 @@ spn_suballocator_subbuf_free(struct spn_suballocator * const suballocator,
   suballocator->total -= subbuf->size;
 
   SPN_SUBALLOCATOR_DEBUG_FREE(suballocator, subbuf_id, subbuf->size);
+
+  SPN_TRACE_SUBALLOCATOR_FREE(suballocator, subbuf_id, subbuf->size);
 
   //
   // try to merge subbuf with left and maybe right and then dispose

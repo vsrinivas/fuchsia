@@ -113,7 +113,7 @@ spn_allocator_device_temp_dispose(struct spn_allocator_device_temp * const devic
 void
 spn_allocator_device_temp_alloc(struct spn_allocator_device_temp * const device_temp,
                                 struct spn_device * const                device,
-                                spn_result (*const wait)(struct spn_device * const device),
+                                spn_result_t (*const wait)(struct spn_device * const device),
                                 VkDeviceSize const             size,
                                 spn_subbuf_id_t * const        subbuf_id,
                                 VkDescriptorBufferInfo * const dbi);

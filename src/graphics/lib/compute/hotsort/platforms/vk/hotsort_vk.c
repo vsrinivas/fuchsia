@@ -4,20 +4,36 @@
 
 #include "hotsort_vk.h"
 
-#include "common/macros.h"
-#include "common/util.h"
-#include "common/vk/vk_assert.h"
-#include "common/vk/vk_barrier.h"
-#include "targets/hotsort_vk_target.h"
-
-#if defined(HOTSORT_VK_SHADER_INFO_AMD_STATISTICS) ||                                              \
-  defined(HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY)
-#include "common/vk/vk_shader_info_amd.h"
-#endif
-
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "common/macros.h"
+#include "common/util.h"
+#include "common/vk/assert.h"
+#include "common/vk/barrier.h"
+#include "targets/hotsort_vk_target.h"
+
+//
+//
+//
+
+#ifndef NDEBUG
+
+#if defined(HOTSORT_VK_SHADER_INFO_AMD_STATISTICS) ||                                              \
+  defined(HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY)
+#include "common/vk/shader_info_amd.h"
+#endif
+
+#endif
+
+//
+//
+//
+
+#ifndef NDEBUG
+#include <stdio.h>
+#endif
 
 //
 // We want concurrent kernel execution to occur in a few places.
@@ -167,7 +183,7 @@ hotsort_vk_create(VkDevice                               device,
     }
 
   uint32_t const count_bc_fm_hm_fills_transpose =
-    +count_bc + count_fm[0] + count_fm[1] + count_fm[2] + count_hm[0] + count_hm[1] + count_hm[2] +
+    count_bc + count_fm[0] + count_fm[1] + count_fm[2] + count_hm[0] + count_hm[1] + count_hm[2] +
     3;  // fill_in + fill_out + transpose
 
   uint32_t const count_all = count_bs + count_bc_fm_hm_fills_transpose;
@@ -193,22 +209,56 @@ hotsort_vk_create(VkDevice                               device,
   hs->pipelines.count = count_all;
 
   //
-  // create all the compute pipelines by reusing this info
+  // Prepare to create compute pipelines
   //
   VkComputePipelineCreateInfo cpci = {
-    .sType              = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-    .pNext              = NULL,
-    .flags              = VK_PIPELINE_CREATE_DISPATCH_BASE,
-    .stage              = { .sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+
+    .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+    .pNext = NULL,
+    .flags = VK_PIPELINE_CREATE_DISPATCH_BASE,
+    .stage = { .sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                .pNext               = NULL,
                .flags               = 0,
                .stage               = VK_SHADER_STAGE_COMPUTE_BIT,
                .module              = VK_NULL_HANDLE,
                .pName               = "main",
                .pSpecializationInfo = NULL },
+
     .layout             = pipeline_layout,
     .basePipelineHandle = VK_NULL_HANDLE,
     .basePipelineIndex  = 0
+  };
+
+  //
+  // Set the subgroup size to what we expected when we built the
+  // HotSort target
+  //
+  // FIXME(allanmac): remove this as soon as we update Fuchsia's toolchain
+  //
+#ifndef VK_EXT_subgroup_size_control
+
+#define VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT 1000225001
+#define VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT 0x00000002
+
+  typedef struct VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT
+  {
+    VkStructureType sType;
+    void *          pNext;
+    uint32_t        requiredSubgroupSize;
+  } VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT;
+
+#endif
+  //
+  // REMOVEME(allanmac) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //
+
+  //
+  // Control the pipeline's subgroup size
+  //
+  VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT rssci = {
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,
+    .pNext = NULL,
+    .requiredSubgroupSize = 0
   };
 
   //
@@ -226,6 +276,13 @@ hotsort_vk_create(VkDevice                               device,
                                     .codeSize = 0,
                                     .pCode    = NULL };
 
+  //
+  // Create a pipeline from each module
+  //
+  // FIXME(allanmac): an alternative layout would list the module
+  // locations in the header enabling use of a parallelized pipeline
+  // creation instruction.
+  //
   uint32_t const * modules = target->modules;
 
   for (uint32_t ii = 0; ii < count_all; ii++)
@@ -237,6 +294,33 @@ hotsort_vk_create(VkDevice                               device,
 
       modules += module_dwords;
 
+      //
+      // DEBUG
+      //
+#ifndef NDEBUG
+      fprintf(stderr, "%-38s ", "HOTSORT SHADER");
+      fprintf(stderr, "(codeSize = %6zu) ... ", smci.codeSize);
+#endif
+
+      //
+      // is subgroup size control active?
+      //
+      if (target->config.extensions.named.EXT_subgroup_size_control)
+        {
+          rssci.requiredSubgroupSize = 1 << target->config.slab.threads_log2;
+
+          if (rssci.requiredSubgroupSize > 1)
+            {
+              cpci.stage.pNext = &rssci;
+              cpci.stage.flags = VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT;
+            }
+          else
+            {
+              cpci.stage.pNext = NULL;
+              cpci.stage.flags = 0;
+            }
+        }
+
       vk(CreateShaderModule(device, &smci, allocator, &cpci.stage.module));
 
       vk(CreateComputePipelines(device,
@@ -247,6 +331,13 @@ hotsort_vk_create(VkDevice                               device,
                                 hs->pipelines.all + ii));
 
       vkDestroyShaderModule(device, cpci.stage.module, allocator);
+
+      //
+      // DEBUG
+      //
+#ifndef NDEBUG
+      fprintf(stderr, "OK\n");
+#endif
     }
 
   //
@@ -301,11 +392,21 @@ hotsort_vk_create(VkDevice                               device,
   //
   // optionally dump pipeline stats
   //
+#ifndef NDEBUG
+
 #ifdef HOTSORT_VK_SHADER_INFO_AMD_STATISTICS
-  vk_shader_info_amd_statistics(device, hs->pipelines.all, NULL, hs->pipelines.count);
+  if (target->config.extensions.named.AMD_shader_info)
+    {
+      vk_shader_info_amd_statistics(device, hs->pipelines.all, NULL, hs->pipelines.count);
+    }
 #endif
 #ifdef HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY
-  vk_shader_info_amd_disassembly(device, hs->pipelines.all, NULL, hs->pipelines.count);
+  if (target->config.extensions.named.AMD_shader_info)
+    {
+      vk_shader_info_amd_disassembly(device, hs->pipelines.all, NULL, hs->pipelines.count);
+    }
+#endif
+
 #endif
 
   //
@@ -338,6 +439,7 @@ hotsort_vk_release(VkDevice                            device,
 void
 hotsort_vk_pad(struct hotsort_vk const * const hs,
                uint32_t const                  count,
+               uint32_t * const                slabs_in,
                uint32_t * const                padded_in,
                uint32_t * const                padded_out)
 {
@@ -351,6 +453,7 @@ hotsort_vk_pad(struct hotsort_vk const * const hs,
   uint32_t const slabs_ru_rem_ru =
     MIN_MACRO(uint32_t, pow2_ru_u32(slabs_ru_rem), hs->config.block.slabs);
 
+  *slabs_in   = slabs_ru;
   *padded_in  = (block_slabs + slabs_ru_rem_ru) * hs->slab_keys;
   *padded_out = *padded_in;
 
@@ -646,12 +749,17 @@ hotsort_vk_sort(VkCommandBuffer                            cb,
   //
   // pre-sort fill?
   //
+  // Note: If there is either 0 or 1 key then there is nothing to do after padding the slab.
+  //
   if (is_pre_sort_reqd)
     {
       uint32_t const from_slab = count / hs->slab_keys;
       uint32_t const to_slab   = padded_pre_sort / hs->slab_keys;
 
       hs_cmd_fill_in(cb, hs, from_slab, to_slab);
+
+      if (count <= 1)
+        return;
 
       vk_barrier_compute_w_to_compute_r(cb);
     }

@@ -6,17 +6,24 @@ import("../gn/build_rules.gni")
 
 config("spinel_public_config") {
   # The sources and clients use 'spinel_xxx.h' to include the headers.
-  include_dirs = [ "." ]
+  include_dirs = [ "include/spinel" ]
 }
 
 source_set("spinel") {
-  public = [
-    "spinel.h",
-    "spinel_assert.h",
-    "spinel_result.h",
-    "spinel_types.h",
+  friend = [
+    "platforms/vk",
+    "platforms/vk/tests",
   ]
-  friend = [ "platforms/vk" ]
+  public = [
+    "include/spinel/spinel.h",
+    "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_result.h",
+    "include/spinel/spinel_types.h",
+
+    # FIXME(digit): Should we include the public vulkan headers
+    # here... or create a GN file in include/spinel... or just mimic
+    # this in spinel/platforms/vk?
+  ]
   sources = [
     "allocator_host.c",
     "allocator_host.h",
@@ -26,21 +33,21 @@ source_set("spinel") {
     "context.h",
     "core.h",
     "core_c.h",
-    "handle.h",
+    "include/spinel/spinel.h",
+    "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_result.h",
+    "include/spinel/spinel_types.h",
     "path_builder.c",
     "path_builder.h",
     "raster_builder.c",
     "raster_builder.h",
-    "spinel.h",
     "spinel_assert.c",
-    "spinel_assert.h",
-    "spinel_result.h",
-    "spinel_types.h",
     "state_assert.h",
     "styling.c",
     "styling.h",
     "suballocator.c",
     "suballocator.h",
+    "trace.h",
     "weakref.c",
     "weakref.h",
   ]

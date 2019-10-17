@@ -21,9 +21,16 @@ struct spn_device;
 //
 //
 
-spn_result
+spn_result_t
 spn_raster_builder_impl_create(struct spn_device * const    device,
                                spn_raster_builder_t * const raster_builder);
+
+//
+//
+//
+
+spn_result_t
+spn_rbi_flush(struct spn_raster_builder_impl * const impl);
 
 //
 //

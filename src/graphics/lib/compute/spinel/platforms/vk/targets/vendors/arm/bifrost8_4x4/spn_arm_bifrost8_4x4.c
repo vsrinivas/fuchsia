@@ -53,14 +53,14 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
     .subgroup_size_log2     = SPN_DEVICE_SUBGROUP_SIZE_LOG2,
 
     .tile = {
-      .width_log2           = SPN_TILE_WIDTH_LOG2,
-      .height_log2          = SPN_TILE_HEIGHT_LOG2
+      .width_log2           = SPN_DEVICE_TILE_WIDTH_LOG2,
+      .height_log2          = SPN_DEVICE_TILE_HEIGHT_LOG2
     },
 
     .block_pool = {
-      .block_dwords_log2    = SPN_BLOCK_POOL_BLOCK_DWORDS_LOG2,
-      .subblock_dwords_log2 = SPN_BLOCK_POOL_SUBBLOCK_DWORDS_LOG2,
-      .ids_per_workgroup    = SPN_KERNEL_BLOCK_POOL_INIT_BP_IDS_PER_WORKGROUP
+      .block_dwords_log2    = SPN_DEVICE_BLOCK_POOL_BLOCK_DWORDS_LOG2,
+      .subblock_dwords_log2 = SPN_DEVICE_BLOCK_POOL_SUBBLOCK_DWORDS_LOG2,
+      .ids_per_workgroup    = SPN_DEVICE_BLOCK_POOL_INIT_BP_IDS_PER_WORKGROUP
     },
 
     .path_builder = {
@@ -78,7 +78,7 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
       .size = {
         .ring               = 8192,
         .eager              = 1024,
-        .cohort             = SPN_KERNEL_RASTERS_ALLOC_METAS_SIZE, // FIXME -- change name
+        .cohort             = SPN_DEVICE_RASTERS_ALLOC_METAS_SIZE, // FIXME -- change name
         .cmds               = 1 << 18,
         .ttrks              = 1 << 20
       }

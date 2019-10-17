@@ -6,93 +6,108 @@
 #define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SHADERS_SPN_MACROS_GLSL_H_
 
 //
-// Use C-like structure layout everywhere
+// We need C-like structure layout everywhere.
 //
-// NOTE: the current descriptors are simple enough that std430 is
-// sufficient.
+// NOTE: The current descriptors are simple enough that std430 is
+// sufficient but the "scalar block layout" may be required in the
+// future.
 //
 
 //
 // clang-format off
 //
 
-#if 0
-#ifdef VULKAN
-#extension GL_EXT_scalar_block_layout         : require
-#endif
-#endif
+#define SPN_GLSL_INT_MIN                       (-2147483648)
+#define SPN_GLSL_INT_MAX                       (+2147483647)
+
+#define SPN_GLSL_UINT_MAX                      (4294967295)
+
+//
+// FIXME
+//
+// Consider providing typed min/max() functions:
+//
+//   <type> [min|max]_<type>(a,b) { ; }
+//
+// But note we still need preprocessor-time min/max().
+//
+
+#define SPN_GLSL_MAX_MACRO(t_,a_,b_)           (((a_) > (b_)) ? (a_) : (b_))
+#define SPN_GLSL_MIN_MACRO(t_,a_,b_)           (((a_) < (b_)) ? (a_) : (b_))
 
 //
 //
 //
 
-#define SPN_GLSL_INT_MIN                    (-2147483648)
-#define SPN_GLSL_INT_MAX                    (+2147483647)
-
-#define SPN_GLSL_UINT_MAX                   (4294967295)
+#define SPN_GLSL_CONCAT_2(a_,b_)               a_ ## b_
+#define SPN_GLSL_CONCAT(a_,b_)                 SPN_GLSL_CONCAT_2(a_,b_)
 
 //
 //
 //
 
-#define SPN_GLSL_CONCAT_2(a,b)              a ## b
-#define SPN_GLSL_CONCAT(a,b)                SPN_GLSL_CONCAT_2(a,b)
-
-//
-//
-//
-
-#define SPN_GLSL_BITS_TO_MASK(n)            ((1u<<(n))-1)
-#define SPN_GLSL_BITS_TO_MASK_AT(b,n)       (SPN_GLSL_BITS_TO_MASK(n) << b)
+#define SPN_GLSL_BITS_TO_MASK(n_)              ((1u<<(n_))-1)
+#define SPN_GLSL_BITS_TO_MASK_AT(b_,n_)        (SPN_GLSL_BITS_TO_MASK(n_) << (b_))
 
 //
 // Insert a bitfield straddling the uvec2 word boundary
 //
+// NOTE: 64-bit inserts, extracts and rotates are operations we want to
+// accelerate with intrinsics when available through GLSL. For example,
+// NVIDIA's 64-bit SHF opcode.
+//
 
-#define SPN_GLSL_INSERT_UVEC2_UINT(b,i,o,n)     \
-  bitfieldInsert(b[0],i,o,32-o);                \
-  bitfieldInsert(b[1],i>>(32-o),0,n-(32-o))
+#define SPN_GLSL_INSERT_UVEC2_COMMON(b_,i_,o_,lo_,hi_)          \
+  b_[0] = SPN_BITFIELD_INSERT((b_)[0],i_,o_,lo_);               \
+  b_[1] = SPN_BITFIELD_INSERT((b_)[1],                          \
+                              SPN_BITFIELD_EXTRACT(i_,lo_,hi_), \
+                              0,                                \
+                              hi_)
 
-#define SPN_GLSL_INSERT_UVEC2_INT(b,i,o,n)      \
-  SPN_GLSL_INSERT_UVEC2_UINT(b,i,o,n)
+#define SPN_GLSL_INSERT_UVEC2_UINT(b_,i_,o_,n_)                 \
+  SPN_GLSL_INSERT_UVEC2_COMMON(b_,i_,o_,32-(o_),(n_)-(32-(o_)))
+
+#define SPN_GLSL_INSERT_UVEC2_INT(b_,i_,o_,n_)                  \
+  SPN_GLSL_INSERT_UVEC2_UINT(b_,i_,o_,n_)
 
 //
 // Returns a uint bitfield straddling the uvec2 word boundary
 // Returns an int bitfield straddling the uvec2 word boundary
 //
 
-#if defined(SPN_ENABLE_EXTENSION_INT64) && defined(GL_ARB_gpu_shader_int64)
+#if (SPN_EXT_ENABLE_INT64 && GL_EXT_shader_explicit_arithmetic_types)
 
-#extension GL_ARB_gpu_shader_int64 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
 
 #if 1
-#define SPN_GLSL_EXTRACT_UVEC2_UINT(v,o,n)  (unpackUint2x32(packUint2x32(v) >> o)[0] & SPN_GLSL_BITS_TO_MASK(n))
+#define SPN_GLSL_EXTRACT_UVEC2_UINT(v_,o_,n_)  (unpack32(pack64(v_) >> o_)[0] & SPN_GLSL_BITS_TO_MASK(n_))
 #else
-#define SPN_GLSL_EXTRACT_UVEC2_UINT(v,o,n)  bitfieldExtract(packUint2x32(v),o,n) // might be supported
+#define SPN_GLSL_EXTRACT_UVEC2_UINT(v_,o_,n_)  SPN_BITFIELD_EXTRACT(pack64(v_),o_,n_) // might be supported
 #endif
 
 #if 1
-#define SPN_GLSL_EXTRACT_UVEC2_INT(v,o,n)   bitfieldExtract(unpackInt2x32(packInt2x32(v) >> o)[0],0,n)
+#define SPN_GLSL_EXTRACT_UVEC2_INT(v_,o_,n_)   SPN_BITFIELD_EXTRACT(unpack32(pack64(v_) >> o_)[0],0,n_)
 #else
-#define SPN_GLSL_EXTRACT_UVEC2_INT(v,o,n)   bitfieldExtract(packInt2x32(v),o,n)  // might be supported
+#define SPN_GLSL_EXTRACT_UVEC2_INT(v_,o_,n_)   SPN_BITFIELD_EXTRACT(pack64(v_),o_,n_)  // might be supported
 #endif
 
 #else // int64 not enabled or supported
 
-#define SPN_GLSL_EXTRACT_UVEC2_UINT(v,o,n)  bitfieldExtract(    (v[0] >> o) | (v[1] << (32-o)) ,0,n)
-#define SPN_GLSL_EXTRACT_UVEC2_INT(v,o,n)   bitfieldExtract(int((v[0] >> o) | (v[1] << (32-o))),0,n)
+#define SPN_GLSL_EXTRACT_UVEC2_UINT(v_,o_,n_)  SPN_BITFIELD_EXTRACT(    ((v_)[0] >> (o_)) | ((v_)[1] << (32-(o_))) ,0,n_)
+#define SPN_GLSL_EXTRACT_UVEC2_INT(v_,o_,n_)   SPN_BITFIELD_EXTRACT(int(((v_)[0] >> (o_)) | ((v_)[1] << (32-(o_)))),0,n_)
 
 #endif
 
 //
-// Certain GPUs will benefit from identifying subgroup uniform values
+// GPUs with support for true scalars will benefit from identifying
+// subgroup uniform values
 //
 
-#if defined(SPN_ENABLE_EXTENSION_SUBGROUP_UNIFORM) && defined(GL_EXT_subgroupuniform_qualifier)
+#if SPN_EXT_ENABLE_SUBGROUP_UNIFORM && GL_EXT_subgroupuniform_qualifier
 
 #extension GL_EXT_subgroupuniform_qualifier : require
 
-#define SPN_SUBGROUP_UNIFORM                subgroupuniformEXT
+#define SPN_SUBGROUP_UNIFORM  subgroupuniformEXT
 
 #else
 

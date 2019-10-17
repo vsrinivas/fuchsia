@@ -11,13 +11,23 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include "spn_vk.h"
+#include "vk.h"
 
 //
 //
 //
 
 struct spn_device;
+
+//
+// REMOVEME(allanmac): DEBUG ONLY
+//
+
+void
+spn_device_block_pool_debug_snap(struct spn_device * const device, VkCommandBuffer cb);
+
+void
+spn_device_block_pool_debug_print(struct spn_device * const device);
 
 //
 //
@@ -44,6 +54,13 @@ spn_device_block_pool_get_mask(struct spn_device * const device);
 
 struct spn_vk_ds_block_pool_t
 spn_device_block_pool_get_ds(struct spn_device * const device);
+
+//
+// Returns the number of dwords in the block pool
+//
+
+uint32_t
+spn_device_block_pool_get_size(struct spn_device * const device);
 
 //
 //

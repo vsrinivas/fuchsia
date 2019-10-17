@@ -13,6 +13,9 @@ graphics_compute_vulkan_executable("spinel_vk_context") {
   ]
   include_dirs =
       [ "$root_gen_dir/src/graphics/lib/compute/spinel/platforms/vk" ]
+  if (current_toolchain == host_toolchain) {
+    defines = [ "SPN_VK_SHADER_INFO_AMD_STATISTICS" ]
+  }
   deps = [
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",

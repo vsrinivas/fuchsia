@@ -121,7 +121,7 @@ spn_allocator_host_temp_dispose(struct spn_allocator_host_temp * const host_temp
 void *
 spn_allocator_host_temp_alloc(struct spn_allocator_host_temp * const host_temp,
                               struct spn_device * const              device,
-                              spn_result (*const wait)(struct spn_device * const device),
+                              spn_result_t (*const wait)(struct spn_device * const device),
                               spn_mem_flags_e const   flags,
                               uint64_t const          size,
                               spn_subbuf_id_t * const subbuf_id,

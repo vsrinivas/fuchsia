@@ -23,8 +23,8 @@
 //
 
 #include "common/macros.h"
-#include "common/vk/vk_assert.h"
-#include "common/vk/vk_find_mem_type_idx.h"
+#include "common/vk/assert.h"
+#include "common/vk/find_mem_type_idx.h"
 #include "device.h"
 
 //
@@ -112,7 +112,7 @@ spn_allocator_device_perm_alloc(struct spn_allocator_device_perm * const device_
   dbi->range  = size;  // could be smaller than mr.size
 
   //
-  // FIXME -- investigate dedicated allocations
+  // FIXME(allanmac): investigate dedicated allocations -- see NVIDIA docs
   //
 #if 0
   VkMemoryDedicatedAllocateInfo const dai =
@@ -197,7 +197,7 @@ spn_allocator_device_temp_dispose(struct spn_allocator_device_temp * const devic
 void
 spn_allocator_device_temp_alloc(struct spn_allocator_device_temp * const device_temp,
                                 struct spn_device * const                device,
-                                spn_result (*const wait)(struct spn_device * const device),
+                                spn_result_t (*const wait)(struct spn_device * const device),
                                 VkDeviceSize const             size,
                                 spn_subbuf_id_t * const        subbuf_id,
                                 VkDescriptorBufferInfo * const subbuf_dbi)

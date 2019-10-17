@@ -71,14 +71,14 @@ struct spn_path_builder
 {
   struct spn_path_builder_impl      * impl;
 
-  spn_result                       (* begin    )(struct spn_path_builder_impl * const impl);
-  spn_result                       (* end      )(struct spn_path_builder_impl * const impl, spn_path_t * const path);
-  spn_result                       (* release  )(struct spn_path_builder_impl * const impl);
-  spn_result                       (* flush    )(struct spn_path_builder_impl * const impl);
+  spn_result_t                       (* begin    )(struct spn_path_builder_impl * const impl);
+  spn_result_t                       (* end      )(struct spn_path_builder_impl * const impl, spn_path_t * const path);
+  spn_result_t                       (* release  )(struct spn_path_builder_impl * const impl);
+  spn_result_t                       (* flush    )(struct spn_path_builder_impl * const impl);
 
 #undef  SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
 #define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p,_i,_n)                                           \
-  spn_result                       (* _p       )(struct spn_path_builder_impl * const impl);
+  spn_result_t                       (* _p       )(struct spn_path_builder_impl * const impl);
 
   SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
 

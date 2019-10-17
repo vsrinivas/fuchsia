@@ -1,3 +1,4 @@
+get_status
 block_pool_init
 fills_dispatch
 fills_expand
@@ -5,7 +6,8 @@ fills_scan
 paths_alloc
 paths_copy
 paths_reclaim
-place
+place_ttpk
+place_ttsk
 rasterize_cubic
 rasterize_line
 rasterize_quad

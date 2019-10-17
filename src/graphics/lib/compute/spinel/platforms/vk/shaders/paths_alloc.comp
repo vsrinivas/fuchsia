@@ -8,14 +8,15 @@
 //
 //
 
-#extension GL_GOOGLE_include_directive        : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
 
 //
 //
 //
 
 #include "spn_config.h"
-#include "spn_vk_layouts.h"
+#include "vk_layouts.h"
 
 //
 // The work can be performed by a single lane but we need to make sure
@@ -23,16 +24,13 @@
 //
 // Alternatively, can choose a device-specific workgroup size
 //
-//   layout(local_size_x_id = SPN_KERNEL_PATHS_ALLOC_WORKGROUP_SIZE) in;
+//   layout(local_size_x_id = SPN_DEVICE_PATHS_ALLOC_WORKGROUP_SIZE) in;
 //
 
-layout(local_size_x = SPN_KERNEL_PATHS_ALLOC_WORKGROUP_SIZE) in;
+layout(local_size_x = SPN_DEVICE_PATHS_ALLOC_WORKGROUP_SIZE) in;
 
 //
-// main(buffer  uint atomics[2],
-//      buffer  uint base[],
-//      uniform uint base_idx,
-//      uniform uint count)
+//
 //
 
 SPN_VK_GLSL_DECL_KERNEL_PATHS_ALLOC();
@@ -41,14 +39,19 @@ SPN_VK_GLSL_DECL_KERNEL_PATHS_ALLOC();
 //
 //
 
-void main()
+void
+main()
 {
   //
   // allocate 'count' blocks in the block pool and store it in the
   // ring buffer 'slot' for the copy kernel to read
   //
-  if (gl_LocalInvocationID.x == 0)
-    pc_alloc[pc_alloc_idx] = atomicAdd(bp_atomics[0],pc_span);
+  if (gl_SubgroupInvocationID == 0)
+    {
+      const uint reads = atomicAdd(bp_atomics[SPN_BLOCK_POOL_ATOMICS_READS], pc_span);
+
+      pc_alloc[pc_alloc_idx] = reads;
+    }
 }
 
 //

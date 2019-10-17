@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 //
-//
+// FIXME(allanmac): slated for removal if not used
 //
 
 #include "event_pool.h"
 
-#include "assert_vk.h"
+#include "assert.h"
 #include "host_alloc.h"
 
 //

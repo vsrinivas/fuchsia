@@ -20,23 +20,22 @@ struct spn_composition
   struct spn_context *          context;
   struct spn_composition_impl * impl;
 
-  //
   // clang-format off
-  //
-  spn_result (* release   )(struct spn_composition_impl * const impl);
-  spn_result (* seal      )(struct spn_composition_impl * const impl);
-  spn_result (* unseal    )(struct spn_composition_impl * const impl);
-  spn_result (* reset     )(struct spn_composition_impl * const impl);
-  spn_result (* clone     )(struct spn_composition_impl * const impl, struct spn_composition * * const clone);
-  spn_result (* get_bounds)(struct spn_composition_impl * const impl, int32_t bounds[4]);
-  spn_result (* place     )(struct spn_composition_impl * const impl,
-                                   spn_raster_t  const  *       rasters,
-                                   spn_layer_id  const  *       layer_ids,
-                                   int32_t       const (*       txtys)[2],
-                                   uint32_t                     count);
-  //
+  spn_result_t (* release   )(struct spn_composition_impl * const impl);
+
+  spn_result_t (* place     )(struct spn_composition_impl * const impl,
+                            spn_raster_t const *                rasters,
+                            spn_layer_id const *                layer_ids,
+                            spn_txty_t const *                  txtys,
+                            uint32_t                            count);
+
+  spn_result_t (* seal      )(struct spn_composition_impl * const impl);
+  spn_result_t (* unseal    )(struct spn_composition_impl * const impl);
+  spn_result_t (* reset     )(struct spn_composition_impl * const impl);
+  spn_result_t (* clone     )(struct spn_composition_impl * const impl, struct spn_composition * * const clone);
+  spn_result_t (* get_bounds)(struct spn_composition_impl * const impl, uint32_t bounds[4]);
+  spn_result_t (* set_clip  )(struct spn_composition_impl * const impl, uint32_t const clip[4]);
   // clang-format on
-  //
 
   int32_t ref_count;
 };

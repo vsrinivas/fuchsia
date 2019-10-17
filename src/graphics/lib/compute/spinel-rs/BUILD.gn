@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_library("spinel-rs") {
   name = "spinel-rs"
@@ -20,9 +20,7 @@ rustc_library("spinel-rs") {
     #       to run the tests.
     # "//src/graphics/lib/compute/spinel",
   ]
-  features = [
-    "spinel-null"
-  ]
+  features = [ "spinel-null" ]
 }
 
 unittest_package("spinel-rs-tests") {

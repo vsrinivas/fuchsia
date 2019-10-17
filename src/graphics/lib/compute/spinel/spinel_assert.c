@@ -28,12 +28,14 @@
 //
 
 char const *
-spn_result_to_string(spn_result const result)
+spn_result_t_to_string(spn_result_t const result)
 {
   switch (result)
     {
-#undef SPN_RESULT_EXPAND_X
-#define SPN_RESULT_EXPAND_X(_result) SPN_RESULT_TO_STR(_result);
+#undef SPN_RESULT
+#define SPN_RESULT(_result) SPN_RESULT_TO_STR(_result);
+
+      SPN_RESULTS();
 
       default:
         return "UNKNOWN SPN RESULT";
@@ -44,22 +46,22 @@ spn_result_to_string(spn_result const result)
 //
 //
 
-spn_result
+spn_result_t
 spn_assert_1(char const * const file,
              int32_t const      line,
              bool const         is_abort,
-             spn_result const   result)
+             spn_result_t const result)
 {
   if (result != SPN_SUCCESS)
     {
-      char const * const spn_result_str = spn_result_to_string(result);
+      char const * const spn_result_t_str = spn_result_t_to_string(result);
 
       fprintf(stderr,
-              "\"%s\", line %d: spn_assert(%d) = \"%s\"",
+              "\"%s\", line %d: spn_assert(%d) = \"%s\"\n",
               file,
               line,
               result,
-              spn_result_str);
+              spn_result_t_str);
 
       if (is_abort)
         {
@@ -74,13 +76,13 @@ spn_assert_1(char const * const file,
 //
 //
 
-spn_result
+spn_result_t
 spn_assert_n(char const * const file,
              int32_t const      line,
              bool const         is_abort,
-             spn_result const   result,
+             spn_result_t const result,
              uint32_t const     n,
-             spn_result const   expect[])
+             spn_result_t const expect[])
 {
   bool match = false;
 
@@ -91,14 +93,14 @@ spn_assert_n(char const * const file,
 
   if (!match)
     {
-      char const * const spn_result_str = spn_result_to_string(result);
+      char const * const spn_result_t_str = spn_result_t_to_string(result);
 
       fprintf(stderr,
-              "\"%s\", line %d: spn_assert(%d) = \"%s\"",
+              "\"%s\", line %d: spn_assert(%d) = \"%s\"\n",
               file,
               line,
               result,
-              spn_result_str);
+              spn_result_t_str);
 
       if (is_abort)
         {

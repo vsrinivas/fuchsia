@@ -8,11 +8,12 @@ import("//build/compiled_action.gni")
 
 declare_args() {
   # Set to true in your args.gn file to generate pre-processed and
-  # auto-formatted shaders under the "debug" sub-directory of hotsort and spinel
-  # target generation output directories.
+  # auto-formatted shaders under the "debug" sub-directory of HotSort
+  # and Spinel target generation output directories.
   #
-  # These are never used, but can be reviewed manually to verify the impact of
-  # configuration parameters, or when modifying hotsort.
+  # These are never used, but can be reviewed manually to verify the
+  # impact of configuration parameters, or when modifying a compute
+  # shader.
   #
   # Example results:
   #
@@ -20,11 +21,33 @@ declare_args() {
   #     gen/src/graphics/lib/compute/
   #        hotsort/targets/hs_amd_gcn3_u64/
   #           comp/
-  #             hs_transpose.comp   -> normal shader.
+  #             hs_transpose.comp -> unpreprocessed shader
   #           debug/
-  #             hs_transpose.comp   -> same, but much easier to read!
+  #             hs_transpose.glsl -> preprocessed shader
   #
   graphics_compute_generate_debug_shaders = true
+
+  # At times we may want to compare the performance of unoptimized
+  # vs. optimized shaders.  On desktop platforms, use of spirv-opt
+  # doesn't appear to provide major performance improvements but it
+  # significantly reduces the size of the SPIR-V modules.
+  #
+  # Disabling the spirv-opt pass may also be useful in identifying and
+  # attributing code generation bugs.
+  #
+  graphics_compute_skip_spirv_opt = false
+
+  # The glslangValidator compiler is noisy by default.  A cleanly
+  # compiling shader still prints out its filename.
+  #
+  # This negatively impacts the GN build.
+  #
+  # For this reason, we silence the compiler with the "-s" option but
+  # unfortunately this also disables all error reporting.
+  #
+  # Set to true to see detailed error reporting.
+  #
+  graphics_compute_verbose_compile = false
 }
 
 # Generate a human-readable version of a set of compute shaders.
@@ -130,10 +153,12 @@ template("graphics_compute_compile_glsl_shader_foreach") {
     outputs = [
       "${_output_dir}/spv/{{source_name_part}}.spv",
     ]
-    args = [
-      "-s",  # Note: '-s' silences glslangValidator printing filename
-             # but detailed error messages are also silenced
-
+    if (graphics_compute_verbose_compile) {
+      args = []
+    } else {
+      args = [ "-s" ]
+    }
+    args += [
       "-o",
       rebase_path(outputs[0], root_build_dir),
       "{{source}}",
@@ -186,7 +211,17 @@ template("graphics_compute_compile_glsl_shader_foreach") {
   #
   compiled_action_foreach(target_name) {
     tool = "//third_party/glslang:spirv-remap"
-    sources = get_target_outputs(":${_gen_opt_target_name}")
+    if (graphics_compute_skip_spirv_opt) {
+      sources = get_target_outputs(":${_gen_spv_target_name}")
+      deps = [
+        ":${_gen_spv_target_name}",
+      ]
+    } else {
+      sources = get_target_outputs(":${_gen_opt_target_name}")
+      deps = [
+        ":${_gen_opt_target_name}",
+      ]
+    }
     outputs = [
       "${_output_dir}/remap/{{source_name_part}}.spv",
     ]
@@ -196,9 +231,6 @@ template("graphics_compute_compile_glsl_shader_foreach") {
       "{{source}}",
       "--output",
       rebase_path("${_output_dir}/remap", root_build_dir),
-    ]
-    deps = [
-      ":${_gen_opt_target_name}",
     ]
   }
 }

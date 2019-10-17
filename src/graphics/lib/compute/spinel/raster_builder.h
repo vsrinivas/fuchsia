@@ -34,17 +34,18 @@ struct spn_raster_builder
   //
   // clang-format off
   //
-  spn_result (* begin  )(struct spn_raster_builder_impl * const impl);
-  spn_result (* end    )(struct spn_raster_builder_impl * const impl, spn_raster_t * const raster);
-  spn_result (* release)(struct spn_raster_builder_impl * const impl);
-  spn_result (* flush  )(struct spn_raster_builder_impl * const impl);
-  spn_result (* fill   )(struct spn_raster_builder_impl * const impl,
-                         spn_path_t                     * const paths,
-                         spn_transform_weakref_t        * const transform_weakrefs,
-                         float                   const (* const transforms)[8],
-                         spn_clip_weakref_t             * const clip_weakrefs,
-                         float                   const (* const clips)[4],
-                         uint32_t                               count);
+  spn_result_t (* begin  )(struct spn_raster_builder_impl * const impl);
+  spn_result_t (* end    )(struct spn_raster_builder_impl * const impl, spn_raster_t * const raster);
+  spn_result_t (* release)(struct spn_raster_builder_impl * const impl);
+  spn_result_t (* flush  )(struct spn_raster_builder_impl * const impl);
+  spn_result_t (* add    )(struct spn_raster_builder_impl * const impl,
+                           spn_path_t const *        paths,
+                           spn_transform_weakref_t * transform_weakrefs,
+                           spn_transform_t const *   transforms,
+                           spn_clip_weakref_t *      clip_weakrefs,
+                           spn_clip_t const *        clips,
+                           uint32_t                  count);
+
   //
   // clang-format on
   //

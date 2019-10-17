@@ -140,23 +140,15 @@ mod tests {
 
     use super::*;
 
-    const FINITE: Clip = Clip {
-        bottom_left: Point { x: 0.0, y: 0.0 },
-        top_right: Point { x: 0.0, y: 0.0 },
-    };
+    const FINITE: Clip =
+        Clip { bottom_left: Point { x: 0.0, y: 0.0 }, top_right: Point { x: 0.0, y: 0.0 } };
     const BL_NAN: Clip = Clip {
-        bottom_left: Point {
-            x: std::f32::NAN,
-            y: 0.0,
-        },
+        bottom_left: Point { x: std::f32::NAN, y: 0.0 },
         top_right: Point { x: 0.0, y: 0.0 },
     };
     const TR_NAN: Clip = Clip {
         bottom_left: Point { x: 0.0, y: 0.0 },
-        top_right: Point {
-            x: std::f32::NAN,
-            y: 0.0,
-        },
+        top_right: Point { x: std::f32::NAN, y: 0.0 },
     };
 
     fn new_path_and_raster_builder() -> (Path, RasterBuilder) {

@@ -13,8 +13,6 @@
 
 #include "allocator_device.h"
 #include "allocator_host.h"
-#include "fence_pool.h"
-#include "spinel_types.h"
 #include "spinel_vk.h"
 
 //
@@ -33,8 +31,9 @@ struct spn_device
     struct
     {
       struct spn_allocator_host_perm perm;
-      struct spn_allocator_host_temp temp;
+      struct spn_allocator_host_temp temp;  // FIXME(allanmac): we may be able to remove this
     } host;
+
     struct
     {
       struct
@@ -43,37 +42,21 @@ struct spn_device
         struct spn_allocator_device_perm copyback;  // hrN     -- copy-back to host
         struct spn_allocator_device_perm coherent;  // hw1:drN -- target-specific
       } perm;
+
       struct
       {
         struct spn_allocator_device_temp local;
       } temp;
     } device;
+
   } allocator;
 
   struct spn_queue_pool *  queue_pool;
-  struct spn_cb_pool *     cb_pool;
-  struct spn_fence_pool *  fence_pool;
   struct spn_handle_pool * handle_pool;
+  struct spn_dispatch *    dispatch;
   struct spn_block_pool *  block_pool;
-
-  //
-  //
-  //
-#if 0
-  struct spn_scheduler * scheduler;
-  struct spn_grid_deps * deps;
-#endif
+  struct spn_status *      status;
 };
-
-//
-// FIXME -- Spinel target needs to be able to vend what extensions it
-// requires from a target device
-//
-
-//
-// Creation and disposal intitializes the context and may rely on
-// other context resources like the scheduler
-//
 
 //
 // Disable device because of a fatal error
@@ -87,47 +70,49 @@ spn_device_lost(struct spn_device * const device);
 //
 
 uint64_t
-spn_device_wait_nsecs(struct spn_device * const device);
+spn_device_get_timeout_ns(struct spn_device * const device);
 
 //
-// does this need to be here?  just grab config
+//
 //
 
-uint32_t
-spn_device_block_pool_get_mask(struct spn_device * const device);
+spn_result_t
+spn_device_wait_for_fences(struct spn_device * const device,
+                           uint32_t const            imports_count,
+                           VkFence * const           imports,
+                           bool const                wait_all,
+                           uint64_t const            timeout_ns);
 
-//
-// Acquire and begin a command buffer
-//
+spn_result_t
+spn_device_wait_all(struct spn_device * const device, bool const wait_all);
 
-VkCommandBuffer
-spn_device_cb_acquire_begin(struct spn_device * const device);
-
-//
-// End a command buffer and acquire a fence
-//
-
-VkFence
-spn_device_cb_end_fence_acquire(struct spn_device * const    device,
-                                VkCommandBuffer const        cb,
-                                spn_fence_complete_pfn const pfn,
-                                void * const                 pfn_payload,
-                                size_t const                 pfn_payload_size);
-
-//
-// yield : if there are unsignaled fences, test if at least one fence is signaled
-// wait  : if there are unsignaled fences, wait for at least one fence to signal
-// drain : wait for all unsignaled fences -- unknown if we need this
-//
-
-spn_result
-spn_device_yield(struct spn_device * const device);
-
-spn_result
+spn_result_t
 spn_device_wait(struct spn_device * const device);
 
-spn_result
-spn_device_drain(struct spn_device * const device);
+//
+//
+//
+
+#define SPN_DEVICE_WAIT_DEBUG_DISABLED
+#ifndef SPN_DEVICE_WAIT_DEBUG_DISABLED
+
+spn_result_t
+spn_device_wait_verbose(struct spn_device * const device,
+                        char const * const        file_line,
+                        char const * const        func_name);
+
+#define SPN_DEVICE_WAIT(device_)                                                                   \
+  spn_device_wait_verbose(device_, __FILE__ ":" STRINGIFY_MACRO(__LINE__) ":", __func__)
+
+#else
+
+#define SPN_DEVICE_WAIT(device_) spn_device_wait(device_)
+
+#endif
+
+//
+//
+//
 
 //
 //

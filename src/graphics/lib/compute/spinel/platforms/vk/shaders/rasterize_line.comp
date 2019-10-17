@@ -5,71 +5,224 @@
 #version 460
 
 //
-// FIXME -- *ALL* pre-new-X TTSK keys could be squelched if we're
-// willing to pay for a pre-pass that reads from back to front and:
 //
-//   - converts all TTRK keys to TTSK keys
-//   - sets squelched TTSK keys to +2
-//   - unsquelched keys are +1
 //
 
-#extension GL_GOOGLE_include_directive             : require
-//#extension GL_EXT_control_flow_attributes          : require
-#extension GL_KHR_shader_subgroup_basic            : require
-#extension GL_KHR_shader_subgroup_ballot           : require
-#extension GL_KHR_shader_subgroup_arithmetic       : require
-//#extension GL_KHR_shader_subgroup_shuffle          : require
-//#extension GL_KHR_shader_subgroup_shuffle_relative : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#extension GL_KHR_shader_subgroup_shuffle : require
+#extension GL_KHR_shader_subgroup_shuffle_relative : require
+#extension GL_KHR_shader_subgroup_vote : require
 
 //
 // RASTERIZE KERNEL
 //
 
 #include "spn_config.h"
-#include "spn_vk_layouts.h"
+#include "vk_layouts.h"
 
 //
-// LOCAL DEFINITIONS
+// Enable NVIDIA-specific extension
 //
 
-#define SPN_KERNEL_RASTERIZE_SUBGROUPS  (SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE / \
-                                         SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE)
+#if SPN_DEVICE_RASTERIZE_EXT_ENABLE_SUBGROUP_PARTITION_NV && GL_NV_shader_subgroup_partitioned
 
-#define SPN_RASTERIZE_SEGMENT(tb_id)    (SPN_TAGGED_BLOCK_ID_GET_ID(tb_id) * \
-                                         SPN_BLOCK_POOL_SUBBLOCK_DWORDS    + \
-                                         gl_SubgroupInvocationID)
+#extension GL_NV_shader_subgroup_partitioned : require
+
+#endif
+
+//
+//
+//
+
+layout(local_size_x = SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE) in;
 
 //
 //
-//
-
-layout(local_size_x = SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE) in;
-
-//
-// rasterize(buffer uint   bp_atomics[2],
-//           buffer uint   bp_ids[],
-//           buffer uint   bp_blocks[],
-//           buffer uint   ttrk_atomic[1],
-//           buffer uvec2  ttrk_extent[],
-//           buffer float8 transforms[]
-//           buffer float4 clips[]
-//           buffer uvec4  fill_cmds[]
-//           uniform uint  bp_mask,
-//           uniform uint  count);
 //
 
 SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE();
 
 //
+// clang-format off
+//
+
+#define SPN_RASTERIZE_SUBGROUP_SIZE           (1 << SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
+#define SPN_RASTERIZE_SUBGROUP_MASK           SPN_BITS_TO_MASK(SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
+
+#define SPN_RASTERIZE_SMEM_CACHE_YX_INVALID   SPN_BITS_TO_MASK(SPN_TTRK_LO_HI_BITS_XY + 1)
+
+#define SPN_RASTERIZE_SMEM_CACHE_BITS_Y_LOG2  2
+#define SPN_RASTERIZE_SMEM_CACHE_BITS_X_LOG2  2
+#define SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2    4
+
+#define SPN_RASTERIZE_SMEM_YX_SIZE            (SPN_RASTERIZE_SUBGROUP_SIZE * 2 + SPN_RASTERIZE_SUBGROUP_SIZE - 1)
+
+#define SPN_RASTERIZE_SMEM_CACHE_SIZE         (1 << SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2)
+
+//
+// FIXME(allanmac): expand this to fit the remaining SMEM
+//
+// The spn_bin() function can produce up a subgroup of new TTSB
+// allocations.  The larger we make this buffer, the fewer atomic
+// appends are made to the TTRK key extent.
+//
+#define SPN_RASTERIZE_SMEM_FLUSH_SIZE         (SPN_RASTERIZE_SUBGROUP_SIZE + SPN_RASTERIZE_SUBGROUP_SIZE / 2 - 1)
+#define SPN_RASTERIZE_SMEM_FLUSH_MARK         (SPN_RASTERIZE_SMEM_FLUSH_SIZE - SPN_RASTERIZE_SUBGROUP_SIZE)
+
+
+//
+// Declare per-subgroup smem struct
+//
+// YX/TTS
+//
+//   Rasterization can result in each subgroup lane can producing 2
+//   line segments.
+//
+//   We also want to process a subgroup's worth of line
+//   segments at a time.
+//
+// CACHE
+//
+//   The current implementation caches up to 16 work-in-progress TTSB
+//   blocks.  This is very generous and could be smaller.
+//
+//   The binning operation could potentially allocate up to a subgroup
+//   size of blocks (and TTRK keys).
+//
+// FLUSH
+//
+//   Each new TTSB block is pointed to by a 64-bit TTRK key.  We want
+//   to make this array as large as possible and flush either a half
+//   or full subgroup at a time.
 //
 //
+// The total SMEM size is _at least_: SUBGROUP_SIZE * 10 + 28
+//
+//    Subgroup |  SMEM dwords
+//   ----------+--------------
+//        4    |      68
+//        8    |     108
+//       16    |     188      <- Intel
+//       32    |     358      <- NVIDIA, AMD/RDNA
+//       64    |     668      <- AMD/GCN - results in reduced occupancy!
+//             |
+//
+// A good target amount of SMEM per subgroup by arch is:
+//
+//    Vendor/Arch | Available dwords
+//   -------------+------------------
+//       Intel    |       292
+//       NVIDIA   |       512
+//       AMD      |       409
+//
+
+struct spn_rasterize_cache
+{
+  uint yx  [SPN_RASTERIZE_SMEM_CACHE_SIZE]; // 16
+  uint base[SPN_RASTERIZE_SMEM_CACHE_SIZE]; // 16
+};
+
+struct spn_rasterize_flush
+{
+  uint ttsb[SPN_RASTERIZE_SMEM_FLUSH_SIZE];
+  uint yx  [SPN_RASTERIZE_SMEM_FLUSH_SIZE];
+};
+
+//
+// FIXME(allanmac): on GPUs that support subgroupUniform variables we
+// can avoid using smem.
+//
+
+struct spn_rasterize_vars
+{
+  uint subblocks_rem;
+  uint ttrk_count;
+  uint cohort;
+};
 
 struct spn_rasterize_smem
 {
-  uint scratch[SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE];
+  uint                scratch[SPN_RASTERIZE_SUBGROUP_SIZE];
+
+  uint                yx     [SPN_RASTERIZE_SMEM_YX_SIZE];
+  uint                tts    [SPN_RASTERIZE_SMEM_YX_SIZE];
+
+  spn_rasterize_cache cache;
+
+  spn_rasterize_flush flush;
+
+  spn_rasterize_vars  vars;
 };
 
-#if ( SPN_KERNEL_RASTERIZE_SUBGROUPS == 1 )
+//
+// clang-format on
+//
+
+//
+// The simple block cache has a few rules:
+//
+// - hold at least a subgroup of subblocks
+// - hold at most one block per lane
+//
+// The cache acquires at least a subgroup of subblocks at a time.
+//
+
+//
+// FIXME(allanmac): eventually hoist the scale to the target config
+//
+
+#define SPN_RASTERIZE_ALLOC_ACQUIRE_SCALE 2
+
+//
+//
+//
+
+#define SPN_RASTERIZE_ALLOC_MIN_BLOCKS                                                             \
+  ((SPN_RASTERIZE_SUBGROUP_SIZE + SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK - 1) /                        \
+   SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK)
+
+#define SPN_RASTERIZE_ALLOC_MIN_SUBBLOCKS                                                          \
+  (SPN_RASTERIZE_ALLOC_MIN_BLOCKS * SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK)
+
+#define SPN_RASTERIZE_ALLOC_MAX_SUBGROUP_SUBBLOCKS                                                 \
+  (SPN_RASTERIZE_SUBGROUP_SIZE * SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK)
+
+#define SPN_RASTERIZE_ALLOC_MAX_SUBBLOCKS                                                          \
+  (SPN_RASTERIZE_ALLOC_MAX_SUBGROUP_SUBBLOCKS - SPN_RASTERIZE_ALLOC_MIN_SUBBLOCKS)
+
+#define SPN_RASTERIZE_ALLOC_MAX_BLOCKS                                                             \
+  (SPN_RASTERIZE_ALLOC_MAX_SUBBLOCKS / SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK)
+
+#define SPN_RASTERIZE_ALLOC_MIN_BLOCKS_SCALED                                                      \
+  (SPN_RASTERIZE_ALLOC_MIN_BLOCKS * SPN_RASTERIZE_ALLOC_ACQUIRE_SCALE)
+
+#define SPN_RASTERIZE_ALLOC_ACQUIRE_BLOCKS                                                         \
+  SPN_GLSL_MIN_MACRO(uint, SPN_RASTERIZE_ALLOC_MAX_BLOCKS, SPN_RASTERIZE_ALLOC_MIN_BLOCKS_SCALED)
+
+#define SPN_RASTERIZE_ALLOC_ACQUIRE_SUBBLOCKS                                                      \
+  (SPN_RASTERIZE_ALLOC_ACQUIRE_BLOCKS * SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK)
+
+//
+// Warn if the scale is needlessly too high
+//
+// FIXME(allanmac): move to target's spn_config.h
+//
+
+#if (SPN_RASTERIZE_ALLOC_MIN_BLOCKS_SCALED > SPN_RASTERIZE_ALLOC_MAX_BLOCKS)
+#error "SPN_RASTERIZE_ALLOC_ACQUIRE_SCALE too large"
+#endif
+
+//
+// Each subgroup has its own smem region
+//
+
+#define SPN_RASTERIZE_SUBGROUPS (SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE / SPN_RASTERIZE_SUBGROUP_SIZE)
+
+#if (SPN_RASTERIZE_SUBGROUPS == 1)
 
 shared spn_rasterize_smem smem;
 
@@ -77,104 +230,1295 @@ shared spn_rasterize_smem smem;
 
 #else
 
-shared spn_rasterize_smem smem[SPN_KERNEL_RASTERIZE_SUBGROUPS];
+shared spn_rasterize_smem smem[SPN_RASTERIZE_SUBGROUPS];
 
 #define SPN_RASTERIZE_SMEM() smem[gl_SubgroupID]
 
 #endif
 
 //
-//
+// Walk the node and, if necessary, jump to the next node
 //
 
-#define SPN_PATH_NODE_DWORD_IS_LAST(n)  (((n) & SPN_BLOCK_POOL_BLOCK_DWORDS_MASK) == SPN_BLOCK_POOL_BLOCK_DWORDS_MASK)
+#define SPN_PATH_SEGMENT(block_id)                                                                 \
+  (block_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID)
+
+#define SPN_PATH_NODE_DWORD_IS_LAST(n)                                                             \
+  (((n)&SPN_BLOCK_POOL_BLOCK_DWORDS_MASK) == SPN_BLOCK_POOL_BLOCK_DWORDS_MASK)
+
+//
+//
+//
 
 void
 spn_segment_next(SPN_SUBGROUP_UNIFORM inout uint tb_id_idx,
                  SPN_SUBGROUP_UNIFORM inout uint block_id)
 {
-  block_id += (SPN_KERNEL_PATHS_COPY_SUBGROUP_SIZE / SPN_BLOCK_POOL_SUBBLOCK_DWORDS);
+  block_id += SPN_BLOCK_POOL_SUBBLOCKS_PER_SUBGROUP(SPN_RASTERIZE_SUBGROUP_SIZE);
+
+#if 0
+  if (gl_SubgroupInvocationID == 0)
+    {
+      const uint debug_base = atomicAdd(bp_debug_count[0], 3);
+
+      bp_debug[debug_base + 0] = 0;
+      bp_debug[debug_base + 1] = tb_id_idx;
+      bp_debug[debug_base + 2] = block_id;
+    }
+#endif
 
   // was that the last path segment in the block?
   if ((block_id & SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK) == 0)
     {
+      tb_id_idx += 1;
+
+#if 0
+      if (gl_SubgroupInvocationID == 0)
+        {
+          const uint debug_base = atomicAdd(bp_debug_count[0], 3);
+
+          bp_debug[debug_base + 0] = 1;
+          bp_debug[debug_base + 1] = tb_id_idx;
+          bp_debug[debug_base + 2] = block_id;
+        }
+#endif
+
       // is this the last tagged block id in the node?
-      if (SPN_PATH_NODE_DWORD_IS_LAST(++tb_id_idx))
-        tb_id_idx = SPN_TAGGED_BLOCK_ID_GET_ID(bp_blocks[tb_id_idx]) * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+      if (SPN_PATH_NODE_DWORD_IS_LAST(tb_id_idx))
+        {
+          tb_id_idx =
+            SPN_TAGGED_BLOCK_ID_GET_ID(bp_blocks[tb_id_idx]) * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+
+#if 0
+          if (gl_SubgroupInvocationID == 0)
+            {
+              const uint debug_base = atomicAdd(bp_debug_count[0], 3);
+
+              bp_debug[debug_base + 0] = 2;
+              bp_debug[debug_base + 1] = tb_id_idx;
+              bp_debug[debug_base + 2] = block_id;
+            }
+#endif
+        }
 
       block_id = SPN_TAGGED_BLOCK_ID_GET_ID(bp_blocks[tb_id_idx]);
+
+#if 0
+      if (gl_SubgroupInvocationID == 0)
+        {
+          const uint debug_base = atomicAdd(bp_debug_count[0], 3);
+
+          bp_debug[debug_base + 0] = 3;
+          bp_debug[debug_base + 1] = tb_id_idx;
+          bp_debug[debug_base + 2] = block_id;
+        }
+#endif
     }
+}
+
+//
+// SMEM WRITES: yx, tts
+//
+
+void
+spn_append(SPN_SUBGROUP_UNIFORM inout uvec2 key_ring,
+           const ivec2                      h0u,
+           const ivec2                      hmu,
+           const ivec2                      h1u)
+{
+  //
+  // h0u -> hmu
+  //
+  {
+    ivec2      h0m_dxdy   = hmu - h0u;
+    const bool h0m_is_nez = (h0m_dxdy.y != 0);
+
+    const uvec4 h0m_ballot = subgroupBallot(h0m_is_nez);
+    const uint  h0m_lt     = subgroupBallotExclusiveBitCount(h0m_ballot);
+
+    uint h0m_idx = key_ring[0] + key_ring[1] + h0m_lt;
+
+    if (h0m_idx >= SPN_RASTERIZE_SMEM_YX_SIZE)
+      h0m_idx -= SPN_RASTERIZE_SMEM_YX_SIZE;
+
+    key_ring[1] += subgroupBallotBitCount(h0m_ballot);
+
+    //
+    // FIXME(allanmac): predicate this entire block with h0m_is_nez
+    //
+
+    // construct YX
+    const uvec2 h0m_min = uvec2(min(h0u, hmu) + SPN_TTXK_XY_BIAS);
+    const uint  h0m_x   = h0m_min.x >> SPN_TILE_SUBPIXEL_X_BITS_LOG2;
+    const uint  h0m_y   = h0m_min.y >> SPN_TILE_SUBPIXEL_Y_BITS_LOG2;
+    const uint  h0m_yx =
+      SPN_BITFIELD_INSERT(h0m_x, h0m_y, SPN_TTRK_LO_HI_BITS_X, SPN_TTRK_HI_BITS_Y);
+
+    // save yx
+    if (h0m_is_nez)
+      {
+        SPN_RASTERIZE_SMEM().yx[h0m_idx] = h0m_yx;
+      }
+
+    const uint h0m_tx = h0m_min.x & SPN_BITS_TO_MASK(SPN_TILE_SUBPIXEL_X_BITS_LOG2);
+    const uint h0m_ty = h0m_min.y & SPN_BITS_TO_MASK(SPN_TILE_SUBPIXEL_Y_BITS_LOG2);
+
+    // adjust TTS.DY
+    if (h0m_dxdy.y > 0)
+      {
+        --h0m_dxdy.y;
+      }
+
+    // construct TTS
+    uint h0m_tts = SPN_BITFIELD_INSERT(h0m_tx, h0m_dxdy.x, SPN_TTS_OFFSET_DX, SPN_TTS_BITS_DX);
+    h0m_tts      = SPN_BITFIELD_INSERT(h0m_tts, h0m_ty, SPN_TTS_OFFSET_TY, SPN_TTS_BITS_TY);
+    h0m_tts      = SPN_BITFIELD_INSERT(h0m_tts, h0m_dxdy.y, SPN_TTS_OFFSET_DY, SPN_TTS_BITS_DY);
+
+    // save tts
+    if (h0m_is_nez)
+      {
+        SPN_RASTERIZE_SMEM().tts[h0m_idx] = h0m_tts;
+      }
+  }
+
+  //
+  // hmu -> h1u
+  //
+  {
+    ivec2      hm1_dxdy   = h1u - hmu;
+    const bool hm1_is_nez = (hm1_dxdy.y != 0);
+
+    //
+    // Skip if nothing to do -- this will occur with very shallow lines
+    // or grid-aligned 45 degree lines.
+    //
+    if (subgroupAny(hm1_is_nez))
+      {
+        const uvec4 hm1_ballot = subgroupBallot(hm1_is_nez);
+        const uint  hm1_lt     = subgroupBallotExclusiveBitCount(hm1_ballot);
+
+        uint hm1_idx = key_ring[0] + key_ring[1] + hm1_lt;
+
+        if (hm1_idx >= SPN_RASTERIZE_SMEM_YX_SIZE)
+          hm1_idx -= SPN_RASTERIZE_SMEM_YX_SIZE;
+
+        key_ring[1] += subgroupBallotBitCount(hm1_ballot);
+
+        //
+        // FIXME(allanmac): predicate this entire block with hm1_is_nez
+        //
+
+        // construct YX
+        const uvec2 hm1_min = uvec2(min(hmu, h1u) + SPN_TTXK_XY_BIAS);
+        const uint  hm1_x   = hm1_min.x >> SPN_TILE_SUBPIXEL_X_BITS_LOG2;
+        const uint  hm1_y   = hm1_min.y >> SPN_TILE_SUBPIXEL_Y_BITS_LOG2;
+        const uint  hm1_yx =
+          SPN_BITFIELD_INSERT(hm1_x, hm1_y, SPN_TTRK_LO_HI_BITS_X, SPN_TTRK_HI_BITS_Y);
+
+        // save yx
+        if (hm1_is_nez)
+          {
+            SPN_RASTERIZE_SMEM().yx[hm1_idx] = hm1_yx;
+          }
+
+        const uint hm1_tx = hm1_min.x & SPN_BITS_TO_MASK(SPN_TILE_SUBPIXEL_X_BITS_LOG2);
+        const uint hm1_ty = hm1_min.y & SPN_BITS_TO_MASK(SPN_TILE_SUBPIXEL_Y_BITS_LOG2);
+
+        // adjust TTS.DY
+        if (hm1_dxdy.y > 0)
+          {
+            --hm1_dxdy.y;
+          }
+
+        // construct tts
+        uint hm1_tts = SPN_BITFIELD_INSERT(hm1_tx, hm1_dxdy.x, SPN_TTS_OFFSET_DX, SPN_TTS_BITS_DX);
+        hm1_tts      = SPN_BITFIELD_INSERT(hm1_tts, hm1_ty, SPN_TTS_OFFSET_TY, SPN_TTS_BITS_TY);
+        hm1_tts      = SPN_BITFIELD_INSERT(hm1_tts, hm1_dxdy.y, SPN_TTS_OFFSET_DY, SPN_TTS_BITS_DY);
+
+        // save tts
+        if (hm1_is_nez)
+          {
+            SPN_RASTERIZE_SMEM().tts[hm1_idx] = hm1_tts;
+          }
+      }
+  }
+}
+
+//
+// Note that NVIDIA provides the PTX instruction "match" on sm_70
+// devices.
+//
+// This instruction returns a ballot of all matching lanes in a
+// subgroup.
+//
+// The GLSL instruction is available via the
+// GL_NV_shader_subgroup_partitioned extension:
+//
+//   uvec4 subgroupPartitionNV()
+//
+// Pre-sm_70 NVIDIA devices emulate the instruction.
+//
+// On non-NVIDIA platforms, this primitive can also be emulated.
+//
+// Below are two different emulations of this operation.
+//
+// TODO(allanmac): improve these primitives
+//
+
+//
+// Partition using subgroup broadcasts.
+//
+
+#define SPN_PARTITION_BROADCAST_INIT(v_, i_)                                                       \
+  part[i_ / 32] = (subgroupBroadcast(v_, i_) == v_) ? (1u << (i_ & 0x1F)) : 0
+
+#define SPN_PARTITION_BROADCAST_TEST(v_, i_)                                                       \
+  part[i_ / 32] |= (subgroupBroadcast(v_, i_) == v_) ? (1u << (i_ & 0x1F)) : 0
+
+uvec4
+spn_partition_broadcast(const uint v)
+{
+  uvec4 part;
+
+#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 4)
+
+  SPN_PARTITION_BROADCAST_INIT(v, 0x00);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x01);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x02);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x03);
+
+#endif
+#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 8)
+
+  SPN_PARTITION_BROADCAST_TEST(v, 0x04);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x05);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x06);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x07);
+
+#endif
+#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 16)
+
+  SPN_PARTITION_BROADCAST_TEST(v, 0x08);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x09);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x0A);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x0B);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x0C);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x0D);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x0E);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x0F);
+
+#endif
+#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 32)
+
+  SPN_PARTITION_BROADCAST_TEST(v, 0x10);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x11);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x12);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x13);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x14);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x15);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x16);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x17);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x18);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x19);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x1A);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x1B);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x1C);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x1D);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x1E);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x1F);
+
+#endif
+#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 64)
+
+  SPN_PARTITION_BROADCAST_INIT(v, 0x20);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x21);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x22);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x23);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x24);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x25);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x26);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x27);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x28);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x29);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x2A);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x2B);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x2C);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x2D);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x2E);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x2F);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x30);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x31);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x32);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x33);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x34);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x35);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x36);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x37);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x38);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x39);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x3A);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x3B);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x3C);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x3D);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x3E);
+  SPN_PARTITION_BROADCAST_TEST(v, 0x3F);
+
+#endif
+
+#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 128)
+#error "subgroup size unimplemented"
+#endif
+
+  return part;
+}
+
+//
+// Partition the 24 bit YX value and 1 extra bit using ballots.
+//
+// This implementation may be preferable on wide subgroup devices.
+//
+
+#define SPN_PARTITION_BALLOT_ONE uvec4(1, 1, 1, 1)
+
+#define SPN_PARTITION_BALLOT_ZERO uvec4(0, 0, 0, 0)
+
+#define SPN_PARTITION_BALLOT_INIT(v_, i_)                                                          \
+  {                                                                                                \
+    const bool p = (v_ & (1u << i_)) != 0;                                                         \
+                                                                                                   \
+    part = subgroupBallot(p) ^ (p ? SPN_PARTITION_BALLOT_ONE : SPN_PARTITION_BALLOT_ZERO);         \
+  }
+
+#define SPN_PARTITION_BALLOT_TEST(v_, i_)                                                          \
+  {                                                                                                \
+    const bool p = (v_ & (1u << i_)) != 0;                                                         \
+                                                                                                   \
+    part &= subgroupBallot(p) ^ (p ? SPN_PARTITION_BALLOT_ONE : SPN_PARTITION_BALLOT_ZERO);        \
+  }
+
+uvec4
+spn_partition_ballot_25(const uint v)
+{
+  uvec4 part;
+
+  SPN_PARTITION_BALLOT_INIT(v, 0x00);
+  SPN_PARTITION_BALLOT_TEST(v, 0x01);
+  SPN_PARTITION_BALLOT_TEST(v, 0x02);
+  SPN_PARTITION_BALLOT_TEST(v, 0x03);
+  SPN_PARTITION_BALLOT_TEST(v, 0x04);
+  SPN_PARTITION_BALLOT_TEST(v, 0x05);
+  SPN_PARTITION_BALLOT_TEST(v, 0x06);
+  SPN_PARTITION_BALLOT_TEST(v, 0x07);
+  SPN_PARTITION_BALLOT_TEST(v, 0x08);
+  SPN_PARTITION_BALLOT_TEST(v, 0x09);
+  SPN_PARTITION_BALLOT_TEST(v, 0x0A);
+  SPN_PARTITION_BALLOT_TEST(v, 0x0B);
+  SPN_PARTITION_BALLOT_TEST(v, 0x0C);
+  SPN_PARTITION_BALLOT_TEST(v, 0x0D);
+  SPN_PARTITION_BALLOT_TEST(v, 0x0E);
+  SPN_PARTITION_BALLOT_TEST(v, 0x0F);
+  SPN_PARTITION_BALLOT_TEST(v, 0x10);
+  SPN_PARTITION_BALLOT_TEST(v, 0x11);
+  SPN_PARTITION_BALLOT_TEST(v, 0x12);
+  SPN_PARTITION_BALLOT_TEST(v, 0x13);
+  SPN_PARTITION_BALLOT_TEST(v, 0x14);
+  SPN_PARTITION_BALLOT_TEST(v, 0x15);
+  SPN_PARTITION_BALLOT_TEST(v, 0x16);
+  SPN_PARTITION_BALLOT_TEST(v, 0x17);
+  SPN_PARTITION_BALLOT_TEST(v, 0x18);  // extra invalid bit
+
+  return part;
 }
 
 //
 //
 //
 
-void main()
+#if SPN_DEVICE_RASTERIZE_EXT_ENABLE_SUBGROUP_PARTITION_NV && GL_NV_shader_subgroup_partitioned
+
+#define SPN_PARTITION(v) subgroupPartitionNV(v)
+
+#elif SPN_DEVICE_RASTERIZE_ENABLE_SUBGROUP_PARTITION_BALLOT
+
+#define SPN_PARTITION(v) spn_partition_ballot_25(v)
+
+#else  // default -- good for small subgroups
+
+#define SPN_PARTITION(v) spn_partition_broadcast(v)
+
+#endif
+
+//
+// For now the hash will simply be the low 2 bits of Y and X for a
+// total of 16 bins.
+//
+
+uint
+spn_hash(const uint yx)
+{
+  //
+  // Given  : [x:y:na]
+  // Return : ([x] | ([y]<<2)) & MASK(4)
+  //
+  return SPN_BITFIELD_INSERT(yx,
+                             yx >> SPN_TTRK_LO_HI_BITS_X,
+                             SPN_RASTERIZE_SMEM_CACHE_BITS_X_LOG2,
+                             SPN_RASTERIZE_SMEM_CACHE_BITS_Y_LOG2) &
+         SPN_BITS_TO_MASK(SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2);
+}
+
+//
+//
+//
+
+void
+spn_cache_init()
+{
+#if ((SPN_RASTERIZE_SMEM_CACHE_SIZE % SPN_RASTERIZE_SUBGROUP_SIZE) == 0)
+
+  for (uint ii = 0; ii < SPN_RASTERIZE_SMEM_CACHE_SIZE; ii += SPN_RASTERIZE_SUBGROUP_SIZE)
+    {
+      smem.cache.yx[ii + gl_SubgroupInvocationID] = SPN_RASTERIZE_SMEM_CACHE_YX_INVALID;
+    }
+
+#else
+
+  for (uint ii = gl_SubgroupInvocationID; ii < SPN_RASTERIZE_SMEM_CACHE_SIZE;
+       ii += SPN_RASTERIZE_SUBGROUP_SIZE)
+    {
+      smem.cache.yx[ii] = SPN_RASTERIZE_SMEM_CACHE_YX_INVALID;
+    }
+
+#endif
+}
+
+//
+// FIXME(allanmac): dispose of keys in a properly coalesced manner
+//
+// (e.g. backwards, etc.)
+//
+// SMEM READS: flush.ttsb, flush.yx, vars.cohort
+//
+
+void
+spn_flush_ttrks(SPN_SUBGROUP_UNIFORM inout uint ttrk_count)
+{
+  uint ttrks_base = 0;
+
+  if (gl_SubgroupInvocationID == 0)
+    {
+      ttrks_base = atomicAdd(ttrks_count, ttrk_count);
+    }
+
+  ttrks_base = subgroupBroadcast(ttrks_base, 0);
+
+  // FIXME(allanmac): don't store in smem
+  SPN_SUBGROUP_UNIFORM const uint cohort = SPN_RASTERIZE_SMEM().vars.cohort;
+
+  for (uint ii = gl_SubgroupInvocationID; ii < ttrk_count; ii += SPN_RASTERIZE_SUBGROUP_SIZE)
+    {
+      const uint  ttsb = SPN_RASTERIZE_SMEM().flush.ttsb[ii];
+      const uint  yx   = SPN_RASTERIZE_SMEM().flush.yx[ii];
+      const uvec2 ttrk = { SPN_BITFIELD_INSERT(ttsb, yx, SPN_TTRK_LO_OFFSET_X, SPN_TTRK_LO_BITS_X),
+                           SPN_BITFIELD_INSERT(
+                             SPN_BITFIELD_EXTRACT(yx, SPN_TTRK_LO_BITS_X, SPN_TTRK_HI_BITS_XY),
+                             cohort,
+                             SPN_TTRK_HI_OFFSET_COHORT,
+                             SPN_TTRK_HI_BITS_COHORT) };
+
+      ttrks_keys[ttrks_base + ii] = ttrk;
+
+#if 0
+      {
+        const uint debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 5);
+
+        bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = gl_WorkGroupID.x;
+        bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = ttrk_count;
+        bp_debug[debug_base + 2 * SPN_RASTERIZE_SUBGROUP_SIZE] = atomicAdd(ttrks_count,0);
+        bp_debug[debug_base + 3 * SPN_RASTERIZE_SUBGROUP_SIZE] = ttrk[0];
+        bp_debug[debug_base + 4 * SPN_RASTERIZE_SUBGROUP_SIZE] = ttrk[1];
+      }
+#endif
+    }
+
+  // reset
+  ttrk_count = 0;
+
+  // FIXME(allanmac)
+  subgroupBarrier();
+}
+
+//
+// SMEM READS  : subblocks_rem, ttrk_count
+// SMEM WRITES : flush.ttsb, flush.yx, ttrk_count
+//
+
+uint
+spn_alloc(const uint                      yx,
+          SPN_SUBGROUP_UNIFORM const uint ttsb_count,
+          const uint                      ttsb_lane,
+          const uint                      ttsb_idx,
+          inout uint                      block_ids)
+{
+  SPN_SUBGROUP_UNIFORM uint subblocks_rem = SPN_RASTERIZE_SMEM().vars.subblocks_rem;
+
+  if (subblocks_rem < ttsb_count)
+    {
+      //
+      // How many blocks do we need to acquire?
+      //
+      // The precise number we need to acquire is:
+      //
+      //   ((ttsb_count - subblocks_rem + SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK - 1) >>
+      //    SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_LOG2)
+      //
+      // But we want to amortize the allocation so we allocate a
+      // tunable fixed number of blocks.
+      //
+
+      // adjust next index
+      subblocks_rem += SPN_RASTERIZE_ALLOC_ACQUIRE_SUBBLOCKS;
+
+      // allocate from block pool
+      uint bp_ids_reads = 0;
+
+      if (gl_SubgroupInvocationID == 0)
+        {
+          bp_ids_reads =
+            atomicAdd(bp_atomics[SPN_BLOCK_POOL_ATOMICS_READS], SPN_RASTERIZE_ALLOC_ACQUIRE_BLOCKS);
+        }
+
+      SPN_SUBGROUP_UNIFORM const uint bp_ids_base = subgroupBroadcast(bp_ids_reads, 0);
+
+      //
+      // FIXME(allanmac): error checking here...
+      //
+      // - log an error
+      // - kill the pipeline with a conditional
+      // - exit
+      //
+
+      // make room
+      block_ids = subgroupShuffleUp(block_ids, SPN_RASTERIZE_ALLOC_ACQUIRE_BLOCKS);
+
+      // update block_ids
+      if (gl_SubgroupInvocationID < SPN_RASTERIZE_ALLOC_ACQUIRE_BLOCKS)
+        {
+          const uint bp_ids_off = bp_ids_base + gl_SubgroupInvocationID;
+          const uint bp_ids_idx = bp_ids_off & bp_mask;
+
+          block_ids = bp_ids[bp_ids_idx];
+        }
+
+      // NON-UNIFORM LOAD?
+      // subgroupBarrier();
+
+      //
+      // blindly initialize TTSB blocks
+      //
+      // FIXME(allanmac): it *might* be better to only initialize
+      // sublocks-per-subgroup at a time -- especially if the block
+      // contains many subblocks.
+      //
+      // FIXME(allanmac): this could be expanded to use broadcasts since
+      // we know how many blocks were just acquired.
+      //
+      //
+      for (SPN_SUBGROUP_UNIFORM uint ii = 0; ii < SPN_RASTERIZE_ALLOC_ACQUIRE_BLOCKS; ii++)
+        {
+          SPN_SUBGROUP_UNIFORM const uint init_id   = subgroupShuffle(block_ids, ii);
+          SPN_SUBGROUP_UNIFORM const uint init_base = init_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+
+          const uint init_idx = init_base + gl_SubgroupInvocationID;
+
+          [[unroll]]
+
+          for (SPN_SUBGROUP_UNIFORM uint ii = 0;
+               ii < SPN_BLOCK_POOL_SUBGROUPS_PER_BLOCK(SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2);
+               ii++)
+          {
+            bp_blocks[init_idx + ii * SPN_RASTERIZE_SUBGROUP_SIZE] = SPN_TTS_INVALID;
+          }
+        }
+    }
+
+    //
+    // DEBUG
+    //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 7);
+
+    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 0] = 0xFEEDFACE;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 1] = block_ids;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 2] = subblocks_rem;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 3] = ttsb_count;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 4] = ttsb_idx;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 5] = ttsb_lane;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 6] = yx;
+  }
+#endif
+
+  // adjust subblocks_rem
+  subblocks_rem -= ttsb_count;
+
+  // copy back to smem
+  SPN_RASTERIZE_SMEM().vars.subblocks_rem = subblocks_rem;
+
+  // which subblock is being acquired?
+  const uint subblock_idx   = (subblocks_rem + ttsb_idx) ^ SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK;
+  const uint block_lane     = subblock_idx >> SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_LOG2;
+  const uint block_subblock = subblock_idx & SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK;
+  const uint subblock_id    = subgroupShuffle(block_ids, block_lane) + block_subblock;
+
+  SPN_SUBGROUP_UNIFORM const uint ttrk_next  = SPN_RASTERIZE_SMEM().vars.ttrk_count;
+  SPN_SUBGROUP_UNIFORM uint       ttrk_count = ttrk_next + ttsb_count;
+  const uint                      ttrk_idx   = ttrk_next + ttsb_idx;
+
+  if (gl_SubgroupInvocationID == ttsb_lane)
+    {
+      SPN_RASTERIZE_SMEM().flush.ttsb[ttrk_idx] = subblock_id;
+      SPN_RASTERIZE_SMEM().flush.yx[ttrk_idx]   = yx;
+    }
+
+  // flush if there are too many TTRK keys
+  if (ttrk_count > SPN_RASTERIZE_SMEM_FLUSH_MARK)
+    {
+      subgroupBarrier();
+
+      // SMEM READS: flush.ttsb, flush.yx, vars.cohort
+      spn_flush_ttrks(ttrk_count);
+    }
+
+  // save the count -- this is always zero right now
+  SPN_RASTERIZE_SMEM().vars.ttrk_count = ttrk_count;
+
+  // FIXME(allanmac)
+  subgroupBarrier();
+
+  return subblock_id;
+}
+
+//
+// SMEM READS: subblocks_next
+//
+
+void
+spn_free_blocks(const uint block_ids)
+{
+  SPN_SUBGROUP_UNIFORM
+  const uint subblocks_rem = SPN_RASTERIZE_SMEM().vars.subblocks_rem;
+
+  SPN_SUBGROUP_UNIFORM
+  const uint blocks_rem = subblocks_rem >> SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_LOG2;
+
+  //
+  // DEBUG
+  //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 5);
+
+    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 0] = 0xBBBBBBBB;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 1] = subblocks_rem;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 2] = blocks_rem;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 3] = block_ids;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 4] = bp_mask;
+  }
+#endif
+
+  // anything to do?
+  if (blocks_rem == 0)
+    return;
+
+  // allocate from block pool
+  uint bp_ids_writes = 0;
+
+  if (gl_SubgroupInvocationID == 0)
+    {
+      bp_ids_writes = atomicAdd(bp_atomics[SPN_BLOCK_POOL_ATOMICS_WRITES], blocks_rem);
+    }
+
+  SPN_SUBGROUP_UNIFORM const uint bp_ids_base = subgroupBroadcast(bp_ids_writes, 0);
+
+  // store back to ring
+  if (gl_SubgroupInvocationID < blocks_rem)
+    {
+      const uint bp_ids_off = bp_ids_base + gl_SubgroupInvocationID;
+      const uint bp_ids_idx = bp_ids_off & bp_mask;
+
+      bp_ids[bp_ids_idx] = block_ids;
+    }
+}
+
+//
+// FIXME(allanmac): Evaluate how smart or dumb the compilers are at
+// ignoring unused words of a uvec4 ballot.
+//
+
+uint
+spn_ballot_and_le_msb(const uvec4 a, const uvec4 b)
+{
+#if 1
+
+  const uvec4 c = (a & b) & gl_SubgroupLeMask;
+
+  if (subgroupBallotBitCount(c) != 0)
+    {
+      return subgroupBallotFindMSB(c);  // undefined for 0
+    }
+  else
+    {
+      return SPN_UINT_MAX;
+    }
+
+#else
+
+#if (SPN_RASTERIZE_SUBGROUP_SIZE <= 32)
+
+  // returns -1 if not found
+  return findMSB(a[0] & b[0] & gl_SubgroupLeMask[0]);
+
+#elif (SPN_RASTERIZE_SUBGROUP_SIZE <= 64)
+
+  uvec4 c;
+
+  c[0] = a[0] & b[0] & gl_SubgroupLeMask[0];
+  c[1] = a[1] & b[1] & gl_SubgroupLeMask[1];
+
+  if ((c[0] | c[1]) != 0)
+    {
+      return subgroupBallotFindMSB(c);
+    }
+  else
+    {
+      return SPN_UINT_MAX;
+    }
+
+#else
+#error "Greater than 64 lanes isn't implemented."
+#endif
+
+#endif
+}
+
+//
+// The primary motivation of the design of this binner is that the
+// device's subgroup size may be much wider than the tile width.
+//
+// This is a major departure from the prior NVIDIA CUDA and Intel
+// OpenCL implementations and an important generalization for Vulkan
+// targets.
+//
+// SMEM READS: cache.yx, cache.base
+// SMEM WRITES: cache.yx
+//
+void
+spn_bin(const bool is_valid, const uint yx, const uint tts, inout uint block_ids)
+{
+  //
+  // DEBUG
+  //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 2);
+
+    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 0] = yx;
+    bp_debug[debug_base + SPN_RASTERIZE_SUBGROUP_SIZE * 1] = tts;
+  }
+#endif
+
+  // look up cache entries
+  const uint hash       = spn_hash(yx);
+  const uint entry_yx   = SPN_RASTERIZE_SMEM().cache.yx[hash];
+  const uint entry_base = SPN_RASTERIZE_SMEM().cache.base[hash];
+
+  // partition the subgroup by value
+  const uvec4 part      = SPN_PARTITION(yx);
+  const uint  part_msb  = subgroupBallotFindMSB(part);
+  uint        part_idx  = subgroupBallotExclusiveBitCount(part);
+  uint        part_base = 0;
+
+  //
+  // DEBUG
+  //
+#if 0
+  // if (gl_WorkGroupID.x == 0)
+    {
+      uint debug_base = 0;
+
+      if (gl_SubgroupInvocationID == 0)
+        debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 5);
+
+      debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+      bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = 0xCAFEBABE;
+      bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = part[0];
+      bp_debug[debug_base + 2 * SPN_RASTERIZE_SUBGROUP_SIZE] = part[1];
+      bp_debug[debug_base + 3 * SPN_RASTERIZE_SUBGROUP_SIZE] = part_idx;
+      bp_debug[debug_base + 4 * SPN_RASTERIZE_SUBGROUP_SIZE] = part_msb;
+    }
+#endif
+
+  // is there a partial TTSB in the cache?
+  bool is_hit = false;
+
+  //
+  // ONLY SMEM WRITES FROM HERE ON
+  //
+
+  // cache hit?
+  if (entry_yx == yx)
+    {
+      // adjust partition idx
+      part_idx += (entry_base & SPN_TILE_HEIGHT_MASK);
+
+      if (part_idx < SPN_TILE_WIDTH)
+        {
+          part_base = (entry_base & ~SPN_TILE_HEIGHT_MASK);
+          is_hit    = true;  // only the partial TTSB is a hit
+        }
+
+      // clear cache entry
+      SPN_RASTERIZE_SMEM().cache.yx[hash] = SPN_RASTERIZE_SMEM_CACHE_YX_INVALID;
+    }
+
+  // fold the partition idx into a TTSB idx
+  part_idx &= SPN_TILE_HEIGHT_MASK;
+
+  // an index of 0 is a new TTSB subblock
+  const bool is_new_ttsb = is_valid && (part_idx == 0);
+
+  // ballot of all TTSB starting lanes
+  const uvec4 ballot_ttsb = subgroupBallot(is_new_ttsb);
+
+  // how many new TTSB subblocks do we need?
+  SPN_SUBGROUP_UNIFORM const uint ttsb_count = subgroupBallotBitCount(ballot_ttsb);
+
+  if (ttsb_count > 0)
+    {
+      // which lanes in each partition acquire TTSB subblocks?
+      // -1 is returned if the partition doesn't require a TTSB.
+      const uint ttsb_lane = spn_ballot_and_le_msb(part, ballot_ttsb);
+
+      // calculate the TTSB subblock rank
+      const uint ttsb_rank = subgroupBallotExclusiveBitCount(ballot_ttsb);
+
+      // distribute the TTSB subblock indices across partitions
+      const uint ttsb_idx = subgroupShuffle(ttsb_rank, ttsb_lane);
+
+      //
+      // DEBUG
+      //
+#if 0
+      if (gl_WorkGroupID.x == 0)
+        {
+          uint debug_base = 0;
+
+          if (gl_SubgroupInvocationID == 0)
+            debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 9);
+
+          debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+          bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = 0xCAFEBABE;
+          bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = part[0];
+          bp_debug[debug_base + 2 * SPN_RASTERIZE_SUBGROUP_SIZE] = part[1];
+          bp_debug[debug_base + 3 * SPN_RASTERIZE_SUBGROUP_SIZE] = ballot_ttsb[0];
+          bp_debug[debug_base + 4 * SPN_RASTERIZE_SUBGROUP_SIZE] = ballot_ttsb[1];
+          bp_debug[debug_base + 5 * SPN_RASTERIZE_SUBGROUP_SIZE] = is_valid ? 1 : 0;
+          bp_debug[debug_base + 6 * SPN_RASTERIZE_SUBGROUP_SIZE] = is_new_ttsb ? 1 : 0;
+          bp_debug[debug_base + 7 * SPN_RASTERIZE_SUBGROUP_SIZE] = ttsb_lane;
+          bp_debug[debug_base + 8 * SPN_RASTERIZE_SUBGROUP_SIZE] = ttsb_rank;
+        }
+#endif
+
+      // FIXME(allanmac)
+      subgroupBarrier();
+
+      //
+      // allocate subblocks
+      //
+      // SMEM READS  : subblocks_next, ttrk_count
+      // SMEM WRITES : flush.ttsb, flush.yx, ttrk_count
+      //
+      const uint ttsb_id = spn_alloc(yx, ttsb_count, ttsb_lane, ttsb_idx, block_ids);
+
+      // adjust bp_idx
+      if (!is_hit)
+        {
+          part_base = ttsb_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+        }
+    }
+
+    //
+    // DEBUG
+    //
+#if 0
+  if (gl_WorkGroupID.x == 1)
+    {
+      uint debug_base = 0;
+
+      if (gl_SubgroupInvocationID == 0)
+        debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 2);
+
+      debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+      bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = is_valid ? 1 : 0;
+      bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = tts;
+    }
+#endif
+
+  subgroupBarrier();
+
+  if (is_valid)
+    {
+      const uint bp_idx = part_base + part_idx;
+
+      // write tts to TTSB
+      bp_blocks[bp_idx] = tts;
+
+#if 0
+      {
+        uint debug_base = atomicAdd(bp_debug_count[0], 2);
+
+        bp_debug[debug_base + 0] = bp_idx;
+        bp_debug[debug_base + 1] = tts;
+      }
+#endif
+
+      // if TTSB isn't full then fight for a cache entry!
+      if (gl_SubgroupInvocationID == part_msb)
+        {
+          if (part_idx != SPN_TILE_HEIGHT_MASK)
+            {
+              SPN_RASTERIZE_SMEM().cache.base[hash] = bp_idx + 1;
+              SPN_RASTERIZE_SMEM().cache.yx[hash]   = yx;
+            }
+        }
+    }
+
+  // FIXME(allanmac)
+  subgroupBarrier();
+}
+
+//
+// There is less than a subgroup of keys
+//
+// SMEM READS: yx, tts
+//
+
+void
+spn_flush_rem(SPN_SUBGROUP_UNIFORM inout uvec2 key_ring, inout uint block_ids)
+{
+  // read-after-write
+  subgroupBarrier();
+
+  //
+  // process the enqueued yx values
+  //
+  const bool is_valid = gl_SubgroupInvocationID < key_ring[1];
+  uint       yx       = SPN_RASTERIZE_SMEM_CACHE_YX_INVALID;
+  uint       tts      = SPN_TTS_INVALID;
+
+  if (is_valid)
+    {
+      // compute ring index
+      uint yx_idx = key_ring[0] + gl_SubgroupInvocationID;
+
+      if (yx_idx >= SPN_RASTERIZE_SMEM_YX_SIZE)
+        {
+          yx_idx -= SPN_RASTERIZE_SMEM_YX_SIZE;
+        }
+
+      // load from smem
+      yx  = SPN_RASTERIZE_SMEM().yx[yx_idx];
+      tts = SPN_RASTERIZE_SMEM().tts[yx_idx];
+    }
+
+  // FIXME(allanmac)
+  subgroupBarrier();
+
+  // bin the YX/TTS
+  spn_bin(is_valid, yx, tts, block_ids);
+}
+
+//
+// There is at least a subgroup of keys
+//
+// SMEM READS: yx, tts
+//
+
+void
+spn_flush_subgroup(SPN_SUBGROUP_UNIFORM inout uvec2 key_ring, inout uint block_ids)
+{
+  // read-after-write
+  subgroupBarrier();
+
+  do
+    {
+      // compute ring index
+      uint yx_idx = key_ring[0] + gl_SubgroupInvocationID;
+
+      if (yx_idx >= SPN_RASTERIZE_SMEM_YX_SIZE)
+        {
+          yx_idx -= SPN_RASTERIZE_SMEM_YX_SIZE;
+        }
+
+      // load from smem
+      const uint yx  = SPN_RASTERIZE_SMEM().yx[yx_idx];
+      const uint tts = SPN_RASTERIZE_SMEM().tts[yx_idx];
+
+      // FIXME(allanmac)
+      subgroupBarrier();
+
+      // continue?
+      key_ring[0] += SPN_RASTERIZE_SUBGROUP_SIZE;
+
+      if (key_ring[0] >= SPN_RASTERIZE_SMEM_YX_SIZE)
+        {
+          key_ring[0] -= SPN_RASTERIZE_SMEM_YX_SIZE;
+        }
+
+      key_ring[1] -= SPN_RASTERIZE_SUBGROUP_SIZE;
+
+      // bin the YX/TTS
+      spn_bin(true, yx, tts, block_ids);
+    }
+  while (key_ring[1] >= SPN_RASTERIZE_SUBGROUP_SIZE);
+}
+
+//
+//
+//
+
+void
+main()
 {
   //
   // This is a subgroup/warp-centric kernel.
   //
   // Which subgroup in the grid is this?
   //
-#if (SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE == SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE)
-  SPN_SUBGROUP_UNIFORM const uint sid = gl_WorkGroupID.x;
-#else
-  SPN_SUBGROUP_UNIFORM const uint sid = gl_WorkGroupID.x * SPN_KERNEL_RASTERIZE_SUBGROUPS + gl_SubgroupID;
+#if (SPN_RASTERIZE_SUBGROUPS == 1)
 
-  // FIXME -- this is dynamically determined and won't be a push
-  // constant and can be found in prim.counts[3]
-  if (sid >= count)
-    return; // empty subgroup
+  SPN_SUBGROUP_UNIFORM
+  const uint sid = gl_WorkGroupID.x;
+
+#else
+
+  SPN_SUBGROUP_UNIFORM
+  const uint sid = gl_WorkGroupID.x * SPN_RASTERIZE_SUBGROUPS + gl_SubgroupID;
+
+  // this is dynamically determined
+  if (sid >= fill_scan_dispatch[SPN_BLOCK_ID_TAG_PATH_LINE][3])
+    return;  // empty subgroup
+
 #endif
+
+  //
+  // initialize smem.keys[]
+  //
+  SPN_SUBGROUP_UNIFORM uvec2 key_ring = { 0, 0 };
 
   //
   // Each subgroup processes a single command
   //
+  // FIXME -- quads,cubics,etc. need to use the dispatch exclusive
+  // scan offset to get the proper sid
+  //
   SPN_SUBGROUP_UNIFORM const uvec4 cmd = rast_cmds[sid];
 
   //
-  // NOTE THAT THE HOST IS RESPONSIBLE FOR SCALING THE TRANSFORM BY:
+  // DEBUG
   //
-  //   [ SPN_SUBPIXEL_RESL_X_F32, SPN_SUBPIXEL_RESL_Y_F32, 1.0f ]
-  //
-  // Coordinates are scaled to subpixel resolution.  All that matters
-  // is that continuity is maintained between end path element
-  // endpoints.
-  //
-  // It's the responsibility of the host to ensure that the transforms
-  // are properly scaled either via intitializing a transform stack
-  // with the subpixel resolution scaled identity or scaling the
-  // transform before its loaded by a rasterization grid.
-  //
-  SPN_SUBGROUP_UNIFORM uint tb_id_idx =
-    SPN_CMD_RASTERIZE_GET_NODE_ID(cmd) * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + SPN_CMD_RASTERIZE_GET_NODE_DWORD(cmd);
-  SPN_SUBGROUP_UNIFORM uint block_id  = SPN_TAGGED_BLOCK_ID_GET_ID(bp_blocks[tb_id_idx]);
+#if 0
+  if (SPN_CMD_RASTERIZE_GET_NODE_DWORD(cmd) != 0x20)
+    return;
+#endif
 
   //
-  // FIXME -- this initial load can be made faster by loading multiple keys
+  // DEBUG
   //
+#if 0
+  {
+    if (gl_SubgroupInvocationID == 0)
+      {
+        const uint debug_base = atomicAdd(bp_debug_count[0], 4);
+
+        bp_debug[debug_base + 0] = cmd[0];
+        bp_debug[debug_base + 1] = cmd[1];
+        bp_debug[debug_base + 2] = cmd[2];
+        bp_debug[debug_base + 3] = cmd[3];
+      }
+  }
+#endif
 
   //
-  // the initial segment idx and segments-per-block constant determine
+  // Head and node blocks contain tagged block ids.
+  //
+  // Calculate the index of the first tagged block id.
+  //
+  SPN_SUBGROUP_UNIFORM
+  uint tb_id_idx = SPN_CMD_RASTERIZE_GET_NODE_ID(cmd) * SPN_BLOCK_POOL_SUBBLOCK_DWORDS +
+                   SPN_CMD_RASTERIZE_GET_NODE_DWORD(cmd);
+
+  SPN_SUBGROUP_UNIFORM uint tb_id    = bp_blocks[tb_id_idx];
+  SPN_SUBGROUP_UNIFORM uint block_id = SPN_TAGGED_BLOCK_ID_GET_ID(tb_id);
+
+  //
+  // DEBUG
+  //
+#if 0
+  {
+    if (gl_SubgroupInvocationID == 0)
+      {
+        const uint debug_base = atomicAdd(bp_debug_count[0], 5);
+
+        bp_debug[debug_base + 0] = SPN_CMD_RASTERIZE_GET_NODE_ID(cmd);
+        bp_debug[debug_base + 1] = SPN_CMD_RASTERIZE_GET_NODE_DWORD(cmd);
+        bp_debug[debug_base + 2] = tb_id_idx;
+        bp_debug[debug_base + 3] = tb_id;
+        bp_debug[debug_base + 4] = block_id;
+      }
+  }
+#endif
+
+  //
+  // OPTIMIZATION(allanmac): This initial load may be able to load
+  // multiple keys at once.  Also, certain path types will map to the
+  // device's block size in a way that lends it self to much simpler
+  // loading.
+  //
+
+#if 0
+  {
+    if (gl_SubgroupInvocationID == 0)
+      {
+        const uint debug_base = atomicAdd(bp_debug_count[0], 4);
+
+        bp_debug[debug_base + 0] = 0x12121212;
+        bp_debug[debug_base + 1] = tb_id_idx;
+        bp_debug[debug_base + 2] = block_id;
+        bp_debug[debug_base + 3] = block_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+      }
+  }
+#endif
+
+  //
+  // The initial segment idx and segments-per-block constant determine
   // how many block ids will need to be loaded
   //
   vec2 a0;
 
-  a0.x = uintBitsToFloat(bp_blocks[SPN_RASTERIZE_SEGMENT(block_id)]);
-  spn_segment_next(tb_id_idx,block_id);
-  a0.y = uintBitsToFloat(bp_blocks[SPN_RASTERIZE_SEGMENT(block_id)]);
-  spn_segment_next(tb_id_idx,block_id);
+  a0.x = uintBitsToFloat(bp_blocks[SPN_PATH_SEGMENT(block_id)]);
 
+  spn_segment_next(tb_id_idx, block_id);
+
+#if 0
+  {
+    if (gl_SubgroupInvocationID == 0)
+      {
+        const uint debug_base = atomicAdd(bp_debug_count[0], 2);
+
+        bp_debug[debug_base + 0] = tb_id_idx;
+        bp_debug[debug_base + 1] = block_id;
+      }
+  }
+#endif
+  a0.y = uintBitsToFloat(bp_blocks[SPN_PATH_SEGMENT(block_id)]);
+
+  spn_segment_next(tb_id_idx, block_id);
+
+#if 0
+  {
+    if (gl_SubgroupInvocationID == 0)
+      {
+        const uint debug_base = atomicAdd(bp_debug_count[0], 2);
+
+        bp_debug[debug_base + 0] = tb_id_idx;
+        bp_debug[debug_base + 1] = block_id;
+      }
+  }
+#endif
   vec2 a1;
 
-  a1.x = uintBitsToFloat(bp_blocks[SPN_RASTERIZE_SEGMENT(block_id)]);
-  spn_segment_next(tb_id_idx,block_id);
-  a1.y = uintBitsToFloat(bp_blocks[SPN_RASTERIZE_SEGMENT(block_id)]);;
-  spn_segment_next(tb_id_idx,block_id);
+  a1.x = uintBitsToFloat(bp_blocks[SPN_PATH_SEGMENT(block_id)]);
+
+  spn_segment_next(tb_id_idx, block_id);
+
+#if 0
+  {
+    if (gl_SubgroupInvocationID == 0)
+      {
+        const uint debug_base = atomicAdd(bp_debug_count[0], 2);
+
+        bp_debug[debug_base + 0] = tb_id_idx;
+        bp_debug[debug_base + 1] = block_id;
+      }
+  }
+#endif
+  a1.y = uintBitsToFloat(bp_blocks[SPN_PATH_SEGMENT(block_id)]);
 
   //
-  // Apply transform
+  // init smem vars
+  //
+  SPN_RASTERIZE_SMEM().vars = spn_rasterize_vars(0, 0, SPN_CMD_RASTERIZE_GET_COHORT(cmd));
+
+  // FIXME(allanmac)
+  subgroupBarrier();
+
+  //
+  // DEBUG -- dump the untransformed lines
+  //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 4);
+
+    debug_base = subgroupBroadcast(debug_base, 0);
+
+    bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE + gl_SubgroupInvocationID] =
+      floatBitsToUint(a0.x);
+    bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE + gl_SubgroupInvocationID] =
+      floatBitsToUint(a0.y);
+    bp_debug[debug_base + 2 * SPN_RASTERIZE_SUBGROUP_SIZE + gl_SubgroupInvocationID] =
+      floatBitsToUint(a1.x);
+    bp_debug[debug_base + 3 * SPN_RASTERIZE_SUBGROUP_SIZE + gl_SubgroupInvocationID] =
+      floatBitsToUint(a1.y);
+  }
+#endif
+
+  //
+  // NOTE THAT THE HOST IS RESPONSIBLE FOR SCALING THE TRANSFORM BY:
+  //
+  //   [ SPN_TTS_SUBPIXEL_X_RESL, SPN_TTS_SUBPIXEL_Y_RESL ]
+  //
+  // Coordinates are scaled to subpixel resolution.  Continuity is
+  // (and must be) maintained between end path element endpoints.
+  //
+  // It's the responsibility of the host to ensure that the transforms
+  // are properly scaled either via intitializing a transform stack
+  // with the subpixel resolution scaled identity or scaling a
+  // transform before it is loaded by a rasterization grid.
+  //
+  // TRANSFORM
   //
   // Note that we only care if the end points are rounded to subpixel precision
   //
@@ -186,3166 +1530,528 @@ void main()
   //   B[1]------D----+
   //   | w0  w1  | 1  |
   //   +---------+----+
-
+  //
   SPN_SUBGROUP_UNIFORM const uint t_idx = SPN_CMD_RASTERIZE_GET_TRANSFORM(cmd);
 
-  SPN_SUBGROUP_UNIFORM const mat2 t_a   = mat2(fill_quads[t_idx  ]);
-  SPN_SUBGROUP_UNIFORM const mat2 t_b   = mat2(fill_quads[t_idx+1]);
+  SPN_SUBGROUP_UNIFORM const mat2 t_a = mat2(fill_quads[t_idx]);
+  SPN_SUBGROUP_UNIFORM const mat2 t_b = mat2(fill_quads[t_idx + 1]);
 
-  vec2 xy0 = t_a * a0 + t_b[0];
-  vec2 xy1 = t_a * a1 + t_b[0];
+  vec2 b0 = t_a * a0 + t_b[0];
+  vec2 b1 = t_a * a1 + t_b[0];
 
+#if 0
+  {
+    if (gl_SubgroupInvocationID == 0)
+      {
+        const uint debug_base = atomicAdd(bp_debug_count[0], 8);
+
+        bp_debug[debug_base + 0] = floatBitsToUint(t_a[0][0]);
+        bp_debug[debug_base + 1] = floatBitsToUint(t_a[0][1]);
+        bp_debug[debug_base + 2] = floatBitsToUint(t_a[1][0]);
+        bp_debug[debug_base + 3] = floatBitsToUint(t_a[1][1]);
+        bp_debug[debug_base + 4] = floatBitsToUint(t_b[0][0]);
+        bp_debug[debug_base + 5] = floatBitsToUint(t_b[0][1]);
+        bp_debug[debug_base + 6] = floatBitsToUint(t_b[1][0]);
+        bp_debug[debug_base + 7] = floatBitsToUint(t_b[1][1]);
+      }
+  }
+#endif
+
+  //
+  // PROJECT
+  //
   // skip projection if affine ...
-  if ((t_b[1][0] != 0.0f) || (t_b[1][1] != 0.0f)) // FIXME -- can be faster with hack
+  //
+
+  // FIXME -- can be faster with hack
+  const bool is_affine = (t_b[1][0] != 0.0f) || (t_b[1][1] != 0.0f);
+
+  if (is_affine)
     {
-      const float xy0d = dot(t_b[1],a0) + 1.0f; // make sure this resolves to two FMAs
+      const float b0_denom = dot(t_b[1], a0) + 1.0f;  // make sure this resolves to two FMAs
 
-      if (xy0d != 0.0f) // FIXME -- harden this further
-        xy0 *= (1.0f/xy0d);
+      if (b0_denom != 0.0f)  // FIXME -- harden this further
+        b0 *= (1.0f / b0_denom);
 
-      const float xy1d = dot(t_b[1],a1) + 1.0f; // make sure this resolves to two FMAs
+      const float b1_denom = dot(t_b[1], a1) + 1.0f;  // make sure this resolves to two FMAs
 
-      if (xy1d != 0.0f) // FIXME -- harden this further
-        xy1 *= (1.0f/xy1d);
+      if (b1_denom != 0.0f)  // FIXME -- harden this further
+        b1 *= (1.0f / b1_denom);
     }
 
   //
-  // clip the line segments here
+  // ROUND TO SUBPIXEL GRID
+  //
+  vec2 c0 = round(b0);
+  vec2 c1 = round(b1);
+
+  //
+  // CLIP
   //
   // SPN_SUBGROUP_UNIFORM const vec4 cv = clips[SPN_CMD_RASTERIZE_GET_CLIP(cmd)];
   //
 
-  // save the cohort id
-  SPN_SUBGROUP_UNIFORM const uint cohort = SPN_CMD_RASTERIZE_GET_COHORT(cmd);
+  //
+  // DEBUG -- dump the transformed lines
+  //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 4);
+
+    debug_base = subgroupBroadcast(debug_base, 0);
+
+    bp_debug[debug_base + gl_SubgroupInvocationID * 4 + 0] = floatBitsToUint(c0.x);
+    bp_debug[debug_base + gl_SubgroupInvocationID * 4 + 1] = floatBitsToUint(c0.y);
+    bp_debug[debug_base + gl_SubgroupInvocationID * 4 + 2] = floatBitsToUint(c1.x);
+    bp_debug[debug_base + gl_SubgroupInvocationID * 4 + 3] = floatBitsToUint(c1.y);
+  }
+#endif
 
   //
-  // start rasterizing the lines
+  // CLASSIFY LINES
+  //
+  // Transform all lines to octant 0:
+  //
+  //  +-------------+
+  //  |      ^      |
+  //  |  \ 7 | 0 /  |
+  //  |   \  |  /   |
+  //  |  6 \ | / 1  |
+  //  |     \|/     |
+  //  | <----+----> |
+  //  |     /|\     |
+  //  |  5 / | \ 2  |
+  //  |   /  |  \   |
+  //  |  / 4 | 3 \  |
+  //  |      v      |
+  //  +-------------+
+  //
+  //   octant |     transformation     |        ops
+  //  --------+------------------------+--------------------
+  //      0   | (+x0,+y0) -> (+x1,+y1) |
+  //      1   | (+y0,+x0) -> (+y1,+x1) | XCHG
+  //      2   | (+y0,-x0) -> (+y1,-x1) | XCHG         NEG_Y
+  //      3   | (+x0,-y0) -> (+x1,-y1) |              NEG_Y
+  //      4   | (-x0,-y0) -> (-x1,-y1) |       NEG_X  NEG_Y
+  //      5   | (-y0,-x0) -> (-y1,-x1) | XCHG  NEG_X  NEG_Y
+  //      6   | (-y0,+x0) -> (-y1,+x1) | XCHG  NEG_X
+  //      7   | (-x0,+y0) -> (-x1,+y1) |       NEG_X
+  //  --------+------------------------+--------------------
+  //
+  // Remap all octants so there is a simple 3-bit representation of
+  // the transformation:
+  //
+  //  +-------------+     +-------------+
+  //  |      ^      |     |      ^      |
+  //  |  \ 7 | 0 /  |     |  \ 2 | 0 /  |
+  //  |   \  |  /   |     |   \  |  /   |
+  //  |  6 \ | / 1  |     |  3 \ | / 1  |
+  //  |     \|/     |     |     \|/     |
+  //  | <----+----> | ==> | <----+----> |
+  //  |     /|\     |     |     /|\     |
+  //  |  5 / | \ 2  |     |  7 / | \ 5  |
+  //  |   /  |  \   |     |   /  |  \   |
+  //  |  / 4 | 3 \  |     |  / 6 | 4 \  |
+  //  |      v      |     |      v      |
+  //  +-------------+     +-------------+
+  //                                                      ops mask
+  //  +--------+---------+------------------------+---------------------+
+  //  | octant | octant' |     transformation     | BIT_0  BIT_1  BIT_2 |
+  //  +--------+---------+------------------------+---------------------+
+  //  |    0   |    0    | (+x0,+y0) -> (+x1,+y1) |                     |
+  //  |    1   |    1    | (+y0,+x0) -> (+y1,+x1) | XCHG                |
+  //  |    7   |    2    | (-x0,+y0) -> (-x1,+y1) |        NEG_X        |
+  //  |    6   |    3    | (-y0,+x0) -> (-y1,+x1) | XCHG   NEG_X        |
+  //  |    3   |    4    | (+x0,-y0) -> (+x1,-y1) |               NEG_Y |
+  //  |    2   |    5    | (+y0,-x0) -> (+y1,-x1) | XCHG          NEG_Y |
+  //  |    4   |    6    | (-x0,-y0) -> (-x1,-y1) |        NEG_X  NEG_Y |
+  //  |    5   |    7    | (-y0,-x0) -> (-y1,-x1) | XCHG   NEG_X  NEG_Y |
+  //  +--------+---------+------------------------+---------------------+
   //
 
   //
-  // how many non-horizontal subpixel y-axis slivers are there?
+  // Send line to (0,0) if it's horizontal
   //
-  const float y_max    = max(xy0.y,xy1.y);
-  const float yp_ceil  = ceil(y_max * SPN_TTS_SUBPIXEL_Y_SCALE_DOWN);  // hi pixel
+  const float y_diff  = abs(c1.y - c0.y);
+  const bool  is_horz = (y_diff == 0.0);
 
-  const float y_min    = min(xy0.y,xy1.y);
-  const float yp_floor = floor(y_min * SPN_TTS_SUBPIXEL_Y_SCALE_DOWN); // lo pixel
-
-  const float yp_segs  = yp_ceil - yp_floor; // how many y pixels?
-
-  const bool  y0_lt    = xy0.y <= xy1.y;
+  if (is_horz)
+    {
+      c0 = vec2(0.0f, 0.0f);
+      c1 = vec2(0.0f, 0.0f);
+    }
 
   //
-  // inclusive subgroup scan of y_segs
+  // Exchange first, reflect second.
   //
-  // segs | 33 15 18 13 --
-  // -----+---------------
-  // inc  | 33 48 66 79 --
-  // exc  |  0 33 48 66 79
+  const bool is_xchg = y_diff < abs(c1.x - c0.x);
+
+  const vec2 d0 = { is_xchg ? c0.y : c0.x, is_xchg ? c0.x : c0.y };
+  const vec2 d1 = { is_xchg ? c1.y : c1.x, is_xchg ? c1.x : c1.y };
+
+  const bool is_neg_x = d0.x > d1.x;
+  const bool is_neg_y = d0.y > d1.y;
+
+  const vec2 neg_xy = { is_neg_x ? -1.0f : +1.0f, is_neg_y ? -1.0f : +1.0f };
+
+  const vec2 e0 = d0 * neg_xy;
+  const vec2 e1 = d1 * neg_xy;
+
   //
-  float yp_inc   = subgroupInclusiveAdd(yp_segs);
-  float yp_count = subgroupBroadcast(yp_inc,SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE-1);
+  // The octant bits are:
+  //
+  //   | const uint octant = (is_xchg  ? 1 : 0) |
+  //   |                     (is_neg_x ? 2 : 0) |
+  //   |                     (is_neg_y ? 4 : 0))
+  //
+
+  //
+  // How many y pixel slivers are there?
+  //
+  const float yp_floor = floor(e0.y * SPN_TTS_SUBPIXEL_Y_SCALE_DOWN);  // lo pixel
+  const float yp_ceil  = ceil(e1.y * SPN_TTS_SUBPIXEL_Y_SCALE_DOWN);   // hi pixel
+  const int   yp_count = int(yp_ceil - yp_floor);                      // how many y pixels?
+
+  //
+  // We can calculate the floor locally or shuffle it in.
+  //
+  // We can either shuffle in a reciprocal or calculate it locally.
+  // Note that one benefit of working out of octant 0 and calculating
+  // locally is avoidance of divide-by-zero issues:
+  //
+  //   const float y_denom = 1.0f / (e1.y - e0.y);
+  //   const float x_denom = 1.0f / (e1.x - e0.x);
+  //
+
+  //
+  // Inclusive scan of yp_count
+  //
+  // count | 33 15 18 13
+  // ------+-------------
+  // inc   | 33 48 66 79
+  // exc   |  0 33 48 66
+  //
+  // Note that we could avoid one cast of an integer to a float if the
+  // scan values were floats.  But we're performing the scan with
+  // integers instead of integer valued floats because we scale float
+  // coordinates by their subpixel resolution and sum them across the
+  // subgroup (<=64 invocations). A signed integer is more appropriate
+  // in this case.
+  //
+  // Also note that the +/-16m divided by 32 is +/-512k of subpixel
+  // resolution which is far beyond Spinel's virtual workspace of
+  // ~64K^2 with a 16x16 tile.
+  //
+  int yp_inc = subgroupInclusiveAdd(yp_count);
+
+  //
+  // Sum total of y pixel slivers
+  //
+  SPN_SUBGROUP_UNIFORM
+  int yp_sum = subgroupBroadcast(yp_inc, SPN_RASTERIZE_SUBGROUP_SIZE - 1);
 
   // return if there is nothing to do
-  if (yp_count == 0)
+  if (yp_sum == 0)
     return;
 
-  int yp_exc = int(yp_inc - yp_segs);
-
-#if 0
-
   //
-  // for (yp_ii=0; yp_ii<y_count; yp_ii+=SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE)
-  //  {
-  //     yp_delta = yp_ii - yp_exc + gl_SubgroupInvocationID;
+  // allocate block ids
   //
-  //     yp_exc  -= SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE;
-  //  }
-  //
+  uint block_ids = SPN_BLOCK_ID_INVALID;
 
-  float y_floor = yp_floor * SPN_TTS_SUBPIXEL_Y_SCALE_UP;
-  uint  yp_diff = yp_exc - yp_ii;
+  // initialize cache
+  spn_cache_init();
 
-  while (true)
+  // keep lanes from fighting
+  if (is_horz)
     {
-      smem.scratch[gl_SubgroupInvocationID] = 0;
-
-
-      if ((yp_diff < SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE) && (yp_inc > yp_ii))
-        smem.scratch[max(0,yp_diff)] = gl_SubgroupInvocationID;
-
-      subgroupMemoryBarrierShared(); // read-after-write
-
-      //
-      // shuffle in line coords
-      //
-      uint  lane_y       = subgroupInclusiveMax(smem.scratch[gl_SubgroupInvocationID]);
-      uint  lane_delta   = gl_SubgroupInvocationID - subgroupShuffle(yp_diff,lane_y);
-      float lane_y_min   = subgroupShuffle(y_min,  lane_y); // lo coord
-      float lane_y_floor = subgroupShuffle(y_floor,lane_y); // lo floor
-      float lane_y_max   = subgroupShuffle(y_max,lane_y); // hi coord
-
-      while (true)
-        {
-          float      lane_y_lo  = max(lane_y_min,lane_y_floor+lane_delta);
-          float      lane_y_hi  = lane_y_lo; // default is invalid
-          const bool is_valid_y = y_base + gl_SubgroupInvocationID < y_count;
-
-          if (is_valid_y)
-            lane_y_hi = min(lane_y_hi + 1.0f,lane_y_max);
-
-          // given y/x
-
-          uint yx_hash   = spn_hash(yx);
-          uint yx_entry  = smem.entries[yx_hash];
-
-          bool yx_hit = (yx == SPN_RASTERIZE_ENTRY_GET_YX(yx_entry));
-
-          uint yx_match  = spn_match(yx_hash,yx_hit);
-
-          uint yx_idx = SPN_RASTERIZE_ENTRY_GET_COUNT(yx_entry) + spn_match_lt(yx_match);
-
-          // count how many full subblocks there are in this round
-          uint yx_tile_idx = yx_idx & SPN_TILE_WIDTH_MASK;
-          uint yx_full     = subgroupBallot(yx_tile_idx == 0);
-
-          // these lanes need new subblocks
-#if 0
-          if (yx_idx >= SPN_TILE_WIDTH)
-            {
-              smem.subblocks[yx_full_lt
-            }
-#endif
-
-          // fire and forget the ttrk keys...
-          bp_blocks[yx_subblock_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + yx_tile_idx] = ttrk;
-
-          // save hash entry {yx,count} and subblock id
-          bool is_last_idx = true;
-          if (is_last_idx)
-            {
-              const uint yx_count_new = yx_tile_idx + 1;
-
-              smem.entry.yxc[yx_hash] = SPN_RASTERIZE_ENTRY_MAKE(yx,yx_count_new);
-
-              if (yx_count_new > 0)
-                smem.entry.sub[yx_hash] = yx_subblock_id;
-            }
-
-          y_base += SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE;
-
-          if (y_base >= y_count)
-            break;
-
-          // if all the lanes are still working on the same segment then
-          // we can skip a bunch of work
-          segs_rem -= SPN_RASTERIZE_SUBGROUP_SIZE;
-
-          if (subgroupAny(segs_rem <= 0))
-            break;
-
-          lane_y_lo += SPN_RASTERIZE_SUBGROUP_SIZE;
-        }
-
-
+      yp_inc = 0;
     }
 
-   // inspect all entries for non-zero counts
-   spn_entries_flush();
-
-   //
-   spn_block_pool_reclaim(block_pool,block_pool_rem);
-
-#endif
-
-}
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-#if 0
-
-// encode { exc : src } into a uint
-#define SPN_RASTERIZE_MAKE_EXC_SRC(exc)                                     \
-  ((exc) | (gl_SubgroupInvocationID << (32-SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE_LOG2)))
-
-// get exc_src.exc
-#define SPN_RASTERIZE_EXC_SRC_GET_EXC(exc_src)                              \
-  bitfieldExtract(exc_src,0,(32-SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE_LOG2))
-
-// get exc_src.src
-#define SPN_RASTERIZE_EXC_SRC_GET_SRC(exc_src)                              \
-  bitfieldExtract(exc_src,(32-SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE_LOG2),SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE_LOG2)
-
-  const uint exc_src = SPN_RASTERIZE_MAKE_EXC_SRC(y_exc);
-
-  //
-  // allocate and init in-register TTSK keys
-  //
-  spn_uint     sk_v_next = 0;
-  spn_ttsk_v_t sk_v;
-
-  sk_v.hi = cohort;
-
-  //
-  // initialize smem
-  //
-  spn_smem_init(smem);
-
-  //
-  // initialize blocks / subblocks
-  //
-  spn_block_id_v_t blocks;
-  spn_uint         blocks_next = SPN_RASTERIZE_BLOCK_ID_V_SIZE;
-
-#if SPN_DEVICE_BLOCK_WORDS_LOG2 > SPN_DEVICE_SUBBLOCK_WORDS_LOG2
-  spn_block_id_t   subblocks   = 0;
-#endif
-
-  //
-  // sliver lines
-  //
-  spn_sliver(bp_atomics,
-             bp_blocks,
-             bp_ids,
-             bp_mask,
-             cohort_atomics,
-             &subblocks,
-             &blocks,
-             &blocks_next,
-             &sk_v,
-             &sk_v_next,
-             sk_extent,
-             smem,
-             l0x,l0y,l1x,l1y);
-
-  //
-  // - flush work-in-progress blocks
-  // - return unused block ids
-  //
-  spn_finalize(bp_atomics,
-               bp_blocks,
-               bp_ids,
-               bp_mask,
-               cohort_atomics,
-               &blocks,
-               blocks_next,
-               &sk_v,
-               sk_v_next,
-               sk_extent,
-               smem);
-#endif
-
-
-
-
-
-
-
-#if 0
-
-//
-//
-//
-
-#include "tile.h"
-#include "common.h"
-#include "atomic_cl.h"
-#include "block_pool_cl.h"
-#include "raster_builder_cl_12.h"
-#include "kernel_cl_12.h"
-
-// #define SPN_ARCH_AVX2
-// #define SPN_RASTERIZE_SIMD_USES_SMEM
-
-#define PRINTF_ENABLE       0
-#define PRINTF_BLOCK_COUNT  0
-
-//
-// NOTE:
-//
-// ON SIMD DEVICES THE BIN COUNT MUST BE POW2 SO THAT WE CAN LOAD IT
-// AS A VECTOR AND PERFORM A SWIZZLE/SHUFFLE
-//
-// NOTE:
-//
-// IGNORE FOR NOW ANY AVX2 CODE SNIPPETS.  THEY WILL BE MOVED ASAP.
-//
-//
-
-#if 0 // SPN_ARCH_AVX2
-
-// #define SPN_RASTERIZE_SUBGROUP_SIZE              1
-// #define SPN_RASTERIZE_VECTOR_SIZE_LOG2           3
-// #define SPN_RASTERIZE_WORKGROUP_COUNT_SUBGROUP   1
-
-// #define SPN_TTXB_WORDS                           8
-
-// #define SPN_RASTERIZE_FLOAT                      float8
-// #define SPN_RASTERIZE_UINT                       uint8
-// #define SPN_RASTERIZE_INT                        int8
-// #define SPN_RASTERIZE_PREDICATE                  int8
-
-// #define SPN_RASTERIZE_BIN_BLOCK                  uint16
-// #define SPN_RASTERIZE_BIN                        uint8
-
-// #define SPN_RASTERIZE_POOL                       uint8
-// #define SPN_RASTERIZE_POOL_SCALE                 6
-
-// #define SPN_RASTERIZE_TILE_HASH_X_BITS           1
-// #define SPN_RASTERIZE_TILE_HASH_Y_BITS           2
-
-// #define SPN_RASTERIZE_VECTOR_EXPAND()            SPN_EXPAND_8()
-
-#endif
-
-//
-// SIMT
-//
-
-#define SPN_RASTERIZE_BLOCK_ID_V_SIZE        SPN_RASTERIZE_SUBGROUP_SIZE
-#define SPN_RASTERIZE_TTSK_V_SIZE            SPN_RASTERIZE_SUBGROUP_SIZE
-#define SPN_RASTERIZE_TTSK_V_MASK            (SPN_RASTERIZE_TTSK_V_SIZE - 1)
-
-//
-//
-//
-
-#define SPN_RASTERIZE_VECTOR_SIZE            (1 << SPN_RASTERIZE_VECTOR_SIZE_LOG2)
-#define SPN_RASTERIZE_ELEMS_PER_SUBGROUP     (SPN_RASTERIZE_SUBGROUP_SIZE * SPN_RASTERIZE_VECTOR_SIZE)
-
-//
-//
-//
-
-#define SPN_RASTERIZE_YX_INIT                0x7FFF7FFF  // { +32767, +32767 }
-#define SPN_RASTERIZE_YX_INVALID             0x80008000  // { -32768, -32768 }
-
-//
-//
-//
-
-#define SPN_RASTERIZE_TILE_HASH_X_MASK       SPN_BITS_TO_MASK(SPN_RASTERIZE_TILE_HASH_X_BITS)
-#define SPN_RASTERIZE_TILE_HASH_Y_MASK       SPN_BITS_TO_MASK(SPN_RASTERIZE_TILE_HASH_Y_BITS)
-#define SPN_RASTERIZE_TILE_HASH_BITS         (SPN_RASTERIZE_TILE_HASH_X_BITS + SPN_RASTERIZE_TILE_HASH_Y_BITS)
-#define SPN_RASTERIZE_TILE_HASH_BIN_COUNT    (1 << SPN_RASTERIZE_TILE_HASH_BITS)
-#define SPN_RASTERIZE_TILE_HASH_BIN_BITS     (SPN_RASTERIZE_TILE_HASH_BITS + 1) // FIXME -- LOG2_RU(BIN_COUNT)
-#define SPN_RASTERIZE_TILE_HASH_BIN_MASK     SPN_BITS_TO_MASK(SPN_RASTERIZE_TILE_HASH_BIN_BITS)
-
-//
-// Norbert Juffa notes: "GPU Pro Tip: Lerp Faster in C++"
-//
-// https://devblogs.nvidia.com/parallelforall/lerp-faster-cuda/
-//
-// Lerp in two fma/mad ops:
-//
-//    t * b + ((-t) * a + a)
-//
-// Note: OpenCL documents mix() as being implemented as:
-//
-//    a + (b - a) * t
-//
-// But this may be a native instruction on some devices. For example,
-// on GEN9 there is an LRP "linear interoplation" opcode but it
-// doesn't appear to support half floats.
-//
-// Feel free to toggle this option and then benchmark and inspect the
-// generated code.  We really want the double FMA to be generated when
-// there isn't support for a LERP/MIX operation.
-//
-
-#if 1
-#define SPN_LERP(a,b,t)      mad(t,b,mad(-(t),a,a))
-#else
-#define SPN_LERP(a,b,t)      mix(a,b,t)
-#endif
-
-//
-// There is no integer MAD in OpenCL with "don't care" overflow
-// semantics.
-//
-// FIXME -- verify if the platform needs explicit MAD operations even
-// if a "--fastmath" option is available at compile time.  It might
-// make sense to explicitly use MAD calls if the platform requires it.
-//
-
-#if 1
-#define SPN_MAD_UINT(a,b,c)  ((a) * (b) + (c))
-#else
-#define SPN_MAD_UINT(a,b,c)  mad_sat(a,b,c)
-#endif
-
-//
-//
-//
-
-
-
-//
-//
-//
-
-union spn_bp_elem
-{
-  spn_uint              u32;
-  spn_tagged_block_id_t tag_id;
-  spn_float             coord;
-};
-
-//
-//
-//
-
-struct spn_subgroup_smem
-{
-  //
-  // SIMT subgroup scratchpad for max scan -- also shared with 'winner' member
-  //
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE > 1 ) || defined ( SPN_RASTERIZE_SIMD_USES_SMEM )
-  struct {
-    union {
-
-      spn_uint                winner;
-
-      struct {
-        spn_uint              scratch[SPN_RASTERIZE_SUBGROUP_SIZE];
-      } aN;
-
-      struct {
-        SPN_RASTERIZE_UINT    scratch[SPN_RASTERIZE_SUBGROUP_SIZE];
-      } vN;
-    };
-  } subgroup;
-#endif
-
-  //
-  // work-in-progress TTSB blocks and associated YX keys
-  //
-  union {
-    struct {
-      // FIXME -- some typedefs are valid here
-      spn_uint                ttsb [SPN_RASTERIZE_TILE_HASH_BIN_COUNT][SPN_DEVICE_SUBBLOCK_WORDS];
-      spn_uint                yx   [SPN_RASTERIZE_TILE_HASH_BIN_COUNT];
-      spn_uint                id   [SPN_RASTERIZE_TILE_HASH_BIN_COUNT];
-      spn_uint                count[SPN_RASTERIZE_TILE_HASH_BIN_COUNT];
-    } aN;
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-    struct {
-      SPN_RASTERIZE_BIN_BLOCK ttsb[SPN_RASTERIZE_TILE_HASH_BIN_COUNT];
-      SPN_RASTERIZE_BIN       yx;
-      SPN_RASTERIZE_BIN       id;
-      SPN_RASTERIZE_BIN       count;
-    } vN;
-#endif
-  } bin;
-};
-
-//
-//
-//
-
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-#define spn_subgroup_lane()  0
-#else
-#define spn_subgroup_lane()  get_sub_group_local_id()
-#endif
-
-//
-// replenish block ids
-//
-// note that you can't overrun the block id pool since it's a ring
-//
-
-static
-void
-spn_blocks_replenish(spn_uint                           * const blocks_next,
-                     spn_block_id_v_t                   * const blocks,
-                     __global SPN_ATOMIC_UINT  volatile * const bp_atomics,
-                     spn_uint                             const bp_mask, // pow2 modulo mask for block pool ring
-                     __global spn_block_id_t   const    * const bp_ids)
-{
-  //
-  // get a new vector of block ids -- this is kind of a narrow
-  // allocation but subblocks help stretch out the pool.
-  //
-  // FIXME -- there is now plenty of SMEM to allocate a LOT of block ids
-  //
-  spn_uint bp_idx = 0;
-
-  if (spn_subgroup_lane() == 0)
-    {
-      bp_idx = SPN_ATOMIC_ADD_GLOBAL_RELAXED_DEVICE(bp_atomics+SPN_BP_ATOMIC_OFFSET_READS,
-                                                    SPN_RASTERIZE_BLOCK_ID_V_SIZE); // ring_reads
-#if 0
-      printf("r+: %8u + %u\n",bp_idx,SPN_RASTERIZE_BLOCK_ID_V_SIZE);
-#endif
-    }
-
-  bp_idx       = (sub_group_broadcast(bp_idx,0) + spn_subgroup_lane()) & bp_mask;
-  *blocks      = bp_ids[bp_idx];
-  *blocks_next = 0;
-}
-
-//
-//
-//
-
-static
-spn_block_id_t
-spn_blocks_get_next(spn_uint                           * const blocks_next,
-                    spn_block_id_v_t                   * const blocks,
-                    __global SPN_ATOMIC_UINT  volatile * const bp_atomics,
-                    spn_uint                             const bp_mask, // pow2 modulo mask for block pool ring
-                    __global spn_block_id_t   const    * const bp_ids)
-{
-  // replenish?
-  if (*blocks_next == SPN_RASTERIZE_BLOCK_ID_V_SIZE)
-    {
-      spn_blocks_replenish(blocks_next,blocks,bp_atomics,bp_mask,bp_ids);
-    }
-
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE > 1 )
-  //
-  // SIMT
-  //
-  spn_block_id_t id = sub_group_broadcast(*blocks,*blocks_next);
-
-#else
-  //
-  // SIMD
-  //
-  spn_block_id_t id = blocks->s0;
-
-  spn_shuffle_down_1(*blocks);
-
-#endif
-
-  *blocks_next += 1;
-
-  return id;
-}
-
-//
-// subblock allocator
-//
-
-#if SPN_DEVICE_BLOCK_WORDS_LOG2 > SPN_DEVICE_SUBBLOCK_WORDS_LOG2
-
-static
-spn_block_id_t
-spn_subblocks_get_next(spn_block_id_t                     * const subblocks,
-                       spn_uint                           * const blocks_next,
-                       spn_block_id_v_t                   * const blocks,
-                       __global SPN_ATOMIC_UINT  volatile * const bp_atomics,
-                       spn_uint                             const bp_mask, // pow2 modulo mask for block pool ring
-                       __global spn_block_id_t   const    * const bp_ids)
-{
-  if ((*subblocks & SPN_DEVICE_SUBBLOCKS_PER_BLOCK_MASK) == 0)
-    {
-      *subblocks = spn_blocks_get_next(blocks_next,blocks,bp_atomics,bp_mask,bp_ids);
-    }
-
-  spn_block_id_t const sb_id = *subblocks;
-
-  *subblocks += 1;
-
-#if 0
-  if (get_sub_group_local_id() == 0)
-    printf("= %u\n",sb_id);
-#endif
-
-  return sb_id;
-}
-
-
-#define SPN_SUBBLOCKS_BLOCKS_PROTO() spn_block_id_t * const subblocks, spn_block_id_t * const blocks
-#define SPN_SUBBLOCKS_BLOCKS_ARGS()  subblocks, blocks
-
-#else
-
-#define SPN_SUBBLOCKS_BLOCKS_PROTO() spn_block_id_t * const blocks
-#define SPN_SUBBLOCKS_BLOCKS_ARGS()  blocks
-
-#endif
-
-//
-//
-//
-
-static
-spn_block_id_t
-spn_ttsk_v_append(SPN_SUBBLOCKS_BLOCKS_PROTO(),
-                  spn_uint                           * const blocks_next,
-                  __global SPN_ATOMIC_UINT  volatile * const bp_atomics,
-                  spn_uint                             const bp_mask, // pow2 modulo mask for block pool ring
-                  __global spn_block_id_t   const    * const bp_ids,
-                  __global SPN_ATOMIC_UINT  volatile * const cohort_atomics,
-                  spn_ttsk_v_t                       * const sk_v,
-                  spn_uint                           * const sk_v_next,
-                  __global spn_ttsk_s_t              * const sk_extent,
-                  spn_uint                             const new_yx)
-{
-#if SPN_DEVICE_BLOCK_WORDS_LOG2 > SPN_DEVICE_SUBBLOCK_WORDS_LOG2
-  spn_block_id_t const new_id = spn_subblocks_get_next(subblocks,
-                                                       blocks_next,
-                                                       blocks,
-                                                       bp_atomics,
-                                                       bp_mask,
-                                                       bp_ids);
-#else
-  spn_block_id_t const new_id = spn_blocks_get_next(blocks_next,
-                                                    blocks,
-                                                    bp_atomics,
-                                                    bp_mask, // pow2 modulo mask for block pool ring
-                                                    bp_ids);
-#endif
-
-  if (get_sub_group_local_id() == (*sk_v_next & SPN_RASTERIZE_TTSK_V_MASK))
-    {
-      sk_v->lo = new_id;
-      sk_v->hi = (sk_v->hi & SPN_TTRK_HI_MASK_COHORT) | new_yx;
-#if 0
-      printf("@ ( %3u, %3u ) %u\n",
-             (new_yx >> 12) & 0xFFF,
-             (new_yx      ) & 0xFFF,
-             new_id);
-#endif
-    }
-
-  *sk_v_next += 1;
-
-  if (*sk_v_next == SPN_RASTERIZE_TTSK_V_SIZE)
-    {
-      *sk_v_next = 0;
-
-      spn_uint sk_idx = 0;
-
-      if (spn_subgroup_lane() == 0)
-        {
-          sk_idx = SPN_ATOMIC_ADD_GLOBAL_RELAXED_DEVICE
-            (cohort_atomics+SPN_RASTER_COHORT_ATOMIC_OFFSET_KEYS,SPN_RASTERIZE_TTSK_V_SIZE);
-#if 0
-          printf("+ %u\n",sk_idx);
-#endif
-        }
-
-      sk_idx = sub_group_broadcast(sk_idx,0) + spn_subgroup_lane();
-
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE > SPN_RASTERIZE_TTSK_V_SIZE )
-      if (spn_subgroup_lane() < SPN_RASTERIZE_TTSK_V_SIZE)
-#endif
-        {
-          sk_extent[sk_idx] = *sk_v;
-#if 0
-          printf("> %u : %v2u\n",sk_idx,*sk_v);
-#endif
-        }
-    }
-
-  return new_id;
-}
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_FLOAT
-spn_subgroup_scan_inclusive_add_float(const float v)
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-  // Note that there isn't a built-in horizontal scan for vectors so
-  // we'll define some here for various widths.
-  //
-  // FIXME -- a scalar version might be faster so put in a
-  // compile-time switch to selection between implementations
-  //
-
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return v;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 1 )
-  // 01
-  //  0 +
-  // --
-  // 01
-  const float w = mad(v.s10,(SPN_RASTERIZE_FLOAT)(0,1),v);
-  return w;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 2 )
-  // 0123
-  //  012 +
-  // ----
-  // 0123
-  //   01 +
-  // ----
-  // 0123
-  //
-  const float w = mad(v.s3012,(SPN_RASTERIZE_FLOAT)(0,1,1,1),v);
-  const float x = mad(w.s2301,(SPN_RASTERIZE_FLOAT)(0,0,1,1),w);
-  return x;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 3 )
-  // 01234567
-  //  0123456 +
-  // --------
-  // 01234567
-  //   012345 +
-  // --------
-  // 01234567
-  //     0123 +
-  // --------
-  // 01234567
-  //
-  const float w = mad(v.s70123456,(SPN_RASTERIZE_FLOAT)(0,1,1,1,1,1,1,1),v);
-  const float x = mad(w.s67012345,(SPN_RASTERIZE_FLOAT)(0,0,1,1,1,1,1,1),w);
-  const float y = mad(x.s45670123,(SPN_RASTERIZE_FLOAT)(0,0,0,0,1,1,1,1),x);
-  return y;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 4 )
-  // 0123456789abcdef
-  //  0123456789abcde +
-  // ----------------
-  // 0123456789abcdef
-  //   0123456789abcd +
-  // ----------------
-  // 0123456789abcdef
-  //     0123456789ab +
-  // ----------------
-  // 0123456789abcdef
-  //         01234567 +
-  // ----------------
-  // 0123456789abcdef
-  //
-  const float w = mad(v.sf0123456789abcde,(SPN_RASTERIZE_FLOAT)(0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),v);
-  const float x = mad(w.sef0123456789abcd,(SPN_RASTERIZE_FLOAT)(0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1),w);
-  const float y = mad(x.scdef0123456789ab,(SPN_RASTERIZE_FLOAT)(0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1),x);
-  const float z = mad(y.s89abcdef01234567,(SPN_RASTERIZE_FLOAT)(0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1),y);
-  return z;
-
-#endif
-
-#else
-  //
-  // SIMT
-  //
-
-  return sub_group_scan_inclusive_add(v);
-
-#endif
-}
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_UINT
-spn_subgroup_scan_inclusive_add_uint(SPN_RASTERIZE_UINT const v)
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-  // Note that there isn't a built-in horizontal scan for vectors so
-  // we'll define some here for various widths.
-  //
-  // FIXME -- a scalar version might be faster so put in a
-  // compile-time switch to selection between implementations
-  //
-
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return v;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 1 )
-  // 01
-  //  0 +
-  // --
-  // 01
-  SPN_RASTERIZE_UINT const w = SPN_MAD_UINT(v.s10,(SPN_RASTERIZE_UINT)(0,1),v);
-  return w;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 2 )
-  // 0123
-  //  012 +
-  // ----
-  // 0123
-  //   01 +
-  // ----
-  // 0123
-  //
-  SPN_RASTERIZE_UINT const w = SPN_MAD_UINT(v.s3012,(SPN_RASTERIZE_UINT)(0,1,1,1),v);
-  SPN_RASTERIZE_UINT const x = SPN_MAD_UINT(w.s2301,(SPN_RASTERIZE_UINT)(0,0,1,1),w);
-  return x;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 3 )
-  // 01234567
-  //  0123456 +
-  // --------
-  // 01234567
-  //   012345 +
-  // --------
-  // 01234567
-  //     0123 +
-  // --------
-  // 01234567
-  //
-  SPN_RASTERIZE_UINT const w = SPN_MAD_UINT(v.s70123456,(SPN_RASTERIZE_UINT)(0,1,1,1,1,1,1,1),v);
-  SPN_RASTERIZE_UINT const x = SPN_MAD_UINT(w.s67012345,(SPN_RASTERIZE_UINT)(0,0,1,1,1,1,1,1),w);
-  SPN_RASTERIZE_UINT const y = SPN_MAD_UINT(x.s45670123,(SPN_RASTERIZE_UINT)(0,0,0,0,1,1,1,1),x);
-  return y;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 4 )
-  // 0123456789abcdef
-  //  0123456789abcde +
-  // ----------------
-  // 0123456789abcdef
-  //   0123456789abcd +
-  // ----------------
-  // 0123456789abcdef
-  //     0123456789ab +
-  // ----------------
-  // 0123456789abcdef
-  //         01234567 +
-  // ----------------
-  // 0123456789abcdef
-  //
-  SPN_RASTERIZE_UINT const w = SPN_MAD_UINT(v.sf0123456789abcde,(SPN_RASTERIZE_UINT)(0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),v);
-  SPN_RASTERIZE_UINT const x = SPN_MAD_UINT(w.sef0123456789abcd,(SPN_RASTERIZE_UINT)(0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1),w);
-  SPN_RASTERIZE_UINT const y = SPN_MAD_UINT(x.scdef0123456789ab,(SPN_RASTERIZE_UINT)(0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1),x);
-  SPN_RASTERIZE_UINT const z = SPN_MAD_UINT(y.s89abcdef01234567,(SPN_RASTERIZE_UINT)(0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1),y);
-  return z;
-
-#endif
-
-#else
-  //
-  // SIMT
-  //
-
-  return sub_group_scan_inclusive_add(v);
-
-#endif
-}
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_UINT
-spn_subgroup_scan_inclusive_max(SPN_RASTERIZE_UINT const v)
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-  // Note that there isn't a built-in horizontal scan for vectors so
-  // we'll define some here for various widths.
-  //
-  // FIXME -- a scalar version might be faster so put in a
-  // compile-time switch to selection between implementations
-  //
-
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return v;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 1 )
-  // 01
-  // 00 max
-  // --
-  // 01
-  SPN_RASTERIZE_UINT const w = max(v.s00,v);
-  return w;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 2 )
-  // 0123
-  // 0012 +
-  // ----
-  // 0123
-  // 0101 +
-  // ----
-  // 0123
-  //
-  SPN_RASTERIZE_UINT const w = max(v.s0012,v);
-  SPN_RASTERIZE_UINT const x = max(w.s0101,w);
-  return x;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 3 )
-  // 01234567
-  // 00123456 +
-  // --------
-  // 01234567
-  // 01012345 +
-  // --------
-  // 01234567
-  // 01230123 +
-  // --------
-  // 01234567
-  //
-  SPN_RASTERIZE_UINT const w = max(v.s00123456,v);
-  SPN_RASTERIZE_UINT const x = max(w.s01012345,w);
-  SPN_RASTERIZE_UINT const y = max(x.s01230123,x);
-  return y;
-
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 4 )
-  // 0123456789abcdef
-  // 00123456789abcde +
-  // ----------------
-  // 0123456789abcdef
-  // 010123456789abcd +
-  // ----------------
-  // 0123456789abcdef
-  // 01230123456789ab +
-  // ----------------
-  // 0123456789abcdef
-  // 0123456701234567 +
-  // ----------------
-  // 0123456789abcdef
-  //
-  SPN_RASTERIZE_UINT const w = max(v.s00123456789abcde,v);
-  SPN_RASTERIZE_UINT const x = max(w.s010123456789abcd,w);
-  SPN_RASTERIZE_UINT const y = max(x.s01230123456789ab,x);
-  SPN_RASTERIZE_UINT const z = max(y.s0123456701234567,y);
-  return z;
-
-#endif
-
-#else
-  //
-  // SIMT
-  //
-
-  return sub_group_scan_inclusive_max(v);
-
-#endif
-}
-
-//
-//
-//
-
-static
-float
-spn_subgroup_last_float(const float v)
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return v;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 1 )
-  return v.s1;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 2 )
-  return v.s3;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 3 )
-  return v.s7;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 4 )
-  return v.sf;
-#endif
-
-#else
-  //
-  // SIMT
-  //
-  return sub_group_broadcast(v,SPN_RASTERIZE_SUBGROUP_SIZE-1);
-
-#endif
-}
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_UINT
-spn_subgroup_last_uint(SPN_RASTERIZE_UINT const v)
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return v;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 1 )
-  return v.s1;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 2 )
-  return v.s3;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 3 )
-  return v.s7;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 4 )
-  return v.sf;
-#endif
-
-#else
-  //
-  // SIMT
-  //
-  return sub_group_broadcast(v,SPN_RASTERIZE_SUBGROUP_SIZE-1);
-
-#endif
-}
-
-//
-//
-//
-
-static
-float
-spn_subgroup_first(const float v)
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return v;
-#else
-  return v.s0;
-#endif
-
-#else
-  //
-  // SIMT
-  //
-  return sub_group_broadcast(v,0);
-
-#endif
-}
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_FLOAT
-spn_subgroup_shuffle(const float v,
-                      SPN_RASTERIZE_UINT  const i)
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return v;
-#else
-  return shuffle(v,i);
-#endif
-
-#else
-  //
-  // SIMT
-  //
-  return intel_sub_group_shuffle(v,i);
-
-#endif
-}
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_FLOAT
-spn_subgroup_shuffle_up_1(const float p, // previous
-                          const float c) // current
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-  // FIXME -- there are alternative formulations here:
-  //
-  // Option 1:
-  //
-  //   select(c.rotate(+1),p.rotate(-1),(1,0,0,...))
-  //
-  // Option 2:
-  //
-  //   p is a scalar
-  //   t    = c.rotate(+1)
-  //   t.s0 = p;
-  //
-  // Option 3: ...
-  //
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return p;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 1 )
-  return shuffle2(p,c,(uint2)(1,2));
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 2 )
-  return shuffle2(p,c,(uint4)(3,4,5,6));
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 3 )
-  return shuffle2(p,c,(uint8)(7,8,9,10,11,12,13,14));
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 4 )
-  return shuffle2(p,c,(uint16)(15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30));
-#endif
-
-#else
-  //
-  // SIMT
-  //
-  return intel_sub_group_shuffle_up(p,c,1);
-
-#endif
-}
-
-//
-//
-//
-
-static
-bool
-spn_is_lane_first()
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1)
-  //
-  // SIMD
-  //
-  return true;
-#else
-  //
-  // SIMT
-  //
-  return get_sub_group_local_id() == 0;
-#endif
-}
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_FLOAT
-spn_delta_offset()
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-#if   ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-  return 1;
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 1 )
-  return (SPN_RASTERIZE_FLOAT)( 1, 2 );
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 2 )
-  return (SPN_RASTERIZE_FLOAT)( 1, 2, 3, 4 );
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 3 )
-  return (SPN_RASTERIZE_FLOAT)( 1, 2, 3, 4, 5, 6, 7, 8 );
-#elif ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 4 )
-  return (SPN_RASTERIZE_FLOAT)( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 );
-#endif
-
-#else
-  //
-  // SIMT
-  //
-  return 1.0f + get_sub_group_local_id();
-
-#endif
-
-}
-
-//
-//
-//
-
-static
-int
-spn_subgroup_any(SPN_RASTERIZE_PREDICATE const p)
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-  return any(p);
-#else
-  //
-  // SIMT
-  //
-  return sub_group_any(p);
-#endif
-}
-
-//
-//
-//
-
-#define SPN_PATH_NODEWORD_IS_LAST(n)  (((n) & SPN_DEVICE_BLOCK_WORDS_MASK) == SPN_DEVICE_BLOCK_WORDS_MASK)
-
-void
-spn_segment_next(__global union spn_bp_elem * const bp_blocks,
-                 spn_uint                   * const nodeword,
-                 spn_block_id_t             * const id)
-{
-  if ((++*id & SPN_DEVICE_SUBBLOCKS_PER_BLOCK_MASK) == 0)
-    {
-      if (SPN_PATH_NODEWORD_IS_LAST(++*nodeword))
-        {
-          *nodeword = SPN_TAGGED_BLOCK_ID_GET_ID(bp_blocks[*nodeword].tag_id) * SPN_DEVICE_SUBBLOCK_WORDS;
-        }
-
-      spn_tagged_block_id_t const tag_id = bp_blocks[*nodeword].tag_id;
-
-      *id = SPN_TAGGED_BLOCK_ID_GET_ID(tag_id);
-    }
-}
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_FLOAT
-spn_native_length(const float x, const float y)
-{
-  return native_sqrt(x * x + y * y);
-}
-
-//
-// Wang's Formula (1985)
-//
-
-#define SPN_WANG_PIXEL_RESL   0.25f // <-- this can be tuned
-
-#define SPN_WANG_EPSILON      (SPN_WANG_PIXEL_RESL * SPN_SUBPIXEL_RESL_X_F32)
-
-#define SPN_WANG_CUBIC        ((3.0f * 2.0f) / (8.0f * SPN_WANG_EPSILON))
-#define SPN_WANG_QUADRATIC    ((2.0f       ) / (8.0f * SPN_WANG_EPSILON))
-
-#define SPN_WANG_LENGTH(x,y)  spn_native_length(x,y)
-#define SPN_WANG_SQRT(x)      native_sqrt(x)
-
-//
-//
-//
-
-static
-SPN_RASTERIZE_FLOAT
-spn_wangs_formula_cubic(const float t0x, const float t0y,
-                        const float t1x, const float t1y,
-                        const float t2x, const float t2y,
-                        const float t3x, const float t3y)
-{
-  //
-  // Return the number of evenly spaced (in the parametric sense) line
-  // segments that are guaranteed to be within "epsilon" error of the
-  // curve.
-  //
-  // We're then going to take multiples of the reciprocal of this
-  // number so that the segmentation can be distributed across the
-  // subgroup.
-  //
-  // Note, this can probably be slightly optimized per architecture
-  // but it's probably far from being a hotspot since it's all
-  // straight-line unpredicated code.
-  //
-  // The result is an integer ranging from [1.0,#segments]
-  //
-  // Note that even if all of the control points are coincident, the
-  // max(1.0f) will categorize this as a line of 1 segment.
-  //
-  // This is what we want!  We want to convert cubics to lines as
-  // easily as possible and *then* cull lines that are either
-  // horizontal or zero length.
-  //
-  return max(1.0f,
-             ceil(SPN_WANG_SQRT(SPN_WANG_CUBIC *
-                                SPN_WANG_LENGTH(max(fabs(t2x - 2.0f * t1x + t0x),
-                                                    fabs(t3x - 2.0f * t2x + t1x)),
-                                                max(fabs(t2y - 2.0f * t1y + t0y),
-                                                    fabs(t3y - 2.0f * t2y + t1y))))));
-}
-
-static
-SPN_RASTERIZE_FLOAT
-spn_wangs_formula_quadratic(const float t0x, const float t0y,
-                            const float t1x, const float t1y,
-                            const float t2x, const float t2y)
-{
-  return max(1.0f,
-             ceil(SPN_WANG_SQRT(SPN_WANG_QUADRATIC *
-                                SPN_WANG_LENGTH(t2x - 2.0f * t1x + t0x,
-                                                t2y - 2.0f * t1y + t0y))));
-}
-
-//
-// rational curves
-//
-
-static
-SPN_RASTERIZE_FLOAT
-spn_wangs_formula_cubic_rat()
-{
-  return 0.0f;
-}
-
-static
-SPN_RASTERIZE_FLOAT
-spn_wangs_formula_quad_rat()
-{
-  return 0.0f;
-}
-
-//
-// flush any work-in-progress blocks and return unused block ids
-//
-
-static
-void
-spn_finalize(__global SPN_ATOMIC_UINT          volatile * const bp_atomics,
-             __global union spn_bp_elem                 * const bp_blocks,
-             __global uint                              * const bp_ids,
-             spn_uint                                     const bp_mask,
-             __global SPN_ATOMIC_UINT          volatile * const cohort_atomics,
-             spn_block_id_v_t                           * const blocks,
-             spn_uint                                     const blocks_next,
-             spn_ttsk_v_t                               * const sk_v,
-             spn_uint                                     const sk_v_next,
-             __global spn_ttsk_s_t                      * const sk_extent,
-             __local  struct spn_subgroup_smem volatile * const smem)
-{
-  //
-  // flush non-empty bins
-  //
-  // FIXME -- accelerate this iteration/search with a subgroup operation
-  //
-  for (spn_uint ii=0; ii<SPN_RASTERIZE_TILE_HASH_BIN_COUNT; ii++)
-    {
-      if (smem->bin.aN.count[ii] > 0)
-        {
-          spn_block_id_v_t const id  = smem->bin.aN.id[ii];
-          spn_uint         const idx = id * SPN_DEVICE_SUBBLOCK_WORDS + spn_subgroup_lane();
-          spn_uint         const tts = smem->bin.aN.ttsb[ii][spn_subgroup_lane()];
-#if 0
-          printf("???????? : [ %10u = %10u : %08X ]\n",id,idx,tts);
-#endif
-          bp_blocks[idx].u32 = tts;
-        }
-
-      //
-      // FIXME -- vectorize with vstoreN()
-      //
-    }
-
-  //
-  // return remaining block ids back to the pool
-  //
-  spn_uint const blocks_rem = SPN_RASTERIZE_BLOCK_ID_V_SIZE - blocks_next;
-
-  if (blocks_rem > 0)
-    {
-      spn_uint bp_idx = 0;
-
-      if (spn_subgroup_lane() == 0)
-        {
-          bp_idx = SPN_ATOMIC_ADD_GLOBAL_RELAXED_DEVICE(bp_atomics+SPN_BP_ATOMIC_OFFSET_WRITES,blocks_rem);
-
-#if 0
-          printf("r-: %8u + %u\n",bp_idx,blocks_rem);
-#endif
-        }
-
-      bp_idx = (sub_group_broadcast(bp_idx,0) + spn_subgroup_lane() - blocks_next) & bp_mask;
-
-      if (spn_subgroup_lane() >= blocks_next)
-        {
-          bp_ids[bp_idx] = *blocks;
-        }
-    }
-
-  //
-  // flush work-in-progress ryx keys
-  //
-  if (sk_v_next > 0)
-    {
-      spn_uint sk_idx = 0;
-
-      if (spn_subgroup_lane() == 0)
-        {
-          sk_idx = SPN_ATOMIC_ADD_GLOBAL_RELAXED_DEVICE
-            (cohort_atomics+SPN_RASTER_COHORT_ATOMIC_OFFSET_KEYS,sk_v_next);
-#if 0
-          printf("* %u\n",sk_idx);
-#endif
-        }
-
-      sk_idx = sub_group_broadcast(sk_idx,0) + spn_subgroup_lane();
-
-      if (spn_subgroup_lane() < sk_v_next)
-        {
-          sk_extent[sk_idx] = *sk_v;
-        }
-    }
-}
-
-//
-// If there are lanes that were unable to append to a bin because
-// their hashes collided with a bin's current ryx key then those bins
-// must be ejected.
-//
-// Note that we do not eject "full" bins because lazily waiting for a
-// collision results in simpler code.
-//
-
-static
-void
-spn_flush(__global SPN_ATOMIC_UINT          volatile * const bp_atomics,
-          __global union spn_bp_elem                 * const bp_blocks,
-          __global uint                              * const bp_ids,
-          spn_uint                                     const bp_mask,
-          __global SPN_ATOMIC_UINT          volatile * const cohort_atomics,
-          spn_block_id_t                             * const subblocks,
-          spn_block_id_v_t                           * const blocks,
-          spn_uint                                   * const blocks_next,
-          spn_ttsk_v_t                               * const sk_v,
-          spn_uint                                   * const sk_v_next,
-          __global spn_ttsk_s_t                      * const sk_extent,
-          __local  struct spn_subgroup_smem volatile * const smem,
-          SPN_RASTERIZE_UINT                           const hash,
-          SPN_RASTERIZE_UINT                           const yx,
-          SPN_RASTERIZE_PREDICATE                            is_collision) // pass by value
-{
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-
-  //
-  // FIXME -- this code is now stale with the changes to the
-  // subblock/block allocation strategy
-  //
-
-  //
-  // get local TTSB ID queue count
-  //
-  spn_uint ttsb_id_count  = smem->pool.count; // scalar
-
-  // init hash bit mask
-  spn_uint component_mask = 0;
-
-  for (int cc=0; cc<SPN_RASTERIZE_VECTOR_SIZE; cc++)
-    {
-      // if no collision continue
-      if (((int*)&is_collision)[cc] == 0)
-        continue;
-
-      uint const winner        = ((uint*)&hash)[cc];
-      uint const component_bit = 1u << winner;
-
-      // if already processed this hash then continue
-      if (component_mask & component_bit)
-        continue;
-
-      // update component mask
-      component_mask |= component_bit;
-
-      //
-      // new winner requires ejecting the old TTSB
-      //
-      if (smem->bin.aN.count[winner] > 0)
-        {
-          spn_uint const elem_idx = smem->bin.aN.id[winner] * SPN_DEVICE_SUBBLOCK_WORDS + spn_subgroup_lane();
-
-          bp_blocks[elem_idx].u32 = smem->bin.aN.ttsb[winner][spn_subgroup_lane()];
-        }
-
-        //
-        // ensure there is at least one TTSK and TTSB ID
-        //
-        if (ttsb_id_count == SPN_RASTERIZE_POOL_SIZE)
-          {
-            //
-            // update remaining count
-            //
-            ttsb_id_count = 0;
-
-            //
-            // flush accumulated ttsk_ryx keys
-            //
-            uint const idx = SPN_ATOMIC_ADD_GLOBAL_RELAXED_DEVICE
-              (cohort_atomics+SPN_RASTER_COHORT_ATOMIC_OFFSET_KEYS,SPN_RASTERIZE_POOL_SIZE); // ttsk_ryx_count
-
-#if 0
-            printf("# %u\n",idx);
-#endif
-
-            for (uint ii=0; ii<SPN_RASTERIZE_POOL_SIZE; ii+=SPN_RASTERIZE_SUBGROUP_SIZE)
-              {
-                ttsk_ryx[idx + ii] = spn_make_ttsk_ryx(smem,SPN_CMD_RASTERIZE_GET_COHORT(cmd),ii);
-              }
-
-            //
-            // allocate more ttsb ids from pool
-            //
-            uint const id = SPN_ATOMIC_ADD_GLOBAL_RELAXED_DEVICE(bp_atomics+0,SPN_RASTERIZE_POOL_SIZE); // ring_reads
-
-            for (uint ii=0; ii<SPN_RASTERIZE_POOL_SIZE; ii+=SPN_RASTERIZE_SUBGROUP_SIZE)
-              smem->pool.aN.id[ii] = bp_ids[id + ii];
-          }
-
-      //
-      // invalidate the winning block
-      //
-
-      //
-      // update bin with winning yx, new ttsb id and zero count
-      //
-      // all lanes are loading/storing from/to the same index
-      //
-      smem->bin.vN.ttsb [winner] = ( SPN_TTS_INVALID );
-      smem->bin.aN.id   [winner] = smem->pool.aN.id[ttsb_id_count];
-      smem->bin.aN.yx   [winner] = smem->pool.aN.yx[ttsb_id_count] = ((uint*)&yx)[cc];
-      smem->bin.aN.count[winner] = 0;
-
-      //
-      // update count
-      //
-      ttsb_id_count += 1;
-    }
-
-  //
-  // save count
-  //
-  smem->pool.count = ttsb_id_count;
-
-#else
-  //
-  // SIMT
-  //
-
-  do {
-    //
-    // only one lane will win!
-    //
-    if (is_collision)
-      smem->subgroup.winner = hash;
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    //
-    // which bin is being ejected?
-    //
-    spn_uint const winner = smem->subgroup.winner;
-
-    //
-    // which colliding hash is taking over the bin?
-    //
-    SPN_RASTERIZE_PREDICATE const is_winner = is_collision && (hash == winner);
-
-    //
-    // all lanes with the same hash will try to store but only one
-    // lane will win
-    //
-    if (is_winner)
-      smem->subgroup.winner = yx;
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    //
-    // flush this block to the pool
-    //
-    if (smem->bin.aN.count[winner] > 0)
-      {
-        spn_block_id_v_t const id  = smem->bin.aN.id[winner];
-        spn_uint         const idx = id * SPN_DEVICE_SUBBLOCK_WORDS + spn_subgroup_lane();
-        spn_uint         const tts = smem->bin.aN.ttsb[winner][spn_subgroup_lane()];
-#if 0
-        printf("%08X : [ %10u = %10u : %08X ]\n",yx,id,idx,tts);
-#endif
-        bp_blocks[idx].u32 = tts;
-      }
-
-    //
-    // append new ttsk
-    //
-    spn_uint       const new_yx = smem->subgroup.winner;
-    spn_block_id_t const new_id = spn_ttsk_v_append(SPN_SUBBLOCKS_BLOCKS_ARGS(),
-                                                    blocks_next,
-                                                    bp_atomics,
-                                                    bp_mask, // pow2 modulo mask for block pool ring
-                                                    bp_ids,
-                                                    cohort_atomics,
-                                                    sk_v,
-                                                    sk_v_next,
-                                                    sk_extent,
-                                                    new_yx);
-
-#if 0
-    if (get_sub_group_local_id() == 0) {
-      printf(">>> %9u\n",new_id);
-    }
-#endif
-
-    //
-    // update bin with winning yx, new ttsb id and zero count
-    //
-    smem->bin.aN.ttsb [winner][spn_subgroup_lane()] = SPN_TTS_INVALID;
-    smem->bin.aN.yx   [winner]                      = new_yx;
-    smem->bin.aN.id   [winner]                      = new_id;
-    smem->bin.aN.count[winner]                      = 0;
-
-    //
-    // remove all lanes matching this hash
-    //
-    is_collision = is_collision && !is_winner;
-
-    //
-    // exit if nothing left to do
-    //
-  } while (sub_group_any(is_collision));
-
-#endif
-}
-
-//
-// scatter scan max
-//
-static
-SPN_RASTERIZE_UINT
-spn_scatter_scan_max(__local struct spn_subgroup_smem volatile * const smem,
-                     SPN_RASTERIZE_FLOAT                         const iss,
-                     SPN_RASTERIZE_FLOAT                         const ess)
-{
-  //
-  // prefix sums determine which lanes we're going to work on next
-  //
-  SPN_RASTERIZE_PREDICATE const is_scratch_store = (iss > 0.0f) && (ess < (float)SPN_RASTERIZE_ELEMS_PER_SUBGROUP);
-  SPN_RASTERIZE_UINT      const scratch_idx      = SPN_CONVERT(SPN_RASTERIZE_UINT)(max(ess,0.0f));
-
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-#ifdef SPN_RASTERIZE_SIMD_USES_SMEM
-  //
-  // SIMD APPROACH 1: SIMT'ISH
-  //
-
-  // zero the volatile smem scratchpad using vector syntax
-  smem->subgroup.vN.scratch[0] = ( 0 );
-
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,S,C,P,A)                         \
-  if (is_scratch_store C)                               \
-    smem->subgroup.aN.scratch[scratch_idx C] = I;
-
-  SPN_RASTERIZE_VECTOR_EXPAND();
-
-  // propagate lanes to right using max scan
-  SPN_RASTERIZE_UINT const scratch = smem->subgroup.vN.scratch[0];
-  SPN_RASTERIZE_UINT const source  = spn_subgroup_scan_inclusive_max(scratch);
-
-#else
-  //
-  // SIMD APPROACH 2: SCALAR'ISH
-  //
-
-  SPN_RASTERIZE_UINT source = ( 0 );
-
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,S,C,P,A)                 \
-  if (is_scratch_store C)                       \
-    ((uint *)&source)[scratch_idx C] = I;
-
-  SPN_RASTERIZE_VECTOR_EXPAND();
-
-  for (uint ii=1; ii<SPN_RASTERIZE_ELEMS_PER_SUBGROUP; ii++)
-    ((uint *)&source)[ii] = max(((uint *)&source)[ii-1],((uint *)&source)[ii]);
-#endif
-
-#else
-  //
-  // SIMT
-  //
-
-  //
-  // zero the volatile smem scratchpad using vector syntax
-  //
-  smem->subgroup.vN.scratch[spn_subgroup_lane()] = ( 0 );
-
-  //
-  // store source lane at starting lane
-  //
-  if (is_scratch_store)
-    smem->subgroup.aN.scratch[scratch_idx] = spn_subgroup_lane();
-
-  //
-  // propagate lanes to right using max scan
-  //
-  SPN_RASTERIZE_UINT const scratch = smem->subgroup.vN.scratch[spn_subgroup_lane()];
-  SPN_RASTERIZE_UINT const source  = spn_subgroup_scan_inclusive_max(scratch);
-#endif
-
-  return source;
-}
-
-//
-// sliver lines into subpixels
-//
-
-static
-void
-spn_sliver(__global SPN_ATOMIC_UINT          volatile * const bp_atomics,
-           __global union spn_bp_elem                 * const bp_blocks,
-           __global uint                              * const bp_ids,
-           spn_uint                                     const bp_mask,
-           __global SPN_ATOMIC_UINT          volatile * const cohort_atomics,
-           spn_block_id_t                             * const subblocks,
-           spn_block_id_v_t                           * const blocks,
-           spn_uint                                   * const blocks_next,
-           spn_ttsk_v_t                               * const sk_v,
-           spn_uint                                   * const sk_v_next,
-           __global spn_ttsk_s_t                      * const sk_extent,
-           __local  struct spn_subgroup_smem volatile * const smem,
-           SPN_RASTERIZE_FLOAT                          const l0x,
-           SPN_RASTERIZE_FLOAT                          const l0y,
-           SPN_RASTERIZE_FLOAT                          const l1x,
-           SPN_RASTERIZE_FLOAT                          const l1y)
-{
-  //
-  // Y-SLIVERING
-  // -----------
-  //
-  // immediately sliver all multi-pixel lines in into 1-pixel high
-  // lines
-  //
-  // note this implicitly squelches horizontal lines
-  //
-  // there is another test for horizontal lines after x-slivering
-  // is complete
-  //
-
-  //
-  // will we need to flip the sign of y_delta ?
-  //
-  SPN_RASTERIZE_PREDICATE const y_lt   = (l0y <= l1y);
-  SPN_RASTERIZE_UINT      const dy_xor = y_lt ? 0 : 0x80000000;
-
-  //
-  // save 1/dy
-  //
-  const float y_denom = native_recip(l1y - l0y);
-
-  //
-  // how many non-horizontal subpixel y-axis slivers are there?
-  //
-  const float y_min   = floor(fmin(l0y,l1y) * SPN_SUBPIXEL_Y_SCALE_DOWN);
-  const float y_max   = ceil (fmax(l0y,l1y) * SPN_SUBPIXEL_Y_SCALE_DOWN);
-  const float y_base  = y_lt ? y_min : y_max;
-  SPN_RASTERIZE_FLOAT       y_segs  = y_max - y_min;
-
-  //
-  // inclusive subgroup scan of y_segs
-  //
-  SPN_RASTERIZE_FLOAT       y_iss   = spn_subgroup_scan_inclusive_add_float(y_segs);
-  SPN_RASTERIZE_FLOAT       y_ess   = y_iss - y_segs;
-  float                     y_rem   = spn_subgroup_last_float(y_iss);
-
-  //
-  // if this is a horizontal line then tweak y_iss so "is_scratch_store" always fails
-  //
-  if (y_segs == 0.0f)
-    y_iss = 0.0f;
-
-#if 0
-  printf("{ { %5.0f, %5.0f }, { %5.0f, %5.0f } (* %5.0f / %5.0f / %5.0f / %5.0f *) }, \n",a0x,a0y,a1x,a1y,y_segs,y_iss,y_ess,y_rem);
-#endif
+  // exclusive scan
+  int yp_exc = yp_inc - yp_count;
 
   //
   // these values don't matter on first iteration
   //
-  SPN_RASTERIZE_FLOAT n1x_prev = 0;
-  SPN_RASTERIZE_FLOAT n1y_prev = 0;
+  // Note: see below how on Intel we want to use their special
+  // shuffle.
+  //
+  vec2 f0_prev = { 0.0f, 0.0f };
 
   //
-  // loop until done
+  // cooperatively sliver the lines
   //
-  while (y_rem > 0.0f)
+  while (true)
     {
-      //
-      // distribute work across lanes
-      //
-      SPN_RASTERIZE_UINT const y_source = spn_scatter_scan_max(smem,y_iss,y_ess);
+      // zero the scratchpad
+      SPN_RASTERIZE_SMEM().scratch[gl_SubgroupInvocationID] = 0;
+
+      // which lane's line is next?
+      const bool is_yp_src = (yp_inc > 0) && (yp_exc < SPN_RASTERIZE_SUBGROUP_SIZE);
+
+      // store the source lane at its starting lane
+      if (is_yp_src)
+        {
+          SPN_RASTERIZE_SMEM().scratch[max(0, yp_exc)] = gl_SubgroupInvocationID;
+        }
 
       //
-      // get line at y_source line
+      // FIXME(allanmac): we can potentially accelerate this loop if
+      // we determine that we are cooperatively processing a single
+      // line that is a multiple of the subgroup size.  Propagating
+      // the min yp_inc should provide all lanes enough information to
+      // make this decision.
       //
-      const float m0x = spn_subgroup_shuffle(l0x,y_source);
-      const float m0y = spn_subgroup_shuffle(l0y,y_source);
-      const float m1x = spn_subgroup_shuffle(l1x,y_source);
-      const float m1y = spn_subgroup_shuffle(l1y,y_source);
+
+      // read-after-write
+      subgroupBarrier();
+
+      // propagate lanes to right using max scan
+      const uint yp_src_iid = SPN_RASTERIZE_SMEM().scratch[gl_SubgroupInvocationID];
+      const uint yp_src     = subgroupInclusiveMax(yp_src_iid);
 
       //
-      // every lane will create a 1 pixel tall line "sliver"
+      // get line at yp_src
       //
-      // FIXME -- this gets expanded on SIMD
+      // FIXME(allanmac): update this once the subgroup extension
+      // supports vector types.
       //
-      // if numerator == 1 then this is the first lane
-      // if numerator == s then this is the last  lane
-      //
-      SPN_RASTERIZE_FLOAT     const y_delta    = spn_delta_offset() - spn_subgroup_shuffle(y_ess,y_source);
-      SPN_RASTERIZE_FLOAT     const y_count    = spn_subgroup_shuffle(y_segs,y_source);
+      const vec2 e0s = { subgroupShuffle(e0.x, yp_src), subgroupShuffle(e0.y, yp_src) };
+      const vec2 e1s = { subgroupShuffle(e1.x, yp_src), subgroupShuffle(e1.y, yp_src) };
 
-      SPN_RASTERIZE_PREDICATE const is_y_first = (y_delta == 1.0f);
-      SPN_RASTERIZE_PREDICATE const is_y_last  = (y_delta >= y_count);
+      //
+      // where are we on the line?
+      //
+      const int yps_offset = 1 + int(gl_SubgroupInvocationID) - subgroupShuffle(yp_exc, yp_src);
+      const int yps_count  = subgroupShuffle(yp_count, yp_src);
 
-      // toggle y_delta sign
-      SPN_RASTERIZE_FLOAT     const y_offset   = as_float((as_uint(y_delta) ^ intel_sub_group_shuffle(dy_xor,y_source)));
+#ifndef SPN_RASTERIZE_SHUFFLE_FLOOR_IS_FAST
+      const float yps_floor = floor(e0s.y * SPN_TTS_SUBPIXEL_Y_SCALE_DOWN);
+#else
+      const float yps_floor = subgroupShuffle(yp_floor, yp_src);
+#endif
+      const bool is_yps_first = (yps_offset == 1);          // first sliver
+      const bool is_yps_last  = (yps_offset >= yps_count);  // last sliver
 
       //
       // calculate "right" line segment endpoint
       //
-      SPN_RASTERIZE_FLOAT       n1y = (y_offset + spn_subgroup_shuffle(y_base,y_source)) * SPN_SUBPIXEL_Y_SCALE_UP;
-      const float n_t = (n1y - m0y) * spn_subgroup_shuffle(y_denom,y_source);
-      SPN_RASTERIZE_FLOAT       n1x = round(SPN_LERP(m0x,m1x,n_t));
+      vec2 f1;
+
+      f1.y = (yps_floor + float(yps_offset)) * SPN_TTS_SUBPIXEL_Y_SCALE_UP;
+
+#ifndef SPN_RASTERIZE_SHUFFLE_RECIPROCAL_IS_FAST
+      const float ys_d = 1.0f / (e1s.y - e0s.y);
+#else
+      const float ys_d      = subgroupShuffle(y_denom, yp_src);
+#endif
+      const float ys_t = (f1.y - e0s.y) * ys_d;
+
+      f1.x = round(mix(e0s.x, e1s.x, ys_t));
 
       //
-      // override c1 if this is last point
+      // override calculated endpoint if this is the last point
       //
-      n1y = select(n1y,m1y,is_y_last);
-      n1x = select(n1x,m1x,is_y_last);
+      if (is_yps_last)
+        {
+          f1 = e1s;  // optionally use select
+        }
 
       //
       // shuffle up "left" line segment endpoint
       //
-      // NOTE: Intel's shuffle_up is unique with its elegant
-      // "previous" argument so don't get used to it
+      // NOTE: Intel's native "shuffle up" intrinsic is unique with
+      // its support of an elegant "previous" argument -- use it if
+      // it's available!
       //
-      SPN_RASTERIZE_FLOAT n0y = spn_subgroup_shuffle_up_1(n1y_prev,n1y);
-      SPN_RASTERIZE_FLOAT n0x = spn_subgroup_shuffle_up_1(n1x_prev,n1x);
+      vec2 f0 = { subgroupShuffleUp(f1.x, 1), subgroupShuffleUp(f1.y, 1) };
 
-      //
-      // override shuffle up if this is the first line segment
-      //
-      n0y = select(n0y,m0y,is_y_first);
-      n0x = select(n0x,m0x,is_y_first);
+      if (gl_SubgroupInvocationID == 0)
+        {
+          f0 = f0_prev;  // optionally use select
+        }
 
       //
       // save previous right endpoint
       //
-      n1x_prev = n1x;
-      n1y_prev = n1y;
+      f0_prev.x = subgroupBroadcast(f1.x, SPN_RASTERIZE_SUBGROUP_SIZE - 1);
+      f0_prev.y = subgroupBroadcast(f1.y, SPN_RASTERIZE_SUBGROUP_SIZE - 1);
 
       //
-      // decrement by subgroup size
+      // override shuffle up if this is the first line segment
       //
-      y_iss -= (float)SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-      y_ess -= (float)SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-      y_rem -= (float)SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-
-#if 0
-      //
-      // debug
-      //
-      if (n0y != n1y) {
-        printf("{ { %5.0f, %5.0f }, { %5.0f, %5.0f } },\n",n0x,n0y,n1x,n1y);
-      }
-#endif
+      if (is_yps_first)
+        {
+          f0 = e0s;  // optionally use select
+        }
 
       //
-      // X-SLIVERING
-      // -----------
+      // OPTIMIZATION -- Further squelch horizontal lines.
       //
-      // now sliver 1-pixel high lines into at either vertical or
-      // 1-pixel wide lines
+      // Nearly vertical lines with exchanged coordinates were
+      // originally nearly horizontal.
       //
-      // save original direction and work with increasing x
+      // If *all* lanes in the subgroup are horizontal then don't
+      // proceed and continue the rasterization loop.
       //
-      SPN_RASTERIZE_PREDICATE const x_lt   = (n0x <= n1x);
-      SPN_RASTERIZE_UINT      const dx_xor = x_lt ? 0 : 0x80000000;
+      const bool is_xchg_src = subgroupShuffle(is_xchg, yp_src);
+      const bool is_vert_src = (f0.x == f1.x);
+      const bool is_horz_src = is_xchg_src && is_vert_src;
 
-      //
-      // save 1/dy
-      //
-      const float x_denom  = native_recip(n1x - n0x);
-
-      //
-      // how many non-horizontal subpixel y-axis slivers are there?
-      //
-      const float x_min    = floor(fmin(n0x,n1x) * SPN_SUBPIXEL_X_SCALE_DOWN);
-      const float x_max    = ceil (fmax(n0x,n1x) * SPN_SUBPIXEL_X_SCALE_DOWN);
-      const float x_base   = x_lt ? x_min : x_max;
-      const float x_segs   = fmax(x_max - x_min,1.0f);
-
-      //
-      // inclusive subgroup scan of y_segs
-      //
-      SPN_RASTERIZE_FLOAT       x_iss    = spn_subgroup_scan_inclusive_add_float(x_segs);
-      SPN_RASTERIZE_FLOAT       x_ess    = x_iss - x_segs;
-      float                     x_rem    = spn_subgroup_last_float(x_iss);
-
-      //
-      // if this is a horizontal line then tweak x_iss so "is_scratch_store" always fails
-      //
-      //if (x_segs == 0.0f)
-      // x_iss = 0.0f;
-
-      //
-      // these values don't matter on first iteration
-      //
-      SPN_RASTERIZE_FLOAT       p1x_prev = 0;
-      SPN_RASTERIZE_FLOAT       p1y_prev = 0;
-
-      //
-      // loop until done
-      //
-      while (x_rem > 0)
+      if (!subgroupAll(is_horz_src))
         {
           //
-          // distribute work across lanes
+          // Blindly calculate grid intersecting midpoint.
           //
-          SPN_RASTERIZE_UINT const x_source = spn_scatter_scan_max(smem,x_iss,x_ess);
+          // This results in either:
+          //
+          //   * (f0->fm), (fm->f1)
+          //   * (f0->f1), (f1->f1)
+          //
+          // An (f1->f1) line is a noop.
+          //
+          const float f0xp_floor = floor(f0.x * SPN_TTS_SUBPIXEL_X_SCALE_DOWN);
 
-          //
-          // get line at y_source line
-          //
-          const float o0x = spn_subgroup_shuffle(n0x,x_source);
-          const float o0y = spn_subgroup_shuffle(n0y,x_source);
-          const float o1x = spn_subgroup_shuffle(n1x,x_source);
-          const float o1y = spn_subgroup_shuffle(n1y,x_source);
+          vec2 fm;
 
-          //
-          // every lane will create a 1 pixel tall line "sliver"
-          //
-          // FIXME -- this gets expanded on SIMD
-          //
-          // if numerator == 1 then this is the first lane
-          // if numerator == s then this is the last  lane
-          //
-          SPN_RASTERIZE_FLOAT     const x_delta    = spn_delta_offset() - spn_subgroup_shuffle(x_ess,x_source);
-          SPN_RASTERIZE_FLOAT     const x_count    = spn_subgroup_shuffle(x_segs,x_source);
+          fm.x = f0xp_floor * SPN_TTS_SUBPIXEL_X_SCALE_UP + SPN_TTS_SUBPIXEL_X_RESL;
 
-          SPN_RASTERIZE_PREDICATE const is_x_first = (x_delta == 1.0f);
-          SPN_RASTERIZE_PREDICATE const is_x_last  = (x_delta >= x_count);
+          const bool midpoint_exists = fm.x < f1.x;
 
-          // toggle x_delta sign
-          SPN_RASTERIZE_FLOAT     const x_offset   = as_float((as_uint(x_delta) ^ intel_sub_group_shuffle(dx_xor,x_source)));
-
-          //
-          // calculate "right" line segment endpoint
-          //
-          SPN_RASTERIZE_FLOAT       p1x = (x_offset + spn_subgroup_shuffle(x_base,x_source)) * SPN_SUBPIXEL_X_SCALE_UP;
-          const float p_t = (p1x - o0x) * spn_subgroup_shuffle(x_denom,x_source);
-          SPN_RASTERIZE_FLOAT       p1y = round(SPN_LERP(o0y,o1y,p_t));
-
-          //
-          // override c1 if this is last point
-          //
-          p1x = select(p1x,o1x,is_x_last);
-          p1y = select(p1y,o1y,is_x_last);
-
-          //
-          // shuffle up "left" line segment endpoint
-          //
-          // NOTE: Intel's shuffle_up is unique with its elegant
-          // "previous" argument so don't get used to it
-          //
-          SPN_RASTERIZE_FLOAT p0x = spn_subgroup_shuffle_up_1(p1x_prev,p1x);
-          SPN_RASTERIZE_FLOAT p0y = spn_subgroup_shuffle_up_1(p1y_prev,p1y);
-
-          //
-          // override shuffle up if this is the first line segment
-          //
-          p0x = select(p0x,o0x,is_x_first);
-          p0y = select(p0y,o0y,is_x_first);
-
-          //
-          // save previous right endpoint
-          //
-          p1x_prev = p1x;
-          p1y_prev = p1y;
-
-          //
-          // decrement by subgroup size
-          //
-          x_iss -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-          x_ess -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-          x_rem -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-
-          //
-          // only non-horizontal subpixel lines are valid
-          //
-          SPN_RASTERIZE_PREDICATE is_active = (p0y != p1y);
-
-          //
-          // if no lanes are active then continue
-          //
-          // FIXME -- THIS SIMPLE SUB_GROUP_ANY TEST SIGNIFICANTLY
-          // IMPACTS PERFORMANCE (+12% ?)
-          //
-          // IT SHOULDN'T !!!
-          //
-#if 0
-          if (!spn_subgroup_any(is_active))
-            continue;
-#endif
-
-          //
-          // Option 1: use SLM for explicitly managed coalesced stores
-          //
-          // 1. which tile does this line belong?
-          // 2. hash tile coordinates
-          // 3. lookup hash
-          // 4. if tile matches then SLM append keys
-          // 5. if tile doesn't match
-          //   a. flush
-          //   b. create new TTSK_RYX
-          //   c. obtain TTSB block from pool
-          //   d. goto 3.
-          //
-
-          //
-          // Option 2: rely on L1/L2/L3 to mitigate non-coalesced stores
-          //
-          // 1. which tile does this line belong?
-          // 2. hash tile coordinates
-          // 3. lookup hash
-          // 4. if tile matches then GMEM append keys
-          // 5. if tile doesn't match
-          //   a. flush (and invalidate empty elems)
-          //   b. create new TTSK_RYX
-          //   c. obtain TTSB block from pool
-          //   d. goto 3.
-          //
-
-          //
-          // The virtual rasterization surface is very large and
-          // signed: +/- ~64K-256K, depending on the architecture.
-          //
-          // Rasters must be clipped to the virtual surface and,
-          // optionally, clipped even further on a per raster
-          // basis.
-          //
-
-          //
-          // Clip to the per-raster clip
-          //
-
-          /*
-
-            CLIP HERE
-
-          */
-
-          //
-          // Hash the tile coordinates
-          //
-          // This table lists nominal values for each architecture.
-          // We want to choose values that are naturally fit the
-          // "width" of the architecture.
-          //
-          //   SIMD   RANGE   BITS  MAX RANGE  MAX BINS  HASH BITS
-          //   ----  -------  ----  ---------  --------  ---------
-          //     4   [0,  4]    3    [0,  7]      10      mod(10)  <-- SSE42, ?
-          //     8   [0,  8]    4    [0, 15]       8         3     <-- GEN*,AVX*
-          //    16   [0, 16]    5    [0, 31]       6      mod(6)   <-- GEN*,?
-          //    32   [0, 32]    6    [0, 63]       5      mod(5)   <-- CUDA,PowerVR,Adreno,GEN*
-          //    64   [0, 64]    7    [0,127]       4         2     <-- AMD Radeon
-          //
-          // NOTE: When possible, bias the hash toward using more y
-          // bits because of:
-          //
-          //   1. the 90 degree counter-clockwise rotation that we put
-          //      in place to offset the render-time clockwise
-          //      rotation
-          //
-          //   2. the likely presence of left-to-right or
-          //      right-to-left glyphs.
-          //
-          // For power-of-two bins, the hash is easy.
-          //
-          // For non-power-of-two, we may want to either implement a
-          // fast mod (compiler should do this for us... hahahaha) or
-          // drop down to the next power-of-two.
-          //
-
-          //
-          // FIXME -- this snarl is not good -- can probably reduce
-          // some of the sign casting but some is there to vectorize a
-          // scalar
-          //
-          SPN_RASTERIZE_INT       const z0y    = SPN_CONVERT(SPN_RASTERIZE_INT)(p0y);
-          SPN_RASTERIZE_INT       const z1y    = SPN_CONVERT(SPN_RASTERIZE_INT)(p1y);
-
-          SPN_RASTERIZE_INT       const z0x    = SPN_CONVERT(SPN_RASTERIZE_INT)(p0x);
-          SPN_RASTERIZE_INT       const z1x    = SPN_CONVERT(SPN_RASTERIZE_INT)(p1x);
-
-          SPN_RASTERIZE_INT       const min_y  = min(z0y,z1y);
-          SPN_RASTERIZE_INT       const max_y  = max(z0y,z1y);
-
-          SPN_RASTERIZE_INT       const tile_y = min_y >> SPN_SUBTILE_RESL_Y_LOG2;
-
-          SPN_RASTERIZE_UINT      const ty     = SPN_AS(SPN_RASTERIZE_UINT)(min_y) & SPN_SUBTILE_MASK_Y;
-          SPN_RASTERIZE_INT             dy     = SPN_AS(SPN_RASTERIZE_INT)(z1y - z0y);
-
-          //
-          // map [+1,+32] to [ 0,+31]
-          // map [-1,-32] to [-1,-32]
-          //
-          SPN_RASTERIZE_INT             dys    = (dy + (~dy >> 31)) << 26;
-
-          SPN_RASTERIZE_INT       const min_x  = min(z0x,z1x);
-          SPN_RASTERIZE_INT       const max_x  = max(z0x,z1x);
-          SPN_RASTERIZE_INT       const tile_x = min_x >> SPN_SUBTILE_RESL_X_LOG2;
-
-          SPN_RASTERIZE_UINT      const tx     = SPN_AS(SPN_RASTERIZE_UINT)(min_x) & SPN_SUBTILE_MASK_X;
-          SPN_RASTERIZE_UINT      const sx     = SPN_AS(SPN_RASTERIZE_UINT)(max_x - min_x);
-
-          SPN_RASTERIZE_UINT      const tts    = dys | (ty << 16) | (sx << 10) | tx;
-
-          SPN_RASTERIZE_UINT      const hash   = (((SPN_AS(SPN_RASTERIZE_UINT)(tile_y) & SPN_RASTERIZE_TILE_HASH_Y_MASK) << SPN_RASTERIZE_TILE_HASH_X_BITS) |
-                                                   (SPN_AS(SPN_RASTERIZE_UINT)(tile_x) & SPN_RASTERIZE_TILE_HASH_X_MASK));
-
-          SPN_RASTERIZE_UINT      const yx     = (((SPN_AS(SPN_RASTERIZE_UINT)(tile_y) & 0xFFF) << 12) | (SPN_AS(SPN_RASTERIZE_UINT)(tile_x) & 0xFFF));
-
-#if 0
-          printf("(%3u, %3u)\n",tile_y,tile_x);
-#endif
-
-#if 0
-          if (is_active)
-            printf("( %3u, %3u ) : [ %3u, %3u, %3d, %3d, %3u ]\n",tile_y,tile_x,ty,tx,dy,((int)dys)>>26,sx);
-#endif
-
-          //
-          // debug
-          //
-#if 0 // PRINTF_ENABLE
-
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,S,C,P,A)                                         \
-          if (is_active C)                                              \
-            printf("{ { %5d, %5d }, { %5d, %5d } (* %2u *) },\n",z0x C,z0y C,z1x C,z1y C,hash C);
-
-          SPN_RASTERIZE_VECTOR_EXPAND();
-#else
-          if (is_active)
-            printf("{ { %5d, %5d }, { %5d, %5d } } (* %2u *),\n",z0x,z0y,z1x,z1y,hash);
-#endif
-
-#endif
-          //
-          // flush all active lanes
-          //
-          while (true)
+          if (midpoint_exists)
             {
-              //
-              // either gather load or vector load+shuffle the yx keys
-              //
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-              SPN_RASTERIZE_BIN       const yx_bin     = smem->bin.vN.yx;
-              SPN_RASTERIZE_UINT      const yx_cur     = shuffle(yx_bin,hash);
+#ifndef SPN_RASTERIZE_SHUFFLE_RECIPROCAL_IS_FAST
+              const float xs_d = 1.0f / (f1.x - f0.x);
 #else
-              SPN_RASTERIZE_UINT      const yx_cur     = smem->bin.aN.yx[hash];
+              const float xs_d = subgroupShuffle(x_denom, yp_src);
 #endif
+              const float xs_t = (fm.x - f0.x) * xs_d;
 
-              //
-              // does yx for lane match yx for hash?
-              //
-              SPN_RASTERIZE_UINT      const active_yx  = is_active ? yx : SPN_RASTERIZE_YX_INVALID;
-              SPN_RASTERIZE_PREDICATE const is_match   = (yx_cur == active_yx);
+              fm.y = round(mix(f0.y, f1.y, xs_t));
+            }
+          else
+            {
+              fm = f1;
+            }
 
-              //
-              // OpenCL spec: "When casting a bool to a vector integer
-              // data type, the vector components will be set to -1
-              // (i.e. all bits set) if the vector bool value is true
-              // and 0 otherwise.
-              //
-#if ( SPN_RASTERIZE_VECTOR_SIZE_LOG2 == 0 )
-              SPN_RASTERIZE_UINT      const h_match    = (SPN_RASTERIZE_UINT)is_match;
-#else
-              SPN_RASTERIZE_UINT      const h_match    = abs(is_match); // {-1,0} -> {+1,0}
+          //
+          // remap back to the line's original octant
+          //
+          const vec2 neg_xy_src = { subgroupShuffle(neg_xy.x, yp_src),
+                                    subgroupShuffle(neg_xy.y, yp_src) };
+          // mirror
+          const vec2 g0 = f0 * neg_xy_src;
+          const vec2 gm = fm * neg_xy_src;
+          const vec2 g1 = f1 * neg_xy_src;
+
+          // exchange
+          const vec2 h0 = { is_xchg_src ? g0.y : g0.x, is_xchg_src ? g0.x : g0.y };
+          const vec2 hm = { is_xchg_src ? gm.y : gm.x, is_xchg_src ? gm.x : gm.y };
+          const vec2 h1 = { is_xchg_src ? g1.y : g1.x, is_xchg_src ? g1.x : g1.y };
+
+          //
+          // DEBUG
+          //
+#if 0
+          {
+            uint debug_base = 0;
+
+            if (gl_SubgroupInvocationID == 0)
+              debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 4);
+
+            debug_base = subgroupBroadcast(debug_base, 0);
+
+            bp_debug[debug_base + gl_SubgroupInvocationID * 4 + 0] = floatBitsToUint(h0.x);
+            bp_debug[debug_base + gl_SubgroupInvocationID * 4 + 1] = floatBitsToUint(h0.y);
+            bp_debug[debug_base + gl_SubgroupInvocationID * 4 + 2] = floatBitsToUint(hm.x);
+            bp_debug[debug_base + gl_SubgroupInvocationID * 4 + 3] = floatBitsToUint(hm.y);
+
+            if (midpoint_exists)
+              {
+                const uint debug_base = atomicAdd(bp_debug_count[0], 4);
+
+                bp_debug[debug_base + 0] = floatBitsToUint(hm.x);
+                bp_debug[debug_base + 1] = floatBitsToUint(hm.y);
+                bp_debug[debug_base + 2] = floatBitsToUint(h1.x);
+                bp_debug[debug_base + 3] = floatBitsToUint(h1.y);
+              }
+          }
 #endif
-              //
-              // how many new elements for each matching hash bin?
-              //
-              SPN_RASTERIZE_UINT      const h_shl      = hash * SPN_RASTERIZE_TILE_HASH_BIN_BITS;
-              SPN_RASTERIZE_UINT      const h          = h_match << h_shl;
+          //
+          // append YX/TTS values to SMEM
+          //
+          spn_append(key_ring, ivec2(h0), ivec2(hm), ivec2(h1));
 
-              //
-              // prefix sum all of the bins in parallel
-              //
-              SPN_RASTERIZE_UINT      const h_iss      = spn_subgroup_scan_inclusive_add_uint(h);
-              SPN_RASTERIZE_UINT      const h_total    = spn_subgroup_last_uint(h_iss);
-
-              //
-              // current bin counts
-              //
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-              SPN_RASTERIZE_BIN       const count_bin  = smem->bin.vN.count;
-              SPN_RASTERIZE_UINT      const count_cur  = shuffle(count_bin,hash);
-#else
-              SPN_RASTERIZE_UINT      const count_cur  = smem->bin.aN.count[hash];
-#endif
-
-              //
-              // calculate where each cache-hit and in-bounds tts should be stored
-              //
-              SPN_RASTERIZE_UINT      const ttsb_index = (h_iss   >> h_shl & SPN_RASTERIZE_TILE_HASH_BIN_MASK) + count_cur - 1;
-              SPN_RASTERIZE_UINT      const count_new  = (h_total >> h_shl & SPN_RASTERIZE_TILE_HASH_BIN_MASK) + count_cur;
-
-              //
-              // which lanes can append to a matching bin?
-              //
-              SPN_RASTERIZE_PREDICATE const is_append  = is_match && (ttsb_index < SPN_DEVICE_SUBBLOCK_WORDS);
-
-              //
-              // scatter append tts elements to bin blocks
-              //
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1)
-              //
-              // SIMD
-              //
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,S,C,P,A)                                         \
-              if (is_append C)                                          \
-                {                                                       \
-                  smem->bin.aN.ttsb [hash C][ttsb_index C] = tts       C; \
-                  smem->bin.aN.count[hash C]               = count_new C; \
-                }
-
-              SPN_RASTERIZE_VECTOR_EXPAND();
-#else
-              //
-              // SIMT
-              //
-              if (is_append)
-                {
-                  smem->bin.aN.ttsb [hash][ttsb_index] = tts;
-                  smem->bin.aN.count[hash]             = count_new; // it's ok if this is > SPN_DEVICE_SUBBLOCK_WORDS
-                }
-#endif
-              //
-              // try to keep predicate updates SIMD-friendly and
-              // outside of predicated code paths -- this is not
-              // always how we would normally do things on SIMT but
-              // either approach is acceptable
-              //
-
-              //
-              // mask off lanes/components that successfully appended
-              //
-              is_active = is_active && !is_append;
-
-              //
-              // are there any active lanes left?
-              //
-              if (!spn_subgroup_any(is_active))
-                break;
-
-              //
-              // There are active lanes that couldn't be appended to a
-              // bin because their hashes collided with the bin's
-              // current ryx key then those bins must be ejected.
-              //
-              // Note that we do not eject "full" bins because lazily
-              // waiting for a collision results in simpler code.
-              //
-              spn_flush(bp_atomics,
-                        bp_blocks,
-                        bp_ids,
-                        bp_mask,
-                        cohort_atomics,
-                        subblocks,
-                        blocks,
-                        blocks_next,
-                        sk_v,
-                        sk_v_next,
-                        sk_extent,
-                        smem,
-                        hash,
-                        yx,
-                        is_active);
+          //
+          // flush if there are more than a subgroup's worth
+          //
+          if (key_ring[1] >= SPN_RASTERIZE_SUBGROUP_SIZE)
+            {
+              spn_flush_subgroup(key_ring, block_ids);
             }
         }
+
+      //
+      // break if there are no y pixel slivers left
+      //
+      if (yp_sum <= SPN_RASTERIZE_SUBGROUP_SIZE)
+        break;
+
+      //
+      // decrement all three
+      //
+      yp_sum -= SPN_RASTERIZE_SUBGROUP_SIZE;
+      yp_inc -= SPN_RASTERIZE_SUBGROUP_SIZE;
+      yp_exc -= SPN_RASTERIZE_SUBGROUP_SIZE;
     }
-}
-
-//
-// INITIALIZE SMEM
-//
-// Note that SIMD/SIMT have nearly the same syntax.
-//
-static
-void
-spn_smem_init(__local struct spn_subgroup_smem volatile * const smem)
-{
-  //
-  // initialize smem bins
-  //
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-  //
-  // SIMD
-  //
-  smem->bin.vN.yx    = ( SPN_RASTERIZE_YX_INIT );
-  smem->bin.vN.count = ( 0 );
-#else
-  //
-  // SIMT
-  //
-  int idx = spn_subgroup_lane();
-
-#if   ( SPN_RASTERIZE_TILE_HASH_BIN_COUNT < SPN_RASTERIZE_ELEMS_PER_SUBGROUP )
-  if (idx < SPN_RASTERIZE_TILE_HASH_BIN_COUNT)
-#elif ( SPN_RASTERIZE_TILE_HASH_BIN_COUNT > SPN_RASTERIZE_ELEMS_PER_SUBGROUP )
-  for (; idx<SPN_RASTERIZE_TILE_HASH_BIN_COUNT; idx+=SPN_RASTERIZE_SUBGROUP_SIZE)
-#endif
-    {
-      smem->bin.aN.yx   [idx] = ( SPN_RASTERIZE_YX_INIT );
-      smem->bin.aN.count[idx] = ( 0 );
-    }
-#endif
-}
-
-//
-// RASTERIZE CUBIC KERNEL
-//
-
-static
-void
-spn_rasterize_cubics(__global SPN_ATOMIC_UINT         volatile * const bp_atomics,
-                     __global union spn_bp_elem                * const bp_blocks,
-                     __global uint                             * const bp_ids,
-                     spn_uint                                    const bp_mask,
-
-                     __global SPN_ATOMIC_UINT         volatile * const cohort_atomics,
-                     __global spn_ttsk_s_t                     * const sk_extent,
-
-                     __local struct spn_subgroup_smem volatile * const smem,
-
-                     spn_uint                                  * const nodeword,
-                     spn_block_id_t                            * const id,
-
-                     union spn_transform              const    * const tv,
-                     union spn_path_clip              const    * const cv,
-                     spn_uint                                    const cohort)
-{
-  //
-  // the initial segment idx and segments-per-block constant determine
-  // how many block ids will need to be loaded
-  //
-  const float c0x = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c0y = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c1x = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c1y = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c2x = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c2y = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c3x = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c3y = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  //
-  // apply transform
-  //
-  // note that we only care if the end points are rounded to subpixel precision
-  //
-  // FIXME -- transformation is currently affine-only support perspective later
-  //
-  // the affine transformation requires 8 FMA + 2 ROUND operations
-  //
-  const float b0x = round(c0x * tv->sx  + c0y * tv->shx + tv->tx);
-  const float b0y = round(c0x * tv->shy + c0y * tv->sy  + tv->ty);
-
-  const float t1x = c1x * tv->sx  + c1y * tv->shx + tv->tx;
-  const float t1y = c1x * tv->shy + c1y * tv->sy  + tv->ty;
-
-  const float t2x = c2x * tv->sx  + c2y * tv->shx + tv->tx;
-  const float t2y = c2x * tv->shy + c2y * tv->sy  + tv->ty;
-
-  const float t3x = round(c3x * tv->sx  + c3y * tv->shx + tv->tx);
-  const float t3y = round(c3x * tv->shy + c3y * tv->sy  + tv->ty);
-
-  //
-  //
-  //
-#if PRINTF_ENABLE
-
-#if ( SPN_RASTERIZE_SUBGROUP_SIZE == 1 )
-
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,S,C,P,A)                                         \
-  printf("{ { %.02f, %.02f }, { %.02f, %.02f },"                        \
-         "  { %.02f, %.02f }, { %.02f, %.02f } },\n",                   \
-         b0x C,b0y C,t1x C,t1y C,                                       \
-         t2x C,t2y C,t3x C,t3y C);
-
-  SPN_RASTERIZE_VECTOR_EXPAND();
-
-#else
-
-  printf("{ { %.02f, %.02f }, { %.02f, %.02f }, { %.02f, %.02f }, { %.02f, %.02f } },\n",
-         b0x,b0y,t1x,t1y,t2x,t2y,t3x,t3y);
-
-#endif
-
-#endif
-
-  //
-  // OLD APPROACH
-  // ------------
-  //
-  // The Spinel CUDA rasterizer was significantly more complex and
-  // performed a few different tasks that are probably best kept
-  // separate.
-  //
-  // The Spinel rasterizer Bezier held 4-element x and y coordinates
-  // in adjacent lanes. This simplified intermingling of single lane
-  // 4-coordinate line segments with two-lane cubic Beziers.
-  //
-  // After transformation of the input segments, the Spinel rasterizer
-  // would test cubics for flatness and, if flat, collapse the
-  // adjacent lanes into a single line lane and an empty lane.
-  //
-  // Any lines would then be appended to a line queue.
-  //
-  // Any cubics would then be subdivided.
-  //
-  // The reclassification process would be repeated.
-  //
-  // NEW APPROACH
-  // ------------
-  //
-  // Assume we're only working with cubics in this kernel.
-  //
-  // Optimization: if the line segment is a special case -- a cusp,
-  // has 1+ inflections, or a loop -- it might be beneficial to
-  // subdivide the control cage 1+ times in order to separate the
-  // flatter segments the high-velocity region(s).
-  //
-  // This means we want to split using [a,b] formulation to _directly_
-  // subdivide producing a new control cage.
-  //
-  // Wang's Formula is still useful even if we subdivide once or twice
-  // as it's so cheap that it might give some useful hints about where
-  // the high-velocity sections of curve reside.
-  //
-  // But it seems like using Wang's and directly flattening to line
-  // segments without any subdivision is good enough for the limited
-  // set of test cases that I've tried.
-  //
-  // So... use Wang's Formula to estimate how many line segment are
-  // required to properly flatten the cubics.
-  //
-  // Then use inclusive/exclusive scans to put all the lanes to work:
-  //
-  //   1. segmenting cubics to line segments
-  //
-  //   2. slivering line segments into 1-pixel high line segments
-  //
-  //   3. slivering 1-pixel high line segments into 1-pixel wide line
-  //      segments
-  //
-  // MORE BACKGROUND ON NEW APPROACH
-  // -------------------------------
-  //
-  // Two options for handling line segments:
-  //
-  // 1. append the line segments onto an SLM array until enough
-  //    work has been accrued (Spinel does this)
-  //
-  // 2. immediately sliver the potentially multi-pixel line
-  //    segments into subpixel lines
-  //
-  // The advantage of (1) is that it guarantees the slivering
-  // process will, on average, always be emitting a full subgroup
-  // of subpixel lines.
-  //
-  // The advantage of (2) is that it reduces code complexity and
-  // leaves more room for SLM tile bins. The difference between Spinel
-  // and Skia Compute is that Wang's Formula guarantees there will be
-  // a full subgroup of multi-pixel lines unless this is the final
-  // iteration of the warp of multi-pixel lines.
-  //
-  // Note that wider GPU architectures might benefit from (1) and
-  // other work accumulation strategies because it will minimize
-  // partial warp workloads in the final iteration of each stage.  It
-  // also minimizes the sunk cost of the uniform control logic steps.
-  //
-  // So let's implement (2) for now...
-  //
-
-  //
-  // And... begin!
-  //
-  // Estimate how many line segments are in quad/cubic curve.
-  //
-  // Wang's Formula will return zero if the control points are
-  // collinear but we bump it up to 1.0f.
-  //
-  const float s_segs  = spn_wangs_formula_cubic(b0x,b0y,t1x,t1y,t2x,t2y,t3x,t3y);
-
-  //
-  // if there are free registers then precalculate the reciprocal for
-  // each estimated segments since it will never change
-  //
-  const float s_denom = native_recip(s_segs);
-
-
-  //
-  // inclusive add scan of estimated line segments
-  // exclusive add scan of estimated line segments
-  // total number       of estimated line segments
-  //
-  SPN_RASTERIZE_FLOAT       s_iss   = spn_subgroup_scan_inclusive_add_float(s_segs);
-  SPN_RASTERIZE_FLOAT       s_ess   = s_iss - s_segs;
-  float                     s_rem   = spn_subgroup_last_float(s_iss); // scalar
-
-  //
-  // Precompute cubic polynomial coefficients from transformed control
-  // cage so we can shuffle them in on each iteration of the outer
-  // loop and then evaluate the polynomial in Horner form.
-  //
-  //                            |  1  0  0  0 | | c0 |
-  //                            |             | |    |
-  //                            | -3  3  0  0 | | c1 |
-  //   B(t) = [ 1 t^1 t^2 t^3 ] |             | |    |
-  //                            |  3 -6  3  0 | | c2 |
-  //                            |             | |    |
-  //                            | -1  3 -3  1 | | c3 |
-  //
-  //
-  const float b1x = mad(-3.0f,b0x,3.0f*t1x);                // 2 - 1 MAD + MUL
-  const float b1y = mad(-3.0f,b0y,3.0f*t1y);                // 2 - 1 MAD + MUL
-
-  const float b2x = mad(3.0f,b0x,mad(-6.0f,t1x,3.0f*t2x));  // 3 - 2 MAD + MUL
-  const float b2y = mad(3.0f,b0y,mad(-6.0f,t1y,3.0f*t2y));  // 3 - 2 MAD + MUL
-
-  const float b3x = mad(3.0f,t1x,mad(-3.0f,t2x,t3x)) - b0x; // 3 - 2 MAD + SUB
-  const float b3y = mad(3.0f,t1y,mad(-3.0f,t2y,t3y)) - b0y; // 3 - 2 MAD + SUB
-
-  //
-  // these values don't matter on the first iteration
-  //
-  SPN_RASTERIZE_FLOAT l1x_prev  = 0;
-  SPN_RASTERIZE_FLOAT l1y_prev  = 0;
-
-  //
-  // allocate and init in-register TTSK keys
-  //
-  spn_uint     sk_v_next = 0;
-  spn_ttsk_v_t sk_v;
-
-  sk_v.hi = cohort;
-
-  //
-  // initialize smem
-  //
-  spn_smem_init(smem);
-
-  //
-  // initialize blocks / subblocks
-  //
-  spn_block_id_v_t blocks;
-  spn_uint         blocks_next = SPN_RASTERIZE_BLOCK_ID_V_SIZE;
-
-#if SPN_DEVICE_BLOCK_WORDS_LOG2 > SPN_DEVICE_SUBBLOCK_WORDS_LOG2
-  spn_block_id_t   subblocks   = 0;
-#endif
-
-  //
-  // loop until done
-  //
-  while (s_rem > 0)
-    {
-      //
-      // distribute work across lanes
-      //
-      SPN_RASTERIZE_UINT const s_source = spn_scatter_scan_max(smem,s_iss,s_ess);
-
-      //
-      // every lane has a fraction to work off of
-      //
-      // FIXME -- this gets expanded on SIMD
-      //
-      // if delta == 1      then this is the first lane
-      // if count == s_segs then this is the last  lane
-      //
-      SPN_RASTERIZE_FLOAT     const s_delta    = spn_delta_offset() - spn_subgroup_shuffle(s_ess,s_source);
-      SPN_RASTERIZE_FLOAT     const s_count    = spn_subgroup_shuffle(s_segs,s_source);
-
-      SPN_RASTERIZE_PREDICATE const is_s_first = (s_delta == 1.0f);
-      SPN_RASTERIZE_PREDICATE const is_s_last  = (s_delta >= s_count);
-
-      //
-      // init parametric t
-      //
-      SPN_RASTERIZE_FLOAT s_t = s_delta * spn_subgroup_shuffle(s_denom,s_source); // faster than native_recip(s_count)?
-
-      //
-      // if last then override to a hard 1.0f
-      //
-      s_t    = is_s_last ? 1.0f : s_t;
-
-      //
-      // decrement by subgroup size
-      //
-      s_iss -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-      s_ess -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-      s_rem -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-
-      //
-      // now every lane knows what to do and the following lines will
-      // pump out up to SUBGROUP_SIZE line segments
-      //
-      // obtain the src vertices through shared or via a shuffle
-      //
-
-      //
-      // shuffle in the polynomial coefficients their source lane
-      //
-      const float s0x = spn_subgroup_shuffle(b0x,s_source);
-      const float s0y = spn_subgroup_shuffle(b0y,s_source);
-
-      const float s1x = spn_subgroup_shuffle(b1x,s_source);
-      const float s1y = spn_subgroup_shuffle(b1y,s_source);
-
-      const float s2x = spn_subgroup_shuffle(b2x,s_source);
-      const float s2y = spn_subgroup_shuffle(b2y,s_source);
-
-      const float s3x = spn_subgroup_shuffle(b3x,s_source);
-      const float s3y = spn_subgroup_shuffle(b3y,s_source);
-
-      //
-      // calculate "right" line segment endpoint using Horner form
-      //
-      SPN_RASTERIZE_FLOAT       l1x = round(mad(mad(mad(s3x,s_t,s2x),s_t,s1x),s_t,s0x)); // 3 MAD + ROUND
-      SPN_RASTERIZE_FLOAT       l1y = round(mad(mad(mad(s3y,s_t,s2y),s_t,s1y),s_t,s0y)); // 3 MAD + ROUND
-
-      //
-      // shuffle up "left" line segment endpoint
-      //
-      // NOTE: Intel's shuffle_up is unique with its elegant
-      // "previous" argument so don't get used to it
-      //
-      SPN_RASTERIZE_FLOAT       l0x = spn_subgroup_shuffle_up_1(l1x_prev,l1x);
-      SPN_RASTERIZE_FLOAT       l0y = spn_subgroup_shuffle_up_1(l1y_prev,l1y);
-
-      //
-      // save previous right endpoint
-      //
-      l1x_prev = l1x;
-      l1y_prev = l1y;
-
-      //
-      // override shuffle up if this is the first line segment
-      //
-      l0x = select(l0x,s0x,is_s_first);
-      l0y = select(l0y,s0y,is_s_first);
-
-      //
-      // sliver lines
-      //
-      spn_sliver(bp_atomics,
-                 bp_blocks,
-                 bp_ids,
-                 bp_mask,
-                 cohort_atomics,
-                 &subblocks,
-                 &blocks,
-                 &blocks_next,
-                 &sk_v,
-                 &sk_v_next,
-                 sk_extent,
-                 smem,
-                 l0x,l0y,l1x,l1y);
-    }
-
-  //
-  // - flush work-in-progress blocks
-  // - return unused block ids
-  //
-  spn_finalize(bp_atomics,
-               bp_blocks,
-               bp_ids,
-               bp_mask,
-               cohort_atomics,
-               &blocks,
-               blocks_next,
-               &sk_v,
-               sk_v_next,
-               sk_extent,
-               smem);
-}
-
-//
-// RASTERIZE QUAD KERNEL
-//
-
-static
-void
-spn_rasterize_quads(__global SPN_ATOMIC_UINT         volatile * const bp_atomics,
-                    __global union spn_bp_elem                * const bp_blocks,
-                    __global uint                             * const bp_ids,
-                    spn_uint                                    const bp_mask,
-
-                    __global SPN_ATOMIC_UINT         volatile * const cohort_atomics,
-                    __global spn_ttsk_s_t                     * const sk_extent,
-
-                    __local struct spn_subgroup_smem volatile * const smem,
-
-                    spn_uint                                  * const nodeword,
-                    spn_block_id_t                            * const id,
-
-                    union spn_transform              const    * const tv,
-                    union spn_path_clip              const    * const cv,
-                    spn_uint                                    const cohort)
-{
-  //
-  // the initial segment idx and segments-per-block constant determine
-  // how many block ids will need to be loaded
-  //
-  const float c0x = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c0y = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c1x = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c1y = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c2x = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  spn_segment_next(bp_blocks,nodeword,id);
-
-  const float c2y = bp_blocks[SPN_RASTERIZE_SEGMENT(*id)].coord;
-
-  //
-  // apply transform
-  //
-  // note that we only care if the end points are rounded to subpixel precision
-  //
-  // FIXME -- transformation is currently affine-only support perspective later
-  //
-  // the affine transformation requires 8 FMA + 2 ROUND operations
-  //
-  const float b0x = round(c0x * tv->sx  + c0y * tv->shx + tv->tx);
-  const float b0y = round(c0x * tv->shy + c0y * tv->sy  + tv->ty);
-
-  const float t1x = c1x * tv->sx  + c1y * tv->shx + tv->tx;
-  const float t1y = c1x * tv->shy + c1y * tv->sy  + tv->ty;
-
-  const float t2x = round(c2x * tv->sx  + c2y * tv->shx + tv->tx);
-  const float t2y = round(c2x * tv->shy + c2y * tv->sy  + tv->ty);
-
-  //
-  // Estimate how many line segments are in quad/cubic curve.
-  //
-  // Wang's Formula will return zero if the control points are
-  // collinear but we bump it up to 1.0f.
-  //
-  const float s_segs  = spn_wangs_formula_quadratic(b0x,b0y,t1x,t1y,t2x,t2y);
-
-  //
-  // if there are free registers then precalculate the reciprocal for
-  // each estimated segments since it will never change
-  //
-  const float s_denom = native_recip(s_segs);
-
-
-  //
-  // inclusive add scan of estimated line segments
-  // exclusive add scan of estimated line segments
-  // total number       of estimated line segments
-  //
-  SPN_RASTERIZE_FLOAT       s_iss   = spn_subgroup_scan_inclusive_add_float(s_segs);
-  SPN_RASTERIZE_FLOAT       s_ess   = s_iss - s_segs;
-  float                     s_rem   = spn_subgroup_last_float(s_iss); // scalar
-
-  //
-  // Precompute quadratic polynomial coefficients from control cage so
-  // we can shuffle them in on each iteration of the outer loop and
-  // then evaluate the polynomial in Horner form.
-  //
-
-  //                        |  1  0  0  | | c0 |
-  //                        |           | |    |
-  //   B(t) = [ 1 t^1 t^2 ] | -2  2  0  | | c1 |
-  //                        |           | |    |
-  //                        |  1 -2  1  | | c2 |
-  //
-  //
-  const float b1x = mad(-2.0f,b0x,2.0f*t1x); // 2 - 1 MAD + MUL
-  const float b1y = mad(-2.0f,b0y,2.0f*t1y); // 2 - 1 MAD + MUL
-
-  const float b2x = mad(-2.0f,t1x,b0x+t2x);  // 2 - 1 MAD + ADD
-  const float b2y = mad(-2.0f,t1y,b0y+t2y);  // 2 - 1 MAD + ADD
-
-  //
-  // these values don't matter on the first iteration
-  //
-  SPN_RASTERIZE_FLOAT l1x_prev  = 0;
-  SPN_RASTERIZE_FLOAT l1y_prev  = 0;
-
-  //
-  // allocate and init in-register TTSK keys
-  //
-  spn_uint     sk_v_next = 0;
-  spn_ttsk_v_t sk_v;
-
-  sk_v.hi = cohort;
-
-  //
-  // initialize smem
-  //
-  spn_smem_init(smem);
-
-  //
-  // initialize blocks / subblocks
-  //
-  spn_block_id_v_t blocks;
-  spn_uint         blocks_next = SPN_RASTERIZE_BLOCK_ID_V_SIZE;
-
-#if SPN_DEVICE_BLOCK_WORDS_LOG2 > SPN_DEVICE_SUBBLOCK_WORDS_LOG2
-  spn_block_id_t   subblocks   = 0;
-#endif
-
-  //
-  // loop until done
-  //
-  while (s_rem > 0)
-    {
-      //
-      // distribute work across lanes
-      //
-      SPN_RASTERIZE_UINT const s_source = spn_scatter_scan_max(smem,s_iss,s_ess);
-
-      //
-      // every lane has a fraction to work off of
-      //
-      // FIXME -- this gets expanded on SIMD
-      //
-      // if delta == 1      then this is the first lane
-      // if count == s_segs then this is the last  lane
-      //
-      SPN_RASTERIZE_FLOAT     const s_delta    = spn_delta_offset() - spn_subgroup_shuffle(s_ess,s_source);
-      SPN_RASTERIZE_FLOAT     const s_count    = spn_subgroup_shuffle(s_segs,s_source);
-
-      SPN_RASTERIZE_PREDICATE const is_s_first = (s_delta == 1.0f);
-      SPN_RASTERIZE_PREDICATE const is_s_last  = (s_delta >= s_count);
-
-      //
-      // init parametric t
-      //
-      SPN_RASTERIZE_FLOAT s_t = s_delta * spn_subgroup_shuffle(s_denom,s_source); // faster than native_recip(s_count)?
-
-      //
-      // if last then override to a hard 1.0f
-      //
-      s_t    = is_s_last ? 1.0f : s_t;
-
-      //
-      // decrement by subgroup size
-      //
-      s_iss -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-      s_ess -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-      s_rem -= SPN_RASTERIZE_ELEMS_PER_SUBGROUP;
-
-      //
-      // now every lane knows what to do and the following lines will
-      // pump out up to SUBGROUP_SIZE line segments
-      //
-      // obtain the src vertices through shared or via a shuffle
-      //
-
-      //
-      // shuffle in the polynomial coefficients their source lane
-      //
-      const float s0x = spn_subgroup_shuffle(b0x,s_source);
-      const float s0y = spn_subgroup_shuffle(b0y,s_source);
-
-      const float s1x = spn_subgroup_shuffle(b1x,s_source);
-      const float s1y = spn_subgroup_shuffle(b1y,s_source);
-
-      const float s2x = spn_subgroup_shuffle(b2x,s_source);
-      const float s2y = spn_subgroup_shuffle(b2y,s_source);
-
-      //
-      // calculate "right" line segment endpoint using Horner form
-      //
-      SPN_RASTERIZE_FLOAT       l1x = round(mad(mad(s2x,s_t,s1x),s_t,s0x)); // 2 MAD + ROUND
-      SPN_RASTERIZE_FLOAT       l1y = round(mad(mad(s2y,s_t,s1y),s_t,s0y)); // 2 MAD + ROUND
-
-      //
-      // shuffle up "left" line segment endpoint
-      //
-      // NOTE: Intel's shuffle_up is unique with its elegant
-      // "previous" argument so don't get used to it
-      //
-      SPN_RASTERIZE_FLOAT       l0x = spn_subgroup_shuffle_up_1(l1x_prev,l1x);
-      SPN_RASTERIZE_FLOAT       l0y = spn_subgroup_shuffle_up_1(l1y_prev,l1y);
-
-      //
-      // save previous right endpoint
-      //
-      l1x_prev = l1x;
-      l1y_prev = l1y;
-
-      //
-      // override shuffle up if this is the first line segment
-      //
-      l0x = select(l0x,s0x,is_s_first);
-      l0y = select(l0y,s0y,is_s_first);
-
-      //
-      // sliver lines
-      //
-      spn_sliver(bp_atomics,
-                 bp_blocks,
-                 bp_ids,
-                 bp_mask,
-                 cohort_atomics,
-                 &subblocks,
-                 &blocks,
-                 &blocks_next,
-                 &sk_v,
-                 &sk_v_next,
-                 sk_extent,
-                 smem,
-                 l0x,l0y,l1x,l1y);
-    }
-
-  //
-  // - flush work-in-progress blocks
-  // - return unused block ids
-  //
-  spn_finalize(bp_atomics,
-               bp_blocks,
-               bp_ids,
-               bp_mask,
-               cohort_atomics,
-               &blocks,
-               blocks_next,
-               &sk_v,
-               sk_v_next,
-               sk_extent,
-               smem);
-}
-
-//
-// RASTERIZE LINE KERNEL
-//
-
-static
-void
-spn_rasterize_lines(__global SPN_ATOMIC_UINT         volatile * const bp_atomics,
-                    __global union spn_bp_elem                * const bp_blocks,
-                    __global uint                             * const bp_ids,
-                    spn_uint                                    const bp_mask,
-
-                    __global SPN_ATOMIC_UINT         volatile * const cohort_atomics,
-                    __global spn_ttsk_s_t                     * const sk_extent,
-
-                    __local struct spn_subgroup_smem volatile * const smem,
-
-                    spn_uint                                  * const nodeword,
-                    spn_block_id_t                            * const id,
-
-                    union spn_transform              const    * const tv,
-                    union spn_path_clip              const    * const cv,
-                    spn_uint                                    const cohort)
-{
-}
-
-//
-//
-//
-
-__kernel
-SPN_RASTERIZE_KERNEL_ATTRIBS
-void
-spn_kernel_rasterize_all(__global SPN_ATOMIC_UINT         volatile * const bp_atomics,
-                         __global union spn_bp_elem                * const bp_blocks,
-                         __global uint                             * const bp_ids,
-                         spn_uint                                    const bp_mask,
-
-                         __global SPN_ATOMIC_UINT         volatile * const cohort_atomics,
-                         __global spn_ttsk_s_t                     * const sk_extent,
-
-                         __global float8                  const    * const transforms, // FIXME -- __constant
-                         __global float4                  const    * const clips,      // FIXME -- __constant
-                         __global union spn_cmd_rasterize const    * const cmds,       // FIXME -- __constant
-                         spn_uint                                    const count)
-{
-  //
-  // declare shared memory block
-  //
-#if ( SPN_RASTERIZE_WORKGROUP_SUBGROUPS == 1 )
-  __local struct spn_subgroup_smem volatile                smem[1];
-#else
-  __local struct spn_subgroup_smem volatile                smem_wg[SPN_RASTERIZE_WORKGROUP_SUBGROUPS];
-  __local struct spn_subgroup_smem volatile * const smem = smem_wg + get_sub_group_id();
-#endif
-
-  //
-  // this is a subgroup/warp-centric kernel
-  //
-  // which subgroup in the grid is this?
-  //
-  // TAKE NOTE: the Intel GEN compiler appears to be recognizing
-  // get_group_id(0) as a uniform but the alternative calculation used
-  // when there are multiple subgroups per workgroup is not
-  // cooperating and driving spillage elsewhere.
-  //
-#if ( SPN_RASTERIZE_WORKGROUP_SUBGROUPS == 1 )
-  uint const cmd_idx = get_group_id(0);
-#else
-  uint const cmd_idx = get_group_id(0) * SPN_RASTERIZE_WORKGROUP_SUBGROUPS + get_sub_group_id();
-#endif
 
 #if 0
-  if (get_sub_group_local_id() == 0)
-    printf("+cmd_idx = %u\n",cmd_idx);
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 2);
+
+    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+    bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = key_ring[0];
+    bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = key_ring[1];
+  }
 #endif
 
   //
-  // if worksgroups are multi-subgroup then there may be excess
-  // subgroups in the final workgroup
+  // flush remaining YX/TTS values
   //
-  if (cmd_idx >= count)
+  if (key_ring[1] > 0)
+    {
+      spn_flush_rem(key_ring, block_ids);
+    }
+
+  subgroupBarrier();
+
+  //
+  // return unused blocks to the block pool
+  //
+  // SMEM READS: subblocks_rem
+  //
+  spn_free_blocks(block_ids);
+
+  //
+  // flush remaining ttrks
+  //
+  SPN_SUBGROUP_UNIFORM uint ttrk_count = SPN_RASTERIZE_SMEM().vars.ttrk_count;
+
+  if (ttrk_count == 0)
     return;
 
-#if 0
-  if (get_sub_group_local_id() == 0)
-    printf("-cmd_idx = %u\n",cmd_idx);
-#endif
-
-  //
-  // load a single command for this subgroup
-  //
-  union spn_cmd_rasterize const cmd = cmds[cmd_idx];
-
-#if 0
-  if (get_sub_group_local_id() == 0)
-    printf("[ %u ]< %u, %u, %u, %u >\n",
-           cmd_idx,
-           cmd.nodeword,
-           SPN_CMD_RASTERIZE_GET_TRANSFORM(cmd),
-           SPN_CMD_RASTERIZE_GET_CLIP(cmd),
-           SPN_CMD_RASTERIZE_GET_COHORT(cmd));
-#endif
-
-  //
-  // get first block node command word and its subblock
-  //
-  spn_uint              nodeword = cmd.nodeword; // nodeword has word-addressing
-  spn_tagged_block_id_t tag_id   = bp_blocks[nodeword].tag_id;
-  spn_block_id_tag      tag      = SPN_TAGGED_BLOCK_ID_GET_TAG(tag_id);
-  spn_block_id_t        id       = SPN_TAGGED_BLOCK_ID_GET_ID(tag_id);
-
-  //
-  // load transform -- uniform across subgroup
-  //
-  // v8: { sx shx tx shy sy ty w0 w1 }
-  //
-  // NOTE THAT WE'RE SCALING UP THE TRANSFORM BY:
-  //
-  //   [ SPN_SUBPIXEL_RESL_X_F32, SPN_SUBPIXEL_RESL_Y_F32, 1.0f ]
-  //
-  // Coordinates are scaled to subpixel resolution.  All that matters
-  // is that continuity is maintained between end path element
-  // endpoints.
-  //
-  // It's the responsibility of the host to ensure that the transforms
-  // are properly scaled either via intitializing a transform stack
-  // with the subpixel resolution scaled identity or scaling the
-  // transform before its loaded by a rasterization grid.
-  //
-  // FIXME -- horizontal load might be better than this broadcast load
-  //
-  union spn_transform const tv     = { .f32v8 = transforms[SPN_CMD_RASTERIZE_GET_TRANSFORM(cmd)] }; // uniform load
-  union spn_path_clip const cv     = { .f32v4 = clips     [SPN_CMD_RASTERIZE_GET_CLIP(cmd)     ] }; // uniform load
-  spn_uint            const cohort = SPN_CMD_RASTERIZE_MASK_COHORT(cmd); // shifted
-
-  switch (tag)
-    {
-    case SPN_BLOCK_ID_TAG_PATH_LINE:
-      spn_rasterize_lines(bp_atomics,
-                          bp_blocks,
-                          bp_ids,
-                          bp_mask,
-                          cohort_atomics,
-                          sk_extent,
-                          smem,
-                          &nodeword,&id,
-                          &tv,&cv,cohort);
-      break;
-
-    case SPN_BLOCK_ID_TAG_PATH_QUAD:
-      spn_rasterize_quads(bp_atomics,
-                          bp_blocks,
-                          bp_ids,
-                          bp_mask,
-                          cohort_atomics,
-                          sk_extent,
-                          smem,
-                          &nodeword,&id,
-                          &tv,&cv,cohort);
-      break;
-
-    case SPN_BLOCK_ID_TAG_PATH_CUBIC:
-      spn_rasterize_cubics(bp_atomics,
-                           bp_blocks,
-                           bp_ids,
-                           bp_mask,
-                           cohort_atomics,
-                           sk_extent,
-                           smem,
-                           &nodeword,&id,
-                           &tv,&cv,cohort);
-      break;
-
-    case SPN_BLOCK_ID_TAG_PATH_RAT_QUAD:
-      break;
-    case SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC:
-      break;
-
-    default:
-      break;
-    }
+  // SMEM READS: flush.ttsb, flush.yx, vars.cohort
+  spn_flush_ttrks(ttrk_count);
 }
 
 //
 //
 //
-
-#endif

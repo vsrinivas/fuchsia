@@ -11,6 +11,7 @@
 
 #include <vulkan/vulkan_core.h>
 
+#include "dispatch.h"
 #include "styling.h"
 
 //
@@ -24,7 +25,7 @@ struct spn_vk_ds_styling_t;
 //
 //
 
-spn_result
+spn_result_t
 spn_styling_impl_create(struct spn_device * const   device,
                         struct spn_styling ** const styling,
                         uint32_t const              dwords_count,
@@ -35,15 +36,15 @@ spn_styling_impl_create(struct spn_device * const   device,
 //
 
 void
-spn_styling_impl_pre_render_ds(struct spn_styling * const         styling,
+spn_styling_happens_before(struct spn_styling * const styling, spn_dispatch_id_t const id);
+
+void
+spn_styling_pre_render_bind_ds(struct spn_styling * const         styling,
                                struct spn_vk_ds_styling_t * const ds,
                                VkCommandBuffer                    cb);
 
 void
-spn_styling_impl_pre_render_wait(struct spn_styling * const   styling,
-                                 uint32_t * const             waitSemaphoreCount,
-                                 VkSemaphore * const          pWaitSemaphores,
-                                 VkPipelineStageFlags * const pWaitDstStageMask);
+spn_styling_post_render(struct spn_styling * const styling);
 
 //
 //

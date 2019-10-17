@@ -44,6 +44,12 @@ spn_ring_is_tail(struct spn_ring const * const ring, uint32_t const idx)
 }
 
 uint32_t
+spn_ring_dropped(struct spn_ring const * const ring)
+{
+  return ring->size - ring->rem;
+}
+
+uint32_t
 spn_ring_rem_nowrap(struct spn_ring const * const ring)
 {
   return ring->size - ring->head;
@@ -107,7 +113,8 @@ spn_ring_release_n(struct spn_ring * const ring, uint32_t const n)
 }
 
 //
-//
+// A subsidiary ring for when space is known to be implicitly
+// available.
 //
 
 void
@@ -120,9 +127,6 @@ spn_next_init(struct spn_next * const next, uint32_t const size)
 uint32_t
 spn_next_acquire_1(struct spn_next * const next)
 {
-  //
-  // CAUTION: this is unguarded so always test before acquiring
-  //
   uint32_t const idx  = next->head;
   uint32_t const head = idx + 1;
 
@@ -131,12 +135,30 @@ spn_next_acquire_1(struct spn_next * const next)
   return idx;
 }
 
+uint32_t
+spn_next_acquire_2(struct spn_next * const next)
+{
+  uint32_t const idx = next->head;
+
+  if (idx + 1 < next->size)
+    {
+      uint32_t const head = idx + 2;
+
+      next->head = (head < next->size) ? head : 0;
+
+      return idx;
+    }
+  else  // we need two continguous slots
+    {
+      next->head = 2;
+
+      return 0;
+    }
+}
+
 void
 spn_next_drop_n(struct spn_next * const next, uint32_t const n)
 {
-  //
-  // CAUTION: this is unguarded so always test before acquiring
-  //
   uint32_t const idx  = next->head;
   uint32_t const head = idx + n;
 

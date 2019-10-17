@@ -182,6 +182,7 @@ hsg_target_header_and_module(struct hsg_config const * const config)
             "static struct hotsort_vk_target const target =                  \n"
             "{                                                               \n"
             "  .config = {                                                   \n"
+            "#include \"hs_target_requirements.inl\"                         \n"
             "#include \"hs_target_config_init.inl\"                          \n"
             "  },                                                            \n"
             "                                                                \n"
@@ -416,8 +417,6 @@ hsg_target_glsl(struct hsg_target * const       target,
         break;
 
         case HSG_OP_TYPE_TRANSPOSE_KERNEL_PREAMBLE: {
-          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE()\n");
-
           fprintf(target->state->source, "HS_SLAB_GLOBAL_IDX_OUT();\n");
         }
         break;
@@ -457,8 +456,6 @@ hsg_target_glsl(struct hsg_target * const       target,
         break;
 
         case HSG_OP_TYPE_BS_KERNEL_PREAMBLE: {
-          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE()\n");
-
           fprintf(target->state->source, "HS_SLAB_GLOBAL_IDX_IN_OUT();\n");
         }
         break;
@@ -492,8 +489,6 @@ hsg_target_glsl(struct hsg_target * const       target,
         break;
 
         case HSG_OP_TYPE_BC_KERNEL_PREAMBLE: {
-          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE()\n");
-
           fprintf(target->state->source, "HS_SLAB_GLOBAL_IDX_OUT();\n");
         }
         break;
@@ -515,8 +510,6 @@ hsg_target_glsl(struct hsg_target * const       target,
         break;
 
         case HSG_OP_TYPE_FM_KERNEL_PREAMBLE: {
-          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE()\n");
-
           fprintf(target->state->source, "HS_FM_PREAMBLE(%u);\n", ops->a);
         }
         break;
@@ -538,8 +531,6 @@ hsg_target_glsl(struct hsg_target * const       target,
         break;
 
         case HSG_OP_TYPE_HM_KERNEL_PREAMBLE: {
-          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE()\n");
-
           fprintf(target->state->source, "HS_HM_PREAMBLE(%u);\n", ops->a);
         }
         break;
@@ -741,7 +732,7 @@ hsg_target_glsl(struct hsg_target * const       target,
         break;
 
       case HSG_OP_TYPE_BX_MERGE_H_PRED:
-        fprintf(target->state->source, "if (HS_SUBGROUP_ID() < %u)\n", ops->a);
+        fprintf(target->state->source, "if (gl_SubgroupID < %u)\n", ops->a);
         break;
 
         case HSG_OP_TYPE_BS_ACTIVE_PRED: {
@@ -750,13 +741,13 @@ hsg_target_glsl(struct hsg_target * const       target,
           if (m->warps <= 32)
             {
               fprintf(target->state->source,
-                      "if (((1u << HS_SUBGROUP_ID()) & 0x%08X) != 0)\n",
+                      "if (((1u << gl_SubgroupID) & 0x%08X) != 0)\n",
                       m->levels[ops->b].active.b32a2[0]);
             }
           else
             {
               fprintf(target->state->source,
-                      "if (((1UL << HS_SUBGROUP_ID()) & 0x%08X%08XL) != 0L)\n",
+                      "if (((1UL << gl_SubgroupID) & 0x%08X%08XL) != 0L)\n",
                       m->levels[ops->b].active.b32a2[1],
                       m->levels[ops->b].active.b32a2[0]);
             }

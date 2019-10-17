@@ -97,14 +97,14 @@
 #define SPN_EXPAND_3()                          \
   SPN_EXPAND_X(0, 1, 0, false)                  \
   SPN_EXPAND_X(1, 2, 0, false)                  \
-  SPN_EXPAND_X(2, 3, 1, true)
+  SPN_EXPAND_X(2, 3, 1,  true)
 
 #define SPN_EXPAND_5()                          \
   SPN_EXPAND_X(0, 1, 0, false)                  \
   SPN_EXPAND_X(1, 2, 0, false)                  \
   SPN_EXPAND_X(2, 3, 1, false)                  \
   SPN_EXPAND_X(3, 4, 2, false)                  \
-  SPN_EXPAND_X(4, 5, 3, true)
+  SPN_EXPAND_X(4, 5, 3,  true)
 
 #define SPN_EXPAND_6()                          \
   SPN_EXPAND_X(0, 1, 0, false)                  \
@@ -112,7 +112,7 @@
   SPN_EXPAND_X(2, 3, 1, false)                  \
   SPN_EXPAND_X(3, 4, 2, false)                  \
   SPN_EXPAND_X(4, 5, 3, false)                  \
-  SPN_EXPAND_X(5, 6, 4, true)
+  SPN_EXPAND_X(5, 6, 4,  true)
 
 #define SPN_EXPAND_7()                          \
   SPN_EXPAND_X(0, 1, 0, false)                  \
@@ -121,7 +121,7 @@
   SPN_EXPAND_X(3, 4, 2, false)                  \
   SPN_EXPAND_X(4, 5, 3, false)                  \
   SPN_EXPAND_X(5, 6, 4, false)                  \
-  SPN_EXPAND_X(6, 7, 5, true)
+  SPN_EXPAND_X(6, 7, 5,  true)
 
 #define SPN_EXPAND_9()                          \
   SPN_EXPAND_X(0, 1, 0, false)                  \
@@ -132,7 +132,7 @@
   SPN_EXPAND_X(5, 6, 4, false)                  \
   SPN_EXPAND_X(6, 7, 5, false)                  \
   SPN_EXPAND_X(7, 8, 6, false)                  \
-  SPN_EXPAND_X(8, 9, 7, true)
+  SPN_EXPAND_X(8, 9, 7,  true)
 
 #define SPN_EXPAND_10()                         \
   SPN_EXPAND_X(0, 1, 0, false)                  \
@@ -144,7 +144,7 @@
   SPN_EXPAND_X(6, 7, 5, false)                  \
   SPN_EXPAND_X(7, 8, 6, false)                  \
   SPN_EXPAND_X(8, 9, 7, false)                  \
-  SPN_EXPAND_X(9, 10,8, true)
+  SPN_EXPAND_X(9, 10,8,  true)
 
 #define SPN_EXPAND_11()                         \
   SPN_EXPAND_X(0, 1, 0, false)                  \

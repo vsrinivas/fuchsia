@@ -8,23 +8,25 @@
 // KERNEL: FILLS EXPAND
 //
 
-#extension GL_GOOGLE_include_directive        : require
-#extension GL_KHR_shader_subgroup_basic       : require
-#extension GL_KHR_shader_subgroup_vote        : require
-#extension GL_KHR_shader_subgroup_ballot      : require
-#extension GL_KHR_shader_subgroup_arithmetic  : require
-#extension GL_KHR_shader_subgroup_shuffle     : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_vote : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#extension GL_KHR_shader_subgroup_shuffle : require
 
 //
 //
 //
 
 #include "spn_config.h"
-#include "spn_vk_layouts.h"
+#include "vk_layouts.h"
 
 //
 // Note that we may want to launch a workgroup of multiple subgroups
 // but typically will be launching a single subgroup.
+//
+// REMOVEME(allanmac): once subgroup_size_control is ready:
 //
 // Intel's variable subgroup size is currently not controllable and
 // complicates reasoning about expected code generation.
@@ -35,175 +37,194 @@
 // no multi-subgroup workgroups.
 //
 
-layout(local_size_x = SPN_KERNEL_FILLS_EXPAND_WORKGROUP_SIZE) in;
+layout(local_size_x = SPN_DEVICE_FILLS_EXPAND_WORKGROUP_SIZE) in;
 
 //
-// BUFFERS
 //
-// main(buffer uint  bp_blocks[],
-//      buffer uint  map[],
-//      buffer uint  prim_scan[], // exclusive scan-add of primitive counts
-//      buffer uvec4 fill_cmds[],
-//      buffer uvec4 rast_cmds[])
 //
 
 SPN_VK_GLSL_DECL_KERNEL_FILLS_EXPAND();
 
 //
+// CONSTANTS
+//
+
+#define SPN_FILLS_EXPAND_SUBGROUP_SIZE (1 << SPN_DEVICE_FILLS_EXPAND_SUBGROUP_SIZE_LOG2)
+
+#define SPN_FILLS_EXPAND_SUBGROUPS                                                                 \
+  (SPN_DEVICE_FILLS_EXPAND_WORKGROUP_SIZE / SPN_FILLS_EXPAND_SUBGROUP_SIZE)
+
+//
+// BLOCK EXPANSION
+//
+
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE                                                         \
+  (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_FILLS_EXPAND_SUBGROUP_SIZE)
+
 //
 //
+//
 
-#if   (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE == 1)
+#if (SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE == 1)
 
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND()       SPN_EXPAND_1()
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST  0
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND() SPN_EXPAND_1()
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST 0
 
-#elif (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE == 2)
+#elif (SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE == 2)
 
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND()       SPN_EXPAND_2()
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST  1
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND() SPN_EXPAND_2()
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST 1
 
-#elif (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE == 4)
+#elif (SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE == 4)
 
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND()       SPN_EXPAND_4()
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST  3
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND() SPN_EXPAND_4()
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST 3
 
-#elif (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE == 8)
+#elif (SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE == 8)
 
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND()       SPN_EXPAND_8()
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST  7
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND() SPN_EXPAND_8()
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST 7
 
-#elif (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE == 16)
+#elif (SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE == 16)
 
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND()       SPN_EXPAND_16()
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST  15
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND() SPN_EXPAND_16()
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST 15
 
-#elif (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE == 32)
+#elif (SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE == 32)
 
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND()       SPN_EXPAND_32()
-#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST  31
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND() SPN_EXPAND_32()
+#define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST 31
 
 #endif
-
-//
-// COMPILE-TIME CONSTANTS
-//
-
-#define SPN_KERNEL_FILLS_EXPAND_SUBGROUPS  (SPN_KERNEL_FILLS_EXPAND_WORKGROUP_SIZE / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE)
 
 //
 // RUN-TIME PREDICATES
 //
 
-#define SPN_FILLS_EXPAND_BROADCAST(E,O,I)                               \
-  subgroupBroadcast(E,O - I * SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE)
+#define SPN_FILLS_EXPAND_BROADCAST(E, O, I)                                                        \
+  subgroupBroadcast(E, O - I * SPN_FILLS_EXPAND_SUBGROUP_SIZE)
+
+//
+// UTILITY
+//
+
+#define SPN_CMD_RASTERIZE_I_TO_NODE_DWORD(I)                                                       \
+  (I * SPN_FILLS_EXPAND_SUBGROUP_SIZE + gl_SubgroupInvocationID)
 
 //
 //
 //
 
-void main()
+void
+main()
 {
   //
   // every subgroup/simd loads the same command
   //
-#if (SPN_KERNEL_FILLS_EXPAND__WORKGROUP_SIZE == SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE)
-  SPN_SUBGROUP_UNIFORM const uint sid = gl_WorkGroupID.x;
+#if (SPN_FILLS_EXPAND_SUBGROUPS == 1)
+
+  SPN_SUBGROUP_UNIFORM
+  uint fsp_idx = gl_WorkGroupID.x;
+
 #else
-  SPN_SUBGROUP_UNIFORM const uint sid = gl_WorkGroupID.x * SPN_KERNEL_FILLS_EXPAND_SUBGROUPS + gl_SubgroupID;
+
+  SPN_SUBGROUP_UNIFORM
+  uint fsp_idx = gl_WorkGroupID.x * SPN_FILLS_EXPAND_SUBGROUPS + gl_SubgroupID;
 
   // if the workgroup is made up of multiple subgroups then exit if
   // the trailing subgroups have no work to do
-  if (sid >= cmd_count)
+  if (fsp_idx >= cmd_span)
     return;
+
 #endif
+
+  //
+  // where are we in the ring?
+  //
+  uint cmd_idx = fsp_idx + cmd_head;
+
+  if (cmd_idx >= cmd_size)
+    {
+      cmd_idx -= cmd_size;
+    }
 
   //
   // Each subgroup loads an spn_cmd_fill and the packed prim counts
   // associated with this command.
   //
   // Note that the 'path_h' component was converted to a node_id in
-  // order to avoid a sparse lookup in the map[].
+  // order to avoid a very scattered lookup in the map[].
   //
-  SPN_SUBGROUP_UNIFORM       uvec4 cmd              = fill_cmds[sid];
-  SPN_SUBGROUP_UNIFORM const uvec4 rast_base_packed = fill_scan_prefix[sid];
-  SPN_SUBGROUP_UNIFORM       uint  node_id          = SPN_CMD_FILL_GET_PATH_H(cmd);
+  // The cmd is not subgroup uniform because we repeatedly reuse it in
+  // each lane.
+  //
+  uvec4 cmd = fill_cmds[cmd_idx];
+
+  //
+  // these are subgroup uniform
+  //
+  SPN_SUBGROUP_UNIFORM uint        node_id          = SPN_CMD_RASTERIZE_GET_NODE_ID(cmd);
+  SPN_SUBGROUP_UNIFORM const uvec4 rast_base_packed = fill_scan_prefix[fsp_idx];
+
+  //
+  // DEBUG
+  //
+#if 0
+  {
+    if (gl_SubgroupInvocationID == 0)
+      {
+        uint debug_base = atomicAdd(bp_debug_count[0], 5);
+
+        bp_debug[debug_base + 0] = rast_base_packed[0];
+        bp_debug[debug_base + 1] = rast_base_packed[1];
+        bp_debug[debug_base + 2] = rast_base_packed[2];
+        bp_debug[debug_base + 3] = rast_base_packed[3];
+        bp_debug[debug_base + 4] = fsp_idx;
+      }
+  }
+#endif
 
   //
   // vertically count tags
+  //
+  // clang-format off
   //
 #if SPN_BLOCK_ID_TAG_PATH_COUNT <= 5
   //
   // 32-bits can hold 5 6-bit fields of [0,63]
   //
-#define SPN_FILLS_EXPAND_TAG_COUNT_TYPE  uint
-
-#define SPN_FILLS_EXPAND_TAG_COUNT_INIT(n)      \
-  SPN_FILLS_EXPAND_TAG_COUNT_TYPE n = 0
-
-#define SPN_FILLS_EXPAND_TAG_COUNT_GET(c,i)     \
-  ((c >> (i * 6)) & ((1<<6)-1))
+#define SPN_FILLS_EXPAND_TAG_COUNT_TYPE         uint
+#define SPN_FILLS_EXPAND_TAG_COUNT_INIT(n_)     SPN_FILLS_EXPAND_TAG_COUNT_TYPE n_ = 0
+#define SPN_FILLS_EXPAND_TAG_COUNT_GET(c_, i_)  SPN_BITFIELD_EXTRACT(c_,int(i_*6),6)
+// #define SPN_FILLS_EXPAND_TAG_COUNT_GET(c, i)  ((c >> (i * 6)) & ((1 << 6) - 1))
 
   //
-  // Is shifting left >= 32 defined behavior in GLSL?  The spec is
-  // vague.
+  // Left shifting >= 32 doesn't saturate to zero. The spec speaks to
+  // this but it's still a little vague.
   //
-#if 0
-#define SPN_FILLS_EXPAND_TAG_COUNT_ADD(c,t)     \
-  c += (1 << (t * 6))
-#elif 0
-#define SPN_FILLS_EXPAND_TAG_COUNT_ADD(c,t)     \
-  c += (1 << min(32,t*6))
-#else
-#define SPN_FILLS_EXPAND_TAG_COUNT_ADD(c,t)                     \
-  c += ((t < SPN_BLOCK_ID_TAG_PATH_COUNT ? 1 : 0) << (t * 6))
-#endif
+  // FIXME(allanmac): make this a maskable operation by altering the
+  // invalid path flag
+  //
+#define SPN_FILLS_EXPAND_TAG_COUNT_ADD(c_, t_)                    \
+  c_ += ((t_ < SPN_BLOCK_ID_TAG_PATH_COUNT ? 0x1 : 0x0) << (t_ * 6))
 
   //
-  // fill this in if there are more than 5 path primitive types
+  // Fill this in if there are ever more than 5 path primitive types.
   //
 #else
-
-#error FIXME -- more than 5 tags not implemented.
-
+#error FIXME -- no support for more than 5 tags.
 #endif
+  //
+  // clang-format on
+  //
 
   //
   // load entire head
   //
   const uint h_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                                   \
-  uint h##I = bp_blocks[h_idx + I * SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE];
-
-  SPN_FILLS_EXPAND_BLOCK_EXPAND();
-
-  //
-  // pick out count.nodes from the header
-  //
-  uint count_nodes;
-
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                                                                   \
-  if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,SPN_PATH_HEAD_OFFSET_NODES,I)) {        \
-    count_nodes = SPN_FILLS_EXPAND_BROADCAST(h##I,SPN_PATH_HEAD_OFFSET_NODES,I);                                \
-  }
-
-  SPN_FILLS_EXPAND_BLOCK_EXPAND();
-
-  //
-  // invalidate header components
-  //
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                                           \
-  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {        \
-    if (SPN_PATH_HEAD_PARTIALLY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {      \
-      if (SPN_PATH_HEAD_IS_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {           \
-        h##I = SPN_TAGGED_BLOCK_ID_INVALID;                                             \
-      }                                                                                 \
-    }                                                                                   \
-  }
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) uint h##I = bp_blocks[h_idx + I * SPN_FILLS_EXPAND_SUBGROUP_SIZE];
 
   SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
@@ -213,10 +234,12 @@ void main()
   uint rast_base = 0;
 
   //
-  // FIXME -- UNPACK THESE HORIZONTALLY / IN PARALLEL
+  // FIXME(allanmac): UNPACK THESE HORIZONTALLY / IN PARALLEL -- this
+  // is sequentially unpacking the tag counts.
   //
-  // FIXME -- this is assuming a subgroup size of >= 5 -- won't work for
-  // quad-sized subgroups (ARM Bifrost, iOS, ...)
+  // FIXME(allanmac): this is assuming a subgroup size of >= 5 --
+  // won't work for quad-sized subgroups (ARM Bifrost v1, iOS, ...)
+  // without updating this logic.
   //
   if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_LINE)
     rast_base = SPN_PATH_PRIMS_GET_LINES(rast_base_packed);
@@ -233,10 +256,109 @@ void main()
   if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)
     rast_base = SPN_PATH_PRIMS_GET_RAT_CUBICS(rast_base_packed);
 
+    //
+    // DEBUG -- dump the head
+    //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_BLOCK_POOL_BLOCK_DWORDS);
+
+    debug_base = subgroupBroadcast(debug_base, 0);
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  bp_debug[debug_base + I * SPN_FILLS_EXPAND_SUBGROUP_SIZE + gl_SubgroupInvocationID] = h##I;
+
+    SPN_FILLS_EXPAND_BLOCK_EXPAND();
+  }
+#endif
+
   //
-  // FIXME -- the stores produced by this remaining code are not
-  // coalesced.  It might not matter but, if it does, we can probably do
-  // better and still retain portability.
+  // pick out count.nodes from the header
+  //
+  uint count_nodes;
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_FILLS_EXPAND_SUBGROUP_SIZE, SPN_PATH_HEAD_OFFSET_NODES, I))  \
+    {                                                                                              \
+      count_nodes = SPN_FILLS_EXPAND_BROADCAST(h##I, SPN_PATH_HEAD_OFFSET_NODES, I);               \
+    }
+
+  SPN_FILLS_EXPAND_BLOCK_EXPAND();
+
+  //
+  // invalidate header components
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
+    {                                                                                              \
+      if (SPN_PATH_HEAD_PARTIALLY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                       \
+        {                                                                                          \
+          if (SPN_PATH_HEAD_IS_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                          \
+            {                                                                                      \
+              h##I = SPN_TAGGED_BLOCK_ID_INVALID;                                                  \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+  SPN_FILLS_EXPAND_BLOCK_EXPAND();
+
+  //
+  // save the next node id
+  //
+  {
+    SPN_SUBGROUP_UNIFORM const uint head_tbid =
+      subgroupBroadcast(SPN_GLSL_CONCAT(h, SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST),
+                        SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
+
+    node_id = SPN_TAGGED_BLOCK_ID_GET_ID(head_tbid);
+  }
+
+//
+// DEBUG -- dump the head with its header invalidated
+//
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_BLOCK_POOL_BLOCK_DWORDS);
+
+    debug_base = subgroupBroadcast(debug_base,0);
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  bp_debug[debug_base + I * SPN_FILLS_EXPAND_SUBGROUP_SIZE + gl_SubgroupInvocationID] = h##I;
+
+    SPN_FILLS_EXPAND_BLOCK_EXPAND();
+  }
+#endif
+
+  //
+  // DEBUG
+  //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], SPN_FILLS_EXPAND_SUBGROUP_SIZE);
+
+    debug_base = subgroupBroadcast(debug_base,0);
+
+    bp_debug[debug_base + gl_SubgroupInvocationID] = rast_base;
+  }
+#endif
+
+  //
+  // FIXME(allanmac): the stores produced by this remaining code are
+  // not coalesced.  It might not matter but, if it does, we can
+  // probably do better and still retain portability.
   //
   // The strategy would to use local memory to accrue 5 subgroup-width
   // arrays of OR'd column bitmasks of path primitives.
@@ -251,49 +373,90 @@ void main()
     //
     SPN_FILLS_EXPAND_TAG_COUNT_INIT(tags_count);
 
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                                           \
-    if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {      \
-      h##I = SPN_TAGGED_BLOCK_ID_GET_TAG(h##I);                                         \
-      SPN_FILLS_EXPAND_TAG_COUNT_ADD(tags_count,h##I);                                  \
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
+    {                                                                                              \
+      h##I = SPN_TAGGED_BLOCK_ID_GET_TAG(h##I);                                                    \
+      SPN_FILLS_EXPAND_TAG_COUNT_ADD(tags_count, h##I);                                            \
     }
 
     SPN_FILLS_EXPAND_BLOCK_EXPAND();
+
+    //
+    // DEBUG -- dump the head with tag counts replaced
+    //
+#if 0
+    {
+      uint debug_base = 0;
+
+      if (gl_SubgroupInvocationID == 0)
+        debug_base = atomicAdd(bp_debug_count[0], SPN_BLOCK_POOL_BLOCK_DWORDS);
+
+      debug_base = subgroupBroadcast(debug_base, 0);
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  bp_debug[debug_base + I * SPN_FILLS_EXPAND_SUBGROUP_SIZE + gl_SubgroupInvocationID] = h##I;
+
+      SPN_FILLS_EXPAND_BLOCK_EXPAND();
+    }
+#endif
+
+    //
+    // DEBUG -- dump the tags_count
+    //
+#if 0
+    {
+      uint debug_base = 0;
+
+      if (gl_SubgroupInvocationID == 0)
+        debug_base = atomicAdd(bp_debug_count[0], SPN_FILLS_EXPAND_SUBGROUP_SIZE);
+
+      debug_base = subgroupBroadcast(debug_base, 0);
+
+      bp_debug[debug_base + gl_SubgroupInvocationID] = tags_count;
+    }
+#endif
 
     //
     // we now have tag counts for this node...
     //
     // write out rasterize cmds for each tag type
     //
-    const uint word_base = gl_SubgroupInvocationID * (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE);
-
-    for (uint ii=0; ii<SPN_BLOCK_ID_TAG_PATH_COUNT; ii++)
+    // FIXME(allanmac): expand the outer tag loop so we can use broadcasts and not shuffles
+    //
+    for (uint ii = 0; ii < SPN_BLOCK_ID_TAG_PATH_COUNT; ii++)
       {
-        const uint tag_count = SPN_FILLS_EXPAND_TAG_COUNT_GET(tags_count,ii);
+        const uint tag_count = SPN_FILLS_EXPAND_TAG_COUNT_GET(tags_count, ii);
 
         if (subgroupAny(tag_count > 0))
           {
-            const uint r_off = subgroupExclusiveAdd(tag_count);
-            uint       r_idx = subgroupShuffle(rast_base,ii) + r_off; // GLSL: ii has to be a compile-time constant
+            const uint tag_inc = subgroupInclusiveAdd(tag_count);
+            const uint tag_exc = tag_inc - tag_count;
 
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                                                   \
-            if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {      \
-              if (h##I == ii) {                                                                 \
-                SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd,word_base + I);                            \
-                rast_cmds[r_idx++] = cmd;                                                       \
-              }                                                                                 \
-            }
+            SPN_SUBGROUP_UNIFORM const uint tag_red =
+              subgroupBroadcast(tag_inc, SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
 
-            SPN_FILLS_EXPAND_BLOCK_EXPAND();
-
-            //
-            // update the rast_base for this path type
-            //
-            const uint rast_base_new = subgroupBroadcast(r_idx,SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE-1);
+            uint tag_rast_idx = subgroupShuffle(rast_base, ii) + tag_exc;
 
             if (gl_SubgroupInvocationID == ii)
-              rast_base = rast_base_new;
+              {
+                rast_base += tag_red;
+              }
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
+    {                                                                                              \
+      if (h##I == ii)                                                                              \
+        {                                                                                          \
+          SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd, SPN_CMD_RASTERIZE_I_TO_NODE_DWORD(I));             \
+          rast_cmds[tag_rast_idx++] = cmd;                                                         \
+        }                                                                                          \
+    }
+
+            SPN_FILLS_EXPAND_BLOCK_EXPAND();
           }
       }
   }
@@ -301,43 +464,45 @@ void main()
   //
   // are we done?
   //
-  if (count_nodes-- == 0)
-    return;
-
-  //
-  // get the "next" id - id of next block is in last lane
-  //
-  node_id = subgroupBroadcast(SPN_GLSL_CONCAT(h,SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST),
-                              SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE-1);
-
-  SPN_CMD_RASTERIZE_SET_NODE_ID(cmd,node_id);
-
-  //
-  // process next node
-  //
-  while (true)
+  while (count_nodes-- > 0)
     {
+      //
+      // process next node
+      //
+      SPN_CMD_RASTERIZE_SET_NODE_ID(cmd, node_id);
+
       //
       // load entire node
       //
       const uint n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                                   \
-      uint n##I = bp_blocks[n_idx + I * SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE];
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) uint n##I = bp_blocks[n_idx + I * SPN_FILLS_EXPAND_SUBGROUP_SIZE];
 
       SPN_FILLS_EXPAND_BLOCK_EXPAND();
+
+      //
+      // save the next node id
+      //
+      {
+        SPN_SUBGROUP_UNIFORM const uint node_tbid =
+          subgroupBroadcast(SPN_GLSL_CONCAT(n, SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST),
+                            SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
+
+        node_id = SPN_TAGGED_BLOCK_ID_GET_ID(node_tbid);
+      }
 
       //
       // how many tags are there per lane?
       //
       SPN_FILLS_EXPAND_TAG_COUNT_INIT(tags_count);
 
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L) {                                 \
-        n##I = SPN_TAGGED_BLOCK_ID_GET_TAG(n##I);               \
-        SPN_FILLS_EXPAND_TAG_COUNT_ADD(tags_count,n##I);        \
-      }
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  {                                                                                                \
+    n##I = SPN_TAGGED_BLOCK_ID_GET_TAG(n##I);                                                      \
+    SPN_FILLS_EXPAND_TAG_COUNT_ADD(tags_count, n##I);                                              \
+  }
 
       SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
@@ -346,51 +511,38 @@ void main()
       //
       // write out rasterize cmds for each tag type
       //
-      const uint word_base = gl_SubgroupInvocationID * (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE);
-
-      for (uint ii=0; ii<SPN_BLOCK_ID_TAG_PATH_COUNT; ii++)
+      // FIXME(allanmac): expand the outer tag loop so we can use broadcasts and not shuffles
+      //
+      for (uint ii = 0; ii < SPN_BLOCK_ID_TAG_PATH_COUNT; ii++)
         {
-          const uint tag_count = SPN_FILLS_EXPAND_TAG_COUNT_GET(tags_count,ii);
+          const uint tag_count = SPN_FILLS_EXPAND_TAG_COUNT_GET(tags_count, ii);
 
           if (subgroupAny(tag_count > 0))
             {
-              const uint r_off = subgroupExclusiveAdd(tag_count);
-              uint       r_idx = subgroupShuffle(rast_base,ii) + r_off; // GLSL: ii has to be a compile-time constant
+              const uint tag_inc = subgroupInclusiveAdd(tag_count);
+              const uint tag_exc = tag_inc - tag_count;
 
-#undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                                                   \
-              if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {    \
-                if (h##I == ii) {                                                               \
-                  SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd,word_base + I);                          \
-                  rast_cmds[r_idx++] = cmd;                                                     \
-                }                                                                               \
-              }
+              SPN_SUBGROUP_UNIFORM const uint tag_red =
+                subgroupBroadcast(tag_inc, SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
 
-              SPN_FILLS_EXPAND_BLOCK_EXPAND();
-
-              //
-              // update the rast_base for this path type
-              //
-              const uint rast_base_new = subgroupBroadcast(r_idx,SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE-1);
+              uint tag_rast_idx = subgroupShuffle(rast_base, ii) + tag_exc;
 
               if (gl_SubgroupInvocationID == ii)
-                rast_base = rast_base_new;
+                {
+                  rast_base += tag_red;
+                }
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (n##I == ii)                                                                                  \
+    {                                                                                              \
+      SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd, SPN_CMD_RASTERIZE_I_TO_NODE_DWORD(I));                 \
+      rast_cmds[tag_rast_idx++] = cmd;                                                             \
+    }
+
+              SPN_FILLS_EXPAND_BLOCK_EXPAND();
             }
         }
-
-      //
-      // are we done?
-      //
-      if (count_nodes-- == 0)
-        return;
-
-      //
-      // get the "next" id - id of next block is in last lane
-      //
-      node_id = subgroupBroadcast(SPN_GLSL_CONCAT(h,SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST),
-                                  SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE-1);
-
-      SPN_CMD_RASTERIZE_SET_NODE_ID(cmd,node_id);
     }
 }
 

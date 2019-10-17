@@ -6,6 +6,14 @@
 #define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_SUBALLOCATOR_H_
 
 //
+// NOTE(allanmac): We may want to move this into 'common'...
+//
+// NOTE(allanmac): It's more likely we get rid of this and replace it
+// with a ring/bump allocator because the allocation patterns are
+// simpler than in the previous CUDA and OpenCL implementations.
+//
+
+//
 // This is a suballocator for a large extent typically less than 4GB.
 //
 // The SPN pipeline will use this for ephemeral host and device memory
@@ -59,28 +67,36 @@ typedef uint64_t spn_subbuf_size_t;  // >=4GB
 // it and it simplifies context allocation.
 //
 
+//
+// clang-format off
+//
+
 struct spn_suballocator
 {
   struct
   {
-    uint32_t avail;
-    uint32_t spare;
-  } rem;  // inuse = count - (avail + spare)
+    uint32_t          avail;
+    uint32_t          spare;
+  } rem;                          // inuse = count - (avail + spare)
 
-  spn_subbuf_size_t size;   // size of memory extent
-  spn_subbuf_size_t total;  // total outstanding allocations
+  spn_subbuf_size_t   size;       // size of memory extent
+  spn_subbuf_size_t   total;      // total outstanding allocations
 
-  uint32_t alignment;  // required pow2 alignment
-  uint32_t count;      // number of subbufs
+  uint32_t            alignment;  // required pow2 alignment
+  uint32_t            count;      // number of subbufs
 
   struct spn_subbuf * subbufs;
 
-  spn_subbuf_id_t * ids;  // [<-AVAIL-><-empty-><-SPARE->]
+  spn_subbuf_id_t   * ids;        // [<-AVAIL-><-empty-><-SPARE->]
 
 #ifndef NDEBUG
-  char const * name;
+  char const        * name;
 #endif
 };
+
+//
+// clang-format on
+//
 
 //
 // Assumes 'size' is a multiple of power-of-two 'align'
@@ -99,13 +115,14 @@ spn_suballocator_dispose(struct spn_suballocator * const        suballocator,
                          struct spn_allocator_host_perm * const host_perm);
 
 //
-//
+// FIXME(allanmac): go ahead and create a typedef for the wait function
+// so that clang-format stops mangling the prototype.
 //
 
 void
 spn_suballocator_subbuf_alloc(struct spn_suballocator * const suballocator,
                               struct spn_device * const       device,
-                              spn_result (*const wait)(struct spn_device * const device),
+                              spn_result_t (*const wait)(struct spn_device * const device),
                               uint64_t const          size,
                               spn_subbuf_id_t * const subbuf_id,
                               uint64_t * const        subbuf_origin,

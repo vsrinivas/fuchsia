@@ -8,23 +8,39 @@
 //
 //
 
-#extension GL_GOOGLE_include_directive        : require
-#extension GL_KHR_shader_subgroup_basic       : require
-#extension GL_KHR_shader_subgroup_arithmetic  : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
 
 //
 //
 //
 
 #include "spn_config.h"
-#include "spn_vk_layouts.h"
+#include "vk_layouts.h"
+
+//
+// CONSTANTS
+//
+
+#define SPN_FILLS_DISPATCH_SUBGROUP_SIZE (1 << SPN_DEVICE_FILLS_DISPATCH_SUBGROUP_SIZE_LOG2)
+
+//
+// If the subgroup size is less than SPN_BLOCK_ID_TAG_PATH_COUNT then
+// we use a different strategy.
+//
+
+#define SPN_FILLS_DISPATCH_SUBGROUP_SIZE_LT_TAG_PATH_COUNT                                         \
+  (SPN_FILLS_DISPATCH_SUBGROUP_SIZE < SPN_BLOCK_ID_TAG_PATH_COUNT)
 
 //
 //
 //
 
-#if (((SPN_BLOCK_ID_TAG_PATH_COUNT + SPN_BLOCK_ID_TAG_PATH_COUNT - 1) / SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE) == 2)
-#extension GL_KHR_shader_subgroup_ballot      : require
+#if SPN_FILLS_DISPATCH_SUBGROUP_SIZE_LT_TAG_PATH_COUNT
+
+#extension GL_KHR_shader_subgroup_ballot : require
+
 #endif
 
 //
@@ -40,7 +56,7 @@
 // The sum is stored in the 4 element of each quad.
 //
 
-layout(local_size_x = SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE) in;
+layout(local_size_x = SPN_FILLS_DISPATCH_SUBGROUP_SIZE) in;
 
 //
 // main(buffer uint prim_counts[sizeof(uvec4) * 5]);
@@ -48,41 +64,42 @@ layout(local_size_x = SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE) in;
 
 SPN_VK_GLSL_DECL_KERNEL_FILLS_DISPATCH();
 
-//
-// FIXME -- aliasing hack!
-//
-
-layout(set = 1, binding = SPN_VK_BINDING_FILL_SCAN, std430) buffer _fill_scan_counts_uvec4 {
-  uvec4 fill_scan_counts_uvec4[5];
-};
 
 //
+// BLOCK POOL DEBUG
+//
+
+SPN_VK_GLSL_DEBUG(0);
+
+//
 //
 //
 
-void main()
+void
+main()
 {
-#if (((SPN_BLOCK_ID_TAG_PATH_COUNT + SPN_BLOCK_ID_TAG_PATH_COUNT - 1) / SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE) == 2)
+#if SPN_FILLS_DISPATCH_SUBGROUP_SIZE_LT_TAG_PATH_COUNT
   //
-  // SIMD4 -- ARM Bifrost and maybe some other small GPUs
+  // SIMD4 -- ARM Bifrost and maybe very small future GPUs
   //
-  uvec4 dispatch0 = uvec4(0,1,1,0);
-  uvec4 dispatch1 = uvec4(0,1,1,0);
+  uvec4 dispatch0 = uvec4(0, 1, 1, 0);
+  uvec4 dispatch1 = uvec4(0, 1, 1, 0);
 
   //
   // load
   //
   dispatch0[0] = fill_scan_counts[gl_SubgroupInvocationID];
 
-  if (SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
-    dispatch1[0] = fill_scan_counts[SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID];
+  if (SPN_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
+    dispatch1[0] = fill_scan_counts[SPN_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID];
 
   //
   // exclusive scan-add of fill_scan_counts
   //
   dispatch0[3] = subgroupExclusiveAdd(dispatch0[0]);
 
-  const uint dispatch0_total = subgroupBroadcast(dispatch0[3]+dispatch0[0],SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE-1);
+  const uint dispatch0_total =
+    subgroupBroadcast(dispatch0[3] + dispatch0[0], SPN_FILLS_DISPATCH_SUBGROUP_SIZE - 1);
 
   dispatch1[3] = subgroupExclusiveAdd(dispatch1[0]) + dispatch0_total;
 
@@ -91,15 +108,14 @@ void main()
   //
   fill_scan_counts_uvec4[gl_SubgroupInvocationID] = dispatch0;
 
-  if (SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
-    fill_scan_counts_uvec4[SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID] = dispatch1;
+  if (SPN_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
+    fill_scan_counts_uvec4[SPN_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID] = dispatch1;
 
 #else
-
   //
   // SIMD8+ -- every other GPU I'm aware of...
   //
-  uvec4 dispatch = uvec4(0,1,1,0);
+  uvec4 dispatch = uvec4(0, 1, 1, 0);
 
   // valid lane?
   const bool is_valid = gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT;
@@ -108,12 +124,34 @@ void main()
   if (is_valid)
     dispatch[0] = fill_scan_counts[gl_SubgroupInvocationID];
 
-  // exclusive scan-add
+  // exclusive scan-add of commands by type
   dispatch[3] = subgroupExclusiveAdd(dispatch[0]);
 
   // store
   if (is_valid)
-    fill_scan_counts_uvec4[gl_SubgroupInvocationID] = dispatch;
+    fill_scan_dispatch[gl_SubgroupInvocationID] = dispatch;
+
+    //
+    // DEBUG -- DUMP DISPATCHES
+    //
+#if 0
+
+  uint debug_base = 0;
+
+  if (gl_SubgroupInvocationID == 0)
+    debug_base = atomicAdd(bp_debug_count[0], SPN_BLOCK_ID_TAG_PATH_COUNT * 4);
+
+  debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID * 4;
+
+  if (is_valid)
+    {
+      bp_debug[debug_base + 0] = dispatch[0];
+      bp_debug[debug_base + 1] = dispatch[1];
+      bp_debug[debug_base + 2] = dispatch[2];
+      bp_debug[debug_base + 3] = dispatch[3];
+    }
+
+#endif
 
 #endif
 }

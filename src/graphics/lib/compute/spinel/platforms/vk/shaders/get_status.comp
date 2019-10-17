@@ -1,0 +1,48 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+//
+//
+
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
+
+//
+//
+//
+
+#include "spn_config.h"
+#include "vk_layouts.h"
+
+//
+//
+//
+
+layout(local_size_x = SPN_DEVICE_GET_STATUS_WORKGROUP_SIZE) in;
+
+//
+//
+//
+
+SPN_VK_GLSL_DECL_KERNEL_GET_STATUS();
+
+//
+//
+//
+
+void
+main()
+{
+  if (gl_SubgroupInvocationID < 2)
+    {
+      status_bp_atomics[gl_SubgroupInvocationID] = atomicAdd(bp_atomics[gl_SubgroupInvocationID], 0);
+    }
+}
+
+//
+//
+//

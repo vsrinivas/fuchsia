@@ -26,6 +26,7 @@
 #define SPN_MEMBER_UINT(name)                    SPN_TYPE_UINT  name
 #define SPN_MEMBER_STRUCT(type,name)             type           name
 #define SPN_MEMBER_FARRAY_UINT(name,len)         SPN_TYPE_UINT  name[len]
+#define SPN_MEMBER_FARRAY_UVEC4(name,len)        SPN_TYPE_UVEC4 name[len]
 #define SPN_MEMBER_VARRAY_UINT(name)             SPN_TYPE_UINT  name[]
 #define SPN_MEMBER_VARRAY_VEC4(name)             SPN_TYPE_VEC4  name[]
 #define SPN_MEMBER_VARRAY_UVEC2(name)            SPN_TYPE_UVEC2 name[]
@@ -37,16 +38,13 @@
 //
 //
 
-#define SPN_VK_GLSL_MQ_RW                 // read and write by shader
-#define SPN_VK_GLSL_MQ_NOACCESS           // no access by shader
+#define SPN_VK_GLSL_ALIGN_GPU_SEGMENT()          layout(align = SPN_SUBGROUP_ALIGN_LIMIT)
 
-#define SPN_VK_GLSL_ALIGN()               layout(align = SPN_SUBGROUP_ALIGN_LIMIT)
-
-#define SPN_VK_PUSH_UINT(name)            SPN_TYPE_UINT  name;
-#define SPN_VK_PUSH_UVEC4(name)           SPN_TYPE_UVEC4 name;
-#define SPN_VK_PUSH_IVEC4(name)           SPN_TYPE_IVEC4 name;
-#define SPN_VK_PUSH_UINT_FARRAY(name,len) SPN_TYPE_UINT  name[len];
-#define SPN_VK_PUSH_UINT_VARRAY(name,len) SPN_TYPE_UINT  name[len];
+#define SPN_VK_PUSH_UINT(name)                   SPN_TYPE_UINT  name;
+#define SPN_VK_PUSH_UVEC4(name)                  SPN_TYPE_UVEC4 name;
+#define SPN_VK_PUSH_IVEC4(name)                  SPN_TYPE_IVEC4 name;
+#define SPN_VK_PUSH_UINT_FARRAY(name,len)        SPN_TYPE_UINT  name[len];
+#define SPN_VK_PUSH_UINT_VARRAY(name,len)        SPN_TYPE_UINT  name[len];
 
 //
 //
@@ -96,7 +94,7 @@
 //
 
 #include "core.h"
-#include "spn_macros_glsl.h"
+#include "spn_macros_glsl.h" // FIXME -- get rid of this and pull macros here
 
 //
 // clang-format on

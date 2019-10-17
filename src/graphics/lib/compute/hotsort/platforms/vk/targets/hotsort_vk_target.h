@@ -11,6 +11,8 @@
 
 #include <stdint.h>
 
+#include "hotsort_vk_target_requirements.h"
+
 //
 // This structure packages target-specific HotSort parameters and
 // SPIR-V modules.
@@ -18,6 +20,15 @@
 
 struct hotsort_vk_target_config
 {
+  //
+  // target requirements
+  //
+  union hotsort_vk_target_extensions extensions;  // required device extensions
+  union hotsort_vk_target_features   features;    // required device features
+
+  //
+  // configuratoin
+  //
   uint8_t is_in_place;
 
   struct

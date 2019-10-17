@@ -8,11 +8,12 @@
 // SEGMENT TTCK
 //
 
-#extension GL_GOOGLE_include_directive        : require
-#extension GL_ARB_gpu_shader_int64            : require
-#extension GL_KHR_shader_subgroup_arithmetic  : require
-#extension GL_KHR_shader_subgroup_ballot      : require
-#extension GL_KHR_shader_subgroup_shuffle     : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_shuffle : require
+#extension GL_KHR_shader_subgroup_shuffle_relative : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
 
 //
 // NOTE THAT THE SEGMENT TTCK KERNEL IS ENTIRELY DEPENDENT ON BOTH THE
@@ -51,11 +52,13 @@
 //
 
 #include "spn_config.h"
-#include "spn_vk_layouts.h"
+#include "vk_layouts.h"
 
 //
+// This shader expecte uvec2 keys
 //
-//
+
+#undef HS_ENABLE_SHUFFLE_64
 
 #include "hs_config.h"
 #include "hs_glsl_macros_config.h"
@@ -69,66 +72,123 @@
 layout(local_size_x = HS_SLAB_THREADS) in;
 
 //
-// main(buffer ulong vout[],
-//      buffer uint  indices[],
-//      buffer uint  counter)
-//
-
-//
 // NOTE: THIS DESCRIPTOR MUST BE COMPATIBLE WITH 'SPN_DESC_TTRKS'
 //
 
 SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK();
 
 //
+// BLOCK POOL DEBUG
 //
+
+SPN_VK_GLSL_DEBUG(0);
+
+//
+// clang-format off
+//
+
+#undef  HS_KV_OUT
+#define HS_KV_OUT                ttcks_keys
+
+#undef  HS_KV_OUT_LOAD
+#define HS_KV_OUT_LOAD(idx)      HS_KV_OUT[idx]
+
+#undef  HS_KV_OUT_STORE
+#define HS_KV_OUT_STORE(idx, kv) HS_KV_OUT[idx] = kv
+
+//
+// clang-format on
 //
 
 #if HS_SLAB_HEIGHT > 32
-#define HS_COL_FLAG_TYPE  uint64_t
+#define SPN_HS_COL_FLAG_TYPE uint64_t  // FIXME(allanmac): may need to be uvec2 someday
 #else
-#define HS_COL_FLAG_TYPE  uint
+#define SPN_HS_COL_FLAG_TYPE uint
+#endif
+
+//
+// MACROS
+//
+
+#if SPN_HS_ENABLE_COMPARE_64
+#define SPN_HS_IS_NOT_MAX(kv_) (pack64(kv_) != HS_KEY_VAL_MAX)
+#else
+#define SPN_HS_IS_NOT_MAX(kv_) ((kv_[0] != HS_KEY_VAL_MAX[0]) || (kv_[1] != HS_KEY_VAL_MAX[1]))
 #endif
 
 //
 //
 //
 
-#define HS_KEY_TYPE_MAX  HS_KEY_TYPE(-1)
+#define SPN_HS_IS_VALID(row_, prev_) SPN_HS_IS_NOT_MAX(r##row_) ? (1u << prev_) : 0
 
 //
 //
 //
 
-#undef  HS_KV_OUT
-#define HS_KV_OUT               ttcks
+#define SPN_HS_HI_XOR(row_, prev_) (r##row_[1] ^ r##prev_[1])
+#define SPN_HS_YX_XOR(row_, prev_) (SPN_HS_HI_XOR(row_, prev_) & SPN_TTCK_HI_MASK_YX)
 
-#undef  HS_KV_OUT_LOAD
-#define HS_KV_OUT_LOAD(idx)     packUint2x32(HS_KV_OUT[idx])
-
-#undef  HS_KV_OUT_STORE
-#define HS_KV_OUT_STORE(idx,kv) HS_KV_OUT[idx] = unpackUint2x32(kv)
+//
+// Note that the SPN_HS_YX_NEQ() is probably the same number of
+// instructions -- eventually choose one and delete the other.
+//
+#if 1  // branchless
+#define SPN_HS_YX_NEQ(row_, prev_) (min(1u, SPN_HS_YX_XOR(row_, prev_)) << prev_)
+#else  // select
+#define SPN_HS_YX_NEQ(row_, prev_) ((SPN_HS_YX_XOR(row_, prev_) != 0) ? 1u << prev_ : 0)
+#endif
 
 //
 //
 //
 
-void main()
+void
+main()
 {
-  HS_SUBGROUP_PREAMBLE(); // because we don't know the size of Intel subgroups
+  HS_SLAB_GLOBAL_IDX();
 
-  HS_SLAB_GLOBAL_IDX_OUT();
-
-  const uint linear_idx = kv_offset_out + gmem_base + gmem_offset * HS_SLAB_HEIGHT;
+  const uint gmem_out_idx = gmem_idx;
+  const uint linear_idx   = gmem_base + gmem_offset * HS_SLAB_HEIGHT;
 
   //
   // LOAD ALL THE ROWS
   //
-#undef  HS_SLAB_ROW
-#define HS_SLAB_ROW(row,prev)                                                   \
-  const HS_KEY_TYPE r##row = HS_KV_OUT_LOAD(gmem_idx + prev * HS_SLAB_WIDTH);
+#undef HS_SLAB_ROW
+#define HS_SLAB_ROW(row, prev) const HS_KEY_TYPE r##row = HS_SLAB_GLOBAL_LOAD_OUT(prev);
 
   HS_SLAB_ROWS();
+
+  //
+  // DEBUG
+  //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base =
+        atomicAdd(bp_debug_count[0], HS_KEY_DWORDS * HS_SLAB_THREADS * (HS_SLAB_HEIGHT + 1));
+
+    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+    bp_debug[debug_base]                   = 0xCAFEBABE;
+    bp_debug[debug_base + HS_SLAB_THREADS] = gl_WorkGroupID.x;
+
+    debug_base += HS_KEY_DWORDS * HS_SLAB_THREADS;
+
+#undef HS_SLAB_ROW
+#define HS_SLAB_ROW(row, prev)                                                                     \
+  {                                                                                                \
+    const uint base = debug_base + prev * HS_SLAB_THREADS * HS_KEY_DWORDS;                         \
+                                                                                                   \
+    bp_debug[base]                   = r##row[0];                                                  \
+    bp_debug[base + HS_SLAB_THREADS] = r##row[1];                                                  \
+  }
+
+    HS_SLAB_ROWS();
+  }
+#endif
 
   //
   // LOAD LAST REGISTER FROM COLUMN TO LEFT
@@ -137,91 +197,105 @@ void main()
   //
   // note that column 0 is undefined
   //
-  const uint       lane  = max(gl_SubgroupInvocationID,1) - 1;
-  HS_KEY_TYPE      r0    = HS_SUBGROUP_SHUFFLE(HS_REG_LAST(r),lane);
-  HS_COL_FLAG_TYPE diffs = 0;
+  HS_KEY_TYPE r0 = HS_SUBGROUP_SHUFFLE_UP(HS_REG_LAST(r), 1);
 
-  if ((gmem_base > 0) && (gl_SubgroupInvocationID == 0))
+  const bool is_first_lane = (gl_SubgroupInvocationID == 0);
+
+  if (is_first_lane)
     {
-      //
-      // If this is the first key in any slab but the first then it
-      // broadcast loads the last key in previous slab
-      //
-      // Note that we only need the high dword but not all compilers
-      // are cooperating right now
-      //
-      r0 = HS_KV_OUT_LOAD(gmem_base - 1); // FIXME - we only need high dword (uvec2[1])
-    }
-  else if (gl_GlobalInvocationID.x == 0)
-    {
-      //
-      // If this is the first lane and first slab then record a diff
-      //
-      r0    = r1;
-      diffs = 1;
+      if (gmem_base > 0)
+        {
+          //
+          // If this is the first key in any slab but the first then it
+          // broadcast loads the last key in previous slab
+          //
+          // Note that we only need the high dword but not all compilers
+          // are cooperating right now
+          //
+          // FIXME(allanmac): we only need high dword (uvec2[1])
+          //
+          r0 = HS_KV_OUT_LOAD(gmem_base - 1);
+        }
+      else
+        {
+          //
+          // If this is the first lane and first slab then record a diff
+          //
+          r0 = ~r1;
+        }
     }
 
   //
   // FIND ALL VALID KEYS IN SLAB
   //
-  HS_COL_FLAG_TYPE valid = 0;
+  SPN_HS_COL_FLAG_TYPE valid = 0;
 
-#undef  HS_SLAB_ROW
-#define HS_SLAB_ROW(row,prev)                                   \
-  valid |= (r##row != HS_KEY_TYPE_MAX) ? (1 << prev) : 0;
+#undef HS_SLAB_ROW
+#define HS_SLAB_ROW(row, prev) valid |= SPN_HS_IS_VALID(row, prev);
 
   HS_SLAB_ROWS();
 
   //
   // FIND ALL DIFFERENCES IN SLAB
   //
-#if 1 // branchless
-#define SPN_YX_NEQ(row,prev)                                                                            \
-  (min(1,((unpackUint2x32(r##row)[1] ^ unpackUint2x32(r##prev)[1]) & SPN_TTCK_HI_MASK_YX)) << prev)
-#else
-#define SPN_YX_NEQ(row,prev) \
-  (((unpackUint2x32(r##row)[1] ^ unpackUint2x32(r##prev)[1]) & SPN_TTCK_HI_MASK_YX) != 0 ? 1 << prev : 0)
-#endif
+  SPN_HS_COL_FLAG_TYPE diffs = 0;
 
-#undef  HS_SLAB_ROW
-#define HS_SLAB_ROW(row,prev)                   \
-  diffs |= SPN_YX_NEQ(row,prev);
+#undef HS_SLAB_ROW
+#define HS_SLAB_ROW(row, prev) diffs |= SPN_HS_YX_NEQ(row, prev);
 
   HS_SLAB_ROWS();
 
   //
   // SUM UP THE DIFFERENCES
   //
-  const HS_COL_FLAG_TYPE valid_diffs = valid & diffs;
-  const uint             count       = bitCount(valid_diffs);
-  const uint             inclusive   = subgroupInclusiveAdd(count);
-  const uint             exclusive   = inclusive - count;
+  const SPN_HS_COL_FLAG_TYPE valid_diffs = valid & diffs;
+  const uint                 count       = bitCount(valid_diffs);
+  const uint                 inc         = subgroupInclusiveAdd(count);
+  const uint                 exc         = inc - count;
 
   //
   // RESERVE SPACE IN THE INDICES ARRAY
   //
   uint next = 0;
 
-  if (gl_SubgroupInvocationID == gl_SubgroupSize - 1)
-    next = atomicAdd(offsets_count[0],inclusive); // FIXME -- need a symbolic offset
+  // FIXME(allanmac) -- need a symbolic offset
+  if (gl_SubgroupInvocationID == HS_SLAB_THREADS - 1)
+    {
+      next = atomicAdd(offsets_count[0], inc);
+    }
 
   // distribute base across subgroup
-  next = exclusive + subgroupBroadcast(next,HS_SLAB_THREADS - 1); // GLSL: ii has to be a compile-time constant
+  next = subgroupBroadcast(next, HS_SLAB_THREADS - 1) + exc;
 
-  //
-  // STORE THE INDICES
-  //
-  // FIXME -- note that this is *not* going to result in coalesced
-  // stores but it probably doesn't matter.  If it is determined that
-  // this impacts performanced then it's straightforward to accumulate
-  // these keys in local memory.
-  //
-#undef  HS_SLAB_ROW
-#define HS_SLAB_ROW(row,prev)                   \
-  if ((valid_diffs & (1 << prev)) != 0)         \
-    offsets[next++] = linear_idx + prev;
+//
+// STORE THE INDICES
+//
+// FIXME(allanmac): Note that this is *not* going to result in
+// coalesced stores but it probably doesn't matter.  If it is
+// determined that this impacts performance then it's
+// straightforward to accumulate these keys in local memory and
+// write them out in a coalesced fashion.
+//
+#undef HS_SLAB_ROW
+#define HS_SLAB_ROW(row, prev)                                                                     \
+  if ((valid_diffs & (1 << prev)) != 0)                                                            \
+    {                                                                                              \
+      offsets[next++] = linear_idx + prev;                                                         \
+    }
 
   HS_SLAB_ROWS();
+
+#if 0
+#undef HS_SLAB_ROW
+#define HS_SLAB_ROW(row, prev)                                                                     \
+  if ((valid_diffs & (1 << prev)) != 0)                                                            \
+    {                                                                                              \
+      const uint debug_base = atomicAdd(bp_debug_count[0], 1);                                     \
+      bp_debug[debug_base]  = linear_idx + prev;                                                   \
+    }
+
+  HS_SLAB_ROWS();
+#endif
 
   //
   // TRANSPOSE THE SLAB AND STORE IT

@@ -147,6 +147,11 @@ main(int argc, char const * argv[])
 
   fprintf(file, "\n");
 
+  //
+  // free and close
+  //
+  free(layout);
+
   if (ferror(file) || fclose(file) != 0)
     {
       return EXIT_FAILURE;

@@ -97,6 +97,30 @@ union spn_path_header
 };
 
 //
+// TTRK
+//
+
+union spn_ttrk
+{
+  SPN_TYPE_UVEC2 u32v2;
+
+  struct {
+    uint32_t     ttsb_id  : SPN_TTRK_LO_BITS_TTSB_ID;
+    uint32_t     x_lo     : SPN_TTRK_LO_BITS_X;
+    uint32_t     x_hi     : SPN_TTRK_HI_BITS_X;
+    uint32_t     y        : SPN_TTRK_HI_BITS_Y;
+    uint32_t     cohort   : SPN_TTRK_HI_BITS_COHORT;
+  };
+
+  struct {
+    uint64_t     na0      : SPN_TTRK_LO_BITS_TTSB_ID;
+    uint64_t     x        : SPN_TTRK_LO_HI_BITS_X;
+    uint64_t     na1      : SPN_TTRK_HI_BITS_Y;
+    uint64_t     na2      : SPN_TTRK_HI_BITS_COHORT;
+  };
+};
+
+//
 // TTCK
 //
 
@@ -110,8 +134,8 @@ union spn_ttck
     uint32_t     escape   : SPN_TTCK_LO_BITS_ESCAPE;
     uint32_t     layer_lo : SPN_TTCK_LO_BITS_LAYER;
     uint32_t     layer_hi : SPN_TTCK_HI_BITS_LAYER;
-    uint32_t     y        : SPN_TTCK_HI_BITS_Y;
     uint32_t     x        : SPN_TTCK_HI_BITS_X;
+    uint32_t     y        : SPN_TTCK_HI_BITS_Y;
   };
 
   struct {
@@ -119,8 +143,8 @@ union spn_ttck
     uint64_t     na1      : SPN_TTCK_LO_BITS_PREFIX;
     uint64_t     na2      : SPN_TTCK_LO_BITS_ESCAPE;
     uint64_t     layer    : SPN_TTCK_LO_HI_BITS_LAYER;
-    uint64_t     na3      : SPN_TTCK_HI_BITS_Y;
-    uint64_t     na4      : SPN_TTCK_HI_BITS_X;
+    uint64_t     na3      : SPN_TTCK_HI_BITS_X;
+    uint64_t     na4      : SPN_TTCK_HI_BITS_Y;
   };
 };
 
@@ -128,15 +152,13 @@ union spn_ttck
 // TTS
 //
 
-#ifndef SPN_TTS_V2
-
 union spn_tts
 {
   uint32_t   u32;
 
   struct {
     uint32_t tx  : SPN_TTS_BITS_TX;
-    uint32_t dx  : SPN_TTS_BITS_DX;
+    int32_t  dx  : SPN_TTS_BITS_DX;
     uint32_t ty  : SPN_TTS_BITS_TY;
     int32_t  dy  : SPN_TTS_BITS_DY;
   };
@@ -151,24 +173,8 @@ union spn_tts
   };
 };
 
-#else
-
-union spn_tts
-{
-  uint32_t   u32;
-
-  struct {
-    uint32_t tx : SPN_TTS_BITS_TX;
-    int32_t  dx : SPN_TTS_BITS_DX;
-    uint32_t ty : SPN_TTS_BITS_TY;
-    int32_t  dy : SPN_TTS_BITS_DY;
-  };
-};
-
-#endif
-
 //
-// STYLING
+// STYLING GROUP NODE
 //
 
 struct spn_group_node
