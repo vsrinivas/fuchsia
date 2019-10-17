@@ -147,10 +147,7 @@ bool MakeBlob(fbl::String fs_path, size_t blob_size, unsigned int* seed,
   ASSERT_EQ(MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0], info->size_merkle,
                                &digest),
             ZX_OK, "Couldn't create Merkle Tree");
-  fbl::StringBuffer<sizeof(info->path)> path;
-  path.AppendPrintf("%s/", fs_path.c_str());
-  digest.ToString(path.data() + path.size(), path.capacity() - path.size());
-  strcpy(info->path.data(), path.c_str());
+  info->path.AppendPrintf("%s/%s", fs_path.c_str(), digest.ToString().c_str());
 
   // Sanity-check the merkle tree
   ASSERT_EQ(MerkleTree::Verify(&info->data[0], info->size_data, &info->merkle[0], info->size_merkle,

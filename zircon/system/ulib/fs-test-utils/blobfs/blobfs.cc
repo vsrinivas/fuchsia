@@ -53,11 +53,7 @@ bool GenerateBlob(BlobSrcFunction sourceCb, fbl::String mount_path, size_t size_
     printf("Couldn't create Merkle Tree\n");
     return false;
   }
-  strcpy(info->path, mount_path.c_str());
-  size_t mount_path_len = strlen(info->path);
-  strcpy(info->path + mount_path_len, "/");
-  size_t prefix_len = strlen(info->path);
-  digest.ToString(info->path + prefix_len, sizeof(info->path) - prefix_len);
+  snprintf(info->path, sizeof(info->path), "%s/%s", mount_path.c_str(), digest.ToString().c_str());
 
   // Sanity-check the merkle tree
   status = MerkleTree::Verify(&info->data[0], info->size_data, &info->merkle[0], info->size_merkle,

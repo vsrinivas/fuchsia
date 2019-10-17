@@ -112,11 +112,7 @@ void handle_entry(FileEntry* entry) {
     fprintf(stderr, "%s: Merkle tree creation failed: %d\n", entry->filename.c_str(), rc);
     exit(1);
   }
-  rc = digest.ToString(entry->digest, sizeof(entry->digest));
-  if (rc != ZX_OK) {
-    fprintf(stderr, "%s: Unable to print Merkle tree root: %d\n", entry->filename.c_str(), rc);
-    exit(1);
-  }
+  snprintf(entry->digest, sizeof(entry->digest), "%s", digest.ToString().c_str());
 }
 
 }  // namespace

@@ -368,12 +368,12 @@ TEST_F(MerkleTreeTestCase, VerifyZeroLength) {
 TEST_F(MerkleTreeTestCase, VerifyBadRoot) {
   ASSERT_OK(InitVerify(kLarge));
   // Modify digest
-  char str[digest::kSha256HexLength];
-  EXPECT_OK(actual_.ToString(str, sizeof(str)));
-  str[0] = (str[0] == '0' ? '1' : '0');
-  EXPECT_OK(actual_.Parse(str, strlen(str)));
+  uint8_t buf[digest::kSha256Length];
+  memcpy(buf, actual_.get(), sizeof(buf));
+  buf[0] ^= 1;
+  Digest modified(buf);
   // Verify
-  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
+  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, modified),
                 ZX_ERR_IO_DATA_INTEGRITY);
 }
 

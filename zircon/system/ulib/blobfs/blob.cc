@@ -73,9 +73,8 @@ zx_status_t Blob::Verify() const {
   blobfs_->Metrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
 
   if (status != ZX_OK) {
-    char name[digest::kSha256HexLength];
-    ZX_ASSERT(digest.ToString(name, sizeof(name)) == ZX_OK);
-    FS_TRACE_ERROR("blobfs verify(%s) Failure: %s\n", name, zx_status_get_string(status));
+    FS_TRACE_ERROR("blobfs verify(%s) Failure: %s\n", digest.ToString().c_str(),
+                   zx_status_get_string(status));
   }
 
   return status;

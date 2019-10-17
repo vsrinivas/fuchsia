@@ -341,14 +341,9 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
     if (GetNode(node_index)->header.IsAllocated() &&
         !GetNode(node_index)->header.IsExtentContainer()) {
       Digest digest(GetNode(node_index)->merkle_root_hash);
-      char name[digest::kSha256HexLength];
-      zx_status_t r = digest.ToString(name, sizeof(name));
-      if (r < 0) {
-        return r;
-      }
+      auto name = digest.ToString();
       uint64_t ino = fuchsia_io_INO_UNKNOWN;
-      if ((r = df.Next(fbl::StringPiece(name, digest::kSha256HexLength), VTYPE_TO_DTYPE(V_TYPE_FILE),
-                       ino)) != ZX_OK) {
+      if (df.Next(name.ToStringPiece(), VTYPE_TO_DTYPE(V_TYPE_FILE), ino) != ZX_OK) {
         break;
       }
       c->index = i + 1;
@@ -756,10 +751,8 @@ zx_status_t Blobfs::InitializeVnodes() {
     zx_status_t status = Cache().Add(vnode);
     if (status != ZX_OK) {
       Digest digest(vnode->GetNode().merkle_root_hash);
-      char name[digest::kSha256HexLength];
-      digest.ToString(name, sizeof(name));
-      FS_TRACE_ERROR("blobfs: CORRUPTED FILESYSTEM: Duplicate node: %s @ index %u\n", name,
-                     node_index - 1);
+      FS_TRACE_ERROR("blobfs: CORRUPTED FILESYSTEM: Duplicate node: %s @ index %u\n",
+                     digest.ToString().c_str(), node_index - 1);
       return status;
     }
     Metrics().UpdateLookup(vnode->SizeData());

@@ -11,6 +11,7 @@
 
 #include <digest/digest.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 
 // See note in //zircon/third_party/ulib/uboringssl/rules.mk
@@ -98,17 +99,14 @@ zx_status_t Digest::Parse(const char* hex, size_t len) {
   return ZX_OK;
 }
 
-zx_status_t Digest::ToString(char* out, size_t len) const {
-  if (len < sizeof(bytes_) * 2 + 1) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  memset(out, 0, len);
-  char* p = out;
+fbl::String Digest::ToString() const {
+  char hex[kSha256HexLength];
+  char* p = hex;
   for (size_t i = 0; i < sizeof(bytes_); ++i) {
     sprintf(p, "%02x", bytes_[i]);
     p += 2;
   }
-  return ZX_OK;
+  return fbl::String(hex);
 }
 
 zx_status_t Digest::CopyTo(uint8_t* out, size_t len) const {

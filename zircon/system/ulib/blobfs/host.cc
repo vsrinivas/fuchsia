@@ -172,10 +172,8 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
   inode->extent_count = 1;
 
   if (size_recorder) {
-    char digest_buf[65];
-    info.digest.ToString(digest_buf, sizeof(digest_buf));
-
-    size_recorder->AppendSizeInformation(digest_buf, kBlobfsBlockSize * inode->block_count);
+    size_recorder->AppendSizeInformation(info.digest.ToString().c_str(),
+                                         kBlobfsBlockSize * inode->block_count);
   }
 
   if ((status = bs->WriteData(inode, info.merkle.data(), data)) != ZX_OK) {

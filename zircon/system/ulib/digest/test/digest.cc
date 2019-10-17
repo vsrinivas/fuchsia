@@ -8,48 +8,56 @@
 #include <utility>
 
 #include <digest/digest.h>
+#include <fbl/string.h>
 #include <zxtest/zxtest.h>
 
 // These unit tests are for the Digest object in ulib/digest.
 
-namespace {
-
-////////////////
-// Test support.
-
-using digest::Digest;
+namespace digest {
+namespace testing {
 
 // echo -n | sha256sum
 const char* kZeroDigest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 // echo -n | sha256sum | cut -c1-64 | tr -d '\n' | xxd -p -r | sha256sum
 const char* kDoubleZeroDigest = "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456";
 
-////////////////
-// Test cases
-
 TEST(DigestTestCase, Strings) {
   Digest actual;
-  ASSERT_OK(actual.Parse(kZeroDigest));
-  char buf[digest::kSha256HexLength];
-  ASSERT_OK(actual.ToString(buf, sizeof(buf)));
-  EXPECT_STR_EQ(kZeroDigest, buf);
+  size_t len = strlen(kZeroDigest);
+    // Incorrect length
+  EXPECT_STATUS(actual.Parse(kZeroDigest, len - 1), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(actual.Parse(kZeroDigest, len + 1), ZX_ERR_INVALID_ARGS);
+  // Not hex
+  char bad[kSha256HexLength];
+  snprintf(bad, sizeof(bad), "%s", kZeroDigest);
+  bad[0] = 'g';
+  EXPECT_STATUS(actual.Parse(bad), ZX_ERR_INVALID_ARGS);
+  // Explicit length
+  EXPECT_OK(actual.Parse(kZeroDigest, len));
+  EXPECT_STR_EQ(kZeroDigest, actual.ToString().c_str());
+  // Implicit length
+  EXPECT_OK(actual.Parse(kDoubleZeroDigest));
+  EXPECT_STR_EQ(kDoubleZeroDigest, actual.ToString().c_str());
+  // fbl::String
+  EXPECT_OK(actual.Parse(fbl::String(kZeroDigest)));
+  EXPECT_STR_EQ(kZeroDigest, actual.ToString().c_str());
 }
 
 TEST(DigestTestCase, Zero) {
   Digest actual, expected;
   ASSERT_OK(expected.Parse(kZeroDigest));
   actual.Hash(nullptr, 0);
-  EXPECT_BYTES_EQ(actual.get(), expected.get(), digest::kSha256Length);
+  EXPECT_BYTES_EQ(actual.get(), expected.get(), kSha256Length);
 }
 
 TEST(DigestTestCase, Self) {
   Digest actual, expected;
   ASSERT_OK(expected.Parse(kDoubleZeroDigest));
   ASSERT_OK(actual.Parse(kZeroDigest));
-  uint8_t buf[digest::kSha256Length];
+  uint8_t buf[kSha256Length];
   ASSERT_OK(actual.CopyTo(buf, sizeof(buf)));
-  actual.Hash(buf, digest::kSha256Length);
-  EXPECT_BYTES_EQ(actual.get(), expected.get(), digest::kSha256Length);
+  actual.Hash(buf, kSha256Length);
+  EXPECT_BYTES_EQ(actual.get(), expected.get(), kSha256Length);
 }
 
 TEST(DigestTestCase, Split) {
@@ -62,23 +70,23 @@ TEST(DigestTestCase, Split) {
     actual.Update(kZeroDigest, i);
     actual.Update(kZeroDigest + i, n - i);
     actual.Final();
-    EXPECT_BYTES_EQ(actual.get(), expected.get(), digest::kSha256Length);
+    EXPECT_BYTES_EQ(actual.get(), expected.get(), kSha256Length);
   }
 }
 
 TEST(DigestTestCase, CWrappers) {
-  uint8_t buf[digest::kSha256Length];
+  uint8_t buf[kSha256Length];
   EXPECT_STATUS(digest_hash(nullptr, 0, buf, sizeof(buf) - 1), ZX_ERR_BUFFER_TOO_SMALL);
   ASSERT_OK(digest_hash(nullptr, 0, buf, sizeof(buf)));
   Digest expected;
   ASSERT_OK(expected.Parse(kZeroDigest));
-  EXPECT_BYTES_EQ(buf, expected.get(), digest::kSha256Length);
+  EXPECT_BYTES_EQ(buf, expected.get(), kSha256Length);
   digest_t* digest = nullptr;
   ASSERT_OK(digest_init(&digest));
   expected.Hash(buf, sizeof(buf));
   digest_update(digest, buf, sizeof(buf));
   ASSERT_OK(digest_final(digest, buf, sizeof(buf)));
-  EXPECT_BYTES_EQ(buf, expected.get(), digest::kSha256Length);
+  EXPECT_BYTES_EQ(buf, expected.get(), kSha256Length);
 }
 
 TEST(DigestTestCase, Equality) {
@@ -108,24 +116,24 @@ TEST(DigestTestCase, Move) {
     EXPECT_EQ(digest1, uninitialized_digest);
 
     Digest digest2(std::move(digest1));
-    EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), digest::kSha256Length);
-    EXPECT_BYTES_EQ(digest2.get(), uninitialized_digest.get(), digest::kSha256Length);
+    EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), kSha256Length);
+    EXPECT_BYTES_EQ(digest2.get(), uninitialized_digest.get(), kSha256Length);
   }
 
   // Start a hash operation in digest1, verify that this does not update the
   // initial hash value.
   EXPECT_OK(digest1.Init());
-  EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), digest::kSha256Length);
+  EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), kSha256Length);
 
   // Hash some nothing into the hash.  Again verify the digest is still
   // valid, but that the internal result is still full of nothing.
   digest1.Update(nullptr, 0);
-  EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), digest::kSha256Length);
+  EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), kSha256Length);
 
   // Move the hash into digest2.  Verify that the context goes with the move
   // operation.
   Digest digest2(std::move(digest1));
-  EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), digest::kSha256Length);
+  EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), kSha256Length);
 
   // Finish the hash operation started in digest1 which was moved into
   // digest2.  Verify that digest2 is no longer valid, but that the result is
@@ -133,13 +141,14 @@ TEST(DigestTestCase, Move) {
   Digest zero_digest;
   ASSERT_OK(zero_digest.Parse(kZeroDigest));
   digest2.Final();
-  EXPECT_BYTES_EQ(digest2.get(), zero_digest.get(), digest::kSha256Length);
+  EXPECT_BYTES_EQ(digest2.get(), zero_digest.get(), kSha256Length);
 
   // Move the result of the hash into a new digest3.  Verify that neither is
   // valid, but that the result was properly moved.
   Digest digest3(std::move(digest2));
-  EXPECT_BYTES_EQ(digest2.get(), uninitialized_digest.get(), digest::kSha256Length);
-  EXPECT_BYTES_EQ(digest3.get(), zero_digest.get(), digest::kSha256Length);
+  EXPECT_BYTES_EQ(digest2.get(), uninitialized_digest.get(), kSha256Length);
+  EXPECT_BYTES_EQ(digest3.get(), zero_digest.get(), kSha256Length);
 }
 
-}  // namespace
+}  // namespace testing
+}  // namespace digest

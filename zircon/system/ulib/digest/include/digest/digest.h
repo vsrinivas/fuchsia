@@ -12,6 +12,7 @@
 
 #ifdef __cplusplus
 
+#include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 
 namespace digest {
@@ -59,16 +60,11 @@ class Digest final {
   // object. |hex| must represent |kLength| bytes, that is, it must have
   // |kLength| * 2 characters.
   zx_status_t Parse(const char* hex, size_t len);
-
-  // Converts |len| characters of the given |hex| string to binary and stores
-  // it in this object. The string does need to be null-terminated, but |len|
-  // must be |kLength| * 2.
   zx_status_t Parse(const char* hex) { return Parse(hex, strlen(hex)); }
+  zx_status_t Parse(const fbl::String& hex) { return Parse(hex.c_str(), hex.length()); }
 
-  // Writes the current digest to |out| as a null-terminated, hex-encoded
-  // string.  |out| must have room for (kLength * 2) + 1 characters to
-  // succeed.
-  zx_status_t ToString(char* out, size_t len) const;
+  // Returns the current digest as a hex string.
+  fbl::String ToString() const;
 
   // Write the current digest to |out|.  |len| must be at least kLength to
   // succeed.
