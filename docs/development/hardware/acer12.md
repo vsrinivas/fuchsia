@@ -22,13 +22,13 @@ With the machine off, Press and hold Volume Up, then continue to hold while pres
 7. Select “Disabled” from the menu
 8. The “Boot priority order” list may be adjusted using the up/down arrows to the right of each item
 9. Order the list like so:
-- USB HDD
-- USB FDD
-- USB CDROM
-- HDD: <MFG> <SERIALNO>
-- Network Boot-IPV4
-- Network Boot-IPV6
-- Windows Boot Manager
+   - USB HDD
+   - USB FDD
+   - USB CDROM
+   - HDD: \<MFG\> \<SERIALNO\>
+   - Network Boot-IPV4
+   - Network Boot-IPV6
+   - Windows Boot Manager
 10. Select the “Main” tab on the left and set the time and date by pressing “[SetTime]” and “[SetDate]” buttons respectfully. This is necessary for proper network operation.
 11. (Optional)  Go back to the “Security” tab and set the supervisor password back to nothing.
 Otherwise you’ll need to enter the password every time you use the BIOS.

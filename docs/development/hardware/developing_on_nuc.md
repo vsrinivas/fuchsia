@@ -1,13 +1,12 @@
-# Developing with Fuchsia on a NUC
+# Install Fuchsia on a NUC
 
 This document describes how to get a NUC up and running with Fuchsia.
 
 [TOC]
 
-
 ## 1. Get Parts {#get-parts}
 
-You’ll need the following:
+You need the following:
 
 - USB 3.0 Drive
 - NUC
@@ -24,39 +23,40 @@ This table shows what I bought from Amazon.
 
 | Item | Link | Notes: |
 | ---- | ---- | ------ |
-| NUC | [B01MSZLO9P](https://www.amazon.com/gp/product/B01MSZLO9P) | Get a NUC7 (Kaby Lake) or NUC6(Skylake) for gpu support. |
+| NUC | [B01MSZLO9P](https://www.amazon.com/gp/product/B01MSZLO9P) | Get a NUC7 (Kaby Lake) or NUC6 (Skylake) for GPU support. |
 | RAM | [B01BIWKP58](https://www.amazon.com/gp/product/B01BIWKP58) | Works fine. |
-| SSD (Only need one, | [B01IAGSDJ0](https://www.amazon.com/gp/product/B01IAGSDJ0) | Works fine. |
-| I bought some of each) | [B00TGIVZTW](https://www.amazon.com/gp/product/B00TGIVZTW) | Works fine. |
-| | [B01M9K0N8I](https://www.amazon.com/gp/product/B01M9K0N8I) | Works fine. |
-| | | |
+| SSD | [B01IAGSDJ0](https://www.amazon.com/gp/product/B01IAGSDJ0) | Works fine. You only need one of these SSDs. |
+| SSD | [B00TGIVZTW](https://www.amazon.com/gp/product/B00TGIVZTW) | Works fine. |
+| SSD | [B01M9K0N8I](https://www.amazon.com/gp/product/B01M9K0N8I) | Works fine. |
 | **Optional:** | | |
 | Keyboard and Mouse | [B00B7GV802](https://www.amazon.com/gp/product/B00B7GV802) | Works fine.  Next time I'd get a keyboard with a smaller foot print. |
 | Monitor | [B015WCV70W](https://www.amazon.com/gp/product/B015WCV70W) | Works fine. |
 | HDMI Cable | [B014I8SIJY](https://www.amazon.com/gp/product/B014I8SIJY) | Works fine. |
 | USB 3.0 drive | [B01BGTG41W](https://www.amazon.com/gp/product/B01BGTG41W) | Works fine. |
 
------
-
 ## 2. Prepare the NUC {#prepare-the-nuc}
-NUCs don’t come with RAM or an SSD so you need to install them.
-<br/><center><img width="50%" src="/docs/images/developing_on_nuc/parts.jpg"/></center><br/>
+
+NUCs don’t come with RAM or an SSD, so you need to install them.
+
+<img width="50%" src="/docs/images/developing_on_nuc/parts.jpg"/>
+
+Follow the instructions to install the RAM and SSD on the NUC:
 
 1. Remove the phillips screws in the bottom feet of the NUC.
-<br/><center><img width="50%" src="/docs/images/developing_on_nuc/nuc_bottom.jpg"/></center>
-<br/><center><img width="50%" src="/docs/images/developing_on_nuc/nuc_inside.jpg"/></center><br/><br/>
+
+   <img width="50%" src="/docs/images/developing_on_nuc/nuc_bottom.jpg"/>
+   <img width="50%" src="/docs/images/developing_on_nuc/nuc_inside.jpg"/>
 1. Install the RAM.
 1. Remove the phillips screw that will hold the SSD in place (phillips screwdriver with magnetic tip is useful here).
 1. Install the SSD.
-1. Screw the SSD in place using screw from 3.
-<br/><center><img width="50%" src="/docs/images/developing_on_nuc/parts_installed.jpg"/></center><br/><br/>
+1. Screw the SSD in place using screw from Step 3.
+
+   <img width="50%" src="/docs/images/developing_on_nuc/parts_installed.jpg"/>
 1. Replace bottom and screw feet back in.
-1.(Optional) Apply fuchsia logo.
-<br/><center><img width="50%" src="/docs/images/developing_on_nuc/nuc_fuchsia.jpg"/></center><br/><br/>
+1. (Optional) Apply fuchsia logo.
+
+   <img width="50%" src="/docs/images/developing_on_nuc/nuc_fuchsia.jpg"/>
 1. Plug power, ethernet, HDMI, keyboard, and mouse into NUC.
-
-
------
 
 ## 3. Enable EFI booting {#enable-efi-booting}
 
@@ -83,14 +83,10 @@ USB-ethernet dongle is unsupported.
 
 If you want to remotely manage the device, see [Remote Management for NUC](nuc-remote-management.md).
 
------
-
 ## 4. Build Fuchsia {#build-fuchsia}
 
 1. Follow the [getting started guidelines](/docs/getting_started.md). Make sure to
 use the board configuration `x86` when running `fx set`. For example `fx set core.x86`.
-
------
 
 ## 5. Pave Fuchsia {#pave-fuchsia}
 
