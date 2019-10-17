@@ -32,17 +32,17 @@ way to provide hierarchy to SDK atoms.
 
 There are a few GN templates developers should use to enable the inclusion of
 their code in an SDK:
-- [`sdk_shared_library`](/cpp/sdk_shared_library.gni)
-- [`sdk_source_set`](/cpp/sdk_source_set.gni)
-- [`sdk_executable`](/cpp/sdk_executable.gni)
+- [`sdk_shared_library`](/build/cpp/sdk_shared_library.gni)
+- [`sdk_source_set`](/build/cpp/sdk_source_set.gni)
+- [`sdk_executable`](/build/cpp/sdk_executable.gni)
 
 Some language-specific targets are also SDK-ready:
-- [`dart_library`](/dart/dart_library.gni)
-- [`fidl_library`](/fidl/fidl_library.gni)
-- [`go_binary`](/go/go_binary.gni)
+- [`dart_library`](/build/dart/dart_library.gni)
+- [`fidl_library`](/build/fidl/fidl_library.gni)
+- [`go_binary`](/build/go/go_binary.gni)
 
 In order to add documentation to an SDK, use the
-[`sdk_documentation`](/sdk/sdk_documentation.gni) template.
+[`sdk_documentation`](sdk_documentation.gni) template.
 
 A target `//foo/bar` declared with one of these templates will yield an
 additional target `//foo/bar:bar_sdk` which is an atom ready to be included in
@@ -67,7 +67,7 @@ only takes a few steps:
 2. Create a new SDK `//some/place:my_sdk` with the `sdk` template, regrouping
    the atoms and molecules that should be included;
 3. Add a new
-   [package](https://fuchsia.googlesource.com/fuchsia/+/master/docs/build/packages.md)
+   [package](/docs/development/sdk/documentation/packages.md)
    file for the molecule:
 ```
 {
