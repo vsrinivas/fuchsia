@@ -4,13 +4,14 @@
 
 use crate::common::{self as common, DataRequest, KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::{CryptoProvider, SealingProviderKey};
-use fidl_fuchsia_kms::Status;
+use fidl_fuchsia_kms::Error;
 use fidl_fuchsia_mem::Buffer;
 use log::error;
 
 pub static SEALING_KEY_NAME: &str = ".SealingKey";
 
 /// A sealing key object.
+#[derive(Debug)]
 pub struct KmsSealingKey {
     provider_key: Box<dyn SealingProviderKey>,
     key_name: String,
@@ -59,16 +60,16 @@ impl KmsKey for KmsSealingKey {
         self.provider_key.get_key_data()
     }
 
-    fn delete(&mut self) -> Result<(), Status> {
+    fn delete(&mut self) -> Result<(), Error> {
         panic!("Sealing key should never be deleted!")
     }
 }
 
 impl KmsSealingKey {
     /// Generates a new sealing key object.
-    pub fn new(provider: &dyn CryptoProvider) -> Result<Self, Status> {
+    pub fn new(provider: &dyn CryptoProvider) -> Result<Self, Error> {
         let provider_key = provider.generate_sealing_key(SEALING_KEY_NAME).map_err(
-            debug_err_fn!(Status::InternalError, "Failed to generate sealing key, err: {:?}."),
+            debug_err_fn!(Error::InternalError, "Failed to generate sealing key, err: {:?}."),
         )?;
         Ok(KmsSealingKey { provider_key, key_name: SEALING_KEY_NAME.to_string() })
     }
@@ -79,17 +80,17 @@ impl KmsSealingKey {
     ///
     /// * `key_name` - The name for the new key.
     /// * `key_attributes` - The attributes for the new key.
-    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes) -> Result<Self, Status> {
+    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes) -> Result<Self, Error> {
         if key_attributes.key_type != KeyType::SealingKey {
             // The key is a different type. This should not happen unless the key file is corrupted.
             error!("The sealing key file is corrupted!");
-            return Err(Status::InternalError);
+            return Err(Error::InternalError);
         }
 
         let provider_key = key_attributes
             .provider
             .parse_sealing_key(&key_attributes.key_data)
-            .map_err(debug_err_fn!(Status::ParseKeyError, "Failed to parse sealing key: {:?}."))?;
+            .map_err(debug_err_fn!(Error::ParseKeyError, "Failed to parse sealing key: {:?}."))?;
         Ok(KmsSealingKey { provider_key, key_name: key_name.to_string() })
     }
 
@@ -98,12 +99,12 @@ impl KmsSealingKey {
     /// #  Arguments:
     ///
     /// * `buffer` - The vmo buffer containing the data to be sealed.
-    fn seal_data(&self, buffer: Buffer) -> Result<Buffer, Status> {
+    fn seal_data(&self, buffer: Buffer) -> Result<Buffer, Error> {
         let input = common::buffer_to_data(buffer)?;
         let output = self
             .provider_key
             .encrypt(&input)
-            .map_err(debug_err_fn!(Status::InternalError, "Failed to encrypt data: {:?}"))?;
+            .map_err(debug_err_fn!(Error::InternalError, "Failed to encrypt data: {:?}"))?;
         Ok(common::data_to_buffer(&output)?)
     }
 
@@ -112,12 +113,12 @@ impl KmsSealingKey {
     /// #  Arguments:
     ///
     /// * `buffer` - The vmo buffer containing the data to be unsealed.
-    fn unseal_data(&self, buffer: Buffer) -> Result<Buffer, Status> {
+    fn unseal_data(&self, buffer: Buffer) -> Result<Buffer, Error> {
         let input = common::buffer_to_data(buffer)?;
         let output = self
             .provider_key
             .decrypt(&input)
-            .map_err(debug_err_fn!(Status::InternalError, "Failed to decrypt data: {:?}"))?;
+            .map_err(debug_err_fn!(Error::InternalError, "Failed to decrypt data: {:?}"))?;
         Ok(common::data_to_buffer(&output)?)
     }
 }

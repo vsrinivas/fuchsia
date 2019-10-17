@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::fmt;
 use std::str;
 
 use crate::crypto_provider::CryptoProvider;
-use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, Status};
+use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, Error, KeyOrigin};
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_zircon as zx;
 use log::error;
@@ -24,7 +25,7 @@ pub enum KeyRequestType<'a> {
 /// A structure to contain a data buffer as input and a mutable result reference as output.
 pub struct DataRequest<'a> {
     pub data: Buffer,
-    pub result: &'a mut Result<Buffer, Status>,
+    pub result: &'a mut Result<Buffer, Error>,
 }
 
 /// The key types.
@@ -44,7 +45,7 @@ pub enum KeyType {
 /// KMS would read from storage and create the key object. After all the handles to this key object
 /// is dropped, the key object would be removed from memory. This ensures that all the operations
 /// are synchronized based on lock to use this Key object.
-pub trait KmsKey: Send {
+pub trait KmsKey: Send + fmt::Debug {
     /// Whether this key is already deleted. A key may be deleted while there are other channels
     /// associated with that key. In this case, any operation on the deleted key would return
     /// key_not_found.
@@ -56,7 +57,7 @@ pub trait KmsKey: Send {
     ///
     /// Panics if the key should never be deleted, for example, the sealing key should never be
     /// deleted.
-    fn delete(&mut self) -> Result<(), Status>;
+    fn delete(&mut self) -> Result<(), Error>;
     /// Get the name for the current key.
     fn get_key_name(&self) -> &str;
     /// Handle a request from user. Note that a key should only handle the request for that key
@@ -156,22 +157,22 @@ pub fn generate_random_data(size: u32) -> Vec<u8> {
 }
 
 /// Read data from a VMO buffer.
-pub fn buffer_to_data(buffer: Buffer) -> Result<Vec<u8>, Status> {
+pub fn buffer_to_data(buffer: Buffer) -> Result<Vec<u8>, Error> {
     let buffer_size = buffer.size;
     let buffer_vmo = buffer.vmo;
 
     let mut input = vec![0; buffer_size as usize];
     buffer_vmo
         .read(&mut input, 0)
-        .map_err(debug_err_fn!(Status::InternalError, "Failed to read data from vmo: {:?}."))?;
+        .map_err(debug_err_fn!(Error::InternalError, "Failed to read data from vmo: {:?}."))?;
     Ok(input)
 }
 
 /// Write data into a VMO buffer.
-pub fn data_to_buffer(data: &[u8]) -> Result<Buffer, Status> {
+pub fn data_to_buffer(data: &[u8]) -> Result<Buffer, Error> {
     let vmo = zx::Vmo::create(data.len() as u64)
-        .map_err(debug_err_fn!(Status::InternalError, "Failed to create vmo: {:?}"))?;
+        .map_err(debug_err_fn!(Error::InternalError, "Failed to create vmo: {:?}"))?;
     vmo.write(&data, 0)
-        .map_err(debug_err_fn!(Status::InternalError, "Failed to write data to vmo: {:?}"))?;
+        .map_err(debug_err_fn!(Error::InternalError, "Failed to write data to vmo: {:?}"))?;
     Ok(Buffer { vmo, size: data.len() as u64 })
 }

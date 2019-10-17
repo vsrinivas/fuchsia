@@ -4,13 +4,13 @@
 
 use crate::common::{self as common, KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::{AsymmetricProviderKey, CryptoProvider};
-use fidl::encoding::OutOfLine;
 use fidl_fuchsia_kms::{
-    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, PublicKey, Signature, Status,
+    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, Error, KeyOrigin, PublicKey, Signature,
     MAX_DATA_SIZE,
 };
 use fidl_fuchsia_mem::Buffer;
 
+#[derive(Debug)]
 pub struct KmsAsymmetricKey {
     provider_key: Box<dyn AsymmetricProviderKey>,
     key_name: String,
@@ -48,9 +48,9 @@ impl KmsKey for KmsAsymmetricKey {
         self.provider_key.get_key_data()
     }
 
-    fn delete(&mut self) -> Result<(), Status> {
+    fn delete(&mut self) -> Result<(), Error> {
         // Inform the provider to delete key.
-        self.provider_key.delete().map_err(|_| Status::InternalError)?;
+        self.provider_key.delete().map_err(|_| Error::InternalError)?;
         self.deleted = true;
         Ok(())
     }
@@ -68,10 +68,10 @@ impl KmsAsymmetricKey {
         provider: &C,
         key_name: &str,
         key_algorithm: AsymmetricKeyAlgorithm,
-    ) -> Result<Self, Status> {
+    ) -> Result<Self, Error> {
         // Ask the provider to generate a provider key.
         let provider_key = provider.generate_asymmetric_key(key_algorithm, key_name).map_err(
-            debug_err_fn!(Status::InternalError, "Failed to generate asymmetric key: {:?}"),
+            debug_err_fn!(Error::InternalError, "Failed to generate asymmetric key: {:?}"),
         )?;
         // Create the key object.
         Ok(KmsAsymmetricKey {
@@ -88,10 +88,10 @@ impl KmsAsymmetricKey {
     ///
     /// * `key_name` - The name for the new key.
     /// * `key_attributes` - The attributes for the new key.
-    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes) -> Result<Self, Status> {
+    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes) -> Result<Self, Error> {
         if key_attributes.key_type != KeyType::AsymmetricPrivateKey {
             // The key is a different type.
-            return Err(Status::KeyNotFound);
+            return Err(Error::KeyNotFound);
         }
         // It is safe to unwrap here because KeyType would always be AsymmetricPrivateKey when
         // we called read_key_attributes_from_file in key_manager and asymmetric_key_algorithm
@@ -102,7 +102,7 @@ impl KmsAsymmetricKey {
             .provider
             .parse_asymmetric_key(&key_attributes.key_data, key_algorithm)
             .map_err(debug_err_fn!(
-                Status::ParseKeyError,
+                Error::ParseKeyError,
                 "Failed to parse asymmetric key data: {:?}"
             ))?;
 
@@ -128,9 +128,9 @@ impl KmsAsymmetricKey {
         data: &[u8],
         key_name: &str,
         key_algorithm: AsymmetricKeyAlgorithm,
-    ) -> Result<Self, Status> {
+    ) -> Result<Self, Error> {
         let provider_key = provider.import_asymmetric_key(data, key_algorithm, key_name).map_err(
-            debug_err_fn!(Status::ParseKeyError, "Failed to import asymmetric key: {:?}"),
+            debug_err_fn!(Error::ParseKeyError, "Failed to import asymmetric key: {:?}"),
         )?;
         // Create the key object.
         Ok(KmsAsymmetricKey {
@@ -147,17 +147,17 @@ impl KmsAsymmetricKey {
     ///
     /// * `buffer` - The input data buffer, need to be less than 32k bytes. Otherwise InputTooLarge
     ///     would be returned.
-    fn sign(&self, buffer: Buffer) -> Result<Vec<u8>, Status> {
+    fn sign(&self, buffer: Buffer) -> Result<Vec<u8>, Error> {
         if buffer.size > MAX_DATA_SIZE.into() {
-            return Err(Status::InputTooLarge);
+            return Err(Error::InputTooLarge);
         }
         let input = common::buffer_to_data(buffer)?;
         if self.is_deleted() {
-            return Err(Status::KeyNotFound);
+            return Err(Error::KeyNotFound);
         }
         self.provider_key
             .sign(&input)
-            .map_err(debug_err_fn!(Status::InternalError, "Failed to sign data: {:?}"))
+            .map_err(debug_err_fn!(Error::InternalError, "Failed to sign data: {:?}"))
     }
 
     pub fn get_key_algorithm(&self) -> AsymmetricKeyAlgorithm {
@@ -169,45 +169,38 @@ impl KmsAsymmetricKey {
     }
 
     /// Get the DER encoded public key.
-    fn get_der_public_key(&self) -> Result<Vec<u8>, Status> {
+    fn get_der_public_key(&self) -> Result<Vec<u8>, Error> {
         if self.is_deleted() {
-            return Err(Status::KeyNotFound);
+            return Err(Error::KeyNotFound);
         }
         Ok(self
             .provider_key
             .get_der_public_key()
-            .map_err(debug_err_fn!(Status::InternalError, "Failed to get public key: {:?}"))?)
+            .map_err(debug_err_fn!(Error::InternalError, "Failed to get public key: {:?}"))?)
     }
 
     pub fn handle_asym_request(&self, req: AsymmetricPrivateKeyRequest) -> Result<(), fidl::Error> {
         match req {
-            AsymmetricPrivateKeyRequest::Sign { data, responder } => match self.sign(data) {
-                Ok(signature) => {
-                    responder.send(Status::Ok, Some(OutOfLine(&mut Signature { bytes: signature })))
-                }
-                Err(status) => responder.send(status, None),
-            },
-            AsymmetricPrivateKeyRequest::GetPublicKey { responder } => {
-                match self.get_der_public_key() {
-                    Ok(public_key) => responder
-                        .send(Status::Ok, Some(OutOfLine(&mut PublicKey { bytes: public_key }))),
-                    Err(status) => responder.send(status, None),
-                }
+            AsymmetricPrivateKeyRequest::Sign { data, responder } => {
+                responder.send(&mut self.sign(data).map(|signature| Signature { bytes: signature }))
             }
+            AsymmetricPrivateKeyRequest::GetPublicKey { responder } => responder.send(
+                &mut self.get_der_public_key().map(|public_key| PublicKey { bytes: public_key }),
+            ),
             AsymmetricPrivateKeyRequest::GetKeyAlgorithm { responder } => {
                 let key_algorithm = self.get_key_algorithm();
                 if self.is_deleted() {
-                    responder.send(Status::KeyNotFound, key_algorithm)
+                    responder.send(&mut Err(Error::KeyNotFound))
                 } else {
-                    responder.send(Status::Ok, key_algorithm)
+                    responder.send(&mut Ok(key_algorithm))
                 }
             }
             AsymmetricPrivateKeyRequest::GetKeyOrigin { responder } => {
                 let origin = self.get_key_origin();
                 if self.is_deleted() {
-                    responder.send(Status::KeyNotFound, origin)
+                    responder.send(&mut Err(Error::KeyNotFound))
                 } else {
-                    responder.send(Status::Ok, origin)
+                    responder.send(&mut Ok(origin))
                 }
             }
         }
@@ -257,7 +250,7 @@ mod tests {
         // Input is 1 byte larger than the maximum data size.
         let test_sign_data = common::generate_random_data(MAX_DATA_SIZE + 1);
         let result = test_key.sign(common::data_to_buffer(&test_sign_data).unwrap());
-        if Err(Status::InputTooLarge) == result {
+        if Err(Error::InputTooLarge) == result {
             assert!(true);
         } else {
             assert!(false);
@@ -278,7 +271,7 @@ mod tests {
 
         let test_sign_data = common::generate_random_data(32);
         let result = test_key.sign(common::data_to_buffer(&test_sign_data).unwrap());
-        if Err(Status::KeyNotFound) == result {
+        if Err(Error::KeyNotFound) == result {
             assert!(true);
         } else {
             assert!(false);

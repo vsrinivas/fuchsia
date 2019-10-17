@@ -9,8 +9,7 @@ using fuchsia.mem as mem;
 const uint8 MAX_KEY_NAME_SIZE = 32;
 const uint32 MAX_DATA_SIZE = 65536;
 
-enum Status {
-    OK = 0;
+enum Error {
     /// Internal unexpected error.
     INTERNAL_ERROR = 1;
     /// When trying to create/import a new key however another key with the same name already exists.
@@ -56,12 +55,12 @@ protocol KeyManager {
     ///
     /// Seal data to an encrypted form. The sealed data can only be unsealed by the same KMS instance
     /// by using UnsealData. `plain_text` needs to be less than `MAX_DATA_SIZE` bytes.
-    SealData(mem.Buffer plain_text) -> (Status status, mem.Buffer? cipher_text);
+    SealData(mem.Buffer plain_text) -> (mem.Buffer cipher_text) error Error;
 
     /// Unseal sealed data.
     ///
     /// Unseal data previously sealed by this KMS instance.
-    UnsealData(mem.Buffer cipher_text) -> (Status status, mem.Buffer? plain_text);
+    UnsealData(mem.Buffer cipher_text) -> (mem.Buffer plain_text) error Error;
 
     /// Generate an asymmetric key.
     ///
@@ -71,7 +70,7 @@ protocol KeyManager {
     /// generating asymmetric key is `ECDSA_SHA512_P521`.
     GenerateAsymmetricKey(
         string:MAX_KEY_NAME_SIZE key_name,
-        request<AsymmetricPrivateKey> key) -> (Status status);
+        request<AsymmetricPrivateKey> key) -> () error Error;
 
     /// Generate an asymmetric key with a specific algorithm.
     ///
@@ -81,7 +80,7 @@ protocol KeyManager {
     GenerateAsymmetricKeyWithAlgorithm(
         string:MAX_KEY_NAME_SIZE key_name,
         AsymmetricKeyAlgorithm key_algorithm,
-        request<AsymmetricPrivateKey> key) -> (Status status);
+        request<AsymmetricPrivateKey> key) -> () error Error;
 
     /// Import an asymmetric private key with a specific algorithm.
     ///
@@ -93,7 +92,7 @@ protocol KeyManager {
         bytes data,
         string:MAX_KEY_NAME_SIZE key_name,
         AsymmetricKeyAlgorithm key_algorithm,
-        request<AsymmetricPrivateKey> key) -> (Status status);
+        request<AsymmetricPrivateKey> key) -> () error Error;
 
     /// Get an asymmetric private key handle.
     ///
@@ -101,29 +100,29 @@ protocol KeyManager {
     /// return `KEY_NOT_FOUND`.
     GetAsymmetricPrivateKey(
         string:MAX_KEY_NAME_SIZE key_name,
-        request<AsymmetricPrivateKey> key) -> (Status status);
+        request<AsymmetricPrivateKey> key) -> () error Error;
 
     /// Delete a key.
     ///
     /// Delete a key for `key_name`.  For all the current handle to the deleted key, they would
     /// become invalid and all following requests on those handles would return `KEY_NOT_FOUND`, user
-    /// should close the invalid handles once get `KEY_NOT_FOUND` Status.
-    DeleteKey(string:MAX_KEY_NAME_SIZE key_name) -> (Status status);
+    /// should close the invalid handles once get `KEY_NOT_FOUND` error.
+    DeleteKey(string:MAX_KEY_NAME_SIZE key_name) -> () error Error;
 };
 
 [FragileBase]
 protocol Key {
     /// Get the key origin (generated/imported).
-    GetKeyOrigin() -> (Status status, KeyOrigin key_origin);
+    GetKeyOrigin() -> (KeyOrigin key_origin) error Error;
 };
 
 protocol AsymmetricPrivateKey {
     compose Key;
 
     /// Sign `data` using the current key. `data` needs to be less than `MAX_DATA_SIZE` bytes.
-    Sign(mem.Buffer data) -> (Status status, Signature? signature);
+    Sign(mem.Buffer data) -> (Signature signature) error Error;
     /// Get the DER format public key for the current private key.
-    GetPublicKey() -> (Status status, PublicKey? public_key);
+    GetPublicKey() -> (PublicKey public_key) error Error;
     /// Get the key algorithm.
-    GetKeyAlgorithm() -> (Status status, AsymmetricKeyAlgorithm key_algorithm);
+    GetKeyAlgorithm() -> (AsymmetricKeyAlgorithm key_algorithm) error Error;
 };

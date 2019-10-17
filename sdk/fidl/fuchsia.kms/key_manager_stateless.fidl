@@ -17,5 +17,5 @@ protocol StatelessKeyManager {
     /// different hardware keys.
     GetHardwareDerivedKey(
         vector<uint8>:MAX_HARDWARE_DERIVE_KEY_INFO_SIZE key_info
-        ) -> (Status status, vector<uint8>:MAX_HARDWARE_DERIVED_KEY_SIZE derived_key);
+        ) -> (vector<uint8>:MAX_HARDWARE_DERIVED_KEY_SIZE derived_key) error Error;
 };

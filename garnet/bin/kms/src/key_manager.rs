@@ -9,12 +9,10 @@ use crate::crypto_provider::{
 use crate::kms_asymmetric_key::KmsAsymmetricKey;
 use crate::kms_sealing_key::{KmsSealingKey, SEALING_KEY_NAME};
 use base64;
-use failure::err_msg;
-use failure::Error as fError;
-use fidl::encoding::OutOfLine;
+use failure::{self, err_msg};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_kms::{
-    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyMarker, KeyManagerRequest, KeyOrigin, Status,
+    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyMarker, Error, KeyManagerRequest, KeyOrigin,
     MAX_DATA_SIZE,
 };
 use fidl_fuchsia_mem::Buffer;
@@ -24,7 +22,7 @@ use log::{error, warn};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::io::{Error, ErrorKind};
+use std::io::{Error as IOError, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex, RwLock};
@@ -83,7 +81,7 @@ impl KeyManager {
         key_manager
     }
 
-    pub fn set_provider(&mut self, provider_name: &str) -> Result<(), fError> {
+    pub fn set_provider(&mut self, provider_name: &str) -> Result<(), failure::Error> {
         if !self.crypto_provider_map.read().unwrap().contains_key(provider_name) {
             return Err(err_msg("Invalid crypto provider name"));
         }
@@ -102,15 +100,12 @@ impl KeyManager {
             KeyManagerRequest::GenerateAsymmetricKey { key_name, key, responder } => {
                 self.with_provider(&self.provider_name, |provider| {
                     // Default algorithm for asymmetric key is ECDSA-SHA512-P521.
-                    match self.generate_asymmetric_key_and_bind(
+                    responder.send(&mut self.generate_asymmetric_key_and_bind(
                         &key_name,
                         key,
                         AsymmetricKeyAlgorithm::EcdsaSha512P521,
                         provider.unwrap(),
-                    ) {
-                        Ok(()) => responder.send(Status::Ok),
-                        Err(status) => responder.send(status),
-                    }
+                    ))
                 })
             }
             KeyManagerRequest::GenerateAsymmetricKeyWithAlgorithm {
@@ -119,21 +114,15 @@ impl KeyManager {
                 key,
                 responder,
             } => self.with_provider(&self.provider_name, |provider| {
-                match self.generate_asymmetric_key_and_bind(
+                responder.send(&mut self.generate_asymmetric_key_and_bind(
                     &key_name,
                     key,
                     key_algorithm,
                     provider.unwrap(),
-                ) {
-                    Ok(()) => responder.send(Status::Ok),
-                    Err(status) => responder.send(status),
-                }
+                ))
             }),
             KeyManagerRequest::GetAsymmetricPrivateKey { key_name, key, responder } => {
-                match self.get_asymmetric_private_key_and_bind(&key_name, key) {
-                    Ok(()) => responder.send(Status::Ok),
-                    Err(status) => responder.send(status),
-                }
+                responder.send(&mut self.get_asymmetric_private_key_and_bind(&key_name, key))
             }
             KeyManagerRequest::ImportAsymmetricPrivateKey {
                 data,
@@ -142,42 +131,24 @@ impl KeyManager {
                 key,
                 responder,
             } => self.with_provider(&self.provider_name, |provider| {
-                match self.import_asymmetric_private_key_and_bind(
+                responder.send(&mut self.import_asymmetric_private_key_and_bind(
                     &data,
                     &key_name,
                     key_algorithm,
                     key,
                     provider.unwrap(),
-                ) {
-                    Ok(()) => responder.send(Status::Ok),
-                    Err(status) => responder.send(status),
-                }
+                ))
             }),
-            KeyManagerRequest::SealData { plain_text, responder } => {
-                self.with_provider(&self.provider_name, |provider| {
-                    match self.seal_data(plain_text, provider.unwrap()) {
-                        Ok(mut cipher_text) => {
-                            responder.send(Status::Ok, Some(OutOfLine(&mut cipher_text)))
-                        }
-                        Err(status) => responder.send(status, None),
-                    }
-                })
-            }
-            KeyManagerRequest::UnsealData { cipher_text, responder } => {
-                self.with_provider(&self.provider_name, |provider| {
-                    match self.unseal_data(cipher_text, provider.unwrap()) {
-                        Ok(mut plain_text) => {
-                            responder.send(Status::Ok, Some(OutOfLine(&mut plain_text)))
-                        }
-                        Err(status) => responder.send(status, None),
-                    }
-                })
-            }
+            KeyManagerRequest::SealData { plain_text, responder } => self
+                .with_provider(&self.provider_name, |provider| {
+                    responder.send(&mut self.seal_data(plain_text, provider.unwrap()))
+                }),
+            KeyManagerRequest::UnsealData { cipher_text, responder } => self
+                .with_provider(&self.provider_name, |provider| {
+                    responder.send(&mut self.unseal_data(cipher_text, provider.unwrap()))
+                }),
             KeyManagerRequest::DeleteKey { key_name, responder } => {
-                match self.delete_key(&key_name) {
-                    Ok(()) => responder.send(Status::Ok),
-                    Err(status) => responder.send(status),
-                }
+                responder.send(&mut self.delete_key(&key_name))
             }
         }
     }
@@ -194,9 +165,9 @@ impl KeyManager {
         key_name: &str,
         key_to_bind: Arc<Mutex<dyn KmsKey>>,
         key: ServerEnd<AsymmetricPrivateKeyMarker>,
-    ) -> Result<(), Status> {
+    ) -> Result<(), Error> {
         let mut request_stream = key.into_stream().map_err(debug_err_fn!(
-            Status::InternalError,
+            Error::InternalError,
             "Error creating AsymmetricKey request stream {:?}"
         ))?;
         // Need to clone the key_name to be move into the async function.
@@ -261,7 +232,7 @@ impl KeyManager {
         key: ServerEnd<AsymmetricPrivateKeyMarker>,
         key_algorithm: AsymmetricKeyAlgorithm,
         provider: &dyn CryptoProvider,
-    ) -> Result<(), Status> {
+    ) -> Result<(), Error> {
         let key_to_bind = self.generate_asymmetric_key(key_name, key_algorithm, provider)?;
         self.bind_asymmetric_key_to_server(key_name, key_to_bind, key)
     }
@@ -281,7 +252,7 @@ impl KeyManager {
         key_name: &str,
         key_algorithm: AsymmetricKeyAlgorithm,
         provider: &dyn CryptoProvider,
-    ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Status> {
+    ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Error> {
         self.generate_or_import_asymmetric_key(key_name, key_algorithm, provider, None)
     }
 
@@ -301,7 +272,7 @@ impl KeyManager {
         key_algorithm: AsymmetricKeyAlgorithm,
         key: ServerEnd<AsymmetricPrivateKeyMarker>,
         provider: &dyn CryptoProvider,
-    ) -> Result<(), Status> {
+    ) -> Result<(), Error> {
         let key_to_bind =
             self.import_asymmetric_private_key(data, &key_name, key_algorithm, provider)?;
         self.bind_asymmetric_key_to_server(&key_name, key_to_bind, key)
@@ -324,7 +295,7 @@ impl KeyManager {
         key_name: &str,
         key_algorithm: AsymmetricKeyAlgorithm,
         provider: &dyn CryptoProvider,
-    ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Status> {
+    ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Error> {
         self.generate_or_import_asymmetric_key(key_name, key_algorithm, provider, Some(data))
     }
 
@@ -335,14 +306,14 @@ impl KeyManager {
         key_algorithm: AsymmetricKeyAlgorithm,
         provider: &dyn CryptoProvider,
         imported_key_data: Option<&[u8]>,
-    ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Status> {
+    ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Error> {
         // Check whether the algorithm is valid.
         Self::check_asymmmetric_supported_algorithms(key_algorithm, provider)?;
         // Create a new symmetric key object and store it into the key map.
         // Obtain a lock on the key map to start a critical section.
         let mut key_map = self.user_key_map.lock().unwrap();
         if key_map.contains_key(key_name) || self.key_file_exists(key_name, true) {
-            return Err(Status::KeyAlreadyExists);
+            return Err(Error::KeyAlreadyExists);
         }
         let new_key = match imported_key_data {
             Some(data) => KmsAsymmetricKey::import_key(provider, data, key_name, key_algorithm),
@@ -379,7 +350,7 @@ impl KeyManager {
         &self,
         key_name: &str,
         key: ServerEnd<AsymmetricPrivateKeyMarker>,
-    ) -> Result<(), Status> {
+    ) -> Result<(), Error> {
         let key_to_bind = self.get_asymmetric_private_key(&key_name)?;
         self.bind_asymmetric_key_to_server(&key_name, key_to_bind, key)
     }
@@ -392,7 +363,7 @@ impl KeyManager {
     /// # Arguments
     ///
     /// * `key_name` - The name for the key to be find.
-    fn get_asymmetric_private_key(&self, key_name: &str) -> Result<Arc<Mutex<dyn KmsKey>>, Status> {
+    fn get_asymmetric_private_key(&self, key_name: &str) -> Result<Arc<Mutex<dyn KmsKey>>, Error> {
         // Start a critical section.
         let mut key_map = self.user_key_map.lock().unwrap();
         let key_to_bind = match key_map.get(key_name) {
@@ -424,7 +395,7 @@ impl KeyManager {
     /// # Arguments
     ///
     /// * `key_name` - The name for the key to be deleted.
-    fn delete_key(&self, key_name: &str) -> Result<(), Status> {
+    fn delete_key(&self, key_name: &str) -> Result<(), Error> {
         // Obtain a lock on the user_key_map to start a critical section to make sure there is no
         // overlapping deleting/generating/importing/getting key operations.
         let mut key_map = self.user_key_map.lock().unwrap();
@@ -453,7 +424,7 @@ impl KeyManager {
         // the removal here.
         let key_attributes_path = self.get_key_attributes_path(key_name, true);
         fs::remove_file(&key_attributes_path)
-            .map_err(debug_err_fn!(Status::InternalError, "Failed to remove key files: {:?}"))?;
+            .map_err(debug_err_fn!(Error::InternalError, "Failed to remove key files: {:?}"))?;
 
         // End the critical section.
         drop(key_map);
@@ -469,12 +440,12 @@ impl KeyManager {
     ///
     /// * `data` - The buffer containing the data to be sealed.
     /// * `provider` - The crypto provider to do the encryption operation.
-    fn seal_data(&self, data: Buffer, provider: &dyn CryptoProvider) -> Result<Buffer, Status> {
+    fn seal_data(&self, data: Buffer, provider: &dyn CryptoProvider) -> Result<Buffer, Error> {
         if data.size > MAX_DATA_SIZE.into() {
-            return Err(Status::InputTooLarge);
+            return Err(Error::InputTooLarge);
         }
         let sealing_key = self.get_sealing_key(provider)?;
-        let mut result = Err(Status::InternalError);
+        let mut result = Err(Error::InternalError);
         // The error, if any, would be return through the result variable, handle_request is
         // guaranteed to not return any FIDL error.
         sealing_key
@@ -496,22 +467,22 @@ impl KeyManager {
     ///
     /// * `data` - The buffer containing the data to be unsealed.
     /// * `provider` - The crypto provider to do the decryption operation.
-    fn unseal_data(&self, data: Buffer, provider: &dyn CryptoProvider) -> Result<Buffer, Status> {
+    fn unseal_data(&self, data: Buffer, provider: &dyn CryptoProvider) -> Result<Buffer, Error> {
         let sealed_data_size =
             provider.calculate_sealed_data_size(MAX_DATA_SIZE.into()).map_err(debug_err_fn!(
-                Status::InternalError,
+                Error::InternalError,
                 "MAX_DATA_SIZE {} is too large, unable to get sealed data size, err: {:?}!",
                 MAX_DATA_SIZE
             ))?;
         if data.size > sealed_data_size {
-            return Err(Status::InputTooLarge);
+            return Err(Error::InputTooLarge);
         }
         if !self.key_file_exists(SEALING_KEY_NAME, false) {
             // If no sealing key exists, something is wrong.
-            return Err(Status::KeyNotFound);
+            return Err(Error::KeyNotFound);
         }
         let sealing_key = self.get_sealing_key(provider)?;
-        let mut result = Err(Status::InternalError);
+        let mut result = Err(Error::InternalError);
         sealing_key
             .lock()
             .unwrap()
@@ -527,7 +498,7 @@ impl KeyManager {
     fn get_sealing_key(
         &self,
         provider: &dyn CryptoProvider,
-    ) -> Result<Arc<Mutex<dyn KmsKey>>, Status> {
+    ) -> Result<Arc<Mutex<dyn KmsKey>>, Error> {
         // Sealing key is managed internally, so we store them in internal_key_map.
         // Begin a critical section.
         let mut key_map = self.internal_key_map.lock().unwrap();
@@ -539,7 +510,7 @@ impl KeyManager {
             let sealing_key =
                 match self.read_key_attributes_from_file(&key_name, &provider_map, false) {
                     Ok(key_attributes) => KmsSealingKey::parse_key(key_name, key_attributes),
-                    Err(Status::KeyNotFound) => {
+                    Err(Error::KeyNotFound) => {
                         warn!("No sealing key found, create new key.");
                         let new_key = KmsSealingKey::new(provider)?;
                         self.write_key_attributes_to_file(
@@ -572,7 +543,7 @@ impl KeyManager {
     fn check_asymmmetric_supported_algorithms(
         key_algorithm: AsymmetricKeyAlgorithm,
         provider: &dyn CryptoProvider,
-    ) -> Result<(), Status> {
+    ) -> Result<(), Error> {
         if provider
             .supported_asymmetric_algorithms()
             .iter()
@@ -581,7 +552,7 @@ impl KeyManager {
         {
             warn!("The asymmetric algorithm is not supported.");
             // TODO: Add logic to fall back.
-            return Err(Status::InternalError);
+            return Err(Error::InternalError);
         }
         Ok(())
     }
@@ -610,7 +581,7 @@ impl KeyManager {
         key_name: &str,
         serialized_key_attributes: &str,
         is_user_key: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IOError> {
         fs::create_dir_all(self.get_key_folder(is_user_key))?;
         let key_attributes_path = self.get_key_attributes_path(key_name, is_user_key);
         fs::write(key_attributes_path, serialized_key_attributes)?;
@@ -630,7 +601,7 @@ impl KeyManager {
         provider_name: &str,
         key_data: &[u8],
         is_user_key: bool,
-    ) -> Result<(), Status> {
+    ) -> Result<(), Error> {
         let key_algorithm_num = match asymmetric_key_algorithm {
             Some(alg) => alg.into_primitive(),
             None => 0,
@@ -645,10 +616,10 @@ impl KeyManager {
         let key_attributes_string = serde_json::to_string(&key_attributes)
             .expect("Failed to encode key attributes to JSON format.");
         self.write_key_attributes(key_name, &key_attributes_string, is_user_key)
-            .map_err(debug_err_fn!(Status::InternalError, "Failed to write key attributes: {:?}"))
+            .map_err(debug_err_fn!(Error::InternalError, "Failed to write key attributes: {:?}"))
     }
 
-    fn read_key_attributes(&self, key_name: &str, is_user_key: bool) -> Result<Vec<u8>, Error> {
+    fn read_key_attributes(&self, key_name: &str, is_user_key: bool) -> Result<Vec<u8>, IOError> {
         let key_attributes_path = self.get_key_attributes_path(key_name, is_user_key);
         Ok(fs::read(key_attributes_path)?)
     }
@@ -658,32 +629,32 @@ impl KeyManager {
         key_name: &str,
         provider_map: &'a HashMap<&'static str, Box<dyn CryptoProvider>>,
         is_user_key: bool,
-    ) -> Result<KeyAttributes<'a>, Status> {
+    ) -> Result<KeyAttributes<'a>, Error> {
         // Read the key attributes from file and parse it.
         let key_attributes_string =
             self.read_key_attributes(&key_name, is_user_key).map_err(|err| {
                 if err.kind() == ErrorKind::NotFound {
-                    return Status::KeyNotFound;
+                    return Error::KeyNotFound;
                 }
                 debug_err!(
-                    Status::InternalError,
+                    Error::InternalError,
                     "Failed to read key attributes from key file: {:?}",
                     err
                 )
             })?;
         let key_attributes_string =
             str::from_utf8(&key_attributes_string).map_err(debug_err_fn!(
-                Status::InternalError,
+                Error::InternalError,
                 "Failed to parse JSON string as UTF8: {:?}! The stored key data is corrupted!"
             ))?;
         let key_attributes_json: KeyAttributesJson = serde_json::from_str(&key_attributes_string)
             .map_err(debug_err_fn!(
-            Status::InternalError,
+            Error::InternalError,
             "Failed to parse key attributes: {:?}, the stored key data is corrupted!"
         ))?;
         let provider_name: &str = &key_attributes_json.provider_name;
         let provider = provider_map.get(provider_name).ok_or_else(debug_err_fn_no_argument!(
-            Status::InternalError,
+            Error::InternalError,
             "Failed to find provider! The stored key data is corrupted!"
         ))?;
         let key_type = key_attributes_json.key_type;
@@ -692,7 +663,7 @@ impl KeyManager {
                 Some(
                     AsymmetricKeyAlgorithm::from_primitive(key_attributes_json.key_algorithm)
                         .ok_or_else(debug_err_fn_no_argument!(
-                            Status::InternalError,
+                            Error::InternalError,
                             "Failed to convert key_algortihm! The stored key data is corrupted!"
                         ))?,
                 )
@@ -702,7 +673,7 @@ impl KeyManager {
         };
         let key_origin = KeyOrigin::from_primitive(key_attributes_json.key_origin).ok_or_else(
             debug_err_fn_no_argument!(
-                Status::InternalError,
+                Error::InternalError,
                 "Failed to convert key_origin! The stored key data is corrupted!"
             ),
         )?;
@@ -814,11 +785,7 @@ mod tests {
         mock_provider.set_error();
         let result =
             key_manager.generate_asymmetric_key(TEST_KEY_NAME, key_algorithm, mock_provider);
-        if let Err(Status::InternalError) = result {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
+        assert_eq!(Error::InternalError, result.unwrap_err());
     }
 
     #[test]
@@ -866,11 +833,7 @@ mod tests {
         let key_manager = test_case.get_key_manager();
         // If we read again, it should read from file.
         let result = key_manager.get_asymmetric_private_key(TEST_KEY_NAME);
-        if let Err(Status::KeyNotFound) = result {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
+        assert_eq!(Error::KeyNotFound, result.unwrap_err());
     }
 
     #[test]
@@ -926,11 +889,7 @@ mod tests {
             key_algorithm,
             mock_provider,
         );
-        if let Err(Status::KeyAlreadyExists) = result {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
+        assert_eq!(Error::KeyAlreadyExists, result.unwrap_err());
     }
 
     #[test]
@@ -951,11 +910,7 @@ mod tests {
             key_algorithm,
             mock_provider,
         );
-        if let Err(Status::KeyAlreadyExists) = result {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
+        assert_eq!(Error::KeyAlreadyExists, result.unwrap_err());
     }
 
     #[test]
@@ -979,23 +934,20 @@ mod tests {
                 .unwrap();
             key_manager.delete_key(TEST_KEY_NAME).unwrap();
             // Try deleting the key again, should fail.
-            assert_eq!(Status::KeyNotFound, key_manager.delete_key(TEST_KEY_NAME).unwrap_err());
+            assert_eq!(Error::KeyNotFound, key_manager.delete_key(TEST_KEY_NAME).unwrap_err());
             assert_eq!(true, key.lock().unwrap().is_deleted());
             // Try getting the deleted key, should get key_not_found.
-            if let Err(Status::KeyNotFound) = key_manager.get_asymmetric_private_key(TEST_KEY_NAME)
-            {
-                assert!(true);
-            } else {
-                assert!(false);
-            }
+            assert_eq!(
+                Error::KeyNotFound,
+                key_manager.get_asymmetric_private_key(TEST_KEY_NAME).unwrap_err()
+            );
         }
         // Try getting the deleted key after all reference to the deleted key is freed, should get
         // key_not_found.
-        if let Err(Status::KeyNotFound) = key_manager.get_asymmetric_private_key(TEST_KEY_NAME) {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
+        assert_eq!(
+            Error::KeyNotFound,
+            key_manager.get_asymmetric_private_key(TEST_KEY_NAME).unwrap_err()
+        );
     }
 
     #[test]
@@ -1003,7 +955,7 @@ mod tests {
         let test_case = TestCase::new();
         let key_manager = test_case.get_key_manager();
         let result = key_manager.delete_key(TEST_KEY_NAME);
-        assert_eq!(Status::KeyNotFound, result.unwrap_err());
+        assert_eq!(Error::KeyNotFound, result.unwrap_err());
     }
 
     #[test]
@@ -1024,11 +976,7 @@ mod tests {
             .unwrap();
         mock_provider.set_key_operation_error();
         let result = key_manager.delete_key(TEST_KEY_NAME);
-        if let Err(Status::InternalError) = result {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
+        assert_eq!(Err(Error::InternalError), result);
     }
 
     #[test]
@@ -1059,11 +1007,7 @@ mod tests {
         mock_provider.set_key_result(Ok(test_output_data.clone()));
         let result =
             key_manager.seal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider);
-        if let Err(Status::InputTooLarge) = result {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
+        assert_eq!(Err(Error::InputTooLarge), result);
     }
 
     #[test]
@@ -1096,11 +1040,7 @@ mod tests {
         mock_provider.set_key_result(Ok(test_output_data.clone()));
         let result = key_manager
             .unseal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider);
-        if let Err(Status::InputTooLarge) = result {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
+        assert_eq!(Err(Error::InputTooLarge), result);
     }
 
     #[test]
@@ -1114,7 +1054,7 @@ mod tests {
         mock_provider.set_key_result(Err(CryptoProviderError::new("")));
         let result =
             key_manager.seal_data(common::data_to_buffer(&test_input_data).unwrap(), mock_provider);
-        assert_eq!(Status::InternalError, result.unwrap_err());
+        assert_eq!(Error::InternalError, result.unwrap_err());
     }
 
     #[test]
@@ -1133,7 +1073,7 @@ mod tests {
 
         // The sealing key should be in a separate name space than user keys.
         let result = key_manager.delete_key(SEALING_KEY_NAME);
-        assert_eq!(Status::KeyNotFound, result.unwrap_err());
+        assert_eq!(Error::KeyNotFound, result.unwrap_err());
     }
 
     #[test]
