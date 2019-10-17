@@ -28,7 +28,6 @@ group("uapp") {
     "fs-mount",
     "fs-umount",
     "fvm-check",
-    "goldfish-benchmark",
     "gpt",
     "hid",
     "hidsensor",

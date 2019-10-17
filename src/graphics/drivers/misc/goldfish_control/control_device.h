@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
-#define ZIRCON_SYSTEM_DEV_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
+#ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
+#define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
@@ -82,4 +82,4 @@ class Control : public ControlType,
 
 }  // namespace goldfish
 
-#endif  // ZIRCON_SYSTEM_DEV_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
+#endif  // SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_

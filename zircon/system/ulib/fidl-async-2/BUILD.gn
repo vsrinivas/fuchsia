@@ -5,6 +5,14 @@
 import("$zx_build/public/gn/library_shim.gni")
 
 library("fidl-async-2") {
+  sdk = "source"
+
+  sdk_headers = [
+    "lib/fidl-async-2/fidl_server.h",
+    "lib/fidl-async-2/fidl_struct.h",
+    "lib/fidl-async-2/simple_binding.h",
+  ]
+
   sources = []
   deps = [
     "$zx/system/ulib/async",

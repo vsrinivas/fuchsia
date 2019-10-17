@@ -63,6 +63,7 @@ group("ulib") {
     "fidl:fidl_base",
     "fidl-async",
     "fidl-async:fidl-async-cpp",
+    "fidl-async-2",
     "fidl-utils",
     "fit",
     "framebuffer",

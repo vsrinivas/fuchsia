@@ -1,0 +1,58 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("goldfish_driver") {
+  output_name = "goldfish"
+
+  sources = [
+    "instance.cc",
+    "pipe.cc",
+    "pipe_device.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async-2",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-driver",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.acpi",
+    "//zircon/system/banjo/ddk.protocol.goldfish.pipe",
+    "//zircon/system/fidl/fuchsia-hardware-goldfish-pipe:c",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+}
+
+package("goldfish") {
+  deprecated_system_image = true
+
+  deps = [
+    ":goldfish_driver",
+  ]
+
+  drivers = [
+    {
+      name = "goldfish.so"
+    },
+  ]
+}

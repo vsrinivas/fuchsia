@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
+#define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
+
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
@@ -70,3 +73,5 @@ class Pipe : public FidlServer<Pipe,
 };
 
 }  // namespace goldfish
+
+#endif  // SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_

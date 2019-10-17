@@ -138,6 +138,7 @@ group("drivers") {
     "//src/camera/drivers",
     "//src/connectivity/ppp:drivers",
     "//src/connectivity/telephony:drivers",
+    "//src/graphics/drivers",
   ]
   if (target_cpu == "arm64") {
     public_deps += [ "//garnet/packages/prod:amlogic_video_decoder" ]

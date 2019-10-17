@@ -4,14 +4,8 @@
 
 group("misc") {
   deps = [
-    "builtin",
-    "cpu-trace",
-    "ktrace",
-    "sysinfo",
-    "test",
+    "goldfish",
+    "goldfish_address_space",
+    "goldfish_control",
   ]
-
-  if (current_cpu == "x64") {
-    deps += [ "tpm" ]
-  }
 }

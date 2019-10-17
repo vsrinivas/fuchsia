@@ -1,0 +1,23 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/goldfish_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/goldfish-address-space",
+            "class/goldfish-control",
+            "class/goldfish-pipe",
+            "sys/platform/acpi/goldfish"
+        ],
+        "services": [
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

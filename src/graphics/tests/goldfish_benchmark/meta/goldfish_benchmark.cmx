@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/goldfish_benchmark"
+    },
+    "sandbox": {
+        "dev": [
+            "class/goldfish-pipe"
+        ],
+        "services": []
+    }
+}

@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "address-space-device.h"
+#include "address_space_device.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <lib/device-protocol/pci.h>
-#include <ddk/trace/event.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <fuchsia/hardware/goldfish/address/space/c/fidl.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/fidl-utils/bind.h>
 #include <limits.h>
 
 #include <map>
 #include <memory>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/trace/event.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
 #define GOLDFISH_ADDRESS_SPACE_PCI_VID 0x607D
 #define GOLDFISH_ADDRESS_SPACE_PCI_DID 0xF153

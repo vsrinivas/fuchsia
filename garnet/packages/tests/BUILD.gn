@@ -346,6 +346,7 @@ group("all") {
     ":go_stdlib_tests",
     ":go_thinfs_tests",
     ":go_tuf",
+    ":graphics",
     ":guest",
     ":httpdate_hyper",
     ":image_pipe_swapchain",
@@ -882,6 +883,13 @@ group("vulkan") {
     "//garnet/lib/vulkan:test-vk-validation",
     "//garnet/packages/prod:vulkan",
     "//src/graphics/lib/vulkan:loader_and_validation_tests",
+  ]
+}
+
+group("graphics") {
+  testonly = true
+  public_deps = [
+    "//src/graphics:tests",
   ]
 }
 
