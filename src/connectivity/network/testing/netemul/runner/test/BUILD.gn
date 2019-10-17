@@ -9,6 +9,7 @@ group("test") {
   testonly = true
   deps = [
     ":netemul_empty_binaries",
+    ":netemul_guest_test",
     ":netemul_sandbox_test",
     "dummy_proc",
     "dynamic_devices",
@@ -49,7 +50,6 @@ test_package("netemul_sandbox_test") {
     "dynamic_devices",
     "easy_netstack_cfg",
     "env_build",
-    "guest",
     "inheritance",
     "netstack_intermediary",
     "netstack_socks",
@@ -58,13 +58,6 @@ test_package("netemul_sandbox_test") {
     "//src/connectivity/network/testing/netemul/runner:sandbox_unittest",
     "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings:mock_device_settings_test",
     "//src/connectivity/network/testing/netemul/runner/model:model_unittest",
-  ]
-
-  resources = [
-    {
-      path = "//src/virtualization/lib/guest_interaction/test/test_script.sh"
-      dest = "test_script.sh"
-    },
   ]
 
   meta = [
@@ -104,10 +97,6 @@ test_package("netemul_sandbox_test") {
       path = rebase_path("meta/netstack_intermediary.cmx")
       dest = "netstack_intermediary.cmx"
     },
-    {
-      path = rebase_path("meta/guest.cmx")
-      dest = "guest.cmx"
-    },
   ]
 
   binaries = [
@@ -134,9 +123,6 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "netstack_intermediary"
-    },
-    {
-      name = "netemul_guest"
     },
   ]
 
@@ -185,6 +171,36 @@ test_package("netemul_sandbox_test") {
       name = "netstack_intermediary_test"
       environments = [ qemu_env ]
     },
+  ]
+}
+
+test_package("netemul_guest_test") {
+  deps = [
+    ":netemul_empty_binaries",
+    "guest",
+  ]
+
+  resources = [
+    {
+      path = "//src/virtualization/lib/guest_interaction/test/test_script.sh"
+      dest = "test_script.sh"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/guest.cmx")
+      dest = "guest.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "netemul_guest"
+    },
+  ]
+
+  tests = [
     {
       # Running guests is resource intensive.  Limit this test to only run on NUCs.
       name = "guest_test"
