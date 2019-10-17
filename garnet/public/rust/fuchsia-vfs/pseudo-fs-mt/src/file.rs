@@ -4,12 +4,9 @@
 
 //! Module holding different kinds of pseudo files and their building blocks.
 
-pub mod asynchronous;
-
-/// Asynchronous is the default and, currently, the only implementation provided for pseudo files.
-pub use asynchronous::{read_only, read_write, write_only};
+/// File nodes with per-connection buffers.
+pub mod pcb;
 
 pub mod test_utils;
 
 mod common;
-mod connection;

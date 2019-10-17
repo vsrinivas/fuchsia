@@ -290,7 +290,7 @@ mod tests {
 
     use crate::{
         directory::{simple, test_utils::run_server_client},
-        file::asynchronous::read_only_static,
+        file::pcb::asynchronous::read_only_static,
     };
 
     use {

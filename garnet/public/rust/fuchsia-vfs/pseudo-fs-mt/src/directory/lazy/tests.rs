@@ -21,7 +21,7 @@ use crate::{
         traversal_position::AlphabeticalTraversal,
     },
     execution_scope::ExecutionScope,
-    file::asynchronous::{read_only, read_only_static},
+    file::pcb::asynchronous::{read_only, read_only_static},
 };
 
 use {

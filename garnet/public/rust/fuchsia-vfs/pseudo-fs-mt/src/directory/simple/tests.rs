@@ -21,7 +21,7 @@ use crate::{
         test_utils::{run_server_client, DirentsSameInodeBuilder},
     },
     execution_scope::ExecutionScope,
-    file::asynchronous::{read_only_static, read_write, write_only},
+    file::pcb::asynchronous::{read_only_static, read_write, write_only},
     path::Path,
     test_utils::node::open_get_proxy,
     test_utils::run_client,

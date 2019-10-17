@@ -25,7 +25,9 @@ use crate::{
     common::send_on_open_with_error,
     directory::entry::{DirectoryEntry, EntryInfo},
     execution_scope::ExecutionScope,
-    file::connection::{AsyncInitBuffer, AsyncUpdate, FileConnection, FileWithPerConnectionBuffer},
+    file::pcb::connection::{
+        AsyncInitBuffer, AsyncUpdate, FileConnection, FileWithPerConnectionBuffer,
+    },
     path::Path,
 };
 
