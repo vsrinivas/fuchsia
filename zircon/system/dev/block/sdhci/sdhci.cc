@@ -42,7 +42,6 @@ constexpr int kDmaDescCount = 512;
 constexpr zx::duration kResetTime                = zx::sec(1);
 constexpr zx::duration kClockStabilizationTime   = zx::msec(150);
 constexpr zx::duration kVoltageStabilizationTime = zx::msec(5);
-constexpr zx::duration kDataStabilizationTime    = zx::msec(1);
 constexpr zx::duration kInhibitWaitTime          = zx::msec(1);
 constexpr zx::duration kWaitYieldTime            = zx::usec(1);
 
@@ -560,10 +559,6 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
   // Note: the SDHCI spec indicates that the data lines should be checked to see if the card is
   // ready for a voltage switch, however that doesn't seem to work for one of our devices.
 
-  // Disable the SD clock before messing with the voltage.
-  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
-  clock.set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
-
   ctrl2.set_voltage_1v8_signalling_enable(voltage_1v8_value).WriteTo(&regs_mmio_buffer_);
 
   // Wait 5ms for the regulator to stabilize.
@@ -572,31 +567,6 @@ zx_status_t Sdhci::SdmmcSetSignalVoltage(sdmmc_voltage_t voltage) {
   if (ctrl2.ReadFrom(&regs_mmio_buffer_).voltage_1v8_signalling_enable() != voltage_1v8_value) {
     zxlogf(ERROR, "sdhci: voltage regulator output did not become stable\n");
     // Cut power to the card if the voltage switch failed.
-    PowerControl::Get()
-        .ReadFrom(&regs_mmio_buffer_)
-        .set_sd_bus_power_vdd1(0)
-        .WriteTo(&regs_mmio_buffer_);
-    return ZX_ERR_INTERNAL;
-  }
-
-  // Turn the clock back on
-  clock.ReadFrom(&regs_mmio_buffer_).set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
-
-  // Wait 1ms for the data lines to stabilize.
-  zx::nanosleep(zx::deadline_after(kDataStabilizationTime));
-
-  // According to the SDHCI spec the data lines should all be high after switching to 1.8V.
-
-  auto state = PresentState::Get().ReadFrom(&regs_mmio_buffer_);
-  const uint32_t dat = state.dat_3_0() | (state.dat_7_4() << 4);
-
-  auto ctrl1 = HostControl1::Get().ReadFrom(&regs_mmio_buffer_);
-  const uint32_t dat_mask = ctrl1.extended_data_transfer_width()
-                                ? 0b1111'1111
-                                : (ctrl1.data_transfer_width_4bit() ? 0b0000'1111 : 0b0000'0001);
-
-  if ((dat & dat_mask) != dat_mask) {
-    zxlogf(ERROR, "sdhci: data bus did not come up after voltage switch\n");
     PowerControl::Get()
         .ReadFrom(&regs_mmio_buffer_)
         .set_sd_bus_power_vdd1(0)
@@ -651,8 +621,12 @@ zx_status_t Sdhci::SdmmcSetBusFreq(uint32_t bus_freq) {
   }
 
   // Turn off the SD clock before messing with the clock rate.
-  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
-  clock.set_internal_clock_enable(0).set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
+  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_).set_sd_clock_enable(0);
+  if (bus_freq == 0) {
+    clock.WriteTo(&regs_mmio_buffer_);
+    return ZX_OK;
+  }
+  clock.set_internal_clock_enable(0).WriteTo(&regs_mmio_buffer_);
 
   // Write the new divider into the control register.
   clock.set_frequency_select(GetClockDividerValue(base_clock_, bus_freq))

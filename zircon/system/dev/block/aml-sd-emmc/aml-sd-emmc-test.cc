@@ -475,4 +475,29 @@ TEST_F(AmlSdEmmcTest, SpuriousInterrupt) {
   ASSERT_OK(dut_->SdmmcRequest(&request));
 }
 
+TEST_F(AmlSdEmmcTest, SetBusFreq) {
+  ASSERT_OK(dut_->Init());
+
+  auto clock = AmlSdEmmcClock::Get().FromValue(0).WriteTo(&mmio_);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(100'000'000));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 10);
+  EXPECT_EQ(clock.cfg_src(), 1);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(200'000'000));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 9);
+  EXPECT_EQ(clock.cfg_src(), 1);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(0));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 0);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(54'000'000));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 19);
+  EXPECT_EQ(clock.cfg_src(), 1);
+
+  EXPECT_OK(dut_->SdmmcSetBusFreq(400'000));
+  EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 60);
+  EXPECT_EQ(clock.cfg_src(), 0);
+}
+
 }  // namespace sdmmc
