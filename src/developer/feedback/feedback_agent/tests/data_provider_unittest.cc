@@ -139,7 +139,7 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class DataProviderImplTest : public sys::testing::TestWithEnvironment {
+class DataProviderTest : public sys::testing::TestWithEnvironment {
  public:
   void SetUp() override { SetUpDataProvider(kDefaultConfig); }
 
@@ -159,8 +159,8 @@ class DataProviderImplTest : public sys::testing::TestWithEnvironment {
 
  protected:
   void SetUpDataProvider(const Config& config) {
-    data_provider_.reset(new DataProviderImpl(
-        dispatcher(), service_directory_provider_.service_directory(), config));
+    data_provider_.reset(
+        new DataProvider(dispatcher(), service_directory_provider_.service_directory(), config));
   }
 
   void SetUpScenic(std::unique_ptr<StubScenic> stub_scenic) {
@@ -237,7 +237,7 @@ class DataProviderImplTest : public sys::testing::TestWithEnvironment {
     return stub_scenic_->take_screenshot_responses();
   }
 
-  std::unique_ptr<DataProviderImpl> data_provider_;
+  std::unique_ptr<DataProvider> data_provider_;
 
  private:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
@@ -249,7 +249,7 @@ class DataProviderImplTest : public sys::testing::TestWithEnvironment {
   std::unique_ptr<StubChannelProvider> stub_channel_provider_;
 };
 
-TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
+TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   const size_t image_dim_in_px = 100;
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px), kSuccess);
@@ -277,7 +277,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   EXPECT_EQ(actual_pixels, expected_pixels);
 }
 
-TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicNotAvailable) {
+TEST_F(DataProviderTest, GetScreenshot_FailOnScenicNotAvailable) {
   SetUpScenic(nullptr);
 
   GetScreenshotResponse feedback_response = GetScreenshot();
@@ -285,7 +285,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicNotAvailable) {
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
-TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
+TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningFailure) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
@@ -299,7 +299,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
-TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) {
+TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateNonBGRA8Screenshot(), kSuccess);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
@@ -313,8 +313,8 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screensh
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
-TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
-  // We simulate three calls to DataProviderImpl::GetScreenshot(): one for which the stub Scenic
+TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
+  // We simulate three calls to DataProvider::GetScreenshot(): one for which the stub Scenic
   // will return a checkerboard 10x10, one for a 20x20 and one failure.
   const size_t num_calls = 3u;
   const size_t image_dim_in_px_0 = 10u;
@@ -339,7 +339,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
-  // We cannot assume that the order of the DataProviderImpl::GetScreenshot() calls match the order
+  // We cannot assume that the order of the DataProvider::GetScreenshot() calls match the order
   // of the Scenic::TakeScreenshot() callbacks because of the async message loop. Thus we need to
   // match them as sets.
   //
@@ -364,7 +364,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
   }
 }
 
-TEST_F(DataProviderImplTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
+TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
   // We use a stub that always returns false as we are not interested in the responses.
   SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
 
@@ -384,7 +384,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCa
   RunLoopUntil([this] { return current_num_scenic_bindings() == 0u; });
 }
 
-TEST_F(DataProviderImplTest, GetData_SmokeTest) {
+TEST_F(DataProviderTest, GetData_SmokeTest) {
   fit::result<Data, zx_status_t> result = GetData();
 
   ASSERT_TRUE(result.is_ok());
@@ -407,7 +407,7 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   }
 }
 
-TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
+TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
   fit::result<Data, zx_status_t> result = GetData();
 
   ASSERT_TRUE(result.is_ok());
@@ -478,7 +478,7 @@ TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
               testing::Contains(MatchesAttachment(kAttachmentAnnotations, annotations_json)));
 }
 
-TEST_F(DataProviderImplTest, GetData_SysLog) {
+TEST_F(DataProviderTest, GetData_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
   // check that we are attaching the logs.
   SetUpLogger({
@@ -526,7 +526,7 @@ constexpr char kInspectJsonSchema[] = R"({
   "uniqueItems": true
 })";
 
-TEST_F(DataProviderImplTest, GetData_Inspect) {
+TEST_F(DataProviderTest, GetData_Inspect) {
   InjectInspectTestApp();
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -592,7 +592,7 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
               testing::Contains(MatchesAttachment(kAttachmentInspect, inspect_json)));
 }
 
-TEST_F(DataProviderImplTest, GetData_Channel) {
+TEST_F(DataProviderTest, GetData_Channel) {
   SetUpChannelProvider("my-channel");
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -605,7 +605,7 @@ TEST_F(DataProviderImplTest, GetData_Channel) {
               testing::Contains(MatchesAnnotation(kAnnotationChannel, "my-channel")));
 }
 
-TEST_F(DataProviderImplTest, GetData_Uptime) {
+TEST_F(DataProviderTest, GetData_Uptime) {
   fit::result<Data, zx_status_t> result = GetData();
 
   ASSERT_TRUE(result.is_ok());
@@ -615,7 +615,7 @@ TEST_F(DataProviderImplTest, GetData_Uptime) {
   EXPECT_THAT(data.annotations(), testing::Contains(MatchesKey(kAnnotationDeviceUptime)));
 }
 
-TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {
+TEST_F(DataProviderTest, GetData_EmptyAnnotationAllowlist) {
   SetUpDataProvider(Config{/*annotation_allowlist=*/{}, kDefaultAttachments});
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -625,7 +625,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {
   EXPECT_FALSE(data.has_annotations());
 }
 
-TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
+TEST_F(DataProviderTest, GetData_EmptyAttachmentAllowlist) {
   SetUpDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -640,7 +640,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 
-TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
+TEST_F(DataProviderTest, GetData_EmptyAllowlists) {
   SetUpDataProvider(Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -652,7 +652,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
   EXPECT_FALSE(data.has_attachment_bundle());
 }
 
-TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAnnotation) {
+TEST_F(DataProviderTest, GetData_UnknownAllowlistedAnnotation) {
   SetUpDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"}, kDefaultAttachments});
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -662,7 +662,7 @@ TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAnnotation) {
   EXPECT_FALSE(data.has_annotations());
 }
 
-TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
+TEST_F(DataProviderTest, GetData_UnknownAllowlistedAttachment) {
   SetUpDataProvider(Config{kDefaultAnnotations,
                            /*attachment_allowlist=*/{"unknown.attachment"}});
 

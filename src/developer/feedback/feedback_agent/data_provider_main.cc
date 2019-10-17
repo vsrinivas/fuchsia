@@ -40,8 +40,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
-  std::unique_ptr<feedback::DataProviderImpl> data_provider =
-      feedback::DataProviderImpl::TryCreate(loop.dispatcher(), context->svc());
+  std::unique_ptr<feedback::DataProvider> data_provider =
+      feedback::DataProvider::TryCreate(loop.dispatcher(), context->svc());
   if (!data_provider) {
     return EXIT_FAILURE;
   }

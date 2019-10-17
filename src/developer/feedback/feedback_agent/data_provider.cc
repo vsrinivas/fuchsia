@@ -40,7 +40,7 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 
 }  // namespace
 
-std::unique_ptr<DataProviderImpl> DataProviderImpl::TryCreate(
+std::unique_ptr<DataProvider> DataProvider::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services) {
   Config config;
 
@@ -68,15 +68,14 @@ std::unique_ptr<DataProviderImpl> DataProviderImpl::TryCreate(
     }
   }
 
-  return std::make_unique<DataProviderImpl>(dispatcher, std::move(services), config);
+  return std::make_unique<DataProvider>(dispatcher, std::move(services), config);
 }
 
-DataProviderImpl::DataProviderImpl(async_dispatcher_t* dispatcher,
-                                   std::shared_ptr<sys::ServiceDirectory> services,
-                                   const Config& config)
+DataProvider::DataProvider(async_dispatcher_t* dispatcher,
+                           std::shared_ptr<sys::ServiceDirectory> services, const Config& config)
     : dispatcher_(dispatcher), executor_(dispatcher), services_(services), config_(config) {}
 
-void DataProviderImpl::GetData(GetDataCallback callback) {
+void DataProvider::GetData(GetDataCallback callback) {
   auto annotations =
       fit::join_promise_vector(
           GetAnnotations(dispatcher_, services_, config_.annotation_allowlist, kDataTimeout))
@@ -162,7 +161,7 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
   executor_.schedule_task(std::move(promise));
 }
 
-void DataProviderImpl::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
+void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout)
                      .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                                    -> fit::result<Screenshot> {
