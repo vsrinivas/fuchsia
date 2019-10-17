@@ -5,12 +5,12 @@
 use {
     super::*,
     crate::{
-        client::{bss::ClientConfig, ConnectFailure, ConnectResult},
+        client::{ConnectFailure, ConnectResult},
         Ssid,
     },
     failure::Fail,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
-    std::collections::VecDeque,
+    std::collections::{HashSet, VecDeque},
     wlan_common::bss::{get_channel_map, get_phy_standard_map},
     wlan_rsn::{
         key::exchange::Key,
@@ -60,7 +60,6 @@ impl StatsCollector {
         &mut self,
         result: ScanResult,
         bss_list: Option<&Vec<fidl_mlme::BssDescription>>,
-        cfg: &ClientConfig,
     ) -> Result<(ScanStats, Option<DiscoveryStats>), StatsError> {
         let now = now();
         let pending_stats = self.discovery_scan_stats.take().ok_or(StatsError::NoPendingScan)?;
@@ -74,7 +73,7 @@ impl StatsCollector {
             bss_count: bss_list.map(|bss_list| bss_list.len()).unwrap_or(0),
         };
         let discovery_stats = bss_list.map(|bss_list| {
-            let ess_count = cfg.group_networks(&bss_list).len();
+            let ess_count = count_ess(&bss_list);
             let num_bss_by_standard = get_phy_standard_map(&bss_list);
             let num_bss_by_channel = get_channel_map(&bss_list);
 
@@ -250,6 +249,11 @@ impl StatsCollector {
     }
 }
 
+/// Counts unique SSID in a given BSS list
+fn count_ess(bss_set: &[fidl_mlme::BssDescription]) -> usize {
+    bss_set.into_iter().map(|b| b.ssid.clone()).collect::<HashSet<_>>().len()
+}
+
 fn now() -> zx::Time {
     zx::Time::get(zx::ClockId::Monotonic)
 }
@@ -383,7 +387,10 @@ mod tests {
     use {
         super::*,
         crate::client::{
-            test_utils::{fake_bss_with_rates, fake_protected_bss_description, fake_scan_request},
+            test_utils::{
+                fake_bss_with_bssid, fake_bss_with_rates, fake_protected_bss_description,
+                fake_scan_request,
+            },
             EstablishRsnaFailure, SelectNetworkFailure,
         },
         failure::format_err,
@@ -399,12 +406,8 @@ mod tests {
         assert!(stats_collector.report_discovery_scan_started(req, is_connected).is_none());
 
         let bss_desc = fake_bss_with_rates(b"foo".to_vec(), vec![12]);
-        let cfg = ClientConfig::default();
-        let stats = stats_collector.report_discovery_scan_ended(
-            ScanResult::Success,
-            Some(&vec![bss_desc]),
-            &cfg,
-        );
+        let stats =
+            stats_collector.report_discovery_scan_ended(ScanResult::Success, Some(&vec![bss_desc]));
         assert_variant!(stats, Ok((scan_stats, discovery_stats)) => {
             assert!(scan_stats.scan_time().into_nanos() > 0);
             assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
@@ -612,12 +615,8 @@ mod tests {
     fn test_no_pending_discovery_scan_stats() {
         let mut stats_collector = StatsCollector::default();
         let bss_desc = fake_protected_bss_description(b"foo".to_vec());
-        let cfg = ClientConfig::default();
-        let stats = stats_collector.report_discovery_scan_ended(
-            ScanResult::Success,
-            Some(&vec![bss_desc]),
-            &cfg,
-        );
+        let stats =
+            stats_collector.report_discovery_scan_ended(ScanResult::Success, Some(&vec![bss_desc]));
         assert_variant!(stats, Err(StatsError::NoPendingScan));
     }
 
@@ -673,5 +672,15 @@ mod tests {
         assert!(stats_collector.report_rsna_started().is_ok());
         assert!(stats_collector.report_rsna_established().is_ok());
         stats_collector.report_connect_finished(ConnectResult::Success)
+    }
+
+    #[test]
+    fn count_ess_in_bss_list() {
+        let bss1 = fake_bss_with_bssid(b"foo".to_vec(), [1, 1, 1, 1, 1, 1]);
+        let bss2 = fake_bss_with_bssid(b"bar".to_vec(), [2, 2, 2, 2, 2, 2]);
+        let bss3 = fake_bss_with_bssid(b"foo".to_vec(), [3, 3, 3, 3, 3, 3]);
+        let num_ssid = count_ess(&vec![bss1, bss2, bss3]);
+
+        assert_eq!(2, num_ssid);
     }
 }

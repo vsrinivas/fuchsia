@@ -4,9 +4,9 @@
 
 use {
     super::rsn::is_rsn_compatible,
-    crate::{clone_utils::clone_bss_desc, Config, Ssid},
+    crate::{Config, Ssid},
     fidl_fuchsia_wlan_mlme::BssDescription,
-    std::{cmp::Ordering, collections::HashMap},
+    std::{cmp::Ordering, collections::HashSet},
     wlan_common::{
         bss::{BssDescriptionExt, Protection},
         ie::rsn::rsne,
@@ -70,19 +70,9 @@ impl ClientConfig {
         bss_list.iter().max_by(|x, y| self.compare_bss(x, y))
     }
 
-    /// Converts a given BSS list into a list of ESS.
-    pub fn group_networks(&self, bss_set: &[BssDescription]) -> Vec<EssInfo> {
-        let mut bss_by_ssid: HashMap<Ssid, Vec<BssDescription>> = HashMap::new();
-
-        for bss in bss_set.iter() {
-            bss_by_ssid.entry(bss.ssid.clone()).or_insert(vec![]).push(clone_bss_desc(bss));
-        }
-
-        bss_by_ssid
-            .values()
-            .filter_map(|bss_list| self.get_best_bss(bss_list))
-            .map(|bss| EssInfo { best_bss: self.convert_bss_description(&bss) })
-            .collect()
+    /// Counts unique SSID in a given BSS list
+    pub fn count_ssid(&self, bss_set: &[BssDescription]) -> usize {
+        bss_set.into_iter().map(|b| b.ssid.clone()).collect::<HashSet<_>>().len()
     }
 }
 
@@ -94,11 +84,6 @@ pub struct BssInfo {
     pub channel: u8,
     pub protection: Protection,
     pub compatible: bool,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct EssInfo {
-    pub best_bss: BssInfo,
 }
 
 fn get_rx_dbm(bss: &BssDescription) -> i8 {
@@ -279,16 +264,14 @@ mod tests {
     }
 
     #[test]
-    fn group_networks_by_ssid() {
+    fn count_ssid_in_bss_list() {
         let cfg = ClientConfig::default();
         let bss1 = fake_bss_with_bssid(b"foo".to_vec(), [1, 1, 1, 1, 1, 1]);
         let bss2 = fake_bss_with_bssid(b"bar".to_vec(), [2, 2, 2, 2, 2, 2]);
         let bss3 = fake_bss_with_bssid(b"foo".to_vec(), [3, 3, 3, 3, 3, 3]);
-        let ess_list = cfg.group_networks(&vec![bss1, bss2, bss3]);
+        let num_ssid = cfg.count_ssid(&vec![bss1, bss2, bss3]);
 
-        let mut ssid_list = ess_list.into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
-        ssid_list.sort();
-        assert_eq!(vec![b"bar".to_vec(), b"foo".to_vec()], ssid_list);
+        assert_eq!(2, num_ssid);
     }
 
     fn assert_bss_cmp(

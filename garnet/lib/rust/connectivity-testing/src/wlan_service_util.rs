@@ -155,7 +155,7 @@ pub async fn disconnect_from_network(
 
 pub async fn perform_scan(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
-) -> Result<Vec<fidl_sme::EssInfo>, Error> {
+) -> Result<Vec<fidl_sme::BssInfo>, Error> {
     let scan_transaction = start_scan_transaction(&iface_sme_proxy)?;
 
     get_scan_results(scan_transaction).await.map_err(Into::into)
@@ -175,7 +175,7 @@ fn start_scan_transaction(
 
 async fn get_scan_results(
     scan_txn: fidl_sme::ScanTransactionProxy,
-) -> Result<Vec<fidl_sme::EssInfo>, Error> {
+) -> Result<Vec<fidl_sme::BssInfo>, Error> {
     let mut stream = scan_txn.take_event_stream();
     let mut scan_results = vec![];
 
@@ -711,11 +711,11 @@ mod tests {
             false,
         );
         let entry2_copy = fidl_sme::BssInfo { ssid: entry2.ssid.clone(), ..entry2 };
-        scan_results_for_response.push(fidl_sme::EssInfo { best_bss: entry1 });
-        scan_results_for_response.push(fidl_sme::EssInfo { best_bss: entry2 });
+        scan_results_for_response.push(entry1);
+        scan_results_for_response.push(entry2);
         let mut expected_response = Vec::new();
-        expected_response.push(fidl_sme::EssInfo { best_bss: entry1_copy });
-        expected_response.push(fidl_sme::EssInfo { best_bss: entry2_copy });
+        expected_response.push(entry1_copy);
+        expected_response.push(entry2_copy);
 
         let scan_results = test_perform_scan(scan_results_for_response);
 
@@ -728,7 +728,7 @@ mod tests {
         assert!(test_perform_scan_error().is_err())
     }
 
-    fn test_perform_scan(mut scan_results: Vec<fidl_sme::EssInfo>) -> Vec<fidl_sme::EssInfo> {
+    fn test_perform_scan(mut scan_results: Vec<fidl_sme::BssInfo>) -> Vec<fidl_sme::BssInfo> {
         let mut exec = Executor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
@@ -752,7 +752,7 @@ mod tests {
     fn send_scan_result_response(
         exec: &mut Executor,
         server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
-        scan_results: &mut Vec<fidl_sme::EssInfo>,
+        scan_results: &mut Vec<fidl_sme::BssInfo>,
     ) {
         let transaction = match poll_client_sme_request(exec, server) {
             Poll::Ready(fidl_sme::ClientSmeRequest::Scan { txn, .. }) => txn,

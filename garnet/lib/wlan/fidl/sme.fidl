@@ -30,10 +30,6 @@ struct BssInfo {
     bool compatible;
 };
 
-struct EssInfo {
-    BssInfo best_bss;
-};
-
 enum ScanErrorCode {
     NOT_SUPPORTED = 1;
     INTERNAL_ERROR = 2;
@@ -46,7 +42,7 @@ struct ScanError {
 
 protocol ScanTransaction {
     // Can be called several times to deliver incremental scan results
-    -> OnResult(vector<EssInfo> aps);
+    -> OnResult(vector<BssInfo> aps);
     -> OnFinished();
     -> OnError(ScanError error);
 };

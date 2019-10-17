@@ -2,26 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    known_ess_store::{KnownEss, KnownEssStore},
-    state_machine::{self, IntoStateExt},
+use {
+    crate::{
+        known_ess_store::{KnownEss, KnownEssStore},
+        state_machine::{self, IntoStateExt},
+    },
+    failure::{bail, format_err},
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async::DurationExt,
+    fuchsia_zircon::prelude::*,
+    futures::{
+        channel::{mpsc, oneshot},
+        future::{Future, FutureExt},
+        select,
+        stream::{self, StreamExt, TryStreamExt},
+    },
+    pin_utils::pin_mut,
+    std::{collections::HashMap, sync::Arc},
+    void::ResultVoidErrExt,
 };
-
-use failure::{bail, format_err};
-use fidl::endpoints::create_proxy;
-use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_async::DurationExt;
-use fuchsia_zircon::prelude::*;
-use futures::{
-    channel::{mpsc, oneshot},
-    future::{Future, FutureExt},
-    select,
-    stream::{self, StreamExt, TryStreamExt},
-};
-use pin_utils::pin_mut;
-use std::sync::Arc;
-use void::ResultVoidErrExt;
 
 const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 const AUTO_CONNECT_SCAN_TIMEOUT_SECONDS: u8 = 20;
@@ -156,13 +156,12 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, fa
 
     let txn = start_scan_txn(&services.sme)?;
     let results = fetch_scan_results(txn).await?;
-    let known_networks = results.into_iter().filter_map(|ess| {
-        services
-            .ess_store
-            .lookup(&ess.best_bss.ssid)
-            .map(|known_ess| (ess.best_bss.ssid, known_ess))
-    });
-    for (ssid, known_ess) in known_networks {
+    let network_by_ssid = results
+        .into_iter()
+        .filter_map(|b| services.ess_store.lookup(&b.ssid).map(|pwd| (b.ssid, pwd)))
+        .collect::<HashMap<_, _>>();
+
+    for (ssid, known_ess) in network_by_ssid {
         if connect_to_known_network(&services.sme, ssid.clone(), known_ess).await? {
             return Ok(Some(ssid));
         }
@@ -378,7 +377,7 @@ async fn wait_until_connected(
 
 async fn fetch_scan_results(
     txn: fidl_sme::ScanTransactionProxy,
-) -> Result<Vec<fidl_sme::EssInfo>, failure::Error> {
+) -> Result<Vec<fidl_sme::BssInfo>, failure::Error> {
     let mut stream = txn.take_event_stream();
     let mut all_aps = vec![];
     while let Some(event) = stream.next().await {
@@ -432,7 +431,11 @@ mod tests {
 
         // Expect the state machine to initiate the scan, then send results back
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..], &b"bar"[..]]);
+        send_scan_results(
+            &mut exec,
+            &mut next_sme_req,
+            &mut vec![bss_info(&b"foo"[..]), bss_info(&b"bar"[..])],
+        );
     }
 
     #[test]
@@ -452,7 +455,7 @@ mod tests {
         // Expect the state machine to initiate the scan, then send results back without
         // the saved network
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        send_scan_results(&mut exec, &mut next_sme_req, &mut vec![bss_info(&b"foo"[..])]);
 
         // None of the returned ssids are known though, so expect the state machine to
         // simply sleep
@@ -463,7 +466,11 @@ mod tests {
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
         // Expect another scan request to the SME and send results
-        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..], &b"bar"[..]]);
+        send_scan_results(
+            &mut exec,
+            &mut next_sme_req,
+            &mut vec![bss_info(&b"foo"[..]), bss_info(&b"bar"[..])],
+        );
 
         // Let the state machine process the results
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
@@ -487,6 +494,52 @@ mod tests {
     }
 
     #[test]
+    fn auto_connect_to_multiple_bss() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        // save the network to trigger a scan
+        ess_store
+            .store(b"foo".to_vec(), KnownEss { password: b"qwerty".to_vec() })
+            .expect("failed to store a network password");
+
+        let (_client, fut, sme_server) = create_client(Arc::clone(&ess_store));
+        let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
+        // Expect the state machine to initiate the scan, then send results back without
+        // the saved network
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect another scan request to the SME and send results
+        let mut bss_list = vec![
+            fidl_sme::BssInfo { bssid: [0, 1, 2, 3, 4, 5], ..bss_info(&b"foo"[..]) },
+            fidl_sme::BssInfo { bssid: [5, 4, 3, 2, 1, 0], ..bss_info(&b"foo"[..]) },
+        ];
+        send_scan_results(&mut exec, &mut next_sme_req, &mut bss_list);
+
+        // Let the state machine process the results
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect a "connect" request to the SME and reply to it
+        exchange_connect_with_sme(
+            &mut exec,
+            &mut next_sme_req,
+            b"foo",
+            b"qwerty",
+            fidl_sme::ConnectResultCode::Failed,
+        );
+
+        // Both scan results had same SSID, so there shouldn't be another connect request
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+
+        assert!(exec.wake_next_timer().is_some());
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        assert_eq!(None, exec.wake_next_timer());
+    }
+
+    #[test]
     fn auto_connect_when_deauth() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
@@ -503,7 +556,7 @@ mod tests {
         // Get the state machine into the connected state by auto-connecting to a known
         // network
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        send_scan_results(&mut exec, &mut next_sme_req, &mut vec![bss_info(&b"foo"[..])]);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
         exchange_connect_with_sme(
             &mut exec,
@@ -534,7 +587,7 @@ mod tests {
         // Get the state machine into the connected state by auto-connecting to a known
         // network
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        send_scan_results(&mut exec, &mut next_sme_req, &mut vec![bss_info(&b"foo"[..])]);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
         exchange_connect_with_sme(
             &mut exec,
@@ -657,7 +710,7 @@ mod tests {
         // Get the state machine into the connected state by auto-connecting to a known
         // network
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        send_scan_results(&mut exec, &mut next_sme_req, &mut vec![bss_info(&b"foo"[..])]);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
         exchange_connect_with_sme(
             &mut exec,
@@ -898,7 +951,7 @@ mod tests {
         // Get the state machine into the connected state by auto-connecting to a known
         // network
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-        send_scan_results(&mut exec, &mut next_sme_req, &[&b"foo"[..]]);
+        send_scan_results(&mut exec, &mut next_sme_req, &mut vec![bss_info(&b"foo"[..])]);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
         exchange_connect_with_sme(
             &mut exec,
@@ -954,16 +1007,12 @@ mod tests {
     fn send_scan_results(
         exec: &mut fasync::Executor,
         next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
-        ssids: &[&[u8]],
+        results: &mut Vec<fidl_sme::BssInfo>,
     ) {
         let txn = assert_variant!(poll_sme_req(exec, next_sme_req),
             Poll::Ready(ClientSmeRequest::Scan { txn, .. }) => txn
         );
         let txn = txn.into_stream().expect("failed to create a scan txn stream").control_handle();
-        let mut results = Vec::new();
-        for ssid in ssids {
-            results.push(fidl_sme::EssInfo { best_bss: bss_info(ssid) });
-        }
         txn.send_on_result(&mut results.iter_mut()).expect("failed to send scan results");
         txn.send_on_finished().expect("failed to send OnFinished to ScanTxn");
     }

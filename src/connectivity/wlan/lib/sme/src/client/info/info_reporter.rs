@@ -5,7 +5,7 @@
 use {
     super::*,
     crate::{
-        client::{bss::ClientConfig, scan, ConnectResult, ConnectionAttemptId, ScanTxnId},
+        client::{scan, ConnectResult, ConnectionAttemptId, ScanTxnId},
         sink::InfoSink,
         Ssid,
     },
@@ -48,18 +48,12 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_scan_ended<D, J>(
-        &mut self,
-        txn_id: ScanTxnId,
-        result: &scan::ScanResult<D, J>,
-        cfg: &ClientConfig,
-    ) {
+    pub fn report_scan_ended<D, J>(&mut self, txn_id: ScanTxnId, result: &scan::ScanResult<D, J>) {
         self.info_sink.send(InfoEvent::MlmeScanEnd { txn_id });
         match result {
             scan::ScanResult::DiscoveryFinished { result, .. } => {
                 let (bss_list, scan_result) = convert_scan_result(result);
-                let stats =
-                    self.stats_collector.report_discovery_scan_ended(scan_result, bss_list, cfg);
+                let stats = self.stats_collector.report_discovery_scan_ended(scan_result, bss_list);
                 warn_if_err!(stats);
                 if let Ok(stats) = stats {
                     self.info_sink.send(InfoEvent::DiscoveryScanStats(stats.0, stats.1));

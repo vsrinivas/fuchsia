@@ -436,7 +436,7 @@ async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Re
                     print_scan_header();
                     printed_header = true;
                 }
-                for ap in aps.iter().sorted_by(|a, b| a.best_bss.ssid.cmp(&b.best_bss.ssid)) {
+                for ap in aps.iter().sorted_by(|a, b| a.ssid.cmp(&b.ssid)) {
                     print_scan_result(ap);
                 }
             }
@@ -472,25 +472,25 @@ fn is_printable_ascii(v: &Vec<u8>) -> bool {
     return true;
 }
 
-fn print_scan_result(ess: &fidl_sme::EssInfo) {
-    let is_ascii = is_ascii(&ess.best_bss.ssid);
-    let is_ascii_print = is_printable_ascii(&ess.best_bss.ssid);
-    let is_utf8 = String::from_utf8(ess.best_bss.ssid.clone()).is_ok();
+fn print_scan_result(bss: &fidl_sme::BssInfo) {
+    let is_ascii = is_ascii(&bss.ssid);
+    let is_ascii_print = is_printable_ascii(&bss.ssid);
+    let is_utf8 = String::from_utf8(bss.ssid.clone()).is_ok();
     let is_hex = !is_utf8 || (is_ascii && !is_ascii_print);
 
     let ssid_str;
     if is_hex {
-        ssid_str = format!("({:X?})", &*ess.best_bss.ssid);
+        ssid_str = format!("({:X?})", &*bss.ssid);
     } else {
-        ssid_str = format!("\"{}\"", String::from_utf8_lossy(&ess.best_bss.ssid));
+        ssid_str = format!("\"{}\"", String::from_utf8_lossy(&bss.ssid));
     }
 
     println!(
         "{} {:4} {:8} {:9} {}",
-        MacAddr(ess.best_bss.bssid),
-        ess.best_bss.rx_dbm,
-        ess.best_bss.channel,
-        if ess.best_bss.protection != fidl_sme::Protection::Open { "Y" } else { "N" },
+        MacAddr(bss.bssid),
+        bss.rx_dbm,
+        bss.channel,
+        if bss.protection != fidl_sme::Protection::Open { "Y" } else { "N" },
         ssid_str
     );
 }

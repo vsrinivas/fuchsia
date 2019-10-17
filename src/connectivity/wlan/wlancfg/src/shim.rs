@@ -13,7 +13,11 @@ use fidl_fuchsia_wlan_stats as fidl_wlan_stats;
 use fuchsia_zircon as zx;
 use futures::{channel::oneshot, prelude::*};
 use itertools::Itertools;
-use std::sync::{Arc, Mutex};
+use std::{
+    cmp::Ordering,
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 #[derive(Clone)]
 pub struct Client {
@@ -114,6 +118,34 @@ async fn handle_request(
     }
 }
 
+pub fn clone_bss_info(bss: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
+    fidl_sme::BssInfo {
+        bssid: bss.bssid.clone(),
+        ssid: bss.ssid.clone(),
+        rx_dbm: bss.rx_dbm,
+        channel: bss.channel,
+        protection: bss.protection,
+        compatible: bss.compatible,
+    }
+}
+
+/// Compares two BSS based on
+/// (1) their compatibility
+/// (2) their security protocol
+/// (3) their Beacon's RSSI
+pub fn compare_bss(left: &fidl_sme::BssInfo, right: &fidl_sme::BssInfo) -> Ordering {
+    left.compatible
+        .cmp(&right.compatible)
+        .then(left.protection.cmp(&right.protection))
+        .then(left.rx_dbm.cmp(&right.rx_dbm))
+}
+
+/// Returns the 'best' BSS from a given BSS list. The 'best' BSS is determined by comparing
+/// all BSS with `compare_bss(BssDescription, BssDescription)`.
+pub fn get_best_bss<'a>(bss_list: &'a Vec<fidl_sme::BssInfo>) -> Option<&'a fidl_sme::BssInfo> {
+    bss_list.iter().max_by(|x, y| compare_bss(x, y))
+}
+
 async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
     let r = async move {
         let client = client.get()?;
@@ -147,9 +179,15 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
             return Err(internal_error());
         }
 
-        Ok(aps
-            .iter()
-            .map(|ess| convert_bss_info(&ess.best_bss))
+        let mut bss_by_ssid: HashMap<Vec<u8>, Vec<fidl_sme::BssInfo>> = HashMap::new();
+        for bss in aps.iter() {
+            bss_by_ssid.entry(bss.ssid.clone()).or_insert(vec![]).push(clone_bss_info(&bss));
+        }
+
+        Ok(bss_by_ssid
+            .values()
+            .filter_map(get_best_bss)
+            .map(convert_bss_info)
             .sorted_by(|a, b| a.ssid.cmp(&b.ssid))
             .collect())
     }
@@ -382,5 +420,48 @@ mod tests {
         let ap = legacy::Ap { is_secure: false, ..ap };
 
         assert_eq!(convert_bss_info(&bss), ap);
+    }
+
+    #[test]
+    fn get_best_bss_empty_list() {
+        assert!(get_best_bss(&vec![]).is_none());
+    }
+
+    #[test]
+    fn get_best_bss_compatible() {
+        let bss2 = bss(-20, false, fidl_sme::Protection::Wpa2Wpa3Personal);
+        let bss1 = bss(-60, true, fidl_sme::Protection::Wpa2Personal);
+        let bss_list = vec![bss1, bss2];
+
+        assert_eq!(get_best_bss(&bss_list), Some(&bss_list[0])); //diff compatible
+    }
+
+    #[test]
+    fn get_best_bss_protection() {
+        let bss1 = bss(-60, true, fidl_sme::Protection::Wpa2Personal);
+        let bss2 = bss(-40, true, fidl_sme::Protection::Wep);
+        let bss_list = vec![bss1, bss2];
+
+        assert_eq!(get_best_bss(&bss_list), Some(&bss_list[0])); //diff protection
+    }
+
+    #[test]
+    fn get_best_bss_rssi() {
+        let bss1 = bss(-10, true, fidl_sme::Protection::Wpa2Personal);
+        let bss2 = bss(-20, true, fidl_sme::Protection::Wpa2Personal);
+        let bss_list = vec![bss1, bss2];
+
+        assert_eq!(get_best_bss(&bss_list), Some(&bss_list[0])); //diff rssi
+    }
+
+    fn bss(rx_dbm: i8, compatible: bool, protection: fidl_sme::Protection) -> fidl_sme::BssInfo {
+        fidl_sme::BssInfo {
+            bssid: [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f],
+            ssid: b"Foo".to_vec(),
+            rx_dbm,
+            channel: 1,
+            protection,
+            compatible,
+        }
     }
 }

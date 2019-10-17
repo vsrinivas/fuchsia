@@ -60,7 +60,7 @@ impl WlanFacade {
         // send the ssids back to the test
         let mut ssids = Vec::new();
         for entry in &results {
-            let ssid = String::from_utf8_lossy(&entry.best_bss.ssid).into_owned();
+            let ssid = String::from_utf8_lossy(&entry.ssid).into_owned();
             ssids.push(ssid);
         }
 

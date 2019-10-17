@@ -40,7 +40,7 @@ use crate::responder::Responder;
 use crate::sink::{InfoSink, MlmeSink};
 use crate::timer::{self, TimedEvent};
 
-pub use self::bss::{BssInfo, ClientConfig, EssInfo};
+pub use self::bss::{BssInfo, ClientConfig};
 pub use self::info::{InfoEvent, ScanResult};
 
 // This is necessary to trick the private-in-public checker.
@@ -85,7 +85,7 @@ pub type ScanTxnId = u64;
 pub struct ClientSme {
     cfg: ClientConfig,
     state: Option<State>,
-    scan_sched: ScanScheduler<Responder<EssDiscoveryResult>, ConnectConfig>,
+    scan_sched: ScanScheduler<Responder<BssDiscoveryResult>, ConnectConfig>,
     context: Context,
 }
 
@@ -163,7 +163,7 @@ impl From<EstablishRsnaFailure> for ConnectFailure {
     }
 }
 
-pub type EssDiscoveryResult = Result<Vec<EssInfo>, fidl_mlme::ScanResultCodes>;
+pub type BssDiscoveryResult = Result<Vec<BssInfo>, fidl_mlme::ScanResultCodes>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Status {
@@ -245,7 +245,7 @@ impl ClientSme {
     pub fn on_scan_command(
         &mut self,
         scan_type: fidl_common::ScanType,
-    ) -> oneshot::Receiver<EssDiscoveryResult> {
+    ) -> oneshot::Receiver<BssDiscoveryResult> {
         let (responder, receiver) = Responder::new();
         let scan = DiscoveryScan::new(responder, scan_type);
         let req = self.scan_sched.enqueue_scan_to_discover(scan);
@@ -290,7 +290,7 @@ impl super::Station for ClientSme {
                 let (result, request) = self.scan_sched.on_mlme_scan_end(end);
                 // Finalize stats for previous scan first before sending scan request for the next
                 // one, which would also start stats collection for new scan scan.
-                self.context.info.report_scan_ended(txn_id, &result, &self.cfg);
+                self.context.info.report_scan_ended(txn_id, &result);
                 self.send_scan_request(request);
                 match result {
                     scan::ScanResult::None => (),
@@ -376,7 +376,12 @@ impl super::Station for ClientSme {
                         report_connect_finished(Some(token.responder), &mut self.context, result);
                     }
                     scan::ScanResult::DiscoveryFinished { tokens, result } => {
-                        let result = result.map(|bss_list| self.cfg.group_networks(&bss_list));
+                        let result = result.map(|bss_list| {
+                            bss_list
+                                .iter()
+                                .map(|bss| self.cfg.convert_bss_description(&bss))
+                                .collect()
+                        });
                         for responder in tokens {
                             responder.respond(result.clone());
                         }
@@ -1093,6 +1098,32 @@ mod tests {
             assert_eq!(stats.join_scan_stats().expect("no scan stats").bss_count, 2);
             assert!(stats.candidate_network.is_some());
         });
+    }
+
+    #[test]
+    fn test_info_event_dont_suppress_bss() {
+        let (mut sme, _mlme_strem, mut info_stream, _time_stream) = create_sme();
+        let mut recv = sme.on_scan_command(fidl_common::ScanType::Passive);
+        expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 });
+
+        let bss = fake_bss_with_bssid(b"foo".to_vec(), [3; 6]);
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+        });
+        let bss = fake_bss_with_bssid(b"foo".to_vec(), [4; 6]);
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCodes::Success },
+        });
+
+        // check that both BSS are received at the end of a scan
+        assert_variant!(recv.try_recv(), Ok(Some(Ok(bss_info))) => {
+            let mut reported_bss_ssid = bss_info.into_iter().map(|bss| (bss.ssid, bss.bssid)).collect::<Vec<_>>();
+            reported_bss_ssid.sort();
+            assert_eq!(reported_bss_ssid, vec![(b"foo".to_vec(), [3; 6]), (b"foo".to_vec(), [4; 6])]);
+        })
     }
 
     #[test]

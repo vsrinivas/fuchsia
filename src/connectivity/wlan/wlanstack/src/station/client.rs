@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_inspect;
 use wlan_sme::client::{
-    BssInfo, ConnectResult, ConnectionAttemptId, EssDiscoveryResult, EssInfo, InfoEvent, ScanTxnId,
+    BssDiscoveryResult, BssInfo, ConnectResult, ConnectionAttemptId, InfoEvent, ScanTxnId,
 };
 use wlan_sme::{self as sme, client as client_sme, DeviceInfo, InfoStream};
 
@@ -292,11 +292,11 @@ fn handle_info_event(
 
 fn send_scan_results(
     handle: fidl_sme::ScanTransactionControlHandle,
-    result: EssDiscoveryResult,
+    result: BssDiscoveryResult,
 ) -> Result<(), fidl::Error> {
     match result {
-        Ok(ess_list) => {
-            let mut fidl_list = ess_list.into_iter().map(convert_ess_info).collect::<Vec<_>>();
+        Ok(bss_list) => {
+            let mut fidl_list = bss_list.into_iter().map(convert_bss_info).collect::<Vec<_>>();
             handle.send_on_result(&mut fidl_list.iter_mut())?;
             handle.send_on_finished()?;
         }
@@ -315,10 +315,6 @@ fn send_scan_results(
         }
     }
     Ok(())
-}
-
-fn convert_ess_info(ess: EssInfo) -> fidl_sme::EssInfo {
-    fidl_sme::EssInfo { best_bss: convert_bss_info(ess.best_bss) }
 }
 
 fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {

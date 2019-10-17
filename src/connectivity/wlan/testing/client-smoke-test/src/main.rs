@@ -105,7 +105,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 Ok(results) => {
                     wlan_iface.scan_success = true;
                     for entry in results.into_iter() {
-                        if entry.best_bss.ssid == opt.target_ssid.as_bytes().to_vec() {
+                        if entry.ssid == opt.target_ssid.as_bytes().to_vec() {
                             wlan_iface.scan_found_target_ssid = true;
                         }
                     }

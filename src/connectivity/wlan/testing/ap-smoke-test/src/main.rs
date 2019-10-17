@@ -57,7 +57,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     test_results.connect_to_wlan_service = true;
 
     let fut = async {
-        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc).await
+        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc)
+            .await
             .context("wlan-ap-smoke-test: failed to query wlanservice iface list")?;
         test_results.query_wlan_service_iface_list = true;
 
@@ -127,8 +128,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 &wlan_ap_iface.sme_proxy,
                 target_ssid.to_vec(),
                 target_pwd.to_vec(),
-                target_channel
-            ).await;
+                target_channel,
+            )
+            .await;
 
             match start_ap_result_code {
                 Ok(result_code) => match result_code {
@@ -170,8 +172,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     }
                 };
 
-                if scan_results.iter().find(|&ap| ap.best_bss.ssid == target_ssid.to_vec()) != None
-                {
+                if scan_results.iter().find(|&ap| ap.ssid == target_ssid.to_vec()) != None {
                     wlan_client_results.found_ap_in_scan = true;
                 }
 
@@ -180,8 +181,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     let connect_result = wlan_service_util::connect_to_network(
                         &wlan_client_iface.sme_proxy,
                         target_ssid.to_vec(),
-                        target_pwd.to_vec()
-                    ).await;
+                        target_pwd.to_vec(),
+                    )
+                    .await;
 
                     match connect_result {
                         Ok(true) => {
@@ -193,9 +195,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 // If connected, disconnect
                 if wlan_client_results.connection_success == true {
-                    match wlan_service_util::disconnect_from_network(
-                        &wlan_client_iface.sme_proxy
-                    ).await {
+                    match wlan_service_util::disconnect_from_network(&wlan_client_iface.sme_proxy)
+                        .await
+                    {
                         Err(_) => wlan_client_results.disconnect_success = false,
                         _ => wlan_client_results.disconnect_success = true,
                     };
@@ -219,8 +221,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
             if wlan_ap_iface.ap_start_success == true {
                 // Stop AP
-                let stop_ap_result =
-                    wlan_ap_service_util::stop_ap(&wlan_ap_iface.sme_proxy).await;
+                let stop_ap_result = wlan_ap_service_util::stop_ap(&wlan_ap_iface.sme_proxy).await;
 
                 if stop_ap_result.is_ok() {
                     wlan_ap_iface.ap_stop_success = true;
