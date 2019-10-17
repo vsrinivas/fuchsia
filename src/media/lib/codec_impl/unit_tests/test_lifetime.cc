@@ -168,6 +168,9 @@ TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsync) {
 }
 
 TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsyncWithOngoingSyncs) {
+  // TODO(37790): This test can flake.  Skip until fixed.
+  GTEST_SKIP();
+
   Create(true, true);
 
   codec_client_ptr_.Bind(codec_client_handle_.TakeChannel());
