@@ -11,7 +11,7 @@ use crate::{
         connection::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{self, AsyncReadDirents},
+        entry_container::{self, AsyncGetEntry, AsyncReadDirents, EntryContainer},
         immutable::connection::{ImmutableConnection, ImmutableConnectionClient},
         mutable::connection::{MutableConnection, MutableConnectionClient},
         traversal_position::AlphabeticalTraversal,
@@ -34,6 +34,7 @@ use {
     parking_lot::Mutex,
     static_assertions::assert_eq_size,
     std::{
+        clone::Clone,
         collections::{btree_map, BTreeMap},
         iter,
         marker::PhantomData,
@@ -187,6 +188,24 @@ where
 
     fn can_hardlink(&self) -> bool {
         false
+    }
+}
+
+impl<Connection> EntryContainer for Simple<Connection>
+where
+    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+{
+    fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
+        assert_eq_size!(u64, usize);
+        if name.len() as u64 > MAX_FILENAME {
+            return Status::INVALID_ARGS.into();
+        }
+
+        let this = self.inner.lock();
+        match this.entries.get(&name) {
+            Some(entry) => entry.clone().into(),
+            None => Status::NOT_FOUND.into(),
+        }
     }
 }
 

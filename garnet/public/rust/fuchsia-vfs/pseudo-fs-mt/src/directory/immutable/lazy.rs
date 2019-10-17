@@ -15,7 +15,7 @@ use crate::{
         connection::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{self, AsyncReadDirents},
+        entry_container::{self, AsyncReadDirents, EntryContainer},
         immutable::connection::ImmutableConnection,
     },
     execution_scope::ExecutionScope,
@@ -307,6 +307,26 @@ where
 
     fn can_hardlink(&self) -> bool {
         false
+    }
+}
+
+impl<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry> EntryContainer
+    for Lazy<TraversalPosition, GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
+where
+    TraversalPosition: Default + Send + Sync + 'static,
+    GetEntryNames: Fn(TraversalPosition, Box<dyn dirents_sink::Sink<TraversalPosition>>) -> AsyncGetEntryNames
+        + Send
+        + Sync
+        + 'static,
+    AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
+    GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
+    AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
+{
+    fn get_entry(self: Arc<Self>, name: String) -> entry_container::AsyncGetEntry {
+        // Can not use `into()` here.  Could not find a good `From` definition to be provided in
+        // `directory/entry_container.rs` so that just a plain `.into()` would work here.
+        let task = (self.get_entry)(name);
+        entry_container::AsyncGetEntry::Future(Box::pin(task))
     }
 }
 

@@ -12,17 +12,36 @@ use crate::{
 
 use {fuchsia_async::Channel, fuchsia_zircon::Status, futures::future::BoxFuture, std::sync::Arc};
 
-pub type ReadDirentsResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
+pub type GetEntryResult = Result<Arc<dyn DirectoryEntry>, Status>;
 
-pub enum AsyncReadDirents {
-    Immediate(ReadDirentsResult),
-    Future(BoxFuture<'static, ReadDirentsResult>),
+pub enum AsyncGetEntry {
+    Immediate(GetEntryResult),
+    Future(BoxFuture<'static, GetEntryResult>),
 }
 
-impl From<Box<dyn dirents_sink::Sealed>> for AsyncReadDirents {
-    fn from(done: Box<dyn dirents_sink::Sealed>) -> AsyncReadDirents {
-        AsyncReadDirents::Immediate(Ok(done))
+impl From<Status> for AsyncGetEntry {
+    fn from(status: Status) -> AsyncGetEntry {
+        AsyncGetEntry::Immediate(Err(status))
     }
+}
+
+impl From<Arc<dyn DirectoryEntry>> for AsyncGetEntry {
+    fn from(entry: Arc<dyn DirectoryEntry>) -> AsyncGetEntry {
+        AsyncGetEntry::Immediate(Ok(entry))
+    }
+}
+
+impl From<BoxFuture<'static, GetEntryResult>> for AsyncGetEntry {
+    fn from(future: BoxFuture<'static, GetEntryResult>) -> AsyncGetEntry {
+        AsyncGetEntry::Future(future)
+    }
+}
+
+/// All directories that contain other entries implement this trait.  Directories may implement
+/// other traits such as [`DirectlyMutable`] and/or [`Observable`] as well.
+pub trait EntryContainer: Send + Sync {
+    /// Returns a reference to a contained directory entry.  Used when linking entries.
+    fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry;
 }
 
 /// This trait indicates that a directory allows it's entries to be added and removed.  Server side
@@ -167,6 +186,19 @@ pub fn rename_helper(
                 }),
             )
         }
+    }
+}
+
+pub type ReadDirentsResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
+
+pub enum AsyncReadDirents {
+    Immediate(ReadDirentsResult),
+    Future(BoxFuture<'static, ReadDirentsResult>),
+}
+
+impl From<Box<dyn dirents_sink::Sealed>> for AsyncReadDirents {
+    fn from(done: Box<dyn dirents_sink::Sealed>) -> AsyncReadDirents {
+        AsyncReadDirents::Immediate(Ok(done))
     }
 }
 

@@ -7,7 +7,7 @@ use crate::{
     directory::{
         common::{check_child_connection_flags, POSIX_DIRECTORY_PROTECTION_ATTRIBUTES},
         entry::DirectoryEntry,
-        entry_container::{self, AsyncReadDirents, Observable},
+        entry_container::{self, AsyncReadDirents, EntryContainer, Observable},
         read_dirents,
     },
     execution_scope::ExecutionScope,
@@ -83,7 +83,7 @@ where
 /// This is an API a directory needs to implement, in order for the `BaseConnection` to be able to
 /// interact with it.
 pub trait BaseConnectionClient<TraversalPosition>:
-    DirectoryEntry + entry_container::Observable<TraversalPosition> + Send + Sync
+    DirectoryEntry + EntryContainer + entry_container::Observable<TraversalPosition> + Send + Sync
 where
     TraversalPosition: Default + Send + Sync + 'static,
 {
@@ -92,7 +92,12 @@ where
 impl<TraversalPosition, T> BaseConnectionClient<TraversalPosition> for T
 where
     TraversalPosition: Default + Send + Sync + 'static,
-    T: DirectoryEntry + entry_container::Observable<TraversalPosition> + Send + Sync + 'static,
+    T: DirectoryEntry
+        + EntryContainer
+        + entry_container::Observable<TraversalPosition>
+        + Send
+        + Sync
+        + 'static,
 {
 }
 
