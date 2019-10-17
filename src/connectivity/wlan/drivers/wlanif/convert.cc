@@ -98,6 +98,18 @@ void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* 
   std::memcpy(out_rsne, in_rsne.data(), *out_rsne_len);
 }
 
+void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_specific,
+                          uint8_t* out_vendor_specific, size_t* vendor_specific_len) {
+  if (in_vendor_specific.size() > WLAN_VIE_MAX_LEN) {
+    warnf("wlanif: Vendor Specific length truncated from %lu to %d\n", in_vendor_specific.size(),
+          WLAN_VIE_MAX_LEN);
+    *vendor_specific_len = WLAN_VIE_MAX_LEN;
+  } else {
+    *vendor_specific_len = in_vendor_specific.size();
+  }
+  std::memcpy(out_vendor_specific, in_vendor_specific.data(), *vendor_specific_len);
+}
+
 void ConvertRateSets(wlanif_bss_description_t* wlanif_desc,
                      const wlan_mlme::BSSDescription& fidl_desc) {
   std::vector<uint8_t> basic_rates(fidl_desc.basic_rate_set);
@@ -150,8 +162,9 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
   ConvertRateSets(wlanif_desc, fidl_desc);
 
   // rsne
-  CopyRSNE(fidl_desc.rsn.value_or(std::vector<uint8_t>{}), wlanif_desc->rsne,
-           &wlanif_desc->rsne_len);
+  if (wlanif_desc->rsne_len)
+    CopyRSNE(fidl_desc.rsn.value_or(std::vector<uint8_t>{}), wlanif_desc->rsne,
+             &wlanif_desc->rsne_len);
 
   // chan
   ConvertWlanChan(&wlanif_desc->chan, fidl_desc.chan);
@@ -282,6 +295,11 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
 
   // rsne
   ArrayToVector(&fidl_desc->rsn, wlanif_desc.rsne, wlanif_desc.rsne_len);
+
+  // vendor ie
+  if (wlanif_desc.vendor_ie_len) {
+    ArrayToVector(&fidl_desc->vendor_ies, wlanif_desc.vendor_ie, wlanif_desc.vendor_ie_len);
+  }
 
   // chan
   ConvertWlanChan(&fidl_desc->chan, wlanif_desc.chan);

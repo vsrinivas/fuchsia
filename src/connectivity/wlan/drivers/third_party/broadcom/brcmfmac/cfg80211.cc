@@ -70,6 +70,7 @@
 #define WLAN_IE_TYPE_SUPP_RATES 1
 #define WLAN_IE_TYPE_RSNE 48
 #define WLAN_IE_TYPE_EXT_SUPP_RATES 50
+#define WLAN_IE_TYPE_VENDOR_SPECIFIC 221
 
 /* IEEE Std. 802.11-2016, 9.4.2.25.2, Table 9-131 */
 #define WPA_CIPHER_NONE 0   /* None */
@@ -899,67 +900,296 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
   BRCMF_DBG(TRACE, "Exit\n");
 }
 
-static zx_status_t brcmf_set_wpa_version(struct net_device* ndev, bool is_protected_bss) {
-  struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
-  struct brcmf_cfg80211_security* sec;
+static zx_status_t brcmf_set_auth_type(struct net_device* ndev, uint8_t auth_type) {
   int32_t val = 0;
-  zx_status_t err = ZX_OK;
+  zx_status_t status = ZX_OK;
 
-  if (is_protected_bss) {
-    val = WPA2_AUTH_PSK;  // | WPA2_AUTH_UNSPECIFIED;
+  switch (auth_type) {
+    case WLAN_AUTH_TYPE_OPEN_SYSTEM:
+      val = BRCMF_AUTH_MODE_OPEN;
+      break;
+    case WLAN_AUTH_TYPE_SHARED_KEY:
+      // When asked to use a shared key (which should only happen for WEP), we will direct the
+      // firmware to use auto-detect, which will fall back on open WEP if shared WEP fails to
+      // succeed. This was chosen to allow us to avoid implementing WEP auto-detection at higher
+      // levels of the wlan stack.
+      val = BRCMF_AUTH_MODE_AUTO;
+      break;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  BRCMF_DBG(CONN, "setting auth to %d\n", val);
+  status = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "auth", val);
+  if (status != ZX_OK) {
+    BRCMF_ERR("set auth failed (%s)\n", zx_status_get_string(status));
+  }
+  return status;
+}
+
+static bool brcmf_valid_wpa_oui(uint8_t* oui, bool is_rsn_ie) {
+  if (is_rsn_ie) {
+    return (memcmp(oui, RSN_OUI, TLV_OUI_LEN) == 0);
+  }
+
+  return (memcmp(oui, WPA_OUI, TLV_OUI_LEN) == 0);
+}
+
+static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcmf_vs_tlv* wpa_ie,
+                                         bool is_rsn_ie, bool is_ap) {
+  uint16_t count;
+  zx_status_t err = ZX_OK;
+  int32_t len;
+  uint32_t i;
+  uint32_t wsec;
+  uint32_t pval = 0;
+  uint32_t gval = 0;
+  uint32_t wpa_auth = 0;
+  uint32_t offset;
+  uint8_t* data;
+  uint16_t rsn_cap;
+  uint32_t wme_bss_disable;
+  uint32_t mfp;
+
+  BRCMF_DBG(TRACE, "Enter\n");
+  if (wpa_ie == NULL) {
+    goto exit;
+  }
+
+  len = wpa_ie->len + TLV_HDR_LEN;
+  data = (uint8_t*)wpa_ie;
+  offset = TLV_HDR_LEN;
+  if (!is_rsn_ie) {
+    offset += VS_IE_FIXED_HDR_LEN;
   } else {
-    val = WPA_AUTH_DISABLED;
+    offset += WPA_IE_VERSION_LEN;
   }
-  BRCMF_DBG(CONN, "setting wpa_auth to 0x%0x\n", val);
-  err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "wpa_auth", val);
+
+  /* check for multicast cipher suite */
+  if ((int32_t)offset + WPA_IE_MIN_OUI_LEN > len) {
+    err = ZX_ERR_INVALID_ARGS;
+    BRCMF_ERR("no multicast cipher suite\n");
+    goto exit;
+  }
+
+  if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
+    err = ZX_ERR_INVALID_ARGS;
+    BRCMF_ERR("invalid OUI\n");
+    goto exit;
+  }
+  offset += TLV_OUI_LEN;
+
+  /* pick up multicast cipher */
+  switch (data[offset]) {
+    case WPA_CIPHER_NONE:
+      BRCMF_DBG(CONN, "MCAST WPA CIPHER NONE\n");
+      gval = 0;
+      break;
+    case WPA_CIPHER_WEP_40:
+    case WPA_CIPHER_WEP_104:
+      BRCMF_DBG(CONN, "MCAST WPA CIPHER WEP40/104\n");
+      gval = WEP_ENABLED;
+      break;
+    case WPA_CIPHER_TKIP:
+      BRCMF_DBG(CONN, "MCAST WPA CIPHER TKIP\n");
+      gval = TKIP_ENABLED;
+      break;
+    case WPA_CIPHER_CCMP_128:
+      BRCMF_DBG(CONN, "MCAST WPA CIPHER CCMP 128\n");
+      gval = AES_ENABLED;
+      break;
+    default:
+      err = ZX_ERR_INVALID_ARGS;
+      BRCMF_ERR("Invalid multi cast cipher info\n");
+      goto exit;
+  }
+
+  offset++;
+  /* walk thru unicast cipher list and pick up what we recognize */
+  count = data[offset] + (data[offset + 1] << 8);
+  offset += WPA_IE_SUITE_COUNT_LEN;
+  /* Check for unicast suite(s) */
+  if ((int32_t)(offset + (WPA_IE_MIN_OUI_LEN * count)) > len) {
+    err = ZX_ERR_INVALID_ARGS;
+    BRCMF_ERR("no unicast cipher suite\n");
+    goto exit;
+  }
+  for (i = 0; i < count; i++) {
+    if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
+      err = ZX_ERR_INVALID_ARGS;
+      BRCMF_ERR("ivalid OUI\n");
+      goto exit;
+    }
+    offset += TLV_OUI_LEN;
+    switch (data[offset]) {
+      case WPA_CIPHER_NONE:
+        BRCMF_DBG(CONN, "UCAST WPA CIPHER NONE\n");
+        break;
+      case WPA_CIPHER_WEP_40:
+      case WPA_CIPHER_WEP_104:
+        BRCMF_DBG(CONN, "UCAST WPA CIPHER WEP 40/104\n");
+        pval |= WEP_ENABLED;
+        break;
+      case WPA_CIPHER_TKIP:
+        BRCMF_DBG(CONN, "UCAST WPA CIPHER TKIP\n");
+        pval |= TKIP_ENABLED;
+        break;
+      case WPA_CIPHER_CCMP_128:
+        BRCMF_DBG(CONN, "UCAST WPA CIPHER CCMP 128\n");
+        pval |= AES_ENABLED;
+        break;
+      default:
+        BRCMF_DBG(CONN, "Invalid unicast security info\n");
+    }
+    offset++;
+  }
+  /* walk thru auth management suite list and pick up what we recognize */
+  count = data[offset] + (data[offset + 1] << 8);
+  offset += WPA_IE_SUITE_COUNT_LEN;
+  /* Check for auth key management suite(s) */
+  if ((int32_t)(offset + (WPA_IE_MIN_OUI_LEN * count)) > len) {
+    err = ZX_ERR_INVALID_ARGS;
+    BRCMF_ERR("no auth key mgmt suite\n");
+    goto exit;
+  }
+  for (i = 0; i < count; i++) {
+    if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
+      err = ZX_ERR_INVALID_ARGS;
+      BRCMF_ERR("ivalid OUI\n");
+      goto exit;
+    }
+    offset += TLV_OUI_LEN;
+    switch (data[offset]) {
+      case RSN_AKM_NONE:
+        BRCMF_DBG(CONN, "RSN_AKM_NONE\n");
+        wpa_auth |= WPA_AUTH_NONE;
+        break;
+      case RSN_AKM_UNSPECIFIED:
+        BRCMF_DBG(CONN, "RSN_AKM_UNSPECIFIED\n");
+        is_rsn_ie ? (wpa_auth |= WPA2_AUTH_UNSPECIFIED) : (wpa_auth |= WPA_AUTH_UNSPECIFIED);
+        break;
+      case RSN_AKM_PSK:
+        BRCMF_DBG(CONN, "RSN_AKM_PSK\n");
+        is_rsn_ie ? (wpa_auth |= WPA2_AUTH_PSK) : (wpa_auth |= WPA_AUTH_PSK);
+        break;
+      case RSN_AKM_SHA256_PSK:
+        BRCMF_DBG(CONN, "RSN_AKM_MFP_PSK\n");
+        wpa_auth |= WPA2_AUTH_PSK_SHA256;
+        break;
+      case RSN_AKM_SHA256_1X:
+        BRCMF_DBG(CONN, "RSN_AKM_MFP_1X\n");
+        wpa_auth |= WPA2_AUTH_1X_SHA256;
+        break;
+      default:
+        BRCMF_DBG(CONN, "Invalid key mgmt info\n");
+    }
+    offset++;
+  }
+
+  mfp = BRCMF_MFP_NONE;
+  if (is_rsn_ie && is_ap) {
+    wme_bss_disable = 1;
+    if (((int32_t)offset + RSN_CAP_LEN) <= len) {
+      rsn_cap = data[offset] + (data[offset + 1] << 8);
+      if (rsn_cap & RSN_CAP_PTK_REPLAY_CNTR_MASK) {
+        wme_bss_disable = 0;
+      }
+      if (rsn_cap & RSN_CAP_MFPR_MASK) {
+        BRCMF_DBG(TRACE, "MFP Required\n");
+        mfp = BRCMF_MFP_REQUIRED;
+        /* Firmware only supports mfp required in
+         * combination with WPA2_AUTH_PSK_SHA256 or
+         * WPA2_AUTH_1X_SHA256.
+         */
+        if (!(wpa_auth & (WPA2_AUTH_PSK_SHA256 | WPA2_AUTH_1X_SHA256))) {
+          err = ZX_ERR_INVALID_ARGS;
+          goto exit;
+        }
+        /* Firmware has requirement that WPA2_AUTH_PSK/
+         * WPA2_AUTH_UNSPECIFIED be set, if SHA256 OUI
+         * is to be included in the rsn ie.
+         */
+        if (wpa_auth & WPA2_AUTH_PSK_SHA256) {
+          wpa_auth |= WPA2_AUTH_PSK;
+        } else if (wpa_auth & WPA2_AUTH_1X_SHA256) {
+          wpa_auth |= WPA2_AUTH_UNSPECIFIED;
+        }
+      } else if (rsn_cap & RSN_CAP_MFPC_MASK) {
+        BRCMF_DBG(TRACE, "MFP Capable\n");
+        mfp = BRCMF_MFP_CAPABLE;
+      }
+    }
+    offset += RSN_CAP_LEN;
+    /* set wme_bss_disable to sync RSN Capabilities */
+    err = brcmf_fil_bsscfg_int_set(ifp, "wme_bss_disable", wme_bss_disable);
+    if (err != ZX_OK) {
+      BRCMF_ERR("wme_bss_disable error %d\n", err);
+      goto exit;
+    }
+
+    /* Skip PMKID cnt as it is know to be 0 for AP. */
+    offset += RSN_PMKID_COUNT_LEN;
+
+    /* See if there is BIP wpa suite left for MFP */
+    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP) &&
+        ((int32_t)(offset + WPA_IE_MIN_OUI_LEN) <= len)) {
+      err = brcmf_fil_bsscfg_data_set(ifp, "bip", &data[offset], WPA_IE_MIN_OUI_LEN);
+      if (err != ZX_OK) {
+        BRCMF_ERR("bip error %d\n", err);
+        goto exit;
+      }
+    }
+  }
+  /* Don't set SES_OW_ENABLED for now (since we don't support WPS yet) */
+  wsec = (pval | gval);
+  BRCMF_ERR("WSEC: 0x%x WPA AUTH: 0x%x\n", wsec, wpa_auth);
+
+  /* set wsec */
+  err = brcmf_fil_bsscfg_int_set(ifp, "wsec", wsec);
   if (err != ZX_OK) {
-    BRCMF_ERR("set wpa_auth failed (%d)\n", err);
-    return err;
+    BRCMF_ERR("wsec error %d\n", err);
+    goto exit;
   }
-  sec = &profile->sec;
-  // TODO(cphoenix): wpa_versions seems to be used only for WEP in brcmf_set_sharedkey(). Delete.
-  sec->wpa_versions = 0;
+  /* Configure MFP, this needs to go after wsec otherwise the wsec command
+   * will overwrite the values set by MFP
+   */
+  if (is_ap && brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP)) {
+    err = brcmf_fil_bsscfg_int_set(ifp, "mfp", mfp);
+    if (err != ZX_OK) {
+      BRCMF_ERR("mfp error %s\n", zx_status_get_string(err));
+      goto exit;
+    }
+  }
+  /* set upper-layer auth */
+  err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_auth);
+  if (err != ZX_OK) {
+    BRCMF_ERR("wpa_auth error %d\n", err);
+    goto exit;
+  }
+
+exit:
   return err;
 }
 
-static zx_status_t brcmf_set_auth_type_open(struct net_device* ndev) {
-  struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
-  struct brcmf_cfg80211_security* sec;
-  int32_t val = 0;
-  zx_status_t err = ZX_OK;
+static zx_status_t brcmf_configure_opensecurity(struct brcmf_if* ifp) {
+  zx_status_t err;
+  int32_t wpa_val;
 
-  err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "auth", val);
+  /* set wsec */
+  err = brcmf_fil_bsscfg_int_set(ifp, "wsec", 0);
   if (err != ZX_OK) {
-    BRCMF_ERR("set auth failed (%d)\n", err);
+    BRCMF_ERR("wsec error %d\n", err);
     return err;
   }
-  sec = &profile->sec;
-  sec->auth_type = 0;
-  return err;
-}
-
-static zx_status_t brcmf_set_wsec_mode(struct net_device* ndev, bool is_protected_bss) {
-  struct brcmf_cfg80211_profile* profile = ndev_to_prof(ndev);
-  struct brcmf_cfg80211_security* sec;
-  int32_t wsec;
-  zx_status_t err = ZX_OK;
-
-  if (is_protected_bss) {
-    wsec = AES_ENABLED;
-  } else {
-    wsec = 0;
-  }
-  err = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "wsec", wsec);
+  /* set upper-layer auth */
+  wpa_val = WPA_AUTH_DISABLED;
+  err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_val);
   if (err != ZX_OK) {
-    BRCMF_ERR("error (%d)\n", err);
+    BRCMF_ERR("wpa_auth error %d\n", err);
     return err;
   }
 
-  sec = &profile->sec;
-  sec->cipher_pairwise = 0;
-  sec->cipher_group = 0;
-
-  return err;
+  return ZX_OK;
 }
 
 // Retrieve information about the station with the specified MAC address. Note that
@@ -992,6 +1222,29 @@ static zx_status_t brcmf_cfg80211_get_station(struct net_device* ndev, const uin
   return err;
 }
 
+static inline bool brcmf_tlv_has_wpa_ie(const uint8_t* ie) {
+  return (ie[TLV_LEN_OFF] >= TLV_OUI_LEN + TLV_LEN_OFF &&
+          !memcmp(&ie[TLV_BODY_OFF], WPA_OUI, TLV_OUI_LEN) &&
+          ie[TLV_BODY_OFF + TLV_OUI_LEN] == WPA_OUI_TYPE);
+}
+
+static struct brcmf_vs_tlv* brcmf_find_wpaie(const uint8_t* ie_buf, uint32_t ie_len) {
+  size_t offset = 0;
+
+  while (offset < ie_len) {
+    uint8_t type = ie_buf[offset];
+    uint8_t length = ie_buf[offset + TLV_LEN_OFF];
+    if (type == WLAN_IE_TYPE_VENDOR_SPECIFIC) {
+      if (brcmf_tlv_has_wpa_ie(ie_buf + offset)) {
+        BRCMF_DBG(CONN, "Found WPA IE\n");
+        return (struct brcmf_vs_tlv*)(ie_buf + offset);
+      }
+    }
+    offset += length + TLV_HDR_LEN;
+  }
+  return nullptr;
+}
+
 void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
   wlanif_assoc_confirm_t conf;
 
@@ -1015,16 +1268,50 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   uint32_t ie_len;
   zx_status_t err = ZX_OK;
   uint32_t ssid_len = 0;
+  const struct brcmf_vs_tlv* wpa_ie;
+  int32_t fw_err = 0;
+  bool is_rsn_ie = true;
+  uint32_t wpa_auth;
+  uint8_t auth_type;
 
   BRCMF_DBG(TRACE, "Enter\n");
   if (!check_vif_up(ifp->vif)) {
     return ZX_ERR_IO;
   }
 
-  // Pass RSNE to firmware
-  ie_len = req->rsne_len;
-  ie = (req->rsne_len > 0) ? req->rsne : NULL;
-  brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len, nullptr);
+  auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+  if (req->rsne_len) {
+    BRCMF_DBG(CONN, "using RSNE rsn len: %zu\n", req->rsne_len);
+    // Pass RSNE to firmware
+    ie_len = req->rsne_len;
+    ie = req->rsne;
+    wpa_auth = WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED;
+  } else if (req->vendor_ie_len) {
+    BRCMF_DBG(CONN, "using WPA1 vendor_ie len: %zu\n", req->vendor_ie_len);
+    wpa_ie = brcmf_find_wpaie(req->vendor_ie, req->vendor_ie_len);
+    if (!wpa_ie) {
+      BRCMF_ERR("No WPA IE found\n");
+      return ZX_ERR_INVALID_ARGS;
+    } else {
+      BRCMF_DBG(CONN, "Found WPA IE, len: %d\n", wpa_ie->len);
+    }
+    is_rsn_ie = false;
+    ie_len = wpa_ie->len + TLV_HDR_LEN;
+    ie = wpa_ie;
+    wpa_auth = WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED;
+  } else {
+    // Neither RSNE or WPA1 is set
+    auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+    wpa_auth = WPA_AUTH_DISABLED;
+    ie = nullptr;
+    ie_len = 0;
+  }
+  err = brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("wpaie failed: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
 
   // TODO(WLAN-733): We should be getting the IEs from SME. Passing a null entry seems
   // to work for now, presumably because the firmware uses its defaults.
@@ -1035,30 +1322,26 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     BRCMF_DBG(TRACE, "Applied Vndr IEs for Assoc request\n");
   }
 
+  err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_auth);
+  if (err != ZX_OK) {
+    BRCMF_ERR("set wpa_auth failed (%d)\n", err);
+    return err;
+  }
+  brcmf_set_auth_type(ndev, auth_type);
+
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
   chanspec = channel_to_chanspec(&cfg->d11inf, &ifp->bss.chan);
   cfg->channel = chanspec;
 
-  // TODO(WLAN-733): Currently fails if a network only supports TKIP for its pairwise cipher
-  bool using_wpa = req->rsne_len != 0;
-
-  err = brcmf_set_wpa_version(ndev, using_wpa);  // wpa_auth
-  if (err != ZX_OK) {
-    BRCMF_ERR("wl_set_wpa_version failed (%d)\n", err);
-    goto done;
-  }
-
-  // Open because we are using WPA2-PSK. With SAE support, this will need to change.
-  err = brcmf_set_auth_type_open(ndev);
-  if (err != ZX_OK) {
-    BRCMF_ERR("wl_set_auth_type failed (%d)\n", err);
-    goto done;
-  }
-
-  err = brcmf_set_wsec_mode(ndev, using_wpa);
-  if (err != ZX_OK) {
-    BRCMF_ERR("wl_set_set_cipher failed (%d)\n", err);
-    goto done;
+  if (ie_len > 0) {
+    struct brcmf_vs_tlv* tmp_ie = (struct brcmf_vs_tlv*)ie;
+    err = brcmf_configure_wpaie(ifp, tmp_ie, is_rsn_ie, false);
+    if (err != ZX_OK) {
+      BRCMF_ERR("Failed to install RSNE: %s\n", zx_status_get_string(err));
+      goto done;
+    }
+  } else {
+    brcmf_configure_opensecurity(ifp);
   }
 
   ssid_len = min_t(uint32_t, ifp->bss.ssid.len, WLAN_MAX_SSID_LEN);
@@ -1118,7 +1401,6 @@ static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
 
   wlanif_impl_ifc_disassoc_conf(&ndev->if_proto, &resp);
 }
-
 static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   struct net_device* ndev = cfg_to_ndev(cfg);
   struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -1207,8 +1489,7 @@ done:
   return status;
 }
 
-static zx_status_t brcmf_cfg80211_del_key(struct net_device* ndev, uint8_t key_idx, bool pairwise,
-                                          const uint8_t* mac_addr) {
+static zx_status_t brcmf_cfg80211_del_key(struct net_device* ndev, uint8_t key_idx) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_wsec_key* key;
   zx_status_t err;
@@ -1252,7 +1533,6 @@ static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
   zx_status_t err;
   bool ext_key;
   uint8_t key_idx = req->key_id;
-  bool pairwise = (req->key_type == WLAN_KEY_TYPE_PAIRWISE);
   const uint8_t* mac_addr = req->address;
 
   BRCMF_DBG(TRACE, "Enter\n");
@@ -1268,7 +1548,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
   }
 
   if (req->key_count == 0) {
-    return brcmf_cfg80211_del_key(ndev, key_idx, pairwise, mac_addr);
+    return brcmf_cfg80211_del_key(ndev, key_idx);
   }
 
   if (req->key_count > sizeof(key->data)) {
@@ -1331,10 +1611,13 @@ static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
   }
 
   err = send_key_to_dongle(ifp, key);
-  if (ext_key || err != ZX_OK) {
+  if (err != ZX_OK) {
     goto done;
   }
 
+  if (ext_key) {
+    goto done;
+  }
   err = brcmf_fil_bsscfg_int_get(ifp, "wsec", (uint32_t*)&wsec);  // TODO(cphoenix): This cast?!?
   if (err != ZX_OK) {
     BRCMF_ERR("get wsec error (%d)\n", err);
@@ -1352,76 +1635,7 @@ done:
   return err;
 }
 
-static void brcmf_parse_ies(uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss) {
-  size_t offset = 0;
-  while (offset < ie_len) {
-    uint8_t type = ie[offset];
-    uint8_t length = ie[offset + 1];
-    switch (type) {
-      case WLAN_IE_TYPE_SSID: {
-        uint8_t ssid_len = std::min<uint8_t>(length, sizeof(bss->ssid.data));
-        memcpy(bss->ssid.data, ie + offset + 2, ssid_len);
-        bss->ssid.len = ssid_len;
-        break;
-      }
-      case WLAN_IE_TYPE_SUPP_RATES: {
-        uint8_t num_supp_rates = std::min<uint8_t>(length, WLAN_MAC_MAX_SUPP_RATES);
-        memcpy(bss->rates, ie + offset + 2, num_supp_rates);
-        bss->num_rates = num_supp_rates;
-        break;
-      }
-      case WLAN_IE_TYPE_EXT_SUPP_RATES: {
-        uint8_t num_ext_supp_rates = std::min<uint8_t>(length, WLAN_MAC_MAX_EXT_RATES);
-        memcpy(bss->rates + bss->num_rates, ie + offset + 2, num_ext_supp_rates);
-        bss->num_rates += num_ext_supp_rates;
-        break;
-      }
-      default:
-        break;
-    }
-    offset += length + 2;
-  }
-}
-
-static void brcmf_ies_extract_rsne(uint8_t* ie_chain, size_t ie_chain_len, uint8_t* rsne_data,
-                                   size_t* rsne_len) {
-  size_t offset = 0;
-  *rsne_len = 0;
-  while (offset < ie_chain_len) {
-    uint8_t type = ie_chain[offset];
-    uint8_t ie_total_length = ie_chain[offset + 1] + 2;
-    if (type == WLAN_IE_TYPE_RSNE) {
-      memcpy(rsne_data, &ie_chain[offset], ie_total_length);
-      *rsne_len = ie_total_length;
-      break;
-    }
-    offset += ie_total_length;
-  }
-}
-
-static void brcmf_iedump(uint8_t* ies, size_t total_len) {
-  size_t offset = 0;
-  while (offset + TLV_HDR_LEN <= total_len) {
-    uint8_t elem_type = ies[offset];
-    uint8_t elem_len = ies[offset + TLV_LEN_OFF];
-    offset += TLV_HDR_LEN;
-    if (offset + elem_len > total_len) {
-      break;
-    }
-    if (elem_type == 0) {
-      BRCMF_DBG_STRING_DUMP(true, ies + offset, elem_len, "IE 0 (name), len %d:", elem_len);
-    } else {
-      BRCMF_DBG_HEX_DUMP(true, ies + offset, elem_len, "IE %d, len %d:\n", elem_type, elem_len);
-    }
-    offset += elem_len;
-  }
-  if (offset != total_len) {
-    BRCMF_DBG(ALL, " * * Offset %ld didn't match length %ld", offset, total_len);
-  }
-}
-
 #define EAPOL_ETHERNET_TYPE_UINT16 0x8e88
-
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
   struct net_device* ndev = ifp->ndev;
   THROTTLE(10, BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA), packet->data,
@@ -1446,6 +1660,73 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
   brcmu_pkt_buf_free_netbuf(packet);
 }
 
+static void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss) {
+  size_t offset = 0;
+  bool wpa_ie_extracted = false;
+
+  while (offset < ie_len) {
+    uint8_t type = ie[offset];
+    uint8_t length = ie[offset + TLV_LEN_OFF];
+    switch (type) {
+      case WLAN_IE_TYPE_SSID: {
+        uint8_t ssid_len = std::min<uint8_t>(length, sizeof(bss->ssid.data));
+        memcpy(bss->ssid.data, ie + offset + TLV_HDR_LEN, ssid_len);
+        bss->ssid.len = ssid_len;
+        break;
+      }
+      case WLAN_IE_TYPE_SUPP_RATES: {
+        uint8_t num_supp_rates = std::min<uint8_t>(length, WLAN_MAC_MAX_SUPP_RATES);
+        memcpy(bss->rates, ie + offset + TLV_HDR_LEN, num_supp_rates);
+        bss->num_rates = num_supp_rates;
+        break;
+      }
+      case WLAN_IE_TYPE_EXT_SUPP_RATES: {
+        uint8_t num_ext_supp_rates = std::min<uint8_t>(length, WLAN_MAC_MAX_EXT_RATES);
+        memcpy(bss->rates + bss->num_rates, ie + offset + TLV_HDR_LEN, num_ext_supp_rates);
+        bss->num_rates += num_ext_supp_rates;
+        break;
+      }
+      case WLAN_IE_TYPE_RSNE: {
+        bss->rsne_len = length + TLV_HDR_LEN;
+        memcpy(bss->rsne, ie + offset, bss->rsne_len);
+        break;
+      }
+      case WLAN_IE_TYPE_VENDOR_SPECIFIC: {
+        if (!wpa_ie_extracted && (brcmf_tlv_has_wpa_ie(ie + offset))) {
+          bss->vendor_ie_len = length + TLV_HDR_LEN;
+          memcpy(bss->vendor_ie, ie + offset, bss->vendor_ie_len);
+          wpa_ie_extracted = true;
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    offset += length + TLV_HDR_LEN;
+  }
+}
+
+static void brcmf_iedump(uint8_t* ies, size_t total_len) {
+  size_t offset = 0;
+  while (offset + TLV_HDR_LEN <= total_len) {
+    uint8_t elem_type = ies[offset];
+    uint8_t elem_len = ies[offset + TLV_LEN_OFF];
+    offset += TLV_HDR_LEN;
+    if (offset + elem_len > total_len) {
+      break;
+    }
+    if (elem_type == 0) {
+      BRCMF_DBG_STRING_DUMP(true, ies + offset, elem_len, "IE 0 (name), len %d:", elem_len);
+    } else {
+      BRCMF_DBG_HEX_DUMP(true, ies + offset, elem_len, "IE %d, len %d:\n", elem_type, elem_len);
+    }
+    offset += elem_len;
+  }
+  if (offset != total_len) {
+    BRCMF_DBG(ALL, " * * Offset %ld didn't match length %ld", offset, total_len);
+  }
+}
+
 static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
                                      const uint8_t* bssid, uint16_t capability, uint16_t interval,
                                      uint8_t* ie, size_t ie_len, int16_t rssi_dbm) {
@@ -1456,8 +1737,7 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
   }
   result.txn_id = ndev->scan_txn_id;
   memcpy(result.bss.bssid, bssid, ETH_ALEN);
-  brcmf_parse_ies(ie, ie_len, &result.bss);
-  brcmf_ies_extract_rsne(ie, ie_len, result.bss.rsne, &result.bss.rsne_len);
+  brcmf_extract_ies(ie, ie_len, &result.bss);
   result.bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
   result.bss.beacon_period = 0;
   result.bss.dtim_period = 0;
@@ -1828,275 +2108,6 @@ free_req:
   return err;
 }
 
-static zx_status_t brcmf_configure_opensecurity(struct brcmf_if* ifp) {
-  zx_status_t err;
-  int32_t wpa_val;
-
-  /* set auth */
-  err = brcmf_fil_bsscfg_int_set(ifp, "auth", 0);
-  if (err != ZX_OK) {
-    BRCMF_ERR("auth error %d\n", err);
-    return err;
-  }
-  /* set wsec */
-  err = brcmf_fil_bsscfg_int_set(ifp, "wsec", 0);
-  if (err != ZX_OK) {
-    BRCMF_ERR("wsec error %d\n", err);
-    return err;
-  }
-  /* set upper-layer auth */
-  wpa_val = WPA_AUTH_DISABLED;
-  err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_val);
-  if (err != ZX_OK) {
-    BRCMF_ERR("wpa_auth error %d\n", err);
-    return err;
-  }
-
-  return ZX_OK;
-}
-
-static bool brcmf_valid_wpa_oui(uint8_t* oui, bool is_rsn_ie) {
-  if (is_rsn_ie) {
-    return (memcmp(oui, RSN_OUI, TLV_OUI_LEN) == 0);
-  }
-
-  return (memcmp(oui, WPA_OUI, TLV_OUI_LEN) == 0);
-}
-
-static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcmf_vs_tlv* wpa_ie,
-                                         bool is_rsn_ie) {
-  uint32_t auth = 0; /* d11 open authentication */
-  uint16_t count;
-  zx_status_t err = ZX_OK;
-  int32_t len;
-  uint32_t i;
-  uint32_t wsec;
-  uint32_t pval = 0;
-  uint32_t gval = 0;
-  uint32_t wpa_auth = 0;
-  uint32_t offset;
-  uint8_t* data;
-  uint16_t rsn_cap;
-  uint32_t wme_bss_disable;
-  uint32_t mfp;
-
-  BRCMF_DBG(TRACE, "Enter\n");
-  if (wpa_ie == NULL) {
-    goto exit;
-  }
-
-  len = wpa_ie->len + TLV_HDR_LEN;
-  data = (uint8_t*)wpa_ie;
-  offset = TLV_HDR_LEN;
-  if (!is_rsn_ie) {
-    offset += VS_IE_FIXED_HDR_LEN;
-  } else {
-    offset += WPA_IE_VERSION_LEN;
-  }
-
-  /* check for multicast cipher suite */
-  if ((int32_t)offset + WPA_IE_MIN_OUI_LEN > len) {
-    err = ZX_ERR_INVALID_ARGS;
-    BRCMF_ERR("no multicast cipher suite\n");
-    goto exit;
-  }
-
-  if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
-    err = ZX_ERR_INVALID_ARGS;
-    BRCMF_ERR("invalid OUI\n");
-    goto exit;
-  }
-  offset += TLV_OUI_LEN;
-
-  /* pick up multicast cipher */
-  switch (data[offset]) {
-    case WPA_CIPHER_NONE:
-      gval = 0;
-      break;
-    case WPA_CIPHER_WEP_40:
-    case WPA_CIPHER_WEP_104:
-      gval = WEP_ENABLED;
-      break;
-    case WPA_CIPHER_TKIP:
-      gval = TKIP_ENABLED;
-      break;
-    case WPA_CIPHER_CCMP_128:
-      gval = AES_ENABLED;
-      break;
-    default:
-      err = ZX_ERR_INVALID_ARGS;
-      BRCMF_ERR("Invalid multi cast cipher info\n");
-      goto exit;
-  }
-
-  offset++;
-  /* walk thru unicast cipher list and pick up what we recognize */
-  count = data[offset] + (data[offset + 1] << 8);
-  offset += WPA_IE_SUITE_COUNT_LEN;
-  /* Check for unicast suite(s) */
-  if ((int32_t)(offset + (WPA_IE_MIN_OUI_LEN * count)) > len) {
-    err = ZX_ERR_INVALID_ARGS;
-    BRCMF_ERR("no unicast cipher suite\n");
-    goto exit;
-  }
-  for (i = 0; i < count; i++) {
-    if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
-      err = ZX_ERR_INVALID_ARGS;
-      BRCMF_ERR("ivalid OUI\n");
-      goto exit;
-    }
-    offset += TLV_OUI_LEN;
-    switch (data[offset]) {
-      case WPA_CIPHER_NONE:
-        break;
-      case WPA_CIPHER_WEP_40:
-      case WPA_CIPHER_WEP_104:
-        pval |= WEP_ENABLED;
-        break;
-      case WPA_CIPHER_TKIP:
-        pval |= TKIP_ENABLED;
-        break;
-      case WPA_CIPHER_CCMP_128:
-        pval |= AES_ENABLED;
-        break;
-      default:
-        BRCMF_ERR("Invalid unicast security info\n");
-    }
-    offset++;
-  }
-  /* walk thru auth management suite list and pick up what we recognize */
-  count = data[offset] + (data[offset + 1] << 8);
-  offset += WPA_IE_SUITE_COUNT_LEN;
-  /* Check for auth key management suite(s) */
-  if ((int32_t)(offset + (WPA_IE_MIN_OUI_LEN * count)) > len) {
-    err = ZX_ERR_INVALID_ARGS;
-    BRCMF_ERR("no auth key mgmt suite\n");
-    goto exit;
-  }
-  for (i = 0; i < count; i++) {
-    if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
-      err = ZX_ERR_INVALID_ARGS;
-      BRCMF_ERR("ivalid OUI\n");
-      goto exit;
-    }
-    offset += TLV_OUI_LEN;
-    switch (data[offset]) {
-      case RSN_AKM_NONE:
-        BRCMF_DBG(TRACE, "RSN_AKM_NONE\n");
-        wpa_auth |= WPA_AUTH_NONE;
-        break;
-      case RSN_AKM_UNSPECIFIED:
-        BRCMF_DBG(TRACE, "RSN_AKM_UNSPECIFIED\n");
-        is_rsn_ie ? (wpa_auth |= WPA2_AUTH_UNSPECIFIED) : (wpa_auth |= WPA_AUTH_UNSPECIFIED);
-        break;
-      case RSN_AKM_PSK:
-        BRCMF_DBG(TRACE, "RSN_AKM_PSK\n");
-        is_rsn_ie ? (wpa_auth |= WPA2_AUTH_PSK) : (wpa_auth |= WPA_AUTH_PSK);
-        break;
-      case RSN_AKM_SHA256_PSK:
-        BRCMF_DBG(TRACE, "RSN_AKM_MFP_PSK\n");
-        wpa_auth |= WPA2_AUTH_PSK_SHA256;
-        break;
-      case RSN_AKM_SHA256_1X:
-        BRCMF_DBG(TRACE, "RSN_AKM_MFP_1X\n");
-        wpa_auth |= WPA2_AUTH_1X_SHA256;
-        break;
-      default:
-        BRCMF_ERR("Invalid key mgmt info\n");
-    }
-    offset++;
-  }
-
-  mfp = BRCMF_MFP_NONE;
-  if (is_rsn_ie) {
-    wme_bss_disable = 1;
-    if (((int32_t)offset + RSN_CAP_LEN) <= len) {
-      rsn_cap = data[offset] + (data[offset + 1] << 8);
-      if (rsn_cap & RSN_CAP_PTK_REPLAY_CNTR_MASK) {
-        wme_bss_disable = 0;
-      }
-      if (rsn_cap & RSN_CAP_MFPR_MASK) {
-        BRCMF_DBG(TRACE, "MFP Required\n");
-        mfp = BRCMF_MFP_REQUIRED;
-        /* Firmware only supports mfp required in
-         * combination with WPA2_AUTH_PSK_SHA256 or
-         * WPA2_AUTH_1X_SHA256.
-         */
-        if (!(wpa_auth & (WPA2_AUTH_PSK_SHA256 | WPA2_AUTH_1X_SHA256))) {
-          err = ZX_ERR_INVALID_ARGS;
-          goto exit;
-        }
-        /* Firmware has requirement that WPA2_AUTH_PSK/
-         * WPA2_AUTH_UNSPECIFIED be set, if SHA256 OUI
-         * is to be included in the rsn ie.
-         */
-        if (wpa_auth & WPA2_AUTH_PSK_SHA256) {
-          wpa_auth |= WPA2_AUTH_PSK;
-        } else if (wpa_auth & WPA2_AUTH_1X_SHA256) {
-          wpa_auth |= WPA2_AUTH_UNSPECIFIED;
-        }
-      } else if (rsn_cap & RSN_CAP_MFPC_MASK) {
-        BRCMF_DBG(TRACE, "MFP Capable\n");
-        mfp = BRCMF_MFP_CAPABLE;
-      }
-    }
-    offset += RSN_CAP_LEN;
-    /* set wme_bss_disable to sync RSN Capabilities */
-    err = brcmf_fil_bsscfg_int_set(ifp, "wme_bss_disable", wme_bss_disable);
-    if (err != ZX_OK) {
-      BRCMF_ERR("wme_bss_disable error %d\n", err);
-      goto exit;
-    }
-
-    /* Skip PMKID cnt as it is know to be 0 for AP. */
-    offset += RSN_PMKID_COUNT_LEN;
-
-    /* See if there is BIP wpa suite left for MFP */
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP) &&
-        ((int32_t)(offset + WPA_IE_MIN_OUI_LEN) <= len)) {
-      err = brcmf_fil_bsscfg_data_set(ifp, "bip", &data[offset], WPA_IE_MIN_OUI_LEN);
-      if (err != ZX_OK) {
-        BRCMF_ERR("bip error %d\n", err);
-        goto exit;
-      }
-    }
-  }
-  /* FOR WPS , set SES_OW_ENABLED */
-  wsec = (pval | gval | SES_OW_ENABLED);
-
-  /* set auth */
-  err = brcmf_fil_bsscfg_int_set(ifp, "auth", auth);
-  if (err != ZX_OK) {
-    BRCMF_ERR("auth error %d\n", err);
-    goto exit;
-  }
-  /* set wsec */
-  err = brcmf_fil_bsscfg_int_set(ifp, "wsec", wsec);
-  if (err != ZX_OK) {
-    BRCMF_ERR("wsec error %d\n", err);
-    goto exit;
-  }
-  /* Configure MFP, this needs to go after wsec otherwise the wsec command
-   * will overwrite the values set by MFP
-   */
-  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP)) {
-    err = brcmf_fil_bsscfg_int_set(ifp, "mfp", mfp);
-    if (err != ZX_OK) {
-      BRCMF_ERR("mfp error %s\n", zx_status_get_string(err));
-      goto exit;
-    }
-  }
-  /* set upper-layer auth */
-  err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_auth);
-  if (err != ZX_OK) {
-    BRCMF_ERR("wpa_auth error %d\n", err);
-    goto exit;
-  }
-
-exit:
-  return err;
-}
-
 static zx_status_t brcmf_parse_vndr_ies(const uint8_t* vndr_ie_buf, uint32_t vndr_ie_len,
                                         struct parsed_vndr_ies* vndr_ies) {
   struct brcmf_vs_tlv* vndrie;
@@ -2109,7 +2120,7 @@ static zx_status_t brcmf_parse_vndr_ies(const uint8_t* vndr_ie_buf, uint32_t vnd
 
   ie = (struct brcmf_tlv*)vndr_ie_buf;
   while (ie) {
-    if (ie->id != WLAN_EID_VENDOR_SPECIFIC) {
+    if (ie->id != WLAN_IE_TYPE_VENDOR_SPECIFIC) {
       goto next;
     }
     vndrie = (struct brcmf_vs_tlv*)ie;
@@ -2355,12 +2366,19 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   brcmf_set_mpc(ifp, 0);
   brcmf_configure_arp_nd_offload(ifp, false);
 
+  // set to open authentication for external supplicant
+  status = brcmf_fil_bsscfg_int_set(ifp, "auth", BRCMF_AUTH_MODE_OPEN);
+  if (status != ZX_OK) {
+    BRCMF_ERR("auth error %s\n", zx_status_get_string(status));
+    goto fail;
+  }
+
   // Configure RSN IE
   if (req->rsne_len != 0) {
     struct brcmf_vs_tlv* tmp_ie = (struct brcmf_vs_tlv*)req->rsne;
-    status = brcmf_configure_wpaie(ifp, tmp_ie, true);
+    status = brcmf_configure_wpaie(ifp, tmp_ie, true, true);
     if (status != ZX_OK) {
-      BRCMF_ERR("Failed to install RSNE\n");
+      BRCMF_ERR("Failed to install RSNE: %s\n", zx_status_get_string(status));
       goto fail;
     }
   } else {
@@ -2744,8 +2762,6 @@ void brcmf_hook_auth_req(void* ctx, const wlanif_auth_req_t* req) {
                             : req->auth_type == WLAN_AUTH_TYPE_SAE ? "SAE" : "invalid",
             MAC_FMT_ARGS(req->peer_sta_address));
 
-  response.result_code = WLAN_AUTH_RESULT_SUCCESS;
-  response.auth_type = req->auth_type;
   // Ensure that join bssid matches auth bssid
   if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
     const uint8_t* old_mac = ifp->bss.bssid;
@@ -2763,6 +2779,11 @@ void brcmf_hook_auth_req(void* ctx, const wlanif_auth_req_t* req) {
     // In release builds, ignore and continue.
     BRCMF_ERR("Ignoring mismatch and using join MAC address\n");
   }
+
+  brcmf_set_auth_type(ndev, req->auth_type);
+
+  response.result_code = WLAN_AUTH_RESULT_SUCCESS;
+  response.auth_type = req->auth_type;
   memcpy(&response.peer_sta_address, ifp->bss.bssid, ETH_ALEN);
 
   BRCMF_DBG(
@@ -2856,8 +2877,9 @@ void brcmf_hook_assoc_req(void* ctx, const wlanif_assoc_req_t* req) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
-  BRCMF_DBG(WLANIF, "Assoc request from SME. address: " MAC_FMT_STR ", rsne_len: %zd\n",
-            MAC_FMT_ARGS(req->peer_sta_address), req->rsne_len);
+  BRCMF_DBG(WLANIF,
+            "Assoc request from SME. address: " MAC_FMT_STR ", rsne_len: %zd venie len %zd\n",
+            MAC_FMT_ARGS(req->peer_sta_address), req->rsne_len, req->vendor_ie_len);
 
   if (req->rsne_len != 0) {
     BRCMF_DBG(TEMP, " * * RSNE non-zero! %ld\n", req->rsne_len);
@@ -3640,6 +3662,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
   }
 
   vif->wdev.iftype = type;
+  vif->saved_ie.assoc_req_ie_len = 0;
 
   brcmf_init_prof(&vif->profile);
 

@@ -20,6 +20,8 @@ void ConvertWlanChan(::fuchsia::wlan::common::WlanChan* fidl_chan,
                      const wlan_channel_t& wlanif_chan);
 void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid);
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len);
+void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_ie, uint8_t* out_vendor_ie,
+                          size_t* out_vendor_ie_len);
 void ConvertBSSDescription(wlanif_bss_description_t* wlanif_bss_desc,
                            const ::fuchsia::wlan::mlme::BSSDescription& fidl_bss_desc);
 void ConvertBSSDescription(::fuchsia::wlan::mlme::BSSDescription* fidl_bss_desc,
