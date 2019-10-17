@@ -45,7 +45,8 @@ TEST_F(DigestUnitTest, VMONames) {
                                        },
                                });
 
-  Digest d(c, {{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  Digester digester({{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  Digest d(c, &digester);
   ConfirmBuckets(d, {{"B", 200U}, {"A", 100U}});
   EXPECT_EQ(0U, d.undigested_vmos().size());
 }  // namespace test
@@ -65,7 +66,8 @@ TEST_F(DigestUnitTest, ProcessNames) {
                                        },
                                });
 
-  Digest d(c, {{"P", "p.*", ".*"}, {"Q", "q.*", ".*"}});
+  Digester digester({{"P", "p.*", ".*"}, {"Q", "q.*", ".*"}});
+  Digest d(c, &digester);
   ConfirmBuckets(d, {{"Q", 200U}, {"P", 100U}});
   EXPECT_EQ(0U, d.undigested_vmos().size());
 }
@@ -85,7 +87,8 @@ TEST_F(DigestUnitTest, Undigested) {
                                        },
                                });
 
-  Digest d(c, {{"A", ".*", "a.*"}});
+  Digester digester({{"A", ".*", "a.*"}});
+  Digest d(c, &digester);
   ASSERT_EQ(1U, d.undigested_vmos().size());
   ASSERT_NE(d.undigested_vmos().end(), d.undigested_vmos().find(2U));
   ConfirmBuckets(d, {{"A", 100U}, {"Undigested", 200U}});
@@ -106,7 +109,8 @@ TEST_F(DigestUnitTest, Kernel) {
                                            .free_bytes = 100,
                                        },
                                });
-  Digest d(c, {});
+  Digester digester({});
+  Digest d(c, &digester);
   EXPECT_EQ(0U, d.undigested_vmos().size());
   ConfirmBuckets(d, {{"Kernel", 150U}, {"Free", 100U}});
 }
@@ -129,7 +133,8 @@ TEST_F(DigestUnitTest, Orphaned) {
                                            {.koid = 1, .name = "p1", .vmos = {1}},
                                        },
                                });
-  Digest d(c, {{"A", ".*", "a.*"}});
+  Digester digester({{"A", ".*", "a.*"}});
+  Digest d(c, &digester);
   EXPECT_EQ(0U, d.undigested_vmos().size());
   ConfirmBuckets(d, {{"A", 100U}, {"Orphaned", 200U}, {"Kernel", 0U}, {"Free", 0U}});
 }
@@ -182,7 +187,8 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 18, .name = "new", .vmos = {18}},
                   },
           });
-  Digest d(c);
+  Digester digester;
+  Digest d(c, &digester);
   EXPECT_EQ(1U, d.undigested_vmos().size());
 
   ConfirmBuckets(d, {

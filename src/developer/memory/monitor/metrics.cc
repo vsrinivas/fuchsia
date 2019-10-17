@@ -52,7 +52,7 @@ void Metrics::CollectMetrics() {
   TRACE_DURATION("memory_monitor", "Watcher::Metrics::CollectMetrics");
   Capture capture;
   capture_cb_(&capture, VMO);
-  Digest digest(capture);
+  Digest digest(capture, &digester_);
 
   std::vector<fuchsia::cobalt::CobaltEvent> events;
 

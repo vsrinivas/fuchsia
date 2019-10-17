@@ -32,6 +32,7 @@ class Metrics {
   async::TaskClosureMethod<Metrics, &Metrics::CollectMetrics> task_{this};
   std::unordered_map<std::string, cobalt_registry::MemoryMetricDimensionBucket>
       bucket_name_to_code_;
+  memory::Digester digester_;
   FXL_DISALLOW_COPY_AND_ASSIGN(Metrics);
 };
 

@@ -18,6 +18,7 @@
 #include <trace/observer.h>
 
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/metrics/summary.h"
 
@@ -72,7 +73,9 @@ int Mem(const fxl::CommandLine& command_line) {
         return EXIT_FAILURE;
       }
       if (command_line.HasOption("digest")) {
-        printer.OutputDigest(Digest(capture));
+        Digester digester;
+        Digest d(capture, &digester);
+        printer.OutputDigest(d);
       } else {
         printer.OutputSummary(Summary(capture, &namer), UNSORTED, pid);
       }
@@ -98,7 +101,8 @@ int Mem(const fxl::CommandLine& command_line) {
     return EXIT_FAILURE;
   }
   if (command_line.HasOption("digest")) {
-    Digest digest(capture);
+    Digester digester;
+    Digest digest(capture, &digester);
     printer.PrintDigest(digest);
     if (command_line.HasOption("undigested")) {
       std::cout << capture.koid_to_vmo().size() << " VMOs, " << digest.undigested_vmos().size()

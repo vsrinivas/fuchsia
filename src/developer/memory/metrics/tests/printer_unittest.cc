@@ -409,7 +409,8 @@ TEST_F(PrinterUnitTest, PrintDigest) {
                                            {.koid = 2, .name = "q1", .vmos = {2}},
                                        },
                                });
-  Digest d(c, {{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  Digester digester({{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  Digest d(c, &digester);
   std::ostringstream oss;
   Printer p(oss);
   p.PrintDigest(d);
@@ -441,7 +442,8 @@ TEST_F(PrinterUnitTest, OutputDigest) {
                                            {.koid = 2, .name = "q1", .vmos = {2}},
                                        },
                                });
-  Digest d(c, {{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  Digester digester({{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  Digest d(c, &digester);
   std::ostringstream oss;
   Printer p(oss);
   p.OutputDigest(d);

@@ -10,7 +10,7 @@
 
 namespace memory {
 
-const std::vector<const BucketMatch> Digest::kDefaultBucketMatches = {
+const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"ZBI Buffer", "bin/bootsvc", ""},
     {"Graphics", ".*", "magma_create_buffer"},
     {"Video Buffer", "devhost:sys", "Sysmem.*"},
@@ -28,67 +28,92 @@ const std::vector<const BucketMatch> Digest::kDefaultBucketMatches = {
     {"Cast", "cast_agent.cmx", ".*"},
 };
 
-Bucket::Bucket(const BucketMatch& match)
-    : name_(match.name),
-      process_(std::regex(match.process)),
-      vmo_(std::regex(match.vmo)),
-      size_(0) {}
+BucketMatch::BucketMatch(const std::string& name, const std::string& process,
+                         const std::string& vmo)
+    : name_(name), process_(process), vmo_(vmo) {}
 
-Digest::Digest(const Capture& capture, const std::vector<const BucketMatch>& bucket_matches)
-    : time_(capture.time()) {
-  TRACE_DURATION("memory_metrics", "Digest::Digest");
-  for (const auto& pair : capture.koid_to_vmo()) {
-    undigested_vmos_.insert(pair.first);
+bool BucketMatch::ProcessMatch(const std::string& process) {
+  const auto& pi = process_match_.find(process);
+  if (pi != process_match_.end()) {
+    return pi->second;
   }
+  bool match = std::regex_match(process, process_);
+  process_match_.emplace(process, match);
+  return match;
+}
+
+bool BucketMatch::VmoMatch(const std::string& vmo) {
+  const auto& vi = vmo_match_.find(vmo);
+  if (vi != vmo_match_.end()) {
+    return vi->second;
+  }
+  bool match = std::regex_match(vmo, vmo_);
+  vmo_match_.emplace(vmo, match);
+  return match;
+}
+
+Digest::Digest(const Capture& capture, Digester* digester) { digester->Digest(capture, this); }
+
+Digester::Digester(const std::vector<const BucketMatch>& bucket_matches) {
   for (const auto& bucket_match : bucket_matches) {
-    buckets_.push_back(Bucket(bucket_match));
+    bucket_matches_.emplace_back(bucket_match);
+  }
+}
+
+void Digester::Digest(const Capture& capture, class Digest* digest) {
+  TRACE_DURATION("memory_metrics", "Digester::Digest");
+  digest->time_ = capture.time();
+  digest->undigested_vmos_.reserve(capture.koid_to_vmo().size());
+  for (const auto& pair : capture.koid_to_vmo()) {
+    digest->undigested_vmos_.emplace(pair.first);
   }
 
-  for (auto& bucket : buckets_) {
+  digest->buckets_.reserve(bucket_matches_.size());
+  for (auto& bucket_match : bucket_matches_) {
+    auto& bucket = digest->buckets_.emplace_back(bucket_match.name(), 0);
     for (const auto& pair : capture.koid_to_process()) {
       const auto& process = pair.second;
 
-      if (!std::regex_match(process.name, bucket.process_)) {
+      if (!bucket_match.ProcessMatch(process.name)) {
         continue;
       }
-
       for (const auto& v : process.vmos) {
-        if (undigested_vmos_.find(v) == undigested_vmos_.end()) {
+        if (digest->undigested_vmos_.count(v) == 0) {
           continue;
         }
         const auto& vmo = capture.vmo_for_koid(v);
-        if (!std::regex_match(vmo.name, bucket.vmo_)) {
+        if (!bucket_match.VmoMatch(vmo.name)) {
           continue;
         }
-        bucket.vmos_.push_back(v);
         bucket.size_ += vmo.committed_bytes;
-        undigested_vmos_.erase(v);
+        digest->undigested_vmos_.erase(v);
       }
     }
   }
-  std::sort(buckets_.begin(), buckets_.end(),
+
+  std::sort(digest->buckets_.begin(), digest->buckets_.end(),
             [](const Bucket& a, const Bucket& b) { return a.size() > b.size(); });
-  if (undigested_vmos_.size() > 0) {
-    uint64_t undigested_size = 0;
-    for (auto v : undigested_vmos_) {
-      undigested_size += capture.vmo_for_koid(v).committed_bytes;
-    }
-    buckets_.emplace_back("Undigested", undigested_size);
+  uint64_t undigested_size = 0;
+  for (auto v : digest->undigested_vmos_) {
+    undigested_size += capture.vmo_for_koid(v).committed_bytes;
+  }
+  if (undigested_size > 0) {
+    digest->buckets_.emplace_back("Undigested", undigested_size);
   }
 
   const auto& kmem = capture.kmem();
   if (kmem.total_bytes > 0) {
     uint64_t vmo_size = 0;
-    for (const auto& bucket : buckets_) {
+    for (const auto& bucket : digest->buckets_) {
       vmo_size += bucket.size_;
     }
     if (vmo_size < kmem.vmo_bytes) {
-      buckets_.emplace_back("Orphaned", kmem.vmo_bytes - vmo_size);
+      digest->buckets_.emplace_back("Orphaned", kmem.vmo_bytes - vmo_size);
     }
-    buckets_.emplace_back("Kernel", kmem.wired_bytes + kmem.total_heap_bytes +
-                                        kmem.mmu_overhead_bytes + kmem.ipc_bytes +
-                                        kmem.other_bytes);
-    buckets_.emplace_back("Free", kmem.free_bytes);
+    digest->buckets_.emplace_back("Kernel", kmem.wired_bytes + kmem.total_heap_bytes +
+                                                kmem.mmu_overhead_bytes + kmem.ipc_bytes +
+                                                kmem.other_bytes);
+    digest->buckets_.emplace_back("Free", kmem.free_bytes);
   }
 }
 
