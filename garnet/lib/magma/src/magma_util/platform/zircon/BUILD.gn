@@ -91,11 +91,11 @@ source_set("device") {
     "$zircon_build_root/public/lib/driver",
     "$zircon_build_root/public/lib/zx",
     "..:device_header",
+    "//zircon/public/lib/device-protocol-pci",
+    "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/public/lib/device-protocol-pci",
-    "//zircon/public/lib/device-protocol-platform-device",
   ]
 }
 
@@ -158,9 +158,9 @@ source_set("sysmem_connection") {
   deps = [
     ":buffer",
     "..:sysmem_connection_header",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 
@@ -263,6 +263,7 @@ source_set("trace") {
 
   deps = [
     "$magma_build_root/src/magma_util",
+    "..:trace_header",
   ]
 
   public_deps = [
@@ -270,7 +271,38 @@ source_set("trace") {
   ]
 
   if (magma_enable_tracing) {
-    public_deps += [
+    deps += [
+      "$zircon_build_root/public/lib/async-cpp",
+      "$zircon_build_root/public/lib/async-loop-cpp",
+      "$zircon_build_root/public/lib/async-loop-default",
+      "$zircon_build_root/public/lib/trace-vthread-with-static-engine",
+      "$zircon_build_root/public/lib/trace-with-static-engine",
+    ]
+  }
+}
+
+source_set("trace_provider") {
+  configs += [
+    "..:platform_include_config",
+    "..:tracing",
+  ]
+
+  sources = [
+    "zircon_platform_trace_provider.cc",
+    "zircon_platform_trace_provider.h",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "..:trace_provider_header",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+
+  if (magma_enable_tracing) {
+    deps += [
       "$zircon_build_root/public/lib/async-cpp",
       "$zircon_build_root/public/lib/async-loop-cpp",
       "$zircon_build_root/public/lib/async-loop-default",

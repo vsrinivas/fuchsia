@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
 
 #include <memory>
 
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/device.h>
+
 #include "magma_util/macros.h"
 #include "platform_trace.h"
+#include "platform_trace_provider.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_device.h"
 
@@ -174,8 +176,8 @@ static zx_status_t driver_bind(void* context, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   gpu->parent_device = parent;
 
-  if (magma::PlatformTrace::Get())
-    magma::PlatformTrace::Get()->Initialize();
+  if (magma::PlatformTraceProvider::Get())
+    magma::PlatformTraceProvider::Get()->Initialize();
 
   gpu->magma_driver = MagmaDriver::Create();
 

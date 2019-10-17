@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "platform_trace.h"
+#include "platform_trace_provider.h"
 
 #if MAGMA_ENABLE_TRACING
 
 TEST(Tracing, Teardown) {
-  auto platform_trace = magma::PlatformTrace::CreateForTesting();
+  auto platform_trace = magma::PlatformTraceProvider::CreateForTesting();
   EXPECT_TRUE(platform_trace);
   EXPECT_TRUE(platform_trace->Initialize());
   platform_trace.reset();

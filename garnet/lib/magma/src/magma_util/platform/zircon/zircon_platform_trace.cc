@@ -17,45 +17,6 @@ namespace magma {
 
 #if MAGMA_ENABLE_TRACING
 
-static std::unique_ptr<ZirconPlatformTrace> g_platform_trace;
-
-ZirconPlatformTrace::ZirconPlatformTrace() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
-
-ZirconPlatformTrace::~ZirconPlatformTrace() {
-  if (trace_provider_) {
-    async::PostTask(loop_.dispatcher(), [this]() {
-      // trace_provider_.reset() needs to run on loop_'s dispatcher or else its teardown can be
-      // racy and crash.
-      trace_provider_.reset();
-      // Run Quit() in the loop to ensure this task executes before JoinThreads() returns and the
-      // destructor finishes.
-      loop_.Quit();
-    });
-  } else {
-    loop_.Quit();
-  }
-  loop_.JoinThreads();
-}
-
-bool ZirconPlatformTrace::Initialize() {
-  zx_status_t status = loop_.StartThread();
-  if (status != ZX_OK)
-    return DRETF(false, "Failed to start async loop");
-  trace_provider_ = std::make_unique<trace::TraceProviderWithFdio>(loop_.dispatcher());
-  return true;
-}
-
-PlatformTrace* PlatformTrace::Get() {
-  if (!g_platform_trace)
-    g_platform_trace = std::make_unique<ZirconPlatformTrace>();
-  return g_platform_trace.get();
-}
-
-// static
-std::unique_ptr<PlatformTrace> PlatformTrace::CreateForTesting() {
-  return std::make_unique<ZirconPlatformTrace>();
-}
-
 ZirconPlatformTraceObserver::ZirconPlatformTraceObserver()
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
@@ -86,13 +47,6 @@ std::unique_ptr<PlatformTraceObserver> PlatformTraceObserver::Create() {
     return nullptr;
   return observer;
 }
-
-#else
-
-PlatformTrace* PlatformTrace::Get() { return nullptr; }
-
-// static
-std::unique_ptr<PlatformTrace> PlatformTrace::CreateForTesting() { return nullptr; }
 
 #endif
 

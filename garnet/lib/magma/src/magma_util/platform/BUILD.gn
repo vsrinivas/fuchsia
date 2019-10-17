@@ -362,7 +362,7 @@ source_set("port") {
   allow_circular_includes_from = [ "zircon:port" ]
 }
 
-source_set("trace") {
+source_set("trace_header") {
   public_configs = [
     ":platform_include_config",
     ":tracing",
@@ -373,11 +373,46 @@ source_set("trace") {
   ]
 
   public_deps = [
-    "zircon:trace",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-vthread-with-static-engine",
+    "//zircon/public/lib/trace-with-static-engine",
+  ]
+}
+
+source_set("trace") {
+  public_deps = [
+    ":trace_header",
   ]
 
-  allow_circular_includes_from = [ "zircon:trace" ]
+  deps = [
+    "zircon:trace",
+  ]
+}
+
+source_set("trace_provider_header") {
+  public_configs = [
+    ":platform_include_config",
+    ":tracing",
+  ]
+
+  sources = [
+    "platform_trace_provider.h",
+  ]
+
+  public_deps = [
+    ":trace",
+    "zircon:trace",
+  ]
+}
+
+source_set("trace_provider") {
+  public_deps = [
+    ":trace_provider_header",
+  ]
+
+  deps = [
+    "zircon:trace_provider",
+  ]
 }
 
 source_set("sysmem_connection_header") {

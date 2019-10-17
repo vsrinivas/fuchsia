@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "platform_trace.h"
+#include "platform_trace_provider.h"
 
 class PlatformTraceInit {
  public:
   PlatformTraceInit() {
-    if (magma::PlatformTrace::Get()) {
-      magma::PlatformTrace::Get()->Initialize();
+    if (magma::PlatformTraceProvider::Get()) {
+      magma::PlatformTraceProvider::Get()->Initialize();
     }
   }
 } init_platform_trace;

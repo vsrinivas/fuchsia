@@ -41,17 +41,8 @@ namespace magma {
 
 class PlatformTrace {
  public:
-  virtual ~PlatformTrace() {}
-
-  virtual bool Initialize() = 0;
-
   // Returns the current time in ticks.
   static uint64_t GetCurrentTicks();
-
-  // Returns null if tracing is not enabled.
-  static PlatformTrace* Get();
-
-  static std::unique_ptr<PlatformTrace> CreateForTesting();
 };
 
 class PlatformTraceObserver {

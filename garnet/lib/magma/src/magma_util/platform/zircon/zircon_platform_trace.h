@@ -11,7 +11,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include <trace-provider/provider.h>
 #include <trace/observer.h>
 #endif
 
@@ -23,17 +22,6 @@
 namespace magma {
 
 #if MAGMA_ENABLE_TRACING
-class ZirconPlatformTrace : public PlatformTrace {
- public:
-  ZirconPlatformTrace();
-  ~ZirconPlatformTrace() override;
-
-  bool Initialize() override;
-
- private:
-  async::Loop loop_;
-  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
-};
 
 class ZirconPlatformTraceObserver : public PlatformTraceObserver {
  public:
