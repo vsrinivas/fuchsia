@@ -161,8 +161,6 @@ struct brcmf_cfg80211_profile {
  * @BRCMF_VIF_STATUS_CONNECTED: connected/joined successfully.
  * @BRCMF_VIF_STATUS_DISCONNECTING: disconnect/disable in progress.
  * @BRCMF_VIF_STATUS_AP_CREATED: AP operation started.
- * @BRCMF_VIF_STATUS_EAP_SUCCUSS: EAPOL handshake successful.
- * @BRCMF_VIF_STATUS_ASSOC_SUCCESS: successful SET_SSID received.
  */
 enum brcmf_vif_status {
   BRCMF_VIF_STATUS_READY,
@@ -170,8 +168,6 @@ enum brcmf_vif_status {
   BRCMF_VIF_STATUS_CONNECTED,
   BRCMF_VIF_STATUS_DISCONNECTING,
   BRCMF_VIF_STATUS_AP_CREATED,
-  BRCMF_VIF_STATUS_EAP_SUCCESS,
-  BRCMF_VIF_STATUS_ASSOC_SUCCESS,
 };
 
 /**
@@ -201,7 +197,7 @@ struct vif_saved_ie {
  * @ifp: lower layer interface pointer
  * @wdev: wireless device.
  * @profile: profile information.
- * @sme_state: SME state using enum brcmf_vif_status bits.
+ * @dev_state: Dev state using enum brcmf_vif_status bits.
  * @list: linked list.
  * @mgmt_rx_reg: registered rx mgmt frame types.
  * @mbss: Multiple BSS type, set if not first AP (not relevant for P2P).
@@ -210,7 +206,7 @@ struct brcmf_cfg80211_vif {
   struct brcmf_if* ifp;
   struct wireless_dev wdev;
   struct brcmf_cfg80211_profile profile;
-  std::atomic<unsigned long> sme_state;
+  std::atomic<unsigned long> dev_state;
   struct vif_saved_ie saved_ie;
   struct list_node list;
   uint16_t mgmt_rx_reg;

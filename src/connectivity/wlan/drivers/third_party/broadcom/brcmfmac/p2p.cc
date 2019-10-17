@@ -451,7 +451,7 @@ zx_status_t brcmf_p2p_start_device(struct brcmf_cfg80211_info* cfg, struct wirel
   mtx_lock(&cfg->usr_sync);
   err = brcmf_p2p_enable_discovery(p2p);
   if (err == ZX_OK) {
-    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state);
+    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->dev_state);
   }
   mtx_unlock(&cfg->usr_sync);
   return err;
@@ -471,7 +471,7 @@ void brcmf_p2p_stop_device(struct brcmf_cfg80211_info* cfg, struct wireless_dev*
     /* Set the discovery state to SCAN */
     (void)brcmf_p2p_set_discover_state(vif->ifp, WL_P2P_DISC_ST_SCAN, 0, 0);
     brcmf_abort_scanning(cfg);
-    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state);
+    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->dev_state);
     mtx_unlock(&cfg->usr_sync);
   }
 }
