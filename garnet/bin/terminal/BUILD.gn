@@ -34,7 +34,6 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/shared-buffer",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
@@ -43,6 +42,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/cstr",
+    "//src/lib/shared-buffer",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:libc",
@@ -76,9 +76,7 @@ config_data("tiles_with_terminal_config") {
 zircon_extras_manifest("terminal_tests_zircon_deps.manifest") {
   visibility = [ ":*" ]
   manifest = "image"
-  patterns = [
-    "bin/sh",
-  ]
+  patterns = [ "bin/sh" ]
 }
 
 test_package("terminal_tests") {

@@ -10,10 +10,7 @@ use {
     fuchsia_runtime::vmar_root_self,
     fuchsia_zircon as zx,
     shared_buffer::SharedBuffer,
-    std::ops::{
-        Deref,
-        DerefMut,
-    },
+    std::ops::{Deref, DerefMut},
 };
 
 /// A safe wrapper around a mapped region of memory.
@@ -52,23 +49,20 @@ impl Mapping {
             | zx::VmarFlags::MAP_RANGE
             | zx::VmarFlags::REQUIRE_NON_RESIZABLE;
         let mapping = Self::create_from_vmo(&vmo, size, flags)?;
-        Ok((
-            mapping,
-            vmo
-        ))
+        Ok((mapping, vmo))
     }
 
     /// Create a `Mapping` from an existing VMO.
     ///
     /// Requires that the VMO was not created with the `RESIZABLE`
     /// option, and returns `ZX_ERR_NOT_SUPPORTED` otherwise.
-    pub fn create_from_vmo(vmo: &zx::Vmo, size: usize, flags: zx::VmarFlags)
-        -> Result<Self, zx::Status>
-    {
+    pub fn create_from_vmo(
+        vmo: &zx::Vmo,
+        size: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<Self, zx::Status> {
         let flags = flags | zx::VmarFlags::REQUIRE_NON_RESIZABLE;
-        let addr = vmar_root_self().map(
-            0, &vmo, 0, size, flags,
-        )?;
+        let addr = vmar_root_self().map(0, &vmo, 0, size, flags)?;
 
         // Safety:
         //

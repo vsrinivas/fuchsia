@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_library("mapped-vmo") {
   name = "mapped_vmo"
@@ -13,6 +14,25 @@ rustc_library("mapped-vmo") {
   deps = [
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/shared-buffer",
+    "//src/lib/shared-buffer",
+  ]
+}
+
+unittest_package("mapped-vmo-tests") {
+  deps = [
+    ":mapped-vmo_test",
+  ]
+
+  tests = [
+    {
+      name = "mapped_vmo_lib_test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":mapped-vmo-tests",
   ]
 }

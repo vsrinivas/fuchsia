@@ -15,10 +15,8 @@ unittest_package("rust-crates-tests") {
     "fuchsia-merkle:fuchsia-merkle_test",
     "fuchsia-scenic:fuchsia-scenic_test",
     "fuchsia-trace:fuchsia-trace_test",
-    "mapped-vmo:mapped-vmo_test",
     "mundane:mundane_test",
     "packet:packet_test",
-    "shared-buffer:shared-buffer_test",
     "zerocopy:zerocopy_test",
   ]
 
@@ -48,19 +46,11 @@ unittest_package("rust-crates-tests") {
       environments = basic_envs
     },
     {
-      name = "mapped_vmo_lib_test"
-      environments = basic_envs
-    },
-    {
       name = "mundane_lib_test"
       environments = basic_envs
     },
     {
       name = "packet_lib_test"
-      environments = basic_envs
-    },
-    {
-      name = "shared_buffer_lib_test"
       environments = basic_envs
     },
     {

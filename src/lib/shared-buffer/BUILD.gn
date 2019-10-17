@@ -3,10 +3,30 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_library("shared-buffer") {
   name = "shared_buffer"
   version = "0.1.0"
   with_unit_tests = true
   edition = "2018"
+}
+
+unittest_package("shared-buffer-tests") {
+  deps = [
+    ":shared-buffer_test",
+  ]
+
+  tests = [
+    {
+      name = "shared_buffer_lib_test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":shared-buffer-tests",
+  ]
 }

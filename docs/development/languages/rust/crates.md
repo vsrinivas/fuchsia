@@ -56,7 +56,7 @@
 
     Rust language bindings for Zircon kernel syscalls
 
-* [mapped-vmo/](/garnet/public/rust/mapped-vmo/)
+* [mapped-vmo/](/src/lib/mapped-vmo/)
 
     A convenience crate for Zircon VMO objects mapped into memory
 
@@ -64,7 +64,7 @@
 
     A Rust crypto library backed by BoringSSL
 
-* [shared-buffer/](/garnet/public/rust/shared-buffer/)
+* [shared-buffer/](/src/lib/shared-buffer/)
 
     Utilities for safely operating on memory shared between untrusting processes
 
