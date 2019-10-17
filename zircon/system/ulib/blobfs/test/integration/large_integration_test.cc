@@ -18,6 +18,8 @@
 
 namespace {
 
+using fs::RamDisk;
+
 // This is work in progress!. See ZX-4203 for context.
 
 /*

@@ -22,13 +22,17 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
+#include <fs/test_support/test_support.h>
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
 
 #include "blobfs_fixtures.h"
-#include "test_support.h"
 
 namespace {
+
+using fs::GetTopologicalPath;
+using fs::FilesystemTest;
+using fs::RamDisk;
 
 // This is work in progress!. See ZX-4203 for context.
 

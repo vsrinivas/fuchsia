@@ -8,19 +8,19 @@
 
 #include <memory>
 
+#include <fs/test_support/environment.h>
 #include <zxtest/zxtest.h>
 
 #include "blobfs_fixtures.h"
-#include "environment.h"
 
 // The test can operate over either a ramdisk, or a real device. Initialization
 // of that device happens at the test environment level, but the test fixtures
 // must be able to see it.
-Environment* g_environment;
+fs::Environment* fs::g_environment;
 
 int main(int argc, char** argv) {
   const char kHelp[] = "Blobfs integration tests";
-  Environment::TestConfig config = {};
+  fs::Environment::TestConfig config = {};
   if (!config.GetOptions(argc, argv)) {
     printf("%s\n%s\n", kHelp, config.HelpMessage());
     return -1;
@@ -32,8 +32,8 @@ int main(int argc, char** argv) {
   config.mount_path = kMountPath;
   config.format_type = DISK_FORMAT_BLOBFS;
 
-  auto parent = std::make_unique<Environment>(config);
-  g_environment = parent.get();
+  auto parent = std::make_unique<fs::Environment>(config);
+  fs::g_environment = parent.get();
 
   // Initialize a tmpfs instance to "hold" the mounted blobfs.
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);

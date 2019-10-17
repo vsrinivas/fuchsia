@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_TEST_SUPPORT_ENVIRONMENT_H_
+#define FS_TEST_SUPPORT_ENVIRONMENT_H_
 
 #include <lib/devmgr-integration-test/fixture.h>
 
@@ -13,6 +14,8 @@
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
+
+namespace fs {
 
 // Simple wrapper around a ramdisk.
 class RamDisk {
@@ -101,3 +104,7 @@ class Environment : public zxtest::Environment {
 };
 
 extern Environment* g_environment;
+
+}  // namespace fs
+
+#endif  // FS_TEST_SUPPORT_ENVIRONMENT_H_

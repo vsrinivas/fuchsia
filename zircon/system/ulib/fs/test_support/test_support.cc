@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_support.h"
+#include "fs/test_support/test_support.h"
 
 #include <fcntl.h>
-#include <limits.h>
-
-#include <fbl/unique_fd.h>
 #include <fuchsia/device/c/fidl.h>
 #include <lib/fzl/fdio.h>
+#include <limits.h>
 #include <zircon/status.h>
+
+#include <fbl/unique_fd.h>
+
+namespace fs {
 
 std::string GetTopologicalPath(const std::string& path) {
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
@@ -40,3 +42,5 @@ std::string GetTopologicalPath(zx_handle_t channel) {
   disk_path[path_len] = 0;
   return std::string(disk_path);
 }
+
+}  // namespace fs

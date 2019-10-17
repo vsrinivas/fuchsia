@@ -1,0 +1,60 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx_build/public/gn/library_shim.gni")
+import("$zx_build/public/gn/test_shim.gni")
+
+library("test_support") {
+  static = true
+  testonly = true
+
+  sources = [
+    "environment.cc",
+    "fixtures.cc",
+    "test_support.cc",
+  ]
+
+  public_deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/devmgr-integration-test:headers",
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/fs-management:headers",
+    "$zx/system/ulib/ramdevice-client:headers",
+    "$zx/system/ulib/zxtest:headers",
+  ]
+
+  deps = [
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":fs_test_support",
+  ]
+}
+
+test("fs_test_support") {
+  output_name = "fs-test-support-test"
+  sources = [
+    "test/environment_test.cc",
+    "test/fixtures_test.cc",
+    "test/main.cc",
+  ]
+  deps = [
+    ":test_support",
+    "$zx/system/ulib/zxtest",
+  ]
+}

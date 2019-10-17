@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "environment.h"
+#include "fs/test_support/environment.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -14,12 +14,12 @@
 #include <lib/fzl/fdio.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <zircon/status.h>
 
 #include <fbl/unique_fd.h>
-#include <zircon/status.h>
+#include <fs/test_support/test_support.h>
 #include <zxtest/zxtest.h>
 
-#include "test_support.h"
 
 namespace {
 
@@ -36,7 +36,7 @@ Options:
 
 constexpr char kTestDevRoot[] = "/fake/dev";
 
-bool GetOptions(int argc, char** argv, Environment::TestConfig* config) {
+bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
   while (true) {
     struct option options[] = {
         {"device", required_argument, nullptr, 'd'},
@@ -87,6 +87,8 @@ bool GetBlockInfo(zx_handle_t channel, fuchsia_hardware_block_BlockInfo* block_i
 }
 
 }  // namespace
+
+namespace fs {
 
 RamDisk::RamDisk(const fbl::unique_fd& devfs_root, uint32_t page_size, uint32_t num_pages)
     : page_size_(page_size), num_pages_(num_pages), path_(kTestDevRoot) {
@@ -194,3 +196,5 @@ void Environment::CreateDevmgr() {
   ASSERT_OK(fdio_ns_get_installed(&name_space));
   ASSERT_OK(fdio_ns_bind_fd(name_space, kTestDevRoot, devfs_root().get()));
 }
+
+}  // namespace fs

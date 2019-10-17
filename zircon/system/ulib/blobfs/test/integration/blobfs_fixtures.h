@@ -7,27 +7,26 @@
 
 #include <blobfs/format.h>
 #include <fs-test-utils/blobfs/blobfs.h>
-
-#include "fixtures.h"
+#include <fs/test_support/fixtures.h>
 
 // FVM slice size used for tests.
 constexpr size_t kTestFvmSliceSize = blobfs::kBlobfsBlockSize;  // 8kb.
 
 constexpr char kMountPath[] = "/blobfs-tmp/zircon-blobfs-test";
 
-class BlobfsTest : public FilesystemTest {
+class BlobfsTest : public fs::FilesystemTest {
  protected:
   void CheckInfo() override;
 };
 
 // Base class for tests that create a dedicated disk of a given size.
-class BlobfsFixedDiskSizeTest : public FixedDiskSizeTest {
+class BlobfsFixedDiskSizeTest : public fs::FixedDiskSizeTest {
  protected:
   explicit BlobfsFixedDiskSizeTest(uint64_t disk_size) : FixedDiskSizeTest(disk_size) {}
   void CheckInfo() override;
 };
 
-class BlobfsTestWithFvm : public FilesystemTestWithFvm {
+class BlobfsTestWithFvm : public fs::FilesystemTestWithFvm {
  public:
   size_t GetSliceSize() const override { return kTestFvmSliceSize; }
 
@@ -37,7 +36,7 @@ class BlobfsTestWithFvm : public FilesystemTestWithFvm {
 };
 
 // Base class for tests that create a dedicated disk of a given size.
-class BlobfsFixedDiskSizeTestWithFvm : public FixedDiskSizeTestWithFvm {
+class BlobfsFixedDiskSizeTestWithFvm : public fs::FixedDiskSizeTestWithFvm {
  public:
   size_t GetSliceSize() const override { return kTestFvmSliceSize; }
 

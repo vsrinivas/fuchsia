@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_TEST_SUPPORT_FIXTURES_H_
+#define FS_TEST_SUPPORT_FIXTURES_H_
 
 #include <fuchsia/io/c/fidl.h>
 
@@ -14,6 +15,8 @@
 #include <zxtest/zxtest.h>
 
 #include "environment.h"
+
+namespace fs {
 
 constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                                        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
@@ -104,3 +107,7 @@ class FixedDiskSizeTestWithFvm : public FilesystemTestWithFvm {
  private:
   std::unique_ptr<RamDisk> ramdisk_;
 };
+
+}  // namespace fs
+
+#endif  // FS_TEST_SUPPORT_FIXTURES_H_

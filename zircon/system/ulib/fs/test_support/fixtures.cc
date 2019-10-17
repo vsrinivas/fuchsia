@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fixtures.h"
+#include "fs/test_support/fixtures.h"
 
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
@@ -21,6 +21,8 @@ namespace {
 constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
 
 }  // namespace
+
+namespace fs {
 
 FilesystemTest::FilesystemTest(FsTestType type)
     : type_(type), environment_(g_environment), device_path_(environment_->device_path()) {}
@@ -145,8 +147,7 @@ void FilesystemTestWithFvm::CreatePartition() {
   auto guid = reinterpret_cast<const fuchsia_hardware_block_partition_GUID*>(kTestUniqueGUID);
   zx_status_t status;
   zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
-      caller.borrow_channel(), 1, type, guid, name.c_str(), name.size() + 1,
-      0, &status);
+      caller.borrow_channel(), 1, type, guid, name.c_str(), name.size() + 1, 0, &status);
   ASSERT_OK(io_status, "Could not send message to FVM driver");
   ASSERT_OK(status, "Could not allocate FVM partition");
 
@@ -175,3 +176,5 @@ FixedDiskSizeTestWithFvm::FixedDiskSizeTestWithFvm(uint64_t disk_size) {
   ramdisk_ = std::make_unique<RamDisk>(environment_->devfs_root(), kBlockSize, num_blocks);
   device_path_ = ramdisk_->path();
 }
+
+}  // namespace fs

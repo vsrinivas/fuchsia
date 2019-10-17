@@ -11,7 +11,7 @@
 
 namespace {
 
-void CheckBlobfsInfo(FilesystemTest* test) {
+void CheckBlobfsInfo(fs::FilesystemTest* test) {
   fuchsia_io_FilesystemInfo info;
   ASSERT_NO_FAILURES(test->GetFsInfo(&info));
 
