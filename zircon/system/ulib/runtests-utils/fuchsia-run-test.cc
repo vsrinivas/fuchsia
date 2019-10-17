@@ -51,6 +51,14 @@ namespace {
 // component url as its parameter.
 constexpr char kRunTestComponentPath[] = "/bin/run-test-component";
 
+// Defines if binary at `kRunTestComponentPath` is valid.
+enum RunTestComponentStatus { NOT_CHECKED, PRESENT, NOT_PRESENT };
+
+RunTestComponentStatus run_test_component_status = RunTestComponentStatus::NOT_CHECKED;
+
+const int kNumberOfTriesForRunTestComponent = 20;
+const int kSleepSecForRunTestComponent = 20;
+
 fbl::String DirectoryName(const fbl::String& path) {
   char* cpath = strndup(path.data(), path.length());
   fbl::String ret(dirname(cpath));
@@ -216,6 +224,37 @@ void TestFileComponentInfo(const fbl::String& path, fbl::String* component_url_o
                                          package_name_str.c_str(), test_file_name.c_str());
 }
 
+/// tries to open `path` as executable and returns status.
+static zx_status_t executable_status(const char* path) {
+  int fd;
+  zx_status_t status =
+      fdio_open_fd(path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::vmo vmo;
+  status = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
+  close(fd);
+  return status;
+}
+
+static RunTestComponentStatus CheckRunTestComponent() {
+  zx_status_t status = -1;
+  for (int i = 0; i < kNumberOfTriesForRunTestComponent; i++) {
+    status = executable_status(kRunTestComponentPath);
+    if (status == ZX_OK) {
+      return RunTestComponentStatus::PRESENT;
+    }
+    sleep(kSleepSecForRunTestComponent);
+  }
+
+  fprintf(stderr, "WARNING: Cannot find '%s': %s", kRunTestComponentPath,
+          zx_status_get_string(status));
+
+  return RunTestComponentStatus::NOT_PRESENT;
+}
+
 std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_dir,
                                        const char* output_filename, const char* test_name) {
   // The arguments passed to fdio_spawn_etc. May be overridden.
@@ -238,7 +277,12 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
   // If we get a non empty |cmx_file_path|, check that it exists, and if
   // present launch the test as component using generated |component_url|.
   if (cmx_file_path != "" && stat(cmx_file_path.c_str(), &s) == 0) {
-    if (stat(kRunTestComponentPath, &s) == 0) {
+    // make sure run-test-component is present.
+    if (run_test_component_status == RunTestComponentStatus::NOT_CHECKED) {
+      run_test_component_status = CheckRunTestComponent();
+    }
+
+    if (run_test_component_status == RunTestComponentStatus::PRESENT) {
       component_launch_args[0] = kRunTestComponentPath;
       component_launch_args[1] = component_url.c_str();
       for (size_t i = 1; i <= argc; i++) {
@@ -246,12 +290,11 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
       }
       args = component_launch_args;
     } else {
-      // TODO(anmittal): Make this a error once we have a stable
-      // system and we can run all tests as components.
       fprintf(stderr,
-              "WARNING: Cannot find '%s', running '%s' as normal test "
+              "FAILURE: Cannot find '%s', cannot run %s as component."
               "binary.",
               kRunTestComponentPath, path);
+      return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0, 0);
     }
   }
 
