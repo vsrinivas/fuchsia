@@ -1,5 +1,10 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include <vector>
-#include <blobfs/compression/zstd.h>
+
+#include "compression/zstd.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   size_t src_size = size;

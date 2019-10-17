@@ -22,8 +22,6 @@
 
 #include <blobfs/allocator.h>
 #include <blobfs/common.h>
-#include <blobfs/compression/blob-compressor.h>
-#include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
 #include <blobfs/node-reserver.h>
@@ -39,6 +37,8 @@
 #include <fs/vnode.h>
 
 #include "blob-cache.h"
+#include "compression/blob-compressor.h"
+#include "compression/compressor.h"
 #include "format-assertions.h"
 #include "metrics.h"
 

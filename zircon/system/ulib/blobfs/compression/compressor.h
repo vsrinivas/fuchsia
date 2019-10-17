@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_COMPRESSOR_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_COMPRESSOR_H_
+
+#include <zircon/types.h>
 
 #include <fbl/macros.h>
 #include <lz4/lz4frame.h>
-#include <zircon/types.h>
 #include <zstd/zstd.h>
 
 namespace blobfs {
@@ -37,3 +39,5 @@ class Compressor {
 };
 
 }  // namespace blobfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_COMPRESSOR_H_

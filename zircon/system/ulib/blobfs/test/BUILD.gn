@@ -41,7 +41,9 @@ test("blobfs-unit") {
     "$zx/system/ulib/storage/operation",
     "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/cksum",
+    "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/safemath",
+    "$zx/third_party/ulib/zstd",
   ]
 
   include_dirs = [ ".." ]
@@ -96,5 +98,8 @@ fuzzer("zstd-fuzzer") {
   ]
   deps = [
     "$zx/system/ulib/blobfs",
+    "$zx/third_party/ulib/lz4",
+    "$zx/third_party/ulib/zstd",
   ]
+  include_dirs = [ ".." ]
 }

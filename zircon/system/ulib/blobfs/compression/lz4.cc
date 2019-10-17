@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/compression/compressor.h>
-#include <blobfs/compression/lz4.h>
+#include "lz4.h"
+
+#include <zircon/types.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <lz4/lz4frame.h>
 #include <fs/trace.h>
-#include <zircon/types.h>
+#include <lz4/lz4frame.h>
+
+#include "compressor.h"
 
 namespace blobfs {
 

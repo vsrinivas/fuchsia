@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "compression/compressor.h"
+
 #include <stdlib.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
 #include <memory>
 
-#include <blobfs/compression/blob-compressor.h>
-#include <blobfs/compression/compressor.h>
-#include <blobfs/compression/lz4.h>
-#include <blobfs/compression/zstd.h>
 #include <blobfs/format.h>
 #include <zxtest/zxtest.h>
+
+#include "compression/blob-compressor.h"
+#include "compression/lz4.h"
+#include "compression/zstd.h"
 
 namespace blobfs {
 namespace {

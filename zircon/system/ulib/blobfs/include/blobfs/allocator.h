@@ -20,7 +20,7 @@
 #include <blobfs/common.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
-#include <blobfs/iterator/extent-iterator.h>
+#include <blobfs/node-finder.h>
 #include <blobfs/node-reserver.h>
 #include <fbl/algorithm.h>
 #include <fbl/function.h>

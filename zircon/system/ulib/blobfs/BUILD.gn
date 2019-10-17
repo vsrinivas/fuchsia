@@ -31,12 +31,6 @@ library("blobfs") {
 
     # <blobfs/allocator.h> has #include <fuchsia/blobfs/c/fidl.h>.
     "$zx/system/fidl/fuchsia-blobfs:c.headers",
-
-    # <blobfs/compression/compressor.h> has #include <lz4/lz4frame.h>
-    "$zx/third_party/ulib/lz4:headers",
-
-    # <blobfs/compression/compressor.h> has #include <zstd/zstd.h>
-    "$zx/third_party/ulib/zstd:headers",
   ]
   deps = [
     "$zx/system/ulib/bitmap",

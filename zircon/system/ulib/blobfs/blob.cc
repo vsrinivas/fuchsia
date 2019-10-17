@@ -18,8 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include <blobfs/compression/lz4.h>
-#include <blobfs/compression/zstd.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/block-iterator.h>
 #include <blobfs/iterator/extent-iterator.h>
@@ -36,6 +34,8 @@
 #include <fs/vfs_types.h>
 
 #include "blobfs.h"
+#include "compression/lz4.h"
+#include "compression/zstd.h"
 #include "metrics.h"
 
 namespace blobfs {

@@ -23,7 +23,6 @@
 #include <limits>
 #include <utility>
 
-#include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/fsck.h>
 #include <blobfs/node-reserver.h>
@@ -41,6 +40,7 @@
 #include <fvm/client.h>
 
 #include "blob.h"
+#include "compression/compressor.h"
 
 using block_client::RemoteBlockDevice;
 using digest::Digest;

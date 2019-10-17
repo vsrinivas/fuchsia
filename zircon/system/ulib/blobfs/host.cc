@@ -15,8 +15,6 @@
 #include <optional>
 #include <utility>
 
-#include <blobfs/compression/compressor.h>
-#include <blobfs/compression/zstd.h>
 #include <blobfs/format.h>
 #include <blobfs/host.h>
 #include <blobfs/host/fsck.h>
@@ -31,6 +29,9 @@
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
+
+#include "compression/compressor.h"
+#include "compression/zstd.h"
 
 using digest::Digest;
 using digest::MerkleTree;

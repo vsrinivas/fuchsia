@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
+#define BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <blobfs/format.h>
-#include <zircon/types.h>
+#include <blobfs/node-finder.h>
 
 namespace blobfs {
 
@@ -28,15 +30,6 @@ class ExtentIterator {
   virtual uint64_t BlockIndex() const = 0;
 };
 
-// Interface to look up nodes.
-class NodeFinder {
- public:
-  virtual ~NodeFinder() = default;
-
-  // Returns a pointer to the requested node.
-  //
-  // TODO(smklein): Return a zx_status_t to allow for invalid |ino| values.
-  virtual Inode* GetNode(uint32_t node_index) = 0;
-};
-
 }  // namespace blobfs
+
+#endif  // BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
