@@ -28,6 +28,7 @@ const OUTPUT_BUFFER_SIZE: usize = 1024;
 #[derive(Debug)]
 pub struct OpteeProvider {}
 
+#[derive(Debug)]
 pub struct OpteeAsymmetricPrivateKey {
     key_data: Vec<u8>,
     key_algorithm: AsymmetricKeyAlgorithm,
@@ -45,6 +46,7 @@ impl ProviderKey for OpteeAsymmetricPrivateKey {
     }
 }
 
+#[derive(Debug)]
 pub struct OpteeSealingKey {
     key_data: Vec<u8>,
 }
@@ -133,10 +135,15 @@ impl CryptoProvider for OpteeProvider {
         Ok(Box::new(OpteeSealingKey { key_data: key_data.to_vec() }))
     }
 
-    fn calculate_sealed_data_size(&self, original_data_size: u64) -> u64 {
+    fn calculate_sealed_data_size(
+        &self,
+        original_data_size: u64,
+    ) -> Result<u64, CryptoProviderError> {
         // overhead is GCM IV size + GCM Tag size.
         let overhead: u64 = 12 + 16;
-        original_data_size.checked_add(overhead).unwrap_or(0)
+        original_data_size
+            .checked_add(overhead)
+            .ok_or(CryptoProviderError::new("original data size too large, overflow"))
     }
 }
 

@@ -12,10 +12,15 @@ use mundane::public::ec::*;
 use mundane::public::rsa::*;
 use mundane::public::*;
 
+/// MundaneSoftwareProvider is a software based provider that only supports asymmetric operations.
+///
+/// MundaneSoftwareProvider uses mundane for asymmetric crypto operations. The key_data is the key
+/// material in plain text so its security depends on the security of the KMS module.
 #[derive(Debug, Clone)]
 pub struct MundaneSoftwareProvider {}
 
-pub struct MundaneAsymmetricPrivateKey {
+#[derive(Debug)]
+struct MundaneAsymmetricPrivateKey {
     key_data: Vec<u8>,
     key_algorithm: AsymmetricKeyAlgorithm,
 }
@@ -116,8 +121,11 @@ impl CryptoProvider for MundaneSoftwareProvider {
         Err(CryptoProviderError::new("Unsupported algorithm."))
     }
 
-    fn calculate_sealed_data_size(&self, _original_data_size: u64) -> u64 {
-        0
+    fn calculate_sealed_data_size(
+        &self,
+        _original_data_size: u64,
+    ) -> Result<u64, CryptoProviderError> {
+        Ok(0)
     }
 }
 

@@ -122,8 +122,11 @@ impl CryptoProvider for MockProvider {
         }
     }
 
-    fn calculate_sealed_data_size(&self, original_data_size: u64) -> u64 {
-        original_data_size
+    fn calculate_sealed_data_size(
+        &self,
+        original_data_size: u64,
+    ) -> Result<u64, CryptoProviderError> {
+        Ok(original_data_size)
     }
 }
 
@@ -172,6 +175,7 @@ impl MockProvider {
     }
 }
 
+#[derive(Debug)]
 pub struct MockAsymmetricKey {
     key_data: Vec<u8>,
     key_algorithm: AsymmetricKeyAlgorithm,
@@ -206,6 +210,7 @@ impl ProviderKey for MockAsymmetricKey {
     }
 }
 
+#[derive(Debug)]
 pub struct MockSealingKey {
     key_data: Vec<u8>,
     result: Arc<Mutex<Result<Vec<u8>, CryptoProviderError>>>,

@@ -4,7 +4,7 @@
 
 use crate::common::{DataRequest, KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::{
-    mundane_provider::MundaneSoftwareProvider, optee_provider::OpteeProvider, CryptoProvider,
+    optee_provider::OpteeProvider, software_provider::SoftwareProvider, CryptoProvider,
 };
 use crate::kms_asymmetric_key::KmsAsymmetricKey;
 use crate::kms_sealing_key::{KmsSealingKey, SEALING_KEY_NAME};
@@ -29,7 +29,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex, RwLock};
 
-const DEFAULT_PROVIDER_NAME: &str = "MundaneSoftwareProvider";
+const DEFAULT_PROVIDER_NAME: &str = "SoftwareProvider";
 const KEY_FOLDER: &str = "/data/kms";
 const USER_KEY_SUBFOLDER: &str = "user";
 const INTERNAL_KEY_SUBFOLDER: &str = "internal";
@@ -77,7 +77,7 @@ impl KeyManager {
             provider_name: DEFAULT_PROVIDER_NAME.to_string(),
         };
 
-        key_manager.add_provider(Box::new(MundaneSoftwareProvider {}));
+        key_manager.add_provider(Box::new(SoftwareProvider::new()));
         key_manager.add_provider(Box::new(OpteeProvider {}));
 
         key_manager
@@ -497,7 +497,13 @@ impl KeyManager {
     /// * `data` - The buffer containing the data to be unsealed.
     /// * `provider` - The crypto provider to do the decryption operation.
     fn unseal_data(&self, data: Buffer, provider: &dyn CryptoProvider) -> Result<Buffer, Status> {
-        if data.size > provider.calculate_sealed_data_size(MAX_DATA_SIZE.into()) {
+        let sealed_data_size =
+            provider.calculate_sealed_data_size(MAX_DATA_SIZE.into()).map_err(debug_err_fn!(
+                Status::InternalError,
+                "MAX_DATA_SIZE {} is too large, unable to get sealed data size, err: {:?}!",
+                MAX_DATA_SIZE
+            ))?;
+        if data.size > sealed_data_size {
             return Err(Status::InputTooLarge);
         }
         if !self.key_file_exists(SEALING_KEY_NAME, false) {
