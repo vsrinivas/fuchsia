@@ -106,7 +106,7 @@ fn gen_netfilter_rule(rule: &router_config::FilterRule) -> Result<netfilter::Rul
     let dst_port_range = from_port_range(&rule.selector.dst_ports)
         .unwrap_or_else(|| netfilter::PortRange { start: 0, end: 0 });
     Ok(netfilter::Rule {
-        action: from_filter_action(&rule.action),
+        action: from_filter_action(rule.action),
         // TODO(cgibson): We need a way to specify the direction of traffic.
         direction: Direction::Incoming,
         dst_subnet: from_cidr_address(&rule.selector.dst_address)?,
@@ -145,7 +145,7 @@ fn from_protocol(proto: Option<router_config::Protocol>) -> Option<netfilter::So
 }
 
 /// Parses a [`router_config::FilterAction`] and turns it into a [`netfilter::Action`]
-fn from_filter_action(action: &router_config::FilterAction) -> netfilter::Action {
+fn from_filter_action(action: router_config::FilterAction) -> netfilter::Action {
     match action {
         router_config::FilterAction::Allow => netfilter::Action::Pass,
         // TODO(cgibson): What is our default drop policy? Should we gloss over the difference
@@ -158,7 +158,7 @@ fn from_filter_action(action: &router_config::FilterAction) -> netfilter::Action
 fn from_port_range(range: &Option<Vec<router_config::PortRange>>) -> Option<netfilter::PortRange> {
     match range {
         Some(ranges) => ranges
-            .into_iter()
+            .iter()
             .find(|_| true)
             .map(|range| netfilter::PortRange { start: range.from, end: range.to }),
         None => None,
@@ -194,7 +194,7 @@ fn from_nat_config(
         Some(subnet) => subnet.clone().to_fidl_subnet(),
         None => return Err(format_err!("NatConfig must have a local_subnet set")),
     };
-    let wan_ip = match nat_config.global_ip.clone() {
+    let wan_ip = match nat_config.global_ip {
         Some(lif) => match lif.address {
             IpAddr::V4(a) => fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
                 addr: a.octets(),
@@ -305,20 +305,20 @@ impl PacketFilter {
         let mut nat_rules = vec![
             netfilter::Nat {
                 proto: netfilter::SocketProtocol::Tcp,
-                src_subnet: src_subnet.clone(),
-                new_src_addr: wan_ip.clone(),
+                src_subnet: src_subnet,
+                new_src_addr: wan_ip,
                 nic: nicid,
             },
             netfilter::Nat {
                 proto: netfilter::SocketProtocol::Udp,
-                src_subnet: src_subnet.clone(),
-                new_src_addr: wan_ip.clone(),
+                src_subnet: src_subnet,
+                new_src_addr: wan_ip,
                 nic: nicid,
             },
             netfilter::Nat {
                 proto: netfilter::SocketProtocol::Icmp,
-                src_subnet: src_subnet.clone(),
-                new_src_addr: wan_ip.clone(),
+                src_subnet: src_subnet,
+                new_src_addr: wan_ip,
                 nic: nicid,
             },
         ];

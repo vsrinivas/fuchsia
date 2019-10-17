@@ -112,9 +112,9 @@ impl EventLoop {
         let mut select_stream = futures::stream::select(
             futures::stream::select(
                 self.event_recv.take().unwrap(),
-                streams.0.map(|e| Event::StackEvent(e)),
+                streams.0.map(Event::StackEvent),
             ),
-            streams.1.map(|e| Event::NetstackEvent(e)),
+            streams.1.map(Event::NetstackEvent),
         );
 
         loop {
@@ -168,7 +168,7 @@ impl EventLoop {
                         LIFType::WAN,
                         name,
                         vlan,
-                        ports.iter().map(|x| PortId::from(*x as u64)).collect(),
+                        ports.iter().map(|x| PortId::from(u64::from(*x))).collect(),
                     )
                     .await;
                 match r {
@@ -182,7 +182,7 @@ impl EventLoop {
                         LIFType::LAN,
                         name,
                         vlan,
-                        ports.iter().map(|x| PortId::from(*x as u64)).collect(),
+                        ports.iter().map(|x| PortId::from(u64::from(*x))).collect(),
                     )
                     .await;
                 match r {
@@ -340,11 +340,11 @@ impl EventLoop {
                 info!("{:?}", config);
                 responder.send(None, not_supported!())
             }
-            RouterAdminRequest::CreateWlanNetwork { network: _, responder } => {
+            RouterAdminRequest::CreateWlanNetwork { responder, .. } => {
                 // TODO(guzt): implement
                 responder.send(None, not_supported!())
             }
-            RouterAdminRequest::DeleteWlanNetwork { network_id: _, responder } => {
+            RouterAdminRequest::DeleteWlanNetwork { responder, .. } => {
                 // TODO(guzt): implement
                 responder.send(not_supported!())
             }
@@ -547,7 +547,7 @@ impl EventLoop {
                     },
                 };
                 let mut forwarder = fidl_fuchsia_router_config::DnsForwarder {
-                    config: config,
+                    config,
                     interfaces: vec![],
                     resolver: vec![],
                 };

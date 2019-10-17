@@ -61,7 +61,7 @@ impl LIF {
                 }
             }
             LIFType::LAN => {
-                if port_list.len() < 1 {
+                if port_list.is_empty() {
                     return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts));
                 }
             }
@@ -92,7 +92,7 @@ impl LIF {
     /// Returns a list of ports associated with this interface. May be more than one if this
     /// interface is a bridge.
     pub fn ports(&self) -> impl ExactSizeIterator<Item = PortId> + '_ {
-        self.ports.iter().map(|p| p.clone())
+        self.ports.iter().copied()
     }
 
     fn remove_port(&mut self, v: Version, p: PortId) -> error::Result<()> {
@@ -239,7 +239,7 @@ fn strip_host(address: &IpAddr, prefix: u8) -> IpAddr {
             if prefix == 0 {
                 IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))
             } else if prefix > 32 {
-                address.clone()
+                *address
             } else {
                 IpAddr::V4(Ipv4Addr::from(
                     (u32::from_be_bytes(a.octets()) >> (32 - prefix) << (32 - prefix))
@@ -251,7 +251,7 @@ fn strip_host(address: &IpAddr, prefix: u8) -> IpAddr {
             if prefix == 0 {
                 IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0))
             } else if prefix > 128 {
-                address.clone()
+                *address
             } else {
                 IpAddr::V6(Ipv6Addr::from(
                     (u128::from_be_bytes(a.octets()) >> (128 - prefix) << (128 - prefix))
@@ -278,18 +278,18 @@ impl LifIpAddr {
     }
 
     /// Convert to fuchsia.net.Subnet, which contains a subnet mask and prefix length.
-    pub fn to_fidl_subnet(&self) -> fidl_fuchsia_net::Subnet {
+    pub fn to_fidl_subnet(&self) -> net::Subnet {
         match self.address {
-            IpAddr::V4(a) => fidl_fuchsia_net::Subnet {
-                addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+            IpAddr::V4(a) => net::Subnet {
+                addr: net::IpAddress::Ipv4(net::Ipv4Address {
                     addr: (u32::from_be_bytes(a.octets()) >> (32 - self.prefix)
                         << (32 - self.prefix))
                         .to_be_bytes(),
                 }),
                 prefix_len: self.prefix,
             },
-            IpAddr::V6(a) => fidl_fuchsia_net::Subnet {
-                addr: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+            IpAddr::V6(a) => net::Subnet {
+                addr: net::IpAddress::Ipv6(net::Ipv6Address {
                     addr: (u128::from_be_bytes(a.octets()) >> (128 - self.prefix)
                         << (128 - self.prefix))
                         .to_be_bytes(),
@@ -373,6 +373,7 @@ impl LIFProperties {
 }
 
 /// `LIFManager` keeps track of Logical interfaces.
+#[derive(Default)]
 pub struct LIFManager {
     lifs: HashMap<UUID, LIF>,
     lif_names: HashSet<String>,
@@ -446,7 +447,7 @@ impl LIFManager {
 mod tests {
     use super::*;
     use crate::portmgr::{Port, PortManager};
-    use fidl_fuchsia_net::Ipv4Address;
+    use net::Ipv4Address;
 
     fn create_ports() -> PortManager {
         let mut pm = PortManager::new();
@@ -818,12 +819,12 @@ mod tests {
         lifip_addr: &str,
         expected_addr: &str,
         prefix_len: u8,
-    ) -> (LifIpAddr, fidl_fuchsia_net::Subnet) {
+    ) -> (LifIpAddr, net::Subnet) {
         let lifip = LifIpAddr { address: lifip_addr.parse().unwrap(), prefix: prefix_len };
 
         let ip: IpAddr = expected_addr.parse().unwrap();
-        let expected_subnet = fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(Ipv4Address {
+        let expected_subnet = net::Subnet {
+            addr: net::IpAddress::Ipv4(Ipv4Address {
                 addr: match ip {
                     std::net::IpAddr::V4(v4addr) => v4addr.octets(),
                     std::net::IpAddr::V6(_) => panic!("unexpected ipv6 address"),

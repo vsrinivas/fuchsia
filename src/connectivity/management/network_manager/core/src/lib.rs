@@ -46,7 +46,7 @@ impl DeviceState {
             port_manager: portmgr::PortManager::new(),
             lif_manager: lifmgr::LIFManager::new(),
             service_manager: servicemgr::Manager::new(),
-            packet_filter: packet_filter,
+            packet_filter,
             hal,
         }
     }
@@ -106,7 +106,7 @@ impl DeviceState {
             return Ok(());
         }
         let port = iface.id;
-        self.port_manager.use_port(&port);
+        self.port_manager.use_port(port);
         let l = lifmgr::LIF::new(
             self.version,
             LIFType::WAN,
@@ -121,11 +121,11 @@ impl DeviceState {
             }),
         )
         .or_else(|e| {
-            self.port_manager.release_port(&port);
+            self.port_manager.release_port(port);
             Err(e)
         })?;
         self.lif_manager.add_lif(&l).or_else(|e| {
-            self.port_manager.release_port(&port);
+            self.port_manager.release_port(port);
             Err(e)
         })
     }
@@ -154,7 +154,7 @@ impl DeviceState {
     /// Releases the given ports.
     fn release_ports(&mut self, ports: &Vec<PortId>) {
         ports.iter().for_each(|p| {
-            self.port_manager.release_port(p);
+            self.port_manager.release_port(*p);
         });
     }
 
@@ -167,7 +167,7 @@ impl DeviceState {
         ports: Vec<PortId>,
     ) -> error::Result<lifmgr::LIF> {
         // Verify ports exist and can be used.
-        let x = ports.iter().find(|p| !self.port_manager.use_port(p));
+        let x = ports.iter().find(|p| !self.port_manager.use_port(**p));
         if x.is_some() {
             self.release_ports(&ports);
             return Err(error::NetworkManager::LIF(error::Lif::InvalidPort));
@@ -197,12 +197,12 @@ impl DeviceState {
             l.set_pid(ports[0]);
         }
         let r = self.lif_manager.add_lif(&l);
-        if r.is_err() {
+        if let Err(e) = r {
             self.release_ports(&ports);
             // nothing to do if delete_bridge fails, all state changes have been reverted
             // already, just return an error to let caller handle it as appropriate.
             self.hal.delete_bridge(l.pid()).await?;
-            return Err(r.unwrap_err());
+            return Err(e);
         }
         // all went well, increase version.
         self.version += 1;
@@ -234,7 +234,7 @@ impl DeviceState {
             self.hal.delete_bridge(lif.pid()).await?;
             //TODO(dpradilla) shut down the ports.
         }
-        self.release_ports(&ports.collect());
+        self.release_ports(&ports.collect::<Vec<PortId>>());
         // delete from database
         if self.lif_manager.remove_lif(lif_id).is_none() {
             return Err(error::NetworkManager::LIF(error::Lif::NotFound));
@@ -626,7 +626,7 @@ impl ElementId {
         self.version = version;
     }
     pub fn uuid(&self) -> UUID {
-        self.uuid.clone()
+        self.uuid
     }
     pub fn version(&self) -> u64 {
         self.version

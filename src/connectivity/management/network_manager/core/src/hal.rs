@@ -105,8 +105,8 @@ impl From<&ForwardingEntry> for Route {
         };
         Route {
             target: LifIpAddr { address: to_ip_addr(r.subnet.addr), prefix: r.subnet.prefix_len },
-            gateway: gateway,
-            port_id: port_id,
+            gateway,
+            port_id,
             metric: None,
         }
     }
@@ -169,9 +169,10 @@ impl From<&InterfaceInfo> for Interface {
 }
 
 fn valid_unicast_address_or_none(addr: LifIpAddr) -> Option<LifIpAddr> {
-    match address_is_valid_unicast(&addr.address) {
-        true => Some(addr),
-        false => None,
+    if address_is_valid_unicast(&addr.address) {
+        Some(addr)
+    } else {
+        None
     }
 }
 
@@ -434,7 +435,7 @@ impl NetCfg {
             Ok(entries) => Some(
                 entries
                     .iter()
-                    .map(|r| Route::from(r))
+                    .map(Route::from)
                     .filter(|r| !r.target.address.is_loopback())
                     .collect(),
             ),

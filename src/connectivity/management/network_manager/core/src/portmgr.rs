@@ -26,6 +26,7 @@ impl Port {
 }
 
 /// `PortManager` keeps track of physical ports in the system.
+#[derive(Default)]
 pub struct PortManager {
     /// `ports` keeps track of ports in the system and if they are available or not.
     ports: std::collections::HashMap<PortId, (Port, bool)>,
@@ -66,8 +67,8 @@ impl PortManager {
     ///
     /// Returns true on success, otherwise returns false if the port is already in use or doesn't
     /// exist.
-    pub fn use_port(&mut self, id: &PortId) -> bool {
-        if let Some((_, available)) = self.ports.get_mut(id) {
+    pub fn use_port(&mut self, id: PortId) -> bool {
+        if let Some((_, available)) = self.ports.get_mut(&id) {
             if *available {
                 // Make it unavailable.
                 *available = false;
@@ -81,8 +82,8 @@ impl PortManager {
     ///
     /// Returns true on success, otherwise returns false if the port does not exist or is not in
     /// use.
-    pub fn release_port(&mut self, id: &PortId) -> bool {
-        if let Some((_, available)) = self.ports.get_mut(id) {
+    pub fn release_port(&mut self, id: PortId) -> bool {
+        if let Some((_, available)) = self.ports.get_mut(&id) {
             if !*available {
                 // Make it available.
                 *available = true;
@@ -216,7 +217,7 @@ mod tests {
         pm.add_port(Port::new(PortId::from(1), &generate_path(1), 1));
         pm.add_port(Port::new(PortId::from(5), &generate_path(5), 1));
         pm.add_port(Port::new(PortId::from(3), &generate_path(3), 1));
-        let got = pm.use_port(&PortId::from(5));
+        let got = pm.use_port(PortId::from(5));
         assert_eq!(got, true)
     }
 
@@ -226,9 +227,9 @@ mod tests {
         pm.add_port(Port::new(PortId::from(1), &generate_path(1), 1));
         pm.add_port(Port::new(PortId::from(5), &generate_path(5), 1));
         pm.add_port(Port::new(PortId::from(3), &generate_path(3), 1));
-        let got = pm.use_port(&PortId::from(5));
+        let got = pm.use_port(PortId::from(5));
         assert_eq!(got, true);
-        let got2 = pm.use_port(&PortId::from(5));
+        let got2 = pm.use_port(PortId::from(5));
         assert_eq!(got2, false)
     }
 
@@ -238,7 +239,7 @@ mod tests {
         pm.add_port(Port::new(PortId::from(1), &generate_path(1), 1));
         pm.add_port(Port::new(PortId::from(5), &generate_path(5), 1));
         pm.add_port(Port::new(PortId::from(3), &generate_path(3), 1));
-        let got = pm.use_port(&PortId::from(15));
+        let got = pm.use_port(PortId::from(15));
         assert_eq!(got, false)
     }
 }
