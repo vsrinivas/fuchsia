@@ -53,6 +53,7 @@ group("tests") {
     "process_builder:tests",
     "shared-buffer:tests",
     "streammap:tests",
+    "test_executor:tests",
     "test_util:tests",
     "ui:tests",
     "waitgroup:tests",
