@@ -42,8 +42,10 @@ class AudioDeviceTest : public HermeticAudioTest {
   void TearDown() override;
   void ExpectCallback() override;
 
-  void SetOnDeviceAddedEvent();
-  void SetOnDeviceRemovedEvent();
+  // These are overridden by VirtualAudioDeviceTest, for virtual device accounting.
+  virtual void SetOnDeviceAddedEvent();
+  virtual void SetOnDeviceRemovedEvent();
+
   void SetOnDeviceGainChangedEvent();
   void SetOnDefaultDeviceChangedEvent();
 
@@ -51,8 +53,8 @@ class AudioDeviceTest : public HermeticAudioTest {
   // explicitly tolerating other callbacks on the async loop before the event
   // for the specified device is received. Each call resets the relevant "what
   // we received" state variables to default values and handles error_occurred_.
-  virtual void ExpectDeviceAdded(const std::array<uint8_t, 16>& unique_id);
-  virtual void ExpectDeviceRemoved(uint64_t remove_token);
+  void ExpectDeviceAdded(const std::array<uint8_t, 16>& unique_id);
+  void ExpectDeviceRemoved(uint64_t remove_token);
   void ExpectDefaultChanged(uint64_t default_token);
   void ExpectGainChanged(uint64_t gain_token);
 

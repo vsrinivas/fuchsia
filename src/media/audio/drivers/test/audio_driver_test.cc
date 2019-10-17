@@ -76,6 +76,7 @@ bool AudioDriverTest::WaitForDevice(DeviceType device_type) {
   }
 
   device_type_ = device_type;
+  bool enumeration_done = false;
 
   // Set up the watchers, etc. If any fail, automatically stop monitoring all device sources.
   for (const auto& devnode : AUDIO_DEVNODES) {
@@ -83,11 +84,13 @@ bool AudioDriverTest::WaitForDevice(DeviceType device_type) {
       continue;
     }
 
-    auto watcher = fsl::DeviceWatcher::Create(
-        devnode.path, [this, device_type](int dir_fd, const std::string& filename) {
+    auto watcher = fsl::DeviceWatcher::CreateWithIdleCallback(
+        devnode.path,
+        [this, device_type](int dir_fd, const std::string& filename) {
           AUD_VLOG(TRACE) << "'" << filename << "' dir_fd " << dir_fd;
           this->AddDevice(dir_fd, filename, device_type);
-        });
+        },
+        [&enumeration_done]() { enumeration_done = true; });
 
     if (watcher == nullptr) {
       EXPECT_FALSE(watcher == nullptr)
@@ -103,10 +106,7 @@ bool AudioDriverTest::WaitForDevice(DeviceType device_type) {
   // Receive a call to AddDeviceByChannel(std::move(stream_channel), name, device_type);
   //
 
-  // Wait for the signal that they are done. We don't 'ExpectCondition' here, because timeout is OK.
-  // This would represent a system without any audio devices, which is acceptable.
-  RunLoopWithTimeoutOrUntil([this]() { return stream_channel_ready_; },
-                            kDurationResponseExpected / 15, kDurationGranularity);
+  RunLoopUntil([&enumeration_done]() { return enumeration_done; });
 
   // If we timed out waiting for devices, this target may not have any. Don't waste further time.
   if (!stream_channel_ready_) {
@@ -190,7 +190,7 @@ void AudioDriverTest::RequestUniqueId() {
 
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
-  ExpectCondition([this]() { return received_get_unique_id_; });
+  RunLoopUntil([this]() { return received_get_unique_id_; });
 }
 
 // Request that the driver return its manufacturer string.
@@ -210,7 +210,7 @@ void AudioDriverTest::RequestManufacturerString() {
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition([this]() { return received_get_string_manufacturer_ || error_occurred_; });
+  RunLoopUntil([this]() { return received_get_string_manufacturer_ || error_occurred_; });
 }
 
 // Request that the driver return its product string.
@@ -230,7 +230,7 @@ void AudioDriverTest::RequestProductString() {
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition([this]() { return received_get_string_product_ || error_occurred_; });
+  RunLoopUntil([this]() { return received_get_string_product_ || error_occurred_; });
 }
 
 // Request that the driver return its gain capabilities and current state.
@@ -247,11 +247,12 @@ void AudioDriverTest::RequestGain() {
 
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
-  ExpectCondition([this]() { return received_get_gain_; });
+  RunLoopUntil([this]() { return received_get_gain_; });
 }
 
-// Determine an appropriate gain state to request, then call other method to request to the driver.
-// This method assumes that the driver has already successfully responded to a GetGain request.
+// Determine an appropriate gain state to request, then call other method to request to the
+// driver. This method assumes that the driver has already successfully responded to a GetGain
+// request.
 void AudioDriverTest::RequestSetGain() {
   if (error_occurred_) {
     return;
@@ -310,7 +311,7 @@ void AudioDriverTest::RequestSetGain(audio_set_gain_flags_t flags, float gain_db
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition([this]() { return received_set_gain_ || error_occurred_; });
+  RunLoopUntil([this]() { return received_set_gain_ || error_occurred_; });
 }
 
 // Request that the driver return the format ranges that it supports.
@@ -327,7 +328,7 @@ void AudioDriverTest::RequestFormats() {
 
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
-  ExpectCondition([this]() { return received_get_formats_; });
+  RunLoopUntil([this]() { return received_get_formats_; });
 }
 
 // For the channelization and sample_format that we've set, determine the size of each frame.
@@ -435,7 +436,7 @@ void AudioDriverTest::RequestSetFormatMin() {
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition(
+  RunLoopUntil(
       [this]() { return (received_set_format_ && ring_buffer_channel_ready_) || error_occurred_; });
   CalculateFrameSize();
 }
@@ -465,7 +466,7 @@ void AudioDriverTest::RequestSetFormatMax() {
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition(
+  RunLoopUntil(
       [this]() { return (received_set_format_ && ring_buffer_channel_ready_) || error_occurred_; });
   CalculateFrameSize();
 }
@@ -487,13 +488,14 @@ void AudioDriverTest::RequestPlugDetect() {
 
   EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
 
-  ExpectCondition([this]() { return received_plug_detect_; });
+  RunLoopUntil([this]() { return received_plug_detect_; });
 }
 
 // Ring-buffer channel requests
 //
 // Request that the driver return the FIFO depth (in bytes), at the currently set format.
-// This method relies on the ring buffer channel, received with response to a successful SetFormat.
+// This method relies on the ring buffer channel, received with response to a successful
+// SetFormat.
 void AudioDriverTest::RequestFifoDepth() {
   if (error_occurred_) {
     return;
@@ -510,11 +512,12 @@ void AudioDriverTest::RequestFifoDepth() {
   EXPECT_EQ(ZX_OK, ring_buffer_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition([this]() { return received_get_fifo_depth_ || error_occurred_; });
+  RunLoopUntil([this]() { return received_get_fifo_depth_ || error_occurred_; });
 }
 
 // Request that the driver return a VMO handle for the ring buffer, at the currently set format.
-// This method relies on the ring buffer channel, received with response to a successful SetFormat.
+// This method relies on the ring buffer channel, received with response to a successful
+// SetFormat.
 void AudioDriverTest::RequestBuffer(uint32_t min_ring_buffer_frames,
                                     uint32_t notifications_per_ring) {
   if (error_occurred_) {
@@ -538,7 +541,7 @@ void AudioDriverTest::RequestBuffer(uint32_t min_ring_buffer_frames,
   EXPECT_EQ(ZX_OK, ring_buffer_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition([this]() { return received_get_buffer_ || error_occurred_; });
+  RunLoopUntil([this]() { return received_get_buffer_ || error_occurred_; });
 }
 
 // Request that the driver start the ring buffer engine, responding with the start_time.
@@ -560,7 +563,7 @@ void AudioDriverTest::RequestStart() {
   EXPECT_EQ(ZX_OK, ring_buffer_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition([this]() { return received_start_ || error_occurred_; });
+  RunLoopUntil([this]() { return received_start_ || error_occurred_; });
 
   EXPECT_GT(start_time_, send_time);
   // TODO(mpuryear): validate start_time is not too far in the future (it includes FIFO delay).
@@ -584,7 +587,7 @@ void AudioDriverTest::RequestStop() {
   EXPECT_EQ(ZX_OK, ring_buffer_transceiver_.SendMessage(request_message));
 
   // This command can return an error, so we check for error_occurred_ as well
-  ExpectCondition([this]() { return received_stop_ || error_occurred_; });
+  RunLoopUntil([this]() { return received_stop_ || error_occurred_; });
 }
 
 // Handle an incoming stream channel message (generally a response from a previous request)
@@ -815,7 +818,8 @@ void AudioDriverTest::HandleGetFormatsResponse(
   }
 }
 
-// Handle a set_format response on the stream channel. After, we will extract a ring buffer channel.
+// Handle a set_format response on the stream channel. After, we will extract a ring buffer
+// channel.
 void AudioDriverTest::HandleSetFormatResponse(const audio_stream_cmd_set_format_resp_t& response) {
   if (!ValidateResponseHeader(response.hdr, set_format_transaction_id_,
                               AUDIO_STREAM_CMD_SET_FORMAT)) {
@@ -886,7 +890,8 @@ void AudioDriverTest::HandlePlugDetectResponse(
   received_plug_detect_ = true;
 }
 
-// Handle a plug_detect notification on the stream channel (async message not solicited by client).
+// Handle a plug_detect notification on the stream channel (async message not solicited by
+// client).
 void AudioDriverTest::HandlePlugDetectNotify(const audio_stream_cmd_plug_detect_resp_t& notify) {
   if (!ValidateResponseHeader(notify.hdr, AUDIO_INVALID_TRANSACTION_ID,
                               AUDIO_STREAM_PLUG_DETECT_NOTIFY)) {
@@ -1059,7 +1064,7 @@ void AudioDriverTest::ExpectPositionNotifyCount(uint32_t count) {
     return;
   }
 
-  ExpectCondition([this, count]() { return position_notification_count_ >= count; });
+  RunLoopUntil([this, count]() { return position_notification_count_ >= count; });
 
   auto timestamp_duration = last_monotonic_time_ - start_time_;
   auto observed_duration = zx::clock::get_monotonic().get() - start_time_;

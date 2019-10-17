@@ -107,7 +107,7 @@ TEST_F(CodecImplFailures, InputBufferCollectionConstraintsCpuUsage) {
 
   Create(processor.NewRequest());
 
-  RunLoopWithTimeoutOrUntil([this]() { return error_handler_ran_; });
+  RunLoopUntil([this]() { return error_handler_ran_; });
   ASSERT_TRUE(error_handler_ran_);
 }
 
@@ -131,7 +131,7 @@ TEST_F(CodecImplFailures, InputBufferCollectionConstraintsMinBufferCount) {
 
   Create(processor.NewRequest());
 
-  RunLoopWithTimeoutOrUntil([this]() { return error_handler_ran_; });
+  RunLoopUntil([this]() { return error_handler_ran_; });
   ASSERT_TRUE(error_handler_ran_);
 }
 
@@ -204,12 +204,12 @@ TEST_F(CodecImplFailures, InputBufferCollectionSysmemFailure) {
   allocator.Bind(std::move(sysmem_request_.value()));
   sysmem_request_ = nullptr;
 
-  RunLoopWithTimeoutOrUntil([&allocator]() { return allocator.collection().is_waiting(); });
+  RunLoopUntil([&allocator]() { return allocator.collection().is_waiting(); });
   ASSERT_TRUE(error_handler_ran_ == 0);
   ASSERT_TRUE(allocator.collection().is_waiting());
 
   allocator.collection().FailAllocation();
 
-  RunLoopWithTimeoutOrUntil([this]() { return error_handler_ran_; });
+  RunLoopUntil([this]() { return error_handler_ran_; });
   ASSERT_TRUE(error_handler_ran_);
 }

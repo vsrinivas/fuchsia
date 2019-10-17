@@ -100,7 +100,7 @@ void AudioDeviceTest::ExpectDeviceAdded(const std::array<uint8_t, 16>& unique_id
   // Our parent TestFixture class uses infinite for polling granularity, which
   // guarantees that we only process one callback at a time. By checking against
   // unique_id, we should be fully reliable in the face of multiple device adds.
-  ExpectCondition([this, &unique_id_str]() {
+  RunLoopUntil([this, &unique_id_str]() {
     return error_occurred_ || (unique_id_str.compare(received_device_.unique_id) == 0);
   });
 
@@ -113,7 +113,7 @@ void AudioDeviceTest::ExpectDeviceAdded(const std::array<uint8_t, 16>& unique_id
 void AudioDeviceTest::ExpectDeviceRemoved(uint64_t remove_token) {
   received_removed_token_ = kInvalidDeviceToken;
 
-  ExpectCondition([this, remove_token]() {
+  RunLoopUntil([this, remove_token]() {
     return error_occurred_ || (received_removed_token_ == remove_token);
   });
 
@@ -126,7 +126,7 @@ void AudioDeviceTest::ExpectDeviceRemoved(uint64_t remove_token) {
 void AudioDeviceTest::ExpectDefaultChanged(uint64_t default_token) {
   received_default_token_ = kInvalidDeviceToken;
 
-  ExpectCondition([this, default_token]() {
+  RunLoopUntil([this, default_token]() {
     return error_occurred_ || (received_default_token_ == default_token);
   });
 
@@ -140,7 +140,7 @@ void AudioDeviceTest::ExpectGainChanged(uint64_t gain_token) {
   received_gain_token_ = kInvalidDeviceToken;
   received_gain_info_ = kInvalidGainInfo;
 
-  ExpectCondition(
+  RunLoopUntil(
       [this, gain_token]() { return error_occurred_ || (received_gain_token_ == gain_token); });
 
   ASSERT_FALSE(error_occurred_);
@@ -172,7 +172,7 @@ void AudioDeviceTest::RetrieveDefaultDevInfoUsingGetDevices(bool get_input) {
         }
       }));
 
-  ExpectCondition(
+  RunLoopUntil(
       [this]() { return error_occurred_ || (received_device_.token_id != kInvalidDeviceToken); });
 
   ASSERT_FALSE(error_occurred_);
@@ -216,7 +216,7 @@ void AudioDeviceTest::RetrieveTokenUsingGetDefault(bool is_input) {
     audio_dev_enum_->GetDefaultOutputDevice(get_default_handler);
   }
 
-  ExpectCondition(
+  RunLoopUntil(
       [this]() { return error_occurred_ || (received_default_token_ != kInvalidDeviceToken); });
 
   ASSERT_FALSE(error_occurred_);
@@ -259,7 +259,7 @@ void AudioDeviceTest::RetrievePreExistingDevices() {
         }
       }));
 
-  ExpectCondition([this]() {
+  RunLoopUntil([this]() {
     return error_occurred_ ||
            (AudioDeviceTest::initial_input_device_count_ != kInvalidDeviceCount &&
             AudioDeviceTest::initial_output_device_count_ != kInvalidDeviceCount);

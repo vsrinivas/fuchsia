@@ -47,9 +47,10 @@ class VirtualAudioDeviceTest : public AudioDeviceTest {
 
   void SetUp() override;
   void TearDown() override;
+
+  void SetOnDeviceAddedEvent() override;
+  void SetOnDeviceRemovedEvent() override;
   void WaitForVirtualDeviceDepartures();
-  void ExpectDeviceAdded(const std::array<uint8_t, 16>& unique_id_arr) override;
-  void ExpectDeviceRemoved(uint64_t remove_token) override;
 
   void AddTwoDevices(bool is_input, bool is_plugged = true);
 

@@ -77,9 +77,6 @@ class TestFixture : public ::gtest::RealLoopFixture {
   // Wait for CompletionCallback or ErrorHandler, expecting callback.
   virtual void ExpectCallback();
 
-  // Wait for a more nuanced condition (not just callback_received_).
-  void ExpectCondition(fit::function<bool()> condition);
-
   // Wait for CompletionCallback or ErrorHandler, expecting the specified error.
   virtual void ExpectDisconnect() { ExpectError(ZX_ERR_PEER_CLOSED); }
   void ExpectError(zx_status_t expect_error);
@@ -97,10 +94,6 @@ class TestFixture : public ::gtest::RealLoopFixture {
 
  private:
   bool callback_received_ = false;
-
-  // Run our asynchronous loop, until the provided condition is satisfied (returns TRUE) or until a
-  // timeout occurs (returns FALSE).
-  bool RunUntilComplete(fit::function<bool()> condition);
 };
 
 }  // namespace media::audio::test

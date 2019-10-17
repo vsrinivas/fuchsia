@@ -88,7 +88,7 @@ void VirtualAudioSystemGainTest::ExpectCallback() {
 void VirtualAudioSystemGainTest::ExpectSystemGainMuteChanged() {
   received_system_gain_db_ = NAN;
 
-  ExpectCondition([this]() { return error_occurred_ || !isnan(received_system_gain_db_); });
+  RunLoopUntil([this]() { return error_occurred_ || !isnan(received_system_gain_db_); });
 
   ASSERT_FALSE(error_occurred_);
   ASSERT_FALSE(isnan(received_system_gain_db_));
@@ -235,7 +235,7 @@ void VirtualAudioSystemGainTest::TestOnDeviceGainChangedAfterChangeSystemGainMut
     EXPECT_NE(received_gain_token_, added_token);
   } else {
     // For outputs, expect both callbacks (in indeterminate order).
-    ExpectCondition([this, added_token]() {
+    RunLoopUntil([this, added_token]() {
       return error_occurred_ ||
              (received_gain_token_ == added_token && !isnan(received_system_gain_db_));
     });

@@ -141,7 +141,7 @@ void AudioAdminTest::TearDown() {
     virtual_audio_output_sync_.Unbind();
   }
 
-  ExpectCondition([&removed]() { return removed; });
+  RunLoopUntil([&removed]() { return removed; });
 
   EXPECT_TRUE(audio_dev_enum_.is_bound());
   EXPECT_TRUE(audio_core_sync_.is_bound());
@@ -207,7 +207,7 @@ void AudioAdminTest::SetUpVirtualAudioOutput() {
 
   // Wait for OnDeviceAdded and OnDefaultDeviceChanged callback.  These will
   // both need to have happened for the new device to be used for the test.
-  ExpectCondition([this, &default_dev]() {
+  RunLoopUntil([this, &default_dev]() {
     return virtual_audio_output_token_ != 0 && default_dev == virtual_audio_output_token_;
   });
 
@@ -968,7 +968,7 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
   // Capture 10 samples of audio.
   audio_capturer_[0]->StartAsyncCapture(10);
   audio_capturer_[1]->StartAsyncCapture(10);
-  ExpectCondition(
+  RunLoopUntil(
       [&produced_packet1, &produced_packet2]() { return produced_packet1 && produced_packet2; });
 
   // Check that we got 10 samples as we expected.
@@ -1072,7 +1072,7 @@ TEST_F(AudioAdminTest, DualCaptureStreamMute) {
   // Capture 10 samples of audio.
   audio_capturer_[0]->StartAsyncCapture(10);
   audio_capturer_[1]->StartAsyncCapture(10);
-  ExpectCondition(
+  RunLoopUntil(
       [&produced_packet1, &produced_packet2]() { return produced_packet1 && produced_packet2; });
 
   // Check that we got 10 samples as we expected.

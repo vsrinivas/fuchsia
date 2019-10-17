@@ -194,12 +194,6 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     codec_impl_->BindAsync([this]() { codec_impl_ = nullptr; });
   }
 
-  bool RunUntil(fit::function<bool()> condition) {
-    constexpr auto kLoopTimeout = zx::sec(15);
-
-    return RunLoopWithTimeoutOrUntil(std::move(condition), kLoopTimeout);
-  }
-
   void OnStreamFailed(uint64_t stream_lifetime_ordinal, fuchsia::media::StreamError error) {
     stream_error_ = std::move(error);
   }
@@ -437,7 +431,7 @@ TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
   ConnectDecryptor();
   decryptor_adapter_->set_has_keys(true);
 
-  EXPECT_TRUE(RunUntil([this]() { return input_buffer_info_.has_value(); }));
+  RunLoopUntil([this]() { return input_buffer_info_.has_value(); });
 
   AssertNoChannelErrors();
   ASSERT_TRUE(input_buffer_info_);
@@ -449,7 +443,7 @@ TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
 
   PumpInput();
 
-  EXPECT_TRUE(RunUntil([this]() { return end_of_stream_reached_; }));
+  RunLoopUntil([this]() { return end_of_stream_reached_; });
 
   AssertNoChannelErrors();
 
@@ -467,7 +461,7 @@ TEST_F(ClearDecryptorAdapterTest, NoKeys) {
   decryptor_adapter_->set_has_keys(false);
   decryptor_->EnableOnStreamFailed();
 
-  EXPECT_TRUE(RunUntil([this]() { return input_buffer_info_.has_value(); }));
+  RunLoopUntil([this]() { return input_buffer_info_.has_value(); });
 
   AssertNoChannelErrors();
   ASSERT_TRUE(input_buffer_info_);
@@ -479,7 +473,7 @@ TEST_F(ClearDecryptorAdapterTest, NoKeys) {
 
   PumpInput();
 
-  EXPECT_TRUE(RunUntil([this]() { return stream_error_.has_value(); }));
+  RunLoopUntil([this]() { return stream_error_.has_value(); });
 
   AssertNoChannelErrors();
 
@@ -492,7 +486,7 @@ class SecureDecryptorAdapterTest : public DecryptorAdapterTest<FakeSecureDecrypt
 TEST_F(SecureDecryptorAdapterTest, FailsToAcquireSecureBuffers) {
   ConnectDecryptor();
 
-  EXPECT_TRUE(RunUntil([this]() { return input_buffer_info_.has_value(); }));
+  RunLoopUntil([this]() { return input_buffer_info_.has_value(); });
 
   AssertNoChannelErrors();
   ASSERT_TRUE(input_buffer_info_);
@@ -506,8 +500,8 @@ TEST_F(SecureDecryptorAdapterTest, FailsToAcquireSecureBuffers) {
 
   // TODO(13678): Once there is a Sysmem fake that allows us to control behavior, we could force it
   // to give us back "secure" buffers that aren't really secure and go through more of the flow.
-  EXPECT_TRUE(RunUntil(
-      [this]() { return decryptor_error_.has_value() && output_collection_error_.has_value(); }));
+  RunLoopUntil(
+      [this]() { return decryptor_error_.has_value() && output_collection_error_.has_value(); });
 
   EXPECT_TRUE(decryptor_error_.has_value());
   EXPECT_TRUE(output_collection_error_.has_value());

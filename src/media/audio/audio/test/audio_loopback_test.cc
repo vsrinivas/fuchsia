@@ -137,7 +137,7 @@ void AudioLoopbackTest::TearDown() {
     virtual_audio_output_sync_.Unbind();
   }
 
-  ExpectCondition([&removed]() { return removed; });
+  RunLoopUntil([&removed]() { return removed; });
 
   EXPECT_TRUE(audio_dev_enum_.is_bound());
   EXPECT_TRUE(audio_sync_.is_bound());
@@ -202,7 +202,7 @@ void AudioLoopbackTest::SetUpVirtualAudioOutput() {
 
   // Wait for OnDeviceAdded and OnDefaultDeviceChanged callback.  These will
   // both need to have happened for the new device to be used for the test.
-  ExpectCondition([this, &default_dev]() {
+  RunLoopUntil([this, &default_dev]() {
     return virtual_audio_output_token_ != 0 && default_dev == virtual_audio_output_token_;
   });
 

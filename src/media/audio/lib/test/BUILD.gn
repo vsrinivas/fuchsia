@@ -15,7 +15,6 @@ source_set("test") {
   ]
 }
 
-# Basic ExpectCondition/ErrorHandler support without pulling in fuchsia.media FIDL
 source_set("test_fixture") {
   testonly = true
 

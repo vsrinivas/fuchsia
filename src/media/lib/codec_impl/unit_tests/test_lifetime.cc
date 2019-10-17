@@ -18,9 +18,6 @@
 
 namespace {
 
-constexpr uint32_t kDeadlineSec = 15;
-constexpr uint32_t kRunLoopIterMs = 10;
-
 auto CreateDecoderParams() {
   fuchsia::mediacodec::CreateDecoder_Params params;
   params.mutable_input_details()->set_format_details_version_ordinal(0).set_mime_type("video/vp9");
@@ -61,11 +58,6 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
     codec_impl_ = nullptr;
   }
 
-  bool RunLoopUntilOrGiveUp(fit::function<bool()> condition) {
-    return RunLoopWithTimeoutOrUntil(std::move(condition), zx::sec(kDeadlineSec),
-                                     zx::msec(kRunLoopIterMs));
-  }
-
   void Create(bool bind = true, bool delete_async = false,
               CodecImpl::StreamProcessorParams params = CreateDecoderParams()) {
     ZX_DEBUG_ASSERT(!delete_async || bind);
@@ -93,7 +85,7 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
             error_handler_ran_ = true;
           });
         });
-    RunLoopUntilOrGiveUp([&codec_impl] { return !!codec_impl; });
+    RunLoopUntil([&codec_impl] { return !!codec_impl; });
     ZX_DEBUG_ASSERT(codec_impl);
     codec_impl_ = std::move(codec_impl);
   }
@@ -151,7 +143,7 @@ TEST_F(CodecImplLifetime, CreateBindChannelClose) {
   Create();
   // Close the client end of the StreamProcessor channel.
   codec_client_handle_.TakeChannel().reset();
-  RunLoopUntilOrGiveUp([this] { return error_handler_ran_; });
+  RunLoopUntil([this] { return error_handler_ran_; });
   EXPECT_TRUE(error_handler_ran_);
 }
 
@@ -159,11 +151,11 @@ TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsync) {
   Create(true, true);
   // Close the client end of the StreamProcessor channel.
   codec_client_handle_.TakeChannel().reset();
-  RunLoopUntilOrGiveUp([this] { return error_handler_ran_; });
+  RunLoopUntil([this] { return error_handler_ran_; });
   // This doesn't imply that !codec_impl_ yet, because deletion
   // is happening async.
   EXPECT_TRUE(error_handler_ran_);
-  RunLoopUntilOrGiveUp([this] { return !codec_impl_; });
+  RunLoopUntil([this] { return !codec_impl_; });
   EXPECT_TRUE(!codec_impl_);
 }
 
@@ -177,13 +169,13 @@ TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsyncWithOngoingSyncs) {
   constexpr uint32_t kInFlightSyncTarget = 5;
   for (uint32_t i = 0; i < kInFlightSyncTarget; ++i) {
     // Each started chain kicks another Sync() on each completion, any time
-    // RunLoopUntilOrGiveUp() is running.
+    // RunLoopUntil() is running.
     StartSyncChain();
   }
 
-  // Make sure the sync chains will re-trigger new syncs while RunLoopUntilOrGiveUp() is
+  // Make sure the sync chains will re-trigger new syncs while RunLoopUntil() is
   // running.
-  RunLoopUntilOrGiveUp([this] { return sync_completion_count_ >= kInFlightSyncTarget * 2; });
+  RunLoopUntil([this] { return sync_completion_count_ >= kInFlightSyncTarget * 2; });
 
   // Trigger an error as if the FakeCodecAdapter had triggered it, with a slight
   // delay before the trigger so we get some coverage of syncs happening
@@ -195,7 +187,7 @@ TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsyncWithOngoingSyncs) {
             "CreateBindChannelCloseDeleteAsyncWithOngoingSyncs triggering failure");
   });
 
-  RunLoopUntilOrGiveUp([this] { return !codec_impl_; });
+  RunLoopUntil([this] { return !codec_impl_; });
   EXPECT_TRUE(!codec_impl_);
 }
 

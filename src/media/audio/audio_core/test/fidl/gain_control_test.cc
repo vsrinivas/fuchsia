@@ -124,7 +124,7 @@ void GainControlTestBase::SetMute(bool mute) { gain_control_->SetMute(mute); }
 void GainControlTestBase::ExpectGainCallback(float gain_db, bool mute) {
   received_gain_db_ = kTooLowGainDb;
 
-  ExpectCondition([this, &gain_db, &mute]() {
+  RunLoopUntil([this, &gain_db, &mute]() {
     return (received_gain_db_ == gain_db) && (received_mute_ == mute);
   });
   EXPECT_EQ(received_gain_db_, gain_db);
@@ -324,7 +324,7 @@ void SiblingGainControlsTest::ExpectGainCallback(float gain_db, bool mute) {
   received_gain_db_ = kTooLowGainDb;
   received_gain_db_2_ = kTooLowGainDb;
 
-  ExpectCondition([this, gain_db, mute]() {
+  RunLoopUntil([this, gain_db, mute]() {
     return error_occurred_ || (received_gain_db_ == gain_db && received_gain_db_2_ == gain_db &&
                                received_mute_ == mute && received_mute_2_ == mute);
   });

@@ -160,7 +160,7 @@ TEST_F(AudioPlugDetectorImplTest, DetectExistingDevices) {
 
   // Start the detector; expect 4 events (1 for each device above);
   ASSERT_EQ(ZX_OK, plug_detector.Start(tracker.GetHandler()));
-  RunLoopWithTimeoutOrUntil([&tracker] { return tracker.size() == 4; });
+  RunLoopUntil([&tracker] { return tracker.size() == 4; });
   EXPECT_EQ(4u, tracker.size());
   EXPECT_TRUE(input0.is_bound());
   EXPECT_TRUE(input1.is_bound());
@@ -180,7 +180,7 @@ TEST_F(AudioPlugDetectorImplTest, DetectHotplugDevices) {
   // Hotplug a device.
   FakeAudioDevice input0;
   auto d1 = AddInputDevice(&input0);
-  RunLoopWithTimeoutOrUntil([&tracker] { return tracker.size() == 1; });
+  RunLoopUntil([&tracker] { return tracker.size() == 1; });
   ASSERT_EQ(1u, tracker.size());
   auto device = std::move(*tracker.take_devices().begin());
   EXPECT_TRUE(device.is_input);

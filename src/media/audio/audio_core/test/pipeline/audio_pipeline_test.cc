@@ -87,7 +87,7 @@ void AudioPipelineTest::WaitForVirtualDeviceDepartures() {
   audio_dev_enum_.events().OnDeviceRemoved =
       CompletionCallback([this](uint64_t token_id) { virtual_device_tokens_.erase(token_id); });
 
-  ExpectCondition([this]() { return error_occurred_ || virtual_device_tokens_.empty(); });
+  RunLoopUntil([this]() { return error_occurred_ || virtual_device_tokens_.empty(); });
 }
 
 // Create a virtual audio output, with the needed characteristics
@@ -109,7 +109,7 @@ void AudioPipelineTest::AddVirtualOutput() {
 
   // expect OnSetFormat (we map ring buffer in this callback)
   // Wait for device to add -- expect OnStart and OnDeviceAdded
-  ExpectCondition(
+  RunLoopUntil(
       [this]() { return received_set_format_ && received_start_ && received_add_device_; });
 
   // Ensure device gain is unity
@@ -120,11 +120,11 @@ void AudioPipelineTest::AddVirtualOutput() {
     audio_dev_enum_->SetDeviceGain(received_add_device_token_, unity, set_flags);
 
     // expect OnDeviceGainChanged
-    ExpectCondition([this]() { return received_gain_changed_; });
+    RunLoopUntil([this]() { return received_gain_changed_; });
   }
 
   // Wait for device to become default -- expect OnDefaultDeviceChanged
-  ExpectCondition([this]() { return received_default_device_changed_; });
+  RunLoopUntil([this]() { return received_default_device_changed_; });
   ASSERT_FALSE(error_occurred_);
 }
 
@@ -261,7 +261,7 @@ void AudioPipelineTest::SetUpRenderer() {
 
   audio_renderer_->SetPtsUnits(kDefaultFrameRate, 1);
 
-  ExpectCondition([this]() { return error_occurred_ || (min_lead_time_ > 0); });
+  RunLoopUntil([this]() { return error_occurred_ || (min_lead_time_ > 0); });
 }
 
 // Enable audio renderer callbacks; store results from responses
@@ -285,7 +285,7 @@ void AudioPipelineTest::ResetAudioRendererEvents() {
 // Retrieve the ring buffer from the virtual audio output); create our shared buffer with the audio
 // renderer and map it; create a snapshot buffer for copying the contents of the driver ring buffer.
 void AudioPipelineTest::SetUpBuffers() {
-  ExpectCondition([this]() { return received_ring_buffer_; });
+  RunLoopUntil([this]() { return received_ring_buffer_; });
 
   // Get the ring buffer - check VMO size and map it into our address space.
   uint64_t vmo_size;
@@ -444,7 +444,7 @@ void AudioPipelineTest::CreateAndSendPackets(uint32_t num_packets, int16_t initi
 
 // With timeout, wait for a specified packet completion
 void AudioPipelineTest::WaitForPacket(uint32_t packet_num) {
-  ExpectCondition([this, packet_num]() {
+  RunLoopUntil([this, packet_num]() {
     return received_packet_completion_ && (received_packet_num_ >= packet_num);
   });
   ASSERT_FALSE(error_occurred_);
@@ -455,7 +455,7 @@ void AudioPipelineTest::WaitForPacket(uint32_t packet_num) {
 // ring buffer.
 void AudioPipelineTest::SynchronizedPlay() {
   // Allow an entire ring buffer to go by
-  ExpectCondition([this]() { return (running_ring_pos_ >= kRingBytes); });
+  RunLoopUntil([this]() { return (running_ring_pos_ >= kRingBytes); });
 
   // Calculate the ref_time for Play
   auto ns_per_byte = TimelineRate(zx::sec(1).get(), kDefaultFrameRate * kDefaultFrameSize);
@@ -470,7 +470,7 @@ void AudioPipelineTest::SynchronizedPlay() {
     received_play_media_time_ = media_time;
   });
 
-  ExpectCondition([this]() { return received_play_; });
+  RunLoopUntil([this]() { return received_play_; });
   ASSERT_FALSE(error_occurred_);
 }
 
@@ -538,7 +538,7 @@ TEST_F(AudioPipelineTest, DiscardDuringRenderResetsPts) {
     received_discard_all_callback = true;
     AUD_VLOG(TRACE) << "DiscardAllPackets #1 complete";
   }));
-  ExpectCondition([this, &received_discard_all_callback]() {
+  RunLoopUntil([this, &received_discard_all_callback]() {
     return (error_occurred_ || received_discard_all_callback);
   });
 
@@ -586,7 +586,7 @@ TEST_F(AudioPipelineTest, DiscardDuringRenderResetsPts) {
     received_discard_all_callback = true;
     AUD_VLOG(TRACE) << "DiscardAllPackets #1 complete";
   }));
-  ExpectCondition([this, &received_discard_all_callback]() {
+  RunLoopUntil([this, &received_discard_all_callback]() {
     return (error_occurred_ || received_discard_all_callback);
   });
 

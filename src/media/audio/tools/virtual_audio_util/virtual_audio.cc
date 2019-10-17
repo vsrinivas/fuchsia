@@ -119,7 +119,7 @@ class VirtualAudioUtil {
   static bool received_callback_;
 
   void QuitLoop();
-  bool RunLoopWithTimeout(zx::duration timeout);
+  bool RunForDuration(zx::duration duration);
   bool WaitForNoCallback();
   bool WaitForCallback();
 
@@ -231,7 +231,7 @@ void VirtualAudioUtil::QuitLoop() {
 }
 
 // Below was borrowed from gtest, as-is
-bool VirtualAudioUtil::RunLoopWithTimeout(zx::duration timeout) {
+bool VirtualAudioUtil::RunForDuration(zx::duration duration) {
   auto canceled = std::make_shared<bool>(false);
   bool timed_out = false;
   async::PostDelayedTask(
@@ -243,7 +243,7 @@ bool VirtualAudioUtil::RunLoopWithTimeout(zx::duration timeout) {
         timed_out = true;
         loop->Quit();
       },
-      timeout);
+      duration);
   loop_->Run();
   loop_->ResetQuit();
 
@@ -256,7 +256,7 @@ bool VirtualAudioUtil::RunLoopWithTimeout(zx::duration timeout) {
 
 bool VirtualAudioUtil::WaitForNoCallback() {
   received_callback_ = false;
-  bool timed_out = RunLoopWithTimeout(zx::msec(5));
+  bool timed_out = RunForDuration(zx::msec(5));
 
   // If all is well, we DIDN'T get a disconnect callback and are still bound.
   if (received_callback_) {
@@ -267,7 +267,7 @@ bool VirtualAudioUtil::WaitForNoCallback() {
 
 bool VirtualAudioUtil::WaitForCallback() {
   received_callback_ = false;
-  bool timed_out = RunLoopWithTimeout(zx::msec(2000));
+  bool timed_out = RunForDuration(zx::msec(2000));
 
   if (!received_callback_) {
     printf("  ... expected a callback; none was received\n");
@@ -292,7 +292,7 @@ bool VirtualAudioUtil::WaitForKey() {
   setbuf(stdin, nullptr);
   RegisterKeyWaiter();
 
-  while (RunLoopWithTimeout(zx::sec(1))) {
+  while (RunForDuration(zx::sec(1))) {
   }
 
   return !key_quit_;

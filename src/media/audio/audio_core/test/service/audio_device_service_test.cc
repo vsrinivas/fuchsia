@@ -46,7 +46,7 @@ void AudioDeviceServiceTest::TearDown() {
   };
 
   driver_ = nullptr;
-  ExpectCondition([this]() { return devices().empty(); });
+  RunLoopUntil([this]() { return devices().empty(); });
 
   ASSERT_TRUE(audio_device_enumerator_.is_bound());
   audio_device_enumerator_.Unbind();
@@ -57,7 +57,7 @@ void AudioDeviceServiceTest::TearDown() {
 // Test that |AddDeviceByChannel| results in an |OnDeviceAdded| event.
 TEST_F(AudioDeviceServiceTest, AddDevice) {
   // Expect that the added device is enumerated via the device enumerator.
-  ExpectCondition([this]() { return !devices().empty(); });
+  RunLoopUntil([this]() { return !devices().empty(); });
 
   ASSERT_EQ(1u, devices().size());
   auto device = devices()[0];
@@ -70,14 +70,14 @@ TEST_F(AudioDeviceServiceTest, AddDevice) {
 
 // Test that the info in |GetDevices| matches the info in the |OnDeviceAdded| event.
 TEST_F(AudioDeviceServiceTest, GetDevices) {
-  ExpectCondition([this]() { return !devices().empty(); });
+  RunLoopUntil([this]() { return !devices().empty(); });
 
   std::optional<std::vector<fuchsia::media::AudioDeviceInfo>> devices;
   audio_device_enumerator().GetDevices(
       [&devices](std::vector<fuchsia::media::AudioDeviceInfo> devices_in) {
         devices = std::move(devices_in);
       });
-  ExpectCondition([&devices]() { return devices.has_value(); });
+  RunLoopUntil([&devices]() { return devices.has_value(); });
 
   ASSERT_EQ(1u, devices->size());
   auto device = (*devices)[0];

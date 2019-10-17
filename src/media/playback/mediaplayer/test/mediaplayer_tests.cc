@@ -75,10 +75,10 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
     commands_.Invoke([this]() { QuitLoop(); });
   }
 
-  // Executes queued commands with the specified timeout.
-  void Execute(zx::duration timeout = zx::sec(60)) {
+  // Executes queued commands
+  void Execute() {
     commands_.Execute();
-    EXPECT_FALSE(RunLoopWithTimeout(zx::duration(timeout)));
+    RunLoop();
   }
 
   // Creates a view.

@@ -90,23 +90,25 @@ void VirtualAudioDeviceTest::TearDown() {
   AudioDeviceTest::TearDown();
 }
 
+void VirtualAudioDeviceTest::SetOnDeviceAddedEvent() {
+  audio_dev_enum_.events().OnDeviceAdded =
+      CompletionCallback([this](fuchsia::media::AudioDeviceInfo dev) {
+        received_device_ = std::move(dev);
+        virtual_device_tokens_.insert(received_device_.token_id);
+      });
+}
+
+void VirtualAudioDeviceTest::SetOnDeviceRemovedEvent() {
+  audio_dev_enum_.events().OnDeviceRemoved = CompletionCallback([this](uint64_t token_id) {
+    received_removed_token_ = token_id;
+    virtual_device_tokens_.erase(token_id);
+  });
+}
+
 void VirtualAudioDeviceTest::WaitForVirtualDeviceDepartures() {
-  audio_dev_enum_.events().OnDeviceRemoved =
-      CompletionCallback([this](uint64_t token_id) { virtual_device_tokens_.erase(token_id); });
+  SetOnDeviceRemovedEvent();
 
-  ExpectCondition([this]() { return error_occurred_ || virtual_device_tokens_.empty(); });
-}
-
-void VirtualAudioDeviceTest::ExpectDeviceAdded(const std::array<uint8_t, 16>& unique_id_arr) {
-  AudioDeviceTest::ExpectDeviceAdded(unique_id_arr);
-
-  virtual_device_tokens_.insert(received_device_.token_id);
-}
-
-void VirtualAudioDeviceTest::ExpectDeviceRemoved(uint64_t remove_token) {
-  AudioDeviceTest::ExpectDeviceRemoved(remove_token);
-
-  virtual_device_tokens_.erase(received_removed_token_);
+  RunLoopUntil([this]() { return error_occurred_ || virtual_device_tokens_.empty(); });
 }
 
 // Using virtualaudio, validate that device list matches what was added.
@@ -461,6 +463,8 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterRemove(bool is_input, bool
   uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
   SetOnDeviceRemovedEvent();
+  received_removed_token_ = kInvalidDeviceToken;
+
   if (most_recent) {
     SetOnDefaultDeviceChangedEvent();
 
@@ -472,15 +476,16 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterRemove(bool is_input, bool
 
     ExpectDefaultChanged(expect_default_token);
     ASSERT_EQ(received_old_token_, expect_remove_token);
-
-    ExpectDeviceRemoved(expect_remove_token);
   } else {
     if (is_input) {
       input_->Remove();
     } else {
       output_->Remove();
     }
+  }
 
+  // If we haven't already received the device departure notification, wait for it here.
+  if (received_removed_token_ != expect_remove_token) {
     ExpectDeviceRemoved(expect_remove_token);
   }
 
@@ -1003,7 +1008,11 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterRemove(bool is_input
       output_->Remove();
     }
   }
-  ExpectDeviceRemoved(expect_remove_token);
+
+  // If we haven't already received the removal notification, wait for it here
+  if (received_removed_token_ != expect_remove_token) {
+    ExpectDeviceRemoved(expect_remove_token);
+  }
 
   RunLoopUntilIdle();
 }
@@ -1014,8 +1023,9 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterUnplug(bool is_input
   uint64_t to_unplug_token = (most_recent ? received_default_token_ : received_old_token_);
   uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
-  auto now = zx::clock::get_monotonic().get();
   SetOnDefaultDeviceChangedEvent();
+
+  auto now = zx::clock::get_monotonic().get();
   if (most_recent) {
     if (is_input) {
       input_2_->ChangePlugState(now, false);

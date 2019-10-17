@@ -18,14 +18,12 @@ constexpr uint32_t kCpuUsageRead =
 constexpr uint32_t kCpuUsageWrite =
     fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften;
 constexpr uint32_t kCpuUsageReadWrite = kCpuUsageRead | kCpuUsageWrite;
-constexpr zx::duration kTimeout = zx::duration(ZX_SEC(30));
 
 class PayloadManagerTest : public ::gtest::RealLoopFixture {
  protected:
   // Loops until |under_test| is ready.
   void LoopUntilReady(const PayloadManager& under_test) {
-    RunLoopWithTimeoutOrUntil([&under_test]() { return under_test.ready(); }, kTimeout,
-                              zx::duration::infinite());
+    RunLoopUntil([&under_test]() { return under_test.ready(); });
   }
 
   // Provides VMOs via the collection referenced by |token|, verifying the buffer constraints
@@ -38,12 +36,10 @@ class PayloadManagerTest : public ::gtest::RealLoopFixture {
 
     bool callback_called = false;
     token->Sync([&callback_called]() { callback_called = true; });
-    RunLoopWithTimeoutOrUntil([&callback_called]() { return callback_called; }, kTimeout,
-                              zx::duration::infinite());
+    RunLoopUntil([&callback_called]() { return callback_called; });
 
     auto collection = service_provider->GetCollectionFromToken(std::move(token));
-    RunLoopWithTimeoutOrUntil([&collection]() { return !collection->constraints().empty(); },
-                              kTimeout, zx::duration::infinite());
+    RunLoopUntil([&collection]() { return !collection->constraints().empty(); });
 
     EXPECT_EQ(1u, collection->constraints().size());
 
@@ -959,14 +955,12 @@ TEST_F(PayloadManagerTest, UsesSysmemVmos_UsesSysmemVmos) {
   bool callback_called = false;
   auto output_token = under_test.TakeOutputSysmemToken();
   output_token->Sync([&callback_called]() { callback_called = true; });
-  RunLoopWithTimeoutOrUntil([&callback_called]() { return callback_called; }, kTimeout,
-                            zx::duration::infinite());
+  RunLoopUntil([&callback_called]() { return callback_called; });
 
   callback_called = false;
   auto input_token = under_test.TakeInputSysmemToken();
   input_token->Sync([&callback_called]() { callback_called = true; });
-  RunLoopWithTimeoutOrUntil([&callback_called]() { return callback_called; }, kTimeout,
-                            zx::duration::infinite());
+  RunLoopUntil([&callback_called]() { return callback_called; });
 
   auto output_collection = service_provider.GetCollectionFromToken(std::move(output_token));
   auto input_collection = service_provider.GetCollectionFromToken(std::move(input_token));
@@ -1489,11 +1483,9 @@ TEST_F(PayloadManagerTest, UsesLocal_UsesLocal_CallbacksCalled) {
                                                    .map_flags_ = ZX_VM_PERM_READ},
                                      nullptr);
 
-  RunLoopWithTimeoutOrUntil(
-      [&output_callback_called, &input_callback_called]() {
-        return output_callback_called && input_callback_called;
-      },
-      kTimeout, zx::duration::infinite());
+  RunLoopUntil([&output_callback_called, &input_callback_called]() {
+    return output_callback_called && input_callback_called;
+  });
   EXPECT_TRUE(under_test.ready());
 
   output_callback_called = false;
@@ -1508,11 +1500,9 @@ TEST_F(PayloadManagerTest, UsesLocal_UsesLocal_CallbacksCalled) {
                                                    .map_flags_ = ZX_VM_PERM_READ},
                                      nullptr);
 
-  RunLoopWithTimeoutOrUntil(
-      [&output_callback_called, &input_callback_called]() {
-        return output_callback_called && input_callback_called;
-      },
-      kTimeout, zx::duration::infinite());
+  RunLoopUntil([&output_callback_called, &input_callback_called]() {
+    return output_callback_called && input_callback_called;
+  });
 }
 
 // Tests behavior when output mode is |kUsesSysmemVmos| and input mode is |kUsesVmos|. The input

@@ -199,10 +199,7 @@ TEST_F(AudioRendererTest, SendPacket) {
                               [&callback_received] { callback_received = true; });
 
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP, [](...) {});
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, &callback_received]() { return error_occurred_ || callback_received; },
-      kDurationResponseExpected, kDurationGranularity))
-      << kTimeoutErr;
+  RunLoopUntil([this, &callback_received]() { return error_occurred_ || callback_received; });
   EXPECT_TRUE(callback_received);
 }
 
@@ -228,10 +225,8 @@ TEST_F(AudioRendererTest, SendPacketInvokesCallbacksInOrder) {
 
   // Play and expect the callbacks in order.
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP, [](...) {});
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, &callback_count]() { return error_occurred_ || (callback_count == 4u); },
-      kDurationResponseExpected, kDurationGranularity))
-      << kTimeoutErr;
+
+  RunLoopUntil([this, &callback_count]() { return error_occurred_ || (callback_count == 4u); });
   EXPECT_EQ(4u, callback_count);
 }
 
@@ -468,11 +463,7 @@ TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
 
   // After enabling MinLeadTime events, we expect an initial notification.
   // Because we have not yet set the format, we expect MinLeadTime to be 0.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, &min_lead_time]() { return error_occurred_ || (min_lead_time >= 0); },
-      kDurationResponseExpected, kDurationGranularity))
-      << kTimeoutErr;
-
+  RunLoopUntil([this, &min_lead_time]() { return error_occurred_ || (min_lead_time >= 0); });
   EXPECT_EQ(min_lead_time, 0);
 
   // FYI: after setting format, MinLeadTime should change to be greater than 0
@@ -502,10 +493,7 @@ TEST_F(AudioRendererTest, GetMinLeadTime) {
       [&min_lead_time](int64_t min_lead_time_nsec) { min_lead_time = min_lead_time_nsec; });
 
   // Wait to receive Lead time callback (will loop timeout? EXPECT_FALSE)
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, &min_lead_time]() { return error_occurred_ || (min_lead_time >= 0); },
-      kDurationResponseExpected, kDurationGranularity))
-      << kTimeoutErr;
+  RunLoopUntil([this, &min_lead_time]() { return error_occurred_ || (min_lead_time >= 0); });
   EXPECT_EQ(min_lead_time, 0);
 }
 
@@ -538,11 +526,9 @@ TEST_F(AudioRendererTest, BindGainControl) {
   gain_control_.Unbind();
 
   // Give audio_renderer_2 a chance to disconnect gain_control_2
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, &ar2_error_occurred, &gc_error_occurred, &gc2_error_occurred]() {
-        return (error_occurred_ || ar2_error_occurred || gc_error_occurred || gc2_error_occurred);
-      },
-      kDurationResponseExpected, kDurationGranularity));
+  RunLoopUntil([this, &ar2_error_occurred, &gc_error_occurred, &gc2_error_occurred]() {
+    return (error_occurred_ || ar2_error_occurred || gc_error_occurred || gc2_error_occurred);
+  });
 
   // Let audio_renderer_ show it is still alive (and allow other disconnects)
   audio_renderer_->GetMinLeadTime(CompletionCallback([](int64_t x) {}));

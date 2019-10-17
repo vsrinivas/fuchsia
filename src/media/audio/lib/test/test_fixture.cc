@@ -16,19 +16,10 @@ void TestFixture::TearDown() {
   ::gtest::RealLoopFixture::TearDown();
 }
 
-bool TestFixture::RunUntilComplete(fit::function<bool()> condition) {
-  return RunLoopWithTimeoutOrUntil(std::move(condition), kDurationResponseExpected,
-                                   kDurationGranularity);
-}
-
-void TestFixture::ExpectCondition(fit::function<bool()> condition) {
-  EXPECT_TRUE(RunUntilComplete(std::move(condition)));
-}
-
 void TestFixture::ExpectCallback() {
   callback_received_ = false;
 
-  ExpectCondition([this]() { return (error_occurred_ || callback_received_); });
+  RunLoopUntil([this]() { return (error_occurred_ || callback_received_); });
 
   EXPECT_FALSE(error_occurred_) << kDisconnectErr;
   EXPECT_TRUE(callback_received_);
@@ -38,7 +29,7 @@ void TestFixture::ExpectError(zx_status_t expected_error) {
   SetNegativeExpectations();
   callback_received_ = false;
 
-  ExpectCondition([this]() { return (error_occurred_ || callback_received_); });
+  RunLoopUntil([this]() { return (error_occurred_ || callback_received_); });
 
   EXPECT_TRUE(error_occurred_);
   EXPECT_EQ(error_code_, expected_error);
