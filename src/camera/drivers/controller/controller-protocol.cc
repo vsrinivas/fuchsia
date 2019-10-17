@@ -12,8 +12,12 @@ namespace camera {
 
 ControllerImpl::ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                                async_dispatcher_t* dispatcher, ddk::IspProtocolClient& isp,
-                               fit::closure on_connection_closed)
-    : dispatcher_(dispatcher), binding_(this), isp_(isp) {
+                               fit::closure on_connection_closed,
+                               fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+    : dispatcher_(dispatcher),
+      binding_(this),
+      isp_(isp),
+      memory_allocator_(std::move(sysmem_allocator)) {
   binding_.set_error_handler([occ = std::move(on_connection_closed)](zx_status_t status) {
     FXL_PLOG(ERROR, status) << "Client disconnected";
     occ();

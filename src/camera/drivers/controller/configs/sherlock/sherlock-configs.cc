@@ -28,7 +28,7 @@ std::vector<fuchsia::camera2::hal::Config> ControllerImpl::SherlockConfigs() {
   configs.push_back(MonitoringConfig());
   InternalConfigInfo monitor_config_info;
   monitor_config_info.streams_info.push_back(MonitorConfigFullRes());
-  monitor_config_info.streams_info.push_back(MonitorConfigFDownScaledRes());
+  monitor_config_info.streams_info.push_back(MonitorConfigDownScaledRes());
 
   // Pushing the internal configurations
   internal_configs_.configs_info.push_back(std::move(monitor_config_info));

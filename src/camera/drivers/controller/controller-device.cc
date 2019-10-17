@@ -20,9 +20,10 @@ namespace {
 enum {
   COMPONENT_ISP,
   COMPONENT_GDC,
+  COMPONENT_SYSMEM,
   COMPONENT_COUNT,
 };
-} // namespace
+}  // namespace
 
 void ControllerDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
@@ -49,10 +50,18 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
   zx::channel channel(handle);
   fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control_interface(std::move(channel));
 
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+
+  auto status = sysmem_.Connect(sysmem_allocator.NewRequest().TakeChannel());
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "%s: Could not setup sysmem allocator: %d\n", __func__, status);
+    return status;
+  }
+
   if (control_interface.is_valid()) {
-    controller_ = std::make_unique<ControllerImpl>(std::move(control_interface),
-                                                   controller_loop_.dispatcher(), isp_,
-                                                   [this] { controller_ = nullptr; });
+    controller_ = std::make_unique<ControllerImpl>(
+        std::move(control_interface), controller_loop_.dispatcher(), isp_,
+        [this] { controller_ = nullptr; }, std::move(sysmem_allocator));
 
     return ZX_OK;
   }
@@ -93,8 +102,14 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     return ZX_ERR_NO_RESOURCES;
   }
 
-  auto controller = std::make_unique<ControllerDevice>(parent, components[COMPONENT_ISP],
-                                                       components[COMPONENT_GDC]);
+  ddk::SysmemProtocolClient sysmem(components[COMPONENT_SYSMEM]);
+  if (!sysmem.is_valid()) {
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_SYSMEM not available\n", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  auto controller = std::make_unique<ControllerDevice>(
+      parent, components[COMPONENT_ISP], components[COMPONENT_GDC], components[COMPONENT_SYSMEM]);
 
   auto status = controller->StartThread();
   if (status != ZX_OK) {

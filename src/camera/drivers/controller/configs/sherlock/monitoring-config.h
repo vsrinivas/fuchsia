@@ -28,9 +28,9 @@ namespace {
 constexpr uint32_t kOutputStreamMlFRMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMlFRWidth = 2176;
 constexpr uint32_t kOutputStreamMlFRHeight = 2720;
-constexpr uint32_t kOutputStreamMlFRMaxBytesPerRow = 0xfffffff;
+constexpr uint32_t kMaxBytesPerRow = 0xfffffff;
 constexpr uint32_t kOutputStreamMlFRLayers = 1;
-constexpr uint32_t kOutputStreamMlFRBytesPerRowDivisor = 128;
+constexpr uint32_t kISPPerRowDivisor = 128;
 constexpr uint32_t kOutputStreamMlFRColorSpaceCount = 1;
 constexpr uint32_t kOutputStreamMlFRFrameRate = 10;
 constexpr ::fuchsia::sysmem::PixelFormatType kOutputStreamMlFRPixelFormat =
@@ -42,9 +42,7 @@ constexpr ::fuchsia::sysmem::ColorSpaceType kOutputStreamMlFRColorSpaceType =
 constexpr uint32_t kOutputStreamMlDSMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMlDSWidth = 640;
 constexpr uint32_t kOutputStreamMlDSHeight = 512;
-constexpr uint32_t kOutputStreamMlDSMaxBytesPerRow = 0xfffffff;
 constexpr uint32_t kOutputStreamMlDSLayers = 1;
-constexpr uint32_t kOutputStreamMlDSBytesPerRowDivisor = 128;
 constexpr uint32_t kOutputStreamMlDSColorSpaceCount = 1;
 constexpr uint32_t kOutputStreamMlDSFrameRate = 10;
 constexpr ::fuchsia::sysmem::PixelFormatType kOutputStreamMlDSPixelFormat =
@@ -53,12 +51,12 @@ constexpr ::fuchsia::sysmem::ColorSpaceType kOutputStreamMlDSColorSpaceType =
     fuchsia::sysmem::ColorSpaceType::REC601_PAL;
 
 // OutputStreamMonitoring Parameters
+constexpr uint32_t kOutputStreamDSWidth = 896;
+constexpr uint32_t kOutputStreamDSHeight = 1600;
 constexpr uint32_t kOutputStreamMonitoringMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMonitoringWidth = 1152;
 constexpr uint32_t kOutputStreamMonitoringHeight = 864;
-constexpr uint32_t kOutputStreamMonitoringMaxBytesPerRow = 0xfffffff;
 constexpr uint32_t kOutputStreamMonitoringLayers = 1;
-constexpr uint32_t kOutputStreamMonitoringBytesPerRowDivisor = 128;
 constexpr uint32_t kOutputStreamMonitoringColorSpaceCount = 1;
 constexpr uint32_t kOutputStreamMonitoringWidth1 = 720;
 constexpr uint32_t kOutputStreamMonitoringHeight1 = 540;
@@ -70,6 +68,7 @@ constexpr ::fuchsia::sysmem::PixelFormatType kOutputStreamMonitoringPixelFormat 
 constexpr ::fuchsia::sysmem::ColorSpaceType kOutputStreamMonitoringColorSpaceType =
     fuchsia::sysmem::ColorSpaceType::REC601_PAL;
 
+constexpr uint32_t kGdcBytesPerRowDivisor = 16;
 }  // namespace
 
 /**********************************
@@ -80,6 +79,8 @@ constexpr ::fuchsia::sysmem::ColorSpaceType kOutputStreamMonitoringColorSpaceTyp
 static constexpr fuchsia::sysmem::BufferCollectionConstraints OutputStreamMLFRConstraints() {
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count_for_camping = kOutputStreamMlFRMinBufferForCamping;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
   constraints.image_format_constraints_count = 1;
   auto& image_constraints = constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = kOutputStreamMlFRPixelFormat;
@@ -88,9 +89,9 @@ static constexpr fuchsia::sysmem::BufferCollectionConstraints OutputStreamMLFRCo
   image_constraints.min_coded_height = kOutputStreamMlFRHeight;
   image_constraints.max_coded_height = kOutputStreamMlFRHeight;
   image_constraints.min_bytes_per_row = kOutputStreamMlFRWidth;
-  image_constraints.max_bytes_per_row = kOutputStreamMlFRMaxBytesPerRow;
+  image_constraints.max_bytes_per_row = kMaxBytesPerRow;
   image_constraints.layers = kOutputStreamMlFRLayers;
-  image_constraints.bytes_per_row_divisor = kOutputStreamMlFRBytesPerRowDivisor;
+  image_constraints.bytes_per_row_divisor = kISPPerRowDivisor;
   image_constraints.color_spaces_count = kOutputStreamMlFRColorSpaceCount;
   image_constraints.color_space[0].type = kOutputStreamMlFRColorSpaceType;
   constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
@@ -131,6 +132,8 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
 static constexpr fuchsia::sysmem::BufferCollectionConstraints OutputStreamMLDSConstraints() {
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count_for_camping = kOutputStreamMlDSMinBufferForCamping;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
   constraints.image_format_constraints_count = 1;
   auto& image_constraints = constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = kOutputStreamMlDSPixelFormat;
@@ -139,9 +142,9 @@ static constexpr fuchsia::sysmem::BufferCollectionConstraints OutputStreamMLDSCo
   image_constraints.min_coded_height = kOutputStreamMlDSHeight;
   image_constraints.max_coded_height = kOutputStreamMlDSHeight;
   image_constraints.min_bytes_per_row = kOutputStreamMlDSWidth;
-  image_constraints.max_bytes_per_row = kOutputStreamMlDSMaxBytesPerRow;
+  image_constraints.max_bytes_per_row = kMaxBytesPerRow;
   image_constraints.layers = kOutputStreamMlDSLayers;
-  image_constraints.bytes_per_row_divisor = kOutputStreamMlDSBytesPerRowDivisor;
+  image_constraints.bytes_per_row_divisor = kISPPerRowDivisor;
   image_constraints.color_spaces_count = kOutputStreamMlDSColorSpaceCount;
   image_constraints.color_space[0].type = kOutputStreamMlDSColorSpaceType;
   constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
@@ -183,6 +186,8 @@ static constexpr fuchsia::sysmem::BufferCollectionConstraints
 OutputStreamDSMonitoringConstraints() {
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count_for_camping = kOutputStreamMonitoringMinBufferForCamping;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
   constraints.image_format_constraints_count = 1;
   auto& image_constraints = constraints.image_format_constraints[0];
   image_constraints.pixel_format.type = kOutputStreamMonitoringPixelFormat;
@@ -191,9 +196,9 @@ OutputStreamDSMonitoringConstraints() {
   image_constraints.min_coded_height = kOutputStreamMonitoringHeight;
   image_constraints.max_coded_height = kOutputStreamMonitoringHeight;
   image_constraints.min_bytes_per_row = kOutputStreamMonitoringWidth;
-  image_constraints.max_bytes_per_row = kOutputStreamMonitoringMaxBytesPerRow;
+  image_constraints.max_bytes_per_row = kMaxBytesPerRow;
   image_constraints.layers = kOutputStreamMonitoringLayers;
-  image_constraints.bytes_per_row_divisor = kOutputStreamMonitoringBytesPerRowDivisor;
+  image_constraints.bytes_per_row_divisor = kISPPerRowDivisor;
   image_constraints.color_spaces_count = kOutputStreamMonitoringColorSpaceCount;
   image_constraints.color_space[0].type = kOutputStreamMonitoringColorSpaceType;
   constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
@@ -276,6 +281,27 @@ static InternalConfigNode OutputStreamMLDS() {
   return node;
 }
 
+fuchsia::sysmem::BufferCollectionConstraints Gdc1Constraints() {
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+  image_constraints.min_coded_width = kOutputStreamMlFRWidth;
+  image_constraints.max_coded_width = kOutputStreamMlFRWidth;
+  image_constraints.min_coded_height = kOutputStreamMlFRHeight;
+  image_constraints.max_coded_height = kOutputStreamMlFRHeight;
+  image_constraints.min_bytes_per_row = kOutputStreamMlFRWidth;
+  image_constraints.max_bytes_per_row = kOutputStreamMlFRWidth;
+  image_constraints.layers = 1;
+  image_constraints.bytes_per_row_divisor = kGdcBytesPerRowDivisor;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC601_PAL;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
+  return constraints;
+}
+
 static InternalConfigNode Gdc1() {
   InternalConfigNode node;
   node.type = kGdc;
@@ -285,7 +311,31 @@ static InternalConfigNode Gdc1() {
                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING;
   node.child_nodes.push_back(OutputStreamMLDS());
   node.gdc_info.config_type = DUMMY_CONFIG_0;
+  node.constraints = Gdc1Constraints();
+  node.image_formats = OutputStreamMLDSImageFormats();
   return node;
+}
+
+fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.min_buffer_count_for_camping = kOutputStreamMlFRMinBufferForCamping;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+  image_constraints.required_min_coded_width = kOutputStreamMlFRWidth;
+  image_constraints.max_coded_width = kOutputStreamMlFRWidth;
+  image_constraints.required_min_coded_height = kOutputStreamMlFRHeight;
+  image_constraints.max_coded_height = kOutputStreamMlFRHeight;
+  image_constraints.min_bytes_per_row = kOutputStreamMlFRWidth;
+  image_constraints.max_bytes_per_row = kOutputStreamMlFRWidth;
+  image_constraints.layers = 1;
+  image_constraints.bytes_per_row_divisor = kISPPerRowDivisor;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC601_PAL;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
+  return constraints;
 }
 
 InternalConfigNode MonitorConfigFullRes() {
@@ -300,6 +350,7 @@ InternalConfigNode MonitorConfigFullRes() {
                                    fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   node.child_nodes.push_back(OutputStreamMLFR());
   node.child_nodes.push_back(Gdc1());
+  node.constraints = MonitorConfigFullResConstraints();
   return node;
 }
 
@@ -314,6 +365,27 @@ static InternalConfigNode OutputStreamMonitoring() {
   return node;
 }
 
+fuchsia::sysmem::BufferCollectionConstraints Gdc2Constraints() {
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+  image_constraints.min_coded_width = kOutputStreamDSWidth;
+  image_constraints.max_coded_width = kOutputStreamDSWidth;
+  image_constraints.min_coded_height = kOutputStreamDSHeight;
+  image_constraints.max_coded_height = kOutputStreamDSHeight;
+  image_constraints.min_bytes_per_row = kOutputStreamDSWidth;
+  image_constraints.max_bytes_per_row = kOutputStreamDSWidth;
+  image_constraints.layers = 1;
+  image_constraints.bytes_per_row_divisor = kGdcBytesPerRowDivisor;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC601_PAL;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
+  return constraints;
+}
+
 static InternalConfigNode Gdc2() {
   InternalConfigNode node;
   node.type = kGdc;
@@ -322,10 +394,34 @@ static InternalConfigNode Gdc2() {
   node.output_stream_type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE;
   node.child_nodes.push_back(OutputStreamMonitoring());
   node.gdc_info.config_type = DUMMY_CONFIG_1;
+  node.constraints = Gdc2Constraints();
+  node.image_formats = OutputStreamMonitoringImageFormats();
   return node;
 }
 
-InternalConfigNode MonitorConfigFDownScaledRes() {
+fuchsia::sysmem::BufferCollectionConstraints MonitorConfigDownScaledResConstraints() {
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.min_buffer_count_for_camping = kOutputStreamMonitoringMinBufferForCamping;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.physically_contiguous_required = true;
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+  image_constraints.required_min_coded_width = kOutputStreamDSWidth;
+  image_constraints.max_coded_width = kOutputStreamDSWidth;
+  image_constraints.required_min_coded_height = kOutputStreamDSHeight;
+  image_constraints.max_coded_height = kOutputStreamDSHeight;
+  image_constraints.min_bytes_per_row = kOutputStreamDSWidth;
+  image_constraints.max_bytes_per_row = kOutputStreamDSWidth;
+  image_constraints.layers = 1;
+  image_constraints.bytes_per_row_divisor = kISPPerRowDivisor;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC601_PAL;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
+  return constraints;
+}
+
+InternalConfigNode MonitorConfigDownScaledRes() {
   InternalConfigNode node;
   node.type = kInputStream;
   node.output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate;
@@ -333,6 +429,7 @@ InternalConfigNode MonitorConfigFDownScaledRes() {
   node.input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION;
   node.supported_streams.push_back(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   node.child_nodes.push_back(Gdc2());
+  node.constraints = MonitorConfigDownScaledResConstraints();
   return node;
 }
 

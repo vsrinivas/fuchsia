@@ -56,6 +56,8 @@ struct InternalConfigNode {
   GdcInfo gdc_info;
   // Constraints
   fuchsia::sysmem::BufferCollectionConstraints constraints;
+  // Image formats supported
+  std::vector<fuchsia::sysmem::ImageFormat_2> image_formats;
 };
 
 struct InternalConfigInfo {

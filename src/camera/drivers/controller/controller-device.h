@@ -27,6 +27,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/isp.h>
+#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
@@ -36,18 +37,20 @@
 namespace camera {
 
 class ControllerDevice;
-using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::UnbindableNew,
-                                         ddk::Messageable>;
+using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::UnbindableNew, ddk::Messageable>;
 
 class ControllerDevice : public ControllerDeviceType,
                          public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
-  explicit ControllerDevice(zx_device_t* parent, zx_device_t* isp, zx_device_t* gdc)
+  explicit ControllerDevice(zx_device_t* parent, zx_device_t* isp, zx_device_t* gdc,
+                            zx_device_t* sysmem)
       : ControllerDeviceType(parent),
         isp_(isp),
         gdc_(gdc),
-        controller_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+        controller_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        sysmem_(sysmem) {}
+
   ~ControllerDevice() { ShutDown(); }
 
   // Setup() is used to create an instance of Controller.
@@ -83,6 +86,7 @@ class ControllerDevice : public ControllerDeviceType,
   async::Loop controller_loop_;
   thrd_t loop_thread_;
   std::unique_ptr<ControllerImpl> controller_ = nullptr;
+  ddk::SysmemProtocolClient sysmem_;
 };
 
 }  // namespace camera

@@ -21,6 +21,7 @@ source_set("controller-source") {
   sources = [
     "controller-device.cc",
     "controller-protocol.cc",
+    "memory_allocation.cc",
     "stream_protocol.cc",
   ]
   deps = [

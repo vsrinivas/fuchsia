@@ -36,6 +36,7 @@ test_package("camera_full_test") {
     "//src/camera/image_writer/test:image_writer_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
     "//src/camera/drivers/controller/test:controller-protocol-test",
+    "//src/camera/drivers/controller/test:controller-allocator-test",
     "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
     "//src/camera/drivers/hw_accel/ge2d/test:ge2d-task",
@@ -67,6 +68,11 @@ test_package("camera_full_test") {
     {
       name = "controller-test"
       manifest = "drivers/controller/test/meta/controller-test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "controller-allocator-test"
+      manifest = "drivers/controller/test/meta/controller-allocator-test.cmx"
       environments = basic_envs
     },
     {

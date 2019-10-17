@@ -13,8 +13,8 @@
 #include <ddktl/protocol/isp.h>
 
 #include "configs/sherlock/internal-config.h"
+#include "memory_allocation.h"
 #include "stream_protocol.h"
-
 namespace camera {
 
 namespace {
@@ -27,10 +27,13 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerImpl);
   ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                  async_dispatcher_t* dispatcher, ddk::IspProtocolClient& isp,
-                 fit::closure on_connection_closed);
+                 fit::closure on_connection_closed,
+                 fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
 
- protected:
-  // For tests.
+  explicit ControllerImpl(ddk::IspProtocolClient& isp,
+                          fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+      : binding_(nullptr), isp_(isp), memory_allocator_(std::move(sysmem_allocator)) {}
+
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
 
   void PopulateConfigurations() { configs_ = SherlockConfigs(); }
@@ -72,6 +75,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   InternalConfigs internal_configs_;
   std::unique_ptr<camera::StreamImpl> stream_;
   ddk::IspProtocolClient& isp_;
+  ControllerMemoryAllocator memory_allocator_;
 };
 
 }  // namespace camera

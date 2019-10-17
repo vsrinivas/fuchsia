@@ -9,10 +9,11 @@
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_call.h>
 
 #include "../controller-protocol.h"
-
+#include "fake_sysmem.h"
 namespace camera {
 namespace {
 
@@ -20,8 +21,13 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     ddk_ = std::make_unique<fake_ddk::Bind>();
+    static constexpr const uint32_t kNumSubDevices = 1;
+    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumSubDevices],
+                                                  kNumSubDevices);
+    protocols[0] = fake_sysmem_.ProtocolEntry();
+    ddk_->SetProtocols(std::move(protocols));
     controller_device_ = std::make_unique<ControllerDevice>(
-        fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent);
+        fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent);
   }
 
   void TearDown() override {
@@ -81,6 +87,7 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
   std::unique_ptr<ControllerDevice> controller_device_;
   fuchsia::hardware::camera::DevicePtr camera_protocol_;
   fuchsia::camera2::hal::ControllerPtr controller_protocol_;
+  FakeSysmem fake_sysmem_;
 };
 
 // Verifies controller can start up and shut down.
