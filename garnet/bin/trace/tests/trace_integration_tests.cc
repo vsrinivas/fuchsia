@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/eventpair.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -15,16 +16,14 @@
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/test/test_settings.h>
 
+#include "garnet/bin/trace/tests/component_context.h"
+#include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/run_test.h"
 
 namespace tracing {
 namespace test {
 
-// Note: /data is no longer large enough in qemu sessions
-// This file is a relative path, from the tmp directory.
-const char kRelativeOutputFilePath[] = "test.trace";
-
-static std::unique_ptr<sys::ComponentContext> g_context;
+namespace {
 
 // |relative_tspec_path| is a relative path, from /pkg.
 static void RunAndVerify(const char* relative_tspec_path) {
@@ -132,6 +131,8 @@ TEST_F(TwoProvidersOneEngine, ErrorHandling) {
 TEST(TwoProvidersTwoEngines, DISABLED_Test) {
   RunAndVerify("data/two_providers_two_engines.tspec");
 }
+
+}  // namespace
 
 }  // namespace test
 }  // namespace tracing

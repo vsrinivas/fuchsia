@@ -12,6 +12,7 @@
 #include <trace-reader/file_reader.h>
 
 #include "garnet/bin/trace/tests/run_test.h"
+#include "garnet/bin/trace/tests/integration_test_utils.h"
 
 namespace tracing {
 namespace test {
@@ -19,9 +20,6 @@ namespace test {
 namespace {
 
 const char kChildPath[] = "/bin/trace";
-
-// Note: /data is no longer large enough in qemu sessions
-const char kRelativeOutputFilePath[] = "test.trace";
 
 // We don't enable all categories, we just need a kernel category we know we'll
 // receive. Syscalls are a good choice. We also need the sched category to get

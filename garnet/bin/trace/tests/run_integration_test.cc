@@ -16,11 +16,8 @@
 #include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/trace/tests/component_context.h"
+#include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/run_test.h"
-
-// Note: /data is no longer large enough in qemu sessions
-// This file is a relative path, from the tmp directory.
-const char kRelativeOutputFilePath[] = "test.trace";
 
 const char kUsageString[] = {
     "Usage: run "
@@ -56,11 +53,11 @@ int main(int argc, char *argv[]) {
 
   tracing::test::InitComponentContext();
 
-  if (!tracing::test::RunTspec(relative_tspec_path, kRelativeOutputFilePath)) {
+  if (!tracing::test::RunTspec(relative_tspec_path, tracing::test::kRelativeOutputFilePath)) {
     return EXIT_FAILURE;
   }
 
-  if (!tracing::test::VerifyTspec(relative_tspec_path, kRelativeOutputFilePath)) {
+  if (!tracing::test::VerifyTspec(relative_tspec_path, tracing::test::kRelativeOutputFilePath)) {
     return EXIT_FAILURE;
   }
 

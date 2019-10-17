@@ -24,6 +24,7 @@
 
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tests/component_context.h"
+#include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/log_settings.h"
@@ -38,8 +39,6 @@ namespace test {
 const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program as a shell command.
 const char kTraceProgramPath[] = "/bin/trace";
-// The path of the trace program from within the trace package.
-// const char kTracePackageProgramPath[] = "/pkg/bin/trace";
 
 void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix) {
   // Transfer our log settings to the subprogram.

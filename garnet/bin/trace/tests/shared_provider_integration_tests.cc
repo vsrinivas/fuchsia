@@ -18,9 +18,6 @@ namespace {
 
 const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/shared_provider_app.cmx";
 
-// Note: /data is no longer large enough in qemu sessions
-const char kRelativeOutputFilePath[] = "test.trace";
-
 // We don't enable all categories, we just need a kernel category we know we'll
 // receive. Syscalls are a good choice. We also need the sched category to get
 // syscall events (syscall enter/exit tracking requires thread tracking).
@@ -37,8 +34,9 @@ TEST(SharedProvider, IntegrationTest) {
   ASSERT_TRUE(RunTraceAndWait(job, args));
 
   size_t num_events;
-  EXPECT_TRUE(
-      VerifyTestEvents(std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath, &num_events));
+  ASSERT_TRUE(
+      VerifyTestEventsFromJson(std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath,
+                               &num_events));
   FXL_VLOG(1) << "Got " << num_events << " events";
 }
 

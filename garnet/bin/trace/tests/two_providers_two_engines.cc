@@ -47,7 +47,7 @@ static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
 static bool VerifyTwoProvidersTwoEnginesTest(const tracing::Spec& spec,
                                              const std::string& test_output_file) {
   size_t num_events;
-  if (!VerifyTestEvents(test_output_file, &num_events)) {
+  if (!VerifyTestEventsFromJson(test_output_file, &num_events)) {
     return false;
   }
 

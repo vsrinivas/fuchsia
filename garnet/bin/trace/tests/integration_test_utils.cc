@@ -16,6 +16,7 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <src/lib/fxl/logging.h>
+#include <trace-reader/file_reader.h>
 #include <trace/event.h>
 #include <trace/observer.h>
 
@@ -33,10 +34,7 @@ const char kCategoryMemberName[] = "cat";
 // The name of the event name member in the json output file.
 const char kEventNameMemberName[] = "name";
 
-// Name to use in instant events.
-#define INSTANT_EVENT_NAME "instant"
-
-// Size in bytes of the records |WriteTestRecords()| emits.
+// Size in bytes of the records |WriteTestEvents()| emits.
 // We assume strings and thread references are not inlined. If they are that's
 // ok. The point is this value is the minimum size of the record we're going to
 // emit. If the record is larger then the trace will be larger, which is ok.
@@ -93,12 +91,26 @@ bool CreateProviderSynchronouslyAndWait(
 
 void WriteTestEvents(size_t num_records) {
   for (size_t i = 0; i < num_records; ++i) {
-    TRACE_INSTANT(CATEGORY_NAME, INSTANT_EVENT_NAME, TRACE_SCOPE_PROCESS, "arg1", 1, "arg2", 2,
-                  "arg3", 3);
+    TRACE_INSTANT(kWriteTestEventsCategoryName,
+                  kWriteTestEventsInstantEventName, TRACE_SCOPE_PROCESS,
+                  "arg1", 1, "arg2", 2, "arg3", 3);
   }
 }
 
-bool VerifyTestEvents(const std::string& test_output_file, size_t* out_num_events) {
+bool IsWriteTestEvent(const trace::Record& record) {
+  if (record.type() == trace::RecordType::kEvent) {
+    const trace::Record::Event& event = record.GetEvent();
+    if (event.type() == trace::EventType::kInstant &&
+        event.category == kWriteTestEventsCategoryName &&
+        event.name == kWriteTestEventsInstantEventName) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool VerifyTestEventsFromJson(const std::string& test_output_file,
+                              size_t* out_num_events) {
   // We don't know how many records got dropped, but we can count them,
   // and verify they are what we expect.
   std::ifstream in(test_output_file);
@@ -143,7 +155,7 @@ bool VerifyTestEvents(const std::string& test_output_file, size_t* out_num_event
       FXL_LOG(ERROR) << "Category name is not a string";
       return false;
     }
-    if (strcmp(category_name.GetString(), CATEGORY_NAME) != 0) {
+    if (strcmp(category_name.GetString(), kWriteTestEventsCategoryName) != 0) {
       FXL_LOG(ERROR) << "Expected category not present in event, got: "
                      << category_name.GetString();
       return false;
@@ -159,8 +171,9 @@ bool VerifyTestEvents(const std::string& test_output_file, size_t* out_num_event
       FXL_LOG(ERROR) << "Event name is not a string";
       return false;
     }
-    if (strcmp(event_name.GetString(), INSTANT_EVENT_NAME) != 0) {
-      FXL_LOG(ERROR) << "Expected event not present in event, got: " << event_name.GetString();
+    if (strcmp(event_name.GetString(), kWriteTestEventsInstantEventName) != 0) {
+      FXL_LOG(ERROR) << "Expected event not present in event, got: "
+                     << event_name.GetString();
       return false;
     }
   }
@@ -168,6 +181,32 @@ bool VerifyTestEvents(const std::string& test_output_file, size_t* out_num_event
   FXL_VLOG(1) << array.Size() << " trace events present";
   *out_num_events = array.Size();
   return true;
+}
+
+bool VerifyTestEventsFromFxt(
+    const std::string& test_output_file,
+    trace::TraceReader::RecordConsumer record_consumer) {
+  size_t num_errors = 0;
+  auto error_handler = [&num_errors](fbl::String error) {
+    ++num_errors;
+    if (num_errors <= kMaxErrorCount) {
+      FXL_LOG(ERROR) << "While reading records got error: " << error.c_str();
+    }
+    if (num_errors == kMaxErrorCount) {
+      FXL_LOG(ERROR) << "Remaining errors will not be printed";
+    }
+  };
+
+  std::unique_ptr<trace::FileReader> reader;
+  if (!trace::FileReader::Create(test_output_file.c_str(),
+                                 std::move(record_consumer),
+                                 std::move(error_handler), &reader)) {
+    FXL_LOG(ERROR) << "Error creating trace::FileReader";
+    return false;
+  }
+
+  reader->ReadFile();
+  return num_errors == 0;
 }
 
 void FillBuffer(size_t num_times, size_t buffer_size_in_mb) {
@@ -226,7 +265,7 @@ static size_t GetMinimumNumberOfEvents(tracing::BufferingMode buffering_mode,
 bool VerifyFullBuffer(const std::string& test_output_file, tracing::BufferingMode buffering_mode,
                       size_t buffer_size_in_mb) {
   size_t num_events;
-  if (!VerifyTestEvents(test_output_file, &num_events)) {
+  if (!VerifyTestEventsFromJson(test_output_file, &num_events)) {
     return false;
   }
 
@@ -255,12 +294,16 @@ bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout) {
   }
 
   async::TaskClosure timeout_task([&loop] {
-    FXL_LOG(ERROR) << "Timed out waiting for tracing to start";
     loop.Quit();
   });
   timeout_task.PostDelayed(loop.dispatcher(), timeout);
-  loop.Run();
-  zx_status_t status = loop.ResetQuit();
+  zx_status_t status = loop.Run();
+  if (status != ZX_OK && status != ZX_ERR_CANCELED) {
+    FXL_LOG(ERROR) << "loop.Run() failed, status=" << status;
+    return false;
+  }
+
+  status = loop.ResetQuit();
   FXL_CHECK(status == ZX_OK);
 
   return trace_state() == TRACE_STARTED;

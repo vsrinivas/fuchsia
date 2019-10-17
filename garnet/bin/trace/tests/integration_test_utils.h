@@ -6,9 +6,7 @@
 #define GARNET_BIN_TRACE_TESTS_INTEGRATION_TEST_UTILS_H_
 
 #include <stddef.h>
-
 #include <string>
-#include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -37,8 +35,27 @@ struct IntegrationTest {
 // Here we can verify we got precisely the number of events we expected.
 constexpr size_t kNumSimpleTestEvents = 10;
 
+// If things go really wrong a large number of error messages can appear,
+// which is annoying. Don't print more than this amount.
+constexpr size_t kMaxErrorCount = 20;
+
+// This file is a relative path, from the tmp directory.
+constexpr char kRelativeOutputFilePath[] = "test.trace";
+
+// Smallest buffer possible, 1MB.
+constexpr const char kBufferSizeArg[] = "--buffer-size=1";
+
+// Category used by |WriteTestEvents()|.
+constexpr const char kWriteTestEventsCategoryName[] = "trace:test";
+
+// Event name used by |WriteTestEvents()| instant events.
+constexpr const char kWriteTestEventsInstantEventName[] = "instant";
+
 // When waiting for tracing to start, wait this long.
-constexpr zx::duration kStartTimeout{zx::sec(10)};
+constexpr zx::duration kStartTimeout{zx::sec(60)};
+
+// When waiting for tracing to stop, wait this long.
+constexpr zx::duration kStopTimeout{zx::sec(60)};
 
 // Given |test_name| return its |IntegrationTest| spec.
 const IntegrationTest* LookupTest(const std::string& test_name);
@@ -62,10 +79,20 @@ bool CreateProviderSynchronouslyAndWait(
 // Emit |num_iterations| records that |VerifyTestEvents()| knows how to test.
 void WriteTestEvents(size_t num_records);
 
-// Verify a trace generated with |WriteTestRecords()|.
+// Return true if |record| was emitted by |WriteTestEvents()|.
+bool IsWriteTestEvent(const trace::Record& record);
+
+// Verify a trace generated with |WriteTestEvents()| in json format.
 // Returns a boolean indicating success.
 // On success returns the number of events found in |*out_num_events|.
-bool VerifyTestEvents(const std::string& test_output_file, size_t* out_num_events);
+bool VerifyTestEventsFromJson(const std::string& test_output_file,
+                              size_t* out_num_events);
+
+// Verify a trace generated with |WriteTestEvents()| in binary fxt format.
+// Returns a boolean indicating success.
+bool VerifyTestEventsFromFxt(
+    const std::string& test_output_file,
+    trace::TraceReader::RecordConsumer record_consumer);
 
 // Write as many records as we can to ensure a buffer of size
 // |buffer_size_in_mb| is full, and fill it |num_times|.
@@ -80,7 +107,7 @@ bool VerifyFullBuffer(const std::string& test_output_file, tracing::BufferingMod
 // Basically this means waiting for the Start() request which contains the trace buffer (as a vmo)
 // and other things.
 // |loop| must be idle and not have any background threads.
-// Returns true if tracing has started.
+// Returns true on success.
 bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout);
 
 }  // namespace test

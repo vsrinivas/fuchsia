@@ -85,19 +85,22 @@ source_set("run_test") {
     "run_test.h",
   ]
 
-  deps = [
-    ":component_context",
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/zx",
   ]
 
-  public_deps = [
+  deps = [
+    ":component_context",
+    ":integration_test_utils",
     "//garnet/bin/trace:spec",
+    "//garnet/public/lib/fsl",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -111,14 +114,17 @@ source_set("integration_test_utils") {
 
   public_deps = [
     "//garnet/bin/trace:spec",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
-    "//zircon/public/lib/zx",
+    "//zircon/public/lib/trace-reader",
   ]
 }
 
@@ -134,14 +140,17 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
 
   public_deps = [
     "//garnet/bin/trace:spec",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider-with-static-engine",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace-provider-with-static-engine",
     "//zircon/public/lib/trace-with-static-engine",
-    "//zircon/public/lib/zx",
+    "//zircon/public/lib/trace-reader",
   ]
 }
 
@@ -155,9 +164,8 @@ executable("trace_integration_tests") {
 
   deps = [
     ":gtest_main",
+    ":integration_test_utils",
     ":run_test",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -174,6 +182,7 @@ executable("run_integration_test") {
 
   deps = [
     ":component_context",
+    ":integration_test_utils",
     ":run_test",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -200,7 +209,7 @@ executable("basic_integration_test_app") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/zx",
   ]
 }
@@ -219,7 +228,7 @@ executable("two_providers_one_engine") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/zx",
   ]
 }
@@ -261,7 +270,7 @@ executable("two_providers_two_engines_test_app") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/zx",
   ]
 }
@@ -300,6 +309,7 @@ executable("return_child_result_tests") {
 
   deps = [
     ":gtest_main",
+    ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
   ]
@@ -328,6 +338,7 @@ executable("detach_tests") {
 
   deps = [
     ":gtest_main",
+    ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -344,6 +355,7 @@ executable("ktrace_integration_tests") {
 
   deps = [
     ":gtest_main",
+    ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/trace-reader",
