@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("psutils") {
+  testonly = true
+  deps = [
+    ":ps",
+  ]
+}
+
+test("ps") {
+  sources = [
+    "../../uapp/psutils/ps_internal.c",
+    "ps_test.c",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zxtest",
+  ]
+}

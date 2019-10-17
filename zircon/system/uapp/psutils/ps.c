@@ -16,35 +16,7 @@
 #include <task-utils/get.h>
 #include <task-utils/walker.h>
 
-#define MAX_STATE_LEN (7 + 1)                        // +1 for trailing NUL
-#define MAX_KOID_LEN sizeof("18446744073709551616")  // 1<<64 + NUL
-
-// A single task (job or process).
-typedef struct {
-  char type;  // 'j' (job), 'p' (process), or 't' (thread)
-  char koid_str[MAX_KOID_LEN];
-  char parent_koid_str[MAX_KOID_LEN];
-  int depth;
-  char name[ZX_MAX_NAME_LEN];
-  char state_str[MAX_STATE_LEN];
-  size_t pss_bytes;
-  size_t private_bytes;
-  size_t shared_bytes;
-} task_entry_t;
-
-// An array of tasks.
-typedef struct {
-  task_entry_t* entries;
-  size_t num_entries;
-  size_t capacity;  // allocation size
-} task_table_t;
-
-// Controls what is shown.
-typedef struct {
-  bool also_show_threads;
-  bool only_show_jobs;
-  char format_unit;
-} ps_options_t;
+#include "ps_internal.h"
 
 // Adds a task entry to the specified table. |*entry| is copied.
 // Returns a pointer to the new table entry.
@@ -190,71 +162,6 @@ static zx_status_t thread_callback(void* ctx, int depth, zx_handle_t thread, zx_
   return ZX_OK;
 }
 
-static void print_header(int id_w, const ps_options_t* options) {
-  if (options->also_show_threads) {
-    printf("%*s %7s %7s %7s %7s %s\n", -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "STATE", "NAME");
-  } else if (options->only_show_jobs) {
-    printf("%*s %7s %7s %7s %s\n", -id_w, "TASK", "PSS", "PRIVATE", "STATE", "NAME");
-  } else {
-    printf("%*s %7s %7s %7s %7s %s\n", -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "STATE", "NAME");
-  }
-}
-
-// Prints the contents of |table| to stdout.
-static void print_table(task_table_t* table, const ps_options_t* options) {
-  if (table->num_entries == 0) {
-    return;
-  }
-
-  // Find the width of the id column; the rest are fixed or don't matter.
-  int id_w = 0;
-  for (size_t i = 0; i < table->num_entries; i++) {
-    const task_entry_t* e = table->entries + i;
-    // Indentation + type + : + koid
-    int w = 2 * e->depth + 2 + strlen(e->koid_str);
-    if (w > id_w) {
-      id_w = w;
-    }
-  }
-
-  print_header(id_w, options);
-  char* idbuf = (char*)malloc(id_w + 1);
-  for (size_t i = 0; i < table->num_entries; i++) {
-    const task_entry_t* e = table->entries + i;
-    if (e->type == 't' && !options->also_show_threads) {
-      continue;
-    }
-    snprintf(idbuf, id_w + 1, "%*s%c: %s", e->depth * 2, "", e->type, e->koid_str);
-
-    // Format the size fields for entry types that need them.
-    char pss_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
-    char private_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
-    if (e->type == 'j' || e->type == 'p') {
-      format_size_fixed(pss_bytes_str, sizeof(pss_bytes_str), e->pss_bytes, options->format_unit);
-      format_size_fixed(private_bytes_str, sizeof(private_bytes_str), e->private_bytes,
-                        options->format_unit);
-    }
-    char shared_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
-    if (e->type == 'p') {
-      format_size_fixed(shared_bytes_str, sizeof(shared_bytes_str), e->shared_bytes,
-                        options->format_unit);
-    }
-
-    if (options->also_show_threads) {
-      printf("%*s %7s %7s %7s %7s %s\n", -id_w, idbuf, pss_bytes_str, private_bytes_str,
-             shared_bytes_str, e->state_str, e->name);
-    } else if (options->only_show_jobs) {
-      printf("%*s %7s %7s %7s %s\n", -id_w, idbuf, pss_bytes_str, private_bytes_str, e->state_str,
-             e->name);
-    } else {
-      printf("%*s %7s %7s %7s %7s %s\n", -id_w, idbuf, pss_bytes_str, private_bytes_str,
-             shared_bytes_str, e->state_str, e->name);
-    }
-  }
-  free(idbuf);
-  print_header(id_w, options);
-}
-
 static void print_help(FILE* f) {
   fprintf(f, "Usage: ps [options]\n");
   fprintf(f, "Options:\n");
@@ -317,7 +224,7 @@ int main(int argc, char** argv) {
             status);
     ret = 1;
   }
-  print_table(&tasks, &options);
+  print_table(&tasks, &options, stdout);
   free(tasks.entries);
   return ret;
 }

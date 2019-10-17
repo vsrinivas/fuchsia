@@ -276,6 +276,7 @@ if (current_cpu != "") {
       "processor",
       "profile",
       "property",
+      "psutils",
       "pty",
       "qsort",
       "race-tests",

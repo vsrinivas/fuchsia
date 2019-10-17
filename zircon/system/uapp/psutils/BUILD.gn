@@ -20,6 +20,7 @@ group("psutils") {
 executable("ps") {
   sources = [
     "ps.c",
+    "ps_internal.c",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
