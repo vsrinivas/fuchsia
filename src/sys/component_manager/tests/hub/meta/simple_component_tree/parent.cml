@@ -10,6 +10,7 @@
         {
             "directory": "/hub",
             "from": "framework",
+            "rights": ["r*"],
         },
     ],
     "children": [

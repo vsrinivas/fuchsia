@@ -7,8 +7,8 @@
         "binary": "bin/check_dir_rights",
     },
     "use": [
-        { "directory": "/read_only" },
-        { "directory": "/read_write" },
-        { "directory": "/read_exec" },
+        { "directory": "/read_only" , "rights":["r*"]},
+        { "directory": "/read_write", "rights":["rw*"]},
+        { "directory": "/read_exec", "rights":["rx*"]},
     ],
 }

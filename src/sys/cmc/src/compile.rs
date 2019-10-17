@@ -532,8 +532,8 @@ mod tests {
                     { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                     { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "legacy_service": "/svc/fuchsia.sys2.LegacyRealm", "from": "framework" },
-                    { "directory": "/data/assets" },
-                    { "directory": "/data/config", "from": "realm" },
+                    { "directory": "/data/assets", "rights" : ["read_bytes"]},
+                    { "directory": "/data/config", "from": "realm", "rights": ["read_bytes"]},
                     { "storage": "meta" },
                     { "storage": "cache", "as": "/tmp" },
                 ],
@@ -623,7 +623,7 @@ mod tests {
                       "as": "/svc/fuchsia.logger.LegacyLog",
                       "to": "realm"
                     },
-                    { "directory": "/volumes/blobfs", "from": "self", "to": "framework" },
+                    { "directory": "/volumes/blobfs", "from": "self", "to": "framework", "rights": ["r*"]},
                     { "directory": "/hub", "from": "framework" }
                 ],
                 "children": [
@@ -1075,7 +1075,7 @@ mod tests {
                     { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                 ],
                 "expose": [
-                    { "directory": "/volumes/blobfs", "from": "self" },
+                    { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
                 ],
                 "offer": [
                     {
@@ -1244,7 +1244,7 @@ mod tests {
             "use": [
                 { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                 { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
-                { "directory": "/data/assets" }
+                { "directory": "/data/assets", "rights": ["read_bytes"] }
             ]
         });
         let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"legacy_service":{"source":{"realm":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets"}}]}"#;

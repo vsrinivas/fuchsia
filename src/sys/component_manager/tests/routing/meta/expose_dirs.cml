@@ -10,14 +10,17 @@
         {
             "directory": "/read_only",
             "from": "self",
+            "rights": ["r*"],
         },
         {
             "directory": "/read_write",
             "from": "self",
+            "rights": ["rw*"],
         },
         {
             "directory": "/read_exec",
             "from": "self",
+            "rights": ["rx*"],
         },
     ],
 }

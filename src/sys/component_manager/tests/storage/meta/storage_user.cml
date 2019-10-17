@@ -10,6 +10,7 @@
         {
             "directory": "/data",
             "from": "self",
+            "rights": ["rw*"],
         }
     ],
 }

@@ -12,11 +12,89 @@ lazy_static! {
     pub static ref REFERENCE_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
     pub static ref FROM_RE: Regex =
         Regex::new(r"^(realm|framework|self|#[A-Za-z0-9\-_]+)$").unwrap();
+    pub static ref FROM_SELF_TOKEN: &'static str = "self";
 }
+
+lazy_static! {
+    pub static ref RIGHT_TOKENS: HashMap<&'static str, Vec<Right>> = {
+        let mut tokens = HashMap::new();
+        tokens.insert(
+            "r*",
+            vec![
+                Right::Connect,
+                Right::Enumerate,
+                Right::Traverse,
+                Right::ReadBytes,
+                Right::GetAttributes,
+            ],
+        );
+        tokens.insert(
+            "w*",
+            vec![
+                Right::Connect,
+                Right::Enumerate,
+                Right::Traverse,
+                Right::WriteBytes,
+                Right::ModifyDirectory,
+            ],
+        );
+        tokens
+            .insert("x*", vec![Right::Connect, Right::Enumerate, Right::Traverse, Right::Execute]);
+        tokens.insert(
+            "rw*",
+            vec![
+                Right::Connect,
+                Right::Enumerate,
+                Right::Traverse,
+                Right::ReadBytes,
+                Right::WriteBytes,
+                Right::GetAttributes,
+                Right::UpdateAttributes,
+            ],
+        );
+        tokens.insert(
+            "rx*",
+            vec![
+                Right::Connect,
+                Right::Enumerate,
+                Right::Traverse,
+                Right::ReadBytes,
+                Right::GetAttributes,
+                Right::Execute,
+            ],
+        );
+        tokens.insert("connect", vec![Right::Connect]);
+        tokens.insert("enumerate", vec![Right::Enumerate]);
+        tokens.insert("execute", vec![Right::Execute]);
+        tokens.insert("get_attributes", vec![Right::GetAttributes]);
+        tokens.insert("modify_directory", vec![Right::ModifyDirectory]);
+        tokens.insert("read_bytes", vec![Right::ReadBytes]);
+        tokens.insert("traverse", vec![Right::Traverse]);
+        tokens.insert("update_attributes", vec![Right::UpdateAttributes]);
+        tokens.insert("write_bytes", vec![Right::WriteBytes]);
+        tokens.insert("admin", vec![Right::Admin]);
+        tokens
+    };
+}
+
 pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
+
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub enum Right {
+    Connect,
+    Enumerate,
+    Execute,
+    GetAttributes,
+    ModifyDirectory,
+    ReadBytes,
+    Traverse,
+    UpdateAttributes,
+    WriteBytes,
+    Admin,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct Document {
@@ -72,6 +150,7 @@ pub struct Use {
     pub storage: Option<String>,
     pub from: Option<String>,
     pub r#as: Option<String>,
+    pub rights: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -82,6 +161,7 @@ pub struct Expose {
     pub from: String,
     pub r#as: Option<String>,
     pub to: Option<String>,
+    pub rights: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -93,6 +173,7 @@ pub struct Offer {
     pub from: String,
     pub to: Vec<String>,
     pub r#as: Option<String>,
+    pub rights: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug)]

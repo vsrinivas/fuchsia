@@ -40,6 +40,31 @@
         "cache",
         "meta"
       ]
+    },
+    "rights-clause": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+            "type": "string",
+            "enum": [
+                "r*",
+                "w*",
+                "x*",
+                "rw*",
+                "rx*",
+                "connect",
+                "read_bytes",
+                "write_bytes",
+                "execute",
+                "get_attributes",
+                "update_attributes",
+                "enumerate",
+                "traverse",
+                "modify_directory",
+                "admin"
+            ]
+        }
     }
   },
   "properties": {
@@ -157,6 +182,15 @@
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
+          },
+          "rights": {
+            "title": "Used directory capability rights",
+            "description": "The set of capability rights which are required by this component for this use statement.",
+            "allOf": [{ "$ref": "#/definitions/rights-clause"}],
+            "examples": [
+                ["r*"],
+                ["r*", "write_bytes"]
+            ]
           }
         }
       }
@@ -232,6 +266,15 @@
             "examples": [
               "realm",
               "framework"
+            ]
+          },
+          "rights": {
+            "title": "Exposed directory capability rights",
+            "description": "The set of capability rights which exposed by this component to the destination",
+            "allOf": [{ "$ref": "#/definitions/rights-clause"}],
+            "examples": [
+                ["r*"],
+                ["read_bytes", "write_bytes"]
             ]
           }
         }
@@ -329,6 +372,15 @@
             "examples": [
               "/data/assets/widgets",
               "/svc/fuchsia.ui.Scenic"
+            ]
+          },
+          "rights": {
+            "title": "Offered directory capability rights",
+            "description": "The set of capability rights which offered by this component to the destination",
+            "allOf": [{ "$ref": "#/definitions/rights-clause"}],
+            "examples": [
+                ["r*"],
+                ["read_bytes", "write_bytes"]
             ]
           }
         }

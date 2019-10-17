@@ -214,6 +214,13 @@ impl<'a> ValidationContext<'a> {
             }
             _ => Ok(()),
         }?;
+        // All directory use expressions must have directory rights.
+        if use_.directory.is_some() {
+            match &use_.rights {
+                Some(rights) => self.validate_directory_rights(&rights)?,
+                None => return Err(Error::validate("Rights required for this use statement.")),
+            };
+        }
         Ok(())
     }
 
@@ -236,6 +243,16 @@ impl<'a> ValidationContext<'a> {
     ) -> Result<(), Error> {
         self.validate_source("expose", expose)?;
         let as_clause = expose as &dyn cml::AsClause;
+        if expose.directory.is_some() {
+            if expose.from == cml::FROM_SELF_TOKEN.to_string() || expose.rights.is_some() {
+                match &expose.rights {
+                    Some(rights) => self.validate_directory_rights(&rights)?,
+                    None => return Err(Error::validate(
+                        "Rights required for this expose statement as it is exposing from self.",
+                    )),
+                };
+            }
+        }
         self.validate_target(
             "expose",
             expose,
@@ -285,6 +302,18 @@ impl<'a> ValidationContext<'a> {
 
             // Perform common target validation.
             let as_clause = offer as &dyn cml::AsClause;
+            if offer.directory.is_some() {
+                if offer.from == cml::FROM_SELF_TOKEN.to_string() || offer.rights.is_some() {
+                    match &offer.rights {
+                        Some(rights) => self.validate_directory_rights(&rights)?,
+                        None => {
+                            return Err(Error::validate(
+                                "Rights required for this offer as it is offering from self.",
+                            ))
+                        }
+                    };
+                }
+            }
             self.validate_target(
                 "offer",
                 offer,
@@ -450,6 +479,36 @@ impl<'a> ValidationContext<'a> {
                 "\"{}\" storage is offered to \"{}\" multiple times",
                 storage_type, target_name
             )));
+        }
+        Ok(())
+    }
+
+    /// Validates that directory rights for all route types are valid, i.e that it does not
+    /// contain duplicate rights and exists if the FromClause originates at "self".
+    /// - `keyword` is the keyword for the clause ("offer", "expose", or "use").
+    /// - `source_obj` is the object containing the directory.
+    fn validate_directory_rights(&self, rights_clause: &Vec<String>) -> Result<(), Error> {
+        // Verify all right tokens are valid.
+        let mut rights = HashSet::new();
+        for right_token in rights_clause.iter() {
+            match cml::RIGHT_TOKENS.get::<str>(right_token) {
+                Some(rights_expanded) => {
+                    for right in rights_expanded.iter() {
+                        if !rights.insert(right) {
+                            return Err(Error::validate(format!(
+                                "\"{}\" is duplicated in the rights clause.",
+                                right_token
+                            )));
+                        }
+                    }
+                }
+                None => {
+                    return Err(Error::validate(format!(
+                        "\"{}\" is not a valid right token.",
+                        right_token
+                    )))
+                }
+            }
         }
         Ok(())
     }
@@ -1458,7 +1517,7 @@ mod tests {
             "expose": [
                 // Here are some services to expose.
                 { "service": "/loggers/fuchsia.logger.Log", "from": "#logger", },
-                { "directory": "/volumes/blobfs", "from": "self", },
+                { "directory": "/volumes/blobfs", "from": "self", "rights": ["rw*"]},
             ],
             "children": [
                 {
@@ -1493,8 +1552,15 @@ mod tests {
                   { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                   { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                   { "legacy_service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
-                  { "directory": "/data/assets" },
-                  { "directory": "/data/config", "from": "realm" },
+                  {
+                    "directory": "/data/assets",
+                    "rights": ["rw*"],
+                  },
+                  {
+                    "directory": "/data/config",
+                    "from": "realm",
+                    "rights": ["rx*"],
+                  },
                   { "storage": "data", "as": "/example" },
                   { "storage": "cache", "as": "/tmp" },
                   { "storage": "meta" }
@@ -1538,7 +1604,7 @@ mod tests {
                         "from": "#logger",
                         "as": "/svc/logger"
                     },
-                    { "directory": "/volumes/blobfs", "from": "self" },
+                    { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
                     { "directory": "/hub", "from": "framework" }
                 ],
                 "children": [
@@ -1583,7 +1649,7 @@ mod tests {
                 "expose": [
                     { "service": "/fonts/CoolFonts", "from": "self" },
                     { "service": "/svc/logger", "from": "#logger", "as": "/thing" },
-                    { "directory": "/thing", "from": "self" }
+                    { "directory": "/thing", "from": "self" , "rights": ["rx*"] }
                 ],
                 "children": [
                     {
@@ -1626,7 +1692,8 @@ mod tests {
                     {
                         "directory": "/data/assets",
                         "from": "self",
-                        "to": [ "#echo_server" ]
+                        "to": [ "#echo_server" ],
+                        "rights": ["rw*"]
                     },
                     {
                         "directory": "/data/index",
@@ -2084,10 +2151,140 @@ mod tests {
         },
 
         // constraints
+        test_cml_rights_all => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo/bar",
+                    "rights": ["connect", "enumerate", "read_bytes", "write_bytes",
+                               "execute", "update_attributes", "get_attributes", "traverse",
+                               "modify_directory", "admin"],
+                  },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_rights_invalid => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo/bar",
+                    "rights": ["cAnnect", "enumerate"],
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Enum conditions are not met at /use/0/rights/0")),
+        },
+        test_cml_rights_duplicate => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo/bar",
+                    "rights": ["connect", "connect"],
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "UniqueItems condition is not met at /use/0/rights")),
+        },
+        test_cml_rights_empty => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo/bar",
+                    "rights": [],
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MinItems condition is not met at /use/0/rights")),
+        },
+        test_cml_rights_alias_star_expansion => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo/bar",
+                    "rights": ["r*"],
+                  },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_rights_alias_star_expansion_with_longform => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo/bar",
+                    "rights": ["w*", "read_bytes"],
+                  },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_rights_alias_star_expansion_with_longform_collision => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo/bar",
+                    "rights": ["r*", "read_bytes"],
+                  },
+                ]
+            }),
+            result = Err(Error::validate("\"read_bytes\" is duplicated in the rights clause.")),
+        },
+        test_cml_rights_alias_star_expansion_collision => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo/bar",
+                    "rights": ["w*", "x*"],
+                  },
+                ]
+            }),
+            result = Err(Error::validate("\"x*\" is duplicated in the rights clause.")),
+        },
+        test_cml_rights_use_invalid => {
+            input = json!({
+                "use": [
+                  { "directory": "/foo", },
+                ]
+            }),
+            result = Err(Error::validate("Rights required for this use statement.")),
+        },
+        test_cml_rights_offer_dir_invalid => {
+            input = json!({
+                "offer": [
+                  {
+                    "directory": "/foo",
+                    "from": "self",
+                    "to": [ "#echo_server" ],
+                  },
+                ],
+                "children": [
+                  {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                  }
+                ],
+            }),
+            result = Err(Error::validate("Rights required for this offer as it is offering from self.")),
+        },
+        test_cml_rights_expose_dir_invalid => {
+            input = json!({
+                "expose": [
+                  {
+                    "directory": "/foo/bar",
+                    "from": "self",
+                  },
+                ]
+            }),
+            result = Err(Error::validate("Rights required for this expose statement as it is exposing from self.")),
+        },
         test_cml_path => {
             input = json!({
                 "use": [
-                  { "directory": "/foo/?!@#$%/Bar" },
+                  {
+                    "directory": "/foo/?!@#$%/Bar",
+                    "rights": ["read_bytes"],
+                  },
                 ]
             }),
             result = Ok(()),

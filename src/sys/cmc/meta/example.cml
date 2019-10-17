@@ -27,6 +27,7 @@
     },
     {
       "directory": "/volumes/blobfs",
+      "rights": ["rw*"],
       "from": "self",
       "to": "framework",
     },
