@@ -24,7 +24,7 @@ port_wait and thread sleep being the notable exceptions.
 
 This page is a non-comprehensive index of the zircon documentation.
 
-+ [Getting Started](getting_started.md)
++ [Getting Started](/docs/development/kernel/getting_started.md)
 + [Contributing Patches](/docs/contribute/contributing.md)
 + [`abigen` grammar](abigen/grammar.md)
 + [GN in Zircon](/docs/development/build/zircon_gn.md)
@@ -39,8 +39,8 @@ This page is a non-comprehensive index of the zircon documentation.
 
 + [Process Objects](objects/process.md)
 + [Thread Objects](objects/thread.md)
-+ [Thread local storage](tls.md)
-+ [Thread annotations](thread_annotations.md)
++ [Thread local storage](/docs/development/threads/tls.md)
++ [Thread annotations](/docs/development/threads/thread_annotations.md)
 + [Handles](handles.md)
 + [Lock validation](lockdep.md)
 + [System Calls](/docs/reference/syscalls/README.md)
@@ -50,7 +50,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Driver interfaces - audio overview](driver_interfaces/audio_overview.md)
 
 + [libc](/docs/development/languages/c-cpp/libc.md)
-+ [C++ fit::promise<> guide](fit_promise_guide.md)
++ [C++ fit::promise<> guide](/docs/development/languages/c-cpp/fit_promise_guide.md)
 
 + [Testing](/docs/development/testing/testing.md)
 + [Kernel tracing](/docs/development/tracing/ktrace.md)
@@ -61,7 +61,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [ACPI debugging](/docs/development/debugging/acpi.md)
 + [Fuzzing the FIDL host tools](/docs/development/testing/fuzzing_fidl.md)
 + [Entropy collection TODOs](entropy_collection_todos.md)
-+ [Memory usage analysis tools](memory.md)
++ [Memory usage analysis tools](/docs/development/memory/memory.md)
 + [Symbolizer](/docs/reference/kernel/symbolizer_markup.md)
 + [Relationship with LK](zx_and_lk.md)
 + [Micro-benchmarks](/docs/development/benchmarking/microbenchmarks.md)

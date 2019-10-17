@@ -4,7 +4,7 @@
 
 Fuchsia has a debugger for native code (C++ and Rust) called zxdb.
 
-Please see the [zxdb documentation](../debugger/README.md) for more details.
+Please see the [zxdb documentation](/docs/development/debugger/README.md) for more details.
 
 ## Backtraces
 
@@ -91,5 +91,5 @@ void my_function() {
 ### Inspecting FIDL messages
 
 Fuchsia has a tool for viewing FIDL messages as they are sent and received. See
-details at [the doc page for fidl inspection](../fidl_inspecting/README.md).
+details at [the doc page for fidl inspection](/docs/development/tools/fidl_inspecting/README.md).
 

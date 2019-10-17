@@ -1,10 +1,22 @@
-# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Developing with Fuchsia on a NUC"
-  path: /docs/development/hardware/developing_on_nuc.md
-- title: "Preparing to install Fuchsia on Pixelbook"
+- title: "Install Fuchsia on Pixelbook"
   path: /docs/development/hardware/pixelbook.md
-- title: "Configuring remote management for NUC"
+- title: "Install Fuchsia on NUC"
+  path: /docs/development/hardware/developing_on_nuc.md
+- title: "Configure remote management for NUC"
   path: /docs/development/hardware/nuc-remote-management.md
+- title: "Prepare a USB flash drive to be a bootable disk"
+  path: /docs/development/hardware/usb_setup.md
+- title: "Install Fuchsia on Acer Switch Alpha 12"
+  path: /docs/development/hardware/acer12.md
+- title: "Install Fuchsia on iMX8M EVK"
+  path: /docs/development/hardware/imx8mevk.md
+- title: "Install Fuchsia on HiKey960"
+  path: /docs/development/hardware/hikey960.md
+- title: "Install Fuchsia on Khadas VIM2 board"
+  path: /docs/development/hardware/khadas-vim.md
+- title: "Install Fuchsia on Toulouse"
+  path: /docs/development/hardware/toulouse.md

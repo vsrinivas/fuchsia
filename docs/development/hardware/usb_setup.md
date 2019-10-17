@@ -1,4 +1,4 @@
-# Setup with a USB Flash Drive
+# Prepare a USB flash drive to be a bootable disk
 
 These instructions prepare a USB flash drive to be a bootable disk for your
 device: this procedure only enables you to netboot or pave, it won't put

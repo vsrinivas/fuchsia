@@ -102,12 +102,12 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Editor configurations](/docs/development/editors/README.md)
 
 
-[acer_12]: /docs/zircon/targets/acer12.md "Acer 12"
-[pixelbook]: hardware/pixelbook.md "Pixelbook"
-[toulouse]: /docs/zircon/targets/toulouse.md "Toulouse"
-[khadas-vim]: /docs/zircon/targets/khadas-vim.md "Khadas VIM2"
-[imx8mevk]: /docs/zircon/targets/imx8mevk.md "iMX8M EVK"
-[hikey960]: /docs/zircon/targets/hikey960.md "HiKey960 (96boards.org)"
+[acer_12]: /docs/development/hardware/acer12.md "Acer 12"
+[pixelbook]: /docs/development/hardware/pixelbook.md "Pixelbook"
+[toulouse]: /docs/development/hardware/toulouse.md "Toulouse"
+[khadas-vim]: /docs/development/hardware/khadas-vim.md "Khadas VIM2"
+[imx8mevk]: /docs/development/hardware/imx8mevk.md "iMX8M EVK"
+[hikey960]: /docs/development/hardware/hikey960.md "HiKey960 (96boards.org)"
 
 [fidl-style]: /docs/development/languages/fidl/style.md
 [fidl-api]: /docs/development/api/fidl.md

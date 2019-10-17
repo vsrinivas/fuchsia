@@ -28,3 +28,5 @@ toc:
   path: /docs/development/languages/c-cpp/cxx.md
 - title: "Compile time collections"
   path: /docs/development/languages/c-cpp/compile_time_object_collections.md
+- title: "fit::promise<> guide"
+  path: /docs/development/languages/c-cpp/fit_promise_guide.md

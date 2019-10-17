@@ -1,4 +1,4 @@
-# Preparing to install Fuchsia on Pixelbook
+# Install Fuchsia on Pixelbook
 
 ## Prerequisites
 Ensure that you have a chromebook build for Fuchsia. Note that Chromebook is now a

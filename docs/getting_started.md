@@ -8,7 +8,7 @@ Fuchsia.
 Note: The Fuchsia source includes [Zircon](/zircon/README.md),
 the core platform that underpins Fuchsia. The Fuchsia build process will
 build Zircon as a side-effect; to work on Zircon only, read and follow
-Zircon's [Getting Started](/docs/zircon/getting_started.md) doc.
+Zircon's [Getting Started](/docs/development/kernel/getting_started.md) doc.
 
 [TOC]
 
@@ -288,7 +288,7 @@ You may wish to peruse the [testing FAQ](development/testing/faq.md).
 
 * [Fuchsia documentation](README.md) hub
 * Working with Zircon - [copying files, network booting, log viewing, and
-more](/docs/zircon/getting_started.md#Copying-files-to-and-from-Zircon)
+more](/docs/development/kernel/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Documentation Standards](/docs/contribute/best-practices/documentation_standards.md) - best practices
   for documentation
 * [Information on the system bootstrap component](/src/sys/sysmgr/).

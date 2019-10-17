@@ -33,8 +33,6 @@ toc:
   path: /docs/zircon/ddk/firmware.md
 - title: Tutorial presentations
   section:
-  - title: "The Banjo tutorial"
-    path: /docs/zircon/ddk/banjo-tutorial.md
   - title: "The Driver Development Kit tutorial"
     path: /docs/zircon/ddk/ddk-tutorial.md
 - title: "Advanced topics and tips"

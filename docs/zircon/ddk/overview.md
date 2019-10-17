@@ -11,5 +11,5 @@
 ## Tutorial presentations
 
 * [Driver Development Kit tutorial](ddk-tutorial.md)
-* [Banjo tutorial](banjo-tutorial.md)
+* [Banjo tutorial](/docs/development/tools/banjo-tutorial.md)
 

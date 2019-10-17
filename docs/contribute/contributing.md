@@ -18,7 +18,7 @@ incomplete and will be expanded over time.
 
 *   Additionally, make sure Zircon is buildable for all major targets (x86-64, arm64) at every
     change. Using `fx multi bringup-cq` can help with this.
-    See [Building Zircon for all targets](/docs/zircon/getting_started.md#building_zircon_for_all_targets)
+    See [Building Zircon for all targets](/docs/development/kernel/getting_started.md#building_zircon_for_all_targets)
     for more information.
 
 *   Avoid breaking the unit tests. Boot Zircon and [run the tests](/docs/development/testing/testing.md) to verify that

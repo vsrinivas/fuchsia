@@ -198,7 +198,7 @@ allowing the device being booted to advertise its bootability and the host to fi
 it and send a system image to it.
 
 If you have a device (for example a Broadwell or Skylake Intel NUC) running
-GigaBoot20x6, first [create a USB drive](/docs/zircon/targets/usb_setup.md).
+GigaBoot20x6, first [create a USB drive](/docs/development/hardware/usb_setup.md).
 
 ```
 $BUILDDIR/tools/bootserver $BUILDDIR/zircon.bin

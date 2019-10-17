@@ -5,19 +5,11 @@ toc:
 - title: "Overview"
   path: /docs/zircon
 
-- title: "Getting started"
-  path: /docs/zircon/getting_started.md
-
 - title: "Architecture support"
   path: /docs/zircon/architecture_support.md
 
 - title: "Concepts"
   path: /docs/zircon/concepts.md
-
-- title: "C++"
-  section:
-  - title: "fit::promise<> guide"
-    path: /docs/zircon/fit_promise_guide.md
 
 - title: Objects
   section:
@@ -58,12 +50,6 @@ toc:
 - title: "Signals"
   path: /docs/zircon/signals.md
 
-- title: "Thread safety annotations"
-  path:  /docs/zircon/thread_annotations.md
-
-- title: "Thread local storage"
-  path: /docs/zircon/tls.md
-
 - title: "Runtime locks"
   section:
   - title: Overview
@@ -103,13 +89,6 @@ toc:
 - title: "DDK"
   section:
   - include: /docs/zircon/ddk/_toc.yaml
-
-- title: "Targets"
-  section:
-  - include: /docs/zircon/targets/_toc.yaml
-
-- title: "Memory usage analysis tools"
-  path: /docs/zircon/memory.md
 
 - title: "Out of memory system"
   path: /docs/zircon/oom.md

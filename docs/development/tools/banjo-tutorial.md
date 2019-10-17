@@ -1,6 +1,6 @@
 # The Banjo Tutorial
 
-This document is part of the [Zircon Driver Development Kit](overview.md) documentation.
+This document is part of the [Zircon Driver Development Kit](/docs/zircon/ddk/overview.md) documentation.
 
 [TOC]
 

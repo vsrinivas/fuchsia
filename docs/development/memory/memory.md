@@ -4,8 +4,8 @@ This file contains information about memory and resource management in Zircon,
 and talks about ways to examine process and system memory usage.
 
 Note: **TODO**(dbort): Talk about the relationship between address spaces,
-[VMARs](objects/vm_address_region.md), [mappings](/docs/reference/syscalls/vmar_map.md), and
-[VMOs](objects/vm_object.md)
+[VMARs](/docs/zircon/objects/vm_address_region.md), [mappings](/docs/reference/syscalls/vmar_map.md), and
+[VMOs](/docs/zircon/objects/vm_object.md)
 
 [TOC]
 

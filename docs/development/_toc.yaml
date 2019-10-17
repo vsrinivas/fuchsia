@@ -25,6 +25,12 @@ toc:
 - title: "Inspect components"
   section:
   - include: /docs/development/inspect/_toc.yaml
+- title: "Manage memory"
+  section:
+  - include: /docs/development/memory/_toc.yaml
+- title: "Manage threads"
+  section:
+  - include: /docs/development/threads/_toc.yaml
 - title: "Develop using the SDK"
   section:
   - include: /docs/development/sdk/_toc.yaml

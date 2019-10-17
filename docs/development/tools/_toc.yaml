@@ -4,10 +4,12 @@
 toc:
 - title: "Fidlcat"
   section:
-  - include: /docs/development/fidl_inspecting/_toc.yaml
+  - include: /docs/development/tools/fidl_inspecting/_toc.yaml
+- title: "Banjo"
+  path: /docs/development/tools/banjo-tutorial.md
 - title: "System monitor"
   section:
-  - include: /docs/development/system_monitor/_toc.yaml
+  - include: /docs/development/tools/system_monitor/_toc.yaml
 - title: "Debugger"
   section:
   - include: /docs/development/debugger/_toc.yaml

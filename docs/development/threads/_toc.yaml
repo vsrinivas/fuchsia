@@ -2,7 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Fidlcat overview"
-  path: /docs/development/fidl_inspecting
-- title: "Fidlcat guide"
-  path: /docs/development/fidl_inspecting/fidlcat_usage.md
+- title: "Thread safety annotations"
+  path:  /docs/development/threads/thread_annotations.md
+- title: "Thread local storage"
+  path: /docs/development/threads/tls.md

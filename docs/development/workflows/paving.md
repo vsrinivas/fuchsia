@@ -59,7 +59,7 @@ this is typically device-specific. For the guides listed below, **only** go
 through the steps to set the boot device, don't continue with any instructions on
 creating install media.
 
-* [Acer Switch Alpha 12](/docs/zircon/targets/acer12.md)
+* [Acer Switch Alpha 12](/docs/development/hardware/acer12.md)
 * [Intel NUC](/docs/development/hardware/developing_on_nuc.md)
 * [Google Pixelbook](/docs/development/hardware/pixelbook.md)
 
