@@ -125,6 +125,7 @@ class _BrightnessModel {
   double get brightness => _brightness;
   set brightness(double value) {
     _brightness = value;
+    _auto = false;
     control.setManualBrightness(value);
     onChange?.call();
   }
