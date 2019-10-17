@@ -13,6 +13,7 @@ pub mod test_utils;
 
 pub mod directory;
 pub mod file;
+pub mod service;
 
 pub mod tree_builder;
 
