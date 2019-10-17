@@ -10,6 +10,7 @@
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/logger.h>
@@ -139,23 +140,9 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class DataProviderTest : public sys::testing::TestWithEnvironment {
+class DataProviderTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override { SetUpDataProvider(kDefaultConfig); }
-
-  void TearDown() override {
-    if (!controller_) {
-      return;
-    }
-    controller_->Kill();
-    bool done = false;
-    controller_.events().OnTerminated = [&done](int64_t code,
-                                                fuchsia::sys::TerminationReason reason) {
-      FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
-      done = true;
-    };
-    RunLoopUntil([&done] { return done; });
-  }
 
  protected:
   void SetUpDataProvider(const Config& config) {
@@ -183,43 +170,23 @@ class DataProviderTest : public sys::testing::TestWithEnvironment {
               ZX_OK);
   }
 
-  // Injects a test app that exposes some Inspect data in the test environment.
-  //
-  // Useful to guarantee there is a component within the environment that exposes Inspect data as we
-  // are excluding system_objects paths from the Inspect discovery and the test component itself
-  // only has a system_objects Inspect node.
-  void InjectInspectTestApp() {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url =
-        "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/"
-        "inspect_test_app.cmx";
-    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
-    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
-    bool ready = false;
-    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
-    RunLoopUntil([&ready] { return ready; });
-  }
-
   GetScreenshotResponse GetScreenshot() {
     GetScreenshotResponse out_response;
-    bool has_out_response = false;
-    data_provider_->GetScreenshot(ImageEncoding::PNG, [&out_response, &has_out_response](
-                                                          std::unique_ptr<Screenshot> screenshot) {
-      out_response.screenshot = std::move(screenshot);
-      has_out_response = true;
-    });
-    RunLoopUntil([&has_out_response] { return has_out_response; });
+    data_provider_->GetScreenshot(ImageEncoding::PNG,
+                                  [&out_response](std::unique_ptr<Screenshot> screenshot) {
+                                    out_response.screenshot = std::move(screenshot);
+                                  });
+    RunLoopUntilIdle();
     return out_response;
   }
 
   fit::result<Data, zx_status_t> GetData() {
     fit::result<Data, zx_status_t> out_result;
-    bool has_out_result = false;
-    data_provider_->GetData([&out_result, &has_out_result](fit::result<Data, zx_status_t> result) {
-      out_result = std::move(result);
-      has_out_result = true;
-    });
-    RunLoopUntil([&has_out_result] { return has_out_result; });
+    data_provider_->GetData(
+        [&out_result](fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
+    // The Inspect data collection happens in a different thread so we need to wait for the timeout
+    // of 10s.
+    RunLoopFor(zx::sec(10));
     return out_result;
   }
 
@@ -241,8 +208,6 @@ class DataProviderTest : public sys::testing::TestWithEnvironment {
 
  private:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::sys::ComponentControllerPtr controller_;
 
   std::unique_ptr<StubScenic> stub_scenic_;
   std::unique_ptr<StubLogger> stub_logger_;
@@ -279,9 +244,7 @@ TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
 
 TEST_F(DataProviderTest, GetScreenshot_FailOnScenicNotAvailable) {
   SetUpScenic(nullptr);
-
   GetScreenshotResponse feedback_response = GetScreenshot();
-
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
@@ -335,8 +298,8 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
                                     feedback_responses.push_back({std::move(screenshot)});
                                   });
   }
-  RunLoopUntil([&feedback_responses] { return feedback_responses.size() == num_calls; });
-
+  RunLoopUntilIdle();
+  EXPECT_EQ(feedback_responses.size(), num_calls);
   EXPECT_TRUE(get_scenic_responses().empty());
 
   // We cannot assume that the order of the DataProvider::GetScreenshot() calls match the order
@@ -376,12 +339,14 @@ TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) 
                                     feedback_responses.push_back({std::move(screenshot)});
                                   });
   }
-  RunLoopUntil([&feedback_responses] { return feedback_responses.size() == num_calls; });
+  RunLoopUntilIdle();
+  EXPECT_EQ(feedback_responses.size(), num_calls);
 
   EXPECT_EQ(total_num_scenic_bindings(), num_calls);
   // The unbinding is asynchronous so we need to run the loop until all the outstanding connections
   // are actually close in the stub.
-  RunLoopUntil([this] { return current_num_scenic_bindings() == 0u; });
+  RunLoopUntilIdle();
+  EXPECT_EQ(current_num_scenic_bindings(), 0u);
 }
 
 TEST_F(DataProviderTest, GetData_SmokeTest) {
@@ -505,93 +470,6 @@ TEST_F(DataProviderTest, GetData_SysLog) {
               testing::Contains(MatchesAttachment(kAttachmentLogSystem, expected_syslog)));
 }
 
-constexpr char kInspectJsonSchema[] = R"({
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "path": {
-        "type": "string"
-      },
-      "contents": {
-        "type": "object"
-      }
-    },
-    "required": [
-      "path",
-      "contents"
-    ],
-    "additionalProperties": false
-  },
-  "uniqueItems": true
-})";
-
-TEST_F(DataProviderTest, GetData_Inspect) {
-  InjectInspectTestApp();
-
-  fit::result<Data, zx_status_t> result = GetData();
-
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-
-  // There should be an "inspect.json" attachment.
-  ASSERT_TRUE(data.has_attachments());
-  bool found_inspect_attachment = false;
-  std::string inspect_json;
-  for (const auto& attachment : data.attachments()) {
-    if (attachment.key != kAttachmentInspect) {
-      continue;
-    }
-    found_inspect_attachment = true;
-
-    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_json));
-    ASSERT_FALSE(inspect_json.empty());
-
-    // JSON verification.
-    // We check that the output is a valid JSON and that it matches the schema.
-    rapidjson::Document json;
-    ASSERT_FALSE(json.Parse(inspect_json.c_str()).HasParseError());
-    rapidjson::Document schema_json;
-    ASSERT_FALSE(schema_json.Parse(kInspectJsonSchema).HasParseError());
-    rapidjson::SchemaDocument schema(schema_json);
-    rapidjson::SchemaValidator validator(schema);
-    EXPECT_TRUE(json.Accept(validator));
-
-    // We then check that we get the expected Inspect data for the injected test app.
-    bool has_entry_for_test_app = false;
-    for (const auto& obj : json.GetArray()) {
-      const std::string path = obj["path"].GetString();
-      if (path.find("inspect_test_app.cmx") != std::string::npos) {
-        has_entry_for_test_app = true;
-        const auto contents = obj["contents"].GetObject();
-        ASSERT_TRUE(contents.HasMember("root"));
-        const auto root = contents["root"].GetObject();
-        ASSERT_TRUE(root.HasMember("obj1"));
-        ASSERT_TRUE(root.HasMember("obj2"));
-        const auto obj1 = root["obj1"].GetObject();
-        const auto obj2 = root["obj2"].GetObject();
-        ASSERT_TRUE(obj1.HasMember("version"));
-        ASSERT_TRUE(obj2.HasMember("version"));
-        EXPECT_STREQ(obj1["version"].GetString(), "1.0");
-        EXPECT_STREQ(obj2["version"].GetString(), "1.0");
-        ASSERT_TRUE(obj1.HasMember("value"));
-        ASSERT_TRUE(obj2.HasMember("value"));
-        EXPECT_EQ(obj1["value"].GetUint(), 100u);
-        EXPECT_EQ(obj2["value"].GetUint(), 200u);
-      }
-    }
-    EXPECT_TRUE(has_entry_for_test_app);
-  }
-  EXPECT_TRUE(found_inspect_attachment);
-
-  // That same "inspect.json" attachment should be present in the attachment bundle.
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
-  EXPECT_THAT(unpacked_attachments,
-              testing::Contains(MatchesAttachment(kAttachmentInspect, inspect_json)));
-}
-
 TEST_F(DataProviderTest, GetData_Channel) {
   SetUpChannelProvider("my-channel");
 
@@ -676,6 +554,164 @@ TEST_F(DataProviderTest, GetData_UnknownAllowlistedAttachment) {
   std::vector<Attachment> unpacked_attachments;
   UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
+}
+
+// Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL interface when we need to
+// control the test environment, e.g. to inject additional components.
+//
+// This does not test the environment service. It directly instantiates the class, without
+// connecting through FIDL.
+class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
+ public:
+  void SetUp() override { SetUpDataProvider(kDefaultConfig); }
+
+  void TearDown() override {
+    if (!controller_) {
+      return;
+    }
+    controller_->Kill();
+    bool done = false;
+    controller_.events().OnTerminated = [&done](int64_t code,
+                                                fuchsia::sys::TerminationReason reason) {
+      FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
+      done = true;
+    };
+    RunLoopUntil([&done] { return done; });
+  }
+
+ protected:
+  void SetUpDataProvider(const Config& config) {
+    data_provider_.reset(
+        new DataProvider(dispatcher(), service_directory_provider_.service_directory(), config));
+  }
+
+  // Injects a test app that exposes some Inspect data in the test environment.
+  //
+  // Useful to guarantee there is a component within the environment that exposes Inspect data as we
+  // are excluding system_objects paths from the Inspect discovery and the test component itself
+  // only has a system_objects Inspect node.
+  void InjectInspectTestApp() {
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
+    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
+    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
+    bool ready = false;
+    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
+    RunLoopUntil([&ready] { return ready; });
+  }
+
+  fit::result<Data, zx_status_t> GetData() {
+    fit::result<Data, zx_status_t> out_result;
+    bool has_out_result = false;
+    data_provider_->GetData([&out_result, &has_out_result](fit::result<Data, zx_status_t> result) {
+      out_result = std::move(result);
+      has_out_result = true;
+    });
+    RunLoopUntil([&has_out_result] { return has_out_result; });
+    return out_result;
+  }
+
+  void UnpackAttachmentBundle(const Data& data, std::vector<Attachment>* unpacked_attachments) {
+    ASSERT_TRUE(data.has_attachment_bundle());
+    const auto& attachment_bundle = data.attachment_bundle();
+    EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
+    ASSERT_TRUE(Unpack(attachment_bundle.value, unpacked_attachments));
+    EXPECT_EQ(unpacked_attachments->size(), data.attachments().size());
+  }
+
+  std::unique_ptr<DataProvider> data_provider_;
+
+ private:
+  sys::testing::ServiceDirectoryProvider service_directory_provider_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  fuchsia::sys::ComponentControllerPtr controller_;
+};
+
+constexpr char kInspectJsonSchema[] = R"({
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "contents": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "path",
+      "contents"
+    ],
+    "additionalProperties": false
+  },
+  "uniqueItems": true
+})";
+
+TEST_F(DataProviderTestWithEnv, GetData_Inspect) {
+  InjectInspectTestApp();
+
+  fit::result<Data, zx_status_t> result = GetData();
+
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+
+  // There should be an "inspect.json" attachment.
+  ASSERT_TRUE(data.has_attachments());
+  bool found_inspect_attachment = false;
+  std::string inspect_json;
+  for (const auto& attachment : data.attachments()) {
+    if (attachment.key != kAttachmentInspect) {
+      continue;
+    }
+    found_inspect_attachment = true;
+
+    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_json));
+    ASSERT_FALSE(inspect_json.empty());
+
+    // JSON verification.
+    // We check that the output is a valid JSON and that it matches the schema.
+    rapidjson::Document json;
+    ASSERT_FALSE(json.Parse(inspect_json.c_str()).HasParseError());
+    rapidjson::Document schema_json;
+    ASSERT_FALSE(schema_json.Parse(kInspectJsonSchema).HasParseError());
+    rapidjson::SchemaDocument schema(schema_json);
+    rapidjson::SchemaValidator validator(schema);
+    EXPECT_TRUE(json.Accept(validator));
+
+    // We then check that we get the expected Inspect data for the injected test app.
+    bool has_entry_for_test_app = false;
+    for (const auto& obj : json.GetArray()) {
+      const std::string path = obj["path"].GetString();
+      if (path.find("inspect_test_app.cmx") != std::string::npos) {
+        has_entry_for_test_app = true;
+        const auto contents = obj["contents"].GetObject();
+        ASSERT_TRUE(contents.HasMember("root"));
+        const auto root = contents["root"].GetObject();
+        ASSERT_TRUE(root.HasMember("obj1"));
+        ASSERT_TRUE(root.HasMember("obj2"));
+        const auto obj1 = root["obj1"].GetObject();
+        const auto obj2 = root["obj2"].GetObject();
+        ASSERT_TRUE(obj1.HasMember("version"));
+        ASSERT_TRUE(obj2.HasMember("version"));
+        EXPECT_STREQ(obj1["version"].GetString(), "1.0");
+        EXPECT_STREQ(obj2["version"].GetString(), "1.0");
+        ASSERT_TRUE(obj1.HasMember("value"));
+        ASSERT_TRUE(obj2.HasMember("value"));
+        EXPECT_EQ(obj1["value"].GetUint(), 100u);
+        EXPECT_EQ(obj2["value"].GetUint(), 200u);
+      }
+    }
+    EXPECT_TRUE(has_entry_for_test_app);
+  }
+  EXPECT_TRUE(found_inspect_attachment);
+
+  // That same "inspect.json" attachment should be present in the attachment bundle.
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(data, &unpacked_attachments);
+  EXPECT_THAT(unpacked_attachments,
+              testing::Contains(MatchesAttachment(kAttachmentInspect, inspect_json)));
 }
 
 }  // namespace
