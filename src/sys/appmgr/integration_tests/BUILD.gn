@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
@@ -78,12 +79,18 @@ executable("hub_tests") {
   ]
 }
 
-test_package("appmgr_integration_tests") {
-  deprecated_shell = "//build"
+config_data("sysmgr_config") {
+  for_pkg = "appmgr_integration_tests"
+  sources = [
+    rebase_path("//src/sys/sysmgr/config/services.config"),
+  ]
+}
 
+test_package("appmgr_integration_tests") {
   deps = [
     ":hub_tests",
     ":realm_tests",
+    ":sysmgr_config",
     "//src/sys/appmgr/integration_tests/inspect:bin-vmo",
   ]
 

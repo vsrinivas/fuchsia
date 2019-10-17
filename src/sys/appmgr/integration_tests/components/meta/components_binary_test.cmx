@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.sys.Environment",

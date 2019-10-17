@@ -214,8 +214,6 @@ group("unittests") {
 }
 
 test_package("appmgr_unittests") {
-  deprecated_shell = "//build"
-
   deps = [
     ":unittest_bin",
   ]

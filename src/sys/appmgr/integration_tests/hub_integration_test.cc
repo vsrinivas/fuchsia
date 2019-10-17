@@ -87,7 +87,7 @@ TEST_F(HubTest, Services) {
     EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
     const std::string path = *glob.begin();
 
-    // Expected files are built-in services plus sysmgr services.
+    // Expect at least these built-in services
     std::vector<std::string> expected_files = {".",
                                                "fuchsia.boot.FactoryItems",
                                                "fuchsia.boot.ReadOnlyLog",
@@ -112,9 +112,6 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.sys.test.CacheControl",
                                                "fuchsia.virtualconsole.SessionManager"};
     sysmgr::Config config;
-    // The following path is deprecated, and because config-data is component
-    // name isolated, it will be impossible to continue to do this in future:
-    ASSERT_TRUE(config.ParseFromDirectory("/pkgfs/packages/config-data/0/data/sysmgr"));
     const auto service_map = config.TakeServices();
     for (const auto& e : service_map) {
       expected_files.push_back(e.first);
@@ -123,13 +120,7 @@ TEST_F(HubTest, Services) {
     // readdir should list all services.
     std::vector<std::string> files;
     ASSERT_TRUE(files::ReadDirContents(path, &files));
-    EXPECT_THAT(files, ::testing::UnorderedElementsAreArray(expected_files));
-
-    // Try looking up an individual service.
-    const std::string service_path = fxl::Concatenate({path, "/", service_map.begin()->first});
-    EXPECT_TRUE(files::IsFile(service_path)) << service_path;
-    const std::string bogus_path = fxl::Concatenate({path, "/does_not_exist"});
-    EXPECT_FALSE(files::IsFile(bogus_path)) << bogus_path;
+    EXPECT_THAT(expected_files, ::testing::IsSubsetOf(files));
   }
 }
 

@@ -1,14 +1,5 @@
 /boot/bin/run-vc
-fuchsia-pkg://fuchsia.com/appmgr_hub_integration_tests#meta/appmgr_hub_integration_tests.cmx
-fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/appmgr_hub_integration_tests.cmx
-fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/appmgr_realm_integration_tests.cmx
-fuchsia-pkg://fuchsia.com/appmgr_realm_integration_tests#meta/appmgr_realm_integration_tests.cmx
-fuchsia-pkg://fuchsia.com/appmgr_unittests#meta/appmgr_unittests.cmx
 fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx
-fuchsia-pkg://fuchsia.com/chrealm_integration_test#meta/chrealm_integration_test.cmx
-fuchsia-pkg://fuchsia.com/chrealm_integrationtests#meta/chrealm_integration_test.cmx
-fuchsia-pkg://fuchsia.com/components_binary_test#meta/components_binary_test.cmx
-fuchsia-pkg://fuchsia.com/components_binary_tests#meta/components_binary_test.cmx
 fuchsia-pkg://fuchsia.com/coordinator_tests#meta/devcoordinator-boot-args-test.cmx
 fuchsia-pkg://fuchsia.com/coordinator_tests#meta/devcoordinator-system-instance-test.cmx
 fuchsia-pkg://fuchsia.com/coordinator_tests#meta/devcoordinator-task-test.cmx
@@ -32,4 +23,3 @@ fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx
 fuchsia-pkg://fuchsia.com/slider_mod_tests#meta/slider_mod_tests.cmx
 fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx
 fuchsia-pkg://fuchsia.com/test_harness_fixture_test#meta/test_harness_fixture_test_bin.cmx
-test_namespace

@@ -119,14 +119,7 @@ TEST_F(RealmTest, Resolve) {
         ASSERT_EQ(ZX_OK, status);
 
         std::string expect;
-        // One day, when this test is not run in the shell realm, it should
-        // read:
-        // files::ReadFileToString("/pkg/test/appmgr_realm_integration_tests",
-        // &expect);
-        files::ReadFileToString(
-            "/pkgfs/packages/appmgr_integration_tests/0/test/"
-            "appmgr_realm_integration_tests",
-            &expect);
+        files::ReadFileToString("/pkg/test/appmgr_realm_integration_tests", &expect);
         ASSERT_FALSE(expect.empty());
 
         std::vector<char> buf(expect.length());

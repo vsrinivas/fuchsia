@@ -4,7 +4,9 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+            "hub",
+            "shell-commands",
+            "system-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",
