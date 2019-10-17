@@ -57,7 +57,7 @@ use std::fmt::Debug;
 use std::time;
 
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
+use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither};
 use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, EmptyBuf};
 use rand::{CryptoRng, RngCore};
@@ -364,7 +364,8 @@ pub trait EventDispatcher:
     + DeviceLayerEventDispatcher<EmptyBuf>
     + IpLayerEventDispatcher<Buf<Vec<u8>>>
     + IpLayerEventDispatcher<EmptyBuf>
-    + TransportLayerEventDispatcher
+    + TransportLayerEventDispatcher<Ipv4>
+    + TransportLayerEventDispatcher<Ipv6>
 {
     /// The type of an instant in time.
     ///

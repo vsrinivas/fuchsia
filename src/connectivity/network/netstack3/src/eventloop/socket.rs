@@ -80,7 +80,7 @@ impl SocketControlWorker {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 }

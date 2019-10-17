@@ -61,7 +61,7 @@ pub(crate) mod udp;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use net_types::ip::{Ipv4, Ipv6};
+use net_types::ip::{Ip, Ipv4, Ipv6};
 
 use crate::data_structures::IdMap;
 use crate::transport::udp::UdpEventDispatcher;
@@ -94,7 +94,7 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(_ctx: &mut Context<D>, id: Tran
 /// An event dispatcher for the transport layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
-pub trait TransportLayerEventDispatcher: UdpEventDispatcher {}
+pub trait TransportLayerEventDispatcher<I: Ip>: UdpEventDispatcher<I> {}
 
 /// A bidirectional map between listeners and addresses.
 ///

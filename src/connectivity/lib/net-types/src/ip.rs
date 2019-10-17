@@ -198,6 +198,9 @@ pub trait Ip:
     /// The subnet of link-local addresses.
     const LINK_LOCAL_SUBNET: Subnet<Self::Addr>;
 
+    /// "IPv4" or "IPv6".
+    const NAME: &'static str;
+
     /// The address type for this IP version.
     ///
     /// [`Ipv4Addr`] for IPv4 and [`Ipv6Addr`] for IPv6.
@@ -235,6 +238,7 @@ impl Ip for Ipv4 {
     /// [RFC 3927 Section 2.1]: https://tools.ietf.org/html/rfc3927#section-2.1
     const LINK_LOCAL_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([169, 254, 0, 0]), prefix: 16 };
+    const NAME: &'static str = "IPv4";
     type Addr = Ipv4Addr;
 }
 
@@ -296,6 +300,7 @@ impl Ip for Ipv6 {
         network: Ipv6Addr::new([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
         prefix: 10,
     };
+    const NAME: &'static str = "IPv6";
     type Addr = Ipv6Addr;
 }
 

@@ -108,7 +108,7 @@ use futures::prelude::*;
 use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::IpVersion;
+use net_types::ip::{Ip, IpVersion};
 use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, Serializer};
 use rand::rngs::OsRng;
@@ -170,7 +170,7 @@ impl EthernetSetupWorker {
                 sender.unbounded_send(eth_device_event)?;
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 }
@@ -197,7 +197,7 @@ impl EthernetWorker {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 }
@@ -873,9 +873,9 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for EventLoopInner {
     }
 }
 
-impl UdpEventDispatcher for EventLoopInner {}
+impl<I: Ip> UdpEventDispatcher<I> for EventLoopInner {}
 
-impl TransportLayerEventDispatcher for EventLoopInner {}
+impl<I: Ip> TransportLayerEventDispatcher<I> for EventLoopInner {}
 
 impl Icmpv4EventDispatcher for EventLoopInner {}
 

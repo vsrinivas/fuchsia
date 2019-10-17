@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Formatter};
 
 use net_types::ip::{Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither};
 use net_types::SpecifiedAddr;
@@ -19,6 +19,7 @@ use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 /// Typically used by implementers of [`packet::ParsablePacket`] that need
 /// to receive external information of which IP version encapsulates the
 /// packet, but without any other associated data.
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct IpVersionMarker<I> {
     _marker: core::marker::PhantomData<I>,
 }
@@ -26,6 +27,12 @@ pub struct IpVersionMarker<I> {
 impl<I: Ip> Default for IpVersionMarker<I> {
     fn default() -> Self {
         Self { _marker: core::marker::PhantomData }
+    }
+}
+
+impl<I: Ip> Debug for IpVersionMarker<I> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "IpVersionMarker<{}>", I::NAME)
     }
 }
 

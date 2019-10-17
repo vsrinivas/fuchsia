@@ -15,7 +15,9 @@ use zerocopy::ByteSlice;
 
 use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
 use crate::context::{RngContext, RngContextExt, StateContext};
-use crate::ip::{BufferTransportIpContext, IpPacketFromArgs, IpProto, TransportIpContext};
+use crate::ip::{
+    BufferTransportIpContext, IpPacketFromArgs, IpProto, IpVersionMarker, TransportIpContext,
+};
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
 use crate::{BufferDispatcher, Context, EventDispatcher};
@@ -140,10 +142,16 @@ impl<A: IpAddress> Listener<A> {
 /// around 0, making it possible to store any associated data in a `Vec` indexed
 /// by the ID. `UdpConnId` implements `Into<usize>`.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct UdpConnId(usize);
+pub struct UdpConnId<I: Ip>(usize, IpVersionMarker<I>);
 
-impl From<UdpConnId> for usize {
-    fn from(id: UdpConnId) -> usize {
+impl<I: Ip> UdpConnId<I> {
+    fn new(id: usize) -> UdpConnId<I> {
+        UdpConnId(id, IpVersionMarker::default())
+    }
+}
+
+impl<I: Ip> From<UdpConnId<I>> for usize {
+    fn from(id: UdpConnId<I>) -> usize {
         id.0
     }
 }
@@ -162,18 +170,27 @@ enum ListenerType {
 /// `Vec` indexed by the ID. The `listener_type` field is used to look at the
 /// correct backing `Vec`: `listeners` or `wildcard_listeners`.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct UdpListenerId {
+pub struct UdpListenerId<I: Ip> {
     id: usize,
     listener_type: ListenerType,
+    _marker: IpVersionMarker<I>,
 }
 
-impl UdpListenerId {
+impl<I: Ip> UdpListenerId<I> {
     fn new_specified(id: usize) -> Self {
-        UdpListenerId { id, listener_type: ListenerType::Specified }
+        UdpListenerId {
+            id,
+            listener_type: ListenerType::Specified,
+            _marker: IpVersionMarker::default(),
+        }
     }
 
     fn new_wildcard(id: usize) -> Self {
-        UdpListenerId { id, listener_type: ListenerType::Wildcard }
+        UdpListenerId {
+            id,
+            listener_type: ListenerType::Wildcard,
+            _marker: IpVersionMarker::default(),
+        }
     }
 }
 
@@ -195,14 +212,14 @@ pub trait BufferUdpContext<I: Ip, B: BufferMut>:
     UdpContext<I> + BufferTransportIpContext<I, B>
 {
     /// Receive a UDP packet for a connection.
-    fn receive_udp_from_conn(&mut self, _conn: UdpConnId, _body: &[u8]) {
+    fn receive_udp_from_conn(&mut self, _conn: UdpConnId<I>, _body: &[u8]) {
         log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_conn: not implemented");
     }
 
     /// Receive a UDP packet for a listener.
     fn receive_udp_from_listen(
         &mut self,
-        _listener: UdpListenerId,
+        _listener: UdpListenerId<I>,
         _src_ip: I::Addr,
         _dst_ip: I::Addr,
         _src_port: Option<NonZeroU16>,
@@ -240,14 +257,16 @@ impl<I: Ip, D: EventDispatcher> StateContext<UdpState<I>> for Context<D> {
 
 impl<I: Ip, D: EventDispatcher> UdpContext<I> for Context<D> {}
 
-impl<I: Ip, B: BufferMut, D: BufferDispatcher<B>> BufferUdpContext<I, B> for Context<D> {
-    fn receive_udp_from_conn(&mut self, conn: UdpConnId, body: &[u8]) {
+impl<I: Ip, B: BufferMut, D: BufferDispatcher<B> + UdpEventDispatcher<I>> BufferUdpContext<I, B>
+    for Context<D>
+{
+    fn receive_udp_from_conn(&mut self, conn: UdpConnId<I>, body: &[u8]) {
         self.dispatcher_mut().receive_udp_from_conn(conn, body);
     }
 
     fn receive_udp_from_listen(
         &mut self,
-        listener: UdpListenerId,
+        listener: UdpListenerId<I>,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         src_port: Option<NonZeroU16>,
@@ -260,18 +279,18 @@ impl<I: Ip, B: BufferMut, D: BufferDispatcher<B>> BufferUdpContext<I, B> for Con
 /// An event dispatcher for the UDP layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
-pub trait UdpEventDispatcher {
+pub trait UdpEventDispatcher<I: Ip> {
     /// Receive a UDP packet for a connection.
-    fn receive_udp_from_conn(&mut self, _conn: UdpConnId, _body: &[u8]) {
+    fn receive_udp_from_conn(&mut self, _conn: UdpConnId<I>, _body: &[u8]) {
         log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_conn: not implemented");
     }
 
     /// Receive a UDP packet for a listener.
-    fn receive_udp_from_listen<A: IpAddress>(
+    fn receive_udp_from_listen(
         &mut self,
-        _listener: UdpListenerId,
-        _src_ip: A,
-        _dst_ip: A,
+        _listener: UdpListenerId<I>,
+        _src_ip: I::Addr,
+        _dst_ip: I::Addr,
         _src_port: Option<NonZeroU16>,
         _body: &[u8],
     ) {
@@ -305,7 +324,7 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
         .and_then(|src_ip| Conn::from_packet(src_ip, dst_ip, &packet))
         .and_then(|conn| state.conn_state.conns.get_id_by_addr(&conn))
     {
-        ctx.receive_udp_from_conn(UdpConnId(conn), packet.body());
+        ctx.receive_udp_from_conn(UdpConnId::new(conn), packet.body());
         Ok(())
     } else if let Some(listener) = state
         .conn_state
@@ -363,7 +382,7 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 #[allow(dead_code)]
 pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx: &mut C,
-    conn: UdpConnId,
+    conn: UdpConnId<I>,
     body: B,
 ) {
     let state = ctx.get_state();
@@ -400,7 +419,7 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
 #[allow(dead_code)]
 pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     ctx: &mut C,
-    listener: UdpListenerId,
+    listener: UdpListenerId<A::Version>,
     local_addr: SpecifiedAddr<A>,
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
@@ -469,7 +488,7 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
     local_port: Option<NonZeroU16>,
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
-) -> UdpConnId {
+) -> UdpConnId<A::Version> {
     let default_local = if let Some(local) = ctx.local_address_for_remote(remote_addr) {
         local
     } else {
@@ -496,7 +515,7 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
         // TODO(joshlf): Return error
         panic!("UDP connection in use");
     }
-    UdpConnId(state.conn_state.conns.insert(c.clone(), c))
+    UdpConnId::new(state.conn_state.conns.insert(c.clone(), c))
 }
 
 /// Listen on for incoming UDP packets.
@@ -520,7 +539,7 @@ pub(crate) fn listen_udp<A: IpAddress, C: UdpContext<A::Version>>(
     ctx: &mut C,
     addrs: Vec<SpecifiedAddr<A>>,
     port: NonZeroU16,
-) -> UdpListenerId {
+) -> UdpListenerId<A::Version> {
     let state = ctx.get_state_mut();
     if addrs.is_empty() {
         if state.conn_state.wildcard_listeners.get_by_addr(&port).is_some() {
@@ -560,24 +579,24 @@ mod tests {
     };
 
     /// The listener data sent through a [`DummyUdpContext`].
-    struct ListenData<A: IpAddress> {
-        listener: UdpListenerId,
-        src_ip: A,
-        dst_ip: A,
+    struct ListenData<I: Ip> {
+        listener: UdpListenerId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
         src_port: Option<NonZeroU16>,
         body: Vec<u8>,
     }
 
     /// The UDP connection data sent through a [`DummyUdpContext`].
-    struct ConnData {
-        conn: UdpConnId,
+    struct ConnData<I: Ip> {
+        conn: UdpConnId<I>,
         body: Vec<u8>,
     }
 
     struct DummyUdpContext<I: Ip> {
         state: UdpState<I>,
-        listen_data: Vec<ListenData<I::Addr>>,
-        conn_data: Vec<ConnData>,
+        listen_data: Vec<ListenData<I>>,
+        conn_data: Vec<ConnData<I>>,
         rng: FakeCryptoRng<XorShiftRng>,
     }
 
@@ -631,13 +650,13 @@ mod tests {
 
     impl<I: Ip> UdpContext<I> for DummyContext<I> {}
     impl<I: Ip, B: BufferMut> BufferUdpContext<I, B> for DummyContext<I> {
-        fn receive_udp_from_conn(&mut self, conn: UdpConnId, body: &[u8]) {
+        fn receive_udp_from_conn(&mut self, conn: UdpConnId<I>, body: &[u8]) {
             self.get_mut().conn_data.push(ConnData { conn, body: body.to_owned() })
         }
 
         fn receive_udp_from_listen(
             &mut self,
-            listener: UdpListenerId,
+            listener: UdpListenerId<I>,
             src_ip: <I as Ip>::Addr,
             dst_ip: <I as Ip>::Addr,
             src_port: Option<NonZeroU16>,

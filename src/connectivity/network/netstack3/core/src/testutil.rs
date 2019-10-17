@@ -937,9 +937,9 @@ impl DummyEventDispatcher {
     }
 }
 
-impl UdpEventDispatcher for DummyEventDispatcher {}
+impl<I: Ip> UdpEventDispatcher<I> for DummyEventDispatcher {}
 
-impl TransportLayerEventDispatcher for DummyEventDispatcher {}
+impl<I: Ip> TransportLayerEventDispatcher<I> for DummyEventDispatcher {}
 
 impl Icmpv4EventDispatcher for DummyEventDispatcher {}
 
