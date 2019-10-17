@@ -29,7 +29,4 @@ target program `bugreport`, which will dump the zip file into stdout.
 
 ## Question? Bug? Feature request?
 
-Contact donosoc and frousseau, or file a
-[bug](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10006&priority=3&components=11880)
-or a
-[feature request](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10005&priority=3&components=11880).
+Contact OWNERS.

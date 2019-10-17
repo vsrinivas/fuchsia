@@ -79,7 +79,4 @@ You can immediately look at the syslog.
 
 ## Question? Bug? Feature request?
 
-Contact frousseau, or file a
-[bug](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10006&priority=3&components=11950)
-or a
-[feature request](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10005&priority=3&components=11950).
+Contact OWNERS.
