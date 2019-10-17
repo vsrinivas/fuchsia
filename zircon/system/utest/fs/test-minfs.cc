@@ -6,29 +6,31 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/minfs/c/fidl.h>
+#include <lib/fdio/vfs.h>
+#include <lib/fzl/fdio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/unique_fd.h>
-#include <ramdevice-client/ramdisk.h>
-#include <fuchsia/io/c/fidl.h>
-#include <fuchsia/minfs/c/fidl.h>
-#include <fvm/format.h>
-#include <lib/fdio/vfs.h>
-#include <lib/fzl/fdio.h>
-#include <minfs/format.h>
-#include <unittest/unittest.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
+#include <fvm/format.h>
+#include <minfs/format.h>
+#include <ramdevice-client/ramdisk.h>
+#include <unittest/unittest.h>
 
 #include "filesystems.h"
 #include "misc.h"
 
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 // Using twice as many blocks and slices of half-size, we have just as much space, but we require
 // resizing to fill our filesystem.
@@ -38,20 +40,21 @@ const test_disk_t kGrowableTestDisk = {
     .slice_size = TEST_FVM_SLICE_SIZE_DEFAULT / 2,
 };
 
-bool QueryInfo(fuchsia_io_FilesystemInfo* info) {
+bool QueryInfo(fio::FilesystemInfo* info) {
   BEGIN_HELPER;
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   // Sync before querying fs so that we can obtain an accurate number of used bytes. Otherwise,
   // blocks which are reserved but not yet allocated won't be counted.
   fsync(fd.get());
-  zx_status_t status;
   fzl::FdioCaller caller(std::move(fd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem((caller.channel()));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result.Unwrap()->s, ZX_OK);
+  ASSERT_NOT_NULL(result.Unwrap()->info);
+  *info = *(result.Unwrap()->info);
   const char* kFsName = "minfs";
-  const char* name = reinterpret_cast<const char*>(info->name);
+  const char* name = reinterpret_cast<const char*>(info->name.data());
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
   ASSERT_EQ(info->block_size, minfs::kMinfsBlockSize);
   ASSERT_EQ(info->max_filename_size, minfs::kMinfsMaxNameSize);
@@ -75,7 +78,7 @@ struct ExpectedQueryInfo {
 bool VerifyQueryInfo(const ExpectedQueryInfo& expected) {
   BEGIN_HELPER;
 
-  fuchsia_io_FilesystemInfo info;
+  fio::FilesystemInfo info;
   ASSERT_TRUE(QueryInfo(&info));
   ASSERT_EQ(info.total_bytes, expected.total_bytes);
   ASSERT_EQ(info.used_bytes, expected.used_bytes);
@@ -220,7 +223,7 @@ bool TestMetrics() {
 
 bool GetFreeBlocks(uint32_t* out_free_blocks) {
   BEGIN_HELPER;
-  fuchsia_io_FilesystemInfo info;
+  fio::FilesystemInfo info;
   ASSERT_TRUE(QueryInfo(&info));
   uint64_t total_bytes = info.total_bytes + info.free_shared_pool_bytes;
   uint64_t used_bytes = info.used_bytes;
@@ -556,7 +559,7 @@ bool TestUnlinkFail(void) {
 
 bool GetAllocatedBlocks(uint64_t* out_allocated_blocks) {
   BEGIN_HELPER;
-  fuchsia_io_FilesystemInfo info;
+  fio::FilesystemInfo info;
   ASSERT_TRUE(QueryInfo(&info));
   *out_allocated_blocks = static_cast<uint64_t>(info.used_bytes) / info.block_size;
   END_HELPER;

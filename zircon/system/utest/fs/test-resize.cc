@@ -4,41 +4,44 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <limits.h>
-#include <new>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
+
+#include <new>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fvm/format.h>
-#include <lib/fzl/fdio.h>
 #include <minfs/format.h>
 #include <unittest/unittest.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
 
 #include "filesystems.h"
 #include "misc.h"
 
 namespace {
 
+namespace fio = ::llcpp::fuchsia::io;
+
 bool QueryInfo(uint64_t* out_free_pool_size) {
   BEGIN_HELPER;
-  fuchsia_io_FilesystemInfo info;
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
-  zx_status_t status;
   fzl::FdioCaller caller(std::move(fd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
-            ZX_OK);
+  auto query_result = fio::DirectoryAdmin::Call::QueryFilesystem(caller.channel());
+  ASSERT_EQ(query_result.status(), ZX_OK);
+  ASSERT_NOT_NULL(query_result.Unwrap()->info);
+  fio::FilesystemInfo* info = query_result.Unwrap()->info;
   // This should always be true, for all filesystems.
-  ASSERT_GT(info.total_bytes, info.used_bytes);
-  *out_free_pool_size = info.free_shared_pool_bytes;
+  ASSERT_GT(info->total_bytes, info->used_bytes);
+  *out_free_pool_size = info->free_shared_pool_bytes;
   END_HELPER;
 }
 

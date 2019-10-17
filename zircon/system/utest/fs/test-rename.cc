@@ -5,22 +5,24 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/handle.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/handle.h>
-#include <zircon/compiler.h>
 
 #include "filesystems.h"
 #include "misc.h"
+
+namespace fio = ::llcpp::fuchsia::io;
 
 bool TestRenameBasic() {
   BEGIN_TEST;
@@ -264,21 +266,19 @@ bool TestRenameRaw() {
   ASSERT_TRUE(fd);
   fzl::FdioCaller caller(std::move(fd));
 
-  zx_status_t status;
-  zx::handle token;
-  ASSERT_EQ(
-      fuchsia_io_DirectoryGetToken(caller.borrow_channel(), &status, token.reset_and_get_address()),
-      ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  auto token_result = fio::Directory::Call::GetToken(caller.channel());
+  ASSERT_EQ(token_result.status(), ZX_OK);
+  ASSERT_EQ(token_result.Unwrap()->s, ZX_OK);
 
   // Pass a path, instead of a name, to rename.
   // Observe that paths are rejected.
   constexpr char src[] = "bravo/charlie";
   constexpr char dst[] = "bravo/delta";
-  ASSERT_EQ(fuchsia_io_DirectoryRename(caller.borrow_channel(), src, strlen(src), token.release(),
-                                       dst, strlen(dst), &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+  auto rename_result =
+      fio::Directory::Call::Rename(caller.channel(), fidl::StringView(src),
+                                   std::move(token_result.Unwrap()->token), fidl::StringView(dst));
+  ASSERT_EQ(rename_result.status(), ZX_OK);
+  ASSERT_EQ(rename_result.Unwrap()->s, ZX_ERR_INVALID_ARGS);
 
   // Clean up
   ASSERT_EQ(unlink("::alpha/bravo/charlie"), 0, "");

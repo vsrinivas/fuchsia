@@ -5,6 +5,12 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/limits.h>
+#include <lib/fzl/fdio.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,22 +18,18 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-
-#include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/limits.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
-#include <unittest/unittest.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/unique_fd.h>
+#include <unittest/unittest.h>
 
 #include "filesystems.h"
 #include "misc.h"
 
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 bool TestAccessReadable() {
   BEGIN_TEST;
@@ -205,9 +207,10 @@ bool CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
   // Clone |in_fd| as read-only; the entire tree under the new connection now becomes read-only
   zx::channel foo_handle_read_only, foo_request_read_only;
   ASSERT_EQ(zx::channel::create(0, &foo_handle_read_only, &foo_request_read_only), ZX_OK);
-  ASSERT_EQ(fuchsia_io_NodeClone(foo_handle, fuchsia_io_OPEN_RIGHT_READABLE,
-                                 foo_request_read_only.release()),
-            ZX_OK);
+
+  auto clone_result = fio::Node::Call::Clone(
+      zx::unowned_channel(foo_handle), fio::OPEN_RIGHT_READABLE, std::move(foo_request_read_only));
+  ASSERT_EQ(clone_result.status(), ZX_OK);
 
   // Turn the handle back to an fd to test posix functions
   fbl::unique_fd fd = ([&]() -> fbl::unique_fd {
@@ -225,11 +228,10 @@ bool CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
 
 bool TestCloneWithBadFlags() {
   BEGIN_TEST;
-
   uint32_t rights[] = {
-      fuchsia_io_OPEN_RIGHT_READABLE,
-      fuchsia_io_OPEN_RIGHT_WRITABLE,
-      fuchsia_io_OPEN_RIGHT_ADMIN,
+      fio::OPEN_RIGHT_READABLE,
+      fio::OPEN_RIGHT_WRITABLE,
+      fio::OPEN_RIGHT_ADMIN,
   };
 
   // CLONE_FLAG_SAME_RIGHTS cannot appear together with any specific rights.
@@ -246,12 +248,13 @@ bool TestCloneWithBadFlags() {
 
     zx::channel foo_clone_client_end, foo_clone_server_end;
     ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);
-    ASSERT_EQ(fuchsia_io_NodeClone(foo_handle, fuchsia_io_CLONE_FLAG_SAME_RIGHTS | right,
-                                   foo_clone_server_end.release()),
-              ZX_OK);
-
-    fuchsia_io_NodeInfo out_info;
-    ASSERT_EQ(fuchsia_io_NodeDescribe(foo_clone_client_end.get(), &out_info), ZX_ERR_PEER_CLOSED);
+    auto clone_result =
+        fio::Node::Call::Clone(zx::unowned_channel(foo_handle), fio::CLONE_FLAG_SAME_RIGHTS | right,
+                               std::move(foo_clone_server_end));
+    ASSERT_EQ(clone_result.status(), ZX_OK);
+    auto describe_result =
+        fio::Node::Call::Describe(zx::unowned_channel(foo_clone_client_end.get()));
+    ASSERT_EQ(describe_result.status(), ZX_ERR_PEER_CLOSED);
   }
 
   END_TEST;
@@ -275,13 +278,13 @@ bool TestCloneCannotIncreaseRights() {
     zx_handle_t foo_handle = fdio_caller.borrow_channel();
     zx::channel foo_clone_client_end, foo_clone_server_end;
     ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);
-    ASSERT_EQ(fuchsia_io_NodeClone(foo_handle,
-                                   fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE,
-                                   foo_clone_server_end.release()),
-              ZX_OK);
-
-    fuchsia_io_NodeInfo out_info;
-    ASSERT_EQ(fuchsia_io_NodeDescribe(foo_clone_client_end.get(), &out_info), ZX_ERR_PEER_CLOSED);
+    auto clone_result = fio::Node::Call::Clone(zx::unowned_channel(foo_handle),
+                                               fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                                               std::move(foo_clone_server_end));
+    ASSERT_EQ(clone_result.status(), ZX_OK);
+    auto describe_result =
+        fio::Node::Call::Describe(zx::unowned_channel(foo_clone_client_end.get()));
+    ASSERT_EQ(describe_result.status(), ZX_ERR_PEER_CLOSED);
   }
 
   END_TEST;

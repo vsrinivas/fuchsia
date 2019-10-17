@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <errno.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -14,21 +17,20 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/channel.h>
-#include <zircon/device/vfs.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
 
 #include "filesystems.h"
 #include "misc.h"
 
+namespace fio = ::llcpp::fuchsia::io;
+
 typedef struct {
   // Buffer containing cached messages
-  uint8_t buf[fuchsia_io_MAX_BUF];
+  uint8_t buf[fio::MAX_BUF];
   // Offset into 'buf' of next message
   uint8_t* ptr;
   // Maximum size of buffer
@@ -90,11 +92,11 @@ bool TestWatcherAdd(void) {
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
   fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_io_DirectoryWatch(caller.borrow_channel(), fuchsia_io_WATCH_MASK_ADDED, 0,
-                                      server.release(), &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+
+  auto watch_result =
+      fio::Directory::Call::Watch(caller.channel(), fio::WATCH_MASK_ADDED, 0, std::move(server));
+  ASSERT_EQ(watch_result.status(), ZX_OK);
+  ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
 
   watch_buffer_t wb;
   memset(&wb, 0, sizeof(wb));
@@ -106,15 +108,15 @@ bool TestWatcherAdd(void) {
   fbl::unique_fd fd(open("::dir/foo", O_RDWR | O_CREAT));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
-  ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_ADDED));
+  ASSERT_TRUE(check_for_event(&wb, client, "foo", fio::WATCH_EVENT_ADDED));
 
   // Renaming into directory should trigger the watcher
   ASSERT_EQ(rename("::dir/foo", "::dir/bar"), 0);
-  ASSERT_TRUE(check_for_event(&wb, client, "bar", fuchsia_io_WATCH_EVENT_ADDED));
+  ASSERT_TRUE(check_for_event(&wb, client, "bar", fio::WATCH_EVENT_ADDED));
 
   // Linking into directory should trigger the watcher
   ASSERT_EQ(link("::dir/bar", "::dir/blat"), 0);
-  ASSERT_TRUE(check_for_event(&wb, client, "blat", fuchsia_io_WATCH_EVENT_ADDED));
+  ASSERT_TRUE(check_for_event(&wb, client, "blat", fio::WATCH_EVENT_ADDED));
 
   // Clean up
   ASSERT_EQ(unlink("::dir/bar"), 0);
@@ -155,20 +157,18 @@ bool TestWatcherExisting(void) {
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
   fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
-  zx_status_t status;
-  uint32_t mask =
-      fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE;
-  ASSERT_EQ(fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0, server.release(), &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  uint32_t mask = fio::WATCH_MASK_ADDED | fio::WATCH_MASK_EXISTING | fio::WATCH_MASK_IDLE;
+  auto watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
+  ASSERT_EQ(watch_result.status(), ZX_OK);
+  ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
   watch_buffer_t wb;
   memset(&wb, 0, sizeof(wb));
 
   // The channel should see the contents of the directory
-  ASSERT_TRUE(check_for_event(&wb, client, ".", fuchsia_io_WATCH_EVENT_EXISTING));
-  ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_EXISTING));
-  ASSERT_TRUE(check_for_event(&wb, client, "bar", fuchsia_io_WATCH_EVENT_EXISTING));
-  ASSERT_TRUE(check_for_event(&wb, client, "", fuchsia_io_WATCH_EVENT_IDLE));
+  ASSERT_TRUE(check_for_event(&wb, client, ".", fio::WATCH_EVENT_EXISTING));
+  ASSERT_TRUE(check_for_event(&wb, client, "foo", fio::WATCH_EVENT_EXISTING));
+  ASSERT_TRUE(check_for_event(&wb, client, "bar", fio::WATCH_EVENT_EXISTING));
+  ASSERT_TRUE(check_for_event(&wb, client, "", fio::WATCH_EVENT_IDLE));
   ASSERT_TRUE(check_for_empty(&wb, client));
 
   // Now, if we choose to add additional files, they'll show up separately
@@ -176,23 +176,23 @@ bool TestWatcherExisting(void) {
   fd.reset(open("::dir/baz", O_RDWR | O_CREAT));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
-  ASSERT_TRUE(check_for_event(&wb, client, "baz", fuchsia_io_WATCH_EVENT_ADDED));
+  ASSERT_TRUE(check_for_event(&wb, client, "baz", fio::WATCH_EVENT_ADDED));
   ASSERT_TRUE(check_for_empty(&wb, client));
 
   // If we create a secondary watcher with the "EXISTING" request, we'll
   // see all files in the directory, but the first watcher won't see anything.
   zx::channel client2;
   ASSERT_EQ(zx::channel::create(0, &client2, &server), ZX_OK);
-  ASSERT_EQ(fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0, server.release(), &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
+  ASSERT_EQ(watch_result.status(), ZX_OK);
+  ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
   watch_buffer_t wb2;
   memset(&wb2, 0, sizeof(wb2));
-  ASSERT_TRUE(check_for_event(&wb2, client2, ".", fuchsia_io_WATCH_EVENT_EXISTING));
-  ASSERT_TRUE(check_for_event(&wb2, client2, "foo", fuchsia_io_WATCH_EVENT_EXISTING));
-  ASSERT_TRUE(check_for_event(&wb2, client2, "bar", fuchsia_io_WATCH_EVENT_EXISTING));
-  ASSERT_TRUE(check_for_event(&wb2, client2, "baz", fuchsia_io_WATCH_EVENT_EXISTING));
-  ASSERT_TRUE(check_for_event(&wb2, client2, "", fuchsia_io_WATCH_EVENT_IDLE));
+  ASSERT_TRUE(check_for_event(&wb2, client2, ".", fio::WATCH_EVENT_EXISTING));
+  ASSERT_TRUE(check_for_event(&wb2, client2, "foo", fio::WATCH_EVENT_EXISTING));
+  ASSERT_TRUE(check_for_event(&wb2, client2, "bar", fio::WATCH_EVENT_EXISTING));
+  ASSERT_TRUE(check_for_event(&wb2, client2, "baz", fio::WATCH_EVENT_EXISTING));
+  ASSERT_TRUE(check_for_event(&wb2, client2, "", fio::WATCH_EVENT_IDLE));
   ASSERT_TRUE(check_for_empty(&wb2, client2));
   ASSERT_TRUE(check_for_empty(&wb, client));
 
@@ -226,12 +226,12 @@ bool TestWatcherRemoved(void) {
 
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  uint32_t mask = fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_REMOVED;
-  zx_status_t status;
+  uint32_t mask = fio::WATCH_MASK_ADDED | fio::WATCH_MASK_REMOVED;
   fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
-  ASSERT_EQ(fuchsia_io_DirectoryWatch(caller.borrow_channel(), mask, 0, server.release(), &status),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+
+  auto watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
+  ASSERT_EQ(watch_result.status(), ZX_OK);
+  ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
 
   watch_buffer_t wb;
   memset(&wb, 0, sizeof(wb));
@@ -242,17 +242,17 @@ bool TestWatcherRemoved(void) {
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
 
-  ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_ADDED));
+  ASSERT_TRUE(check_for_event(&wb, client, "foo", fio::WATCH_EVENT_ADDED));
   ASSERT_TRUE(check_for_empty(&wb, client));
 
   ASSERT_EQ(rename("::dir/foo", "::dir/bar"), 0);
 
-  ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_REMOVED));
-  ASSERT_TRUE(check_for_event(&wb, client, "bar", fuchsia_io_WATCH_EVENT_ADDED));
+  ASSERT_TRUE(check_for_event(&wb, client, "foo", fio::WATCH_EVENT_REMOVED));
+  ASSERT_TRUE(check_for_event(&wb, client, "bar", fio::WATCH_EVENT_ADDED));
   ASSERT_TRUE(check_for_empty(&wb, client));
 
   ASSERT_EQ(unlink("::dir/bar"), 0);
-  ASSERT_TRUE(check_for_event(&wb, client, "bar", fuchsia_io_WATCH_EVENT_REMOVED));
+  ASSERT_TRUE(check_for_event(&wb, client, "bar", fio::WATCH_EVENT_REMOVED));
   ASSERT_TRUE(check_for_empty(&wb, client));
 
   // The fd is still owned by "dir".

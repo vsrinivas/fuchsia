@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/vfs.h>
@@ -20,6 +20,8 @@
 #include "filesystems.h"
 
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 bool TestConnectionRights() {
   BEGIN_TEST;
@@ -50,31 +52,31 @@ bool TestConnectionRights() {
   typedef struct test_row {
    public:
     uint32_t connection_flags;    // Or'd ZX_FS_RIGHT_* flags for this connection.
-    uint32_t request_flags;       // Or'd fuchsia_io_VMO_FLAG_* values.
+    uint32_t request_flags;       // Or'd fio::VMO_FLAG_* values.
     zx_status_t expected_result;  // What we expect FileGetBuffer to return.
   } test_row_t;
 
   test_row_t test_data[] = {
       // If the connection has all rights, then everything should work.
       {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
-       .request_flags = fuchsia_io_VMO_FLAG_READ,
+       .request_flags = fio::VMO_FLAG_READ,
        .expected_result = ZX_OK},
       {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
-       .request_flags = fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_WRITE,
+       .request_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_WRITE,
        .expected_result = ZX_OK},
       {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
-       .request_flags = fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXEC,
+       .request_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
        .expected_result = ZX_OK},
       // If the connection is missing the EXECUTABLE right, then requests with
-      // fuchsia_io_VMO_FLAG_EXEC should fail.
+      // fio::VMO_FLAG_EXEC should fail.
       {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
-       .request_flags = fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXEC,
+       .request_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
        .expected_result = ZX_ERR_ACCESS_DENIED},
 
       // If the connection is missing the WRITABLE right, then requests with
-      // fuchsia_io_VMO_FLAG_WRITE should fail.
+      // fio::VMO_FLAG_WRITE should fail.
       {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
-       .request_flags = fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_WRITE,
+       .request_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_WRITE,
        .expected_result = ZX_ERR_ACCESS_DENIED},
 
   };
@@ -90,12 +92,12 @@ bool TestConnectionRights() {
 
       // Call FileGetBuffer on the channel with the testcase's request flags.
       // Check that we get the expected result.
-      zx_status_t status;
-      fuchsia_mem_Buffer buffer = {};
-      EXPECT_EQ(fuchsia_io_FileGetBuffer(client.get(), row.request_flags, &status, &buffer), ZX_OK);
+      auto result =
+          fio::File::Call::GetBuffer(zx::unowned_channel(client.get()), row.request_flags);
+      EXPECT_EQ(result.status(), ZX_OK);
 
       // Verify that the result matches the value in our test table.
-      EXPECT_EQ(status, row.expected_result);
+      EXPECT_EQ(result.Unwrap()->s, row.expected_result);
     }
   }
 
