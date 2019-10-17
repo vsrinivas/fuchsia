@@ -4,6 +4,7 @@
 
 pub mod work_scheduler;
 
+mod dispatcher;
 mod work_item;
 
 #[cfg(test)]

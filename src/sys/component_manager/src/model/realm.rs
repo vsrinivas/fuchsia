@@ -325,6 +325,16 @@ impl Realm {
     }
 }
 
+impl std::fmt::Debug for Realm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Realm")
+            .field("component_url", &self.component_url)
+            .field("startup", &self.startup)
+            .field("abs_moniker", &self.abs_moniker)
+            .finish()
+    }
+}
+
 /// The execution state of a component.
 pub struct ExecutionState {
     /// True if the component instance has shut down. This means that the component is stopped

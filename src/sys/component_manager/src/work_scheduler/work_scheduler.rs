@@ -16,8 +16,8 @@
 use {
     crate::{
         framework::FrameworkCapability,
-        model::{error::ModelError, hooks::*, AbsoluteMoniker, Realm},
-        work_scheduler::work_item::WorkItem,
+        model::{error::ModelError, hooks::*, Realm},
+        work_scheduler::{dispatcher::Dispatcher, work_item::WorkItem},
     },
     cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget, FrameworkCapabilityDecl},
     failure::{format_err, Error},
@@ -141,7 +141,7 @@ impl WorkSchedulerInner {
             {
                 Self::check_for_worker(&*realm).await?;
                 Ok(Some(Box::new(WorkSchedulerCapability::new(
-                    realm.abs_moniker.clone(),
+                    realm.clone(),
                     WorkScheduler { inner: self.clone() },
                 )) as Box<dyn FrameworkCapability>))
             }
@@ -197,13 +197,23 @@ impl WorkScheduler {
 
     pub async fn schedule_work(
         &self,
-        abs_moniker: &AbsoluteMoniker,
+        realm: Arc<Realm>,
         work_id: &str,
         work_request: &fsys::WorkRequest,
     ) -> Result<(), fsys::Error> {
         let mut state = self.inner.state.lock().await;
+        self.schedule_work_request(&mut *state, realm, work_id, work_request)
+    }
+
+    fn schedule_work_request(
+        &self,
+        state: &mut WorkSchedulerState,
+        dispatcher: Arc<dyn Dispatcher>,
+        work_id: &str,
+        work_request: &fsys::WorkRequest,
+    ) -> Result<(), fsys::Error> {
         let work_items = &mut state.work_items;
-        let work_item = WorkItem::try_new(abs_moniker, work_id, work_request)?;
+        let work_item = WorkItem::try_new(dispatcher, work_id, work_request)?;
 
         if work_items.contains(&work_item) {
             return Err(fsys::Error::InstanceAlreadyExists);
@@ -217,14 +227,19 @@ impl WorkScheduler {
         Ok(())
     }
 
-    pub async fn cancel_work(
+    pub async fn cancel_work(&self, realm: Arc<Realm>, work_id: &str) -> Result<(), fsys::Error> {
+        let mut state = self.inner.state.lock().await;
+        self.cancel_work_item(&mut *state, realm, work_id)
+    }
+
+    fn cancel_work_item(
         &self,
-        abs_moniker: &AbsoluteMoniker,
+        state: &mut WorkSchedulerState,
+        dispatcher: Arc<dyn Dispatcher>,
         work_id: &str,
     ) -> Result<(), fsys::Error> {
-        let mut state = self.inner.state.lock().await;
         let work_items = &mut state.work_items;
-        let work_item = WorkItem::new_by_identity(abs_moniker, work_id);
+        let work_item = WorkItem::new_by_identity(dispatcher, work_id);
 
         // TODO(markdittmer): Use `work_items.remove_item(work_item)` if/when it becomes stable.
         let mut found = false;
@@ -452,20 +467,20 @@ impl Hook for WorkSchedulerInner {
 /// component instance's `AbsoluteMoniker`. All FIDL operations bound to the same object and moniker
 /// observe the same collection of `WorkItem` objects.
 struct WorkSchedulerCapability {
-    abs_moniker: AbsoluteMoniker,
+    realm: Arc<Realm>,
     work_scheduler: WorkScheduler,
 }
 
 impl WorkSchedulerCapability {
-    pub fn new(abs_moniker: AbsoluteMoniker, work_scheduler: WorkScheduler) -> Self {
-        WorkSchedulerCapability { abs_moniker, work_scheduler }
+    pub fn new(realm: Arc<Realm>, work_scheduler: WorkScheduler) -> Self {
+        WorkSchedulerCapability { realm, work_scheduler }
     }
 
     /// Service `open` invocation via an event loop that dispatches FIDL operations to
     /// `work_scheduler`.
     async fn open_async(
         work_scheduler: WorkScheduler,
-        abs_moniker: &AbsoluteMoniker,
+        realm: Arc<Realm>,
         mut stream: fsys::WorkSchedulerRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
@@ -477,11 +492,11 @@ impl WorkSchedulerCapability {
                     ..
                 } => {
                     let mut result =
-                        work_scheduler.schedule_work(abs_moniker, &work_id, &work_request).await;
+                        work_scheduler.schedule_work(realm.clone(), &work_id, &work_request).await;
                     responder.send(&mut result)?;
                 }
                 fsys::WorkSchedulerRequest::CancelWork { responder, work_id, .. } => {
-                    let mut result = work_scheduler.cancel_work(abs_moniker, &work_id).await;
+                    let mut result = work_scheduler.cancel_work(realm.clone(), &work_id).await;
                     responder.send(&mut result)?;
                 }
             }
@@ -502,9 +517,9 @@ impl FrameworkCapability for WorkSchedulerCapability {
         let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
         let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
         let work_scheduler = self.work_scheduler.clone();
-        let abs_moniker = self.abs_moniker.clone();
+        let realm = self.realm.clone();
         fasync::spawn(async move {
-            let result = Self::open_async(work_scheduler, &abs_moniker, stream).await;
+            let result = Self::open_async(work_scheduler, realm, stream).await;
             if let Err(e) = result {
                 // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
                 warn!("WorkSchedulerCapability.open failed: {}", e);
@@ -521,7 +536,7 @@ mod tests {
         super::*,
         crate::model::{AbsoluteMoniker, ChildMoniker},
         fuchsia_async::{Executor, Time, WaitState},
-        futures::Future,
+        futures::{future::BoxFuture, Future},
     };
 
     /// Time is measured in nanoseconds. This provides a constant symbol for one second.
@@ -531,6 +546,39 @@ mod tests {
     // apparent when "time starts at 0".
     const FAKE_MONOTONIC_TIME: i64 = 374789234875;
 
+    impl Dispatcher for AbsoluteMoniker {
+        fn abs_moniker(&self) -> &AbsoluteMoniker {
+            &self
+        }
+        fn dispatch(&self, _work_item: WorkItem) -> BoxFuture<Result<(), fsys::Error>> {
+            Box::pin(async move { Err(fsys::Error::InvalidArguments) })
+        }
+    }
+
+    async fn schedule_work_request(
+        work_scheduler: &WorkScheduler,
+        abs_moniker: &AbsoluteMoniker,
+        work_id: &str,
+        work_request: &fsys::WorkRequest,
+    ) -> Result<(), fsys::Error> {
+        let mut state = work_scheduler.inner.state.lock().await;
+        work_scheduler.schedule_work_request(
+            &mut *state,
+            Arc::new(abs_moniker.clone()),
+            work_id,
+            work_request,
+        )
+    }
+
+    async fn cancel_work_item(
+        work_scheduler: &WorkScheduler,
+        abs_moniker: &AbsoluteMoniker,
+        work_id: &str,
+    ) -> Result<(), fsys::Error> {
+        let mut state = work_scheduler.inner.state.lock().await;
+        work_scheduler.cancel_work_item(&mut *state, Arc::new(abs_moniker.clone()), work_id)
+    }
+
     async fn get_work_status(
         work_scheduler: &WorkScheduler,
         abs_moniker: &AbsoluteMoniker,
@@ -538,10 +586,9 @@ mod tests {
     ) -> Result<(i64, Option<i64>), fsys::Error> {
         let state = work_scheduler.inner.state.lock().await;
         let work_items = &state.work_items;
-        match work_items
-            .iter()
-            .find(|work_item| &work_item.abs_moniker == abs_moniker && work_item.id == work_id)
-        {
+        match work_items.iter().find(|work_item| {
+            work_item.dispatcher.abs_moniker() == abs_moniker && work_item.id == work_id
+        }) {
             Some(work_item) => Ok((work_item.next_deadline_monotonic, work_item.period)),
             None => Err(fsys::Error::InstanceNotFound),
         }
@@ -579,14 +626,26 @@ mod tests {
 
         // Schedule different 2 out of 3 requests on each component instance.
 
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&a, "NOW_ONCE", &now_once).await);
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&a, "EACH_SECOND", &each_second).await);
+        assert_eq!(Ok(()), schedule_work_request(&work_scheduler, &a, "NOW_ONCE", &now_once).await);
+        assert_eq!(
+            Ok(()),
+            schedule_work_request(&work_scheduler, &a, "EACH_SECOND", &each_second).await
+        );
 
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&b, "EACH_SECOND", &each_second).await);
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&b, "IN_AN_HOUR", &in_an_hour).await);
+        assert_eq!(
+            Ok(()),
+            schedule_work_request(&work_scheduler, &b, "EACH_SECOND", &each_second).await
+        );
+        assert_eq!(
+            Ok(()),
+            schedule_work_request(&work_scheduler, &b, "IN_AN_HOUR", &in_an_hour).await
+        );
 
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&c, "IN_AN_HOUR", &in_an_hour).await);
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&c, "NOW_ONCE", &now_once).await);
+        assert_eq!(
+            Ok(()),
+            schedule_work_request(&work_scheduler, &c, "IN_AN_HOUR", &in_an_hour).await
+        );
+        assert_eq!(Ok(()), schedule_work_request(&work_scheduler, &c, "NOW_ONCE", &now_once).await);
 
         assert_eq!(
             Ok((FAKE_MONOTONIC_TIME, None)),
@@ -629,7 +688,7 @@ mod tests {
 
         // Cancel a's NOW_ONCE. Confirm it only affects a's scheduled work.
 
-        assert_eq!(Ok(()), work_scheduler.cancel_work(&a, "NOW_ONCE").await);
+        assert_eq!(Ok(()), cancel_work_item(&work_scheduler, &a, "NOW_ONCE").await);
 
         assert_eq!(
             Err(fsys::Error::InstanceNotFound),
@@ -692,16 +751,32 @@ mod tests {
             period: None,
         };
 
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&a, "EACH_SECOND", &each_second).await);
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&c, "NOW_ONCE", &now_once).await);
-        assert_eq!(Ok(()), work_scheduler.schedule_work(&b, "IN_AN_HOUR", &in_an_hour).await);
+        assert_eq!(
+            Ok(()),
+            schedule_work_request(&work_scheduler, &a, "EACH_SECOND", &each_second).await
+        );
+        assert_eq!(Ok(()), schedule_work_request(&work_scheduler, &c, "NOW_ONCE", &now_once).await);
+        assert_eq!(
+            Ok(()),
+            schedule_work_request(&work_scheduler, &b, "IN_AN_HOUR", &in_an_hour).await
+        );
 
         // Order should match deadlines, not order of scheduling or component topology.
         assert_eq!(
             vec![
-                WorkItem::new(&c, "NOW_ONCE", FAKE_MONOTONIC_TIME, None),
-                WorkItem::new(&a, "EACH_SECOND", FAKE_MONOTONIC_TIME + SECOND, Some(SECOND),),
-                WorkItem::new(&b, "IN_AN_HOUR", FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None,),
+                WorkItem::new(Arc::new(c), "NOW_ONCE", FAKE_MONOTONIC_TIME, None),
+                WorkItem::new(
+                    Arc::new(a),
+                    "EACH_SECOND",
+                    FAKE_MONOTONIC_TIME + SECOND,
+                    Some(SECOND),
+                ),
+                WorkItem::new(
+                    Arc::new(b),
+                    "IN_AN_HOUR",
+                    FAKE_MONOTONIC_TIME + (SECOND * 60 * 60),
+                    None,
+                ),
             ],
             get_all_by_deadline(&work_scheduler).await
         );
@@ -737,7 +812,12 @@ mod tests {
         ) -> Self {
             TestWorkUnit {
                 start,
-                work_item: WorkItem::new(abs_moniker, id, next_deadline_monotonic, period),
+                work_item: WorkItem::new(
+                    Arc::new(abs_moniker.clone()),
+                    id,
+                    next_deadline_monotonic,
+                    period,
+                ),
             }
         }
     }
@@ -875,7 +955,10 @@ mod tests {
             let root = AbsoluteMoniker::root();
             let now_once =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
-            assert_eq!(Ok(()), work_scheduler.schedule_work(&root, "NOW_ONCE", &now_once).await);
+            assert_eq!(
+                Ok(()),
+                schedule_work_request(&work_scheduler, &root, "NOW_ONCE", &now_once).await
+            );
         }));
         t.assert_no_timers();
     }
@@ -891,7 +974,10 @@ mod tests {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(1).await);
             let now_once =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
-            assert_eq!(Ok(()), work_scheduler.schedule_work(&root, "NOW_ONCE", &now_once).await);
+            assert_eq!(
+                Ok(()),
+                schedule_work_request(&work_scheduler, &root, "NOW_ONCE", &now_once).await
+            );
         }));
 
         // Confirm timer and work item.
@@ -919,7 +1005,7 @@ mod tests {
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: Some(1) };
             assert_eq!(
                 Ok(()),
-                work_scheduler.schedule_work(&root, "EVERY_MOMENT", &every_moment).await
+                schedule_work_request(&work_scheduler, &root, "EVERY_MOMENT", &every_moment).await
             );
         }));
 
@@ -950,7 +1036,10 @@ mod tests {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
             let at_nine =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: None };
-            assert_eq!(Ok(()), work_scheduler.schedule_work(&root, "AT_NINE", &at_nine).await);
+            assert_eq!(
+                Ok(()),
+                schedule_work_request(&work_scheduler, &root, "AT_NINE", &at_nine).await
+            );
         }));
 
         // Confirm timer and work item.
@@ -961,7 +1050,10 @@ mod tests {
         t.run_and_sync(&mut Box::pin(async {
             let at_four =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
-            assert_eq!(Ok(()), work_scheduler.schedule_work(&root, "AT_FOUR", &at_four).await);
+            assert_eq!(
+                Ok(()),
+                schedule_work_request(&work_scheduler, &root, "AT_FOUR", &at_four).await
+            );
         }));
 
         // Confirm timer moved _back_, and work units are as expected.
@@ -983,7 +1075,10 @@ mod tests {
         t.run_and_sync(&mut Box::pin(async {
             let at_ten =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(10)), period: None };
-            assert_eq!(Ok(()), work_scheduler.schedule_work(&root, "AT_TEN", &at_ten).await);
+            assert_eq!(
+                Ok(()),
+                schedule_work_request(&work_scheduler, &root, "AT_TEN", &at_ten).await
+            );
         }));
 
         // Confirm unchanged, and work units are as expected.
@@ -1013,10 +1108,16 @@ mod tests {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
             let at_four =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
-            assert_eq!(Ok(()), work_scheduler.schedule_work(&root, "AT_FOUR", &at_four).await);
+            assert_eq!(
+                Ok(()),
+                schedule_work_request(&work_scheduler, &root, "AT_FOUR", &at_four).await
+            );
             let at_nine =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: None };
-            assert_eq!(Ok(()), work_scheduler.schedule_work(&root, "AT_NINE", &at_nine).await);
+            assert_eq!(
+                Ok(()),
+                schedule_work_request(&work_scheduler, &root, "AT_NINE", &at_nine).await
+            );
         }));
 
         // Confirm timer and work items.
@@ -1050,14 +1151,21 @@ mod tests {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
             let at_four =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
-            assert_eq!(Ok(()), work_scheduler.schedule_work(&root, "AT_FOUR", &at_four).await);
+            assert_eq!(
+                Ok(()),
+                schedule_work_request(&work_scheduler, &root, "AT_FOUR", &at_four).await
+            );
             let at_nine_periodic =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: Some(5) };
             assert_eq!(
                 Ok(()),
-                work_scheduler
-                    .schedule_work(&root, "AT_NINE_PERIODIC_FIVE", &at_nine_periodic)
-                    .await
+                schedule_work_request(
+                    &work_scheduler,
+                    &root,
+                    "AT_NINE_PERIODIC_FIVE",
+                    &at_nine_periodic
+                )
+                .await
             );
         }));
 
