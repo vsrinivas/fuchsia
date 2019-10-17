@@ -64,14 +64,16 @@ Status JournalImpl::Commit(coroutine::CoroutineHandler* handler,
   }
   SetEntryIds(&changes);
 
+  // |base_| and |other_| must be cloned, because they keep the potential bases for diffs alive, and
+  // |parents| will be discarded before this JournalImpl is destructed.
   std::vector<std::unique_ptr<const storage::Commit>> parents;
   if (other_) {
     parents.reserve(2);
-    parents.push_back(std::move(base_));
-    parents.push_back(std::move(other_));
+    parents.push_back(base_->Clone());
+    parents.push_back(other_->Clone());
   } else {
     parents.reserve(1);
-    parents.push_back(std::move(base_));
+    parents.push_back(base_->Clone());
   }
 
   if (cleared_ == JournalContainsClearOperation::NO) {

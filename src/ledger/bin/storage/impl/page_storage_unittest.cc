@@ -103,6 +103,11 @@ class PageStorageImplAccessorForTest {
                                   const ObjectDigest& digest) {
     return storage->object_identifier_factory_.count(digest);
   }
+
+  static callback::OperationSerializer& GetCommitSerializer(
+      const std::unique_ptr<PageStorageImpl>& storage) {
+    return storage->commit_serializer_;
+  }
 };
 
 namespace {
@@ -676,6 +681,39 @@ class PageStorageTest : public StorageTest {
              << "For id " << object_identifier << " expected to find the object "
              << (is_synced ? "un" : "") << "synced, but was " << (expected_synced ? "un" : "")
              << "synced, instead.";
+    }
+    return ::testing::AssertionSuccess();
+  }
+
+  ::testing::AssertionResult MarkCommitSynced(const CommitId& commit) {
+    bool called;
+    Status status;
+    storage_->MarkCommitSynced(commit,
+                               callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+
+    if (!called) {
+      return ::testing::AssertionFailure() << "MarkCommitSynced did not return";
+    }
+    if (status != Status::OK) {
+      return ::testing::AssertionFailure() << "MarkCommitSynced returned status " << status;
+    }
+    return ::testing::AssertionSuccess();
+  }
+
+  ::testing::AssertionResult MarkPieceSynced(ObjectIdentifier object_identifier) {
+    RetrackIdentifier(&object_identifier);
+    bool called;
+    Status status;
+    storage_->MarkPieceSynced(object_identifier,
+                              callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+
+    if (!called) {
+      return ::testing::AssertionFailure() << "MarkPieceSynced did not return";
+    }
+    if (status != Status::OK) {
+      return ::testing::AssertionFailure() << "MarkPieceSynced returned status " << status;
     }
     return ::testing::AssertionSuccess();
   }
@@ -3980,6 +4018,69 @@ TEST_F(PageStorageTest, EagerGarbageCollection) {
     RetrackIdentifier(&object_identifier);
     ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::INTERNAL_NOT_FOUND);
   });
+}
+
+// Tests that the object identifiers of parents are not garbage collected between the time the tree
+// is written to disk, and the time the commit is written to disk.
+TEST_F(PageStorageTest, CommitJournalKeepsParents) {
+  // We create the following tree, with commits numbered by creation order:
+  //    (1)
+  //   /  \
+  // (2)  (3)
+  // Between (2) and (3), we mark (1) and (2) and their root objects as synced: the root object of
+  // (1) becomes garbage collectable as soon as we drop our reference to (1).
+  // Create two commits, mark the first one as synced, as well as its root object.
+  bool called;
+  Status status;
+  std::unique_ptr<const Commit> commit1 = TryCommitFromLocal(10);
+  ASSERT_TRUE(commit1);
+  std::unique_ptr<const Commit> commit2 = TryCommitFromLocal(10);
+  ASSERT_TRUE(commit2);
+
+  CommitId commit1_id = commit1->GetId();
+  ObjectIdentifier commit1_root_identifier = commit1->GetRootIdentifier();
+  MarkCommitSynced(commit1_id);
+  MarkCommitSynced(commit2->GetId());
+  MarkPieceSynced(commit1_root_identifier);
+  UntrackIdentifier(&commit1_root_identifier);
+
+  std::unique_ptr<Journal> journal = storage_->StartCommit(std::move(commit1));
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+  // Take the commit lock before committing. This will leave time for garbage collection.
+  fit::closure unlock;
+  PageStorageImplAccessorForTest::GetCommitSerializer(storage_).Serialize(
+      [] {}, callback::Capture(callback::SetWhenCalled(&called), &unlock));
+  ASSERT_TRUE(called);
+  std::unique_ptr<const Commit> commit3;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit3));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+  unlock();
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_TRUE(commit3);
+
+  // The root of |commit1| is alive, so the diff can be computed.
+  called = false;
+  storage_->GetDiffForCloud(*commit3, [&](Status status, CommitIdView base_commit_id,
+                                          std::vector<EntryChange> /*changes*/) {
+    called = true;
+    EXPECT_EQ(base_commit_id, commit1_id);
+    EXPECT_EQ(status, Status::OK);
+  });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  ASSERT_GT(PageStorageImplAccessorForTest::CountLiveReferences(
+                storage_, commit1_root_identifier.object_digest()),
+            0);
+
+  // Mark commit3 as synced: the root of commit1 is not needed anymore.
+  MarkCommitSynced(commit3->GetId());
+  ASSERT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(
+                storage_, commit1_root_identifier.object_digest()),
+            0);
 }
 
 }  // namespace

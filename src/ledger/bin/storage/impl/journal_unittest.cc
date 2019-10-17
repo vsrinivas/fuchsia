@@ -110,6 +110,8 @@ TEST_F(JournalTest, JournalsPutDeleteCommit) {
     Status status = journal_->Commit(handler, &commit, &objects_to_sync);
     ASSERT_EQ(status, Status::OK);
     ASSERT_NE(nullptr, commit);
+    ObjectDigest commit_root = commit->GetRootIdentifier().object_digest();
+    objects_to_sync.clear();
 
     std::vector<Entry> entries = GetCommitContents(*commit);
     ASSERT_THAT(entries, SizeIs(1));
@@ -125,6 +127,12 @@ TEST_F(JournalTest, JournalsPutDeleteCommit) {
     status = journal_->Commit(handler, &commit, &objects_to_sync);
     ASSERT_EQ(status, Status::OK);
     ASSERT_NE(nullptr, commit);
+
+    // Let the GC run.
+    RunLoopUntilIdle();
+
+    // Check that even after committing, we keep a live reference to the root of base commit.
+    EXPECT_FALSE(page_storage_.GetObjectIdentifierFactory()->TrackDeletion(commit_root));
 
     ASSERT_THAT(GetCommitContents(*commit), ElementsAre());
   }));
@@ -288,6 +296,8 @@ TEST_F(JournalTest, MergeJournal) {
     status = journal_->Commit(handler, &commit_0, &objects_to_sync_0);
     ASSERT_EQ(status, Status::OK);
     ASSERT_NE(nullptr, commit_0);
+    ObjectDigest commit0_root = commit_0->GetRootIdentifier().object_digest();
+    objects_to_sync_0.clear();
 
     SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
     journal_->Put("1", object_identifier_, KeyPriority::EAGER);
@@ -297,6 +307,8 @@ TEST_F(JournalTest, MergeJournal) {
     status = journal_->Commit(handler, &commit_1, &objects_to_sync_1);
     ASSERT_EQ(status, Status::OK);
     ASSERT_NE(nullptr, commit_1);
+    ObjectDigest commit1_root = commit_1->GetRootIdentifier().object_digest();
+    objects_to_sync_1.clear();
 
     // Create a merge journal, adding only a key "2".
     SetJournal(JournalImpl::Merge(&environment_, &page_storage_, std::move(commit_0),
@@ -308,6 +320,15 @@ TEST_F(JournalTest, MergeJournal) {
     status = journal_->Commit(handler, &merge_commit, &objects_to_sync_merge);
     ASSERT_EQ(status, Status::OK);
     ASSERT_NE(nullptr, merge_commit);
+    objects_to_sync_merge.clear();
+
+    // Let the GC run.
+    RunLoopUntilIdle();
+
+    // Even after committing, we should have live references to the roots of commit 0 and 1.
+    // Test this by trying to start a deletion.
+    EXPECT_FALSE(page_storage_.GetObjectIdentifierFactory()->TrackDeletion(commit0_root));
+    EXPECT_FALSE(page_storage_.GetObjectIdentifierFactory()->TrackDeletion(commit1_root));
 
     // Expect the contents to have two keys: "0" and "2".
     std::vector<Entry> entries = GetCommitContents(*merge_commit);

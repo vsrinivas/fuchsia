@@ -31,6 +31,8 @@ namespace storage {
 // longer valid, it is an error to try to call any further methods on that
 // object. A journal that is not commited before destruction, will be rolled
 // back.
+// The parent commits, and the identifiers of their tree roots, are kept alive
+// until the journal object is discarded.
 class JournalImpl : public Journal {
  private:
   // Passkey idiom to restrict access to the constructor to static factories.
