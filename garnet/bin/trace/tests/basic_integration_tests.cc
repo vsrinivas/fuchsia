@@ -4,6 +4,9 @@
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 
+namespace tracing {
+namespace test {
+
 // Basic tests are all folded into integration_test_app.
 
 const IntegrationTest* kIntegrationTests[] = {
@@ -18,3 +21,6 @@ const IntegrationTest* LookupTest(const std::string& test_name) {
   }
   return nullptr;
 }
+
+}  // namespace test
+}  // namespace tracing

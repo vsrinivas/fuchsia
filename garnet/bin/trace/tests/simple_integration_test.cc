@@ -13,6 +13,9 @@
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 
+namespace tracing {
+namespace test {
+
 static bool RunSimpleTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
@@ -47,3 +50,6 @@ const IntegrationTest kSimpleIntegrationTest = {
     &RunSimpleTest,
     &VerifySimpleTest,
 };
+
+}  // namespace test
+}  // namespace tracing

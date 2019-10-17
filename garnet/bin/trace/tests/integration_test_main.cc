@@ -38,12 +38,13 @@ const char kUsageString[] = {
     "  --verbose[=LEVEL]  set debug verbosity level\n"
     "  --log-file=FILE    write log output to FILE\n"};
 
-static int RunTest(const tracing::Spec& spec, TestRunner* run) {
+static int RunTest(const tracing::Spec& spec, tracing::test::TestRunner* run) {
   bool success = run(spec);
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-static int VerifyTest(const tracing::Spec& spec, TestVerifier* verify,
+static int VerifyTest(const tracing::Spec& spec,
+                      tracing::test::TestVerifier* verify,
                       const std::string& test_output_file) {
   if (!verify(spec, test_output_file))
     return EXIT_FAILURE;
@@ -108,7 +109,7 @@ int main(int argc, char* argv[]) {
   FXL_DCHECK(spec.test_name);
   auto test_name = *spec.test_name;
 
-  auto test = LookupTest(test_name);
+  auto test = tracing::test::LookupTest(test_name);
   if (test == nullptr) {
     FXL_LOG(ERROR) << "Unknown test name: " << test_name;
     return EXIT_FAILURE;

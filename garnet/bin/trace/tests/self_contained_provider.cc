@@ -18,6 +18,9 @@
 
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 
+namespace tracing {
+namespace test {
+
 static const char kName[] = "self-contained-provider";
 
 static int SelfContainedProviderThread(void* arg) {
@@ -43,3 +46,6 @@ __EXPORT bool StartSelfContainedProvider(thrd_t* out_thread) {
   }
   return true;
 }
+
+}  // namespace test
+}  // namespace tracing

@@ -6,6 +6,11 @@
 
 #include "garnet/bin/trace/tests/run_test.h"
 
+namespace tracing {
+namespace test {
+
+namespace {
+
 const char kChildPath[] = "/pkg/bin/return_1234";
 
 constexpr const int kChildReturnCode = 1234;
@@ -39,3 +44,8 @@ TEST(ReturnChildResult, True) {
   ASSERT_TRUE(WaitAndGetReturnCode("trace", child, &return_code));
   EXPECT_EQ(return_code, kChildReturnCode);
 }
+
+}  // namespace
+
+}  // namespace test
+}  // namespace tracing

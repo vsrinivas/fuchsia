@@ -9,6 +9,11 @@
 
 #include "garnet/bin/trace/tests/run_test.h"
 
+namespace tracing {
+namespace test {
+
+namespace {
+
 const char kChildPath[] = "/pkg/bin/run_awhile";
 
 // Only run tracing for this long, not the default 10 seconds.
@@ -75,3 +80,8 @@ TEST(DetachTest, DISABLED_SpawnedAppDetached) {
   ASSERT_TRUE(test_helper);
   EXPECT_EQ(test_helper.kill(), ZX_OK);
 }
+
+}  // namespace
+
+}  // namespace test
+}  // namespace tracing

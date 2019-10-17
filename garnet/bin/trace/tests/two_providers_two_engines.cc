@@ -20,6 +20,9 @@
 
 #define TEST_NAME "two-providers-two-engines"
 
+namespace tracing {
+namespace test {
+
 static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
@@ -71,3 +74,6 @@ const IntegrationTest* LookupTest(const std::string& test_name) {
   }
   return nullptr;
 }
+
+}  // namespace test
+}  // namespace tracing

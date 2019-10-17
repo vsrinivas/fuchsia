@@ -11,6 +11,11 @@
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/run_test.h"
 
+namespace tracing {
+namespace test {
+
+namespace {
+
 const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/provider_destruction_app.cmx";
 
 // Note: /data is no longer large enough in qemu sessions
@@ -23,8 +28,6 @@ const char kRelativeOutputFilePath[] = "test.trace";
 // in the kernel.
 // TODO(dje): This could use some cleanup.
 const char kCategoriesArg[] = "--categories=" CATEGORY_NAME;
-
-namespace {
 
 // Try this many times to exercise shutdown.
 // This has been more than enough to trigger PT-247 in practice.
@@ -48,3 +51,6 @@ TEST(ProviderDestruction, StressTest) {
 }
 
 }  // namespace
+
+}  // namespace test
+}  // namespace tracing

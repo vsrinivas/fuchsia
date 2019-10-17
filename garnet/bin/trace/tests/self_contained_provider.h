@@ -16,6 +16,12 @@
 #endif
 #include <threads.h>
 
+namespace tracing {
+namespace test {
+
 bool StartSelfContainedProvider(thrd_t* out_thread);
+
+}  // namespace test
+}  // namespace tracing
 
 #endif  // GARNET_BIN_TRACE_TESTS_SELF_CONTAINED_PROVIDER_H_

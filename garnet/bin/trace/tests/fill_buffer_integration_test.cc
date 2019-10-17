@@ -9,6 +9,9 @@
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 
+namespace tracing {
+namespace test {
+
 const char kProviderName[] = "fill-buffer";
 
 static bool RunFillBufferTest(const tracing::Spec& spec) {
@@ -66,3 +69,6 @@ const IntegrationTest kFillBufferIntegrationTest = {
     &RunFillBufferTest,
     &VerifyFillBufferTest,
 };
+
+}  // namespace test
+}  // namespace tracing

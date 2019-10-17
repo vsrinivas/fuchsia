@@ -10,6 +10,11 @@
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/run_test.h"
 
+namespace tracing {
+namespace test {
+
+namespace {
+
 const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/shared_provider_app.cmx";
 
 // Note: /data is no longer large enough in qemu sessions
@@ -22,8 +27,6 @@ const char kRelativeOutputFilePath[] = "test.trace";
 // in the kernel.
 // TODO(dje): This could use some cleanup.
 const char kCategoriesArg[] = "--categories=" CATEGORY_NAME;
-
-namespace {
 
 TEST(SharedProvider, IntegrationTest) {
   zx::job job{};  // -> default job
@@ -41,3 +44,6 @@ TEST(SharedProvider, IntegrationTest) {
 }
 
 }  // namespace
+
+}  // namespace test
+}  // namespace tracing

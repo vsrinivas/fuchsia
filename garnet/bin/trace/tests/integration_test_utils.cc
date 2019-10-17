@@ -19,6 +19,9 @@
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 
+namespace tracing {
+namespace test {
+
 // The name of the trace events member in the json output file.
 const char kTraceEventsMemberName[] = "traceEvents";
 
@@ -259,3 +262,6 @@ bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout) {
 
   return trace_state() == TRACE_STARTED;
 }
+
+}  // namespace test
+}  // namespace tracing

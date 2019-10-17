@@ -31,6 +31,9 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
+namespace tracing {
+namespace test {
+
 // The "path" of the trace program from outside the trace package.
 const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program as a shell command.
@@ -401,3 +404,6 @@ bool VerifyTspec(const std::string& relative_tspec_path,
     return RunComponentAndWait(&loop, context, program_path, args);
   }
 }
+
+}  // namespace test
+}  // namespace tracing

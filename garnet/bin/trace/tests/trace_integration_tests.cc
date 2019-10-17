@@ -16,6 +16,9 @@
 
 #include "garnet/bin/trace/tests/run_test.h"
 
+namespace tracing {
+namespace test {
+
 // Note: /data is no longer large enough in qemu sessions
 // This file is a relative path, from the tmp directory.
 const char kRelativeOutputFilePath[] = "test.trace";
@@ -128,3 +131,6 @@ TEST_F(TwoProvidersOneEngine, ErrorHandling) {
 TEST(TwoProvidersTwoEngines, DISABLED_Test) {
   RunAndVerify("data/two_providers_two_engines.tspec");
 }
+
+}  // namespace test
+}  // namespace tracing

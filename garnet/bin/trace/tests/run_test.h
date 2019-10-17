@@ -13,6 +13,9 @@
 #include <string>
 #include <vector>
 
+namespace tracing {
+namespace test {
+
 // Our component's tmp directory.
 constexpr char kTestTmpPath[] = "/tmp";
 
@@ -63,5 +66,8 @@ bool RunTspec(const std::string& relative_tspec_path,
 // ("synchronous" meaning that it waits for the verifier to complete).
 bool VerifyTspec(const std::string& relative_tspec_path,
                  const std::string& relative_output_file_path);
+
+}  // namespace test
+}  // namespace tracing
 
 #endif  // GARNET_BIN_TRACE_TESTS_RUN_TEST_H_

@@ -20,7 +20,7 @@ const char kProviderName[] = "provider-destruction";
 static bool WriteEvents(async::Loop& loop) {
   fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
-  if (!CreateProviderSynchronously(loop, kProviderName, &provider, &already_started)) {
+  if (!tracing::test::CreateProviderSynchronously(loop, kProviderName, &provider, &already_started)) {
     return false;
   }
 
@@ -31,13 +31,13 @@ static bool WriteEvents(async::Loop& loop) {
     // has started. But we haven't received the Start() request yet, which
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     async::Loop wait_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    if (!WaitForTracingToStart(wait_loop, kStartTimeout)) {
+    if (!tracing::test::WaitForTracingToStart(wait_loop, tracing::test::kStartTimeout)) {
       FXL_LOG(ERROR) << "Provider " << kProviderName << " failed waiting for tracing to start";
       return false;
     }
   }
 
-  WriteTestEvents(kNumSimpleTestEvents);
+  tracing::test::WriteTestEvents(tracing::test::kNumSimpleTestEvents);
 
   return true;
 }

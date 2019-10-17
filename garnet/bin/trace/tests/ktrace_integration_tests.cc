@@ -12,6 +12,11 @@
 
 #include "garnet/bin/trace/tests/run_test.h"
 
+namespace tracing {
+namespace test {
+
+namespace {
+
 const char kChildPath[] = "/bin/trace";
 
 // Note: /data is no longer large enough in qemu sessions
@@ -75,3 +80,8 @@ TEST(Ktrace, DISABLED_IntegrationTest) {
 
   ASSERT_GT(syscall_count, 0u);
 }
+
+}  // namespace
+
+}  // namespace test
+}  // namespace tracing

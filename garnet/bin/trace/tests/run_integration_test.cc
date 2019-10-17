@@ -55,11 +55,11 @@ int main(int argc, char *argv[]) {
 
   tracing::test::InitComponentContext();
 
-  if (!RunTspec(relative_tspec_path, kRelativeOutputFilePath)) {
+  if (!tracing::test::RunTspec(relative_tspec_path, kRelativeOutputFilePath)) {
     return EXIT_FAILURE;
   }
 
-  if (!VerifyTspec(relative_tspec_path, kRelativeOutputFilePath)) {
+  if (!tracing::test::VerifyTspec(relative_tspec_path, kRelativeOutputFilePath)) {
     return EXIT_FAILURE;
   }
 
