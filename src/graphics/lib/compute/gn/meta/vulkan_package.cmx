@@ -3,8 +3,13 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
         "features": [
-            "vulkan"
+            "vulkan",
+            "isolated-cache-storage",
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.sysmem.Allocator",

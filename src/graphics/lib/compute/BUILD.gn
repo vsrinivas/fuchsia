@@ -52,6 +52,7 @@ group("all_tests") {
     ":tests",
     "hotsort:tests",
     "spinel:tests",
+    "tests:tests",
   ]
   if (_build_host_tests) {
     data_deps = [
@@ -63,5 +64,8 @@ group("all_tests") {
 # A target used to group all simple graphics compute unit-tests
 # (i.e. those that do not depend on Vulkan for now).
 graphics_compute_unittest_package("graphics_compute_unittests") {
-  tests = [ "common:common_unittests" ]
+  tests = [
+    "common:common_unittests",
+    "tests:common_unittests",
+  ]
 }

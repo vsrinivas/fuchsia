@@ -79,7 +79,7 @@ template("graphics_compute_vulkan_executable") {
     if (!defined(resources)) {
       resources = []
     }
-    resources = vulkan_validation_layers.resources
+    resources += vulkan_validation_layers.resources
 
     if (!defined(meta)) {
       meta = [

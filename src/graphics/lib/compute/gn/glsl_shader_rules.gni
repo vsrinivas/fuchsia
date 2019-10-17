@@ -138,8 +138,10 @@ template("graphics_compute_compile_glsl_shader_foreach") {
       rebase_path(outputs[0], root_build_dir),
       "{{source}}",
     ]
-    foreach(include_dir, invoker.include_dirs) {
-      args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
+    if (defined(invoker.include_dirs)) {
+      foreach(include_dir, invoker.include_dirs) {
+        args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
+      }
     }
     if (defined(invoker.args)) {
       args += invoker.args
