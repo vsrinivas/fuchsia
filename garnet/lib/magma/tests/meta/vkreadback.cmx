@@ -1,9 +1,10 @@
 {
     "facets": {
         "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
-            }
+            "system-services": [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
+            ]
         }
     },
     "program": {
@@ -15,6 +16,7 @@
             "vulkan"
         ],
         "services": [
+            "fuchsia.sysmem.Allocator",
             "fuchsia.vulkan.loader.Loader"
         ]
     }
