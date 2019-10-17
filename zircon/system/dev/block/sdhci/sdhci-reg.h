@@ -303,6 +303,16 @@ class Capabilities0 : public hwreg::RegisterBase<Capabilities0, uint32_t> {
   static constexpr uint32_t kMhzToHz = 1'000'000;
 };
 
+class Capabilities1 : public hwreg::RegisterBase<Capabilities1, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<Capabilities1>(0x44); }
+
+  DEF_BIT(13, use_tuning_for_sdr50);
+  DEF_BIT(2, ddr50_support);
+  DEF_BIT(1, sdr104_support);
+  DEF_BIT(0, sdr50_support);
+};
+
 class AdmaErrorStatus : public hwreg::RegisterBase<AdmaErrorStatus, uint8_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<AdmaErrorStatus>(0x54); }
