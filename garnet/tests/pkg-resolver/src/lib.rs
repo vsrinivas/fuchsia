@@ -243,14 +243,14 @@ fn extra_blob_contents(i: u32) -> Vec<u8> {
     format!("contents of file {}", i).as_bytes().to_owned()
 }
 
-async fn make_rolldice_pkg_with_extra_blobs(n: u32) -> Result<Package, Error> {
+async fn make_rolldice_pkg_with_extra_blobs(n: u32) -> Package {
     let mut pkg = PackageBuilder::new("rolldice")
-        .add_resource_at("bin/rolldice", ROLLDICE_BIN)?
-        .add_resource_at("meta/rolldice.cmx", ROLLDICE_CMX)?;
+        .add_resource_at("bin/rolldice", ROLLDICE_BIN)
+        .add_resource_at("meta/rolldice.cmx", ROLLDICE_CMX);
     for i in 0..n {
-        pkg = pkg.add_resource_at(format!("data/file{}", i), extra_blob_contents(i).as_slice())?;
+        pkg = pkg.add_resource_at(format!("data/file{}", i), extra_blob_contents(i).as_slice());
     }
-    pkg.build().await
+    pkg.build().await.unwrap()
 }
 
 fn resolve_package(

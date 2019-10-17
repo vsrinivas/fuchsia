@@ -24,7 +24,6 @@ async fn test_pkgfs_short_write() -> Result<(), Error> {
 
     let pkg = PackageBuilder::new("example")
         .add_resource_at("a/b", "Hello world!\n".as_bytes())
-        .expect("add resource")
         .build()
         .await
         .expect("build package");
@@ -141,7 +140,6 @@ async fn test_pkgfs_restart_install() -> Result<(), Error> {
 
     let pkg = PackageBuilder::new("example")
         .add_resource_at("a/b", "Hello world!\n".as_bytes())
-        .expect("add resource")
         .build()
         .await
         .expect("build package");
@@ -336,7 +334,6 @@ async fn test_pkgfs_restart_install_already_done() -> Result<(), Error> {
 
     let pkg = PackageBuilder::new("example")
         .add_resource_at("a/b", "Hello world!\n".as_bytes())
-        .expect("add resource")
         .build()
         .await
         .expect("build package");
@@ -490,7 +487,6 @@ async fn test_pkgfs_restart_install_failed_meta_far() -> Result<(), Error> {
 
     let pkg = PackageBuilder::new("example")
         .add_resource_at("a/b", "Hello world!\n".as_bytes())
-        .expect("add resource")
         .build()
         .await
         .expect("build package");

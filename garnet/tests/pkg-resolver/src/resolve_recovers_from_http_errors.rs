@@ -53,15 +53,20 @@ async fn verify_resolve_fails_then_succeeds(
     pkg: Package,
     uri_handler: OverrideOnceUriPathHandler,
     failure_status: Status,
-) -> Result<(), Error> {
+) {
     let env = TestEnv::new();
     let repo = Arc::new(
-        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?,
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
     );
-    let served_repository = repo.build_server().uri_path_override_handler(uri_handler).start()?;
+    let served_repository =
+        repo.build_server().uri_path_override_handler(uri_handler).start().unwrap();
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(repo_config.into()).await?;
+    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
     env.set_experiment_state(Experiment::DownloadBlob, true).await;
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
 
@@ -70,7 +75,6 @@ async fn verify_resolve_fails_then_succeeds(
 
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
     env.stop().await;
-    Ok(())
 }
 
 struct NotFoundUriPathHandler;
@@ -87,8 +91,8 @@ impl UriPathHandler for NotFoundUriPathHandler {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn second_resolve_succeeds_when_far_404() -> Result<(), Error> {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await?;
+async fn second_resolve_succeeds_when_far_404() {
+    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
     let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
 
     verify_resolve_fails_then_succeeds(
@@ -100,8 +104,8 @@ async fn second_resolve_succeeds_when_far_404() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn second_resolve_succeeds_when_blob_404() -> Result<(), Error> {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await?;
+async fn second_resolve_succeeds_when_blob_404() {
+    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
     let path_to_override = format!(
         "/blobs/{}",
         MerkleTree::from_reader(extra_blob_contents(0).as_slice()).expect("merkle slice").root()
@@ -147,14 +151,15 @@ impl UriPathHandler for OneByteShortThenErrorUriPathHandler {
 const FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING: usize = 1_000_000;
 
 #[fasync::run_singlethreaded(test)]
-async fn second_resolve_succeeds_when_far_errors_mid_download() -> Result<(), Error> {
+async fn second_resolve_succeeds_when_far_errors_mid_download() {
     let pkg = PackageBuilder::new("large_meta_far")
         .add_resource_at(
             "meta/large_file",
             vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING].as_slice(),
-        )?
+        )
         .build()
-        .await?;
+        .await
+        .unwrap();
     let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
 
     verify_resolve_fails_then_succeeds(
@@ -166,12 +171,13 @@ async fn second_resolve_succeeds_when_far_errors_mid_download() -> Result<(), Er
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn second_resolve_succeeds_when_blob_errors_mid_download() -> Result<(), Error> {
+async fn second_resolve_succeeds_when_blob_errors_mid_download() {
     let blob = vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING];
     let pkg = PackageBuilder::new("large_blob")
-        .add_resource_at("blobbity/blob", blob.as_slice())?
+        .add_resource_at("blobbity/blob", blob.as_slice())
         .build()
-        .await?;
+        .await
+        .unwrap();
     let path_to_override = format!(
         "/blobs/{}",
         MerkleTree::from_reader(blob.as_slice()).expect("merkle slice").root()
@@ -206,14 +212,15 @@ impl UriPathHandler for OneByteShortThenDisconnectUriPathHandler {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn second_resolve_succeeds_disconnect_before_far_complete() -> Result<(), Error> {
+async fn second_resolve_succeeds_disconnect_before_far_complete() {
     let pkg = PackageBuilder::new("large_meta_far")
         .add_resource_at(
             "meta/large_file",
             vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING].as_slice(),
-        )?
+        )
         .build()
-        .await?;
+        .await
+        .unwrap();
     let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
 
     verify_resolve_fails_then_succeeds(
@@ -225,12 +232,13 @@ async fn second_resolve_succeeds_disconnect_before_far_complete() -> Result<(), 
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn second_resolve_succeeds_disconnect_before_blob_complete() -> Result<(), Error> {
+async fn second_resolve_succeeds_disconnect_before_blob_complete() {
     let blob = vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING];
     let pkg = PackageBuilder::new("large_blob")
-        .add_resource_at("blobbity/blob", blob.as_slice())?
+        .add_resource_at("blobbity/blob", blob.as_slice())
         .build()
-        .await?;
+        .await
+        .unwrap();
     let path_to_override = format!(
         "/blobs/{}",
         MerkleTree::from_reader(blob.as_slice()).expect("merkle slice").root()
@@ -263,8 +271,8 @@ impl UriPathHandler for OneByteFlippedUriPathHandler {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn second_resolve_succeeds_when_far_corrupted() -> Result<(), Error> {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await?;
+async fn second_resolve_succeeds_when_far_corrupted() {
+    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
     let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
 
     verify_resolve_fails_then_succeeds(
@@ -276,8 +284,8 @@ async fn second_resolve_succeeds_when_far_corrupted() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn second_resolve_succeeds_when_blob_corrupted() -> Result<(), Error> {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await?;
+async fn second_resolve_succeeds_when_blob_corrupted() {
+    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
     let blob = extra_blob_contents(0);
     let path_to_override = format!(
         "/blobs/{}",

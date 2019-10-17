@@ -14,7 +14,7 @@ use {
     },
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_component::client::{launcher, App, AppBuilder, ExitStatus},
+    fuchsia_component::client::{launcher, App, AppBuilder, ExitStatus, Stdio},
     fuchsia_merkle::Hash,
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::DurationNum,
@@ -340,6 +340,8 @@ impl Repository {
         println!("using port={}", port);
 
         let mut pm = AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
+            .stdout(Stdio::MakePipe)
+            .stderr(Stdio::MakePipe)
             .arg("serve")
             .arg(format!("-l=127.0.0.1:{}", port))
             .arg("-repo=/repo")
@@ -377,11 +379,11 @@ impl Repository {
                 let fut = get(format!("http://127.0.0.1:{}/config.json", port));
                 match fut.await {
                     Ok(_) => {
-                        println!("server up on attempt {}", attempt);
+                        println!("'pm serve' up on attempt {}", attempt);
                         return Ok(());
                     }
                     Err(e) => {
-                        println!("request failed: {:?}", e);
+                        println!("'pm serve' not yet responding, attempt {} {:?}", attempt, e);
                         return Err(e);
                     }
                 }
@@ -398,7 +400,13 @@ impl Repository {
                 wait_pm_down
             }
             future::Either::Right((exit_status, _)) => {
-                bail!("{}", exit_status?);
+                let output = pm.wait_with_output().await.unwrap();
+                panic!(
+                    "'pm serve' exited too soon {:?}\nstdout: {:?}\nstderr: {:?}",
+                    exit_status,
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
             }
         }
         .boxed();
@@ -474,12 +482,12 @@ mod tests {
         let repo = RepositoryBuilder::new()
             .add_package(
                 PackageBuilder::new("rolldice")
-                    .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())?
+                    .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())
                     .add_resource_at(
                         "meta/rolldice.cmx",
                         r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes(),
-                    )?
-                    .add_resource_at("data/duplicate_a", "same contents".as_bytes())?
+                    )
+                    .add_resource_at("data/duplicate_a", "same contents".as_bytes())
                     .build()
                     .await?,
             )
@@ -488,13 +496,13 @@ mod tests {
                     .add_resource_at(
                         "bin/fortune",
                         "#!/boot/bin/sh\necho ask again later\n".as_bytes(),
-                    )?
+                    )
                     .add_resource_at(
                         "meta/fortune.cmx",
                         r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes(),
-                    )?
-                    .add_resource_at("data/duplicate_b", same_contents.as_bytes())?
-                    .add_resource_at("data/duplicate_c", same_contents.as_bytes())?
+                    )
+                    .add_resource_at("data/duplicate_b", same_contents.as_bytes())
+                    .add_resource_at("data/duplicate_c", same_contents.as_bytes())
                     .build()
                     .await?,
             )
@@ -525,7 +533,7 @@ mod tests {
         let repo = RepositoryBuilder::new()
             .add_package(
                 PackageBuilder::new("tiny")
-                    .add_resource_at("data/message", message)?
+                    .add_resource_at("data/message", message)
                     .build()
                     .await?,
             )
@@ -597,12 +605,12 @@ mod tests {
         let repo = RepositoryBuilder::new()
             .add_package(
                 PackageBuilder::new("rolldice")
-                    .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())?
+                    .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())
                     .add_resource_at(
                         "meta/rolldice.cmx",
                         r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes(),
-                    )?
-                    .add_resource_at("data/duplicate_a", "same contents".as_bytes())?
+                    )
+                    .add_resource_at("data/duplicate_a", "same contents".as_bytes())
                     .build()
                     .await?,
             )
@@ -611,13 +619,13 @@ mod tests {
                     .add_resource_at(
                         "bin/fortune",
                         "#!/boot/bin/sh\necho ask again later\n".as_bytes(),
-                    )?
+                    )
                     .add_resource_at(
                         "meta/fortune.cmx",
                         r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes(),
-                    )?
-                    .add_resource_at("data/duplicate_b", same_contents.as_bytes())?
-                    .add_resource_at("data/duplicate_c", same_contents.as_bytes())?
+                    )
+                    .add_resource_at("data/duplicate_b", same_contents.as_bytes())
+                    .add_resource_at("data/duplicate_c", same_contents.as_bytes())
                     .build()
                     .await?,
             )

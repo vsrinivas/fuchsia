@@ -143,7 +143,6 @@ mod tests {
 
         let pkg = PackageBuilder::new("example")
             .add_resource_at("a/b", "Hello world!\n".as_bytes())
-            .expect("add resource")
             .build()
             .await
             .expect("build package");
@@ -239,7 +238,6 @@ mod tests {
 
         let pkg = PackageBuilder::new("example")
             .add_resource_at("a/b", "Hello world!\n".as_bytes())
-            .expect("add resource")
             .build()
             .await
             .expect("build package");

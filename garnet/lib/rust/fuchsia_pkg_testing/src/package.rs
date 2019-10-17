@@ -97,7 +97,7 @@ impl Package {
 
             let relative_path = path.strip_prefix(root).unwrap();
             let f = File::open(path)?;
-            pkg = pkg.add_resource_at(relative_path.to_str().unwrap(), f)?;
+            pkg = pkg.add_resource_at(relative_path.to_str().unwrap(), f);
         }
 
         Ok(pkg.build().await?)
@@ -185,10 +185,13 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
 
         if let Some(event) = event {
             match event.wait_handle(zx::Signals::USER_0, zx::Time::after(0.seconds())) {
-                Err(Status::TIMED_OUT) => Err(VerificationError::UnreadableBlob),
-                Err(other_status) => {
-                    Err(format_err!("wait_handle failed with status: {:?}", other_status).into())
-                }
+                Err(Status::TIMED_OUT) => Err(VerificationError::NoUser0 { path: path.into() }),
+                Err(other_status) => Err(format_err!(
+                    "wait_handle failed with status: {:?} {:?}",
+                    other_status,
+                    path
+                )
+                .into()),
                 Ok(_) => Ok(()),
             }
         } else {
@@ -201,7 +204,8 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
         loop {
             let (status, chunk) =
                 file.read(fidl_fuchsia_io::MAX_BUF).await.context("file read to respond")?;
-            Status::ok(status).context("file read to succeed")?;
+            Status::ok(status)
+                .map_err(|status| VerificationError::FileReadError { path: path.into(), status })?;
 
             if chunk.is_empty() {
                 return Ok(buf);
@@ -233,8 +237,18 @@ pub enum VerificationError {
         /// Path to the file.
         path: String,
     },
-    /// We failed to read from a blob that should have been readable.
-    UnreadableBlob,
+    /// USER_0 signal was not set on the File's event.
+    NoUser0 {
+        /// Path to the file
+        path: String,
+    },
+    /// Read method on file failed.
+    FileReadError {
+        /// Path to the file
+        path: String,
+        /// Read result
+        status: Status,
+    },
     /// Anything else.
     Other(Error),
 }
@@ -279,17 +293,17 @@ impl PackageBuilder {
         mut self,
         path: impl Into<PathBuf>,
         mut contents: impl io::Read,
-    ) -> Result<Self, io::Error> {
+    ) -> Self {
         let path = path.into();
         let mut data = vec![];
-        contents.read_to_end(&mut data)?;
+        contents.read_to_end(&mut data).unwrap();
 
         if let Some(parent) = path.parent() {
             self.make_dirs(parent);
         }
         let replaced = self.contents.insert(path.clone(), PackageEntry::File(data));
         assert_eq!(None, replaced, "already contains an entry at {:?}", path);
-        Ok(self)
+        self
     }
 
     fn make_dirs(&mut self, path: &Path) {
@@ -398,13 +412,9 @@ impl PackageDir {
     ///
     /// # Panics
     /// If the package already contains a resource at `path`, relative to this `PackageDir`.
-    pub fn add_resource_at(
-        mut self,
-        path: impl AsRef<Path>,
-        contents: impl io::Read,
-    ) -> Result<Self, io::Error> {
-        self.pkg = self.pkg.add_resource_at(self.path.join(path.as_ref()), contents)?;
-        Ok(self)
+    pub fn add_resource_at(mut self, path: impl AsRef<Path>, contents: impl io::Read) -> Self {
+        self.pkg = self.pkg.add_resource_at(self.path.join(path.as_ref()), contents);
+        self
     }
 
     /// Finish adding resources to this directory, returning the modified [`PackageBuilder`].
@@ -422,8 +432,8 @@ mod tests {
     fn test_panics_file_with_existing_parent_as_file() {
         let _ = (|| -> Result<(), Error> {
             PackageBuilder::new("test")
-                .add_resource_at("data", "data contents".as_bytes())?
-                .add_resource_at("data/foo", "data/foo contents".as_bytes())?;
+                .add_resource_at("data", "data contents".as_bytes())
+                .add_resource_at("data/foo", "data/foo contents".as_bytes());
             Ok(())
         })();
     }
@@ -433,7 +443,7 @@ mod tests {
     fn test_panics_dir_with_existing_file() {
         let _ = (|| -> Result<(), Error> {
             PackageBuilder::new("test")
-                .add_resource_at("data", "data contents".as_bytes())?
+                .add_resource_at("data", "data contents".as_bytes())
                 .dir("data");
             Ok(())
         })();
@@ -444,7 +454,7 @@ mod tests {
     fn test_panics_nested_dir_with_existing_file() {
         let _ = (|| -> Result<(), Error> {
             PackageBuilder::new("test")
-                .add_resource_at("data", "data contents".as_bytes())?
+                .add_resource_at("data", "data contents".as_bytes())
                 .dir("data/foo");
             Ok(())
         })();
@@ -456,9 +466,9 @@ mod tests {
         let _ = (|| -> Result<(), Error> {
             PackageBuilder::new("test")
                 .dir("data")
-                .add_resource_at("foo", "data/foo contents".as_bytes())?
+                .add_resource_at("foo", "data/foo contents".as_bytes())
                 .finish()
-                .add_resource_at("data", "data contents".as_bytes())?;
+                .add_resource_at("data", "data contents".as_bytes());
             Ok(())
         })();
     }
@@ -467,7 +477,7 @@ mod tests {
     async fn test_basic() -> Result<(), Error> {
         let pkg = PackageBuilder::new("rolldice")
             .dir("bin")
-            .add_resource_at("rolldice", "asldkfjaslkdfjalskdjfalskdf".as_bytes())?
+            .add_resource_at("rolldice", "asldkfjaslkdfjalskdjfalskdf".as_bytes())
             .finish()
             .build()
             .await?;
@@ -492,13 +502,13 @@ mod tests {
     async fn test_dir_semantics() -> Result<(), Error> {
         let with_dir = PackageBuilder::new("data-file")
             .dir("data")
-            .add_resource_at("file", "contents".as_bytes())?
+            .add_resource_at("file", "contents".as_bytes())
             .finish()
             .build()
             .await?;
 
         let with_direct = PackageBuilder::new("data-file")
-            .add_resource_at("data/file", "contents".as_bytes())?
+            .add_resource_at("data/file", "contents".as_bytes())
             .build()
             .await?;
 
@@ -545,7 +555,7 @@ mod tests {
 
         let from_dir = Package::from_dir(root.path()).await?;
         let pkg = PackageBuilder::new("asdf")
-            .add_resource_at("data/hello", "world".as_bytes())?
+            .add_resource_at("data/hello", "world".as_bytes())
             .build()
             .await?;
 
