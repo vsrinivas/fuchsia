@@ -235,7 +235,7 @@ impl BuiltinRootServices {
             fs.add_fidl_service(move |stream| {
                 fasync::spawn(
                     ProcessLauncherService::serve(stream)
-                        .unwrap_or_else(|e| panic!("Error while serving process launcher: {}", e)),
+                        .unwrap_or_else(|e| warn!("Error while serving process launcher: {:?}", e)),
                 )
             });
         }
@@ -244,7 +244,7 @@ impl BuiltinRootServices {
             fs.add_fidl_service(move |stream| {
                 fasync::spawn(
                     VmexService::serve(stream)
-                        .unwrap_or_else(|e| panic!("Error while serving vmex service: {}", e)),
+                        .unwrap_or_else(|e| warn!("Error while serving vmex service: {:?}", e)),
                 )
             });
         }
@@ -253,7 +253,7 @@ impl BuiltinRootServices {
         fs.add_fidl_service(move |stream| {
             fasync::spawn(
                 WorkScheduler::serve_root_work_scheduler_control(stream).unwrap_or_else(|e| {
-                    panic!("Error while serving work scheduler control: {}", e)
+                    warn!("Error while serving work scheduler control: {:?}", e)
                 }),
             )
         });
@@ -263,7 +263,7 @@ impl BuiltinRootServices {
         fs.add_fidl_service(move |stream| {
             fasync::spawn(
                 system_controller::serve(stream)
-                    .unwrap_or_else(|e| panic!("Error serving system controller: {}", e)),
+                    .unwrap_or_else(|e| warn!("Error serving system controller: {:?}", e)),
             )
         });
 
@@ -470,6 +470,32 @@ mod tests {
         let res = proxy.echo_string(Some("hippos")).await;
         let err = res.expect_err("echo_string unexpected succeeded");
         assert!(err.is_closed(), "Unexpected error: {:?}", err);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn bad_fidl_input_doesnt_panic() -> Result<(), Error> {
+        let args = Arguments { use_builtin_process_launcher: true, ..Default::default() };
+        let builtin = BuiltinRootServices::new(&args)?;
+
+        // connect to one of the builtin services
+        let proxy = builtin.connect_to_service::<LauncherMarker>()?;
+
+        // unwrap the channel, write some garbage into it, and observe that the channel is closed
+        // and we don't panic.
+        let chan = proxy.into_channel().unwrap();
+
+        // Writing should succeed since it's asynchronous
+        let res = chan.write(&vec![0; 1024], &mut vec![]);
+        assert!(res.is_ok());
+
+        // The channel should be closed with an error since we wrote garbage
+        let mut msg_buf = zx::MessageBuf::new();
+        let res = chan.recv_msg(&mut msg_buf).await;
+        assert!(res.is_err());
+
+        // If we've made it this far we haven't panicked
+
         Ok(())
     }
 }
