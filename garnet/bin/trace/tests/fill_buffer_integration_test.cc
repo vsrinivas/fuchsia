@@ -20,7 +20,7 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
   // writing the buffer. So run the provider loop in the background.
   loop.StartThread();
 
-  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
   if (!CreateProviderSynchronously(loop, kProviderName, &provider, &already_started)) {
     return false;

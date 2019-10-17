@@ -43,14 +43,14 @@ const char kEventNameMemberName[] = "name";
 constexpr size_t kRecordSize = 64;
 
 bool CreateProviderSynchronously(async::Loop& loop, const char* name,
-                                 fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider,
+                                 std::unique_ptr<trace::TraceProviderWithFdio>* out_provider,
                                  bool* out_already_started) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
-  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
-  if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, name, &provider,
-                                                         &already_started)) {
+  if (!trace::TraceProviderWithFdio::CreateSynchronously(
+        dispatcher, name, &provider, &already_started)) {
     FXL_LOG(ERROR) << "Failed to create provider " << name;
     return false;
   }
@@ -62,10 +62,10 @@ bool CreateProviderSynchronously(async::Loop& loop, const char* name,
 
 bool CreateProviderSynchronouslyAndWait(
     async::Loop& loop, const char* name,
-    fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider) {
+    std::unique_ptr<trace::TraceProviderWithFdio>* out_provider) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
-  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
   if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, name, &provider,
                                                          &already_started)) {
@@ -79,7 +79,8 @@ bool CreateProviderSynchronouslyAndWait(
     // has started. But we haven't received the Start() request yet, which
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     if (!WaitForTracingToStart(loop, kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << name << " failed waiting for tracing to start";
+      FXL_LOG(ERROR) << "Provider " << name
+                     << " timed out waiting for tracing to start";
       return false;
     }
   }

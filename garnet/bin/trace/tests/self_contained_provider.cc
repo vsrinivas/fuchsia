@@ -26,7 +26,7 @@ static const char kName[] = "self-contained-provider";
 static int SelfContainedProviderThread(void* arg) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider;
   if (!CreateProviderSynchronouslyAndWait(loop, kName, &provider)) {
     return false;
   }

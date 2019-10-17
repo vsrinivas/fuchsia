@@ -19,7 +19,7 @@ namespace test {
 static bool RunSimpleTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider;
   if (!CreateProviderSynchronouslyAndWait(loop, "simple", &provider)) {
     return false;
   }

@@ -26,7 +26,7 @@ namespace test {
 static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  fbl::unique_ptr<trace::TraceProviderWithFdio> provider1;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider1;
   if (!CreateProviderSynchronouslyAndWait(loop, "provider1", &provider1)) {
     return false;
   }
