@@ -130,6 +130,8 @@ source_set("data_provider_src") {
     "inspect_ptr.h",
     "kernel_log_ptr.cc",
     "kernel_log_ptr.h",
+    "ref_counted_delayed_task.cc",
+    "ref_counted_delayed_task.h",
     "screenshot_ptr.cc",
     "screenshot_ptr.h",
     "system_log_ptr.cc",

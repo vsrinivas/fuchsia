@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/ref_counted_delayed_task_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
