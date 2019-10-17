@@ -10,7 +10,7 @@ test("memfs") {
     "vmofile-tests.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",

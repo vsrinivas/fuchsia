@@ -5,29 +5,31 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fzl/fdio.h>
+#include <lib/memfs/memfs.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
-
-#include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
-#include <lib/memfs/memfs.h>
-#include <unittest/unittest.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <utility>
 
+#include <fbl/unique_fd.h>
+#include <unittest/unittest.h>
+
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 bool TestFidlBasic() {
   BEGIN_TEST;
@@ -52,10 +54,10 @@ bool TestFidlBasic() {
   ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
   ASSERT_EQ(fdio_service_connect("/fidltmp/file-a", request), ZX_OK);
 
-  fuchsia_io_NodeInfo info = {};
-  ASSERT_EQ(fuchsia_io_FileDescribe(h, &info), ZX_OK);
-  ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_file);
-  ASSERT_EQ(info.file.event, ZX_HANDLE_INVALID);
+  auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
+  ASSERT_EQ(describe_result.status(), ZX_OK);
+  ASSERT_TRUE(describe_result.Unwrap()->info.is_file());
+  ASSERT_EQ(describe_result.Unwrap()->info.file().event.get(), ZX_HANDLE_INVALID);
   zx_handle_close(h);
 
   loop.Shutdown();
@@ -85,11 +87,10 @@ bool TestFidlOpenReadOnly() {
   ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
   ASSERT_EQ(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE, request), ZX_OK);
 
-  zx_status_t status;
-  uint32_t flags;
-  ASSERT_EQ(fuchsia_io_FileGetFlags(h, &status, &flags), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(flags, ZX_FS_RIGHT_READABLE);
+  auto result = fio::File::Call::GetFlags(zx::unowned_channel(h));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result.Unwrap()->s, ZX_OK);
+  ASSERT_EQ(result.Unwrap()->flags, ZX_FS_RIGHT_READABLE);
   zx_handle_close(h);
 
   loop.Shutdown();
@@ -99,17 +100,18 @@ bool TestFidlOpenReadOnly() {
   END_TEST;
 }
 
-bool QueryInfo(const char* path, fuchsia_io_FilesystemInfo* info) {
+bool QueryInfo(const char* path, fio::FilesystemInfo* info) {
   BEGIN_HELPER;
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
-  zx_status_t status;
   fzl::FdioCaller caller(std::move(fd));
-  ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  auto result = fio::DirectoryAdmin::Call::QueryFilesystem((caller.channel()));
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result.Unwrap()->s, ZX_OK);
+  ASSERT_NOT_NULL(result.Unwrap()->info);
+  *info = *(result.Unwrap()->info);
   const char* kFsName = "memfs";
-  const char* name = reinterpret_cast<const char*>(info->name);
+  const char* name = reinterpret_cast<const char*>(info->name.data());
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
   ASSERT_EQ(info->block_size, ZX_PAGE_SIZE);
   ASSERT_EQ(info->max_filename_size, NAME_MAX);
@@ -131,7 +133,7 @@ bool TestFidlQueryFilesystem() {
     ASSERT_GE(fd.get(), 0);
 
     // Sanity checks
-    fuchsia_io_FilesystemInfo info;
+    fio::FilesystemInfo info;
     ASSERT_TRUE(QueryInfo("/fidltmp-basic", &info));
 
     // Query number of blocks
@@ -154,7 +156,7 @@ bool TestFidlQueryFilesystem() {
     fbl::unique_fd fd(open("/fidltmp-limited", O_DIRECTORY | O_RDONLY));
     ASSERT_GE(fd.get(), 0);
 
-    fuchsia_io_FilesystemInfo info;
+    fio::FilesystemInfo info;
     ASSERT_TRUE(QueryInfo("/fidltmp-limited", &info));
 
     // When space is limited, total_bytes must be a multiple of block_size

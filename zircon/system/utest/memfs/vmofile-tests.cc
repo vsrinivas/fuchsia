@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -26,6 +26,8 @@
 #include <unittest/unittest.h>
 
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 bool test_vmofile_basic() {
   BEGIN_TEST;
@@ -50,35 +52,36 @@ bool test_vmofile_basic() {
 
   zx::channel h, request;
   ASSERT_EQ(zx::channel::create(0, &h, &request), ZX_OK);
-  ASSERT_EQ(fuchsia_io_DirectoryOpen(client.get(), fuchsia_io_OPEN_RIGHT_READABLE, 0, "greeting", 8,
-                                     request.release()),
-            ZX_OK);
+  auto open_result =
+      fio::Directory::Call::Open(zx::unowned_channel(client), fio::OPEN_RIGHT_READABLE, 0,
+                                 fidl::StringView("greeting"), std::move(request));
+  ASSERT_EQ(open_result.status(), ZX_OK);
 
-  zx_status_t status = ZX_OK;
-  fuchsia_mem_Buffer buffer = {};
-  ASSERT_EQ(fuchsia_io_FileGetBuffer(h.get(), fuchsia_io_VMO_FLAG_READ, &status, &buffer), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_NE(buffer.vmo, ZX_HANDLE_INVALID);
-  ASSERT_EQ(buffer.size, 13);
-  zx_handle_close(buffer.vmo);
+  auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ);
+  ASSERT_EQ(get_result.status(), ZX_OK);
+  ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
+  llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer;
+  ASSERT_TRUE(buffer->vmo.is_valid());
+  ASSERT_EQ(buffer->size, 13);
 
-  fuchsia_io_NodeInfo info = {};
-  ASSERT_EQ(fuchsia_io_FileDescribe(h.get(), &info), ZX_OK);
-  ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_vmofile);
-  ASSERT_EQ(info.vmofile.offset, 0u);
-  ASSERT_EQ(info.vmofile.length, 13u);
-  zx_handle_close(info.vmofile.vmo);
+  auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
+  ASSERT_EQ(describe_result.status(), ZX_OK);
+  fio::NodeInfo* info = &describe_result.Unwrap()->info;
+  ASSERT_TRUE(info->is_vmofile());
+  ASSERT_EQ(info->vmofile().offset, 0u);
+  ASSERT_EQ(info->vmofile().length, 13u);
 
-  uint64_t seek = 0u;
-  ASSERT_EQ(fuchsia_io_FileSeek(h.get(), 7u, fuchsia_io_SeekOrigin_START, &status, &seek), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(seek, 7u);
-  memset(&info, 0, sizeof(info));
-  ASSERT_EQ(fuchsia_io_FileDescribe(h.get(), &info), ZX_OK);
-  ASSERT_EQ(info.tag, fuchsia_io_NodeInfoTag_vmofile);
-  ASSERT_EQ(info.vmofile.offset, 0u);
-  ASSERT_EQ(info.vmofile.length, 13u);
-  zx_handle_close(info.vmofile.vmo);
+  auto seek_result = fio::File::Call::Seek(zx::unowned_channel(h), 7u, fio::SeekOrigin::START);
+  ASSERT_EQ(seek_result.status(), ZX_OK);
+  ASSERT_EQ(seek_result.Unwrap()->s, ZX_OK);
+  ASSERT_EQ(seek_result.Unwrap()->offset, 7u);
+
+  describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
+  ASSERT_EQ(describe_result.status(), ZX_OK);
+  info = &describe_result.Unwrap()->info;
+  ASSERT_TRUE(info->is_vmofile());
+  ASSERT_EQ(info->vmofile().offset, 0u);
+  ASSERT_EQ(info->vmofile().length, 13u);
 
   h.reset();
 
