@@ -91,16 +91,79 @@ class WebDriverConnector {
       .map((session) => session.webDriver.currentUrl)
       .where((url) => url.isNotEmpty);
 
+  /// Search for Chrome contexts based on the host of the currently displayed
+  /// page and return their entries.
+  ///
+  /// For a returned entry, entry.key is the port, and entry.value is the
+  /// WebDriver object.
+  Future<List<WebDriverSession>> _webDriverSessionsForHost(
+      String host) async {
+    await _updateWebDriverSessions();
+
+    return List.from(_webDriverSessions.values
+        .where((session) => Uri.parse(session.webDriver.currentUrl).host == host));
+  }
+
   /// Searches for Chrome contexts based on the host of the currently displayed
   /// page, and returns `WebDriver` connections to the found contexts.
   Future<List<WebDriver>> webDriversForHost(String host) async {
     _log.info('Finding webdrivers for $host');
-    await _updateWebDriverSessions();
+    return List.from(
+        (await _webDriverSessionsForHost(host)).map((session) =>
+            session.webDriver));
+  }
 
-    return List.from(_webDriverSessions.values
-        .where(
-            (session) => Uri.parse(session.webDriver.currentUrl).host == host)
-        .map((session) => session.webDriver));
+  /// Checks whether a debugging [endpoint] matches the specified [filters].
+  ///
+  /// To match, for each (key, value) pair in [filters] must have key present in
+  /// the [endpoint] object, and the corresponding values must be equal.
+  bool _checkDebuggerEndpointFilters(
+      Map<String, dynamic> endpoint, Map<String, dynamic> filters) {
+    if (filters == null) {
+      return true;
+    }
+    for (final key in filters.keys) {
+      if (!endpoint.containsKey(key) || endpoint[key] != filters[key]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Obtains a list of URLs for connecting to the DevTools debugger via
+  /// websockets.
+  ///
+  /// The websocket targets are pulled from [the /json
+  /// endpoint](https://chromedevtools.github.io/devtools-protocol/#endpoints).
+  /// To be returned, an endpoint's url field must match the specified [host],
+  /// and for each (key, value) pair in [filters], the corresponding
+  /// field in the endpoint description must be present and equal to the
+  /// specified value.
+  ///
+  /// This may return more than one URL per context, as a context can have
+  /// multiple debugging targets, and more than one of them may match the
+  /// given host.
+  Future<List<String>> webSocketDebuggerUrlsForHost(String host,
+      {Map<String, dynamic> filters}) async {
+    final portsForHost =
+        (await _webDriverSessionsForHost(host)).map((session) =>
+            session.localPort);
+
+    final devToolsUrls = <String>[];
+    for (final port in portsForHost) {
+      final request = await io.HttpClient()
+          .getUrl(Uri.parse('http://localhost:$port/json'));
+      final response = await request.close();
+      final endpoints = json.decode(await utf8.decodeStream(response));
+
+      for (final endpoint in endpoints) {
+        if (_checkDebuggerEndpointFilters(endpoint, filters)) {
+          devToolsUrls.add(endpoint['webSocketDebuggerUrl']);
+        }
+      }
+    }
+
+    return devToolsUrls;
   }
 
   /// Starts Chromedriver on the host.

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
-import 'dart:io' show File, Platform, Process, ProcessResult;
+import 'dart:io' show File, Platform, Process, ProcessResult, WebSocket;
 
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
@@ -115,6 +115,75 @@ class Performance {
     }
 
     return _dump.writeAsBytes('$traceName-trace', extension, contents);
+  }
+
+  /// Starts a Chrome trace from the given [webSocketUrl] with the default
+  /// categories.
+  ///
+  /// [webSocketUrl] can be obtained from
+  /// [Webdriver.webSocketDebuggerUrlsForHost]. Returns a WebSocket object that
+  /// is to be passed to [stopChromeTrace] to stop and download the trace data.
+  ///
+  /// TODO(35714): Allow tracing users to specify categories to trace.
+  Future<WebSocket> startChromeTrace(String webSocketUrl) async {
+    final webSocket = await WebSocket.connect(webSocketUrl);
+    _log.info('Starting chrome trace');
+    webSocket.add(json.encode({
+      'jsonrpc': '2.0',
+      'method': 'Tracing.start',
+      'params': {},
+      'id': 1,
+    }));
+    return webSocket;
+  }
+
+  /// Stops a Chrome trace that was started by [startChromeTrace] and writes it
+  /// to a file.
+  ///
+  /// Returns the file containing the trace data. Calling [stopChromeTrace] on
+  /// the same [webSocket] twice will throw an error.
+  Future<File> stopChromeTrace(WebSocket webSocket,
+      {@required String traceName}) async {
+    _log.info('Stopping and saving chrome trace');
+    webSocket.add(json.encode({
+      'jsonrpc': '2.0',
+      'method': 'Tracing.end',
+      'params': {},
+      'id': 2,
+    }));
+
+    final traceEvents = [];
+
+    await for (final content in webSocket) {
+      final obj = json.decode(content);
+      if (obj['method'] == 'Tracing.tracingComplete') {
+        break;
+      } else if (obj['method'] == 'Tracing.dataCollected') {
+        traceEvents.addAll(obj['params']['value']);
+      }
+    }
+    await webSocket.close();
+
+    _log.info('Writing chrome trace to file');
+    return _dump.writeAsBytes('$traceName-chrome-trace', 'json',
+        utf8.encode(json.encode(traceEvents)));
+  }
+
+  /// Combine [fuchsiaTrace] and [chromeTrace] into a merged JSON-format trace.
+  ///
+  /// [fuchsiaTrace] must be a trace file in JSON format (not FXT).
+  Future<File> mergeTraces(
+      {@required File fuchsiaTrace,
+      @required File chromeTrace,
+      @required String traceName}) async {
+    final fuchsiaTraceData = json.decode(await fuchsiaTrace.readAsString());
+    final chromeTraceData = json.decode(await chromeTrace.readAsString());
+
+    final mergedTraceData = fuchsiaTraceData;
+    mergedTraceData['traceEvents'].addAll(chromeTraceData);
+
+    return _dump.writeAsBytes('$traceName-merged-trace', 'json',
+        utf8.encode(json.encode(mergedTraceData)));
   }
 
   /// A helper function that runs a process with the given args.

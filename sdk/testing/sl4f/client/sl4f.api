@@ -1260,6 +1260,60 @@
               "returnType": "Future<File>",
               "type": "MethodDeclarationImpl"
             },
+            "mergeTraces": {
+              "SimpleFormalParameterImpl": {
+                "chromeTrace": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "chromeTrace",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                },
+                "fuchsiaTrace": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "fuchsiaTrace",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "File"
+                },
+                "traceName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "traceName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "mergeTraces",
+              "returnType": "Future<File>",
+              "type": "MethodDeclarationImpl"
+            },
             "processTrace": {
               "SimpleFormalParameterImpl": {
                 "appName": {
@@ -1380,6 +1434,72 @@
               "isStatic": false,
               "name": "runProcess",
               "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            },
+            "startChromeTrace": {
+              "SimpleFormalParameterImpl": {
+                "webSocketUrl": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "webSocketUrl",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "startChromeTrace",
+              "returnType": "Future<WebSocket>",
+              "type": "MethodDeclarationImpl"
+            },
+            "stopChromeTrace": {
+              "SimpleFormalParameterImpl": {
+                "traceName": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "traceName",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "webSocket": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "webSocket",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "WebSocket"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "stopChromeTrace",
+              "returnType": "Future<File>",
               "type": "MethodDeclarationImpl"
             },
             "trace": {
@@ -3004,6 +3124,46 @@
               "isStatic": false,
               "name": "webDriversForHost",
               "returnType": "Future<List<WebDriver>>",
+              "type": "MethodDeclarationImpl"
+            },
+            "webSocketDebuggerUrlsForHost": {
+              "SimpleFormalParameterImpl": {
+                "filters": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "filters",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Map<String, dynamic>"
+                },
+                "host": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "host",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "webSocketDebuggerUrlsForHost",
+              "returnType": "Future<List<String>>",
               "type": "MethodDeclarationImpl"
             }
           },

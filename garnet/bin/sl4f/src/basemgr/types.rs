@@ -22,4 +22,5 @@ impl std::str::FromStr for BaseManagerMethod {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum RestartSessionResult {
     Success,
+    NoSessionToRestart,
 }
