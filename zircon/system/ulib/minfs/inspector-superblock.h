@@ -19,6 +19,12 @@ namespace minfs {
 // Total number of fields in the on-disk superblock structure.
 constexpr uint32_t kSuperblockNumElements = 28;
 constexpr char kSuperBlockName[] = "superblock";
+constexpr char kBackupSuperBlockName[] = "backup superblock";
+
+enum class SuperblockType {
+  kPrimary,
+  kBackup,
+};
 
 class SuperBlockObject : public disk_inspector::DiskObject {
  public:
@@ -28,10 +34,13 @@ class SuperBlockObject : public disk_inspector::DiskObject {
   SuperBlockObject& operator=(const SuperBlockObject&) = delete;
   SuperBlockObject& operator=(SuperBlockObject&&) = delete;
 
-  SuperBlockObject(const Superblock& sb) : sb_(sb) {}
+  SuperBlockObject(const Superblock& sb, SuperblockType block_type)
+      : sb_(sb), block_type_(block_type) {}
 
   // DiskObject interface:
-  const char* GetName() const override { return kSuperBlockName; }
+  const char* GetName() const override {
+    return (block_type_ == SuperblockType::kBackup) ? kBackupSuperBlockName : kSuperBlockName;
+  }
 
   uint32_t GetNumElements() const override { return kSuperblockNumElements; }
 
@@ -42,6 +51,8 @@ class SuperBlockObject : public disk_inspector::DiskObject {
  private:
   // minfs superblock object.
   const Superblock sb_;
+  // whether this object is the backup superblock;
+  const SuperblockType block_type_;
 };
 
 }  // namespace minfs

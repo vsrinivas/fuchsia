@@ -71,7 +71,8 @@ zx_status_t Inspector::CreateRoot(std::unique_ptr<Bcache> bc,
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetSuperBlock() const {
-  return std::unique_ptr<disk_inspector::DiskObject>(new SuperBlockObject(fs_->Info()));
+  return std::unique_ptr<disk_inspector::DiskObject>(
+      new SuperBlockObject(fs_->Info(), SuperblockType::kPrimary));
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetInodeTable() const {
@@ -94,6 +95,21 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournal() const {
       new JournalObject(*info, start_block, length, fs_.get()));
 }
 
+std::unique_ptr<disk_inspector::DiskObject> RootObject::GetBackupSuperBlock() const {
+  char data[kMinfsBlockSize];
+  const Superblock& info = fs_->Info();
+
+  uint64_t location =
+      ((info.flags & kMinfsFlagFVM) == 0) ? kNonFvmSuperblockBackup : kFvmSuperblockBackup;
+  if (fs_->ReadBlock(static_cast<blk_t>(location), &data) < 0) {
+    FS_TRACE_ERROR("minfsInspector: could not read backup superblock\n");
+    return nullptr;
+  }
+  auto backup_info = reinterpret_cast<Superblock&>(data);
+  return std::unique_ptr<disk_inspector::DiskObject>(
+      new SuperBlockObject(backup_info, SuperblockType::kBackup));
+}
+
 void RootObject::GetValue(const void** out_buffer, size_t* out_buffer_size) const {
   ZX_DEBUG_ASSERT_MSG(false, "Invalid GetValue call for non primitive data type.");
 }
@@ -111,6 +127,10 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetElementAt(uint32_t in
     case 2: {
       // Journal
       return GetJournal();
+    }
+    case 3: {
+      // Backup Superblock
+      return GetBackupSuperBlock();
     }
   };
   return nullptr;

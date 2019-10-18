@@ -22,7 +22,7 @@
 namespace minfs {
 
 // Total number of elements present in root.
-constexpr uint32_t kRootNumElements = 3;
+constexpr uint32_t kRootNumElements = 4;
 constexpr char kRootName[] = "minfs-root";
 
 class RootObject : public disk_inspector::DiskObject {
@@ -53,6 +53,9 @@ class RootObject : public disk_inspector::DiskObject {
 
   // Gets the journal diskObject element at index 2.
   std::unique_ptr<disk_inspector::DiskObject> GetJournal() const;
+
+  // Gets the journal diskObject element at index 3.
+  std::unique_ptr<disk_inspector::DiskObject> GetBackupSuperBlock() const;
 
   // Pointer to the Minfs instance.
   std::unique_ptr<InspectableFilesystem> fs_;

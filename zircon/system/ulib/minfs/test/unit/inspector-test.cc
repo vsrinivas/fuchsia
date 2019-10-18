@@ -79,6 +79,61 @@ uint64_t GetUint64Value(const disk_inspector::DiskObject* object) {
   return *reinterpret_cast<const uint64_t*>(buffer);
 }
 
+void RunSuperblockTest(SuperblockType version) {
+  Superblock sb;
+  sb.magic0 = kMinfsMagic0;
+  sb.magic1 = kMinfsMagic1;
+  sb.version_major = kMinfsMajorVersion;
+  sb.version_minor = kMinfsMinorVersion;
+  sb.flags = kMinfsFlagClean;
+  sb.block_size = kMinfsBlockSize;
+  sb.inode_size = kMinfsInodeSize;
+
+  size_t size;
+  const void* buffer = nullptr;
+
+  std::unique_ptr<SuperBlockObject> superblock(new SuperBlockObject(sb, version));
+  switch (version) {
+    case SuperblockType::kPrimary:
+      ASSERT_STR_EQ(kSuperBlockName, superblock->GetName());
+      break;
+    case SuperblockType::kBackup:
+      ASSERT_STR_EQ(kBackupSuperBlockName, superblock->GetName());
+      break;
+    default:
+      ADD_FATAL_FAILURE("Unexpected superblock type");
+  }
+  ASSERT_EQ(kSuperblockNumElements, superblock->GetNumElements());
+
+  std::unique_ptr<disk_inspector::DiskObject> obj0 = superblock->GetElementAt(0);
+  obj0->GetValue(&buffer, &size);
+  ASSERT_EQ(kMinfsMagic0, *(reinterpret_cast<const uint64_t*>(buffer)));
+
+  std::unique_ptr<disk_inspector::DiskObject> obj1 = superblock->GetElementAt(1);
+  obj1->GetValue(&buffer, &size);
+  ASSERT_EQ(kMinfsMagic1, *(reinterpret_cast<const uint64_t*>(buffer)));
+
+  std::unique_ptr<disk_inspector::DiskObject> obj2 = superblock->GetElementAt(2);
+  obj2->GetValue(&buffer, &size);
+  ASSERT_EQ(kMinfsMajorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
+
+  std::unique_ptr<disk_inspector::DiskObject> obj3 = superblock->GetElementAt(3);
+  obj3->GetValue(&buffer, &size);
+  ASSERT_EQ(kMinfsMinorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
+
+  std::unique_ptr<disk_inspector::DiskObject> obj4 = superblock->GetElementAt(4);
+  obj4->GetValue(&buffer, &size);
+  ASSERT_EQ(kMinfsFlagClean, *(reinterpret_cast<const uint32_t*>(buffer)));
+
+  std::unique_ptr<disk_inspector::DiskObject> obj5 = superblock->GetElementAt(5);
+  obj5->GetValue(&buffer, &size);
+  ASSERT_EQ(kMinfsBlockSize, *(reinterpret_cast<const uint32_t*>(buffer)));
+
+  std::unique_ptr<disk_inspector::DiskObject> obj6 = superblock->GetElementAt(6);
+  obj6->GetValue(&buffer, &size);
+  ASSERT_EQ(kMinfsInodeSize, *(reinterpret_cast<const uint32_t*>(buffer)));
+}
+
 TEST(InspectorTest, TestRoot) {
   auto fs = std::unique_ptr<MockMinfs>(new MockMinfs());
 
@@ -119,51 +174,7 @@ TEST(InspectorTest, TestInodeTable) {
   ASSERT_EQ(kInodeNumElements, obj1->GetNumElements());
 }
 
-TEST(InspectorTest, TestSuperblock) {
-  Superblock sb;
-  sb.magic0 = kMinfsMagic0;
-  sb.magic1 = kMinfsMagic1;
-  sb.version_major = kMinfsMajorVersion;
-  sb.version_minor = kMinfsMinorVersion;
-  sb.flags = kMinfsFlagClean;
-  sb.block_size = kMinfsBlockSize;
-  sb.inode_size = kMinfsInodeSize;
-
-  size_t size;
-  const void* buffer = nullptr;
-
-  std::unique_ptr<SuperBlockObject> superblock(new SuperBlockObject(sb));
-  ASSERT_STR_EQ(kSuperBlockName, superblock->GetName());
-  ASSERT_EQ(kSuperblockNumElements, superblock->GetNumElements());
-
-  std::unique_ptr<disk_inspector::DiskObject> obj0 = superblock->GetElementAt(0);
-  obj0->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsMagic0, *(reinterpret_cast<const uint64_t*>(buffer)));
-
-  std::unique_ptr<disk_inspector::DiskObject> obj1 = superblock->GetElementAt(1);
-  obj1->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsMagic1, *(reinterpret_cast<const uint64_t*>(buffer)));
-
-  std::unique_ptr<disk_inspector::DiskObject> obj2 = superblock->GetElementAt(2);
-  obj2->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsMajorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
-
-  std::unique_ptr<disk_inspector::DiskObject> obj3 = superblock->GetElementAt(3);
-  obj3->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsMinorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
-
-  std::unique_ptr<disk_inspector::DiskObject> obj4 = superblock->GetElementAt(4);
-  obj4->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsFlagClean, *(reinterpret_cast<const uint32_t*>(buffer)));
-
-  std::unique_ptr<disk_inspector::DiskObject> obj5 = superblock->GetElementAt(5);
-  obj5->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsBlockSize, *(reinterpret_cast<const uint32_t*>(buffer)));
-
-  std::unique_ptr<disk_inspector::DiskObject> obj6 = superblock->GetElementAt(6);
-  obj6->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsInodeSize, *(reinterpret_cast<const uint32_t*>(buffer)));
-}
+TEST(InspectorTest, TestSuperblock) { RunSuperblockTest(SuperblockType::kPrimary); }
 
 TEST(InspectorTest, TestInode) {
   Inode fileInode;
@@ -268,6 +279,10 @@ TEST(InspectorTest, CorrectJournalLocation) {
   block = entries->GetElementAt(3);
   EXPECT_STR_EQ("Journal[3]: Commit", block->GetName());
 }
+
+// Currently, the only difference between this test and TestSuperblock is that
+// this returns a different name.
+TEST(InspectorTest, TestBackupSuperblock) { RunSuperblockTest(SuperblockType::kBackup); }
 
 }  // namespace
 }  // namespace minfs
