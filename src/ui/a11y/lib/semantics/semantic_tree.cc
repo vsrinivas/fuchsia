@@ -49,7 +49,7 @@ void SemanticTree::OnAccessibilityActionRequested(
 
 // Internal helper function to check if a point is within a bounding box.
 bool SemanticTree::BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
-                                    const escher::vec2& point) {
+                                    const fuchsia::math::PointF& point) {
   return box.min.x <= point.x && box.max.x >= point.x && box.min.y <= point.y &&
          box.max.y >= point.y;
 }

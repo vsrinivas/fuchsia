@@ -536,6 +536,46 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_SingleNode) {
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 }
 
+// Test that calling LogSemanticTreeForView() with an unregistered ViewRef returns empty string. 
+TEST_F(SemanticsManagerTest, LogSemanticTreeForView_NoViewRegistered) {
+  fuchsia::ui::views::ViewRef unregistered_view_ref;
+  zx::eventpair unused;
+
+  FX_CHECK(zx::eventpair::create(0u, &unregistered_view_ref.reference, &unused) == ZX_OK);
+
+  std::string semantic_tree_log = semantics_manager_.LogSemanticTreeForView(unregistered_view_ref);
+  EXPECT_TRUE(semantic_tree_log.empty());
+}
+
+// Test for LogSemanticTreeForView() to make sure correct logs are generated,
+// when there are muultiple views registered with the semantics manager.
+TEST_F(SemanticsManagerTest, LogSemanticTreeForView_MultipleViews) {
+  // Create fake semantic provider and register view with semantics_manager_.
+  accessibility_test::MockSemanticProvider semantic_provider_single_node(&semantics_manager_);
+
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  // Update tree for fake view.
+  InitializeActionListener(kSemanticTreeSingleNodePath, &semantic_provider_single_node);
+
+  // Add a second view and update its tree.
+  accessibility_test::MockSemanticProvider semantic_provider_odd_nodes(&semantics_manager_);
+
+  RunLoopUntilIdle();
+
+  InitializeActionListener(kSemanticTreeOddNodesPath, &semantic_provider_odd_nodes);
+
+  // Verify that LogSemantoicTreeForView() returns the correct logs when supplied each of the 
+  // two registered view refs.
+  std::string single_node_tree_log = semantics_manager_.LogSemanticTreeForView(semantic_provider_single_node.view_ref());
+  EXPECT_EQ(single_node_tree_log, kSemanticTreeSingle);
+
+  std::string odd_nodes_tree_log = semantics_manager_.LogSemanticTreeForView(semantic_provider_odd_nodes.view_ref());
+  EXPECT_EQ(odd_nodes_tree_log, kSemanticTreeOdd);
+}
+
 // Test for PerformHitTesting() to make sure correct node_id is passed from the
 // semantic provider to semantics manager.
 TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {

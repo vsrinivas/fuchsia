@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
@@ -17,7 +18,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/util/util.h"
-#include "src/ui/scenic/lib/gfx/util/unwrap.h"
 
 namespace a11y {
 
@@ -61,6 +61,10 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // Also, deletes the semantic tree, when Semantics Manager is disabled.
   void EnableSemanticsUpdates(bool enabled);
 
+  // FOR TESTING ONLY
+  // Create semantic tree logs in a human readable form.
+  std::string LogSemanticTree();
+
  private:
   // Representation of single semantic tree update/delete transaction.
   struct SemanticTreeTransaction {
@@ -91,9 +95,6 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids) override;
 
-  // Create semantic tree logs in a human readable form.
-  std::string LogSemanticTree();
-
   // Helper function to traverse semantic tree with a root node, and for
   // creating string with tree information.
   void LogSemanticTreeHelper(fuchsia::accessibility::semantics::NodePtr root_node,
@@ -113,7 +114,7 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   bool CheckIfAllNodesReachable(const std::unordered_set<uint32_t>& visited);
 
   // Internal helper function to check if a point is within a bounding box.
-  static bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const escher::vec2& point);
+  static bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const fuchsia::math::PointF& point);
 
   // Function to create per view Log files under debug directory for debugging
   // semantic tree.

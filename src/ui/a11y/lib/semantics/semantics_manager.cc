@@ -4,11 +4,11 @@
 
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
 
+#include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace a11y {
 
@@ -90,6 +90,21 @@ void SemanticsManager::PerformHitTesting(
   }
 
   FX_LOGS(INFO) << "Given KOID(" << koid << ") doesn't match any existing ViewRef's koid.";
+}
+
+fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager> SemanticsManager::GetHandler(
+    async_dispatcher_t* dispatcher) {
+  return bindings_.GetHandler(this, dispatcher);
+}
+
+std::string SemanticsManager::LogSemanticTreeForView(const fuchsia::ui::views::ViewRef& view_ref) {
+  for (const auto& binding : semantic_tree_bindings_.bindings()) {
+    if (binding->impl()->IsSameView(view_ref)) {
+      return binding->impl()->LogSemanticTree();
+    }
+  }
+
+  return std::string();
 }
 
 void SemanticsManager::CloseChannel(zx_koid_t koid) {

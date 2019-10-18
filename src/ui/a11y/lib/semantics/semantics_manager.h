@@ -47,6 +47,16 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       zx_koid_t koid, ::fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
+  // FOR TESTING ONLY
+  // Returns interface request handler for this service.
+  fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager> GetHandler(
+      async_dispatcher_t* dispatcher);
+
+  // FOR TESTING ONLY
+  // Returns human-readable representation of semantic tree state for view with given ViewRef.
+  // Returns empty string if view_ref does not exist.
+  std::string LogSemanticTreeForView(const fuchsia::ui::views::ViewRef& view_ref);
+
  private:
   // |fushsia::accessibility::semantics::SemanticsManager|:
   void RegisterViewForSemantics(
