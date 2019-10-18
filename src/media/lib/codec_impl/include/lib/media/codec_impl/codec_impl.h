@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/fit/variant.h>
+#include <lib/thread-safe-deleter/thread_safe_deleter.h>
 #include <zircon/compiler.h>
 
 #include <list>
@@ -547,7 +548,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lifetime_ordinal);
   void CloseCurrentStream_StreamControl(uint64_t stream_lifetime_ordinal,
                                         bool release_input_buffers, bool release_output_buffers);
-  void Sync_StreamControl(SyncCallback callback);
+  void Sync_StreamControl(ThreadSafeDeleter<SyncCallback> callback);
   void QueueInputFormatDetails_StreamControl(uint64_t stream_lifetime_ordinal,
                                              fuchsia::media::FormatDetails format_details);
   void QueueInputPacket_StreamControl(fuchsia::media::Packet packet);

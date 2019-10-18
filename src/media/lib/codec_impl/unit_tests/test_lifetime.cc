@@ -47,10 +47,6 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
   }
 
   void SetUp() override {
-    // Just hold onto the server end and never connect it to anything, for now.
-    sysmem_request_ = sysmem_client_.NewRequest();
-    codec_request_ = codec_client_handle_.NewRequest();
-
     loop_separate_thread_.StartThread("separate_thread");
   }
   void TearDown() override {
@@ -60,6 +56,9 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
 
   void Create(bool bind = true, bool delete_async = false,
               CodecImpl::StreamProcessorParams params = CreateDecoderParams()) {
+    // Just hold onto the server end and never connect it to anything, for now.
+    sysmem_request_ = sysmem_client_.NewRequest();
+    codec_request_ = codec_client_handle_.NewRequest();
     ZX_DEBUG_ASSERT(!delete_async || bind);
     std::unique_ptr<CodecImpl> codec_impl;
     admission_control_.TryAddCodec(
@@ -160,35 +159,37 @@ TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsync) {
 }
 
 TEST_F(CodecImplLifetime, CreateBindChannelCloseDeleteAsyncWithOngoingSyncs) {
-  // TODO(37790): This test can flake.  Skip until fixed.
-  GTEST_SKIP();
+  // More than one thread is involved, so do this several times in case it helps catch something
+  // bad that doesn't always happen.
+  constexpr uint64_t kIterCount = 20;
+  for (uint64_t iter = 0; iter < kIterCount; ++iter) {
+    Create(true, true);
 
-  Create(true, true);
+    codec_client_ptr_.Bind(codec_client_handle_.TakeChannel());
+    constexpr uint32_t kInFlightSyncTarget = 5;
+    for (uint32_t i = 0; i < kInFlightSyncTarget; ++i) {
+      // Each started chain kicks another Sync() on each completion, any time
+      // RunLoopUntil() is running.
+      StartSyncChain();
+    }
 
-  codec_client_ptr_.Bind(codec_client_handle_.TakeChannel());
-  constexpr uint32_t kInFlightSyncTarget = 5;
-  for (uint32_t i = 0; i < kInFlightSyncTarget; ++i) {
-    // Each started chain kicks another Sync() on each completion, any time
-    // RunLoopUntil() is running.
-    StartSyncChain();
+    // Make sure the sync chains will re-trigger new syncs while RunLoopUntil() is
+    // running.
+    RunLoopUntil([this] { return sync_completion_count_ >= kInFlightSyncTarget * 2; });
+
+    // Trigger an error as if the FakeCodecAdapter had triggered it, with a slight
+    // delay before the trigger so we get some coverage of syncs happening
+    // continuously while the failure handling happens.
+    PostToSeparateThread([this] {
+      zx::nanosleep(zx::deadline_after(zx::msec(20)));
+      static_cast<CodecAdapterEvents*>(codec_impl_.get())
+          ->onCoreCodecFailCodec(
+              "CreateBindChannelCloseDeleteAsyncWithOngoingSyncs triggering failure");
+    });
+
+    RunLoopUntil([this] { return !codec_impl_; });
+    EXPECT_TRUE(!codec_impl_);
   }
-
-  // Make sure the sync chains will re-trigger new syncs while RunLoopUntil() is
-  // running.
-  RunLoopUntil([this] { return sync_completion_count_ >= kInFlightSyncTarget * 2; });
-
-  // Trigger an error as if the FakeCodecAdapter had triggered it, with a slight
-  // delay before the trigger so we get some coverage of syncs happening
-  // continuously while the failure handling happens.
-  PostToSeparateThread([this] {
-    zx::nanosleep(zx::deadline_after(zx::msec(20)));
-    static_cast<CodecAdapterEvents*>(codec_impl_.get())
-        ->onCoreCodecFailCodec(
-            "CreateBindChannelCloseDeleteAsyncWithOngoingSyncs triggering failure");
-  });
-
-  RunLoopUntil([this] { return !codec_impl_; });
-  EXPECT_TRUE(!codec_impl_);
 }
 
 TEST_F(CodecImplLifetime, CreateBindDeleteEncoder) {

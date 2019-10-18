@@ -591,17 +591,32 @@ void CodecImpl::Sync(SyncCallback callback) {
   // If the posted task doesn't run because stream_control_queue_.StopAndClear()
   // happened/happens, it doesn't matter because the whole channel will be
   // closing before long.
-  PostToStreamControl([this, callback = std::move(callback)]() mutable {
-    Sync_StreamControl(std::move(callback));
+  //
+  // The callback has affinity with fidl_thread(), including the destructor.
+  // This is problematic with respect to the
+  // stream_control_queue_.StopAndClear() called on StreamControl domain during
+  // unbind. Without special handling, that StopAndClear() would try to delete
+  // callback on the StreamControl domain instead of on the fidl_thread().  To
+  // prevent that, we ensure that deletion of the lambda without running the
+  // lambda will still post destruction of callback to fidl_thread(), and this
+  // posting will queue before the lamda that runs
+  // shared_fidl_queue_.StopAndClear().
+  PostToStreamControl([this,
+      callback_holder = ThreadSafeDeleter<SyncCallback>(
+          &shared_fidl_queue_, std::move(callback))]() mutable {
+    Sync_StreamControl(std::move(callback_holder));
   });
 }
 
-void CodecImpl::Sync_StreamControl(SyncCallback callback) {
+void CodecImpl::Sync_StreamControl(ThreadSafeDeleter<SyncCallback> callback_holder) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   if (IsStopping()) {
-    // In this case ~callback will happen instead of callback(), in which case
-    // the response won't be sent, which is appropriate - the channel is getting
-    // closed soon instead, and the client has to tolerate that.
+    // In this case, we rely on ThreadSafeDeleter to delete callback on fidl_thread().
+    //
+    // The response won't be sent, which is appropriate - the channel is getting closed soon
+    // instead, and the client has to tolerate that.
+    //
+    // ~callback_holder
     return;
   }
   // We post back to FIDL thread to respond to ensure we're not racing with
@@ -609,7 +624,11 @@ void CodecImpl::Sync_StreamControl(SyncCallback callback) {
   // which can cause process termination.  Also, because this fences
   // BufferAllocation clean close which itself is done async from StreamControl
   // to FIDL in some cases.
-  PostToSharedFidl([callback = std::move(callback)] { callback(); });
+  PostToSharedFidl([this, callback_holder = std::move(callback_holder)]() mutable {
+    ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+    // call the held callback
+    callback_holder.held()();
+  });
 }
 
 void CodecImpl::RecycleOutputPacket(fuchsia::media::PacketHeader available_output_packet) {
