@@ -12,12 +12,12 @@ use {
         MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig, RepositoryConfigBuilder,
         RepositoryKey,
     },
-    fidl_fuchsia_sys::LauncherProxy,
+    fidl_fuchsia_sys::{ComponentControllerProxy, LauncherProxy},
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_component::client::{launcher, App, AppBuilder, ExitStatus, Stdio},
+    fuchsia_component::client::{launcher, AppBuilder, Output, Stdio},
     fuchsia_merkle::Hash,
     fuchsia_url::pkg_url::RepoUrl,
-    fuchsia_zircon::DurationNum,
+    fuchsia_zircon::{self as zx, DurationNum},
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
         future::BoxFuture,
@@ -337,7 +337,7 @@ impl Repository {
             let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
             listener.local_addr()?.port()
         };
-        println!("using port={}", port);
+        println!("'pm serve' will use port {}", port);
 
         let mut pm = AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
             .stdout(Stdio::MakePipe)
@@ -358,12 +358,14 @@ impl Repository {
             )?;
         }
 
+        let pm_serve_spawn_time = zx::Time::get(zx::ClockId::Monotonic);
         let pm = pm.spawn(launcher)?;
+        let pm_controller = pm.controller().clone();
 
         // Wait for "pm serve" to either respond to HTTP requests (giving up after a 20 seconds) or
         // exit, whichever happens first.
 
-        let wait_pm_down = ExitStatus::from_event_stream(pm.controller().take_event_stream());
+        let wait_pm_down = pm.wait_with_output();
 
         // Under high load, a fast retry timeout can prevent pm from starting up. Start out fast,
         // but slow down if pm doesn't come up quickly.
@@ -374,8 +376,8 @@ impl Repository {
 
         let mut attempt = 0u32;
         let wait_pm_up = fuchsia_backoff::retry_or_first_error(backoff, || {
+            attempt += 1;
             async move {
-                attempt += 1;
                 let fut = get(format!("http://127.0.0.1:{}/config.json", port));
                 match fut.await {
                     Ok(_) => {
@@ -394,24 +396,32 @@ impl Repository {
         })
         .boxed();
 
+        println!(
+            "waiting for 'pm serve' to respond to http requests {}ms",
+            (zx::Time::get(zx::ClockId::Monotonic) - pm_serve_spawn_time).into_millis()
+        );
         let wait_pm_down = match future::select(wait_pm_up, wait_pm_down).await {
             future::Either::Left((res, wait_pm_down)) => {
-                res?;
+                if let Err(e) = res {
+                    pm_controller.kill().unwrap();
+                    let output = wait_pm_down.await.unwrap().ok();
+                    panic!(
+                        "'pm serve' hasn't responded to http requests in {}ms\n {:?}\n{:?}",
+                        (zx::Time::get(zx::ClockId::Monotonic) - pm_serve_spawn_time).into_millis(),
+                        e,
+                        output
+                    );
+                }
                 wait_pm_down
             }
-            future::Either::Right((exit_status, _)) => {
-                let output = pm.wait_with_output().await.unwrap();
-                panic!(
-                    "'pm serve' exited too soon {:?}\nstdout: {:?}\nstderr: {:?}",
-                    exit_status,
-                    String::from_utf8_lossy(&output.stdout),
-                    String::from_utf8_lossy(&output.stderr)
-                );
+            future::Either::Right((output, _)) => {
+                let output = output.unwrap().ok();
+                panic!("'pm serve' exited too soon {:?}", output,);
             }
         }
         .boxed();
 
-        Ok(ServedRepository { repo: self, port, _indir: indir, pm, wait_pm_down })
+        Ok(ServedRepository { repo: self, port, _indir: indir, pm: pm_controller, wait_pm_down })
     }
 }
 
@@ -420,8 +430,8 @@ pub struct ServedRepository<'a> {
     repo: &'a Repository,
     port: u16,
     _indir: TempDir,
-    pm: App,
-    wait_pm_down: BoxFuture<'a, Result<ExitStatus, Error>>,
+    pm: ComponentControllerProxy,
+    wait_pm_down: BoxFuture<'a, Result<Output, Error>>,
 }
 
 impl<'a> ServedRepository<'a> {
@@ -452,9 +462,9 @@ impl<'a> ServedRepository<'a> {
     }
 
     /// Kill the pm component and wait for it to exit.
-    pub async fn stop(mut self) {
+    pub async fn stop(self) {
         self.pm.kill().expect("pm to have been running");
-        self.wait_pm_down.await.expect("pm to exit with an exit status");
+        self.wait_pm_down.await.expect("pm to exit");
     }
 }
 
