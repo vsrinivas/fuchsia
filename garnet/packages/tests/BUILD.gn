@@ -347,7 +347,6 @@ group("all") {
     ":intl",
     ":json",
     ":kms",
-    ":lib",
     ":libc",
     ":linux_runner",
     ":log_listener",
@@ -654,13 +653,6 @@ group("scpi") {
   testonly = true
   public_deps = [
     "//garnet/bin/scpi:scpi_server_tests",
-  ]
-}
-
-group("lib") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib:garnet_lib_tests",
   ]
 }
 

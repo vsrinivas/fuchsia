@@ -22,6 +22,8 @@ group("lib") {
     "network_wrapper",
     "pkg_url",
     "shared-buffer",
+    "testing",
+    "timekeeper",
     "ui",
     "url",
     "uuid",
@@ -56,6 +58,8 @@ group("tests") {
     "streammap:tests",
     "test_executor:tests",
     "test_util:tests",
+    "testing:tests",
+    "timekeeper:tests",
     "ui:tests",
     "waitgroup:tests",
   ]
