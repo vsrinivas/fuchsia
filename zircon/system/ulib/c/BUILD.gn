@@ -96,6 +96,7 @@ library("c") {
             "zircon/syscalls/port.h",
             "zircon/syscalls/profile.h",
             "zircon/syscalls/resource.h",
+            "zircon/syscalls/scheduler.h",
             "zircon/syscalls/smc.h",
             "zircon/syscalls/system.h",
             "zircon/syscalls/types.h",
