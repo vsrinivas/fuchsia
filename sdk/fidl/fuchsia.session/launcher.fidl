@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.session;
+
+using fuchsia.sys2;
+
+/// A protocol used to launch sessions.
+[Discoverable]
+protocol Launcher {
+    /// Launches the session detailed in |configuration|.
+    ///
+    /// If a session is currently running, the component associated with the running session will
+    /// be destroyed.
+    LaunchSession(SessionConfiguration configuration) -> () error LaunchSessionError;
+};
+
+/// Errors returned when a session fails to launch.
+enum LaunchSessionError {
+    /// There was an error resolving the session's component url.
+    NOT_FOUND = 1;
+
+    /// The session failed to launch.
+    FAILED = 2;
+};
+
+/// Describes a session to launch.
+table SessionConfiguration {
+    /// The component URL of the session.
+    1: string:fuchsia.sys2.MAX_URL_LENGTH session_url;
+};

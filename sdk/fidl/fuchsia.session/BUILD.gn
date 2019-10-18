@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.session") {
   sources = [
     "element_manager.fidl",
+    "launcher.fidl",
   ]
 
   public_deps = [
