@@ -30,7 +30,8 @@ class Queue {
                                           InspectManager* inspect_manager);
 
   // Add a report to the queue.
-  bool Add(std::map<std::string, fuchsia::mem::Buffer> atttachments,
+  bool Add(const std::string& program_name,
+           std::map<std::string, fuchsia::mem::Buffer> atttachments,
            std::optional<fuchsia::mem::Buffer> minidump,
            std::map<std::string, std::string> annotations);
 

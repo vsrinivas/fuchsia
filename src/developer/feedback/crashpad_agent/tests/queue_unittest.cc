@@ -114,9 +114,12 @@ class QueueTest : public ::testing::Test {
     for (auto const& op : ops) {
       switch (op) {
         case QueueOps::AddNewReport:
-          ASSERT_TRUE(queue_->Add(
-              /*attachments=*/MakeAttachments(),
-              /*minidump=*/BuildAttachment(kMinidumpValue), /*annotations=*/MakeAnnotations()));
+
+          ASSERT_TRUE(queue_->Add(fxl::StringPrintf("program_%ld", program_id_),
+                                  /*attachments=*/MakeAttachments(),
+                                  /*minidump=*/BuildAttachment(kMinidumpValue),
+                                  /*annotations=*/MakeAnnotations()));
+          ++program_id_;
           if (!queue_->IsEmpty()) {
             AddExpectedReport(queue_->LatestReport());
           }
@@ -183,8 +186,6 @@ class QueueTest : public ::testing::Test {
 
  private:
   void AddExpectedReport(const UUID& uuid) {
-    inspect_manager_->AddReport(fxl::StringPrintf("program_%ld", program_id_), uuid.ToString());
-    ++program_id_;
     // Add a report to the back of the expected queue contents if and only if it is expected
     // to be in the queue after processing.
     if (state_ != QueueOps::SetStateToUpload) {

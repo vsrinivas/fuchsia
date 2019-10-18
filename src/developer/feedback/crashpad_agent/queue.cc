@@ -40,13 +40,16 @@ bool Queue::Contains(const UUID& uuid) const {
          pending_reports_.end();
 }
 
-bool Queue::Add(std::map<std::string, fuchsia::mem::Buffer> attachments,
+bool Queue::Add(const std::string& program_name,
+                std::map<std::string, fuchsia::mem::Buffer> attachments,
                 std::optional<fuchsia::mem::Buffer> minidump,
                 std::map<std::string, std::string> annotations) {
   UUID local_report_id;
   if (!database_->MakeNewReport(attachments, minidump, annotations, &local_report_id)) {
     return false;
   }
+
+  inspect_manager_->AddReport(program_name, local_report_id.ToString());
 
   pending_reports_.push_back(local_report_id);
   ProcessAll();
