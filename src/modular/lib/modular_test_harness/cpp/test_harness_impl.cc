@@ -38,8 +38,6 @@ constexpr char kSessionShellDefaultUrl[] =
 constexpr char kStoryShellDefaultUrl[] =
     "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_story_shell.cmx";
 
-constexpr char kSessionAgentFakeInterceptionUrl[] =
-    "fuchsia-pkg://example.com/FAKE_SESSION_AGENT_PKG/fake_session_agent.cmx";
 constexpr char kSessionAgentFakeInterceptionCmx[] = R"(
 {
   "sandbox": {

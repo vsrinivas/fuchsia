@@ -23,6 +23,9 @@
 
 namespace modular_testing {
 
+constexpr char kSessionAgentFakeInterceptionUrl[] =
+    "fuchsia-pkg://example.com/FAKE_SESSION_AGENT_PKG/fake_session_agent.cmx";
+
 // Provides the |TestHarness| service.
 class TestHarnessImpl final : fuchsia::modular::testing::TestHarness,
                               public modular::LifecycleImpl::Delegate {

@@ -28,7 +28,7 @@ AgentRunner::AgentRunner(
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
     fuchsia::auth::TokenManager* const token_manager,
     fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider,
-    EntityProviderRunner* const entity_provider_runner,
+    EntityProviderRunner* const entity_provider_runner, inspect::Node* session_inspect_node,
     std::unique_ptr<AgentServiceIndex> agent_service_index)
     : launcher_(launcher),
       ledger_repository_(ledger_repository),
@@ -36,6 +36,7 @@ AgentRunner::AgentRunner(
       user_intelligence_provider_(user_intelligence_provider),
       entity_provider_runner_(entity_provider_runner),
       terminating_(std::make_shared<bool>(false)),
+      session_inspect_node_(session_inspect_node),
       agent_service_index_(std::move(agent_service_index)) {}
 
 AgentRunner::~AgentRunner() = default;
@@ -105,7 +106,6 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::functi
     }
     return;
   }
-
   run_agent_callbacks_[agent_url].push_back(std::move(done));
 
   RunAgent(agent_url);
@@ -118,10 +118,11 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
 
-  FXL_CHECK(
-      running_agents_
-          .emplace(agent_url, std::make_unique<AgentContextImpl>(info, std::move(agent_config)))
-          .second);
+  FXL_CHECK(running_agents_
+                .emplace(agent_url, std::make_unique<AgentContextImpl>(
+                                        info, std::move(agent_config),
+                                        session_inspect_node_->CreateChild(agent_url)))
+                .second);
 
   auto run_callbacks_it = run_agent_callbacks_.find(agent_url);
   if (run_callbacks_it != run_agent_callbacks_.end()) {
@@ -140,10 +141,8 @@ void AgentRunner::ConnectToAgent(
   if (*terminating_) {
     return;
   }
-
   pending_agent_connections_[agent_url].push_back(
       {requestor_url, std::move(incoming_services_request), std::move(agent_controller_request)});
-
   EnsureAgentIsRunning(agent_url, [this, agent_url] {
     // If the agent was terminating and has restarted, forwarding connections
     // here is redundant, since it was already forwarded earlier.

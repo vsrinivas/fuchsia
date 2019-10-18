@@ -45,7 +45,7 @@ class EntityProviderRunnerTest : public TestWithLedger, modular::EntityProviderL
     // order for agent creation to be synchronous, which these tests assume.
     agent_runner_ = std::make_unique<modular::AgentRunner>(&launcher_, ledger_repository(),
                                                            token_manager_.get(), nullptr,
-                                                           entity_provider_runner_.get());
+                                                           entity_provider_runner_.get(), &node_);
   }
 
   void TearDown() override {
@@ -78,6 +78,8 @@ class EntityProviderRunnerTest : public TestWithLedger, modular::EntityProviderL
   }
 
   FakeLauncher launcher_;
+
+  inspect::Node node_;
 
   files::ScopedTempDir mq_data_dir_;
   std::unique_ptr<modular::EntityProviderRunner> entity_provider_runner_;

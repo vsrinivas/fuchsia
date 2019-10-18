@@ -469,10 +469,10 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
   auto agent_service_index =
       std::make_unique<MapAgentServiceIndex>(std::move(service_to_agent_map));
 
-  agent_runner_.reset(
-      new AgentRunner(session_environment_->GetLauncher(), ledger_repository_.get(),
-                      agent_token_manager_.get(), user_intelligence_provider_impl_.get(),
-                      entity_provider_runner_.get(), std::move(agent_service_index)));
+  agent_runner_.reset(new AgentRunner(
+      session_environment_->GetLauncher(), ledger_repository_.get(), agent_token_manager_.get(),
+      user_intelligence_provider_impl_.get(), entity_provider_runner_.get(), &inspect_root_node_,
+      std::move(agent_service_index)));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
   maxwell_component_context_bindings_ =

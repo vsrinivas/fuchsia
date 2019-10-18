@@ -17,6 +17,7 @@ source_set("agent_runner") {
   public_deps = [
     ":public",
     "//peridot/lib/ledger_client:page_client",
+    "//sdk/lib/sys/inspect/cpp",
   ]
 
   deps = [
@@ -91,6 +92,7 @@ source_set("public") {
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
     "//src/modular/bin/sessionmgr/entity_provider_runner",

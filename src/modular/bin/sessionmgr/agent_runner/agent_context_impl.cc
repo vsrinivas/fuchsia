@@ -158,13 +158,15 @@ class AgentContextImpl::StopCall : public Operation<bool> {
 };
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
-                                   fuchsia::modular::AppConfig agent_config)
+                                   fuchsia::modular::AppConfig agent_config,
+                                   inspect::Node agent_node)
     : url_(agent_config.url),
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info, kAgentComponentNamespace, url_, url_),
       token_manager_(info.token_manager),
       entity_provider_runner_(info.component_context_info.entity_provider_runner),
-      user_intelligence_provider_(info.user_intelligence_provider) {
+      user_intelligence_provider_(info.user_intelligence_provider),
+      agent_node_(std::move(agent_node)) {
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
         component_context_impl_.Connect(std::move(request));

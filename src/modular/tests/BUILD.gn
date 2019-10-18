@@ -105,6 +105,7 @@ executable("inspect_session_test") {
     "//src/lib/fsl",
     "//src/modular/lib/modular_config",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_impl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
   ]

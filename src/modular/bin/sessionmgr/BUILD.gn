@@ -156,6 +156,7 @@ source_set("component_context") {
     "//peridot/lib/ledger_client:types",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/fsl",
     "//src/lib/fxl",

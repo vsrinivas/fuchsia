@@ -10,6 +10,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include <string>
 
@@ -43,7 +44,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // Starts the agent specified in |agent_config| and provides it:
   //  1) AgentContext service
   //  2) A set of services from UserIntelligenceProvider for this agent's url.
-  explicit AgentContextImpl(const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config);
+  explicit AgentContextImpl(const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
+                            inspect::Node agent_node);
   ~AgentContextImpl() override;
 
   // Stops the running agent, irrespective of whether there are active
@@ -137,6 +139,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   fuchsia::auth::TokenManager* const token_manager_;                              // Not owned.
   EntityProviderRunner* const entity_provider_runner_;                            // Not owned.
   fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.
+
+  inspect::Node agent_node_;
 
   State state_ = State::INITIALIZING;
 

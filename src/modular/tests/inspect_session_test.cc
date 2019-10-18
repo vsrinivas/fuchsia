@@ -4,6 +4,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/component/cpp/connect.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -20,7 +21,7 @@
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
-
+#include "src/modular/lib/modular_test_harness/cpp/test_harness_impl.h"
 namespace {
 
 using fuchsia::modular::AddMod;
@@ -47,7 +48,8 @@ constexpr char kSessionmgrInspectRootGlobPath[] =
 constexpr char kInitialIntentParameterData[] = "\"initial\"";
 constexpr char kIntentAction[] = "action";
 constexpr char kIntentParameterName[] = "intent_parameter";
-
+constexpr char kClipboardAgentUrl[] =
+    "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx";
 class InspectSessionTest : public modular_testing::TestHarnessFixture {
  protected:
   InspectSessionTest()
@@ -168,6 +170,28 @@ TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
               AllOf(inspect::testing::NodeMatches(inspect::testing::NameMatches("root"))));
 }
 
+TEST_F(InspectSessionTest, DefaultAgentsHierarchy) {
+  fuchsia::modular::testing::TestHarnessSpec spec;
+  spec.set_environment_suffix("inspect");
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
+  builder.InterceptSessionShell(fake_session_shell_->BuildInterceptOptions());
+  builder.BuildAndRun(test_harness());
+
+  // Wait for our session shell to start.
+  RunLoopUntil([&] { return fake_session_shell_->is_running(); });
+
+  zx::vmo vmo;
+  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo));
+  auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
+  EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
+
+  const auto& child = hierarchy.children();
+  EXPECT_THAT(child.size(), 2);
+  EXPECT_THAT(child.at(0), NodeMatches(NameMatches(kClipboardAgentUrl)));
+  EXPECT_THAT(child.at(1),
+              NodeMatches(NameMatches(modular_testing::kSessionAgentFakeInterceptionUrl)));
+}
+
 TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   RunHarnessAndInterceptSessionShell();
 
@@ -236,12 +260,13 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   auto hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
   EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
 
-  const auto& child = hierarchy.children();
-  EXPECT_THAT(child.size(), 1);
-  EXPECT_THAT(child.at(0), NodeMatches(NameMatches("my_story")));
-  EXPECT_THAT(child.at(0), NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
-                               IntIs("last_focus_time", last_focus_timestamps.back()),
-                               StringIs("annotation: test_key", "test_value"))))));
+  const auto& children = hierarchy.children();
+  // Contains 2 agents and 1 story
+  EXPECT_THAT(children.size(), 3);
+  EXPECT_THAT(children, Contains(NodeMatches(NameMatches("my_story"))));
+  EXPECT_THAT(children.at(0), NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
+                                  IntIs("last_focus_time", last_focus_timestamps.back()),
+                                  StringIs("annotation: test_key", "test_value"))))));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
@@ -250,7 +275,6 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
 
   // Check that a node is removed from the hierarchy when a story is removed.
   ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
-  std::cout << "5" << std::endl;
 
   hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
   EXPECT_THAT(hierarchy, AllOf(NodeMatches(NameMatches("root"))));
@@ -312,10 +336,11 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
   EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
 
   const auto& child = hierarchy.children();
-  EXPECT_THAT(child.size(), 1);
-  EXPECT_THAT(child.at(0), NodeMatches(NameMatches("my_story")));
+  EXPECT_THAT(child.size(), 3);
 
-  const auto& grandchild = child.at(0).children();
+  EXPECT_THAT(child.at(2), NodeMatches(NameMatches("my_story")));
+
+  const auto& grandchild = child.at(2).children();
 
   EXPECT_THAT(grandchild.size(), 1);
   EXPECT_THAT(grandchild.at(0), NodeMatches(NameMatches(kFakeModuleUrl)));

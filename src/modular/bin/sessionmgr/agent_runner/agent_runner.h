@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include <functional>
 #include <map>
@@ -41,7 +42,7 @@ class AgentRunner {
               fuchsia::ledger::internal::LedgerRepository* ledger_repository,
               fuchsia::auth::TokenManager* token_manager,
               fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
-              EntityProviderRunner* entity_provider_runner,
+              EntityProviderRunner* entity_provider_runner, inspect::Node* session_inspect_node,
               std::unique_ptr<AgentServiceIndex> agent_service_index = nullptr);
   ~AgentRunner();
 
@@ -147,6 +148,9 @@ class AgentRunner {
 
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;
+
+  // Not owned. This is the parent node to the agent nodes.
+  inspect::Node* session_inspect_node_;
 
   std::unique_ptr<AgentServiceIndex> agent_service_index_;
 

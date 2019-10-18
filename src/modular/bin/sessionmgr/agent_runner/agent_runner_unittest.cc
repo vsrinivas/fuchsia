@@ -159,7 +159,7 @@ class AgentRunnerTest : public TestWithLedger {
     if (agent_runner_ == nullptr) {
       agent_runner_ = std::make_unique<modular::AgentRunner>(
           &launcher_, ledger_repository(), token_manager_.get(), nullptr,
-          entity_provider_runner_.get(),
+          entity_provider_runner_.get(), &node_,
           std::make_unique<modular::MapAgentServiceIndex>(std::move(agent_service_index_)));
     }
     return agent_runner_.get();
@@ -251,6 +251,7 @@ class AgentRunnerTest : public TestWithLedger {
 
  private:
   FakeLauncher launcher_;
+  inspect::Node node_;
 
   files::ScopedTempDir mq_data_dir_;
   std::unique_ptr<modular::EntityProviderRunner> entity_provider_runner_;
