@@ -617,7 +617,7 @@ Briefly, the generated code presents:
 4.  client binding prototypes &mdash; we'll see how the client uses this below,
 5.  FIDL message ops structure; this is a list of functions that you supply in the driver
     to handle each and every FIDL method defined by all the protocols in the "`.fidl`" file,
-6.  display prototypes &mdash; this is called by our FIDL message handler,
+6.  dispatch prototypes &mdash; this is called by our FIDL message handler,
 7.  reply prototype &mdash; we call this in our driver when we want to reply to the client.
 
 #### The client side
