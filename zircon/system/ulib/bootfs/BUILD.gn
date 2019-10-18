@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx_build/public/gn/library_shim.gni")
+import("$zx/public/gn/fuzzer.gni")
 
 library("bootfs") {
   sdk = "source"
@@ -31,3 +32,16 @@ test("bootfs-test") {
     "$zx/system/ulib/zxtest",
   ]
 }
+
+fuzzer("bootfs-parser-fuzzer") {
+  sources = [
+    "parser-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/bootfs",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
