@@ -10,6 +10,7 @@ library("digest") {
   sources = [
     "digest.cc",
     "merkle-tree.cc",
+    "node-digest.cc",
   ]
 
   deps = [

@@ -13,6 +13,7 @@ test("digest") {
   sources = [
     "digest.cc",
     "merkle-tree.cc",
+    "node-digest.cc",
   ]
   deps = [
     "$zx/system/ulib/digest",
