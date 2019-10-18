@@ -1,0 +1,78 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.report;
+
+/// A hardcoded number of max contacts per report. This should be increased in the future if
+/// we see devices with more than the max amount.
+const uint32 TOUCH_MAX_CONTACTS = 10;
+
+/// The device type from which the touch originated.
+enum TouchType : uint32 {
+    /// A touch screen has direct finger input associated with a display.
+    TOUCHSCREEN = 1;
+};
+
+/// `ContactDescriptor` describes the fields associated with a touch on a touch device.
+table ContactDescriptor {
+    /// Describes the reporting of the x-axis.
+    1: Axis position_x;
+
+    /// Describes the reporting of the y-axis.
+    2: Axis position_y;
+
+    /// Pressure of the contact.
+    3: Axis pressure;
+
+    /// Width of the area of contact.
+    4: Axis contact_width;
+
+    /// Height of the area of contact.
+    5: Axis contact_height;
+};
+
+/// `TouchDescriptor` describes the fields associated with an individual touch device.
+table TouchDescriptor {
+    /// The contact descriptors associated with this touch descriptor.
+    1: vector<ContactDescriptor>:TOUCH_MAX_CONTACTS contacts;
+
+    /// The max number of contacts that this touch device can report at once.
+    2: uint32 max_contacts;
+
+    /// The type of touch device being used.
+    3: TouchType touch_type;
+};
+
+/// `Contact` describes one touch on a touch device.
+table ContactReport {
+    /// Identifier for this contact.
+    1: uint32 contact_id;
+
+    /// A contact's position on the x axis.
+    2: int64 position_x;
+
+    /// A contact's position on the y axis.
+    3: int64 position_y;
+
+    /// Pressure of the contact.
+    4: int64 pressure;
+
+    /// Width of the bounding box around the touch contact. Combined with
+    /// `contact_height`, this describes the area of the touch contact.
+    /// `contact_width` and `contact_height` should both have units of distance,
+    /// and they should be in the same units as `position_x` and `position_y`.
+    5: int64 contact_width;
+
+    /// Height of the bounding box around the touch contact. Combined with
+    /// `contact_width`, this describes the area of the touch contact.
+    /// `contact_width` and `contact_height` should both have units of distance,
+    /// and they should be in the same units as `position_x` and `position_y`.
+    6: int64 contact_height;
+};
+
+/// `TouchscreenReport` describes the current contacts recorded by the touchscreen.
+table TouchReport {
+    /// The contacts currently being reported by the device.
+    1: vector<ContactReport>:TOUCH_MAX_CONTACTS contacts;
+};

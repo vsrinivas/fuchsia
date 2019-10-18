@@ -11,6 +11,7 @@ fidl_library("fuchsia-input-report") {
     "mouse.fidl",
     "report.fidl",
     "sensor.fidl",
+    "touch.fidl",
     "units.fidl",
   ]
 }

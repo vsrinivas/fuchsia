@@ -40,6 +40,11 @@ enum class Unit : uint32_t {
 };
 
 
+enum class TouchType : uint32_t {
+  TOUCHSCREEN = 1u,
+};
+
+
 enum class SensorType : uint32_t {
   ACCELEROMETER_X = 1u,
   ACCELEROMETER_Y = 2u,
@@ -63,10 +68,14 @@ struct Axis;
 struct SensorAxis;
 struct SensorDescriptor;
 struct MouseDescriptor;
+struct ContactDescriptor;
+struct TouchDescriptor;
 struct MouseReport;
-struct InputReport;
 struct DeviceInfo;
 struct DeviceDescriptor;
+struct ContactReport;
+struct TouchReport;
+struct InputReport;
 class InputDevice;
 
 extern "C" const fidl_type_t fuchsia_input_report_SensorReportTable;
@@ -311,6 +320,218 @@ class MouseDescriptor::Builder {
   ::fidl::Array<fidl_envelope_t, 5> envelopes_ = {};
 };
 
+extern "C" const fidl_type_t fuchsia_input_report_ContactDescriptorTable;
+
+// `ContactDescriptor` describes the fields associated with a touch on a touch device.
+struct ContactDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  // Describes the reporting of the x-axis.
+  const ::llcpp::fuchsia::input::report::Axis& position_x() const {
+    ZX_ASSERT(has_position_x());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::Axis& position_x() {
+    ZX_ASSERT(has_position_x());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_position_x() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  // Describes the reporting of the y-axis.
+  const ::llcpp::fuchsia::input::report::Axis& position_y() const {
+    ZX_ASSERT(has_position_y());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(2 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::Axis& position_y() {
+    ZX_ASSERT(has_position_y());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_position_y() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  // Pressure of the contact.
+  const ::llcpp::fuchsia::input::report::Axis& pressure() const {
+    ZX_ASSERT(has_pressure());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(3 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::Axis& pressure() {
+    ZX_ASSERT(has_pressure());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_pressure() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  // Width of the area of contact.
+  const ::llcpp::fuchsia::input::report::Axis& contact_width() const {
+    ZX_ASSERT(has_contact_width());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(4 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::Axis& contact_width() {
+    ZX_ASSERT(has_contact_width());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(4 - 1).data);
+  }
+  bool has_contact_width() const {
+    return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
+  }
+
+  // Height of the area of contact.
+  const ::llcpp::fuchsia::input::report::Axis& contact_height() const {
+    ZX_ASSERT(has_contact_height());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(5 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::Axis& contact_height() {
+    ZX_ASSERT(has_contact_height());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::Axis*>(EnvelopesView::at(5 - 1).data);
+  }
+  bool has_contact_height() const {
+    return EnvelopesView::count() >= 5 && EnvelopesView::at(5 - 1).data != nullptr;
+  }
+
+  ContactDescriptor() = default;
+  ~ContactDescriptor() = default;
+  ContactDescriptor(ContactDescriptor&& other) noexcept = default;
+  ContactDescriptor& operator=(ContactDescriptor&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_ContactDescriptorTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 200;
+
+ private:
+  ContactDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class ContactDescriptor::Builder {
+ public:
+  ContactDescriptor view() { return ContactDescriptor(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  // Describes the reporting of the x-axis.
+  Builder&& set_position_x(::llcpp::fuchsia::input::report::Axis* elem);
+
+  // Describes the reporting of the y-axis.
+  Builder&& set_position_y(::llcpp::fuchsia::input::report::Axis* elem);
+
+  // Pressure of the contact.
+  Builder&& set_pressure(::llcpp::fuchsia::input::report::Axis* elem);
+
+  // Width of the area of contact.
+  Builder&& set_contact_width(::llcpp::fuchsia::input::report::Axis* elem);
+
+  // Height of the area of contact.
+  Builder&& set_contact_height(::llcpp::fuchsia::input::report::Axis* elem);
+
+ private:
+  Builder() = default;
+  friend Builder ContactDescriptor::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 5> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_input_report_TouchDescriptorTable;
+
+// `TouchDescriptor` describes the fields associated with an individual touch device.
+struct TouchDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  // The contact descriptors associated with this touch descriptor.
+  const ::fidl::VectorView<::llcpp::fuchsia::input::report::ContactDescriptor>& contacts() const {
+    ZX_ASSERT(has_contacts());
+    return *reinterpret_cast<const ::fidl::VectorView<::llcpp::fuchsia::input::report::ContactDescriptor>*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::fidl::VectorView<::llcpp::fuchsia::input::report::ContactDescriptor>& contacts() {
+    ZX_ASSERT(has_contacts());
+    return *reinterpret_cast<::fidl::VectorView<::llcpp::fuchsia::input::report::ContactDescriptor>*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_contacts() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  // The max number of contacts that this touch device can report at once.
+  const uint32_t& max_contacts() const {
+    ZX_ASSERT(has_max_contacts());
+    return *reinterpret_cast<const uint32_t*>(EnvelopesView::at(2 - 1).data);
+  }
+  uint32_t& max_contacts() {
+    ZX_ASSERT(has_max_contacts());
+    return *reinterpret_cast<uint32_t*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_max_contacts() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  // The type of touch device being used.
+  const ::llcpp::fuchsia::input::report::TouchType& touch_type() const {
+    ZX_ASSERT(has_touch_type());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::TouchType*>(EnvelopesView::at(3 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::TouchType& touch_type() {
+    ZX_ASSERT(has_touch_type());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::TouchType*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_touch_type() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  TouchDescriptor() = default;
+  ~TouchDescriptor() = default;
+  TouchDescriptor(TouchDescriptor&& other) noexcept = default;
+  TouchDescriptor& operator=(TouchDescriptor&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_TouchDescriptorTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 2240;
+
+ private:
+  TouchDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class TouchDescriptor::Builder {
+ public:
+  TouchDescriptor view() { return TouchDescriptor(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  // The contact descriptors associated with this touch descriptor.
+  Builder&& set_contacts(::fidl::VectorView<::llcpp::fuchsia::input::report::ContactDescriptor>* elem);
+
+  // The max number of contacts that this touch device can report at once.
+  Builder&& set_max_contacts(uint32_t* elem);
+
+  // The type of touch device being used.
+  Builder&& set_touch_type(::llcpp::fuchsia::input::report::TouchType* elem);
+
+ private:
+  Builder() = default;
+  friend Builder TouchDescriptor::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
+};
+
 extern "C" const fidl_type_t fuchsia_input_report_MouseReportTable;
 
 // |MouseReport| gives the relative movement of the mouse and currently
@@ -436,6 +657,324 @@ class MouseReport::Builder {
   ::fidl::Array<fidl_envelope_t, 5> envelopes_ = {};
 };
 
+extern "C" const fidl_type_t fuchsia_input_report_DeviceDescriptorTable;
+
+// |DeviceDescriptor| describes a physical input device. Some physical devices may
+// send multiple types of reports (E.g: a physical touchscreen can send touch and
+// stylus reports, so it will have both a TouchDescriptor and a StylusDescriptor).
+struct DeviceDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  // |device_info| should always be present to help distinguish between physical devices.
+  const ::llcpp::fuchsia::input::report::DeviceInfo& device_info() const {
+    ZX_ASSERT(has_device_info());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::DeviceInfo*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::DeviceInfo& device_info() {
+    ZX_ASSERT(has_device_info());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::DeviceInfo*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_device_info() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  // When |mouse| is present the device has a mouse.
+  const ::llcpp::fuchsia::input::report::MouseDescriptor& mouse() const {
+    ZX_ASSERT(has_mouse());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::MouseDescriptor*>(EnvelopesView::at(2 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::MouseDescriptor& mouse() {
+    ZX_ASSERT(has_mouse());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::MouseDescriptor*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_mouse() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  // When |sensor| is present the device has a sensor.
+  const ::llcpp::fuchsia::input::report::SensorDescriptor& sensor() const {
+    ZX_ASSERT(has_sensor());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::SensorDescriptor*>(EnvelopesView::at(3 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::SensorDescriptor& sensor() {
+    ZX_ASSERT(has_sensor());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::SensorDescriptor*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_sensor() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  // When |touch| is present the device has a touch device.
+  // (E.g: Touchscreen, touchpad).
+  const ::llcpp::fuchsia::input::report::TouchDescriptor& touch() const {
+    ZX_ASSERT(has_touch());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::TouchDescriptor*>(EnvelopesView::at(4 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::TouchDescriptor& touch() {
+    ZX_ASSERT(has_touch());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::TouchDescriptor*>(EnvelopesView::at(4 - 1).data);
+  }
+  bool has_touch() const {
+    return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
+  }
+
+  DeviceDescriptor() = default;
+  ~DeviceDescriptor() = default;
+  DeviceDescriptor(DeviceDescriptor&& other) noexcept = default;
+  DeviceDescriptor& operator=(DeviceDescriptor&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_DeviceDescriptorTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 6096;
+
+ private:
+  DeviceDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class DeviceDescriptor::Builder {
+ public:
+  DeviceDescriptor view() { return DeviceDescriptor(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  // |device_info| should always be present to help distinguish between physical devices.
+  Builder&& set_device_info(::llcpp::fuchsia::input::report::DeviceInfo* elem);
+
+  // When |mouse| is present the device has a mouse.
+  Builder&& set_mouse(::llcpp::fuchsia::input::report::MouseDescriptor* elem);
+
+  // When |sensor| is present the device has a sensor.
+  Builder&& set_sensor(::llcpp::fuchsia::input::report::SensorDescriptor* elem);
+
+  // When |touch| is present the device has a touch device.
+  // (E.g: Touchscreen, touchpad).
+  Builder&& set_touch(::llcpp::fuchsia::input::report::TouchDescriptor* elem);
+
+ private:
+  Builder() = default;
+  friend Builder DeviceDescriptor::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_input_report_ContactReportTable;
+
+// `Contact` describes one touch on a touch device.
+struct ContactReport final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  // Identifier for this contact.
+  const uint32_t& contact_id() const {
+    ZX_ASSERT(has_contact_id());
+    return *reinterpret_cast<const uint32_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  uint32_t& contact_id() {
+    ZX_ASSERT(has_contact_id());
+    return *reinterpret_cast<uint32_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_contact_id() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  // A contact's position on the x axis.
+  const int64_t& position_x() const {
+    ZX_ASSERT(has_position_x());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(2 - 1).data);
+  }
+  int64_t& position_x() {
+    ZX_ASSERT(has_position_x());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_position_x() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  // A contact's position on the y axis.
+  const int64_t& position_y() const {
+    ZX_ASSERT(has_position_y());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(3 - 1).data);
+  }
+  int64_t& position_y() {
+    ZX_ASSERT(has_position_y());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_position_y() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  // Pressure of the contact.
+  const int64_t& pressure() const {
+    ZX_ASSERT(has_pressure());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(4 - 1).data);
+  }
+  int64_t& pressure() {
+    ZX_ASSERT(has_pressure());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(4 - 1).data);
+  }
+  bool has_pressure() const {
+    return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
+  }
+
+  // Width of the bounding box around the touch contact. Combined with
+  // `contact_height`, this describes the area of the touch contact.
+  // `contact_width` and `contact_height` should both have units of distance,
+  // and they should be in the same units as `position_x` and `position_y`.
+  const int64_t& contact_width() const {
+    ZX_ASSERT(has_contact_width());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(5 - 1).data);
+  }
+  int64_t& contact_width() {
+    ZX_ASSERT(has_contact_width());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(5 - 1).data);
+  }
+  bool has_contact_width() const {
+    return EnvelopesView::count() >= 5 && EnvelopesView::at(5 - 1).data != nullptr;
+  }
+
+  // Height of the bounding box around the touch contact. Combined with
+  // `contact_width`, this describes the area of the touch contact.
+  // `contact_width` and `contact_height` should both have units of distance,
+  // and they should be in the same units as `position_x` and `position_y`.
+  const int64_t& contact_height() const {
+    ZX_ASSERT(has_contact_height());
+    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(6 - 1).data);
+  }
+  int64_t& contact_height() {
+    ZX_ASSERT(has_contact_height());
+    return *reinterpret_cast<int64_t*>(EnvelopesView::at(6 - 1).data);
+  }
+  bool has_contact_height() const {
+    return EnvelopesView::count() >= 6 && EnvelopesView::at(6 - 1).data != nullptr;
+  }
+
+  ContactReport() = default;
+  ~ContactReport() = default;
+  ContactReport(ContactReport&& other) noexcept = default;
+  ContactReport& operator=(ContactReport&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_ContactReportTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 144;
+
+ private:
+  ContactReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class ContactReport::Builder {
+ public:
+  ContactReport view() { return ContactReport(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  // Identifier for this contact.
+  Builder&& set_contact_id(uint32_t* elem);
+
+  // A contact's position on the x axis.
+  Builder&& set_position_x(int64_t* elem);
+
+  // A contact's position on the y axis.
+  Builder&& set_position_y(int64_t* elem);
+
+  // Pressure of the contact.
+  Builder&& set_pressure(int64_t* elem);
+
+  // Width of the bounding box around the touch contact. Combined with
+  // `contact_height`, this describes the area of the touch contact.
+  // `contact_width` and `contact_height` should both have units of distance,
+  // and they should be in the same units as `position_x` and `position_y`.
+  Builder&& set_contact_width(int64_t* elem);
+
+  // Height of the bounding box around the touch contact. Combined with
+  // `contact_width`, this describes the area of the touch contact.
+  // `contact_width` and `contact_height` should both have units of distance,
+  // and they should be in the same units as `position_x` and `position_y`.
+  Builder&& set_contact_height(int64_t* elem);
+
+ private:
+  Builder() = default;
+  friend Builder ContactReport::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 6> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_input_report_TouchReportTable;
+
+// `TouchscreenReport` describes the current contacts recorded by the touchscreen.
+struct TouchReport final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  // The contacts currently being reported by the device.
+  const ::fidl::VectorView<::llcpp::fuchsia::input::report::ContactReport>& contacts() const {
+    ZX_ASSERT(has_contacts());
+    return *reinterpret_cast<const ::fidl::VectorView<::llcpp::fuchsia::input::report::ContactReport>*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::fidl::VectorView<::llcpp::fuchsia::input::report::ContactReport>& contacts() {
+    ZX_ASSERT(has_contacts());
+    return *reinterpret_cast<::fidl::VectorView<::llcpp::fuchsia::input::report::ContactReport>*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_contacts() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  TouchReport() = default;
+  ~TouchReport() = default;
+  TouchReport(TouchReport&& other) noexcept = default;
+  TouchReport& operator=(TouchReport&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_TouchReportTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 1632;
+
+ private:
+  TouchReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class TouchReport::Builder {
+ public:
+  TouchReport view() { return TouchReport(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  // The contacts currently being reported by the device.
+  Builder&& set_contacts(::fidl::VectorView<::llcpp::fuchsia::input::report::ContactReport>* elem);
+
+ private:
+  Builder() = default;
+  friend Builder TouchReport::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
+};
+
 extern "C" const fidl_type_t fuchsia_input_report_InputReportTable;
 
 // |InputReport| is a single report that is created by an input device.
@@ -497,6 +1036,19 @@ struct InputReport final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
   }
 
+  // |touch| is the report generated if the device contains a touch device.
+  const ::llcpp::fuchsia::input::report::TouchReport& touch() const {
+    ZX_ASSERT(has_touch());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::TouchReport*>(EnvelopesView::at(5 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::TouchReport& touch() {
+    ZX_ASSERT(has_touch());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::TouchReport*>(EnvelopesView::at(5 - 1).data);
+  }
+  bool has_touch() const {
+    return EnvelopesView::count() >= 5 && EnvelopesView::at(5 - 1).data != nullptr;
+  }
+
   InputReport() = default;
   ~InputReport() = default;
   InputReport(InputReport&& other) noexcept = default;
@@ -509,7 +1061,7 @@ struct InputReport final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 1104;
+  static constexpr uint32_t MaxOutOfLine = 2768;
 
  private:
   InputReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -534,105 +1086,20 @@ class InputReport::Builder {
   // |sensor| is the report generated if the device contains a sensor.
   Builder&& set_sensor(::llcpp::fuchsia::input::report::SensorReport* elem);
 
+  // |touch| is the report generated if the device contains a touch device.
+  Builder&& set_touch(::llcpp::fuchsia::input::report::TouchReport* elem);
+
  private:
   Builder() = default;
   friend Builder InputReport::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
+  ::fidl::Array<fidl_envelope_t, 5> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_input_report_DeviceDescriptorTable;
-
-// |DeviceDescriptor| describes a physical input device. Some physical devices may
-// send multiple types of reports (E.g: a physical touchscreen can send touch and
-// stylus reports, so it will have both a TouchDescriptor and a StylusDescriptor).
-struct DeviceDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
-  // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
-
-  // |device_info| should always be present to help distinguish between physical devices.
-  const ::llcpp::fuchsia::input::report::DeviceInfo& device_info() const {
-    ZX_ASSERT(has_device_info());
-    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::DeviceInfo*>(EnvelopesView::at(1 - 1).data);
-  }
-  ::llcpp::fuchsia::input::report::DeviceInfo& device_info() {
-    ZX_ASSERT(has_device_info());
-    return *reinterpret_cast<::llcpp::fuchsia::input::report::DeviceInfo*>(EnvelopesView::at(1 - 1).data);
-  }
-  bool has_device_info() const {
-    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
-  }
-
-  // When |mouse| is present the device has a mouse.
-  const ::llcpp::fuchsia::input::report::MouseDescriptor& mouse() const {
-    ZX_ASSERT(has_mouse());
-    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::MouseDescriptor*>(EnvelopesView::at(2 - 1).data);
-  }
-  ::llcpp::fuchsia::input::report::MouseDescriptor& mouse() {
-    ZX_ASSERT(has_mouse());
-    return *reinterpret_cast<::llcpp::fuchsia::input::report::MouseDescriptor*>(EnvelopesView::at(2 - 1).data);
-  }
-  bool has_mouse() const {
-    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
-  }
-
-  // When |sensor| is present the device has a sensor.
-  const ::llcpp::fuchsia::input::report::SensorDescriptor& sensor() const {
-    ZX_ASSERT(has_sensor());
-    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::SensorDescriptor*>(EnvelopesView::at(3 - 1).data);
-  }
-  ::llcpp::fuchsia::input::report::SensorDescriptor& sensor() {
-    ZX_ASSERT(has_sensor());
-    return *reinterpret_cast<::llcpp::fuchsia::input::report::SensorDescriptor*>(EnvelopesView::at(3 - 1).data);
-  }
-  bool has_sensor() const {
-    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
-  }
-
-  DeviceDescriptor() = default;
-  ~DeviceDescriptor() = default;
-  DeviceDescriptor(DeviceDescriptor&& other) noexcept = default;
-  DeviceDescriptor& operator=(DeviceDescriptor&& other) noexcept = default;
-
-  class Builder;
-  friend class Builder;
-  static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_input_report_DeviceDescriptorTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 3824;
-
- private:
-  DeviceDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
-};
-
-class DeviceDescriptor::Builder {
- public:
-  DeviceDescriptor view() { return DeviceDescriptor(max_ordinal_, envelopes_.data_); }
-  ~Builder() = default;
-  Builder(Builder&& other) noexcept = default;
-  Builder& operator=(Builder&& other) noexcept = default;
-
-  // |device_info| should always be present to help distinguish between physical devices.
-  Builder&& set_device_info(::llcpp::fuchsia::input::report::DeviceInfo* elem);
-
-  // When |mouse| is present the device has a mouse.
-  Builder&& set_mouse(::llcpp::fuchsia::input::report::MouseDescriptor* elem);
-
-  // When |sensor| is present the device has a sensor.
-  Builder&& set_sensor(::llcpp::fuchsia::input::report::SensorDescriptor* elem);
-
- private:
-  Builder() = default;
-  friend Builder DeviceDescriptor::Build();
-
-  uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
-};
+// A hardcoded number of max contacts per report. This should be increased in the future if
+// we see devices with more than the max amount.
+constexpr uint32_t TOUCH_MAX_CONTACTS = 10u;
 
 // A hardcoded number of max sensor values. This should be increased in the future
 // if we ever see a sensor with more values.
@@ -754,7 +1221,7 @@ class InputDevice final {
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetReportsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 56000;
+    static constexpr uint32_t MaxOutOfLine = 139200;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -770,7 +1237,7 @@ class InputDevice final {
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 3824;
+    static constexpr uint32_t MaxOutOfLine = 6096;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1130,12 +1597,16 @@ struct IsFidlType<::llcpp::fuchsia::input::report::MouseDescriptor> : public std
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::MouseDescriptor>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::input::report::MouseReport> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::MouseReport>);
+struct IsFidlType<::llcpp::fuchsia::input::report::ContactDescriptor> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::ContactDescriptor>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::input::report::InputReport> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::InputReport>);
+struct IsFidlType<::llcpp::fuchsia::input::report::TouchDescriptor> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::TouchDescriptor>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::input::report::MouseReport> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::MouseReport>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::input::report::DeviceInfo> : public std::true_type {};
@@ -1149,6 +1620,18 @@ static_assert(sizeof(::llcpp::fuchsia::input::report::DeviceInfo) == ::llcpp::fu
 template <>
 struct IsFidlType<::llcpp::fuchsia::input::report::DeviceDescriptor> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::DeviceDescriptor>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::input::report::ContactReport> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::ContactReport>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::input::report::TouchReport> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::TouchReport>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::input::report::InputReport> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::InputReport>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::input::report::InputDevice::GetReportsEventResponse> : public std::true_type {};

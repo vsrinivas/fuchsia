@@ -84,6 +84,86 @@ auto ::llcpp::fuchsia::input::report::MouseDescriptor::Builder::set_buttons(::fi
   return std::move(*this);
 }
 
+::llcpp::fuchsia::input::report::ContactDescriptor::Builder ContactDescriptor::Build() {
+  return ContactDescriptor::Builder();
+}
+
+auto ::llcpp::fuchsia::input::report::ContactDescriptor::Builder::set_position_x(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactDescriptor::Builder::set_position_y(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactDescriptor::Builder::set_pressure(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactDescriptor::Builder::set_contact_width(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactDescriptor::Builder::set_contact_height(::llcpp::fuchsia::input::report::Axis* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[5 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 5) {
+    max_ordinal_ = 5;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::input::report::TouchDescriptor::Builder TouchDescriptor::Build() {
+  return TouchDescriptor::Builder();
+}
+
+auto ::llcpp::fuchsia::input::report::TouchDescriptor::Builder::set_contacts(::fidl::VectorView<::llcpp::fuchsia::input::report::ContactDescriptor>* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::TouchDescriptor::Builder::set_max_contacts(uint32_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::TouchDescriptor::Builder::set_touch_type(::llcpp::fuchsia::input::report::TouchType* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
 ::llcpp::fuchsia::input::report::MouseReport::Builder MouseReport::Build() {
   return MouseReport::Builder();
 }
@@ -133,6 +213,117 @@ auto ::llcpp::fuchsia::input::report::MouseReport::Builder::set_pressed_buttons(
   return std::move(*this);
 }
 
+::llcpp::fuchsia::input::report::DeviceDescriptor::Builder DeviceDescriptor::Build() {
+  return DeviceDescriptor::Builder();
+}
+
+auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_device_info(::llcpp::fuchsia::input::report::DeviceInfo* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_mouse(::llcpp::fuchsia::input::report::MouseDescriptor* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_sensor(::llcpp::fuchsia::input::report::SensorDescriptor* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_touch(::llcpp::fuchsia::input::report::TouchDescriptor* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::input::report::ContactReport::Builder ContactReport::Build() {
+  return ContactReport::Builder();
+}
+
+auto ::llcpp::fuchsia::input::report::ContactReport::Builder::set_contact_id(uint32_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactReport::Builder::set_position_x(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactReport::Builder::set_position_y(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactReport::Builder::set_pressure(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactReport::Builder::set_contact_width(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[5 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 5) {
+    max_ordinal_ = 5;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::ContactReport::Builder::set_contact_height(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[6 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 6) {
+    max_ordinal_ = 6;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::input::report::TouchReport::Builder TouchReport::Build() {
+  return TouchReport::Builder();
+}
+
+auto ::llcpp::fuchsia::input::report::TouchReport::Builder::set_contacts(::fidl::VectorView<::llcpp::fuchsia::input::report::ContactReport>* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
 ::llcpp::fuchsia::input::report::InputReport::Builder InputReport::Build() {
   return InputReport::Builder();
 }
@@ -173,33 +364,11 @@ auto ::llcpp::fuchsia::input::report::InputReport::Builder::set_sensor(::llcpp::
   return std::move(*this);
 }
 
-::llcpp::fuchsia::input::report::DeviceDescriptor::Builder DeviceDescriptor::Build() {
-  return DeviceDescriptor::Builder();
-}
-
-auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_device_info(::llcpp::fuchsia::input::report::DeviceInfo* elem) -> Builder&& {
+auto ::llcpp::fuchsia::input::report::InputReport::Builder::set_touch(::llcpp::fuchsia::input::report::TouchReport* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[1 - 1].data = static_cast<void*>(elem);
-  if (max_ordinal_ < 1) {
-    max_ordinal_ = 1;
-  }
-  return std::move(*this);
-}
-
-auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_mouse(::llcpp::fuchsia::input::report::MouseDescriptor* elem) -> Builder&& {
-  ZX_ASSERT(elem);
-  envelopes_[2 - 1].data = static_cast<void*>(elem);
-  if (max_ordinal_ < 2) {
-    max_ordinal_ = 2;
-  }
-  return std::move(*this);
-}
-
-auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_sensor(::llcpp::fuchsia::input::report::SensorDescriptor* elem) -> Builder&& {
-  ZX_ASSERT(elem);
-  envelopes_[3 - 1].data = static_cast<void*>(elem);
-  if (max_ordinal_ < 3) {
-    max_ordinal_ = 3;
+  envelopes_[5 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 5) {
+    max_ordinal_ = 5;
   }
   return std::move(*this);
 }
