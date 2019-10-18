@@ -37,6 +37,7 @@ group("service-legacy-privacy") {
 group("bin") {
   testonly = true
   public_deps = [
+    "//src/connectivity/location/regulatory_region",
     "//src/connectivity/wlan/wlancfg",
     "//src/connectivity/wlan/wlanstack",
   ]
