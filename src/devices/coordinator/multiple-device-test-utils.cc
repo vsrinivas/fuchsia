@@ -142,6 +142,11 @@ void MultipleDeviceTestCase::TearDown() {
   }
 
   devhost_.devices().clear();
+  // We no longer need the async loop.
+  // If we do not shutdown here, the destructor
+  // could be cleaning up the vfs, before the loop clears the
+  // connections.
+  coordinator_loop_.Shutdown();
 }
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,

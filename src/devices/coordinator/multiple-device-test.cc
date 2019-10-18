@@ -80,7 +80,6 @@ TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
   coordinator_loop()->RunUntilIdle();
 }
 
-/* Flaking. Re-enable after fxb/37462 is resolved
 TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
@@ -170,7 +169,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   ASSERT_TRUE(callback_executed);
   ASSERT_FALSE(suspend_task_pbus.is_pending());
   ASSERT_TRUE(suspend_task_sys.is_pending());
-}*/
+}
 
 TEST_F(MultipleDeviceTestCase, UnbindThenResume) {
   size_t parent_index;
