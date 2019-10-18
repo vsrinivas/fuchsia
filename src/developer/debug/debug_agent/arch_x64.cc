@@ -73,13 +73,10 @@ inline zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug_ip
 
   out->push_back(CreateRegister(RegisterID::kX64_mxcsr, 4u, &vec_regs.mxcsr));
 
-  // TODO(donosoc): For now there is no support of AVX-512 within zircon,
-  //                so we're not sending over that data, only AVX.
-  //                Enable it when AVX-512 is done.
-  auto base = static_cast<uint32_t>(RegisterID::kX64_ymm0);
-  for (size_t i = 0; i < 16; i++) {
+  auto base = static_cast<uint32_t>(RegisterID::kX64_zmm0);
+  for (size_t i = 0; i < 32; i++) {
     auto reg_id = static_cast<RegisterID>(base + i);
-    out->push_back(CreateRegister(reg_id, 32u, &vec_regs.zmm[i]));
+    out->push_back(CreateRegister(reg_id, 64u, &vec_regs.zmm[i]));
   }
 
   return ZX_OK;
