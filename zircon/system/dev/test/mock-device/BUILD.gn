@@ -11,7 +11,7 @@ if (current_toolchain != default_toolchain) {
       "fidl.cc",
     ]
     deps = [
-      ":fuchsia.device.mock.c",
+      ":fuchsia.device.mock.llcpp",
       "$zx/system/banjo/ddk.protocol.test",
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/ddktl",
