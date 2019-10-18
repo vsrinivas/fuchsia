@@ -7,11 +7,14 @@
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
 namespace fuchsia_io = ::llcpp::fuchsia::io;
+
+const uint32_t kReadFlags = fuchsia_io::OPEN_RIGHT_READABLE;
 
 TEST(DirectoryTest, ServiceConnect) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_service_connect(nullptr, ZX_HANDLE_INVALID));
@@ -30,17 +33,16 @@ TEST(DirectoryTest, Open) {
 
   zx::channel h1, h2;
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, fdio_open("/x/y/z", fuchsia_io::OPEN_RIGHT_READABLE, h1.release()));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, fdio_open("/", fuchsia_io::OPEN_RIGHT_READABLE, h2.release()));
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, fdio_open("/x/y/z", kReadFlags, h1.release()));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, fdio_open("/", kReadFlags, h2.release()));
 
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  ASSERT_OK(fdio_open("/svc", fuchsia_io::OPEN_RIGHT_READABLE, h1.release()));
+  ASSERT_OK(fdio_open("/svc", kReadFlags, h1.release()));
 
   zx::channel h3, h4;
   ASSERT_OK(zx::channel::create(0, &h3, &h4));
   ASSERT_OK(fdio_service_connect_at(h2.get(), fuchsia_process_Launcher_Name, h3.release()));
-  ASSERT_OK(fdio_open_at(h2.get(), fuchsia_process_Launcher_Name, fuchsia_io::OPEN_RIGHT_READABLE,
-                         h4.release()));
+  ASSERT_OK(fdio_open_at(h2.get(), fuchsia_process_Launcher_Name, kReadFlags, h4.release()));
 
   h3.reset(fdio_service_clone(h2.get()));
   ASSERT_TRUE(h3.is_valid());
@@ -59,35 +61,40 @@ std::string new_path(const char* file) {
 }
 
 TEST(DirectoryTest, OpenFD) {
-  int fd = -1;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_open_fd(nullptr, fuchsia_io::OPEN_RIGHT_READABLE, &fd));
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, fdio_open_fd("/x/y/z", fuchsia_io::OPEN_RIGHT_READABLE, &fd));
+  {
+    fbl::unique_fd fd;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_open_fd(nullptr, kReadFlags, fd.reset_and_get_address()));
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, fdio_open_fd("/x/y/z", kReadFlags, fd.reset_and_get_address()));
 
-  // Opening local directories, like the root of the namespace, should be supported.
-  ASSERT_OK(fdio_open_fd("/", fuchsia_io::OPEN_RIGHT_READABLE, &fd));
-  // But empty path segments don't need to be supported.
-  ASSERT_EQ(ZX_ERR_BAD_PATH, fdio_open_fd("//", fuchsia_io::OPEN_RIGHT_READABLE, &fd));
+    // Opening local directories, like the root of the namespace, should be supported.
+    ASSERT_OK(fdio_open_fd("/", kReadFlags, fd.reset_and_get_address()));
+    // But empty path segments don't need to be supported.
+    ASSERT_EQ(ZX_ERR_BAD_PATH, fdio_open_fd("//", kReadFlags, fd.reset_and_get_address()));
+  }
 
-  std::string test_sys_path = new_path("test/sys");
-  ASSERT_OK(fdio_open_fd(test_sys_path.c_str(), fuchsia_io::OPEN_RIGHT_READABLE, &fd));
-  ASSERT_TRUE(fd >= 0);
+  {
+    fbl::unique_fd fd;
+    std::string test_sys_path = new_path("test/sys");
+    ASSERT_OK(fdio_open_fd(test_sys_path.c_str(), kReadFlags, fd.reset_and_get_address()));
+    ASSERT_TRUE(fd.is_valid());
 
-  int fd2 = -1;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            fdio_open_fd_at(fd, nullptr, fuchsia_io::OPEN_RIGHT_READABLE, &fd2));
-  ASSERT_EQ(fd2, -1);
-  ASSERT_EQ(ZX_ERR_NOT_FOUND,
-            fdio_open_fd_at(fd, "some-nonexistent-file", fuchsia_io::OPEN_RIGHT_READABLE, &fd2));
-  ASSERT_EQ(fd2, -1);
+    fbl::unique_fd fd2;
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+              fdio_open_fd_at(fd.get(), nullptr, kReadFlags, fd2.reset_and_get_address()));
+    ASSERT_FALSE(fd2.is_valid());
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, fdio_open_fd_at(fd.get(), "some-nonexistent-file", kReadFlags,
+                                                fd2.reset_and_get_address()));
+    ASSERT_FALSE(fd2.is_valid());
 
-  // We expect the binary that this file is compiled into to exist
-  ASSERT_OK(fdio_open_fd_at(fd, "fdio-test", fuchsia_io::OPEN_RIGHT_READABLE, &fd2));
-  ASSERT_TRUE(fd >= 0);
+    // We expect the binary that this file is compiled into to exist
+    ASSERT_OK(fdio_open_fd_at(fd.get(), "fdio-test", kReadFlags, fd2.reset_and_get_address()));
+    ASSERT_TRUE(fd2.is_valid());
 
-  // Verify that we can actually read from that file.
-  char buf[256];
-  ssize_t bytes_read = read(fd2, buf, 256);
-  ASSERT_EQ(bytes_read, 256);
+    // Verify that we can actually read from that file.
+    char buf[256];
+    ssize_t bytes_read = read(fd2.get(), buf, 256);
+    ASSERT_EQ(bytes_read, 256);
+  }
 }
 
 }  // namespace

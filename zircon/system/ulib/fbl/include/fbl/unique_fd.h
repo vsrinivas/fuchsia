@@ -55,6 +55,15 @@ class unique_fd {
     fd_ = t;
   }
 
+  // Reset the underlying fd, and then get the address of the underlying internal fd storage.
+  //
+  // Note: The intended purpose is to facilitate interactions with C APIs which expect to be
+  // provided a pointer to a handle used as an out parameter.
+  int* reset_and_get_address() {
+    reset();
+    return &fd_;
+  }
+
   void swap(unique_fd& other) {
     int t = fd_;
     fd_ = other.fd_;

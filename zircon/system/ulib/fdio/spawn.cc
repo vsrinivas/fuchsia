@@ -32,6 +32,8 @@
 #include <utility>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "private.h"
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -84,16 +86,15 @@ static_assert(offsetof(fdio_spawn_action_t, name.data) == 8,
               "fdio_spawn_action_t must have a stable ABI");
 
 static zx_status_t load_path(const char* path, zx::vmo* out_vmo) {
-  int fd;
-  zx_status_t status =
-      fdio_open_fd(path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
+  fbl::unique_fd fd;
+  zx_status_t status = fdio_open_fd(path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                                    fd.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
 
   zx::vmo vmo;
-  status = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
-  close(fd);
+  status = fdio_get_vmo_exec(fd.get(), vmo.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }

@@ -9,7 +9,6 @@
 #include <zxtest/zxtest.h>
 
 namespace {
-
 TEST(UniqueFdTest, InvalidFd) {
   fbl::unique_fd fd;
 
@@ -140,8 +139,11 @@ TEST(UniqueFdTest, Reset) {
   EXPECT_EQ(pipe(pipes), 0);
   int other_pipes[2];
   EXPECT_EQ(pipe(other_pipes), 0);
+  int third_pipes[2];
+  EXPECT_EQ(pipe(third_pipes), 0);
   ASSERT_NO_FAILURES(VerifyPipesOpen(pipes[1], pipes[0]));
   ASSERT_NO_FAILURES(VerifyPipesOpen(other_pipes[1], other_pipes[0]));
+  ASSERT_NO_FAILURES(VerifyPipesOpen(third_pipes[1], third_pipes[0]));
   {
     fbl::unique_fd in(pipes[1]);
     fbl::unique_fd out(pipes[0]);
@@ -149,6 +151,7 @@ TEST(UniqueFdTest, Reset) {
     ASSERT_NO_FAILURES(VerifyPipesOpen(in.get(), out.get()));
     ASSERT_NO_FAILURES(VerifyPipesOpen(pipes[1], pipes[0]));
     ASSERT_NO_FAILURES(VerifyPipesOpen(other_pipes[1], other_pipes[0]));
+    ASSERT_NO_FAILURES(VerifyPipesOpen(third_pipes[1], third_pipes[0]));
 
     in.reset(other_pipes[1]);
     out.reset(other_pipes[0]);
@@ -156,6 +159,15 @@ TEST(UniqueFdTest, Reset) {
     ASSERT_NO_FAILURES(VerifyPipesOpen(in.get(), out.get()));
     ASSERT_NO_FAILURES(VerifyPipesClosed(pipes[1], pipes[0]));
     ASSERT_NO_FAILURES(VerifyPipesOpen(other_pipes[1], other_pipes[0]));
+    ASSERT_NO_FAILURES(VerifyPipesOpen(third_pipes[1], third_pipes[0]));
+
+    *in.reset_and_get_address() = third_pipes[1];
+    *out.reset_and_get_address() = third_pipes[0];
+
+    ASSERT_NO_FAILURES(VerifyPipesOpen(in.get(), out.get()));
+    ASSERT_NO_FAILURES(VerifyPipesClosed(pipes[1], pipes[0]));
+    ASSERT_NO_FAILURES(VerifyPipesClosed(other_pipes[1], other_pipes[0]));
+    ASSERT_NO_FAILURES(VerifyPipesOpen(third_pipes[1], third_pipes[0]));
 
     in.reset();
     out.reset();
@@ -163,9 +175,8 @@ TEST(UniqueFdTest, Reset) {
     ASSERT_NO_FAILURES(VerifyPipesClosed(in.get(), out.get()));
     ASSERT_NO_FAILURES(VerifyPipesClosed(pipes[1], pipes[0]));
     ASSERT_NO_FAILURES(VerifyPipesClosed(other_pipes[1], other_pipes[0]));
+    ASSERT_NO_FAILURES(VerifyPipesClosed(third_pipes[1], third_pipes[0]));
   }
-  ASSERT_NO_FAILURES(VerifyPipesClosed(pipes[1], pipes[0]));
-  ASSERT_NO_FAILURES(VerifyPipesClosed(other_pipes[1], other_pipes[0]));
 }
 
 TEST(UniqueFdTest, Duplicate) {
