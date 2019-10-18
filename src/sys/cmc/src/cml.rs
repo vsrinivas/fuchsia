@@ -9,13 +9,6 @@ use serde_json::{Map, Value};
 use std::collections::HashMap;
 
 lazy_static! {
-    pub static ref REFERENCE_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
-    pub static ref FROM_RE: Regex =
-        Regex::new(r"^(realm|framework|self|#[A-Za-z0-9\-_]+)$").unwrap();
-    pub static ref FROM_SELF_TOKEN: &'static str = "self";
-}
-
-lazy_static! {
     pub static ref RIGHT_TOKENS: HashMap<&'static str, Vec<Right>> = {
         let mut tokens = HashMap::new();
         tokens.insert(
@@ -81,6 +74,7 @@ pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
+pub const FROM_SELF_TOKEN: &str = "self";
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub enum Right {
@@ -94,6 +88,39 @@ pub enum Right {
     UpdateAttributes,
     WriteBytes,
     Admin,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum Ref<'a> {
+    Named(&'a str),
+    Realm,
+    Framework,
+    Self_,
+}
+
+lazy_static! {
+    static ref NAME_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
+}
+
+/// Parse the given name of the form `#some-name`, returning the
+/// name of the target if it is a valid target name, or `None`
+/// otherwise.
+pub fn parse_named_reference(reference: &str) -> Option<&str> {
+    NAME_RE.captures(reference).map_or(None, |c| c.get(1)).map(|c| c.as_str())
+}
+
+/// Parse the given relative reference, consisting of tokens such as
+/// `realm` or `#child`. Returns None if the name could not be parsed.
+pub fn parse_reference<'a>(value: &'a str) -> Option<Ref<'a>> {
+    if value.starts_with("#") {
+        return parse_named_reference(value).map(|c| Ref::Named(c));
+    }
+    match value {
+        "framework" => Some(Ref::Framework),
+        "realm" => Some(Ref::Realm),
+        "self" => Some(Ref::Self_),
+        _ => None,
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -289,5 +316,32 @@ impl AsClause for Offer {
 impl FromClause for Storage {
     fn from(&self) -> &str {
         &self.from
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_named_reference() {
+        assert_eq!(parse_named_reference("#some-child"), Some("some-child"));
+        assert_eq!(parse_named_reference("#-"), Some("-"));
+        assert_eq!(parse_named_reference("#_"), Some("_"));
+        assert_eq!(parse_named_reference("#7"), Some("7"));
+
+        assert_eq!(parse_named_reference("#"), None);
+        assert_eq!(parse_named_reference("some-child"), None);
+    }
+
+    #[test]
+    fn test_parse_reference_test() {
+        assert_eq!(parse_reference("realm"), Some(Ref::Realm));
+        assert_eq!(parse_reference("framework"), Some(Ref::Framework));
+        assert_eq!(parse_reference("self"), Some(Ref::Self_));
+        assert_eq!(parse_reference("#child"), Some(Ref::Named("child")));
+
+        assert_eq!(parse_reference("invalid"), None);
+        assert_eq!(parse_reference("#invalid-child^"), None);
     }
 }

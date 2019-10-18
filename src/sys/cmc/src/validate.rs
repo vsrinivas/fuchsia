@@ -225,8 +225,8 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_storage(&self, storage: &cml::Storage) -> Result<(), Error> {
-        if let Some(caps) = cml::REFERENCE_RE.captures(&storage.from) {
-            if !self.all_children.contains(&caps[1]) {
+        if let Some(child) = cml::parse_named_reference(&storage.from) {
+            if !self.all_children.contains(child) {
                 return Err(Error::validate(format!(
                     "\"{}\" is a \"storage\" source but it does not appear in \"children\"",
                     storage.from,
@@ -271,16 +271,13 @@ impl<'a> ValidationContext<'a> {
         prev_storage_types: &mut PathMap<'a>,
     ) -> Result<(), Error> {
         self.validate_source("offer", offer)?;
-        let from_caps = cml::REFERENCE_RE.captures(&offer.from);
-        let from_child = match &from_caps {
-            Some(caps) => Some(&caps[0]),
-            None => None,
-        };
+        let from_child = cml::parse_named_reference(&offer.from);
         let mut prev_targets = HashSet::new();
         for to in offer.to.iter() {
             // Check that any referenced child in the target name is valid.
-            if let Some(caps) = cml::REFERENCE_RE.captures(&to) {
-                if !self.all_children.contains(&caps[1]) && !self.all_collections.contains(&caps[1])
+            let to_child = cml::parse_named_reference(&to);
+            if let Some(to_child) = to_child {
+                if !self.all_children.contains(to_child) && !self.all_collections.contains(to_child)
                 {
                     return Err(Error::validate(format!(
                         "\"{}\" is an \"offer\" target but it does not appear in \"children\" \
@@ -291,13 +288,10 @@ impl<'a> ValidationContext<'a> {
             }
 
             // Check that the capability is not being re-offered to a target that exposed it.
-            if let Some(from_child) = &from_child {
-                if from_child == &to {
-                    return Err(Error::validate(format!(
-                        "Offer target \"{}\" is same as source",
-                        &to,
-                    )));
-                }
+            if from_child.is_some() && from_child == to_child {
+                return Err(Error::validate(
+                    format!("Offer target \"{}\" is same as source", &to,),
+                ));
             }
 
             // Perform common target validation.
@@ -334,9 +328,9 @@ impl<'a> ValidationContext<'a> {
     where
         T: cml::FromClause + cml::CapabilityClause,
     {
-        if let Some(caps) = cml::REFERENCE_RE.captures(source_obj.from()) {
+        if let Some(source_child) = cml::parse_named_reference(source_obj.from()) {
             if source_obj.storage().is_none() {
-                if !self.all_children.contains(&caps[1]) {
+                if !self.all_children.contains(source_child) {
                     return Err(Error::validate(format!(
                         "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
                         source_obj.from(),
@@ -344,7 +338,7 @@ impl<'a> ValidationContext<'a> {
                     )));
                 }
             } else {
-                if !self.all_storage_and_sources.contains_key(&caps[1]) {
+                if !self.all_storage_and_sources.contains_key(source_child) {
                     return Err(Error::validate(format!(
                         "\"{}\" is an \"{}\" source but it does not appear in \"storage\"",
                         source_obj.from(),
@@ -462,8 +456,8 @@ impl<'a> ValidationContext<'a> {
         let target_name = to_entry.map_or("", |t| t.as_str());
 
         // Check that the source of this storage capability does not match the target
-        if let Some(f) = cml::REFERENCE_RE.captures(source_obj.from()).map(|c| c[1].to_string()) {
-            if self.all_storage_and_sources.get(f.as_str()) == Some(&target_name) {
+        if let Some(f) = cml::parse_named_reference(source_obj.from()) {
+            if self.all_storage_and_sources.get(f) == Some(&target_name) {
                 return Err(Error::validate(format!(
                     "Storage offer target \"{}\" is same as source",
                     target_name

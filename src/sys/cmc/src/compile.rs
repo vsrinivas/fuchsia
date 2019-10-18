@@ -281,12 +281,13 @@ fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>,
 
 fn extract_use_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
     match in_obj.from.as_ref() {
-        Some(from) => match from as &str {
-            "realm" => Ok(cm::Ref::Realm(cm::RealmRef {})),
-            "framework" => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-            _ => Err(Error::internal(format!("invalid \"from\" for \"use\": {}", from))),
+        Some(from) => match cml::parse_reference(from) {
+            Some(cml::Ref::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
+            Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+            Some(_) => Err(Error::internal(format!("invalid \"from\" for \"use\": {}", from))),
+            None => Err(Error::internal(format!("invalid \"from\": {}", from))),
         },
-        None => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        None => Ok(cm::Ref::Realm(cm::RealmRef {})), // Default value.
     }
 }
 
@@ -294,63 +295,48 @@ fn extract_expose_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
-    let from = in_obj.from().to_string();
-    if !cml::FROM_RE.is_match(&from) {
-        return Err(Error::internal(format!("invalid \"from\": {}", from)));
+    match cml::parse_reference(in_obj.from()) {
+        Some(cml::Ref::Named(name)) => {
+            Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
+        }
+        Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+        Some(cml::Ref::Self_) => Ok(cm::Ref::Self_(cm::SelfRef {})),
+        Some(_) => {
+            Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", in_obj.from())))
+        }
+        None => Err(Error::internal(format!("invalid \"from\": {}", in_obj.from()))),
     }
-    let ret = if from.starts_with("#") {
-        let (_, child_name) = from.split_at(1);
-        cm::Ref::Child(cm::ChildRef { name: cm::Name::new(child_name.to_string())? })
-    } else if from == "framework" {
-        cm::Ref::Framework(cm::FrameworkRef {})
-    } else if from == "self" {
-        cm::Ref::Self_(cm::SelfRef {})
-    } else {
-        return Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", from)));
-    };
-    Ok(ret)
 }
 
 fn extract_offer_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
-    let from = in_obj.from().to_string();
-    if !cml::FROM_RE.is_match(&from) {
-        return Err(Error::internal(format!("invalid \"from\": {}", from)));
+    match cml::parse_reference(in_obj.from()) {
+        Some(cml::Ref::Named(name)) => {
+            Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
+        }
+        Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+        Some(cml::Ref::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        Some(cml::Ref::Self_) => Ok(cm::Ref::Self_(cm::SelfRef {})),
+        None => Err(Error::internal(format!("invalid \"from\": {}", in_obj.from()))),
     }
-    let ret = if from.starts_with("#") {
-        let (_, child_name) = from.split_at(1);
-        cm::Ref::Child(cm::ChildRef { name: cm::Name::new(child_name.to_string())? })
-    } else if from == "framework" {
-        cm::Ref::Framework(cm::FrameworkRef {})
-    } else if from == "realm" {
-        cm::Ref::Realm(cm::RealmRef {})
-    } else if from == "self" {
-        cm::Ref::Self_(cm::SelfRef {})
-    } else {
-        return Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", from)));
-    };
-    Ok(ret)
 }
 
 fn extract_offer_storage_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
-    let from = in_obj.from().to_string();
-    if !cml::FROM_RE.is_match(&from) {
-        return Err(Error::internal(format!("invalid \"from\": {}", from)));
+    match cml::parse_reference(in_obj.from()) {
+        Some(cml::Ref::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        Some(cml::Ref::Named(storage_name)) => {
+            Ok(cm::Ref::Storage(cm::StorageRef { name: cm::Name::new(storage_name.to_string())? }))
+        }
+        Some(_) => {
+            Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", in_obj.from())))
+        }
+        None => Err(Error::internal(format!("invalid \"from\": {}", in_obj.from()))),
     }
-    let ret = if from.starts_with("#") {
-        let (_, storage_name) = from.split_at(1);
-        cm::Ref::Storage(cm::StorageRef { name: cm::Name::new(storage_name.to_string())? })
-    } else if from == "realm" {
-        cm::Ref::Realm(cm::RealmRef {})
-    } else {
-        return Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", from)));
-    };
-    Ok(ret)
 }
 
 fn extract_storage_targets(
@@ -362,11 +348,11 @@ fn extract_storage_targets(
         .to
         .iter()
         .map(|to| {
-            let caps = match cml::REFERENCE_RE.captures(to.as_str()) {
+            let name = match cml::parse_named_reference(to.as_str()) {
                 Some(c) => Ok(c),
                 None => Err(Error::internal(format!("invalid \"dest\": {}", to.as_str()))),
-            }?;
-            let name = caps[1].to_string();
+            }?
+            .to_string();
 
             if all_children.contains(&name as &str) {
                 Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
@@ -393,13 +379,13 @@ fn extract_targets(
 
     // Validate the "to" references.
     for to in in_obj.to.iter() {
-        let caps = match cml::REFERENCE_RE.captures(to.as_str()) {
+        let name = match cml::parse_named_reference(to.as_str()) {
             Some(c) => Ok(c),
             None => Err(Error::internal(format!("invalid \"dest\": {}", to.as_str()))),
-        }?;
+        }?
+        .to_string();
 
         // Obtain the target reference.
-        let name = caps[1].to_string();
         let target = if all_children.contains(&name as &str) {
             cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? })
         } else if all_collections.contains(&name as &str) {
