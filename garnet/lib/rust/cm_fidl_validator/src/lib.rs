@@ -27,6 +27,7 @@ pub enum Error {
     InvalidChild(String, String, String),
     InvalidCollection(String, String, String),
     InvalidStorage(String, String, String),
+    MultipleRunnersSpecified(String),
 }
 
 impl Error {
@@ -93,6 +94,10 @@ impl Error {
     ) -> Self {
         Error::InvalidStorage(decl_type.into(), keyword.into(), storage.into())
     }
+
+    pub fn multiple_runners_specified(decl_type: impl Into<String>) -> Self {
+        Error::MultipleRunnersSpecified(decl_type.into())
+    }
 }
 
 impl error::Error for Error {}
@@ -127,6 +132,7 @@ impl fmt::Display for Error {
                 "\"{}\" is referenced in {}.{} but it does not appear in storage",
                 s, d, k
             ),
+            Error::MultipleRunnersSpecified(d) => write!(f, "{} specifies multiple runners", d),
         }
     }
 }
@@ -251,9 +257,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "uses".
         if let Some(uses) = self.decl.uses.as_ref() {
-            for use_ in uses.iter() {
-                self.validate_use_decl(&use_);
-            }
+            self.validate_uses_decl(uses);
         }
 
         // Validate "exposes".
@@ -276,6 +280,24 @@ impl<'a> ValidationContext<'a> {
             Ok(())
         } else {
             Err(self.errors)
+        }
+    }
+
+    fn validate_uses_decl(&mut self, uses: &[fsys::UseDecl]) {
+        // Validate individual fields.
+        for use_ in uses.iter() {
+            self.validate_use_decl(&use_);
+        }
+
+        // Ensure that no more than one runner is specified.
+        let mut runners_count: i32 = 0;
+        for use_ in uses.iter() {
+            if let fsys::UseDecl::Runner(_) = use_ {
+                runners_count += 1;
+            }
+        }
+        if runners_count > 1 {
+            self.errors.push(Error::multiple_runners_specified("UseRunnerDecl"));
         }
     }
 
@@ -321,6 +343,14 @@ impl<'a> ValidationContext<'a> {
                     );
                 }
             },
+            fsys::UseDecl::Runner(r) => {
+                check_name(
+                    r.source_name.as_ref(),
+                    "UseRunnerDecl",
+                    "source_name",
+                    &mut self.errors,
+                );
+            }
             fsys::UseDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "use"));
             }
@@ -1053,7 +1083,7 @@ mod tests {
             ExposeServiceDecl, FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl,
             OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, RunnerDecl,
             SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl,
-            UseLegacyServiceDecl, UseServiceDecl, UseStorageDecl,
+            UseLegacyServiceDecl, UseRunnerDecl, UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -1182,6 +1212,10 @@ mod tests {
         assert_eq!(
             format!("{}", Error::invalid_storage("Decl", "source", "name")),
             "\"name\" is referenced in Decl.source but it does not appear in storage"
+        );
+        assert_eq!(
+            format!("{}", Error::multiple_runners_specified("Decl")),
+            "Decl specifies multiple runners"
         );
     }
 
@@ -1322,6 +1356,9 @@ mod tests {
                         type_: Some(StorageType::Cache),
                         target_path: None,
                     }),
+                    UseDecl::Runner(UseRunnerDecl {
+                        source_name: None,
+                    }),
                 ]);
                 decl
             },
@@ -1337,6 +1374,7 @@ mod tests {
                 Error::missing_field("UseDirectoryDecl", "target_path"),
                 Error::missing_field("UseStorageDecl", "type"),
                 Error::missing_field("UseStorageDecl", "target_path"),
+                Error::missing_field("UseRunnerDecl", "source_name"),
             ])),
         },
         test_validate_uses_invalid_identifiers => {
@@ -1383,6 +1421,23 @@ mod tests {
                 Error::invalid_field("UseStorageDecl", "target_path"),
             ])),
         },
+        test_validate_uses_multiple_runners => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    UseDecl::Runner(UseRunnerDecl {
+                        source_name: Some("elf".to_string()),
+                    }),
+                    UseDecl::Runner(UseRunnerDecl {
+                        source_name: Some("elf".to_string()),
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::multiple_runners_specified("UseRunnerDecl"),
+            ])),
+        },
         test_validate_uses_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
@@ -1406,6 +1461,9 @@ mod tests {
                         type_: Some(StorageType::Cache),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
+                    UseDecl::Runner(UseRunnerDecl {
+                        source_name: Some(format!("{}", "a".repeat(101))),
+                    }),
                 ]);
                 decl
             },
@@ -1417,6 +1475,7 @@ mod tests {
                 Error::field_too_long("UseDirectoryDecl", "source_path"),
                 Error::field_too_long("UseDirectoryDecl", "target_path"),
                 Error::field_too_long("UseStorageDecl", "target_path"),
+                Error::field_too_long("UseRunnerDecl", "source_name"),
             ])),
         },
 

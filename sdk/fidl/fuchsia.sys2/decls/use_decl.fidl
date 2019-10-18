@@ -11,6 +11,7 @@ xunion UseDecl {
     UseLegacyServiceDecl legacy_service;
     UseDirectoryDecl directory;
     UseStorageDecl storage;
+    UseRunnerDecl runner;
 };
 
 /// Declares a service used by a component, which was offered to the component's
@@ -91,6 +92,7 @@ table UseStorageDecl {
 /// Declares a runner used by a component, which was offered to the component's
 /// environment.
 table UseRunnerDecl {
-    /// The name of the runner, as it was presented to this component.
-    1: runner_name name;
+    /// The name of the runner, as it was presented to this component by the
+    /// realm.
+    1: runner_name source_name;
 };

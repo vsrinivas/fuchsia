@@ -56,6 +56,7 @@ impl From<UseDecl> for CapabilityType {
             UseDecl::LegacyService(_) => CapabilityType::LegacyService,
             UseDecl::Directory(_) => CapabilityType::Directory,
             UseDecl::Storage(_) => CapabilityType::Storage,
+            UseDecl::Runner(_) => CapabilityType::Runner,
         }
     }
 }

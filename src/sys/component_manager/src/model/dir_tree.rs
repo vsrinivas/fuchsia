@@ -79,8 +79,8 @@ impl DirTree {
             cm_rust::UseDecl::Directory(d) => &d.target_path,
             cm_rust::UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
             cm_rust::UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
-            cm_rust::UseDecl::Storage(UseStorageDecl::Meta) => {
-                // Meta storage doesn't show up in the namespace, nothing to do.
+            cm_rust::UseDecl::Storage(UseStorageDecl::Meta) | cm_rust::UseDecl::Runner(_) => {
+                // Meta storage and runners don't show up in the namespace; nothing to do.
                 return Ok(());
             }
         };
@@ -132,7 +132,7 @@ mod tests {
         cm_rust::{
             CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl,
             ExposeLegacyServiceDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl,
-            UseDirectoryDecl, UseLegacyServiceDecl, UseSource, UseStorageDecl,
+            UseDirectoryDecl, UseLegacyServiceDecl, UseRunnerDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -167,6 +167,7 @@ mod tests {
                     CapabilityPath::try_from("/in/data/cache").unwrap(),
                 )),
                 UseDecl::Storage(UseStorageDecl::Meta),
+                UseDecl::Runner(UseRunnerDecl { source_name: CapabilityName::from("elf") }),
             ],
             ..default_component_decl()
         };

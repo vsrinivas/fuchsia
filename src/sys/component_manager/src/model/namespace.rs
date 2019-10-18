@@ -99,6 +99,9 @@ impl IncomingNamespace {
                         abs_moniker.clone(),
                     )?;
                 }
+                cm_rust::UseDecl::Runner(_) => {
+                    return Err(ModelError::unsupported("Runner capability"))
+                }
             }
         }
 

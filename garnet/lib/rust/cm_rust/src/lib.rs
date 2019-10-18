@@ -380,6 +380,7 @@ fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
                     LegacyService(UseLegacyServiceDecl),
                     Directory(UseDirectoryDecl),
                     Storage(UseStorageDecl),
+                    Runner(UseRunnerDecl),
                 });
 fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
                   {
@@ -399,6 +400,11 @@ fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
                       source: UseSource,
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
+                  });
+fidl_into_struct!(UseRunnerDecl, UseRunnerDecl, fsys::UseRunnerDecl,
+                  fsys::UseRunnerDecl,
+                  {
+                      source_name: CapabilityName,
                   });
 
 fidl_into_struct!(ExposeLegacyServiceDecl, ExposeLegacyServiceDecl, fsys::ExposeLegacyServiceDecl,
@@ -1312,6 +1318,9 @@ mod tests {
                        type_: Some(fsys::StorageType::Meta),
                        target_path: None,
                    }),
+                   fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                       source_name: Some("myrunner".to_string()),
+                   }),
                ]),
                exposes: Some(vec![
                    fsys::ExposeDecl::LegacyService(fsys::ExposeLegacyServiceDecl {
@@ -1488,6 +1497,9 @@ mod tests {
                         }),
                         UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())),
                         UseDecl::Storage(UseStorageDecl::Meta),
+                        UseDecl::Runner(UseRunnerDecl {
+                            source_name: "myrunner".into(),
+                        }),
                     ],
                     exposes: vec![
                         ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
