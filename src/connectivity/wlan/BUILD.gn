@@ -18,14 +18,6 @@ group("service") {
   ]
 }
 
-group("service-wep") {
-  testonly = true
-  deps = [
-    ":bin",
-    "config:wep",
-  ]
-}
-
 group("service-legacy-privacy") {
   testonly = true
   deps = [
