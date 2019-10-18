@@ -46,6 +46,10 @@ impl Plan for StubPlan {
             Ok(StubPlan)
         }
     }
+
+    fn id(&self) -> String {
+        String::new()
+    }
 }
 
 /// The Installer is responsible for performing (or triggering) the installation of the update

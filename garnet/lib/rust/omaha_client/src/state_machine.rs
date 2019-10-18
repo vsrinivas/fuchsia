@@ -27,7 +27,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 use std::str::Utf8Error;
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
 mod time;
 pub mod update_check;
@@ -39,6 +39,8 @@ pub use timer::StubTimer;
 pub use timer::Timer;
 
 const LAST_CHECK_TIME: &str = "last_check_time";
+const INSTALL_PLAN_ID: &str = "install_plan_id";
+const UPDATE_FIRST_SEEN_TIME: &str = "update_first_seen_time";
 
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform a single update check process.
@@ -510,10 +512,20 @@ where
             self.report_success_event(&request_params, EventType::UpdateDownloadStarted, &apps)
                 .await;
 
+            let install_plan_id = install_plan.id();
+            let update_start_time = clock::now();
+            let update_first_seen_time =
+                self.record_update_first_seen_time(&install_plan_id, update_start_time).await;
+
             let install_result = self.installer.perform_install(&install_plan, None).await;
             if let Err(e) = install_result {
                 warn!("Installation failed: {}", e);
                 self.report_error(&request_params, EventErrorCode::Installation, &apps).await;
+
+                match clock::now().duration_since(update_start_time) {
+                    Ok(duration) => self.report_metrics(Metrics::FailedUpdateDuration(duration)),
+                    Err(e) => warn!("Update start time is in the future: {}", e),
+                }
                 return Ok(Self::make_response(
                     response,
                     update_check::Action::InstallPlanExecutionError,
@@ -527,6 +539,18 @@ where
             // TODO: Verify downloaded update if needed.
 
             self.report_success_event(&request_params, EventType::UpdateComplete, &apps).await;
+
+            let update_finish_time = clock::now();
+            match update_finish_time.duration_since(update_start_time) {
+                Ok(duration) => self.report_metrics(Metrics::SuccessfulUpdateDuration(duration)),
+                Err(e) => warn!("Update start time is in the future: {}", e),
+            }
+            match update_finish_time.duration_since(update_first_seen_time) {
+                Ok(duration) => {
+                    self.report_metrics(Metrics::SuccessfulUpdateFromFirstSeen(duration))
+                }
+                Err(e) => warn!("Update first seen time is in the future: {}", e),
+            }
 
             self.set_state(State::WaitingForReboot);
             Ok(Self::make_response(response, update_check::Action::Updated))
@@ -684,6 +708,38 @@ where
         if let Err(err) = self.metrics_reporter.report_metrics(metrics) {
             warn!("Unable to report metrics: {:?}", err);
         }
+    }
+
+    async fn record_update_first_seen_time(
+        &mut self,
+        install_plan_id: &str,
+        now: SystemTime,
+    ) -> SystemTime {
+        let mut storage = self.storage_ref.lock().await;
+        let previous_id = storage.get_string(INSTALL_PLAN_ID).await;
+        if let Some(previous_id) = previous_id {
+            if previous_id == install_plan_id {
+                return storage
+                    .get_int(UPDATE_FIRST_SEEN_TIME)
+                    .await
+                    .map(time::i64_to_time)
+                    .unwrap_or(now);
+            }
+        }
+        // Update INSTALL_PLAN_ID and UPDATE_FIRST_SEEN_TIME for new update.
+        if let Err(e) = storage.set_string(INSTALL_PLAN_ID, install_plan_id).await {
+            error!("Unable to persist {}: {}", INSTALL_PLAN_ID, e);
+            return now;
+        }
+        if let Err(e) = storage.set_int(UPDATE_FIRST_SEEN_TIME, time::time_to_i64(now)).await {
+            error!("Unable to persist {}: {}", UPDATE_FIRST_SEEN_TIME, e);
+            let _ = storage.remove(INSTALL_PLAN_ID).await;
+            return now;
+        }
+        if let Err(e) = storage.commit().await {
+            error!("Unable to commit persisted data: {}", e);
+        }
+        now
     }
 }
 
@@ -1400,7 +1456,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
-                MockMetricsReporter::new(false),
+                StubMetricsReporter,
                 Rc::new(Mutex::new(storage)),
                 make_test_app_set(),
             )
@@ -1425,7 +1481,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
-                MockMetricsReporter::new(false),
+                StubMetricsReporter,
                 Rc::new(Mutex::new(storage)),
                 make_test_app_set(),
             )
@@ -1465,7 +1521,7 @@ mod tests {
                 StubInstaller::default(),
                 &config,
                 StubTimer,
-                MockMetricsReporter::new(false),
+                StubMetricsReporter,
                 Rc::new(Mutex::new(storage)),
                 app_set.clone(),
             )
@@ -1481,7 +1537,6 @@ mod tests {
     fn test_report_check_interval() {
         block_on(async {
             let config = config_generator();
-            let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
             let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 StubHttpRequest,
@@ -1489,7 +1544,7 @@ mod tests {
                 &config,
                 StubTimer,
                 MockMetricsReporter::new(false),
-                storage_ref,
+                Rc::new(Mutex::new(MemStorage::new())),
                 make_test_app_set(),
             )
             .await;
@@ -1516,6 +1571,137 @@ mod tests {
             assert_eq!(storage.get_int(LAST_CHECK_TIME).await, Some(123456789 + 999999));
             assert_eq!(storage.len(), 1);
             assert!(storage.committed());
+        });
+    }
+
+    #[test]
+    fn test_report_successful_update_duration() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
+
+            clock::mock::set(time::i64_to_time(123456789));
+            {
+                let mut storage = state_machine.storage_ref.lock().await;
+                storage.set_string(INSTALL_PLAN_ID, "").await.unwrap();
+                storage.set_int(UPDATE_FIRST_SEEN_TIME, 23456789).await.unwrap();
+                storage.commit().await.unwrap();
+            }
+            state_machine.set_state_callback(|state| {
+                if state == State::FinalizingUpdate {
+                    clock::mock::set(time::i64_to_time(222222222))
+                }
+            });
+            state_machine.start_update_check(CheckOptions::default()).await;
+
+            assert!(state_machine.metrics_reporter.metrics.len() > 2);
+            assert_eq!(
+                state_machine.metrics_reporter.metrics[1],
+                Metrics::SuccessfulUpdateDuration(Duration::from_micros(98765433))
+            );
+            assert_eq!(
+                state_machine.metrics_reporter.metrics[2],
+                Metrics::SuccessfulUpdateFromFirstSeen(Duration::from_micros(198765433))
+            );
+        });
+    }
+
+    #[test]
+    fn test_report_failed_update_duration() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller { should_fail: true },
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
+
+            clock::mock::set(time::i64_to_time(123456789));
+            state_machine.start_update_check(CheckOptions::default()).await;
+
+            assert!(state_machine.metrics_reporter.metrics.len() > 1);
+            assert_eq!(
+                state_machine.metrics_reporter.metrics[1],
+                Metrics::FailedUpdateDuration(Duration::from_micros(0))
+            );
+        });
+    }
+
+    #[test]
+    fn test_record_update_first_seen_time() {
+        block_on(async {
+            let config = config_generator();
+            let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
+
+            let now = time::i64_to_time(123456789);
+            assert_eq!(state_machine.record_update_first_seen_time("id", now).await, now);
+            {
+                let storage = state_machine.storage_ref.lock().await;
+                assert_eq!(storage.get_string(INSTALL_PLAN_ID).await, Some("id".to_string()));
+                assert_eq!(storage.get_int(UPDATE_FIRST_SEEN_TIME).await, Some(time_to_i64(now)));
+                assert_eq!(storage.len(), 2);
+                assert!(storage.committed());
+            }
+
+            let now2 = now + Duration::from_secs(1000);
+            assert_eq!(state_machine.record_update_first_seen_time("id", now2).await, now);
+            {
+                let storage = state_machine.storage_ref.lock().await;
+                assert_eq!(storage.get_string(INSTALL_PLAN_ID).await, Some("id".to_string()));
+                assert_eq!(storage.get_int(UPDATE_FIRST_SEEN_TIME).await, Some(time_to_i64(now)));
+                assert_eq!(storage.len(), 2);
+                assert!(storage.committed());
+            }
+            assert_eq!(state_machine.record_update_first_seen_time("id2", now2).await, now2);
+            {
+                let storage = state_machine.storage_ref.lock().await;
+                assert_eq!(storage.get_string(INSTALL_PLAN_ID).await, Some("id2".to_string()));
+                assert_eq!(storage.get_int(UPDATE_FIRST_SEEN_TIME).await, Some(time_to_i64(now2)));
+                assert_eq!(storage.len(), 2);
+                assert!(storage.committed());
+            }
         });
     }
 }

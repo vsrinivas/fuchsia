@@ -119,6 +119,10 @@ impl Plan for FuchsiaInstallPlan {
             }
         }
     }
+
+    fn id(&self) -> String {
+        self.url.to_string()
+    }
 }
 
 #[cfg(test)]
@@ -275,4 +279,14 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_install_plan_id() {
+        let url = TEST_URL_BASE.to_string() + TEST_PACKAGE_NAME;
+        let install_plan = FuchsiaInstallPlan {
+            url: PkgUrl::parse(&url).unwrap(),
+            install_source: InstallSource::ScheduledTask,
+        };
+
+        assert_eq!(install_plan.id(), url);
+    }
 }

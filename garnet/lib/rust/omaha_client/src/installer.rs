@@ -19,6 +19,10 @@ pub trait Plan: std::marker::Sized {
         request_params: &RequestParams,
         response: &Response,
     ) -> Result<Self, Self::Error>;
+
+    /// A string that can identify individual install plans, used to check if the current plan is
+    /// the same as the previous one.
+    fn id(&self) -> String;
 }
 
 /// The trait for the platform-specific Installer to implement.
