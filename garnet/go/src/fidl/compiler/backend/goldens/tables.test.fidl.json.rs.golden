@@ -93,3 +93,28 @@ fidl_table! {
     },
   },
 }
+
+#[derive(Debug, PartialEq)]
+pub struct ReverseOrdinalTable {
+  pub x: Option<i64>,
+  pub y: Option<i64>,
+  pub z: Option<i64>,
+}
+
+fidl_table! {
+  name: ReverseOrdinalTable,
+  members: {
+    x {
+      ty: i64,
+      ordinal: 3,
+    },
+    y {
+      ty: i64,
+      ordinal: 2,
+    },
+    z {
+      ty: i64,
+      ordinal: 1,
+    },
+  },
+}

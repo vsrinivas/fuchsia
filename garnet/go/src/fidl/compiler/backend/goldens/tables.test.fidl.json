@@ -319,6 +319,93 @@
         "has_padding": false,
         "has_flexible_envelope": true
       }
+    },
+    {
+      "name": "test.name/ReverseOrdinalTable",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
+        "line": 29,
+        "column": 7
+      },
+      "members": [
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "x",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
+            "line": 30,
+            "column": 14
+          },
+          "size": 8,
+          "max_out_of_line": 0,
+          "alignment": 8,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "y",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
+            "line": 31,
+            "column": 14
+          },
+          "size": 8,
+          "max_out_of_line": 0,
+          "alignment": 8,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "z",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
+            "line": 32,
+            "column": 14
+          },
+          "size": 8,
+          "max_out_of_line": 0,
+          "alignment": 8,
+          "max_handles": 0
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 72,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 72,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 72,
+        "has_padding": false,
+        "has_flexible_envelope": true
+      }
     }
   ],
   "union_declarations": [],
@@ -326,6 +413,7 @@
   "type_alias_declarations": [],
   "declaration_order": [
     "test.name/SimpleTable",
+    "test.name/ReverseOrdinalTable",
     "test.name/OlderSimpleTable",
     "test.name/NewerSimpleTable",
     "test.name/EmptyTable"
@@ -334,6 +422,7 @@
     "test.name/EmptyTable": "table",
     "test.name/SimpleTable": "table",
     "test.name/OlderSimpleTable": "table",
-    "test.name/NewerSimpleTable": "table"
+    "test.name/NewerSimpleTable": "table",
+    "test.name/ReverseOrdinalTable": "table"
   }
 }

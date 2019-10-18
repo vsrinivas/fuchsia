@@ -178,3 +178,85 @@ func (u *NewerSimpleTable) HasZ() bool {
 func (u *NewerSimpleTable) ClearZ() {
 	u.ZPresent = false
 }
+
+type ReverseOrdinalTable struct {
+	_ struct{} `fidl:"t,16,8" fidl_size_v1_no_ee:"16" fidl_alignment_v1_no_ee:"8"`
+	X int64 `fidl:"3" fidl2:"3"`
+	XPresent bool
+	Y int64 `fidl:"2" fidl2:"2"`
+	YPresent bool
+	Z int64 `fidl:"1" fidl2:"1"`
+	ZPresent bool
+}
+
+func (u *ReverseOrdinalTable) SetX(x int64) {
+	u.X = x
+	u.XPresent = true
+}
+
+func (u *ReverseOrdinalTable) GetX() int64 {
+	return u.X
+}
+
+func (u *ReverseOrdinalTable) GetXWithDefault(_default int64) int64 {
+	if !u.HasX() {
+		return _default
+	}
+	return u.X
+}
+
+func (u *ReverseOrdinalTable) HasX() bool {
+	return u.XPresent
+}
+
+func (u *ReverseOrdinalTable) ClearX() {
+	u.XPresent = false
+}
+
+func (u *ReverseOrdinalTable) SetY(y int64) {
+	u.Y = y
+	u.YPresent = true
+}
+
+func (u *ReverseOrdinalTable) GetY() int64 {
+	return u.Y
+}
+
+func (u *ReverseOrdinalTable) GetYWithDefault(_default int64) int64 {
+	if !u.HasY() {
+		return _default
+	}
+	return u.Y
+}
+
+func (u *ReverseOrdinalTable) HasY() bool {
+	return u.YPresent
+}
+
+func (u *ReverseOrdinalTable) ClearY() {
+	u.YPresent = false
+}
+
+func (u *ReverseOrdinalTable) SetZ(z int64) {
+	u.Z = z
+	u.ZPresent = true
+}
+
+func (u *ReverseOrdinalTable) GetZ() int64 {
+	return u.Z
+}
+
+func (u *ReverseOrdinalTable) GetZWithDefault(_default int64) int64 {
+	if !u.HasZ() {
+		return _default
+	}
+	return u.Z
+}
+
+func (u *ReverseOrdinalTable) HasZ() bool {
+	return u.ZPresent
+}
+
+func (u *ReverseOrdinalTable) ClearZ() {
+	u.ZPresent = false
+}

@@ -30,6 +30,37 @@ auto ::llcpp::test::name::SimpleTable::Builder::set_y(int64_t* elem) -> Builder&
   return std::move(*this);
 }
 
+::llcpp::test::name::ReverseOrdinalTable::Builder ReverseOrdinalTable::Build() {
+  return ReverseOrdinalTable::Builder();
+}
+
+auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_z(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_y(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_x(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
 ::llcpp::test::name::OlderSimpleTable::Builder OlderSimpleTable::Build() {
   return OlderSimpleTable::Builder();
 }

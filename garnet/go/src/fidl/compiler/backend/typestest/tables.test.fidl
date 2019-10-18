@@ -25,3 +25,9 @@ table NewerSimpleTable {
     6: int64 z;
     7: reserved;
 };
+
+table ReverseOrdinalTable {
+    3: int64 x;
+    2: int64 y;
+    1: int64 z;
+};

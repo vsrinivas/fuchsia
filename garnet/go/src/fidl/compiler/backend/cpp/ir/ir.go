@@ -1119,7 +1119,9 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 			continue
 		}
 		m := c.compileTableMember(v, appendNamespace)
-		r.BiggestOrdinal = m.Ordinal
+		if m.Ordinal > r.BiggestOrdinal {
+			r.BiggestOrdinal = m.Ordinal
+		}
 		r.Members = append(r.Members, m)
 	}
 

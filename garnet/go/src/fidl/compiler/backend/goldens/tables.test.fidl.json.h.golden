@@ -9,6 +9,7 @@ namespace test {
 namespace name {
 
 class SimpleTable;
+class ReverseOrdinalTable;
 class OlderSimpleTable;
 class NewerSimpleTable;
 class EmptyTable;
@@ -123,6 +124,157 @@ class SimpleTable final {
 };
 
 using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
+
+class ReverseOrdinalTable final {
+ public:
+  static const fidl_type_t* FidlType;
+  // Returns whether no field is set.
+  bool IsEmpty() const;
+  
+  const int64_t& z() const {
+    ZX_ASSERT(has_z_);
+    return z_value_.value;
+  }
+  bool has_z() const {
+    return has_z_;
+  }
+  
+  int64_t* mutable_z() {
+    if (!has_z_) {
+      has_z_ = true;
+      Construct(&z_value_.value);
+    }
+    return &z_value_.value;
+  }
+  ReverseOrdinalTable& set_z(int64_t _value) {
+    if (!has_z_) {
+      has_z_ = true;
+      Construct(&z_value_.value, std::move(_value));
+    } else {
+      z_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_z() {
+    if (!has_z_) {
+      return;
+    }
+    has_z_ = false;
+    Destruct(&z_value_.value);
+  }
+  
+  const int64_t& y() const {
+    ZX_ASSERT(has_y_);
+    return y_value_.value;
+  }
+  bool has_y() const {
+    return has_y_;
+  }
+  
+  int64_t* mutable_y() {
+    if (!has_y_) {
+      has_y_ = true;
+      Construct(&y_value_.value);
+    }
+    return &y_value_.value;
+  }
+  ReverseOrdinalTable& set_y(int64_t _value) {
+    if (!has_y_) {
+      has_y_ = true;
+      Construct(&y_value_.value, std::move(_value));
+    } else {
+      y_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_y() {
+    if (!has_y_) {
+      return;
+    }
+    has_y_ = false;
+    Destruct(&y_value_.value);
+  }
+  
+  const int64_t& x() const {
+    ZX_ASSERT(has_x_);
+    return x_value_.value;
+  }
+  bool has_x() const {
+    return has_x_;
+  }
+  
+  int64_t* mutable_x() {
+    if (!has_x_) {
+      has_x_ = true;
+      Construct(&x_value_.value);
+    }
+    return &x_value_.value;
+  }
+  ReverseOrdinalTable& set_x(int64_t _value) {
+    if (!has_x_) {
+      has_x_ = true;
+      Construct(&x_value_.value, std::move(_value));
+    } else {
+      x_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_x() {
+    if (!has_x_) {
+      return;
+    }
+    has_x_ = false;
+    Destruct(&x_value_.value);
+  }
+
+  ReverseOrdinalTable();
+  ReverseOrdinalTable(ReverseOrdinalTable&& other);
+  ~ReverseOrdinalTable();
+  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other);
+
+  static inline ::std::unique_ptr<ReverseOrdinalTable> New() { return ::std::make_unique<ReverseOrdinalTable>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value, size_t _offset);
+  zx_status_t Clone(ReverseOrdinalTable* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+  bool has_z_ : 1;
+  bool has_y_ : 1;
+  bool has_x_ : 1;
+  union ValueUnion_z {
+    ValueUnion_z() {}
+    ~ValueUnion_z() {}
+
+    int64_t value;
+  };
+  ValueUnion_z z_value_;
+  union ValueUnion_y {
+    ValueUnion_y() {}
+    ~ValueUnion_y() {}
+
+    int64_t value;
+  };
+  ValueUnion_y y_value_;
+  union ValueUnion_x {
+    ValueUnion_x() {}
+    ~ValueUnion_x() {}
+
+    int64_t value;
+  };
+  ValueUnion_x x_value_;
+};
+
+using ReverseOrdinalTablePtr = ::std::unique_ptr<ReverseOrdinalTable>;
 
 class OlderSimpleTable final {
  public:
@@ -409,6 +561,50 @@ struct Equality<::test::name::SimpleTable> {
 	return false;
       }
     } else if (_rhs.has_y()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::name::ReverseOrdinalTable>
+    : public EncodableCodingTraits<::test::name::ReverseOrdinalTable, 16> {};
+
+inline zx_status_t Clone(const ::test::name::ReverseOrdinalTable& _value,
+                         ::test::name::ReverseOrdinalTable* result) {
+  return _value.Clone(result);
+}
+template<>
+struct Equality<::test::name::ReverseOrdinalTable> {
+  static inline bool Equals(const ::test::name::ReverseOrdinalTable& _lhs, const ::test::name::ReverseOrdinalTable& _rhs) {
+    if (_lhs.has_z()) {
+      if (!_rhs.has_z()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.z(), _rhs.z())) {
+	return false;
+      }
+    } else if (_rhs.has_z()) {
+      return false;
+    }
+    if (_lhs.has_y()) {
+      if (!_rhs.has_y()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
+	return false;
+      }
+    } else if (_rhs.has_y()) {
+      return false;
+    }
+    if (_lhs.has_x()) {
+      if (!_rhs.has_x()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+	return false;
+      }
+    } else if (_rhs.has_x()) {
       return false;
     }
     return true;
