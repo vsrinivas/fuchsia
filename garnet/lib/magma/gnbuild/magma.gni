@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/cpp/extract_imported_symbols.gni")
+import("//build/cpp/verify_imported_symbols.gni")
 import("//build/testing/environments.gni")
 
 declare_args() {
@@ -135,8 +137,15 @@ template("magma_pdev_entry") {
 }
 
 template("magma_vulkan_icd") {
-  shared_library(target_name) {
-    forward_variables_from(invoker, "*")
+  assert(defined(invoker.output_name), "output_name must be provided")
+
+  # TODO(39136): Enable this assert once all instances of this template have an allowlist.
+  # assert(defined(invoker.imported_symbols_allowlist), "imported_symbols_allowlist must be provided")
+  has_allowlist = defined(invoker.imported_symbols_allowlist)
+
+  shared_library_target_name = "${target_name}__shlib"
+  shared_library(shared_library_target_name) {
+    forward_variables_from(invoker, "*", [ "imported_symbols_allowlist" ])
     if (!is_debug) {
       version_script =
           rebase_path("//garnet/lib/magma/scripts/libvulkan.version")
@@ -145,6 +154,48 @@ template("magma_vulkan_icd") {
       }
       inputs += [ version_script ]
       ldflags += [ "-Wl,--version-script=$version_script" ]
+    }
+  }
+
+  if (has_allowlist) {
+    lib_name = "${invoker.output_name}.so"
+    extract_imported_symbols_target_name =
+        "${target_name}__extract_imported_symbols"
+    verify_imported_symbols_target_name =
+        "${target_name}__verify_imported_symbols"
+
+    shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
+
+    imported_symbols_allowlist_file =
+        rebase_path(invoker.imported_symbols_allowlist)
+    generated_imported_symbols_file =
+        "$target_gen_dir/${invoker.output_name}.imported_symbols.list"
+    extract_imported_symbols(extract_imported_symbols_target_name) {
+      library = "$shared_out_dir/$lib_name"
+      symbols = generated_imported_symbols_file
+
+      deps = [
+        ":$shared_library_target_name",
+      ]
+    }
+
+    verify_imported_symbols(verify_imported_symbols_target_name) {
+      current = generated_imported_symbols_file
+      allowlist = imported_symbols_allowlist_file
+      library_name = lib_name
+      deps = [
+        ":$extract_imported_symbols_target_name",
+      ]
+    }
+  }
+
+  group(target_name) {
+    public_deps = [
+      ":$shared_library_target_name",
+    ]
+
+    if (has_allowlist) {
+      public_deps += [ ":$verify_imported_symbols_target_name" ]
     }
   }
 }
