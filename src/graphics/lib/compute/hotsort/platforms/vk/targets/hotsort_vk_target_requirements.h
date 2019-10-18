@@ -31,9 +31,6 @@ extern "C" {
 #define HOTSORT_VK_TARGET_EXTENSIONS()                                                             \
   HOTSORT_VK_TARGET_EXTENSION(AMD_shader_info)                                                     \
   HOTSORT_VK_TARGET_EXTENSION(EXT_subgroup_size_control)                                           \
-  HOTSORT_VK_TARGET_EXTENSION(KHR_maintenance1)                                                    \
-  HOTSORT_VK_TARGET_EXTENSION(KHR_maintenance2)                                                    \
-  HOTSORT_VK_TARGET_EXTENSION(KHR_maintenance3)                                                    \
   HOTSORT_VK_TARGET_EXTENSION(KHR_pipeline_executable_properties)                                  \
   HOTSORT_VK_TARGET_EXTENSION(KHR_shader_subgroup_extended_types)
 
