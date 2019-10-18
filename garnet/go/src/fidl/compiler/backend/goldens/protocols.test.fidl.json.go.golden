@@ -69,8 +69,8 @@ const (
 
 type WithErrorSyntaxResponseAsStructResult struct {
 	I_withErrorSyntaxResponseAsStructResultTag `fidl:"u,32,8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Response WithErrorSyntaxResponseAsStructResponse `fidl:"415743989"`
-	Err uint32 `fidl:"1728496323"`
+	Response WithErrorSyntaxResponseAsStructResponse `fidl:"1"`
+	Err uint32 `fidl:"2"`
 }
 
 func (u *WithErrorSyntaxResponseAsStructResult) Which() I_withErrorSyntaxResponseAsStructResultTag {
@@ -108,8 +108,8 @@ const (
 
 type WithErrorSyntaxErrorAsPrimitiveResult struct {
 	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"u,8,4" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Response WithErrorSyntaxErrorAsPrimitiveResponse `fidl:"138512668"`
-	Err uint32 `fidl:"1043053528"`
+	Response WithErrorSyntaxErrorAsPrimitiveResponse `fidl:"1"`
+	Err uint32 `fidl:"2"`
 }
 
 func (u *WithErrorSyntaxErrorAsPrimitiveResult) Which() I_withErrorSyntaxErrorAsPrimitiveResultTag {
@@ -147,8 +147,8 @@ const (
 
 type WithErrorSyntaxErrorAsEnumResult struct {
 	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"u,8,4" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Response WithErrorSyntaxErrorAsEnumResponse `fidl:"1951667349"`
-	Err ErrorEnun `fidl:"887935114"`
+	Response WithErrorSyntaxErrorAsEnumResponse `fidl:"1"`
+	Err ErrorEnun `fidl:"2"`
 }
 
 func (u *WithErrorSyntaxErrorAsEnumResult) Which() I_withErrorSyntaxErrorAsEnumResultTag {

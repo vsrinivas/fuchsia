@@ -1506,7 +1506,7 @@
             "identifier": "test.name/WithErrorSyntax_ResponseAsStruct_Response",
             "nullable": false
           },
-          "xunion_ordinal": 415743989,
+          "xunion_ordinal": 1,
           "location": {
             "filename": "generated",
             "line": 16,
@@ -1523,7 +1523,7 @@
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "xunion_ordinal": 1728496323,
+          "xunion_ordinal": 2,
           "location": {
             "filename": "generated",
             "line": 17,
@@ -1579,7 +1579,7 @@
             "identifier": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
             "nullable": false
           },
-          "xunion_ordinal": 138512668,
+          "xunion_ordinal": 1,
           "location": {
             "filename": "generated",
             "line": 23,
@@ -1596,7 +1596,7 @@
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "xunion_ordinal": 1043053528,
+          "xunion_ordinal": 2,
           "location": {
             "filename": "generated",
             "line": 24,
@@ -1652,7 +1652,7 @@
             "identifier": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
             "nullable": false
           },
-          "xunion_ordinal": 1951667349,
+          "xunion_ordinal": 1,
           "location": {
             "filename": "generated",
             "line": 30,
@@ -1670,7 +1670,7 @@
             "identifier": "test.name/ErrorEnun",
             "nullable": false
           },
-          "xunion_ordinal": 887935114,
+          "xunion_ordinal": 2,
           "location": {
             "filename": "generated",
             "line": 31,

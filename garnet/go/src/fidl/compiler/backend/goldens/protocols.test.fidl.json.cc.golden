@@ -102,13 +102,13 @@ void WithErrorSyntax_ResponseAsStruct_Result::DecodeFromXUnionBytes(::fidl::Deco
 
 
 switch (ordinal) {
-    case 415743989: {
+    case 1: {
       WithErrorSyntax_ResponseAsStruct_Response _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_response(std::move(_member));
       break;
     }
-    case 1728496323: {
+    case 2: {
       uint32_t _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_err(std::move(_member));
@@ -241,13 +241,13 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::DecodeFromXUnionBytes(::fidl::Deco
 
 
 switch (ordinal) {
-    case 138512668: {
+    case 1: {
       WithErrorSyntax_ErrorAsPrimitive_Response _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_response(std::move(_member));
       break;
     }
-    case 1043053528: {
+    case 2: {
       uint32_t _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_err(std::move(_member));
@@ -1181,13 +1181,13 @@ void WithErrorSyntax_ErrorAsEnum_Result::DecodeFromXUnionBytes(::fidl::Decoder* 
 
 
 switch (ordinal) {
-    case 1951667349: {
+    case 1: {
       WithErrorSyntax_ErrorAsEnum_Response _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_response(std::move(_member));
       break;
     }
-    case 887935114: {
+    case 2: {
       ErrorEnun _member{};
       ::fidl::Decode(_decoder, &_member, envelope_offset);
       _value->set_err(std::move(_member));

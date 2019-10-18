@@ -161,44 +161,19 @@ union Foo {
   END_TEST;
 }
 
-bool error_syntax_sugar_same_ordinals() {
+bool error_syntax_explicit_ordinals() {
   BEGIN_TEST;
-
-  TestLibrary sugar_library(R"FIDL(
+  TestLibrary error_library(R"FIDL(
 library example;
-
 protocol Example {
   Method() -> () error int32;
 };
-
 )FIDL");
-  ASSERT_TRUE(sugar_library.Compile());
-
-  TestLibrary desugared_library(R"FIDL(
-library example;
-
-xunion Example_Method_Result {
-  int32 Response;
-  int32 Err;
-};
-
-protocol Example {
-  Method() -> (Example_Method_Result res);
-};
-
-)FIDL");
-  ASSERT_TRUE(desugared_library.Compile());
-
-  const fidl::flat::Union* sugar_union = sugar_library.LookupUnion("Example_Method_Result");
-  const fidl::flat::XUnion* desugared_xunion =
-      desugared_library.LookupXUnion("Example_Method_Result");
-
-  ASSERT_NOT_NULL(sugar_union);
-  ASSERT_NOT_NULL(desugared_xunion);
-
-  ASSERT_EQ(sugar_union->members.front().xunion_ordinal->value,
-            desugared_xunion->members.front().ordinal->value);
-
+  ASSERT_TRUE(error_library.Compile());
+  const fidl::flat::Union* error_union = error_library.LookupUnion("Example_Method_Result");
+  ASSERT_NOT_NULL(error_union);
+  ASSERT_EQ(error_union->members.front().xunion_ordinal->value, 1);
+  ASSERT_EQ(error_union->members.back().xunion_ordinal->value, 2);
   END_TEST;
 }
 
@@ -208,5 +183,5 @@ BEGIN_TEST_CASE(xunion_tests)
 RUN_TEST(compiling)
 RUN_TEST(invalid_empty_xunions)
 RUN_TEST(union_xunion_same_ordinals)
-RUN_TEST(error_syntax_sugar_same_ordinals)
+RUN_TEST(error_syntax_explicit_ordinals)
 END_TEST_CASE(xunion_tests)

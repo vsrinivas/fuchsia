@@ -2417,7 +2417,7 @@ protocol Example {
             "identifier": "fidl.test.json/Example_foo_Response",
             "nullable": false
           },
-          "xunion_ordinal": 204524336,
+          "xunion_ordinal": 1,
           "location": {
             "filename": "generated",
             "line": 4,
@@ -2434,7 +2434,7 @@ protocol Example {
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "xunion_ordinal": 5397661,
+          "xunion_ordinal": 2,
           "location": {
             "filename": "generated",
             "line": 5,

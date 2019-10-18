@@ -1518,17 +1518,13 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
   SourceLocation method_name = method->identifier->location();
   Name result_name = DerivedName({protocol_name.name_part(), method_name.data(), "Result"});
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
-  auto response_ordinal = std::make_unique<raw::Ordinal32>(fidl::ordinals::GetGeneratedOrdinal32(
-      library_name_, result_name.name_part(), std::string("Response"), sourceElement));
   Union::Member response_member{
-      std::move(response_ordinal),
+      std::make_unique<raw::Ordinal32>(sourceElement, 1),  // success case explicitly has ordinal 1
       IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable),
       GeneratedSimpleName("response"), nullptr};
-
-  auto err_ordinal = std::make_unique<raw::Ordinal32>(fidl::ordinals::GetGeneratedOrdinal32(
-      library_name_, result_name.name_part(), "Err", sourceElement));
-  Union::Member error_member{std::move(err_ordinal), std::move(error_type_ctor),
-                             GeneratedSimpleName("err"), nullptr};
+  Union::Member error_member{
+      std::make_unique<raw::Ordinal32>(sourceElement, 2),  // error case explicitly has ordinal 2
+      std::move(error_type_ctor), GeneratedSimpleName("err"), nullptr};
   std::vector<Union::Member> result_members;
   result_members.push_back(std::move(response_member));
   result_members.push_back(std::move(error_member));
