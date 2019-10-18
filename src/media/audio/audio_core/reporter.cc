@@ -361,7 +361,7 @@ std::string Reporter::NextCapturerName() {
 void Reporter::OutputUnderflow(zx::duration output_underflow_duration,
                                zx::time uptime_to_underflow) {
   // Bucket this into exponentially-increasing time since system boot.
-  // By default, bucket the overflow into the last bucket: "more than 8 minutes after startup".
+  // By default, bucket the overflow into the last bucket
 
   int bucket = UpMoreThan64m;
   zx::duration uptime = uptime_to_underflow - zx::time(0);

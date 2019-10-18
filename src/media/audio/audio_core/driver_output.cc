@@ -25,7 +25,7 @@ static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
 static constexpr zx::duration kDefaultMaxRetentionNsec = zx::msec(60);
 static constexpr zx::duration kDefaultRetentionGapNsec = zx::msec(10);
-static constexpr zx::duration kUnderflowCooldown = zx::sec(1);
+static constexpr zx::duration kUnderflowCooldown = zx::msec(1000);
 
 static std::atomic<zx_txid_t> TXID_GEN(1);
 static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);

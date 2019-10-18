@@ -61,15 +61,10 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
   Logging::Init(fxl::LOG_INFO);
 #endif
 
-  // TODO(30888)
-  //
-  // Eliminate this as soon as we have a more official way of meeting real-time latency
-  // requirements.  The main async_t is responsible for receiving audio payloads sent by
-  // applications, so it has real time requirements (just like the mixing threads do).  In a perfect
-  // world, however, we would want to have this task run on a thread which is different from the
-  // thread which is processing *all* audio service jobs (even non-realtime ones).  This, however,
-  // will take more significant restructuring.  We will cross that bridge when we have the TBD way
-  // to deal with realtime requirements in place.
+  // The main async_t here is responsible for receiving audio payloads sent by applications, so it
+  // has real time requirements just like mixing threads. Ideally, this task would not run on the
+  // same thread that processes *all* non-mix audio service jobs (even non-realtime ones), but that
+  // will take more significant restructuring, when we can deal with realtime requirements in place.
   AcquireAudioCoreImplProfile(component_context_.get(), [](zx::profile profile) {
     FXL_DCHECK(profile);
     if (profile) {
@@ -80,7 +75,6 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
 
   // Set up our output manager.
   zx_status_t res = device_manager_.Init();
-  // TODO(johngro): Do better at error handling than this weak check.
   FXL_DCHECK(res == ZX_OK);
 
   // Set up our audio policy.

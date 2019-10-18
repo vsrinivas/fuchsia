@@ -49,7 +49,7 @@ class AudioDeviceSettingsPersistenceTest : public testing::ThreadingModelFixture
     // Ensure we have no files left around.
     ASSERT_TRUE(files::DeletePath(kSettingsPath, true));
     ASSERT_TRUE(files::DeletePath(kDefaultSettingsPath, true));
-    // The "default settings" directory shoudl already exist (expected on a read-only directory).
+    // The "default settings" directory should already exist (expected on a read-only directory).
     ASSERT_TRUE(files::CreateDirectory(kDefaultSettingsPath));
   }
 

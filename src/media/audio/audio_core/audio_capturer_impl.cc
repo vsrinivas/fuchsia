@@ -688,10 +688,7 @@ void DumpRbRegions(const RbRegion* regions) {
 
 // Display a timeline function.
 void DumpTimelineFunction(const media::TimelineFunction& timeline_function) {
-  FXL_LOG(WARNING) << "(TLFunction) sub/ref deltas " << timeline_function.subject_delta()
-                   << "/"
-                   // FXL_VLOG(SPEW) << "(TLFunction) sub/ref deltas " <<
-                   // timeline_function.subject_delta() << "/"
+  FXL_LOG(WARNING) << "(TLFunction) sub/ref deltas " << timeline_function.subject_delta() << "/"
                    << timeline_function.reference_delta() << ", sub/ref times "
                    << timeline_function.subject_time() << "/" << timeline_function.reference_time();
 }
@@ -997,25 +994,21 @@ void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac
   if constexpr (kLogCaptureOverflow) {
     auto overflow_msec = static_cast<double>(overflow_duration.to_nsecs()) / ZX_MSEC(1);
 
+    std::ostringstream stream;
+    stream << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/" << kCaptureOverflowErrorInterval
+           << "): source-start " << frac_source_start << " missed mix-point "
+           << frac_source_mix_point << " by " << std::setprecision(4) << overflow_msec << " ms";
+
     if ((kCaptureOverflowErrorInterval > 0) &&
         (overflow_count % kCaptureOverflowErrorInterval == 0)) {
-      FXL_LOG(ERROR) << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/"
-                     << kCaptureOverflowErrorInterval << "): source-start " << frac_source_start
-                     << " missed mix-point " << frac_source_mix_point << " by "
-                     << std::setprecision(4) << overflow_msec << " ms";
+      FXL_LOG(ERROR) << stream.str();
     } else if ((kCaptureOverflowInfoInterval > 0) &&
                (overflow_count % kCaptureOverflowInfoInterval == 0)) {
-      FXL_LOG(INFO) << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/"
-                    << kCaptureOverflowInfoInterval << "): source-start " << frac_source_start
-                    << " missed mix-point " << frac_source_mix_point << " by "
-                    << std::setprecision(4) << overflow_msec << " ms";
+      FXL_LOG(INFO) << stream.str();
 
     } else if ((kCaptureOverflowTraceInterval > 0) &&
                (overflow_count % kCaptureOverflowTraceInterval == 0)) {
-      FXL_VLOG(TRACE) << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/"
-                      << kCaptureOverflowTraceInterval << "): source-start " << frac_source_start
-                      << " missed mix-point " << frac_source_mix_point << " by "
-                      << std::setprecision(4) << overflow_msec << " ms";
+      FXL_VLOG(TRACE) << stream.str();
     }
   }
 }
@@ -1030,33 +1023,28 @@ void AudioCapturerImpl::PartialOverflowOccurred(int64_t frac_source_offset,
   if (abs(frac_source_offset) >= (Mixer::FRAC_ONE << 2)) {
     uint16_t partial_overflow_count = std::atomic_fetch_add<uint16_t>(&partial_overflow_count_, 1u);
     if constexpr (kLogCaptureOverflow) {
+      std::ostringstream stream;
+      stream << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
+             << kCaptureOverflowErrorInterval << "): shifting by "
+             << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex << abs(frac_source_offset)
+             << " source subframes (" << std::dec << (frac_source_offset >> kPtsFractionalBits)
+             << " frames) and " << dest_mix_offset << " mix (capture) frames";
+
       if ((kCaptureOverflowErrorInterval > 0) &&
           (partial_overflow_count % kCaptureOverflowErrorInterval == 0)) {
-        FXL_LOG(ERROR) << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
-                       << kCaptureOverflowErrorInterval << "): shifting by "
-                       << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                       << abs(frac_source_offset) << " source subframes and " << std::dec
-                       << dest_mix_offset << " mix (capture) frames";
+        FXL_LOG(ERROR) << stream.str();
       } else if ((kCaptureOverflowInfoInterval > 0) &&
                  (partial_overflow_count % kCaptureOverflowInfoInterval == 0)) {
-        FXL_LOG(INFO) << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
-                      << kCaptureOverflowInfoInterval << "): shifting by "
-                      << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                      << abs(frac_source_offset) << " source subframes and " << std::dec
-                      << dest_mix_offset << " mix (capture) frames";
+        FXL_LOG(INFO) << stream.str();
       } else if ((kCaptureOverflowTraceInterval > 0) &&
                  (partial_overflow_count % kCaptureOverflowTraceInterval == 0)) {
-        FXL_VLOG(TRACE) << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
-                        << kCaptureOverflowTraceInterval << "): shifting by "
-                        << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                        << abs(frac_source_offset) << " source subframes and " << std::dec
-                        << dest_mix_offset << " mix (capture) frames";
+        FXL_VLOG(TRACE) << stream.str();
       }
-    } else {
-      if constexpr (kLogCaptureOverflow) {
-        FXL_VLOG(TRACE) << "Slipping by " << dest_mix_offset
-                        << " mix (capture) frames to align with source region";
-      }
+    }
+  } else {
+    if constexpr (kLogCaptureOverflow) {
+      FXL_VLOG(TRACE) << "Slipping by " << dest_mix_offset
+                      << " mix (capture) frames to align with source region";
     }
   }
 }
@@ -1247,6 +1235,10 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
         // Move on to the next region
         continue;
       }
+      // Otherwise, if this job_start is beyond this region, skip it (regardless of width)
+      if (region.sfrac_pts + (region.len << kPtsFractionalBits) < job_start) {
+        continue;
+      }
 
       // If the PTS of the first frame of audio in our source region is after
       // the positive window edge of our filter centered at our job's sampling
@@ -1287,7 +1279,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       auto dest_offset = static_cast<uint32_t>(dest_offset_64);
       auto frac_source_offset = static_cast<int32_t>(source_offset_64);
 
-      FXL_DCHECK(frac_source_offset < static_cast<int32_t>(region_frac_frame_len));
+      FXL_DCHECK(frac_source_offset < static_cast<int32_t>(region_frac_frame_len))
+          << std::hex << frac_source_offset << " must be less than "
+          << static_cast<int32_t>(region_frac_frame_len);
       const uint8_t* region_source = rb->virt() + (region.srb_pos * rb->frame_size());
 
       // Invalidate the region of the cache we are just about to read on
