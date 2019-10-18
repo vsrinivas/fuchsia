@@ -8,6 +8,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __Fuchsia__
+
+#include <zircon/status.h>
+
+#endif
+
 namespace fidl {
 namespace internal {
 
@@ -37,11 +43,24 @@ void ReportChannelWritingError(const Message& message, const fidl_type_t* type, 
                                const char* file, int line) {
   char type_name[1024];
   size_t type_name_length = fidl_format_type_name(type, type_name, sizeof(type_name));
+
+#ifdef __Fuchsia__
+
+  fprintf(stderr,
+          "fidl channel writing error at %s:%d: zx_status_t %d (%s), "
+          "type %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
+          file, line, status, zx_status_get_string(status), static_cast<int>(type_name_length),
+          type_name, message.bytes().actual(), message.handles().actual());
+
+#else
+
   fprintf(stderr,
           "fidl channel writing error at %s:%d: zx_status_t %d, "
           "type %.*s, %" PRIu32 " bytes, %" PRIu32 " handles\n",
           file, line, status, static_cast<int>(type_name_length), type_name,
           message.bytes().actual(), message.handles().actual());
+
+#endif
 }
 
 }  // namespace internal

@@ -17,7 +17,14 @@ zx_status_t SendMessage(const zx::channel& channel, const fidl_type_t* type, Mes
     FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
     return status;
   }
-  return message.Write(channel.get(), 0);
+
+  status = message.Write(channel.get(), 0);
+  if (status != ZX_OK) {
+    FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status);
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace internal
