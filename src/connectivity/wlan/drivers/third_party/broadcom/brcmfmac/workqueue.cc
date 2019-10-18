@@ -30,9 +30,9 @@ WorkQueue::WorkQueue(const char* name) {
 }
 
 WorkQueue::~WorkQueue() {
-  auto work = WorkItem([](WorkItem* work) { pthread_exit(nullptr); });
+  auto work = WorkItem([](WorkItem* work) { thrd_exit(0); });
   Schedule(&work);
-  pthread_join(thread_, nullptr);
+  thrd_join(thread_, nullptr);
 }
 
 WorkQueue& WorkQueue::DefaultInstance() {
@@ -88,7 +88,7 @@ void WorkQueue::Schedule(WorkItem* work) {
   lock_.unlock();
 }
 
-void* WorkQueue::Runner() {
+int WorkQueue::Runner() {
   while (true) {
     // When all the works are consumed, these two lines will block the thread.
     sync_completion_wait(&work_ready_, ZX_TIME_INFINITE);
@@ -114,9 +114,10 @@ void* WorkQueue::Runner() {
 void WorkQueue::StartWorkQueue() {
   work_ready_ = {};
   list_initialize(&list_);
-  pthread_create(
-      &thread_, nullptr, [](void* arg) { return reinterpret_cast<WorkQueue*>(arg)->Runner(); },
-      this);
+  auto thread_func = [](void* arg) {
+    return reinterpret_cast<WorkQueue*>(arg)->Runner();
+  };
+  thrd_create_with_name(&thread_, thread_func, this, name_);
 }
 
 WorkItem::WorkItem(void (*handler)(WorkItem* work))

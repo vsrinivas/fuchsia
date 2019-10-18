@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#define _ALL_SOURCE
 #include <threads.h>
 
 enum { ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HOST };

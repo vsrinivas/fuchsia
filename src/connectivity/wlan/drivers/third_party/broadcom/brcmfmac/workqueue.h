@@ -20,7 +20,6 @@
 #define _ALL_SOURCE
 
 #include <lib/sync/completion.h>
-#include <pthread.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/listnode.h>
@@ -79,10 +78,10 @@ class WorkQueue {
  private:
   sync_completion_t work_ready_;
   char name_[kWorkqueueNameMaxlen];
-  pthread_t thread_;
+  thrd_t thread_;
 
   // Thread body for the WorkQueue execution thread.
-  void* Runner();
+  int Runner();
 
   // Start the WorkQueue thread.
   void StartWorkQueue();

@@ -515,7 +515,7 @@ struct brcmf_sdio {
   brcmf_timer_info_t timer;
   sync_completion_t watchdog_wait;
   std::atomic<bool> watchdog_should_stop;
-  pthread_t watchdog_tsk;
+  thrd_t watchdog_tsk;
   std::atomic<bool> wd_active;
 
   WorkQueue* brcmf_wq;
@@ -2200,7 +2200,7 @@ static void brcmf_sdio_bus_stop(brcmf_bus* bus_if) {
     bus->watchdog_should_stop.store(true);
     sync_completion_signal(&bus->watchdog_wait);
     BRCMF_DBG(TEMP, "Closing and joining SDIO watchdog task\n");
-    thread_result = pthread_join(bus->watchdog_tsk, NULL);
+    thread_result = thrd_join(bus->watchdog_tsk, NULL);
     BRCMF_DBG(TEMP, "Result of thread join: %d\n", thread_result);
     bus->watchdog_tsk = 0;
   }
@@ -3390,12 +3390,12 @@ static const struct brcmf_buscore_ops brcmf_sdio_buscore_ops = {
 
 // This will wait, then dump out all SDIO transactions to date.
 #ifdef SDIO_PRINTER
-pthread_t sdio_thread;
-static void* sdio_printer(void* foo) {
+thrd_t sdio_thread;
+static int sdio_printer(void* foo) {
   BRCMF_DBG(TEMP, "SDIO printer started\n");
   zx_nanosleep(zx_deadline_after(ZX_SEC(10000000)));
   psr();
-  return NULL;
+  return 0;
 }
 #endif  // SDIO_PRINTER
 
@@ -3411,7 +3411,12 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
   sdio_claim_host(sdiodev->func1);
 
 #ifdef SDIO_PRINTER
-  pthread_create(&sdio_thread, NULL, sdio_printer, NULL);
+  int status = thrd_create_with_name(&sdio_thread, &sdio_printer,
+                                     nullptr, "sdio_printer");
+  if (status != thrd_success) {
+    BRCMF_ERR("Unable to create sdio_printer thread: %d\n"< status);
+    goto fail;
+  }
 #endif  // SDIO_PRINTER
 
   BRCMF_DBG(INFO, "brcmfmac: F1 signature read @0x18000000=0x%4x\n",
@@ -3555,7 +3560,7 @@ fail:
   return err;
 }
 
-static void* brcmf_sdio_watchdog_thread(void* data) {
+static int brcmf_sdio_watchdog_thread(void* data) {
   struct brcmf_sdio* bus = (struct brcmf_sdio*)data;
 
   /* Run until signal received */
@@ -3575,7 +3580,7 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
     bus->sdcnt.tickcnt++;
     sync_completion_reset(&bus->watchdog_wait);
   }
-  return NULL;
+  return 0;
 }
 
 static void brcmf_sdio_watchdog(void* data) {
@@ -3837,8 +3842,12 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   /* Initialize watchdog thread */
   bus->watchdog_wait = {};
   bus->watchdog_should_stop.store(false);
-  thread_result = pthread_create(&bus->watchdog_tsk, NULL, brcmf_sdio_watchdog_thread, bus);
-  if (thread_result != 0) {
+  thread_result = thrd_create_with_name(&bus->watchdog_tsk,
+                                        &brcmf_sdio_watchdog_thread,
+                                        bus,
+                                        "brcmf-watchdog");
+
+  if (thread_result != thrd_success) {
     BRCMF_ERR("brcmf_watchdog thread failed to start: error %d\n", thread_result);
     bus->watchdog_tsk = 0;
   }
