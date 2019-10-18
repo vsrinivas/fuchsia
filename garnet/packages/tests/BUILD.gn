@@ -180,13 +180,6 @@ group("iquery_golden_test") {
   ]
 }
 
-group("elflib") {
-  testonly = true
-  public_deps = [
-    "//src/lib/elflib:elflib_tests($host_toolchain)",
-  ]
-}
-
 group("component_cpp") {
   testonly = true
   public_deps = [
@@ -318,7 +311,6 @@ group("all") {
     ":device_settings",
     ":display_capture_test",
     ":e2e_input_tests",
-    ":elflib",
     ":escher",
     ":examples",
     ":fdio_spawn",

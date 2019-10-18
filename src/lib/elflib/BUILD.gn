@@ -70,6 +70,14 @@ test("elflib_tests") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":elflib_tests($host_toolchain)",
+  ]
+}
+
 fuzzer("elflib_fuzzer") {
   sources = [
     "elflib_fuzztest.cc",

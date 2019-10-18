@@ -39,6 +39,7 @@ group("tests") {
     "cobalt:tests",
     "containers/cpp:tests",
     "cstr:tests",
+    "elflib:tests",
     "fidl_codec:tests",
     "fidl_table_validation:tests",
     "fuchsia-async-testloop:tests",
