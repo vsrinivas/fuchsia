@@ -14,13 +14,14 @@ usage() {
   echo "  the development host machine."
 }
 
-# Note that api_version is intentionally set to "0.0.0" as it is currently unused by the loader.
+# The loader queries the ICD version from vkEnumerateInstanceVersion only if the api_version
+# reported in the manifest is at least 1.1.0.
 
 manifest_contents="{
   \"file_format_version\": \"1.0.0\",
   \"ICD\": {
     \"library_path\": \"${1}\",
-    \"api_version\": \"0.0.0\"
+    \"api_version\": \"1.1.0\"
   }
 }"
 
