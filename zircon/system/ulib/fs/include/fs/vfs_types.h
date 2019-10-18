@@ -83,6 +83,103 @@ union Rights {
   constexpr static Rights All() { return Rights{0xf}; }
 };
 
+// Identifies the different operational contracts used to interact with a vnode.
+// For example, the |kFile| protocol allows reading and writing byte contents through
+// a buffer, and the |kMemory| protocol requests a VMO object to be returned during
+// |GetNodeInfo|, etc.
+//
+// The members in this class have one-to-one correspondence with the variants in
+// |VnodeRepresentation|.
+//
+// Note: Due to the implementation strategy in |VnodeProtocolSet|, the number of
+// protocols must be less than 64. When the need arises as to support more than 64
+// protocols, we should change the implementation in |VnodeProtocolSet| accordingly.
+enum class VnodeProtocol : uint32_t {
+  kConnector = 0,
+  kFile,
+  kDirectory,
+  kPipe,
+  kMemory,
+  kDevice,
+  kTty,
+  kSocket,
+  // Note: when appending more members, adjust |kVnodeProtocolCount| accordingly.
+};
+
+constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kSocket) + 1;
+
+// A collection of |VnodeProtocol|s, stored internally as a bit-field.
+// The N-th bit corresponds to the N-th element in the |VnodeProtocol| enum, under zero-based index.
+class VnodeProtocolSet {
+ public:
+  // Constructs a set containing a single protocol.
+  //
+  // The implicit conversion is intentional, to improve ergonomics when performing
+  // union/intersection operations between |VnodeProtocol| and |VnodeProtocolSet|.
+  // NOLINTNEXTLINE(google-explicit-constructor)
+  constexpr VnodeProtocolSet(VnodeProtocol protocol)
+      : protocol_bits_(1 << static_cast<uint32_t>(protocol)) {}
+
+  // Union operator.
+  constexpr VnodeProtocolSet operator|(VnodeProtocolSet other) {
+    return VnodeProtocolSet(protocol_bits_ | other.protocol_bits_);
+  }
+
+  // Intersection operator.
+  constexpr VnodeProtocolSet operator&(VnodeProtocolSet other) const {
+    return VnodeProtocolSet(protocol_bits_ & other.protocol_bits_);
+  }
+
+  // Difference operator.
+  constexpr VnodeProtocolSet Except(VnodeProtocolSet other) const {
+    return VnodeProtocolSet(protocol_bits_ & ~other.protocol_bits_);
+  }
+
+  // True iff at least one element is present in the set.
+  constexpr bool any() const {
+    return protocol_bits_ != 0;
+  }
+
+  // If the set contains a single element, returns that element. Otherwise, return std::nullopt.
+  constexpr std::optional<VnodeProtocol> which() const {
+    if (protocol_bits_ == 0) {
+      return std::nullopt;
+    }
+    uint64_t is_power_of_two = protocol_bits_ && !(protocol_bits_ & (protocol_bits_ - 1));
+    if (!is_power_of_two) {
+      return std::nullopt;
+    }
+    return static_cast<VnodeProtocol>(static_cast<uint32_t>(__builtin_ctzl(protocol_bits_)));
+  }
+
+  constexpr bool operator==(const VnodeProtocolSet& rhs) const {
+    return protocol_bits_ == rhs.protocol_bits_;
+  }
+
+  constexpr bool operator!=(const VnodeProtocolSet& rhs) const {
+    return !operator==(rhs);
+  }
+
+  // The set of all defined protocols.
+  constexpr static VnodeProtocolSet All() {
+    return VnodeProtocolSet((1ul << kVnodeProtocolCount) - 1ul);
+  }
+
+  // The empty set of protocols.
+  constexpr static VnodeProtocolSet Empty() {
+    return VnodeProtocolSet(0);
+  }
+
+ private:
+  constexpr explicit VnodeProtocolSet(uint64_t raw_bits) : protocol_bits_(raw_bits) {}
+
+  uint64_t protocol_bits_;
+};
+
+inline constexpr VnodeProtocolSet operator|(VnodeProtocol lhs, VnodeProtocol rhs) {
+  return VnodeProtocolSet(lhs) | VnodeProtocolSet(rhs);
+}
+
 // Options specified during opening and cloning.
 struct VnodeConnectionOptions {
   // TODO(fxb/38160): Harmonize flags and rights to express both fuchsia.io v1 and v2 semantics.

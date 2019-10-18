@@ -13,6 +13,7 @@ group("test") {
 test("fs-vnode") {
   sources = [
     "lazy_dir_tests.cc",
+    "main.cc",
     "pseudo_dir_tests.cc",
     "pseudo_file_tests.cc",
     "remote_dir_tests.cc",
@@ -40,6 +41,7 @@ test("fs-vnode") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
 
