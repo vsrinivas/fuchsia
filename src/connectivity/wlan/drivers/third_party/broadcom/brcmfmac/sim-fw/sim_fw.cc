@@ -24,6 +24,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim.h"
 
@@ -89,7 +90,7 @@ zx_status_t SimFirmware::BcdcVarOp(brcmf_proto_bcdc_dcmd* dcmd, uint8_t* data, s
   zx_status_t status = ZX_OK;
 
   char* str_begin = reinterpret_cast<char*>(data);
-  uint8_t* str_end = static_cast<uint8_t*>(std::memchr(str_begin, '\0', dcmd->len));
+  uint8_t* str_end = static_cast<uint8_t*>(memchr(str_begin, '\0', dcmd->len));
   if (str_end == nullptr) {
     BRCMF_ERR("SET_VAR: iovar name not null-terminated\n");
     return ZX_ERR_INVALID_ARGS;
@@ -152,7 +153,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
             "info (%zu bytes)\n",
             dcmd->len, sizeof(rev_info));
       }
-      std::memcpy(data, &rev_info, sizeof(rev_info));
+      memcpy(data, &rev_info, sizeof(rev_info));
       bcdc_response_.Set(msg, len);
       break;
     }
@@ -258,16 +259,98 @@ void SimFirmware::BcdcResponse::Set(uint8_t* data, size_t new_len) {
   memcpy(msg_, data, new_len);
 }
 
+zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* data,
+                                           uint8_t* iface_id) {
+  if (add_entry) {
+    auto ssid_info = static_cast<const brcmf_mbss_ssid_le*>(data);
+
+    for (int i = 0; i < kMaxIfSupported; i++) {
+      if (!iface_tbl_[i].allocated) {
+        iface_tbl_[i].allocated = true;
+        iface_tbl_[i].iface_id = i;
+        iface_tbl_[i].bsscfgidx = ssid_info->bsscfgidx;
+        memcpy(iface_tbl_[i].ssid, ssid_info->SSID, ssid_info->SSID_len);
+        iface_tbl_[i].ssid_len = ssid_info->SSID_len;
+        *iface_id = i;
+        return ZX_OK;
+      }
+    }
+  } else {
+    auto bsscfgidx = static_cast<const int32_t*>(data);
+    for (int i = 0; i < kMaxIfSupported; i++) {
+      if (iface_tbl_[i].allocated && iface_tbl_[i].bsscfgidx == *bsscfgidx) {
+        *iface_id = iface_tbl_[i].iface_id;
+        iface_tbl_[i].allocated = false;
+        return ZX_OK;
+      }
+    }
+  }
+  return ZX_ERR_IO;
+}
+
+zx_status_t SimFirmware::HandleBssCfgRequest(const bool add_iface, const void* data,
+                                             const size_t len) {
+  brcmf_event_msg_be* msg_be;
+  struct brcmf_if_event* ifevent;
+  uint8_t iface_id;
+  size_t data_offset;
+
+  auto buf = CreateEventBuffer(sizeof(brcmf_if_event), &msg_be, &data_offset);
+  uint8_t* buffer_data = buf->data();
+  // ifevent = (struct brcmf_if_event*)((uint8_t*)msg_be + sizeof(brcmf_event_msg_be));
+  ifevent = reinterpret_cast<brcmf_if_event*>(&buffer_data[data_offset]);
+
+  msg_be->flags = 0;
+  msg_be->event_type = htobe32(BRCMF_E_IF);
+  msg_be->auth_type = 0;
+  msg_be->reason = 0;
+  memcpy(msg_be->addr, mac_addr_.data(), ETH_ALEN);
+  ifevent->flags = 0;
+  ifevent->role = 1;
+
+  if (HandleIfaceTblReq(add_iface, data, &iface_id) == ZX_OK) {
+    if (add_iface) {
+      auto ssid_info = static_cast<const brcmf_mbss_ssid_le*>(data);
+      ifevent->bsscfgidx = ssid_info->bsscfgidx;
+      ifevent->action = BRCMF_E_IF_ADD;
+    } else {
+      auto bsscfgidx = static_cast<const int32_t*>(data);
+      ifevent->action = BRCMF_E_IF_DEL;
+      ifevent->bsscfgidx = static_cast<const uint8_t>(*bsscfgidx);
+    }
+    msg_be->status = htobe32(BRCMF_E_STATUS_SUCCESS);
+    sprintf(msg_be->ifname, "wl0.%d", iface_id);
+    msg_be->ifidx = iface_id;
+    ifevent->ifidx = iface_id;
+    msg_be->bsscfgidx = ifevent->bsscfgidx;
+  } else {
+    msg_be->status = htobe32(BRCMF_E_STATUS_ERROR);
+  }
+  SendEventToDriver(std::move(buf));
+  return ZX_OK;
+}
+
 zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t value_len) {
-  if (!std::strcmp(name, "cur_etheraddr")) {
+  if (!std::strcmp(name, "bsscfg:interface_remove")) {
+    if (value_len < sizeof(int32_t)) {
+      return ZX_ERR_IO;
+    } else {
+      return HandleBssCfgRequest(false, value, value_len);
+    }
+  } else if (!std::strcmp(name, "bsscfg:ssid")) {
+    if (value_len < sizeof(brcmf_mbss_ssid_le)) {
+      return ZX_ERR_IO;
+    } else {
+      return HandleBssCfgRequest(true, value, value_len);
+    }
+  } else if (!std::strcmp(name, "cur_etheraddr")) {
     if (value_len == ETH_ALEN) {
       return SetMacAddr(static_cast<const uint8_t*>(value));
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
-  } else if (!std::strcmp(name, "escan")) {
+  } else if (!std::strcmp(name, "escan"))
     return HandleEscanRequest(static_cast<const brcmf_escan_params_le*>(value), value_len);
-  }
 
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_ERR("Ignoring request to set iovar '%s'\n", name);

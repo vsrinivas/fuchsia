@@ -48,6 +48,12 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device,
       ->brcmfmac::Device::Init((*device_out)->phy_device_, parent_device, bus_register_fn);
 }
 
+zx_status_t SimDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
+  return fake_dev_mgr_->DeviceAdd(phy_device_, args, out_device);
+}
+
+zx_status_t SimDevice::DeviceRemove(zx_device_t* dev) { return fake_dev_mgr_->DeviceRemove(dev); }
+
 zx_status_t SimDevice::BusRegister(brcmf_pub* drvr) {
   zx_status_t status;
   std::unique_ptr<brcmf_bus> bus;

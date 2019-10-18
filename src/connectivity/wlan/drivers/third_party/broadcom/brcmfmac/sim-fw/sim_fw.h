@@ -89,12 +89,30 @@ class SimFirmware {
   zx_status_t BusGetBootloaderMacAddr(uint8_t* mac_addr);
 
  private:
+  /* This structure contains the variables related to an iface entry in SIM FW.
+   * ssid - input from the driver indicating the ssid of the interface
+   * ssid_len - length of the ssid field (excluding the null)
+   * bsscfgidx - input from the driver indicating the bss index
+   * allocated - maintained by SIM FW to indicate entry is allocated
+   * iface_id - the iface id allocated by SIM FW - in this case always the array index of the table
+   */
+  typedef struct sim_iface_entry {
+    char ssid[IEEE80211_SSID_LEN_MAX];
+    uint8_t ssid_len;
+    int32_t bsscfgidx;
+    bool allocated;
+    int8_t iface_id;
+  } sim_iface_entry_t;
+
   // This value is specific to firmware, and drives some behavior (notably the interpretation
   // of the chanspec encoding).
   static constexpr uint32_t kIoType = BRCMU_D11AC_IOTYPE;
 
   // Default interface identification string
   static constexpr const char* kDefaultIfcName = "wl\x30";
+
+  // Max number of interfaces supported
+  static constexpr uint8_t kMaxIfSupported = 4;
 
   // BCDC interface
   std::unique_ptr<std::vector<uint8_t>> CreateBcdcBuffer(size_t requested_size, size_t* offset_out);
@@ -107,6 +125,8 @@ class SimFirmware {
   // Iovar handlers
   zx_status_t SetMacAddr(const uint8_t* mac_addr);
   zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len);
+  zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
+  zx_status_t HandleBssCfgRequest(const bool add_iface, const void* data, const size_t len);
 
   // Escan operations
   zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len);
@@ -142,6 +162,7 @@ class SimFirmware {
   std::array<uint8_t, ETH_ALEN> mac_addr_;
   ScanState scan_state_;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
+  sim_iface_entry_t iface_tbl_[kMaxIfSupported];
 };
 
 }  // namespace wlan::brcmfmac

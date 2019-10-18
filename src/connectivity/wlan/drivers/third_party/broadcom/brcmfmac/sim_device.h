@@ -22,6 +22,7 @@ namespace wlan::brcmfmac {
 
 class SimDevice : public Device {
  public:
+  ~SimDevice();
   // Static factory function for SimDevice instances.
   static zx_status_t Create(zx_device_t* parent_device,
                             const std::shared_ptr<simulation::FakeDevMgr>& dev_mgr,
@@ -36,7 +37,9 @@ class SimDevice : public Device {
   SimDevice(const SimDevice& device) = delete;
   SimDevice& operator=(const SimDevice& other) = delete;
 
-  ~SimDevice();
+  // Trampolines for DDK functions, for platforms that support them
+  zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
+  zx_status_t DeviceRemove(zx_device_t* dev) override;
 
  protected:
   // Perform the bus-specific initialization

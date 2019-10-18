@@ -397,6 +397,12 @@ zx_status_t brcmf_cfg80211_up(struct net_device* ndev);
 zx_status_t brcmf_cfg80211_down(struct net_device* ndev);
 uint16_t brcmf_cfg80211_get_iftype(struct brcmf_if* ifp);
 
+zx_status_t brcmf_cfg80211_add_iface(struct brcmf_pub* drvr, const char* name,
+                                     struct vif_params* params,
+                                     const wlanphy_impl_create_iface_req_t* req,
+                                     struct wireless_dev** wdev_out);
+zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev);
+
 zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
                             struct brcmf_cfg80211_vif** vif_out);
 void brcmf_free_vif(struct brcmf_cfg80211_vif* vif);
@@ -421,6 +427,33 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet);
 
 // TODO: Move to core.h
 zx_status_t brcmf_netdev_open(struct net_device* ndev);
-extern wlanif_impl_protocol_ops_t if_impl_proto_ops;
+
+// Protocol ops implementations.
+
+zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* ifc,
+                           zx_handle_t* out_sme_channel);
+void brcmf_if_stop(net_device* ndev);
+void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info);
+void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req);
+void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req);
+void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req);
+void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind);
+void brcmf_if_deauth_req(net_device* ndev, const wlanif_deauth_req_t* req);
+void brcmf_if_assoc_req(net_device* ndev, const wlanif_assoc_req_t* req);
+void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind);
+void brcmf_if_disassoc_req(net_device* ndev, const wlanif_disassoc_req_t* req);
+void brcmf_if_reset_req(net_device* ndev, const wlanif_reset_req_t* req);
+void brcmf_if_start_req(net_device* ndev, const wlanif_start_req_t* req);
+void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req);
+void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req);
+void brcmf_if_del_keys_req(net_device* ndev, const wlanif_del_keys_req_t* req);
+void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req);
+void brcmf_if_stats_query_req(net_device* ndev);
+void brcmf_if_start_capture_frames(net_device* ndev, const wlanif_start_capture_frames_req_t* req,
+                                   wlanif_start_capture_frames_resp_t* resp);
+void brcmf_if_stop_capture_frames(net_device* ndev);
+zx_status_t brcmf_if_set_multicast_promisc(net_device* ndev, bool enable);
+void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_t* netbuf,
+                            ethernet_impl_queue_tx_callback completion_cb, void* cookie);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_

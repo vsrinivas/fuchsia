@@ -80,6 +80,8 @@ source_set("core") {
     "proto.h",
     "timer.cc",
     "utils.cc",
+    "wlan_interface.cc",
+    "wlan_interface.h",
   ]
   public = [
     "bcdc.h",

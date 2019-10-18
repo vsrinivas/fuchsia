@@ -126,8 +126,7 @@ static zx_status_t brcmf_fweh_call_event_handler(struct brcmf_if* ifp,
  * @item: queue entry.
  * @ifpp: interface object (may change upon ADD action).
  */
-static void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* emsg,
-                                       void* data) {
+void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* emsg, void* data) {
   struct brcmf_if_event* ifevent = static_cast<decltype(ifevent)>(data);
   struct brcmf_if* ifp;
   bool is_p2pdev;

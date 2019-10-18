@@ -796,8 +796,11 @@ void Device::AssociateInd(const wlanif_assoc_ind_t* ind) {
   fidl_ind.listen_interval = ind->listen_interval;
 
   // ssid
-  fidl_ind.ssid->assign(ind->ssid.data, ind->ssid.data + ind->ssid.len);
 
+  if (ind->ssid.len) {
+    fidl_ind.ssid =
+        {std::vector<uint8_t>(ind->ssid.data, ind->ssid.data + ind->ssid.len)};
+  }
   // rsne
   bool is_protected = ind->rsne_len != 0;
   if (is_protected) {

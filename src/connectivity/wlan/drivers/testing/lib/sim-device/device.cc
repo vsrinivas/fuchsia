@@ -12,28 +12,23 @@
 namespace wlan::simulation {
 
 zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, zx_device_t** out) {
-  {
-    wlan_sim_dev_info_t dev_info = {
-        .parent = parent,
-        .dev_args = (args == nullptr ? device_add_args_t{} : *args),
-    };
-    DeviceId id(dev_counter_++);
-    devices_.insert({id, dev_info});
+  wlan_sim_dev_info_t dev_info = {
+      .parent = parent,
+      .dev_args = (args == nullptr ? device_add_args_t{} : *args),
+  };
+  DeviceId id(dev_counter_++);
+  devices_.insert({id, dev_info});
 
-    if (out) {
-      *out = id.as_device();
-    }
-
-    DBG_PRT("%s: Added SIM device. proto %d # devices: %lu Handle: %p\n", __func__,
-            args ? args->proto_id : 0, devices_.size(), out ? *out : nullptr);
-    return ZX_OK;
+  if (out) {
+    *out = id.as_device();
   }
+
+  DBG_PRT("%s: Added SIM device. proto %d # devices: %lu Handle: %p\n", __func__,
+          args ? args->proto_id : 0, devices_.size(), out ? *out : nullptr);
+  return ZX_OK;
 }
 
 zx_status_t FakeDevMgr::DeviceRemove(zx_device_t* device) {
-  //  if (!device) {
-  //    return ZX_ERR_INVALID_ARGS;
-  //  }
   auto iter = devices_.find(DeviceId::FromDevice(device));
   if (iter == devices_.end()) {
     DBG_PRT("%s device %p does not exist\n", __func__, device);

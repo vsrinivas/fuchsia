@@ -45,6 +45,12 @@ void SdioDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void SdioDevice::DdkRelease() { delete this; }
 
+zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
+  return device_add(zxdev(), args, out_device);
+}
+
+zx_status_t SdioDevice::DeviceRemove(zx_device_t* dev) { return device_remove_deprecated(dev); }
+
 zx_status_t SdioDevice::BusRegister(brcmf_pub* drvr) {
   zx_status_t status;
   std::unique_ptr<brcmf_bus> bus;

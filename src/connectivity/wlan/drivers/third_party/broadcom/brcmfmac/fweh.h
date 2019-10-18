@@ -333,6 +333,7 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp);
 void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_packet,
                               uint32_t packet_len);
 void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing);
+void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* emsg, void* data);
 
 static inline void brcmf_fweh_process_netbuf(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf) {
   struct brcmf_event* event_packet;

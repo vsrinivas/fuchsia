@@ -45,12 +45,6 @@
 
 #define MAX_WAIT_FOR_8021X_TX_MSEC (950)
 
-static inline brcmf_pub* if_to_pub(struct brcmf_if* ifp) { return ifp->drvr; }
-
-static inline brcmf_pub* ndev_to_pub(struct net_device* ndev) {
-  return if_to_pub(ndev_to_if(ndev));
-}
-
 const char* brcmf_ifname(struct brcmf_if* ifp) {
   if (!ifp) {
     return "<if_null>";
@@ -190,21 +184,20 @@ static void _brcmf_set_multicast_list(WorkItem* work) {
   brcmf_configure_arp_nd_offload(ifp, !cmd_value);
 }
 
-zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, void* addr) {
+zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, uint8_t* addr) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
-  struct sockaddr* sa = (struct sockaddr*)addr;
   zx_status_t err;
   int32_t fw_err = 0;
 
   BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
 
-  err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", sa->sa_data, ETH_ALEN, &fw_err);
+  err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", addr, ETH_ALEN, &fw_err);
   if (err != ZX_OK) {
     BRCMF_ERR("Setting cur_etheraddr failed: %s, fw err %s\n", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   } else {
-    BRCMF_DBG(TRACE, "updated to %pM\n", sa->sa_data);
-    memcpy(ifp->mac_addr, sa->sa_data, ETH_ALEN);
+    BRCMF_DBG(TRACE, "updated to %pM\n", addr);
+    memcpy(ifp->mac_addr, addr, ETH_ALEN);
     memcpy(ifp->ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
   }
   return err;
@@ -475,96 +468,6 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
   return ZX_OK;
 }
 
-zx_status_t brcmf_phy_query(void* ctx, wlanphy_impl_info_t* phy_info) {
-  struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
-  // See wlan/protocol/info.h
-  wlan_info_t* info = &phy_info->wlan_info;
-  memset(info, 0, sizeof(*info));
-  memcpy(info->mac_addr, ifp->mac_addr, ETH_ALEN);
-  info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP;
-  info->supported_phys = 0x1f;  // WLAN_INFO_PHY_TYPE_;
-  info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS |
-                          WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
-  info->caps = 0xf;       // WLAN_INFO_HARDWARE_CAPABILITY_;
-  info->bands_count = 0;  // FIXME #29890 -- Long-term solution needed
-  return ZX_OK;
-}
-
-static void brcmf_release_zx_if_device(void* ctx) {
-  // TODO(cphoenix): Implement unbind/release
-  // Unbind - remove device from tree
-  // Release - dealloc resources
-  BRCMF_ERR("* * Need to unload and release all driver structs");
-}
-
-static zx_protocol_device_t if_impl_device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .release = brcmf_release_zx_if_device,
-};
-
-zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
-                                   uint16_t* out_iface_id) {
-  struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
-  struct net_device* ndev = ifp->ndev;
-  struct wireless_dev* wdev = ndev_to_wdev(ndev);
-  zx_status_t result;
-
-  BRCMF_DBG(TEMP, "brcmf_phy_create_iface called!");
-  if (req->sme_channel == ZX_HANDLE_INVALID) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "brcmfmac-wlanif",  // TODO(cphoenix): Uniquify this?
-      .ctx = ndev,
-      .ops = &if_impl_device_ops,
-      .proto_id = ZX_PROTOCOL_WLANIF_IMPL,
-      .proto_ops = &if_impl_proto_ops,
-  };
-
-  brcmf_pub* const drvr = ifp->drvr;
-  brcmf_bus* const bus = drvr->bus_if;
-
-  BRCMF_DBG(TEMP, "About to add if_dev");
-  result = brcmf_bus_device_add(bus, drvr->phy_zxdev, &args, &drvr->if_zxdev);
-  if (result != ZX_OK) {
-    BRCMF_ERR("Failed to device_add: %s", zx_status_get_string(result));
-    return result;
-  }
-  BRCMF_DBG(TEMP, "device_add() succeeded. Added iface hooks.");
-
-  *out_iface_id = 42;
-
-  wdev->iftype = req->role;
-
-  /* set appropriate operations */
-  ndev->initialized_for_ap = true;
-  ndev->sme_channel = zx::channel(req->sme_channel);
-
-  /* set the mac address & netns */
-  memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
-  ndev->priv_destructor = &brcmf_free_net_device_vif;
-  BRCMF_DBG(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
-
-  return ZX_OK;
-}
-
-zx_status_t brcmf_phy_destroy_iface(void* ctx, uint16_t id) {
-  BRCMF_ERR("Don't know how to destroy iface yet");
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country) {
-  if (country == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  BRCMF_ERR("brcmf_phy_set_country() to [%s] not implemented",
-            wlan::common::Alpha2ToStr(country->alpha2).c_str());
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
   struct brcmf_pub* drvr = ifp->drvr;
   struct net_device* ndev = ifp->ndev;
@@ -576,17 +479,10 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
 }
 
 static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
-  brcmf_pub* drvr = ndev_to_pub(ndev);
-
   // TODO(cphoenix): Make sure devices are removed and memory is freed properly. This code
   // is probably wrong. See WLAN-1057.
   brcmf_free_net_device_vif(ndev);
   brcmf_free_net_device(ndev);
-  if (drvr->phy_zxdev != NULL) {
-    brcmf_bus* const bus = drvr->bus_if;
-    brcmf_bus_device_remove(bus, drvr->phy_zxdev);
-    drvr->phy_zxdev = NULL;
-  }
 }
 
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on) {
@@ -687,7 +583,6 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
       return ZX_ERR_NO_MEMORY;
     }
   } else {
-    BRCMF_DBG(INFO, "allocate netdev interface\n");
     /* Allocate netdev, including space for private structure */
     ndev = brcmf_allocate_net_device(sizeof(*ifp), is_p2pdev ? "p2p" : name);
     if (!ndev) {
@@ -714,7 +609,6 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
   if (mac_addr != NULL) {
     memcpy(ifp->mac_addr, mac_addr, ETH_ALEN);
   }
-
   BRCMF_DBG(TRACE, " ==== if:%s (%pM) created ===\n", name, ifp->mac_addr);
   if (if_out) {
     *if_out = ifp;
@@ -940,8 +834,8 @@ struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name)
 void brcmf_free_net_device(struct net_device* dev) {
   if (dev != NULL) {
     free(dev->priv);
+    free(dev);
   }
-  free(dev);
 }
 
 void brcmf_enable_tx(struct net_device* dev) {

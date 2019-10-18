@@ -39,6 +39,10 @@ class SdioDevice : public Device, public ::ddk::Device<SdioDevice, ::ddk::Unbind
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
+  // Trampolines for DDK functions, for platforms that support them
+  zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
+  zx_status_t DeviceRemove(zx_device_t* dev) override;
+
  protected:
   explicit SdioDevice(zx_device_t* parent);
   ~SdioDevice();

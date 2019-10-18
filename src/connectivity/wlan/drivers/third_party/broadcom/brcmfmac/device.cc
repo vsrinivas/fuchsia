@@ -15,10 +15,22 @@
 
 #include <zircon/status.h>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
 namespace wlan {
 namespace brcmfmac {
+namespace {
+
+constexpr char kClientInterfaceName[] = "brcmfmac-wlanif-client";
+constexpr uint16_t kClientInterfaceId = 0;
+constexpr char kApInterfaceName[] = "brcmfmac-wlanif-ap";
+constexpr uint16_t kApInterfaceId = 1;
+
+}  // namespace
+
+Device::~Device() = default;
 
 zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device,
                          BusRegisterFn bus_register_fn) {
@@ -46,24 +58,118 @@ zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device,
 
   dispatcher_ = std::move(dispatcher);
   brcmf_pub_ = std::move(pub);
+  client_interface_ = nullptr;
+  ap_interface_ = nullptr;
   return ZX_OK;
 }
 
 zx_status_t Device::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
-  return brcmf_phy_query(brcmf_pub_->iflist[0], out_info);
+  return WlanInterface::Query(brcmf_pub_.get(), out_info);
 }
 
 zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
                                            uint16_t* out_iface_id) {
-  return brcmf_phy_create_iface(brcmf_pub_->iflist[0], req, out_iface_id);
+  zx_status_t status = ZX_OK;
+  wireless_dev* wdev = nullptr;
+  uint16_t iface_id = 0;
+
+  switch (req->role) {
+    case WLAN_INFO_MAC_ROLE_CLIENT: {
+      if (client_interface_ != nullptr) {
+        BRCMF_ERR("Device::WlanphyImplCreateIface() client interface already exists\n");
+        return ZX_ERR_NO_RESOURCES;
+      }
+
+      if ((status = brcmf_cfg80211_add_iface(brcmf_pub_.get(), kClientInterfaceName, nullptr, req,
+                                             &wdev)) != ZX_OK) {
+        BRCMF_ERR("Device::WlanphyImplCreateIface() failed to create Client interface, %s\n",
+                  zx_status_get_string(status));
+        return status;
+      }
+
+      WlanInterface* interface = nullptr;
+      if ((status = WlanInterface::Create(this, kClientInterfaceName,
+                                          &brcmf_pub_->iflist[kClientInterfaceId]->vif->wdev,
+                                          &interface)) != ZX_OK) {
+        return status;
+      }
+
+      client_interface_ = interface;  // The lifecycle of `interface` is owned by the devhost.
+      iface_id = kClientInterfaceId;
+      break;
+    }
+    case WLAN_INFO_MAC_ROLE_AP: {
+      if (ap_interface_ != nullptr) {
+        BRCMF_ERR("Device::WlanphyImplCreateIface() AP interface already exists\n");
+        return ZX_ERR_NO_RESOURCES;
+      }
+
+      if ((status = brcmf_cfg80211_add_iface(brcmf_pub_.get(), kApInterfaceName, nullptr, req,
+                                             &wdev)) != ZX_OK) {
+        BRCMF_ERR("Device::WlanphyImplCreateIface() failed to create AP interface, %s\n",
+                  zx_status_get_string(status));
+        return status;
+      }
+
+      WlanInterface* interface = nullptr;
+      if ((status = WlanInterface::Create(this, kApInterfaceName, wdev, &interface)) != ZX_OK) {
+        return status;
+      }
+
+      ap_interface_ = interface;  // The lifecycle of `interface` is owned by the devhost.
+      iface_id = kApInterfaceId;
+      break;
+    };
+    default: {
+      BRCMF_ERR("Device::WlanphyImplCreateIface() MAC role %d not supported\n", req->role);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  }
+
+  *out_iface_id = iface_id;
+  return ZX_OK;
 }
 
 zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
-  return brcmf_phy_destroy_iface(brcmf_pub_->iflist[0], iface_id);
+  zx_status_t status = ZX_OK;
+
+  switch (iface_id) {
+    case kClientInterfaceId: {
+      if (client_interface_ == nullptr) {
+        return ZX_ERR_NOT_FOUND;
+      }
+      if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, client_interface_->wdev())) !=
+          ZX_OK) {
+        BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to cleanup STA interface, %s\n",
+                  zx_status_get_string(status));
+        return status;
+      }
+      client_interface_->DdkRemove();
+      client_interface_ = nullptr;
+      break;
+    }
+    case kApInterfaceId: {
+      if (ap_interface_ == nullptr) {
+        return ZX_ERR_NOT_FOUND;
+      }
+      if ((status = brcmf_cfg80211_del_iface(brcmf_pub_->config, ap_interface_->wdev())) != ZX_OK) {
+        BRCMF_ERR("Device::WlanphyImplDestroyIface() failed to destroy AP interface, %s\n",
+                  zx_status_get_string(status));
+        return status;
+      }
+      ap_interface_->DdkRemove();
+      ap_interface_ = nullptr;
+      break;
+    }
+    default: {
+      return ZX_ERR_NOT_FOUND;
+    }
+  }
+  return ZX_OK;
 }
 
 zx_status_t Device::WlanphyImplSetCountry(const wlanphy_country_t* country) {
-  return brcmf_phy_set_country(brcmf_pub_->iflist[0], country);
+  return WlanInterface::SetCountry(country);
 }
 
 void Device::DisableDispatcher() {

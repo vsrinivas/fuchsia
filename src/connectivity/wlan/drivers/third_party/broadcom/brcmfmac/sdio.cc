@@ -3646,8 +3646,6 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .get_bootloader_macaddr = brcmf_sdio_get_bootloader_macaddr,
     .open_firmware_file = brcmf_sdio_load_firmware,
     .get_wifi_metadata = brcmf_get_wifi_metadata,
-    .device_add = [](struct brcmf_bus* bus, zx_device_t* parent, device_add_args_t* args,
-                     zx_device_t** out) { return device_add(parent, args, out); },
 };
 
 static void brcmf_sdio_firmware_callback(brcmf_pub* drvr, zx_status_t err,

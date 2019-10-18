@@ -284,12 +284,6 @@ struct net_device {
   int needs_free_net_device;
 };
 
-zx_status_t brcmf_phy_query(void* ctx, wlanphy_impl_info_t* phy_info);
-zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
-                                   uint16_t* out_iface_id);
-zx_status_t brcmf_phy_destroy_iface(void* ctx, uint16_t id);
-zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country);
-
 /*
  * interface functions from common layer
  */
@@ -313,5 +307,6 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr);
 zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,
                                  int32_t* fwerr_ptr);
 void brcmf_bus_add_txhdrlen(brcmf_pub* drvr, uint len);
+zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, uint8_t* addr);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
