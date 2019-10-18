@@ -21,6 +21,29 @@
 
 namespace {
 
+TEST(LocalhostTest, MsgWaitAll) {
+  int recvfd;
+  ASSERT_GE(recvfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
+
+  auto socket_deleter = [](int *fd) {
+    ASSERT_EQ(close(*fd), 0) << strerror(errno);
+    delete fd;
+  };
+  std::unique_ptr<int, decltype(socket_deleter)> deleter(new int(recvfd), socket_deleter);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+
+  int status = fcntl(recvfd, F_GETFL, 0);
+  ASSERT_EQ(0, fcntl(recvfd, F_SETFL, status | O_NONBLOCK));
+
+  ASSERT_EQ(recvfrom(recvfd, nullptr, 0, MSG_WAITALL, nullptr, nullptr), -1);
+  EXPECT_EQ(errno, EAGAIN);
+}
+
 // Raw sockets are typically used for implementing custom protocols. We intend to support custom
 // protocols through structured FIDL APIs in the future, so this test ensures that raw sockets are
 // disabled to prevent them from accidentally becoming load-bearing.
