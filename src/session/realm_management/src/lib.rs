@@ -62,10 +62,35 @@ pub async fn bind_child(
     Ok(())
 }
 
+/// Destroys a child in the specified `Realm`. This call is expects a matching call to have been
+/// made to `create_child`.
+///
+/// # Parameters
+/// - `child_name`: The name of the child to destroy.
+/// - `collection_name`: The name of collection in which the child was created.
+/// - `realm`: The `Realm` the child will bound in.
+///
+/// # Errors
+/// Returns an error if the child was not destroyed in the realm.
+pub async fn destroy_child(
+    child_name: &str,
+    collection_name: &str,
+    realm: &fsys::RealmProxy,
+) -> Result<(), fsys::Error> {
+    let mut child_ref = fsys::ChildRef {
+        name: child_name.to_string(),
+        collection: Some(collection_name.to_string()),
+    };
+
+    realm.destroy_child(&mut child_ref).await.map_err(|_| fsys::Error::Internal)??;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use {
-        super::{bind_child, create_child},
+        super::{bind_child, create_child, destroy_child},
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
         futures::prelude::*,
@@ -201,5 +226,26 @@ mod tests {
         });
 
         assert!(bind_child("", "", &realm_proxy).await.is_err());
+    }
+
+    /// Tests that `destroy_child` results in the appropriate call to `RealmProxy`.
+    #[fasync::run_singlethreaded(test)]
+    async fn destroy_child_parameters() {
+        let child_name = "test_child";
+        let child_collection = "test_collection";
+
+        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
+            fsys::RealmRequest::DestroyChild { child, responder } => {
+                assert_eq!(child.name, child_name);
+                assert_eq!(child.collection, Some(child_collection.to_string()));
+
+                let _ = responder.send(&mut Ok(()));
+            }
+            _ => {
+                assert!(false);
+            }
+        });
+
+        assert!(destroy_child(child_name, child_collection, &realm_proxy).await.is_ok());
     }
 }
