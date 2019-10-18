@@ -2,64 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <getopt.h>
-
-#include <memory>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/memfs/memfs.h>
+
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 #include "blobfs_fixtures.h"
 #include "environment.h"
-
-constexpr char kUsageMessage[] = R"""(
-Blobfs integration tests. Tests can be run either against a real block device
-or using a ram-disk (default behavior).
-
-Options:
---device path_to_device (-d): Performs tests on top of a specific block device
---no-journal: Don't use journal
---help (-h): Displays full help
-
-)""";
-
-bool GetOptions(int argc, char** argv, Environment::TestConfig* config) {
-  while (true) {
-    struct option options[] = {
-        {"device", required_argument, nullptr, 'd'},
-        {"no-journal", no_argument, nullptr, 'j'},
-        {"help", no_argument, nullptr, 'h'},
-        {"gtest_filter", optional_argument, nullptr, 'f'},
-        {"gtest_list_tests", optional_argument, nullptr, 'l'},
-        {"gtest_shuffle", optional_argument, nullptr, 's'},
-        {"gtest_repeat", required_argument, nullptr, 'i'},
-        {"gtest_random_seed", required_argument, nullptr, 'r'},
-        {"gtest_break_on_failure", optional_argument, nullptr, 'b'},
-        {nullptr, 0, nullptr, 0},
-    };
-    int opt_index;
-    int c = getopt_long(argc, argv, "d:hf::l::s::i:r:b::", options, &opt_index);
-    if (c < 0) {
-      break;
-    }
-    switch (c) {
-      case 'd':
-        config->path = optarg;
-        break;
-      case 'j':
-        config->use_journal = false;
-        break;
-      case 'h':
-        printf("%s\n", kUsageMessage);
-        return true;
-      case '?':
-        return false;
-    }
-  }
-  return argc == optind;
-}
 
 // The test can operate over either a ramdisk, or a real device. Initialization
 // of that device happens at the test environment level, but the test fixtures
@@ -67,11 +19,16 @@ bool GetOptions(int argc, char** argv, Environment::TestConfig* config) {
 Environment* g_environment;
 
 int main(int argc, char** argv) {
+  const char kHelp[] = "Blobfs integration tests";
   Environment::TestConfig config = {};
-  if (!GetOptions(argc, argv, &config)) {
-    printf("%s\n", kUsageMessage);
+  if (!config.GetOptions(argc, argv)) {
+    printf("%s\n%s\n", kHelp, config.HelpMessage());
     return -1;
   }
+  if (config.show_help) {
+    printf("%s\n%s\n", kHelp, config.HelpMessage());
+  }
+
   config.mount_path = kMountPath;
   config.format_type = DISK_FORMAT_BLOBFS;
 

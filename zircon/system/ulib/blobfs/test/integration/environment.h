@@ -46,7 +46,15 @@ class Environment : public zxtest::Environment {
     const char* path;  // Path to an existing device.
     const char* mount_path;
     disk_format_type format_type;
+    bool show_help;
     bool use_journal = true;
+
+    // Updates the configuration with options from the command line.
+    // Returns false as soon as an option is not recognized.
+    bool GetOptions(int argc, char** argv);
+
+    // Returns the help message.
+    const char* HelpMessage() const;
   };
 
   explicit Environment(const TestConfig& config) : config_(config) {}

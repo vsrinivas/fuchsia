@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <getopt.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fzl/fdio.h>
@@ -22,7 +23,54 @@
 
 namespace {
 
+constexpr char kUsageMessage[] = R"""(
+Tests can be run either against a real block device or using a ram-disk (default
+behavior).
+
+Options:
+--device path_to_device (-d): Performs tests on top of a specific block device
+--no-journal: Don't use journal
+--help (-h): Displays full help
+
+)""";
+
 constexpr char kTestDevRoot[] = "/fake/dev";
+
+bool GetOptions(int argc, char** argv, Environment::TestConfig* config) {
+  while (true) {
+    struct option options[] = {
+        {"device", required_argument, nullptr, 'd'},
+        {"no-journal", no_argument, nullptr, 'j'},
+        {"help", no_argument, nullptr, 'h'},
+        {"gtest_filter", optional_argument, nullptr, 'f'},
+        {"gtest_list_tests", optional_argument, nullptr, 'l'},
+        {"gtest_shuffle", optional_argument, nullptr, 's'},
+        {"gtest_repeat", required_argument, nullptr, 'i'},
+        {"gtest_random_seed", required_argument, nullptr, 'r'},
+        {"gtest_break_on_failure", optional_argument, nullptr, 'b'},
+        {nullptr, 0, nullptr, 0},
+    };
+    int opt_index;
+    int c = getopt_long(argc, argv, "d:hf::l::s::i:r:b::", options, &opt_index);
+    if (c < 0) {
+      break;
+    }
+    switch (c) {
+      case 'd':
+        config->path = optarg;
+        break;
+      case 'j':
+        config->use_journal = false;
+        break;
+      case 'h':
+        config->show_help = true;
+        return true;
+      case '?':
+        return false;
+    }
+  }
+  return argc == optind;
+}
 
 bool GetBlockInfo(zx_handle_t channel, fuchsia_hardware_block_BlockInfo* block_info) {
   zx_status_t status;
@@ -61,6 +109,14 @@ zx_status_t RamDisk::WakeUp() const { return ramdisk_wake(ramdisk_); }
 
 zx_status_t RamDisk::GetBlockCounts(ramdisk_block_write_counts_t* counts) const {
   return ramdisk_get_block_counts(ramdisk_, counts);
+}
+
+bool Environment::TestConfig::GetOptions(int argc, char** argv) {
+  return ::GetOptions(argc, argv, this);
+}
+
+const char* Environment::TestConfig::HelpMessage() const {
+  return kUsageMessage;
 }
 
 void Environment::SetUp() {
