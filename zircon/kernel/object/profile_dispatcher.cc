@@ -14,6 +14,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/popcount.h>
 #include <object/thread_dispatcher.h>
 
 KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create")
@@ -38,12 +39,34 @@ zx_status_t validate_profile(const zx_profile_info_t& info) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  // Ensure only zero or one of the mutually exclusive flags is set.
+  const uint32_t kMutuallyExclusiveFlags =
+      ZX_PROFILE_INFO_FLAG_PRIORITY | ZX_PROFILE_INFO_FLAG_DEADLINE;
+  if (ktl::popcount(flags & kMutuallyExclusiveFlags) > 1) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // Ensure priority is valid.
   if ((flags & ZX_PROFILE_INFO_FLAG_PRIORITY) != 0) {
     if ((info.priority < LOWEST_PRIORITY) || (info.priority > HIGHEST_PRIORITY)) {
       return ZX_ERR_INVALID_ARGS;
     }
     flags &= ~ZX_PROFILE_INFO_FLAG_PRIORITY;
+  }
+
+  if ((flags & ZX_PROFILE_INFO_FLAG_DEADLINE) != 0) {
+    // TODO(eieio): Add additional admission criteria to prevent values that are
+    // too large or too small. These values are mediated by a privileged service
+    // so the risk of abuse is low, but it still might be good to implement some
+    // sort of failsafe check to prevent mistakes.
+    const bool admissible =
+        info.deadline_params.capacity > 0 &&
+        info.deadline_params.capacity <= info.deadline_params.relative_deadline &&
+        info.deadline_params.relative_deadline <= info.deadline_params.period;
+    if (!admissible) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    flags &= ~ZX_PROFILE_INFO_FLAG_DEADLINE;
   }
 
   // Ensure affinity mask is valid.
@@ -91,6 +114,14 @@ zx_status_t ProfileDispatcher::ApplyProfile(fbl::RefPtr<ThreadDispatcher> thread
   // Set priority.
   if ((info_.flags & ZX_PROFILE_INFO_FLAG_PRIORITY) != 0) {
     zx_status_t result = thread->SetPriority(info_.priority);
+    if (result != ZX_OK) {
+      return result;
+    }
+  }
+
+  // Set deadline.
+  if ((info_.flags & ZX_PROFILE_INFO_FLAG_DEADLINE) != 0) {
+    zx_status_t result = thread->SetDeadline(info_.deadline_params);
     if (result != ZX_OK) {
       return result;
     }

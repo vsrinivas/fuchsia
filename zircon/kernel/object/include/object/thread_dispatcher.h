@@ -202,6 +202,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // Profile support
   zx_status_t SetPriority(int32_t priority) TA_EXCL(get_lock());
+  zx_status_t SetDeadline(const zx_sched_deadline_params_t& params) TA_EXCL(get_lock());
   zx_status_t SetSoftAffinity(cpu_mask_t mask) TA_EXCL(get_lock());
 
   // For ChannelDispatcher use.

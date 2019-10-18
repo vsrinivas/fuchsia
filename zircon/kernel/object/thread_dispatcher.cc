@@ -1184,6 +1184,18 @@ zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
   return ZX_OK;
 }
 
+zx_status_t ThreadDispatcher::SetDeadline(const zx_sched_deadline_params_t& params) {
+  Guard<fbl::Mutex> guard{get_lock()};
+  if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
+      (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
+      (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {
+    return ZX_ERR_BAD_STATE;
+  }
+  // The deadline parameters are already validated by the Profile dispatcher.
+  thread_set_deadline(&thread_, params);
+  return ZX_OK;
+}
+
 zx_status_t ThreadDispatcher::SetSoftAffinity(cpu_mask_t mask) {
   Guard<fbl::Mutex> guard{get_lock()};
   if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||

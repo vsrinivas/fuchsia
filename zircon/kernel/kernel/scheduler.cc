@@ -110,13 +110,15 @@ __NO_SAFESTACK void FinalContextSwitch(thread_t* oldthread, thread_t* newthread)
   arch_context_switch(oldthread, newthread);
 }
 
+// Writes a context switch record to the ktrace buffer. This is always enabled
+// so that user mode tracing can track which threads are running.
 inline void TraceContextSwitch(const thread_t* current_thread, const thread_t* next_thread,
                                cpu_num_t current_cpu) {
-  const uintptr_t raw_current = reinterpret_cast<uintptr_t>(current_thread);
-  const uintptr_t raw_next = reinterpret_cast<uintptr_t>(next_thread);
-  const uint32_t current = static_cast<uint32_t>(raw_current);
-  const uint32_t next = static_cast<uint32_t>(raw_next);
-  const uint32_t user_tid = static_cast<uint32_t>(next_thread->user_tid);
+  const auto raw_current = reinterpret_cast<uintptr_t>(current_thread);
+  const auto raw_next = reinterpret_cast<uintptr_t>(next_thread);
+  const auto current = static_cast<uint32_t>(raw_current);
+  const auto next = static_cast<uint32_t>(raw_next);
+  const auto user_tid = static_cast<uint32_t>(next_thread->user_tid);
   const uint32_t context = current_cpu | (current_thread->state << 8) |
                            (current_thread->base_priority << 16) |
                            (next_thread->base_priority << 24);
@@ -1082,5 +1084,7 @@ void sched_change_priority(thread_t* thread, int priority) {
     mp_reschedule(cpus_to_reschedule_mask, 0);
   }
 }
+
+void sched_change_deadline(thread_t* thread, const zx_sched_deadline_params_t& params) {}
 
 void sched_preempt_timer_tick(zx_time_t now) { Scheduler::TimerTick(SchedTime{now}); }

@@ -13,8 +13,8 @@
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <ffl/fixed.h>
-#include <kernel/scheduler_state.h>
 #include <kernel/sched.h>
+#include <kernel/scheduler_state.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
 
@@ -50,7 +50,7 @@ class Scheduler {
   SchedWeight GetTotalWeight() const TA_EXCL(thread_lock);
   size_t GetRunnableTasks() const TA_EXCL(thread_lock);
 
-  // Dumps the state of the runqueue to the debug log.
+  // Dumps the state of the run queue to the debug log.
   void Dump() TA_REQ(thread_lock);
 
   // Returns the number of the CPU this scheduler instance is associated with.
@@ -62,17 +62,18 @@ class Scheduler {
 
   // Befriend the sched API wrappers to enable calling the static methods
   // below.
-  friend void sched_init_thread(thread_t* t, int priority);
-  friend void sched_block(void);
-  friend void sched_yield(void);
-  friend void sched_preempt(void);
-  friend void sched_reschedule(void);
-  friend void sched_resched_internal(void);
-  friend void sched_unblock_idle(thread_t* t);
-  friend void sched_migrate(thread_t* t);
-  friend void sched_inherit_priority(thread_t* t, int pri, bool* local_resched,
+  friend void sched_init_thread(thread_t* thread, int priority);
+  friend void sched_block();
+  friend void sched_yield();
+  friend void sched_preempt();
+  friend void sched_reschedule();
+  friend void sched_resched_internal();
+  friend void sched_unblock_idle(thread_t* thread);
+  friend void sched_migrate(thread_t* thread);
+  friend void sched_inherit_priority(thread_t* thread, int priority, bool* local_reschedule,
                                      cpu_mask_t* cpus_to_reschedule_mask);
-  friend void sched_change_priority(thread_t* t, int pri);
+  friend void sched_change_priority(thread_t* thread, int priority);
+  friend void sched_change_deadline(thread_t* thread, const zx_sched_deadline_params_t& params);
   friend bool sched_unblock(thread_t* t);
   friend bool sched_unblock_list(struct list_node* list);
   friend void sched_transition_off_cpu(cpu_num_t old_cpu);

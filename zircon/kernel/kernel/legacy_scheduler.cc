@@ -783,6 +783,9 @@ void sched_change_priority(thread_t* t, int pri) {
   }
 }
 
+// non-functional deadline API.
+void sched_change_deadline(thread_t*, const zx_sched_deadline_params_t&) {}
+
 // preemption timer that is set whenever a thread is scheduled
 void sched_preempt_timer_tick(zx_time_t now) {
   // if the preemption timer went off on the idle or a real time thread, ignore it

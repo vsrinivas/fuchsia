@@ -12,6 +12,7 @@
 #include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/scheduler.h>
 #include <zircon/types.h>
 
 #include <arch/defines.h>
@@ -273,6 +274,7 @@ void thread_construct_first(thread_t* t, const char* name);
 thread_t* thread_create_idle_thread(uint cpu_num);
 void thread_set_name(const char* name);
 void thread_set_priority(thread_t* t, int priority);
+void thread_set_deadline(thread_t* t, const zx_sched_deadline_params_t& params);
 void thread_set_user_callback(thread_t* t, thread_user_callback_t cb);
 
 // Creates a thread with |name| that will execute |entry| at |priority|. |arg|

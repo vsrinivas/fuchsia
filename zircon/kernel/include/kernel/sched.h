@@ -10,6 +10,7 @@
 #include <list.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/scheduler.h>
 
 #include <kernel/thread.h>
 
@@ -38,6 +39,11 @@ void sched_inherit_priority(thread_t* t, int pri, bool* local_resched, cpu_mask_
 // set the priority of a thread and reset the boost value. This function might reschedule.
 // pri should be 0 <= to <= MAX_PRIORITY.
 void sched_change_priority(thread_t* t, int pri) TA_REQ(thread_lock);
+
+// set the deadline of a thread. This function might reschedule.
+// requires 0 < capacity <= relative_deadline <= period.
+void sched_change_deadline(thread_t* t, const zx_sched_deadline_params_t& params)
+    TA_REQ(thread_lock);
 
 // return true if the thread was placed on the current cpu's run queue
 // this usually means the caller should locally reschedule soon

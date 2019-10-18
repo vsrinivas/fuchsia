@@ -20,7 +20,6 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <ktl/atomic.h>
 #include <lib/counters.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
@@ -45,6 +44,7 @@
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
+#include <ktl/atomic.h>
 #include <lockdep/lockdep.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
@@ -1104,21 +1104,35 @@ void thread_set_user_callback(thread_t* t, thread_user_callback_t cb) {
 /**
  * @brief Change priority of current thread
  *
+ * Sets the thread to use the fair scheduling discipline using the given
+ * priority.
+ *
  * See thread_create() for a discussion of priority values.
  */
 void thread_set_priority(thread_t* t, int priority) {
   DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+  ASSERT(priority >= LOWEST_PRIORITY && priority <= HIGHEST_PRIORITY);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-
-  if (priority <= IDLE_PRIORITY) {
-    priority = IDLE_PRIORITY + 1;
-  }
-  if (priority > HIGHEST_PRIORITY) {
-    priority = HIGHEST_PRIORITY;
-  }
-
   sched_change_priority(t, priority);
+}
+
+/**
+ * @brief Change the deadline of current thread
+ *
+ * Sets the thread to use the deadline scheduling discipline using the given
+ * parameters.
+ *
+ * @param t The thread to set or change deadline scheduling parameters.
+ * @param params The deadline parameters to apply to the thread.
+ */
+void thread_set_deadline(thread_t* t, const zx_sched_deadline_params_t& params) {
+  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+  ASSERT(params.capacity > 0 && params.capacity <= params.relative_deadline &&
+         params.relative_deadline <= params.period);
+
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  sched_change_deadline(t, params);
 }
 
 /**

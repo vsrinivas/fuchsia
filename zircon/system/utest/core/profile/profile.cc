@@ -8,6 +8,7 @@
 #include <zircon/errors.h>
 #include <zircon/syscalls/profile.h>
 #include <zircon/syscalls/types.h>
+#include <zircon/time.h>
 
 #include <thread>
 
@@ -28,6 +29,13 @@ zx_profile_info_t MakeSchedulerProfileInfo(int32_t priority) {
   zx_profile_info_t info = {};
   info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY;
   info.priority = priority;
+  return info;
+}
+
+zx_profile_info_t MakeSchedulerProfileInfo(const zx_sched_deadline_params_t& params) {
+  zx_profile_info_t info = {};
+  info.flags = ZX_PROFILE_INFO_FLAG_DEADLINE;
+  info.deadline_params = params;
   return info;
 }
 
@@ -124,6 +132,42 @@ TEST(SchedulerProfileTest, CreateProfileWithPriorityBelowLowestIsInvalidArgs) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*root_job, 0u, &profile_info, &profile));
 }
 
+TEST(SchedulerProfileTest, CreateProfileWithDeadlineIsOk) {
+  zx::unowned_job root_job(zx::job::default_job());
+  ASSERT_TRUE(root_job->is_valid());
+  zx_profile_info_t profile_info = MakeSchedulerProfileInfo({ZX_MSEC(1), ZX_MSEC(8), ZX_MSEC(10)});
+  zx::profile profile;
+
+  ASSERT_OK(zx::profile::create(*root_job, 0u, &profile_info, &profile));
+}
+
+TEST(SchedulerProfileTest, CreateProfileWithZeroCapacityIsInvalidArgs) {
+  zx::unowned_job root_job(zx::job::default_job());
+  ASSERT_TRUE(root_job->is_valid());
+  zx_profile_info_t profile_info = MakeSchedulerProfileInfo({ZX_MSEC(0), ZX_MSEC(8), ZX_MSEC(10)});
+  zx::profile profile;
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*root_job, 0u, &profile_info, &profile));
+}
+
+TEST(SchedulerProfileTest, CreateProfileWithDeadlineBelowCapacityIsInvalidArgs) {
+  zx::unowned_job root_job(zx::job::default_job());
+  ASSERT_TRUE(root_job->is_valid());
+  zx_profile_info_t profile_info = MakeSchedulerProfileInfo({ZX_MSEC(8), ZX_MSEC(1), ZX_MSEC(10)});
+  zx::profile profile;
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*root_job, 0u, &profile_info, &profile));
+}
+
+TEST(SchedulerProfileTest, CreateProfileWithPeriodBelowDeadlineIsInvalidArgs) {
+  zx::unowned_job root_job(zx::job::default_job());
+  ASSERT_TRUE(root_job->is_valid());
+  zx_profile_info_t profile_info = MakeSchedulerProfileInfo({ZX_MSEC(8), ZX_MSEC(10), ZX_MSEC(1)});
+  zx::profile profile;
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*root_job, 0u, &profile_info, &profile));
+}
+
 TEST(SchedulerProfileTest, CreateProfileOnNonRootJobIsAccessDenied) {
   zx::unowned_job root_job(zx::job::default_job());
   ASSERT_TRUE(root_job->is_valid());
@@ -161,10 +205,14 @@ TEST(SchedulerProfileTest, SetThreadPriorityIsOk) {
   zx_profile_info_t info_2 = MakeSchedulerProfileInfo(ZX_PRIORITY_HIGH);
   ASSERT_OK(zx::profile::create(*root_job, 0u, &info_2, &profile_2));
 
+  zx::profile profile_3;
+  zx_profile_info_t info_3 = MakeSchedulerProfileInfo({ZX_MSEC(8), ZX_MSEC(16), ZX_MSEC(16)});
+  ASSERT_OK(zx::profile::create(*root_job, 0u, &info_3, &profile_3));
+
   // Operate on a background thread, just in case a failure changes the priority of the main
   // thread.
   std::thread worker(
-      [](zx::profile first, zx::profile second, std::atomic<const char*>* error,
+      [](zx::profile first, zx::profile second, zx::profile third, std::atomic<const char*>* error,
          std::atomic<zx_status_t>* result) {
         *result = zx::thread::self()->set_profile(first, 0);
         if (result != ZX_OK) {
@@ -178,8 +226,15 @@ TEST(SchedulerProfileTest, SetThreadPriorityIsOk) {
           *error = "Failed to set second profile on thread";
           return;
         }
+        std::this_thread::yield();
+
+        *result = zx::thread::self()->set_profile(third, 0);
+        if (result != ZX_OK) {
+          *error = "Failed to set third profile on thread";
+          return;
+        }
       },
-      std::move(profile_1), std::move(profile_2), &error, &result);
+      std::move(profile_1), std::move(profile_2), std::move(profile_3), &error, &result);
 
   // Wait until is completed.
   worker.join();
@@ -191,6 +246,16 @@ TEST(ProfileTest, CreateProfileWithDefaultInitializedProfileInfoIsError) {
   zx::unowned_job root_job(zx::job::default_job());
   ASSERT_TRUE(root_job->is_valid());
   zx_profile_info_t profile_info = {};
+  zx::profile profile;
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*root_job, 0u, &profile_info, &profile));
+}
+
+TEST(ProfileTest, CreateProfileWithMutuallyExclusiveFlagsIsInvalidArgs) {
+  zx::unowned_job root_job(zx::job::default_job());
+  ASSERT_TRUE(root_job->is_valid());
+  zx_profile_info_t profile_info = {};
+  profile_info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY | ZX_PROFILE_INFO_FLAG_DEADLINE;
   zx::profile profile;
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx::profile::create(*root_job, 0u, &profile_info, &profile));

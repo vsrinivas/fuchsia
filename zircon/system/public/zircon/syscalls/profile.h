@@ -5,6 +5,7 @@
 #ifndef SYSROOT_ZIRCON_SYSCALLS_PROFILE_H_
 #define SYSROOT_ZIRCON_SYSCALLS_PROFILE_H_
 
+#include <zircon/syscalls/scheduler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
@@ -17,14 +18,20 @@ __BEGIN_CDECLS
 
 #define ZX_PROFILE_INFO_FLAG_PRIORITY (1 << 0)
 #define ZX_PROFILE_INFO_FLAG_CPU_MASK (1 << 1)
+#define ZX_PROFILE_INFO_FLAG_DEADLINE (1 << 2)
 
 typedef struct zx_profile_info {
   // A bitmask of ZX_PROFILE_INFO_FLAG_* values. Specifies which fields
   // below have been specified. Other fields are considered unset.
   uint32_t flags;
 
-  // Scheduling priority. |flags| must have ZX_PROFILE_INFO_FLAG_PRIORITY set.
-  int32_t priority;
+  union {
+    // Scheduling priority. |flags| must have ZX_PROFILE_INFO_FLAG_PRIORITY set.
+    int32_t priority;
+
+    // Scheduling deadline. |flags| must have ZX_PROFILE_INFO_FLAG_DEADLINE set.
+    zx_sched_deadline_params_t deadline_params;
+  };
 
   // CPUs that threads may be scheduled on. |flags| must have
   // ZX_PROFILE_INFO_FLAG_CPU_MASK set.
