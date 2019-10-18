@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_location.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/function_type.h"
@@ -66,72 +67,6 @@ FileLine MakeFileLine(llvm::DWARFUnit* unit, const llvm::Optional<std::string>& 
   if (file && line)
     return FileLine(*file, unit->getCompilationDir(), static_cast<int>(*line));
   return FileLine();
-}
-
-// Decodes the contents of DW_AT_Location attribute.
-VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
-                                        const llvm::DWARFFormValue& form) {
-  if (form.isFormClass(llvm::DWARFFormValue::FC_Block) ||
-      form.isFormClass(llvm::DWARFFormValue::FC_Exprloc)) {
-    // These forms are both a block of data which is interpreted as a DWARF expression. There is no
-    // validity range for this so assume the expression is valid as long as the variable is in
-    // scope.
-    llvm::ArrayRef<uint8_t> block = *form.getAsBlock();
-    return VariableLocation(block.data(), block.size());
-  }
-
-  if (!form.isFormClass(llvm::DWARFFormValue::FC_SectionOffset))
-    return VariableLocation();  // Unknown type.
-
-  // This form is a "section offset" reference to a block in the .debug_loc table that contains a
-  // list of valid ranges + associated expressions.
-  llvm::DWARFContext& context = unit->getContext();
-  const llvm::DWARFObject& object = context.getDWARFObj();
-  const llvm::DWARFSection& debug_loc_section = object.getLocSection();
-  if (debug_loc_section.Data.empty()) {
-    // LLVM dumpLocation() falls back on the DWARFObject::getLocDWOSection() call in this case. We
-    // don't support DWOs yet so just fail.
-    return VariableLocation();
-  }
-  // Already type-checked this above so can count on the Optional return value being valid.
-  uint32_t offset = *form.getAsSectionOffset();
-
-  // Extract the LLVM location list.
-  llvm::DWARFDebugLoc debug_loc;
-  llvm::DWARFDataExtractor data(object, debug_loc_section, context.isLittleEndian(),
-                                object.getAddressSize());
-  llvm::Optional<llvm::DWARFDebugLoc::LocationList> location_list =
-      debug_loc.parseOneLocationList(data, &offset);
-  if (!location_list)
-    return VariableLocation();  // No locations.
-
-  // Convert from llvm::DWARFDebugLoc::Entry to VariableLocation::Entry.
-  std::vector<VariableLocation::Entry> entries;
-  for (const llvm::DWARFDebugLoc::Entry& llvm_entry : location_list->Entries) {
-    entries.emplace_back();
-    VariableLocation::Entry& dest = entries.back();
-
-    // These location list begin and end values are "relative to the applicable base address of the
-    // compilation unit referencing this location list."
-    //
-    // "The applicable base address of a location list entry is determined by the closest preceding
-    // base address selection entry in the same location list. If there is no such selection entry,
-    // then the applicable base address defaults to the base address of the compilation unit."
-    //
-    // LLVM doesn't seem to handle the "base address selection entry" in location lists, so we
-    // assume that Clang won't generate them either.  Assume all addresses are relative to the
-    // compilation unit's base address which is in DW_AT_low_pc
-    auto base_address = const_cast<llvm::DWARFUnit*>(unit)->getBaseAddress();
-    if (base_address) {
-      dest.begin = base_address->Address + llvm_entry.Begin;
-      dest.end = base_address->Address + llvm_entry.End;
-      const uint8_t* data = reinterpret_cast<const uint8_t*>(llvm_entry.Loc.data());
-      dest.expression.assign(data, data + llvm_entry.Loc.size());
-    } else {
-      FXL_NOTREACHED() << "No base address.";
-    }
-  }
-  return VariableLocation(std::move(entries));
 }
 
 // Extracts the subrange size from an array subrange DIE. Returns the value on success, nullopt on
