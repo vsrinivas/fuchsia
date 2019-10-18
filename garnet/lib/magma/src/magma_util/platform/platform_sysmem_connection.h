@@ -49,6 +49,7 @@ class PlatformSysmemConnection {
   virtual ~PlatformSysmemConnection() {}
 
   static std::unique_ptr<PlatformSysmemConnection> Create();
+  static std::unique_ptr<PlatformSysmemConnection> Import(uint32_t handle);
 
   static magma_status_t DecodeBufferDescription(
       const uint8_t* image_data, uint64_t image_data_size,

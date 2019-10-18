@@ -400,6 +400,16 @@ magma_status_t magma_sysmem_connection_create(magma_sysmem_connection_t* connect
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_sysmem_connection_import(magma_handle_t channel,
+                                              magma_sysmem_connection_t* connection_out) {
+  auto platform_connection = magma_sysmem::PlatformSysmemConnection::Import(channel);
+  if (!platform_connection) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create sysmem connection");
+  }
+  *connection_out = reinterpret_cast<magma_sysmem_connection_t>(platform_connection.release());
+  return MAGMA_STATUS_OK;
+}
+
 void magma_sysmem_connection_release(magma_sysmem_connection_t connection) {
   delete reinterpret_cast<magma_sysmem::PlatformSysmemConnection*>(connection);
 }
@@ -573,4 +583,11 @@ magma_status_t magma_sysmem_get_buffer_handle_from_collection(magma_sysmem_conne
                                                               uint32_t* vmo_offset_out) {
   auto buffer_collection = reinterpret_cast<magma_sysmem::PlatformBufferCollection*>(collection);
   return buffer_collection->GetBufferHandle(index, buffer_handle_out, vmo_offset_out).get();
+}
+
+magma_status_t magma_initialize_tracing(magma_handle_t channel) {
+  // Throw away tracing handle, since it's not needed yet.
+  // TODO(fxb/13095): Use
+  auto tracing_handle = magma::PlatformHandle::Create(channel);
+  return MAGMA_STATUS_OK;
 }

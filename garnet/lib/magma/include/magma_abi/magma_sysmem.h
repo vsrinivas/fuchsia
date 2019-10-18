@@ -16,6 +16,10 @@ extern "C" {
 // Allocate a new connection to the sysmem service.
 magma_status_t magma_sysmem_connection_create(magma_sysmem_connection_t* connection_out);
 
+// Import and take ownership of a sysmem connection.
+magma_status_t magma_sysmem_connection_import(magma_handle_t handle,
+                                              magma_sysmem_connection_t* connection_out);
+
 // Destroy a connection to the sysmem service. Allocated buffers are allowed to outlive the
 // connection.
 void magma_sysmem_connection_release(magma_sysmem_connection_t connection);

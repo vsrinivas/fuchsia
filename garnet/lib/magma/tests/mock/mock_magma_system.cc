@@ -217,6 +217,10 @@ magma_status_t magma_sysmem_connection_create(magma_sysmem_connection_t* connect
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
+magma_status_t magma_sysmem_connection_import(magma_handle_t channel,
+                                              magma_sysmem_connection_t* connection_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
 void magma_sysmem_connection_release(magma_sysmem_connection_t connection) {}
 
 void magma_buffer_collection_release(magma_sysmem_connection_t connection,
@@ -326,5 +330,9 @@ void magma_commit_buffer(magma_connection_t connection, magma_buffer_t buffer, u
 
 magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t buffer,
                                   uint64_t addr, uint64_t offset, uint64_t length) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_initialize_tracing(magma_handle_t channel) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }

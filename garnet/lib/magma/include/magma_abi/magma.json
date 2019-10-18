@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 45,
+    "next-free-ordinal": 46,
     "exports": [
       {
         "ordinal": 1,
@@ -43,7 +43,7 @@
           },
           {
             "name": "handle_out",
-            "type": "uint32_t*",
+            "type": "magma_handle_t*",
             "description": "Handle to the returned buffer."
           }
         ]
@@ -182,12 +182,12 @@
         "arguments": [
           {
             "name": "buffer_handle",
-            "type": "uint32_t",
+            "type": "magma_handle_t",
             "description": "A valid handle."
           },
           {
             "name": "buffer_handle_out",
-            "type": "uint32_t*",
+            "type": "magma_handle_t*",
             "description": "The returned duplicate handle."
           }
         ]
@@ -200,7 +200,7 @@
         "arguments": [
           {
             "name": "buffer_handle",
-            "type": "uint32_t",
+            "type": "magma_handle_t",
             "description": "A valid handle."
           }
         ]
@@ -331,7 +331,7 @@
           },
           {
             "name": "handle",
-            "type": "uint32_t",
+            "type": "magma_handle_t",
             "description": "A platform specific handle to the address range."
           }
         ]
@@ -545,7 +545,7 @@
           },
           {
             "name": "buffer_handle_out",
-            "type": "uint32_t*",
+            "type": "magma_handle_t*",
             "description": "The returned handle."
           }
         ]
@@ -563,7 +563,7 @@
           },
           {
             "name": "buffer_handle",
-            "type": "uint32_t",
+            "type": "magma_handle_t",
             "description": "A valid handle."
           },
           {
@@ -755,7 +755,7 @@
           },
           {
             "name": "semaphore_handle_out",
-            "type": "uint32_t*",
+            "type": "magma_handle_t*",
             "description": "The returned handle."
           }
         ]
@@ -773,7 +773,7 @@
           },
           {
             "name": "semaphore_handle",
-            "type": "uint32_t",
+            "type": "magma_handle_t",
             "description": "A valid semaphore handle."
           },
           {
@@ -786,7 +786,7 @@
       {
         "ordinal": 42,
         "name": "magma_get_notification_channel_handle",
-        "type": "uint32_t",
+        "type": "magma_handle_t",
         "description": "Returns a uint32_t (zx_handle_t) that can be waited on to determine when the connection has data in the notification channel. This channel has the same lifetime as the connection and must not be closed by the client.",
         "arguments": [
           {
@@ -839,6 +839,19 @@
             "name": "buffer_size_out",
             "type": "uint64_t*",
             "description": "Returned size of the notification data written to the buffer, or 0 if there are no messages pending."
+          }
+        ]
+      },
+      {
+        "ordinal": 45,
+        "name": "magma_initialize_tracing",
+        "type": "magma_status_t",
+        "description": "Initializes tracing",
+        "arguments": [
+          {
+            "name": "channel",
+            "type": "magma_handle_t",
+            "description": "An open connection to a tracing provider."
           }
         ]
       }

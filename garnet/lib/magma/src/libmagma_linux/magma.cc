@@ -137,3 +137,7 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
     assert(false);
   }
 }
+
+magma_status_t magma_initialize_tracing(magma_handle_t channel) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

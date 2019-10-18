@@ -39,7 +39,7 @@ magma_status_t magma_query(
 magma_status_t magma_query_returns_buffer(
     int32_t file_descriptor,
     uint64_t id,
-    uint32_t* handle_out);
+    magma_handle_t* handle_out);
 
 ///
 /// \brief Opens a connection to a device.
@@ -112,15 +112,15 @@ void magma_release_buffer(
 /// \param buffer_handle_out The returned duplicate handle.
 ///
 magma_status_t magma_duplicate_handle(
-    uint32_t buffer_handle,
-    uint32_t* buffer_handle_out);
+    magma_handle_t buffer_handle,
+    magma_handle_t* buffer_handle_out);
 
 ///
 /// \brief Releases the given handle.
 /// \param buffer_handle A valid handle.
 ///
 magma_status_t magma_release_buffer_handle(
-    uint32_t buffer_handle);
+    magma_handle_t buffer_handle);
 
 ///
 /// \brief Returns a unique id for the given buffer.
@@ -188,7 +188,7 @@ magma_status_t magma_get_buffer_is_mappable(
 ///
 magma_status_t magma_set_buffer_mapping_address_range(
     magma_buffer_t buffer,
-    uint32_t handle);
+    magma_handle_t handle);
 
 ///
 /// \brief Maps the given buffer's memory into the calling process's address space.
@@ -294,7 +294,7 @@ void magma_commit_buffer(
 magma_status_t magma_export(
     magma_connection_t connection,
     magma_buffer_t buffer,
-    uint32_t* buffer_handle_out);
+    magma_handle_t* buffer_handle_out);
 
 ///
 /// \brief Imports and takes ownership of the buffer referred to by the given handle.
@@ -304,7 +304,7 @@ magma_status_t magma_export(
 ///
 magma_status_t magma_import(
     magma_connection_t connection,
-    uint32_t buffer_handle,
+    magma_handle_t buffer_handle,
     magma_buffer_t* buffer_out);
 
 ///
@@ -400,7 +400,7 @@ magma_status_t magma_wait_semaphores(
 magma_status_t magma_export_semaphore(
     magma_connection_t connection,
     magma_semaphore_t semaphore,
-    uint32_t* semaphore_handle_out);
+    magma_handle_t* semaphore_handle_out);
 
 ///
 /// \brief Imports and takes ownership of the semaphore referred to by the given handle.
@@ -410,7 +410,7 @@ magma_status_t magma_export_semaphore(
 ///
 magma_status_t magma_import_semaphore(
     magma_connection_t connection,
-    uint32_t semaphore_handle,
+    magma_handle_t semaphore_handle,
     magma_semaphore_t* semaphore_out);
 
 ///
@@ -419,7 +419,7 @@ magma_status_t magma_import_semaphore(
 ///        connection and must not be closed by the client.
 /// \param connection An open connection.
 ///
-uint32_t magma_get_notification_channel_handle(
+magma_handle_t magma_get_notification_channel_handle(
     magma_connection_t connection);
 
 ///
@@ -445,6 +445,13 @@ magma_status_t magma_read_notification_channel(
     void* buffer,
     uint64_t buffer_size,
     uint64_t* buffer_size_out);
+
+///
+/// \brief Initializes tracing
+/// \param channel An open connection to a tracing provider.
+///
+magma_status_t magma_initialize_tracing(
+    magma_handle_t channel);
 
 #if defined(__cplusplus)
 }

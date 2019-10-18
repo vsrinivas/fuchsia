@@ -111,6 +111,9 @@ typedef uintptr_t magma_sysmem_buffer_constraints_t;
 
 typedef uintptr_t magma_buffer_format_description_t;
 
+// Corresponds to a zx_handle_t on Fuchsia.
+typedef uint32_t magma_handle_t;
+
 // a buffer plus its associated relocations referenced by a command buffer
 struct magma_system_exec_resource {
   uint64_t buffer_id;

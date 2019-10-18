@@ -9,6 +9,9 @@
 #include <thread>
 
 #if defined(__Fuchsia__)
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
+
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma_sysmem.h"
 #endif
@@ -319,12 +322,21 @@ class TestConnection {
 #endif
   }
 
-  void Sysmem(bool use_format_modifier) {
+  void Sysmem(bool use_format_modifier, bool import_connection) {
 #if !defined(__Fuchsia__)
     GTEST_SKIP();
 #else
     magma_sysmem_connection_t connection;
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_connection_create(&connection));
+    if (import_connection) {
+      zx::channel local_endpoint, server_endpoint;
+      EXPECT_EQ(ZX_OK, zx::channel::create(0u, &local_endpoint, &server_endpoint));
+      EXPECT_EQ(ZX_OK,
+                fdio_service_connect("/svc/fuchsia.sysmem.Allocator", server_endpoint.release()));
+      EXPECT_EQ(MAGMA_STATUS_OK,
+                magma_sysmem_connection_import(local_endpoint.release(), &connection));
+    } else {
+      EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_connection_create(&connection));
+    }
 
     magma_buffer_collection_t collection;
     EXPECT_EQ(MAGMA_STATUS_OK,
@@ -405,6 +417,18 @@ class TestConnection {
     // Driver's shouldn't allow this value to be queried through this entrypoint.
     EXPECT_NE(MAGMA_STATUS_OK, magma_query_returns_buffer(fd_, MAGMA_QUERY_DEVICE_ID, &handle_out));
     EXPECT_EQ(0u, handle_out);
+  }
+
+  void TracingInit() {
+#if !defined(__Fuchsia__)
+    GTEST_SKIP();
+#else
+    zx::channel local_endpoint, server_endpoint;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0u, &local_endpoint, &server_endpoint));
+    EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.tracing.provider.Registry",
+                                          server_endpoint.release()));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_initialize_tracing(local_endpoint.release()));
+#endif
   }
 
  private:
@@ -509,17 +533,27 @@ TEST(MagmaAbi, ImageFormat) {
 
 TEST(MagmaAbi, Sysmem) {
   TestConnection test;
-  test.Sysmem(false);
+  test.Sysmem(false, false);
 }
 
 TEST(MagmaAbi, SysmemLinearFormatModifier) {
   TestConnection test;
-  test.Sysmem(true);
+  test.Sysmem(true, false);
+}
+
+TEST(MagmaAbi, SysmemImport) {
+  TestConnection test;
+  test.Sysmem(false, true);
 }
 
 TEST(MagmaAbi, QueryReturnsBuffer) {
   TestConnection test;
   test.QueryReturnsBuffer();
+}
+
+TEST(MagmaAbi, TracingInit) {
+  TestConnection test;
+  test.TracingInit();
 }
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c(TestConnection::device_name())); }

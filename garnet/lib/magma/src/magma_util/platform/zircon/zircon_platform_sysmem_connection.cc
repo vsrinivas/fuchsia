@@ -96,24 +96,20 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
                  bytes_per_pixel * width),
         settings_.image_format_constraints.bytes_per_row_divisor);
     planes_out[0].byte_offset = 0;
-    uint32_t coded_height =
-          std::max(static_cast<uint64_t>(settings_.image_format_constraints.min_coded_height),
-                   height);
+    uint32_t coded_height = std::max(
+        static_cast<uint64_t>(settings_.image_format_constraints.min_coded_height), height);
     if (settings_.image_format_constraints.pixel_format.type ==
         fuchsia::sysmem::PixelFormatType::NV12) {
       // Planes are assumed to be tightly-packed for now.
       planes_out[1].bytes_per_row = planes_out[0].bytes_per_row;
-      planes_out[1].byte_offset =
-          planes_out[0].bytes_per_row * coded_height;
+      planes_out[1].byte_offset = planes_out[0].bytes_per_row * coded_height;
     } else if (settings_.image_format_constraints.pixel_format.type ==
                fuchsia::sysmem::PixelFormatType::I420) {
       // Planes are assumed to be tightly-packed for now.
       planes_out[1].bytes_per_row = planes_out[2].bytes_per_row = planes_out[0].bytes_per_row / 2;
-      planes_out[1].byte_offset =
-          planes_out[0].bytes_per_row * coded_height;
+      planes_out[1].byte_offset = planes_out[0].bytes_per_row * coded_height;
       planes_out[2].byte_offset =
-          planes_out[1].byte_offset +
-          planes_out[1].bytes_per_row * coded_height / 2;
+          planes_out[1].byte_offset + planes_out[1].bytes_per_row * coded_height / 2;
     }
     return true;
   }
@@ -431,6 +427,13 @@ std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Create() {
   if (status != ZX_OK) {
     return DRETP(nullptr, "Failed to connect to sysmem service, status %d", status);
   }
+  return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
+}
+
+// static
+std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Import(uint32_t handle) {
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+  sysmem_allocator.Bind(zx::channel(handle));
   return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
 }
 
