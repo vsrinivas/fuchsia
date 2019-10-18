@@ -24,10 +24,11 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
   testing::FakeObjectRegistry object_registry_;
   fbl::RefPtr<testing::FakeAudioOutput> device_{
       testing::FakeAudioOutput::Create(&threading_model(), &object_registry_)};
-  AudioDriver driver_{device_.get()};
+  AudioDriver driver_{device_.get(), [this](auto delay) { last_late_command_ = delay; }};
   // While |driver_| is the object under test, this object simulates the channel messages that
   // normally come from the actual driver instance.
   std::unique_ptr<testing::FakeAudioDriver> remote_driver_;
+  zx::duration last_late_command_ = zx::duration::infinite();
 };
 
 TEST_F(AudioDriverTest, GetDriverInfo) {
@@ -49,10 +50,18 @@ TEST_F(AudioDriverTest, GetDriverInfoTimeout) {
   EXPECT_FALSE(device_->driver_info_fetched());
   EXPECT_EQ(driver_.state(), AudioDriver::State::MissingDriverInfo);
 
-  // Now time out.
-  RunLoopFor(zx::nsec(1));
+  // Now time out (run 10ms past the deadline).
+  RunLoopFor(zx::msec(10) + zx::nsec(1));
   EXPECT_FALSE(device_->driver_info_fetched());
-  EXPECT_EQ(driver_.state(), AudioDriver::State::Shutdown);
+  EXPECT_EQ(driver_.state(), AudioDriver::State::MissingDriverInfo);
+  EXPECT_EQ(last_late_command_, zx::duration::infinite());
+
+  // Now run the driver to process the response.
+  remote_driver_->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(last_late_command_, zx::msec(10));
+  EXPECT_TRUE(device_->driver_info_fetched());
+  EXPECT_EQ(driver_.state(), AudioDriver::State::Unconfigured);
 }
 
 }  // namespace

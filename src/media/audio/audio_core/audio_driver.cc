@@ -19,6 +19,7 @@
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
+namespace {
 
 static constexpr zx_txid_t TXID = 1;
 
@@ -33,7 +34,19 @@ static constexpr uint16_t kPositionNotificationSpewInterval = 1;
 static constexpr uint16_t kPositionNotificationTraceInterval = 60;
 static constexpr uint16_t kPositionNotificationInfoInterval = 3600;
 
-AudioDriver::AudioDriver(AudioDevice* owner) : owner_(owner) { FXL_DCHECK(owner_ != nullptr); }
+// TODO(39092): Log a cobalt metric for this.
+void LogMissedCommandDeadline(zx::duration delay) {
+  FXL_LOG(WARNING) << "Driver command missed deadline by " << delay.to_nsecs() << "ns";
+}
+
+}  // namespace
+
+AudioDriver::AudioDriver(AudioDevice* owner) : AudioDriver(owner, LogMissedCommandDeadline) {}
+
+AudioDriver::AudioDriver(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
+    : owner_(owner), timeout_handler_(std::move(timeout_handler)) {
+  FXL_DCHECK(owner_ != nullptr);
+}
 
 zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   TRACE_DURATION("audio", "AudioDriver::Init");
@@ -981,6 +994,15 @@ void AudioDriver::ShutdownSelf(const char* reason, zx_status_t status) {
 
 void AudioDriver::SetupCommandTimeout() {
   TRACE_DURATION("audio", "AudioDriver::SetupCommandTimeout");
+
+  // If we have received a late response, report it now.
+  if (driver_last_timeout_ != zx::time::infinite()) {
+    auto delay = async::Now(owner_->mix_domain().dispatcher()) - driver_last_timeout_;
+    driver_last_timeout_ = zx::time::infinite();
+    FXL_DCHECK(timeout_handler_);
+    timeout_handler_(delay);
+  }
+
   zx::time deadline;
 
   deadline = fetch_driver_info_deadline_;
@@ -1100,6 +1122,11 @@ void AudioDriver::RingBufferChannelSignalled(async_dispatcher_t* dispatcher, asy
   if (peer_closed_asserted) {
     ShutdownSelf("Ring buffer channel closed", ZX_ERR_PEER_CLOSED);
   }
+}
+
+void AudioDriver::DriverCommandTimedOut() {
+  FXL_LOG(WARNING) << "Unexpected driver timeout";
+  driver_last_timeout_ = async::Now(owner_->mix_domain().dispatcher());
 }
 
 }  // namespace media::audio

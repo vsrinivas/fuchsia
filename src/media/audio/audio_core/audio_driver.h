@@ -69,6 +69,10 @@ class AudioDriver {
   };
 
   AudioDriver(AudioDevice* owner);
+
+  using DriverTimeoutHandler = fit::function<void(zx::duration)>;
+  AudioDriver(AudioDevice* owner, DriverTimeoutHandler timeout_handler);
+
   virtual ~AudioDriver() = default;
 
   zx_status_t Init(zx::channel stream_channel);
@@ -222,11 +226,10 @@ class AudioDriver {
                                   zx_status_t status, const zx_packet_signal_t* signal)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
-  void DriverCommandTimedOut() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token()) {
-    ShutdownSelf("Unexpected command timeout", ZX_ERR_TIMED_OUT);
-  }
+  void DriverCommandTimedOut() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   AudioDevice* const owner_;
+  DriverTimeoutHandler timeout_handler_;
 
   State state_ = State::Uninitialized;
   zx::channel stream_channel_;
@@ -278,6 +281,8 @@ class AudioDriver {
   mutable std::mutex plugged_lock_;
   bool plugged_ FXL_GUARDED_BY(plugged_lock_) = false;
   zx::time plug_time_ FXL_GUARDED_BY(plugged_lock_);
+
+  zx::time driver_last_timeout_ = zx::time::infinite();
 };
 
 }  // namespace media::audio
