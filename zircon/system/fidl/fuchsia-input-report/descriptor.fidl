@@ -28,4 +28,7 @@ table DeviceDescriptor {
 
     /// When |mouse| is present the device has a mouse.
     2: MouseDescriptor mouse;
+
+    /// When |sensor| is present the device has a sensor.
+    3: SensorDescriptor sensor;
 };

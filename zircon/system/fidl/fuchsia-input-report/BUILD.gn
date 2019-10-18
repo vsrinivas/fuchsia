@@ -10,6 +10,7 @@ fidl_library("fuchsia-input-report") {
     "device.fidl",
     "mouse.fidl",
     "report.fidl",
+    "sensor.fidl",
     "units.fidl",
   ]
 }

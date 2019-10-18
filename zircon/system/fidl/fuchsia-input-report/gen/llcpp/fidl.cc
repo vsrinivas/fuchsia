@@ -9,6 +9,32 @@ namespace fuchsia {
 namespace input {
 namespace report {
 
+::llcpp::fuchsia::input::report::SensorReport::Builder SensorReport::Build() {
+  return SensorReport::Builder();
+}
+
+auto ::llcpp::fuchsia::input::report::SensorReport::Builder::set_values(::fidl::VectorView<int64_t>* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::input::report::SensorDescriptor::Builder SensorDescriptor::Build() {
+  return SensorDescriptor::Builder();
+}
+
+auto ::llcpp::fuchsia::input::report::SensorDescriptor::Builder::set_values(::fidl::VectorView<::llcpp::fuchsia::input::report::SensorAxis>* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
 ::llcpp::fuchsia::input::report::MouseDescriptor::Builder MouseDescriptor::Build() {
   return MouseDescriptor::Builder();
 }
@@ -138,6 +164,15 @@ auto ::llcpp::fuchsia::input::report::InputReport::Builder::set_trace_id(uint64_
   return std::move(*this);
 }
 
+auto ::llcpp::fuchsia::input::report::InputReport::Builder::set_sensor(::llcpp::fuchsia::input::report::SensorReport* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
 ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder DeviceDescriptor::Build() {
   return DeviceDescriptor::Builder();
 }
@@ -156,6 +191,15 @@ auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_mouse(::llc
   envelopes_[2 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 2) {
     max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder::set_sensor(::llcpp::fuchsia::input::report::SensorDescriptor* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
   }
   return std::move(*this);
 }

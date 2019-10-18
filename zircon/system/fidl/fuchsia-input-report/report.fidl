@@ -10,7 +10,10 @@ using zx;
 table InputReport {
     /// |event_time| is in nanoseconds when the event was recorded.
     1: zx.time event_time;
+    /// |mouse| is the report generated if the device contains a mouse.
     2: MouseReport mouse;
+    /// |sensor| is the report generated if the device contains a sensor.
+    4: SensorReport sensor;
 
     /// Unique ID to connect trace async begin/end events.
     3: uint64 trace_id;

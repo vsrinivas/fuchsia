@@ -41,6 +41,9 @@ enum Unit : uint32 {
 
     /// A measurement of pressure is 10^-3 Pascal
     PRESSURE = 10;
+
+    // A measurement of lux is 10^-6 Candela/(m^2)
+    LUX = 11;
 };
 
 /// Describe a |Range| of values.

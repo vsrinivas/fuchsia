@@ -1,0 +1,61 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.report;
+
+/// A hardcoded number of max sensor values. This should be increased in the future
+/// if we ever see a sensor with more values.
+const uint32 SENSOR_MAX_VALUES = 100;
+
+/// Each sensor value has a corresponding SensorType, which explains what the
+/// value is measuring in the world.
+enum SensorType : uint32 {
+    /// Acceleration on the X axis.
+    ACCELEROMETER_X = 1;
+    /// Acceleration on the Y axis.
+    ACCELEROMETER_Y = 2;
+    /// Acceleration on the Z axis.
+    ACCELEROMETER_Z = 3;
+    /// Strength of the Magnetic Field in the X axis.
+    MAGNETOMETER_X = 4;
+    /// Strength of the Magnetic Field in the Y axis.
+    MAGNETOMETER_Y = 5;
+    /// Strength of the Magnetic Field in the Z axis.
+    MAGNETOMETER_Z = 6;
+    /// Angular Velocity in the X direction moving counter-clockwise.
+    GYROSCOPE_X = 7;
+    /// Angular Velocity in the Y direction moving counter-clockwise.
+    GYROSCOPE_Y = 8;
+    /// Angular Velocity in the Z direction moving counter-clockwise.
+    GYROSCOPE_Z = 9;
+    /// Ambient level of Light.
+    LIGHT_ILLUMINANCE = 10;
+    /// Ambient level of Red Light.
+    LIGHT_RED = 11;
+    /// Ambient level of Green Light.
+    LIGHT_GREEN = 12;
+    /// Ambient level of Blue Light.
+    LIGHT_BLUE = 13;
+};
+
+/// A |SensorAxis| is a normal |Axis| with an additional |SensorType| to describe what the
+/// axis is measuring.
+struct SensorAxis {
+    Axis axis;
+    SensorType type;
+};
+
+/// |SensorDescriptor| describes the capabilities of a sensor.
+table SensorDescriptor {
+    /// Each |SensorAxis| in |values| describes what a sensor is measuring and its range.
+    /// These will directly correspond to the values in |SensorReport|.
+    1: vector<SensorAxis>:SENSOR_MAX_VALUES values;
+};
+
+/// |SensorReport| gives the values measured by a sensor at a given point in time.
+table SensorReport {
+    /// The ordering of |values| will always directly correspond to the ordering of
+    /// the values in |SensorDescriptor|.
+    1: vector<int64>:SENSOR_MAX_VALUES values;
+};

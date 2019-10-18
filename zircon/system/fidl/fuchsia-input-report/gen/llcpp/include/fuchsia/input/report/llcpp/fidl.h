@@ -34,17 +34,158 @@ enum class Unit : uint32_t {
   MAGNETIC_FLUX = 8u,
   LUMINOUS_FLUX = 9u,
   PRESSURE = 10u,
+  LUX = 11u,
 };
 
 
+enum class SensorType : uint32_t {
+  ACCELEROMETER_X = 1u,
+  ACCELEROMETER_Y = 2u,
+  ACCELEROMETER_Z = 3u,
+  MAGNETOMETER_X = 4u,
+  MAGNETOMETER_Y = 5u,
+  MAGNETOMETER_Z = 6u,
+  GYROSCOPE_X = 7u,
+  GYROSCOPE_Y = 8u,
+  GYROSCOPE_Z = 9u,
+  LIGHT_ILLUMINANCE = 10u,
+  LIGHT_RED = 11u,
+  LIGHT_GREEN = 12u,
+  LIGHT_BLUE = 13u,
+};
+
+
+struct SensorReport;
 struct Range;
 struct Axis;
+struct SensorAxis;
+struct SensorDescriptor;
 struct MouseDescriptor;
 struct MouseReport;
 struct InputReport;
 struct DeviceInfo;
 struct DeviceDescriptor;
 class InputDevice;
+
+extern "C" const fidl_type_t fuchsia_input_report_SensorReportTable;
+
+// |SensorReport| gives the values measured by a sensor at a given point in time.
+struct SensorReport final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  // The ordering of |values| will always directly correspond to the ordering of
+  // the values in |SensorDescriptor|.
+  const ::fidl::VectorView<int64_t>& values() const {
+    ZX_ASSERT(has_values());
+    return *reinterpret_cast<const ::fidl::VectorView<int64_t>*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::fidl::VectorView<int64_t>& values() {
+    ZX_ASSERT(has_values());
+    return *reinterpret_cast<::fidl::VectorView<int64_t>*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_values() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  SensorReport() = default;
+  ~SensorReport() = default;
+  SensorReport(SensorReport&& other) noexcept = default;
+  SensorReport& operator=(SensorReport&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_SensorReportTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 832;
+
+ private:
+  SensorReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class SensorReport::Builder {
+ public:
+  SensorReport view() { return SensorReport(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  // The ordering of |values| will always directly correspond to the ordering of
+  // the values in |SensorDescriptor|.
+  Builder&& set_values(::fidl::VectorView<int64_t>* elem);
+
+ private:
+  Builder() = default;
+  friend Builder SensorReport::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_input_report_SensorDescriptorTable;
+
+// |SensorDescriptor| describes the capabilities of a sensor.
+struct SensorDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  // Each |SensorAxis| in |values| describes what a sensor is measuring and its range.
+  // These will directly correspond to the values in |SensorReport|.
+  const ::fidl::VectorView<::llcpp::fuchsia::input::report::SensorAxis>& values() const {
+    ZX_ASSERT(has_values());
+    return *reinterpret_cast<const ::fidl::VectorView<::llcpp::fuchsia::input::report::SensorAxis>*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::fidl::VectorView<::llcpp::fuchsia::input::report::SensorAxis>& values() {
+    ZX_ASSERT(has_values());
+    return *reinterpret_cast<::fidl::VectorView<::llcpp::fuchsia::input::report::SensorAxis>*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_values() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  SensorDescriptor() = default;
+  ~SensorDescriptor() = default;
+  SensorDescriptor(SensorDescriptor&& other) noexcept = default;
+  SensorDescriptor& operator=(SensorDescriptor&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_SensorDescriptorTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 3232;
+
+ private:
+  SensorDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class SensorDescriptor::Builder {
+ public:
+  SensorDescriptor view() { return SensorDescriptor(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  // Each |SensorAxis| in |values| describes what a sensor is measuring and its range.
+  // These will directly correspond to the values in |SensorReport|.
+  Builder&& set_values(::fidl::VectorView<::llcpp::fuchsia::input::report::SensorAxis>* elem);
+
+ private:
+  Builder() = default;
+  friend Builder SensorDescriptor::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
+};
 
 extern "C" const fidl_type_t fuchsia_input_report_MouseDescriptorTable;
 
@@ -315,6 +456,7 @@ struct InputReport final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
   }
 
+  // |mouse| is the report generated if the device contains a mouse.
   const ::llcpp::fuchsia::input::report::MouseReport& mouse() const {
     ZX_ASSERT(has_mouse());
     return *reinterpret_cast<const ::llcpp::fuchsia::input::report::MouseReport*>(EnvelopesView::at(2 - 1).data);
@@ -340,6 +482,19 @@ struct InputReport final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
   }
 
+  // |sensor| is the report generated if the device contains a sensor.
+  const ::llcpp::fuchsia::input::report::SensorReport& sensor() const {
+    ZX_ASSERT(has_sensor());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::SensorReport*>(EnvelopesView::at(4 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::SensorReport& sensor() {
+    ZX_ASSERT(has_sensor());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::SensorReport*>(EnvelopesView::at(4 - 1).data);
+  }
+  bool has_sensor() const {
+    return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
+  }
+
   InputReport() = default;
   ~InputReport() = default;
   InputReport(InputReport&& other) noexcept = default;
@@ -352,7 +507,7 @@ struct InputReport final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 240;
+  static constexpr uint32_t MaxOutOfLine = 1104;
 
  private:
   InputReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -368,17 +523,21 @@ class InputReport::Builder {
   // |event_time| is in nanoseconds when the event was recorded.
   Builder&& set_event_time(int64_t* elem);
 
+  // |mouse| is the report generated if the device contains a mouse.
   Builder&& set_mouse(::llcpp::fuchsia::input::report::MouseReport* elem);
 
   // Unique ID to connect trace async begin/end events.
   Builder&& set_trace_id(uint64_t* elem);
+
+  // |sensor| is the report generated if the device contains a sensor.
+  Builder&& set_sensor(::llcpp::fuchsia::input::report::SensorReport* elem);
 
  private:
   Builder() = default;
   friend Builder InputReport::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
+  ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_DeviceDescriptorTable;
@@ -418,6 +577,19 @@ struct DeviceDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
   }
 
+  // When |sensor| is present the device has a sensor.
+  const ::llcpp::fuchsia::input::report::SensorDescriptor& sensor() const {
+    ZX_ASSERT(has_sensor());
+    return *reinterpret_cast<const ::llcpp::fuchsia::input::report::SensorDescriptor*>(EnvelopesView::at(3 - 1).data);
+  }
+  ::llcpp::fuchsia::input::report::SensorDescriptor& sensor() {
+    ZX_ASSERT(has_sensor());
+    return *reinterpret_cast<::llcpp::fuchsia::input::report::SensorDescriptor*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_sensor() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
   DeviceDescriptor() = default;
   ~DeviceDescriptor() = default;
   DeviceDescriptor(DeviceDescriptor&& other) noexcept = default;
@@ -430,7 +602,7 @@ struct DeviceDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 560;
+  static constexpr uint32_t MaxOutOfLine = 3824;
 
  private:
   DeviceDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -449,13 +621,20 @@ class DeviceDescriptor::Builder {
   // When |mouse| is present the device has a mouse.
   Builder&& set_mouse(::llcpp::fuchsia::input::report::MouseDescriptor* elem);
 
+  // When |sensor| is present the device has a sensor.
+  Builder&& set_sensor(::llcpp::fuchsia::input::report::SensorDescriptor* elem);
+
  private:
   Builder() = default;
   friend Builder DeviceDescriptor::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 2> envelopes_ = {};
+  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
 };
+
+// A hardcoded number of max sensor values. This should be increased in the future
+// if we ever see a sensor with more values.
+constexpr uint32_t SENSOR_MAX_VALUES = 100u;
 
 
 
@@ -485,6 +664,22 @@ struct Axis {
   ::llcpp::fuchsia::input::report::Range range = {};
 
   ::llcpp::fuchsia::input::report::Unit unit = {};
+};
+
+extern "C" const fidl_type_t fuchsia_input_report_SensorAxisTable;
+
+// A |SensorAxis| is a normal |Axis| with an additional |SensorType| to describe what the
+// axis is measuring.
+struct SensorAxis {
+  static constexpr const fidl_type_t* Type = &fuchsia_input_report_SensorAxisTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::llcpp::fuchsia::input::report::Axis axis = {};
+
+  ::llcpp::fuchsia::input::report::SensorType type = {};
 };
 
 // A hardcoded number of max mouse buttons. This should be increased in the future
@@ -556,7 +751,7 @@ class InputDevice final {
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetReportsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 32768;
+    static constexpr uint32_t MaxOutOfLine = 143360;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -571,7 +766,7 @@ class InputDevice final {
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 560;
+    static constexpr uint32_t MaxOutOfLine = 3824;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -897,6 +1092,10 @@ class InputDevice final {
 namespace fidl {
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::input::report::SensorReport> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::SensorReport>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::input::report::Range> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::Range>);
 static_assert(offsetof(::llcpp::fuchsia::input::report::Range, min) == 0);
@@ -909,6 +1108,17 @@ static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::Axis>);
 static_assert(offsetof(::llcpp::fuchsia::input::report::Axis, range) == 0);
 static_assert(offsetof(::llcpp::fuchsia::input::report::Axis, unit) == 16);
 static_assert(sizeof(::llcpp::fuchsia::input::report::Axis) == ::llcpp::fuchsia::input::report::Axis::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::input::report::SensorAxis> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::SensorAxis>);
+static_assert(offsetof(::llcpp::fuchsia::input::report::SensorAxis, axis) == 0);
+static_assert(offsetof(::llcpp::fuchsia::input::report::SensorAxis, type) == 24);
+static_assert(sizeof(::llcpp::fuchsia::input::report::SensorAxis) == ::llcpp::fuchsia::input::report::SensorAxis::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::input::report::SensorDescriptor> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::input::report::SensorDescriptor>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::input::report::MouseDescriptor> : public std::true_type {};
