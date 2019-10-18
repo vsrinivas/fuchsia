@@ -437,7 +437,7 @@ TEST_F(MerkleTreeTestCase, CreateAndVerifyHugePRNGData) {
       case 3: {
         // Flip a bit in tree (if large enough to have a tree)
         if (tree_len_ != 0) {
-          tree_[rand() % (data_len_ / digest::kSha256Length)] ^= flip;
+          tree_[rand() % ((data_len_ / kNodeSize) * digest::kSha256Length)] ^= flip;
           EXPECT_STATUS(
               MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
               ZX_ERR_IO_DATA_INTEGRITY);
