@@ -184,8 +184,8 @@ MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
       end_handle_pos_(handles + num_handles),
       handle_pos_(handles),
       output_errors_(output_errors),
-      unions_are_xunions_(fidl::should_decode_union_from_xunion(
-          *reinterpret_cast<const fidl_message_header_t*>(bytes))) {}
+      unions_are_xunions_(fidl_should_decode_union_from_xunion(
+          reinterpret_cast<const fidl_message_header_t*>(bytes))) {}
 
 MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t offset, uint64_t num_bytes,
                                uint64_t num_handles)

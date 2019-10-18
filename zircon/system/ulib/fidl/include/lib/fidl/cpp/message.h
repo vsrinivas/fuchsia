@@ -7,16 +7,10 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
 
-#define TXN_HEADER_UNION_FROM_XUNION_FLAG (1 << 0)
-
 namespace fidl {
-
-// TODO: put in txn_header.c when it will be created.
-inline bool should_decode_union_from_xunion(const fidl_message_header_t& hdr) {
-  return (hdr.flags[0] & TXN_HEADER_UNION_FROM_XUNION_FLAG) != 0;
-}
 
 // A FIDL message.
 //
@@ -70,14 +64,14 @@ class Message {
   uint64_t ordinal() const { return header().ordinal; }
 
   bool should_decode_union_from_xunion() const {
-    return fidl::should_decode_union_from_xunion(header());
+    return fidl_should_decode_union_from_xunion(GetBytesAs<fidl_message_header_t>());
   }
 
   // Whether this message is in a supported version of the wire format.
   //
   // Valid only if has_header().
   bool is_supported_version() const {
-    return header().magic_number == kFidlWireFormatMagicNumberInitial;
+    return fidl_validate_txn_header(GetBytesAs<fidl_message_header_t>()) == ZX_OK;
   }
 
   // The message payload that follows the header.

@@ -14,6 +14,11 @@ void fidl_init_txn_header(fidl_message_header_t* out_hdr, zx_txid_t txid, uint64
   out_hdr->ordinal = ordinal;
 }
 
-zx_status_t fidl_validate_txn_header(fidl_message_header_t* hdr) {
-  return hdr->magic_number == kFidlWireFormatMagicNumberInitial ? ZX_OK : ZX_ERR_INVALID_ARGS;
+zx_status_t fidl_validate_txn_header(const fidl_message_header_t* hdr) {
+  return hdr->magic_number == kFidlWireFormatMagicNumberInitial ? ZX_OK
+                                                                : ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+}
+
+bool fidl_should_decode_union_from_xunion(const fidl_message_header_t* hdr) {
+  return (hdr->flags[0] & FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG) != 0;
 }

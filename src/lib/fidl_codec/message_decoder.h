@@ -15,6 +15,7 @@
 #include <src/lib/fxl/logging.h>
 
 #include "lib/fidl/cpp/message.h"
+#include "lib/fidl/txn_header.h"
 #include "src/lib/fidl_codec/colors.h"
 #include "src/lib/fidl_codec/display_options.h"
 #include "src/lib/fidl_codec/library_loader.h"

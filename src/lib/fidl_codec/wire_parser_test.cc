@@ -1342,7 +1342,7 @@ TEST_F(WireParserTest, UnionsAreXUnions) {
   }
 
   {
-    message.header().flags[0] = TXN_HEADER_UNION_FROM_XUNION_FLAG;
+    message.header().flags[0] = FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 
     // Decode the message using the modified description (the xunion is now a union).
     MessageDecoder decoder(message.bytes().data(), message.bytes().size(), nullptr, 0,

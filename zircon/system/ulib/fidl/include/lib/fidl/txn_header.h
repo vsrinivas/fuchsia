@@ -7,13 +7,17 @@
 
 #include <zircon/fidl.h>
 
+#define FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG (1 << 0)
+
 __BEGIN_CDECLS
 
 // TODO(38643): make this inline
 // Initialize a txn header as per the Transaction Header v3 proposal (FTP-037)
 void fidl_init_txn_header(fidl_message_header_t* out_hdr, zx_txid_t txid, uint64_t ordinal);
 
-zx_status_t fidl_validate_txn_header(fidl_message_header_t* hdr);
+zx_status_t fidl_validate_txn_header(const fidl_message_header_t* hdr);
+
+bool fidl_should_decode_union_from_xunion(const fidl_message_header_t* hdr);
 
 __END_CDECLS
 
