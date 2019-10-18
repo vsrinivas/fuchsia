@@ -67,3 +67,7 @@ fuchsia_internal/firmware/optee/astro/d83c3c4a-9e8d-4e4e-ad30-9d40e137f689/prod 
 # Secmem TA Firmware for Sherlock
 @Subdir firmware/optee/sherlock
 fuchsia_internal/firmware/optee/astro/2c1a33c0-44cc-11e5-bc3b-0002a5d5c51b/dev 5K67MHM0tjNeZ6WCoQy5hiE7q_eawc8S1A6GTNmCB0IC
+
+# Weave Auth TA Firmware for Sherlock
+@Subdir firmware/optee/sherlock
+fuchsia_internal/firmware/optee/sherlock/aa6aa795-9ab7-41a9-9138-320e37bffb11/dev _13Cu0fv8kfMyR-Vzv45qLJ0A0wwrmKMhlJLssMBOmoC
