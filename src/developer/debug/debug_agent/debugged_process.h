@@ -27,6 +27,7 @@ namespace debug_agent {
 
 class Breakpoint;
 class DebugAgent;
+class HardwareBreakpoint;
 class ObjectProvider;
 class ProcessBreakpoint;
 class ProcessWatchpoint;
@@ -178,6 +179,10 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
     return software_breakpoints_;
   }
 
+  const std::map<uint64_t, std::unique_ptr<HardwareBreakpoint>>& hardware_breakpoints() const {
+    return hardware_breakpoints_;
+  }
+
  protected:
   std::shared_ptr<arch::ArchProvider> arch_provider_;
   std::shared_ptr<ObjectProvider> object_provider_;
@@ -217,6 +222,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
 
   zx_status_t RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
+  zx_status_t RegisterHardwareBreakpoint(Breakpoint* bp, uint64_t address);
+  void UnregisterHardwareBreakpoint(Breakpoint* bp, uint64_t address);
 
   DebugAgent* debug_agent_ = nullptr;  // Non-owning.
 
@@ -235,6 +242,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
 
   // Maps addresses to the ProcessBreakpoint at a location.
   std::map<uint64_t, std::unique_ptr<SoftwareBreakpoint>> software_breakpoints_;
+  std::map<uint64_t, std::unique_ptr<HardwareBreakpoint>> hardware_breakpoints_;
 
   // Each watchpoint holds the information about what range of addresses
   // it spans. They're keyed by the first address of their range.

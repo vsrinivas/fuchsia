@@ -92,6 +92,7 @@ const std::string kProcessName = "process-name";
 constexpr uint64_t kAddress1 = 0x1234;
 constexpr uint64_t kAddress2 = 0x5678;
 constexpr uint64_t kAddress3 = 0x9abc;
+constexpr uint64_t kAddress4 = 0xdef0;
 
 TEST(DebuggedProcess, RegisterBreakpoints) {
   MockProcessDelegate process_delegate;
@@ -128,6 +129,31 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   EXPECT_EQ(it++->first, kAddress2);
   EXPECT_EQ(it++->first, kAddress3);
   EXPECT_EQ(it, process.software_breakpoints().end());
+
+  // Register a hardware breakpoint.
+  Breakpoint hw_breakpoint(&process_delegate);
+  debug_ipc::BreakpointSettings hw_settings;
+  settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress4));
+  hw_breakpoint.SetSettings(debug_ipc::BreakpointType::kHardware, hw_settings);
+
+  ZX_ASSERT_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress3), ZX_OK);
+  ZX_ASSERT_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress4), ZX_OK);
+
+  // Should've inserted 2 HW breakpoint.
+  ASSERT_EQ(process.software_breakpoints().size(), 2u);
+  ASSERT_EQ(process.hardware_breakpoints().size(), 2u);
+  auto hw_it = process.hardware_breakpoints().begin();
+  EXPECT_EQ(hw_it++->first, kAddress3);
+  EXPECT_EQ(hw_it++->first, kAddress4);
+  EXPECT_EQ(hw_it, process.hardware_breakpoints().end());
+
+  // Remove a hardware breakpoint.
+  process.UnregisterBreakpoint(&hw_breakpoint, kAddress3);
+  ASSERT_EQ(process.software_breakpoints().size(), 2u);
+  ASSERT_EQ(process.hardware_breakpoints().size(), 1u);
+  hw_it = process.hardware_breakpoints().begin();
+  EXPECT_EQ(hw_it++->first, kAddress4);
+  EXPECT_EQ(hw_it, process.hardware_breakpoints().end());
 }
 
 }  // namespace

@@ -430,6 +430,7 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address
     case debug_ipc::BreakpointType::kSoftware:
       return RegisterSoftwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kHardware:
+      return RegisterHardwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kWatchpoint:
       // TODO(donosoc): Reactivate once the transition is complete.
       return ZX_ERR_NOT_SUPPORTED;
@@ -449,6 +450,7 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
     case debug_ipc::BreakpointType::kSoftware:
       return UnregisterSoftwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kHardware:
+      return UnregisterHardwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kWatchpoint:
       // TODO(donosoc): Reactivate once the transition is complete.
       return;
@@ -767,6 +769,34 @@ void DebuggedProcess::UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t addr
     for (auto& pair : threads_)
       pair.second->WillDeleteProcessBreakpoint(found->second.get());
     software_breakpoints_.erase(found);
+  }
+}
+
+zx_status_t DebuggedProcess::RegisterHardwareBreakpoint(Breakpoint* bp, uint64_t address) {
+  auto found = hardware_breakpoints_.find(address);
+  if (found == hardware_breakpoints_.end()) {
+    auto breakpoint = std::make_unique<HardwareBreakpoint>(bp, this, address, arch_provider_);
+    if (zx_status_t status = breakpoint->Init(); status != ZX_OK)
+      return status;
+
+    hardware_breakpoints_[address] = std::move(breakpoint);
+    return ZX_OK;
+  } else {
+    return found->second->RegisterBreakpoint(bp);
+  }
+}
+
+void DebuggedProcess::UnregisterHardwareBreakpoint(Breakpoint* bp, uint64_t address) {
+  auto found = hardware_breakpoints_.find(address);
+  if (found == hardware_breakpoints_.end()) {
+    return;
+  }
+
+  bool still_used = found->second->UnregisterBreakpoint(bp);
+  if (!still_used) {
+    for (auto& pair : threads_)
+      pair.second->WillDeleteProcessBreakpoint(found->second.get());
+    hardware_breakpoints_.erase(found);
   }
 }
 
