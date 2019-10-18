@@ -2833,145 +2833,196 @@ TEST_F(PageStorageTest, SyncMetadata) {
   }
 }
 
-TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
+class PageStorageTestAddMultipleCommits : public PageStorageTest {
+ public:
+  void SetUp() override {
+    PageStorageTest::SetUp();
+    RunInCoroutine([this](CoroutineHandler* handler) {
+      storage_->SetSyncDelegate(&sync_);
+
+      // Build the commit Tree with:
+      //   0   1
+      //    \ / \
+      //     2   3
+      //         |
+      //         4
+      // 0 and 1 are present locally as commits, but their tree is not.
+      // 2, 3 and 4 are added as a single batch.
+      // A merge of 0 and 1 (commit 5) is used to make the objects of 0 and 1 garbage collectable.
+      // Each commit contains one tree node, one eager value and one lazy value.
+      tree_object_identifiers_.resize(6);
+      eager_object_identifiers_.resize(6);
+      lazy_object_identifiers_.resize(6);
+      for (size_t i = 0; i < tree_object_identifiers_.size(); ++i) {
+        ObjectData eager_value =
+            MakeObject("eager value" + std::to_string(i), InlineBehavior::PREVENT);
+        ObjectData lazy_value =
+            MakeObject("lazy value" + std::to_string(i), InlineBehavior::PREVENT);
+        std::vector<Entry> entries = {
+            Entry{"key" + std::to_string(i), eager_value.object_identifier, KeyPriority::EAGER,
+                  EntryId("id" + std::to_string(i))},
+            Entry{"lazy" + std::to_string(i), lazy_value.object_identifier, KeyPriority::LAZY,
+                  EntryId("id" + std::to_string(i))}};
+        std::unique_ptr<const btree::TreeNode> node;
+        ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
+        tree_object_identifiers_[i] = node->GetIdentifier();
+        eager_object_identifiers_[i] = eager_value.object_identifier;
+        lazy_object_identifiers_[i] = lazy_value.object_identifier;
+        sync_.AddObject(eager_value.object_identifier, eager_value.value);
+        sync_.AddObject(lazy_value.object_identifier, lazy_value.value);
+        std::unique_ptr<const Object> root_object =
+            TryGetObject(tree_object_identifiers_[i], PageStorage::Location::Local());
+        fxl::StringView root_data;
+        ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
+        sync_.AddObject(tree_object_identifiers_[i], root_data.ToString());
+      }
+
+      // Create the commits, the initial upload batch, and the second batch.
+      std::vector<std::unique_ptr<const Commit>> parent;
+      parent.emplace_back(GetFirstHead());
+      std::unique_ptr<const Commit> commit0 = storage_->GetCommitFactory()->FromContentAndParents(
+          environment_.clock(), tree_object_identifiers_[0], std::move(parent));
+      parent.clear();
+
+      parent.emplace_back(GetFirstHead());
+      std::unique_ptr<const Commit> commit1 = storage_->GetCommitFactory()->FromContentAndParents(
+          environment_.clock(), tree_object_identifiers_[1], std::move(parent));
+      parent.clear();
+
+      // Ensure that commit0 has a larger id than commit1.
+      if (commit0->GetId() < commit1->GetId()) {
+        std::swap(commit0, commit1);
+        std::swap(tree_object_identifiers_[0], tree_object_identifiers_[1]);
+        std::swap(eager_object_identifiers_[0], eager_object_identifiers_[1]);
+        std::swap(lazy_object_identifiers_[0], lazy_object_identifiers_[1]);
+      }
+
+      parent.emplace_back(commit0->Clone());
+      parent.emplace_back(commit1->Clone());
+      std::unique_ptr<const Commit> commit2 = storage_->GetCommitFactory()->FromContentAndParents(
+          environment_.clock(), tree_object_identifiers_[2], std::move(parent));
+      parent.clear();
+      EXPECT_EQ(commit2->GetParentIds()[0], commit1->GetId());
+
+      parent.emplace_back(commit1->Clone());
+      std::unique_ptr<const Commit> commit3 = storage_->GetCommitFactory()->FromContentAndParents(
+          environment_.clock(), tree_object_identifiers_[3], std::move(parent));
+      parent.clear();
+
+      parent.emplace_back(commit3->Clone());
+      std::unique_ptr<const Commit> commit4 = storage_->GetCommitFactory()->FromContentAndParents(
+          environment_.clock(), tree_object_identifiers_[4], std::move(parent));
+      parent.clear();
+
+      parent.emplace_back(commit0->Clone());
+      parent.emplace_back(commit1->Clone());
+      std::unique_ptr<const Commit> commit5 = storage_->GetCommitFactory()->FromContentAndParents(
+          environment_.clock(), tree_object_identifiers_[5], std::move(parent));
+      parent.clear();
+
+      std::vector<PageStorage::CommitIdAndBytes> initial_batch;
+      initial_batch.emplace_back(commit0->GetId(), commit0->GetStorageBytes().ToString());
+      initial_batch.emplace_back(commit1->GetId(), commit1->GetStorageBytes().ToString());
+      initial_batch.emplace_back(commit5->GetId(), commit5->GetStorageBytes().ToString());
+
+      test_batch_.emplace_back(commit2->GetId(), commit2->GetStorageBytes().ToString());
+      test_batch_.emplace_back(commit3->GetId(), commit3->GetStorageBytes().ToString());
+      test_batch_.emplace_back(commit4->GetId(), commit4->GetStorageBytes().ToString());
+
+      commit0.reset();
+      commit1.reset();
+      commit2.reset();
+      commit3.reset();
+      commit4.reset();
+      commit5.reset();
+
+      // Reset and clear the storage. We do not retrack the identifiers immediately because we want
+      // to leave the opportunity for the roots of commit 0 and 1 to be collected.
+      ResetStorage();
+      storage_->SetSyncDelegate(&sync_);
+
+      // Add commits 0, 1 and 5 from the cloud and let garbage collection kick in.
+      bool called;
+      Status status;
+      storage_->AddCommitsFromSync(std::move(initial_batch), ChangeSource::CLOUD,
+                                   callback::Capture(callback::SetWhenCalled(&called), &status));
+      RunLoopUntilIdle();
+      ASSERT_TRUE(called);
+      EXPECT_EQ(status, Status::OK);
+
+      // Check that the objects of commits 0 and 1 have been collected.
+      for (auto& identifiers :
+           {tree_object_identifiers_, eager_object_identifiers_, lazy_object_identifiers_}) {
+        for (auto commit : {0, 1}) {
+          ObjectIdentifier identifier = identifiers[commit];
+          RetrackIdentifier(&identifier);
+          std::unique_ptr<const Piece> piece;
+          ASSERT_EQ(ReadObject(handler, identifier, &piece), Status::INTERNAL_NOT_FOUND);
+        }
+      }
+
+      // Retrack all identifiers.
+      for (auto object_identifiers :
+           {&tree_object_identifiers_, &eager_object_identifiers_, &lazy_object_identifiers_}) {
+        for (auto& identifier : *object_identifiers) {
+          RetrackIdentifier(&identifier);
+        }
+      }
+      sync_.object_requests.clear();
+    });
+  }
+
+  FakeSyncDelegate sync_;
+  std::vector<ObjectIdentifier> tree_object_identifiers_;
+  std::vector<ObjectIdentifier> eager_object_identifiers_;
+  std::vector<ObjectIdentifier> lazy_object_identifiers_;
+  std::vector<PageStorage::CommitIdAndBytes> test_batch_;
+};
+
+TEST_F(PageStorageTestAddMultipleCommits, FromSync) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    FakeSyncDelegate sync;
-    storage_->SetSyncDelegate(&sync);
-
-    // Build the commit Tree with:
-    //     0   1
-    //         |
-    //         2
-    std::vector<ObjectIdentifier> object_identifiers;
-    object_identifiers.resize(3);
-    for (size_t i = 0; i < object_identifiers.size(); ++i) {
-      ObjectData value = MakeObject("value" + std::to_string(i), InlineBehavior::PREVENT);
-      std::vector<Entry> entries = {Entry{"key" + std::to_string(i), value.object_identifier,
-                                          KeyPriority::EAGER, EntryId("id" + std::to_string(i))}};
-      std::unique_ptr<const btree::TreeNode> node;
-      ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
-      object_identifiers[i] = node->GetIdentifier();
-      sync.AddObject(value.object_identifier, value.value);
-      std::unique_ptr<const Object> root_object =
-          TryGetObject(object_identifiers[i], PageStorage::Location::Local());
-      fxl::StringView root_data;
-      ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
-      sync.AddObject(object_identifiers[i], root_data.ToString());
-    }
-
-    // Reset and clear the storage.
-    ResetStorage();
-    storage_->SetSyncDelegate(&sync);
-    for (auto& identifier : object_identifiers) {
-      RetrackIdentifier(&identifier);
-    }
-
-    std::vector<std::unique_ptr<const Commit>> parent;
-    parent.emplace_back(GetFirstHead());
-    std::unique_ptr<const Commit> commit0 = storage_->GetCommitFactory()->FromContentAndParents(
-        environment_.clock(), object_identifiers[0], std::move(parent));
-    parent.clear();
-
-    parent.emplace_back(GetFirstHead());
-    std::unique_ptr<const Commit> commit1 = storage_->GetCommitFactory()->FromContentAndParents(
-        environment_.clock(), object_identifiers[1], std::move(parent));
-    parent.clear();
-
-    parent.emplace_back(commit1->Clone());
-    std::unique_ptr<const Commit> commit2 = storage_->GetCommitFactory()->FromContentAndParents(
-        environment_.clock(), object_identifiers[2], std::move(parent));
-
-    std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-    commits_and_bytes.emplace_back(commit0->GetId(), commit0->GetStorageBytes().ToString());
-    commits_and_bytes.emplace_back(commit1->GetId(), commit1->GetStorageBytes().ToString());
-    commits_and_bytes.emplace_back(commit2->GetId(), commit2->GetStorageBytes().ToString());
-
+    // Add commits 2, 3 4.
     bool called;
     Status status;
-    storage_->AddCommitsFromSync(std::move(commits_and_bytes), ChangeSource::CLOUD,
+
+    storage_->AddCommitsFromSync(std::move(test_batch_), ChangeSource::CLOUD,
                                  callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
 
-    EXPECT_EQ(sync.object_requests.size(), 4u);
-    EXPECT_NE(sync.object_requests.find({object_identifiers[0], RetrievedObjectType::TREE_NODE}),
-              sync.object_requests.end());
-    EXPECT_EQ(sync.object_requests.find({object_identifiers[1], RetrievedObjectType::TREE_NODE}),
-              sync.object_requests.end());
-    EXPECT_NE(sync.object_requests.find({object_identifiers[2], RetrievedObjectType::TREE_NODE}),
-              sync.object_requests.end());
+    // The tree and eager objects of the heads have been downloaded.
+    EXPECT_THAT(
+        sync_.object_requests,
+        UnorderedElementsAre(Pair(tree_object_identifiers_[2], RetrievedObjectType::TREE_NODE),
+                             Pair(eager_object_identifiers_[2], RetrievedObjectType::BLOB),
+                             Pair(tree_object_identifiers_[4], RetrievedObjectType::TREE_NODE),
+                             Pair(eager_object_identifiers_[4], RetrievedObjectType::BLOB)));
   });
 }
 
-TEST_F(PageStorageTest, AddMultipleCommitsFromP2P) {
+TEST_F(PageStorageTestAddMultipleCommits, FromP2P) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    FakeSyncDelegate sync;
-    storage_->SetSyncDelegate(&sync);
-
-    // Build the commit Tree with:
-    //     0   1
-    //         |
-    //         2
-    std::vector<ObjectIdentifier> object_identifiers;
-    object_identifiers.resize(3);
-    for (size_t i = 0; i < object_identifiers.size(); ++i) {
-      ObjectData value = MakeObject("value" + std::to_string(i), InlineBehavior::PREVENT);
-      std::vector<Entry> entries = {Entry{"key" + std::to_string(i), value.object_identifier,
-                                          KeyPriority::EAGER, EntryId("id" + std::to_string(i))}};
-      std::unique_ptr<const btree::TreeNode> node;
-      ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
-      object_identifiers[i] = node->GetIdentifier();
-      sync.AddObject(value.object_identifier, value.value);
-      std::unique_ptr<const Object> root_object =
-          TryGetObject(object_identifiers[i], PageStorage::Location::Local());
-      fxl::StringView root_data;
-      ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
-      sync.AddObject(object_identifiers[i], root_data.ToString());
-    }
-
-    // Reset and clear the storage.
-    ResetStorage();
-    storage_->SetSyncDelegate(&sync);
-    for (auto& identifier : object_identifiers) {
-      RetrackIdentifier(&identifier);
-    }
-
-    std::vector<std::unique_ptr<const Commit>> parent;
-    parent.emplace_back(GetFirstHead());
-    std::unique_ptr<const Commit> commit0 = storage_->GetCommitFactory()->FromContentAndParents(
-        environment_.clock(), object_identifiers[0], std::move(parent));
-    parent.clear();
-
-    parent.emplace_back(GetFirstHead());
-    std::unique_ptr<const Commit> commit1 = storage_->GetCommitFactory()->FromContentAndParents(
-        environment_.clock(), object_identifiers[1], std::move(parent));
-    parent.clear();
-
-    parent.emplace_back(commit1->Clone());
-    std::unique_ptr<const Commit> commit2 = storage_->GetCommitFactory()->FromContentAndParents(
-        environment_.clock(), object_identifiers[2], std::move(parent));
-
-    std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-    commits_and_bytes.emplace_back(commit0->GetId(), commit0->GetStorageBytes().ToString());
-    commits_and_bytes.emplace_back(commit1->GetId(), commit1->GetStorageBytes().ToString());
-    commits_and_bytes.emplace_back(commit2->GetId(), commit2->GetStorageBytes().ToString());
-
+    // Add commits 2, 3 4.
     bool called;
     Status status;
-    storage_->AddCommitsFromSync(std::move(commits_and_bytes), ChangeSource::P2P,
+    storage_->AddCommitsFromSync(std::move(test_batch_), ChangeSource::P2P,
                                  callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
 
-    EXPECT_EQ(sync.object_requests.size(), 6u);
-    EXPECT_NE(sync.object_requests.find({object_identifiers[0], RetrievedObjectType::TREE_NODE}),
-              sync.object_requests.end());
-    EXPECT_NE(sync.object_requests.find({object_identifiers[1], RetrievedObjectType::TREE_NODE}),
-              sync.object_requests.end());
-    EXPECT_NE(sync.object_requests.find({object_identifiers[2], RetrievedObjectType::TREE_NODE}),
-              sync.object_requests.end());
+    // The tree, and eager objects of all new commits have been downloaded, as well as the tree
+    // of parent commits.
+    EXPECT_THAT(
+        sync_.object_requests,
+        UnorderedElementsAre(Pair(tree_object_identifiers_[1], RetrievedObjectType::TREE_NODE),
+                             Pair(tree_object_identifiers_[2], RetrievedObjectType::TREE_NODE),
+                             Pair(eager_object_identifiers_[2], RetrievedObjectType::BLOB),
+                             Pair(tree_object_identifiers_[3], RetrievedObjectType::TREE_NODE),
+                             Pair(eager_object_identifiers_[3], RetrievedObjectType::BLOB),
+                             Pair(tree_object_identifiers_[4], RetrievedObjectType::TREE_NODE),
+                             Pair(eager_object_identifiers_[4], RetrievedObjectType::BLOB)));
   });
 }
 

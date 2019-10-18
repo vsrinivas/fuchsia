@@ -1471,6 +1471,24 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
         commit->GetId();
   }
 
+  // If the commits come from P2P, we may have to sync them. This requires having the tree of their
+  // parents locally present.
+  // This vector keeps the roots of the parents to download alive: it must not be cleared before the
+  // commits are added.
+  // TODO(35279): send sync information with P2P commits so we don't do this for synced commits.
+  std::vector<btree::LocatedObjectIdentifier> parents_to_download;
+  if (source == ChangeSource::P2P) {
+    for (const auto& commit : commits) {
+      if (leaves.find(&commit->GetParentIds()[0]) == leaves.end()) {
+        ObjectIdentifier base_parent_root;
+        RETURN_ON_ERROR(GetBaseParentRootIdentifier(handler, *commit, &base_parent_root));
+        parents_to_download.push_back(
+            {std::move(base_parent_root),
+             PageStorage::Location::TreeNodeFromNetwork(commit->GetParentIds()[0].ToString())});
+      }
+    }
+  }
+
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
@@ -1478,6 +1496,12 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
                               {leaf.second->GetRootIdentifier(),
                                PageStorage::Location::TreeNodeFromNetwork(leaf.second->GetId())},
                               waiter->NewCallback());
+  }
+  for (const auto& root : parents_to_download) {
+    // List the entries. This ensures the whole tree is present locally.
+    btree::ForEachEntry(
+        environment_->coroutine_service(), this, root, "", [](Entry e) { return true; },
+        waiter->NewCallback());
   }
 
   Status waiter_status;
