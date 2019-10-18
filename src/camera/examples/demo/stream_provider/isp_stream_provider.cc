@@ -11,8 +11,6 @@
 
 #include <src/lib/fxl/logging.h>
 
-#include "streamptr_wrapper.h"
-
 static constexpr const char* kDevicePath = "/dev/class/isp-device-test/000";
 
 // Create a provider using the known IspDeviceTest device.
@@ -30,11 +28,12 @@ std::unique_ptr<StreamProvider> IspStreamProvider::Create() {
 }
 
 // Offer a stream as served through the tester interface.
-std::unique_ptr<fuchsia::camera2::Stream> IspStreamProvider::ConnectToStream(
-    fuchsia::camera2::Stream_EventSender* event_handler, fuchsia::sysmem::ImageFormat_2* format_out,
+zx_status_t IspStreamProvider::ConnectToStream(
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+    fuchsia::sysmem::ImageFormat_2* format_out,
     fuchsia::sysmem::BufferCollectionInfo_2* buffers_out, bool* should_rotate_out) {
   if (!format_out || !buffers_out || !should_rotate_out) {
-    return nullptr;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   // Get a channel to the tester device.
@@ -42,25 +41,20 @@ std::unique_ptr<fuchsia::camera2::Stream> IspStreamProvider::ConnectToStream(
   zx_status_t status = fdio_get_service_handle(isp_fd_.get(), channel.reset_and_get_address());
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to get service handle";
-    return nullptr;
+    return status;
   }
 
   // Bind the tester interface and create a stream.
   fuchsia::camera::test::IspTesterSyncPtr tester;
   tester.Bind(std::move(channel));
-  fuchsia::camera2::StreamPtr stream;
-  stream.set_error_handler(
-      [](zx_status_t status) { FXL_PLOG(ERROR, status) << "Server disconnected"; });
-  stream.events().OnFrameAvailable =
-      fit::bind_member(event_handler, &fuchsia::camera2::Stream::EventSender_::OnFrameAvailable);
-  status = tester->CreateStream(stream.NewRequest(), buffers_out, format_out);
+  status = tester->CreateStream(std::move(request), buffers_out, format_out);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to create stream";
-    return nullptr;
+    return status;
   }
 
   // The stream coming directly from the ISP is not oriented properly.
   *should_rotate_out = true;
 
-  return std::make_unique<StreamPtrWrapper>(std::move(stream));
+  return ZX_OK;
 }

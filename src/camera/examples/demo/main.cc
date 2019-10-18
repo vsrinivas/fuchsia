@@ -88,12 +88,18 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
 
     fuchsia::sysmem::ImageFormat_2 format;
     fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-    view->stream_ = view->stream_provider_->ConnectToStream(view.get(), &format, &buffers,
-                                                            &view->should_rotate_);
-    if (!view->stream_) {
-      FXL_LOG(ERROR) << "Failed to connect to stream";
+    zx_status_t status = view->stream_provider_->ConnectToStream(
+        view->stream_.NewRequest(loop->dispatcher()), &format, &buffers, &view->should_rotate_);
+    if (status != ZX_OK) {
+      FXL_PLOG(ERROR, status) << "Failed to connect to stream";
       return nullptr;
     }
+    view->stream_.set_error_handler([loop](zx_status_t status) {
+      FXL_PLOG(ERROR, status) << "Stream disconnected";
+      loop->Quit();
+    });
+    view->stream_.events().OnFrameAvailable =
+        fit::bind_member(view.get(), &DemoView::OnFrameAvailable);
 
     uint32_t image_pipe_id = view->session()->AllocResourceId();
     view->session()->Enqueue(
@@ -159,7 +165,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
   // |scenic::SessionListener|
   void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
-  // |fuchsia::camera2::Stream_EventSender|
+  // |fuchsia::camera2::Stream|
   void OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) override {
     SleepIfChaos();
     if (!has_logical_size()) {
@@ -233,7 +239,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
   bool chaos_;
   std::mt19937 chaos_gen_;
   std::binomial_distribution<uint32_t> chaos_dist_;
-  std::unique_ptr<fuchsia::camera2::Stream> stream_;
+  fuchsia::camera2::StreamPtr stream_;
   scenic::ShapeNode node_;
   TextNode text_node_;
   fuchsia::images::ImagePipePtr image_pipe_;

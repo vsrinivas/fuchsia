@@ -35,22 +35,19 @@ class StreamProvider {
   //   The friendly name of the source.
   virtual std::string GetName() = 0;
 
-  // Creates a Stream instance, routing events to the given event_handler.
+  // Creates a Stream instance.
   // This method reflects the corresponding API in CameraManager, however here the caller is not
-  // able to participate in buffer format negotiation. The caller must ensure that event_handler
-  // remain valid for the lifetime of the returned Stream.
+  // able to participate in buffer format negotiation.
   // Args:
-  //   |event_handler|: a caller-provided implementation of Stream event handlers
+  //   |request|: a request for a Stream interface
   //   |format_out|: output parameter that describes the format of the created stream
   //   |buffers_out|: output parameter that describes the buffers backing the created stream
   //   |should_rotate_out|: output parameter that indicates whether the stream should be rotated in
   //                        order to appear correct
-  // Returns:
-  //   A Stream instance, or nullptr on error.
-  virtual std::unique_ptr<fuchsia::camera2::Stream> ConnectToStream(
-      fuchsia::camera2::Stream_EventSender* event_handler,
-      fuchsia::sysmem::ImageFormat_2* format_out,
-      fuchsia::sysmem::BufferCollectionInfo_2* buffers_out, bool* should_rotate_out) = 0;
+  virtual zx_status_t ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+                                      fuchsia::sysmem::ImageFormat_2* format_out,
+                                      fuchsia::sysmem::BufferCollectionInfo_2* buffers_out,
+                                      bool* should_rotate_out) = 0;
 };
 
 #endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_INCLUDE_STREAM_PROVIDER_H_

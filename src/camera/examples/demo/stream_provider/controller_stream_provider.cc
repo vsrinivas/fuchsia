@@ -12,8 +12,6 @@
 #include <fbl/unique_fd.h>
 #include <src/lib/fxl/logging.h>
 
-#include "streamptr_wrapper.h"
-
 static constexpr const char* kDevicePath = "/dev/camera-controller/camera-controller-device";
 
 ControllerStreamProvider::~ControllerStreamProvider() {
@@ -79,13 +77,13 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
   return std::move(provider);
 }
 
-// Offer a stream as served through the tester interface.
-std::unique_ptr<fuchsia::camera2::Stream> ControllerStreamProvider::ConnectToStream(
-    fuchsia::camera2::Stream::EventSender_* event_handler,
+// Offer a stream as served through the controller service provided by the driver.
+zx_status_t ControllerStreamProvider::ConnectToStream(
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
     fuchsia::sysmem::ImageFormat_2* format_out,
     fuchsia::sysmem::BufferCollectionInfo_2* buffers_out, bool* should_rotate_out) {
   if (!format_out || !buffers_out || !should_rotate_out) {
-    return nullptr;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   static constexpr const uint32_t kConfigIndex = 0;
@@ -94,7 +92,7 @@ std::unique_ptr<fuchsia::camera2::Stream> ControllerStreamProvider::ConnectToStr
 
   if (buffer_collection_.is_bound()) {
     FXL_PLOG(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound by caller.";
-    return nullptr;
+    return ZX_ERR_ALREADY_BOUND;
   }
 
   // Get the list of valid configs as reported by the controller.
@@ -103,25 +101,25 @@ std::unique_ptr<fuchsia::camera2::Stream> ControllerStreamProvider::ConnectToStr
   zx_status_t status = controller_->GetConfigs(&configs, &status_return);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to call GetConfigs";
-    return nullptr;
+    return status;
   }
   if (status_return != ZX_OK) {
     FXL_PLOG(ERROR, status_return) << "Failed to get configs";
-    return nullptr;
+    return status_return;
   }
   if (configs->size() <= kConfigIndex) {
     FXL_LOG(ERROR) << "Invalid config index " << kConfigIndex;
-    return nullptr;
+    return ZX_ERR_BAD_STATE;
   }
   auto& config = configs->at(kConfigIndex);
   if (config.stream_configs.size() <= kStreamConfigIndex) {
     FXL_LOG(ERROR) << "Invalid stream config index " << kStreamConfigIndex;
-    return nullptr;
+    return ZX_ERR_BAD_STATE;
   }
   auto& stream_config = config.stream_configs[kStreamConfigIndex];
   if (stream_config.image_formats.size() <= kImageFormatIndex) {
     FXL_LOG(ERROR) << "Invalid image format index " << kImageFormatIndex;
-    return nullptr;
+    return ZX_ERR_BAD_STATE;
   }
   auto& image_format = stream_config.image_formats[kImageFormatIndex];
 
@@ -132,23 +130,23 @@ std::unique_ptr<fuchsia::camera2::Stream> ControllerStreamProvider::ConnectToStr
   status = allocator_->AllocateNonSharedCollection(buffer_collection_.NewRequest());
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to allocate new collection";
-    return nullptr;
+    return status;
   }
   status = buffer_collection_->SetConstraints(true, stream_config.constraints);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to set constraints to those reported by the controller";
-    return nullptr;
+    return status;
   }
   status_return = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   status = buffer_collection_->WaitForBuffersAllocated(&status_return, &buffers);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to call WaitForBuffersAllocated";
-    return nullptr;
+    return status;
   }
   if (status_return != ZX_OK) {
     FXL_PLOG(ERROR, status_return) << "Failed to allocate buffers";
-    return nullptr;
+    return status_return;
   }
 
   // TODO(fxb/37296): remove ISP workarounds
@@ -160,7 +158,7 @@ std::unique_ptr<fuchsia::camera2::Stream> ControllerStreamProvider::ConnectToStr
                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
       FXL_PLOG(ERROR, status) << "Error mapping vmo";
-      return nullptr;
+      return status;
     }
     memset(mapper.start(), 128, mapper.size());
     mapper.Unmap();
@@ -171,20 +169,15 @@ std::unique_ptr<fuchsia::camera2::Stream> ControllerStreamProvider::ConnectToStr
   status = buffers.Clone(&buffers_for_caller);
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to clone buffer collection";
-    return nullptr;
+    return status;
   }
 
   // Create the stream using the created buffer collection.
-  fuchsia::camera2::StreamPtr stream;
-  stream.set_error_handler(
-      [](zx_status_t status) { FXL_PLOG(ERROR, status) << "Server disconnected"; });
-  stream.events().OnFrameAvailable =
-      fit::bind_member(event_handler, &fuchsia::camera2::Stream::EventSender_::OnFrameAvailable);
   status = controller_->CreateStream(kConfigIndex, kStreamConfigIndex, kImageFormatIndex,
-                                     std::move(buffers), stream.NewRequest());
+                                     std::move(buffers), std::move(request));
   if (status != ZX_OK) {
     FXL_PLOG(ERROR, status) << "Failed to create stream";
-    return nullptr;
+    return status;
   }
 
   // The stream from controller is currently unrotated.
@@ -193,5 +186,6 @@ std::unique_ptr<fuchsia::camera2::Stream> ControllerStreamProvider::ConnectToStr
 
   *format_out = std::move(image_format);
   *buffers_out = std::move(buffers_for_caller);
-  return std::make_unique<StreamPtrWrapper>(std::move(stream));
+
+  return ZX_OK;
 }
