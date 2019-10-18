@@ -122,7 +122,7 @@ B.cml:
 {
     "offer": [{
         "service": "/intermediary",
-        "from": "self",
+        "from": "realm",
         "to": [{
             { "dest": "#C", "as": "/intermediary2" },
         }],
