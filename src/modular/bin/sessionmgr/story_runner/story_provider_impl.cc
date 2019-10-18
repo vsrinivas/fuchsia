@@ -257,7 +257,7 @@ class StoryProviderImpl::GetStoryEntityProviderCall : public Operation<StoryEnti
 };
 
 StoryProviderImpl::StoryProviderImpl(
-    Environment* const user_environment, std::string device_id,
+    Environment* const session_environment, std::string device_id,
     SessionStorage* const session_storage, fuchsia::modular::AppConfig story_shell_config,
     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
     const ComponentContextInfo& component_context_info,
@@ -269,7 +269,7 @@ StoryProviderImpl::StoryProviderImpl(
     modular::ModuleFacetReader* const module_facet_reader,
     PresentationProvider* const presentation_provider, const bool enable_story_shell_preload,
     inspect::Node* root_node)
-    : user_environment_(user_environment),
+    : session_environment_(session_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
       story_shell_config_(std::move(story_shell_config)),
@@ -426,7 +426,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   }
 
   preloaded_story_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      user_environment_->GetLauncher(), CloneStruct(story_shell_config_));
+      session_environment_->GetLauncher(), CloneStruct(story_shell_config_));
 }
 
 fuchsia::modular::StoryInfo2Ptr StoryProviderImpl::GetCachedStoryInfo(std::string story_id) {

@@ -20,14 +20,21 @@ constexpr char kIntentAction[] = "action";
 class IntlClientModule : public modular_testing::FakeModule {
  public:
   IntlClientModule()
-      : modular_testing::FakeModule({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-                                     .sandbox_services = {"fuchsia.intl.PropertyProvider",
-                                                          "fuchsia.modular.ModuleContext"}},
-                                    [](fuchsia::modular::Intent) {}) {}
+      : modular_testing::FakeModule(
+            {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl("FakeIntlClientModule"),
+             .sandbox_services = {"fuchsia.intl.PropertyProvider",
+                                  "fuchsia.modular.ComponentContext",
+                                  "fuchsia.modular.ModuleContext"}},
+            [](fuchsia::modular::Intent) {}) {}
 
   zx_status_t ConnectToIntlPropertyProvider() {
-    return component_context()->svc()->Connect<fuchsia::intl::PropertyProvider>(
-        client_.NewRequest());
+    auto status =
+        component_context()->svc()->Connect<fuchsia::intl::PropertyProvider>(client_.NewRequest());
+    client_.set_error_handler([this](zx_status_t status) {
+      FXL_LOG(ERROR) << "fuchsia::intl::PropertyProvider connection status: " << status;
+      has_error_ = true;
+    });
+    return status;
   }
 
   void LoadProfile() {
@@ -38,10 +45,12 @@ class IntlClientModule : public modular_testing::FakeModule {
   fuchsia::intl::Profile* Profile() { return HasProfile() ? &(profile_.value()) : nullptr; }
 
   bool HasProfile() { return !!profile_; }
+  bool HasError() { return has_error_; }
 
  private:
   fuchsia::intl::PropertyProviderPtr client_;
   std::optional<fuchsia::intl::Profile> profile_;
+  bool has_error_ = false;
 };
 
 // Smoke test for Modular's provision of fuchsia.intl.PropertyProvider.
@@ -67,7 +76,8 @@ TEST_F(IntlPropertyProviderTest, GetsProfileFromProvider) {
   ASSERT_EQ(ZX_OK, test_module_->ConnectToIntlPropertyProvider());
 
   test_module_->LoadProfile();
-  RunLoopUntil([&] { return test_module_->HasProfile(); });
+  RunLoopUntil([&] { return test_module_->HasProfile() || test_module_->HasError(); });
+  ASSERT_TRUE(test_module_->HasProfile());
 
   fuchsia::intl::Profile* profile = test_module_->Profile();
   ASSERT_TRUE(profile->has_locales());

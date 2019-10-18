@@ -19,6 +19,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
+#include "src/modular/lib/fidl/environment.h"
 
 namespace modular {
 
@@ -29,6 +30,7 @@ struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
   fuchsia::app::discover::DiscoverRegistry* const discover_registry;
+  Environment* session_environment;
 };
 
 // ModuleContextImpl keeps a single connection from a module instance in
@@ -74,6 +76,9 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   // Not owned. The StoryControllerImpl for the Story in which this Module
   // lives.
   StoryControllerImpl* const story_controller_impl_;
+
+  // The session environment
+  Environment* session_environment_;
 
   ComponentContextImpl component_context_impl_;
 

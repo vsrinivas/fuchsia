@@ -50,7 +50,7 @@ class StoryStorage;
 
 class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::FocusWatcher {
  public:
-  StoryProviderImpl(Environment* user_environment, std::string device_id,
+  StoryProviderImpl(Environment* session_environment, std::string device_id,
                     SessionStorage* session_storage, fuchsia::modular::AppConfig story_shell_config,
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                     const ComponentContextInfo& component_context_info,
@@ -79,7 +79,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   void Teardown(fit::function<void()> callback);
 
   // Called by StoryControllerImpl.
-  const Environment* user_environment() const { return user_environment_; }
+  Environment* session_environment() const { return session_environment_; }
 
   // The device ID for this user/device.
   const std::string device_id() const { return device_id_; }
@@ -195,7 +195,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   void MaybeLoadStoryShellDelayed();
 
-  Environment* const user_environment_;
+  Environment* const session_environment_;
 
   SessionStorage* session_storage_;  // Not owned.
 

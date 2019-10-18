@@ -99,7 +99,6 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // |fuchsia::modular::internal::SessionContext|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
-  std::unique_ptr<Environment> sessionmgr_environment_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> sessionmgr_app_;
   fuchsia::modular::internal::SessionmgrPtr sessionmgr_;
 

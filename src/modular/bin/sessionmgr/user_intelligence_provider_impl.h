@@ -24,7 +24,6 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
  public:
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      sys::ComponentContext* context,
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
           story_provider_connector,
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>

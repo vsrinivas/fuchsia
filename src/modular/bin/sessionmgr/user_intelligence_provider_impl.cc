@@ -43,7 +43,6 @@ void UserIntelligenceProviderImpl::SessionAgentData::ConnectOrQueueServiceReques
 }
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    sys::ComponentContext* const context,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
         story_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>

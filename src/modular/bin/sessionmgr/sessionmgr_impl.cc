@@ -228,6 +228,17 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
   story_provider_impl_->SetSessionShell(std::move(session_shell));
 }
 
+// Create an environment for the session. Override the launcher using the launcher from the
+// SessionmgrImpl's ComponentContext. This means any "additional_services" added to the
+// environment will not be served by the environment's launcher. As a workaround, see
+// ModuleContextImpl, which forwards service requests for session_environment services to
+// this environment's ServiceProvider.
+//
+// True separation among multiple sessions is currently NOT supported.
+// Note that a desired side effect in this version of Modular is the isolated storage data
+// path is specific to the sessionmgr, i.e., from a top-level environment, and for now, this
+// is preferred. Future implementations will use the new SessionFramework, which will provide
+// support for multiple sessions.
 void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
   session_id_ = session_id;
 
@@ -427,7 +438,6 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
   auto puppet_master_request = puppet_master.NewRequest();
 
   user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
-      component_context_,
       [this](fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
         if (terminating_) {
           return;

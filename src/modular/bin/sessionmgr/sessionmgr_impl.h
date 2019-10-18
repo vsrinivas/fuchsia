@@ -135,9 +135,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       const std::string& story_id,
       fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) override;
 
-  fuchsia::sys::ServiceProviderPtr GetServiceProvider(fuchsia::modular::AppConfig config);
-  fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);
-
   fuchsia::ledger::cloud::CloudProviderPtr LaunchCloudProvider(
       const std::string& user_profile_id,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);

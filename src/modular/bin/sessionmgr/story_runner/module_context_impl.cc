@@ -4,7 +4,9 @@
 
 #include "src/modular/bin/sessionmgr/story_runner/module_context_impl.h"
 
+#include <fuchsia/intl/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include <string>
 
@@ -20,6 +22,7 @@ ModuleContextImpl::ModuleContextImpl(
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
+      session_environment_(info.session_environment),
       component_context_impl_(
           info.component_context_info,
           EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId().value_or("")),
@@ -39,6 +42,23 @@ ModuleContextImpl::ModuleContextImpl(
     module_scope.set_module_path(module_data_->module_path());
     discover_registry_->RegisterStoryModule(std::move(module_scope), std::move(request));
   });
+
+  // Forward sessionmgr service requests to the session environment's service provider.
+  // See SessionmgrImpl::InitializeSessionEnvironment.
+  service_provider_impl_.AddService<fuchsia::intl::PropertyProvider>(
+      [this](fidl::InterfaceRequest<fuchsia::intl::PropertyProvider> request) {
+        fuchsia::sys::ServiceProviderPtr service_provider;
+        session_environment_->environment()->GetServices(service_provider.NewRequest());
+        service_provider->ConnectToService(fuchsia::intl::PropertyProvider::Name_,
+                                           request.TakeChannel());
+      });
+  service_provider_impl_.AddService<fuchsia::modular::Clipboard>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
+        fuchsia::sys::ServiceProviderPtr service_provider;
+        session_environment_->environment()->GetServices(service_provider.NewRequest());
+        service_provider->ConnectToService(fuchsia::modular::Clipboard::Name_,
+                                           request.TakeChannel());
+      });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
 }
 
