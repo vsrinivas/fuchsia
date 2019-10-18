@@ -2349,6 +2349,279 @@ protocol Child {
   END_TEST;
 }
 
+bool union_size8alignment4_sandwich() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union UnionSize8Alignment4 {
+    uint32 variant;
+};
+
+struct Sandwich {
+    uint32 before;
+    UnionSize8Alignment4 union;
+    uint32 after;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto sandwich = library.LookupStruct("Sandwich");
+  ASSERT_NONNULL(sandwich);
+  EXPECT_TRUE(CheckTypeShape(sandwich,
+                             Expected{
+                                 .inline_size = 16,
+                                 .alignment = 4,
+                                 .max_handles = 0,
+                                 .has_padding = false,
+                             },
+                             Expected{
+                                 .inline_size = 40,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .max_handles = 0,
+                                 .depth = 1,
+                                 .has_padding = true,
+                             }));
+  ASSERT_EQ(sandwich->members.size(), 3);
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[0], // before
+                              ExpectedField{
+                                  .offset = 0,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 0,
+                                  .padding = 4,
+                              }));
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[1], // union
+                              ExpectedField{
+                                  .offset = 4,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 8,
+                                  .padding = 0,
+                              }));
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[2], // after
+                              ExpectedField{
+                                  .offset = 12,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 32,
+                                  .padding = 4,
+                              }));
+
+  END_TEST;
+}
+
+bool union_size12alignment4_sandwich() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union UnionSize12Alignment4 {
+    array<uint8>:6 variant;
+};
+
+struct Sandwich {
+    uint32 before;
+    UnionSize12Alignment4 union;
+    int32 after;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto sandwich = library.LookupStruct("Sandwich");
+  ASSERT_NONNULL(sandwich);
+  EXPECT_TRUE(CheckTypeShape(sandwich,
+                             Expected{
+                                 .inline_size = 20,
+                                 .alignment = 4,
+                                 .max_handles = 0,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 40,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .max_handles = 0,
+                                 .depth = 1,
+                                 .has_padding = true,
+                             }));
+  ASSERT_EQ(sandwich->members.size(), 3);
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[0], // before
+                              ExpectedField{
+                                  .offset = 0,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 0,
+                                  .padding = 4,
+                              }));
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[1], // union
+                              ExpectedField{
+                                  .offset = 4,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 8,
+                                  .padding = 0,
+                              }));
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[2], // after
+                              ExpectedField{
+                                  .offset = 16,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 32,
+                                  .padding = 4,
+                              }));
+
+  END_TEST;
+}
+
+bool union_size24alignment8_sandwich() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct StructSize16Alignment8 {
+    uint64 f1;
+    uint64 f2;
+};
+
+union UnionSize24Alignment8 {
+    StructSize16Alignment8 variant;
+};
+
+struct Sandwich {
+    uint32 before;
+    UnionSize24Alignment8 union;
+    uint32 after;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto sandwich = library.LookupStruct("Sandwich");
+  ASSERT_NONNULL(sandwich);
+  EXPECT_TRUE(CheckTypeShape(sandwich,
+                             Expected{
+                                 .inline_size = 40,
+                                 .alignment = 8,
+                                 .max_handles = 0,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 40,
+                                 .alignment = 8,
+                                 .max_out_of_line = 16,
+                                 .max_handles = 0,
+                                 .depth = 1,
+                                 .has_padding = true,
+                             }));
+  ASSERT_EQ(sandwich->members.size(), 3);
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[0], // before
+                              ExpectedField{
+                                  .offset = 0,
+                                  .padding = 4,
+                              },
+                              ExpectedField{
+                                  .offset = 0,
+                                  .padding = 4,
+                              }));
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[1], // union
+                              ExpectedField{
+                                  .offset = 8,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 8,
+                                  .padding = 0,
+                              }));
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[2], // after
+                              ExpectedField{
+                                  .offset = 32,
+                                  .padding = 4,
+                              },
+                              ExpectedField{
+                                  .offset = 32,
+                                  .padding = 4,
+                              }));
+
+  END_TEST;
+}
+
+bool union_size36alignment4_sandwich() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union UnionSize36Alignment4 {
+    array<uint8>:32 variant;
+};
+
+struct Sandwich {
+    uint32 before;
+    UnionSize36Alignment4 union;
+    uint32 after;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto sandwich = library.LookupStruct("Sandwich");
+  ASSERT_NONNULL(sandwich);
+  EXPECT_TRUE(CheckTypeShape(sandwich,
+                             Expected{
+                                 .inline_size = 44,
+                                 .alignment = 4,
+                                 .max_handles = 0,
+                                 .has_padding = false,
+                             },
+                             Expected{
+                                 .inline_size = 40,
+                                 .alignment = 8,
+                                 .max_out_of_line = 32,
+                                 .max_handles = 0,
+                                 .depth = 1,
+                                 .has_padding = true,
+                             }));
+  ASSERT_EQ(sandwich->members.size(), 3);
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[0], // before
+                              ExpectedField{
+                                  .offset = 0,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 0,
+                                  .padding = 4,
+                              }));
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[1], // union
+                              ExpectedField{
+                                  .offset = 4,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 8,
+                                  .padding = 0,
+                              }));
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[2], // after
+                              ExpectedField{
+                                  .offset = 40,
+                                  .padding = 0,
+                              },
+                              ExpectedField{
+                                  .offset = 32,
+                                  .padding = 4,
+                              }));
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(typeshape_tests)
@@ -2385,4 +2658,8 @@ RUN_TEST(co_recursive_struct_with_handles)
 RUN_TEST(co_recursive_struct2)
 RUN_TEST(struct_two_deep)
 RUN_TEST(protocol_child_and_parent)
+RUN_TEST(union_size8alignment4_sandwich)
+RUN_TEST(union_size12alignment4_sandwich)
+RUN_TEST(union_size24alignment8_sandwich)
+RUN_TEST(union_size36alignment4_sandwich)
 END_TEST_CASE(typeshape_tests)
