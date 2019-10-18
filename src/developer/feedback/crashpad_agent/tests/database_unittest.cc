@@ -253,7 +253,6 @@ TEST_F(DatabaseTest, Check_GetUploadReport) {
   auto upload_report = database_->GetUploadReport(local_report_id);
   EXPECT_THAT(upload_report->GetAnnotations(), ElementsAre(Pair(kAnnotationKey, kAnnotationValue)));
   EXPECT_THAT(upload_report->GetAttachments(), ElementsAre(Key(kAttachmentKey)));
-  EXPECT_EQ(upload_report->GetUploadAttempts(), 0u);
 }
 
 TEST_F(DatabaseTest, Check_AttachmentsContainMinidump) {
@@ -272,24 +271,6 @@ TEST_F(DatabaseTest, Check_AttachmentsContainMinidump) {
                                                    Key(kAttachmentKey),
                                                    Key("uploadFileMinidump"),
                                                }));
-  EXPECT_EQ(upload_report->GetUploadAttempts(), 0u);
-}
-
-TEST_F(DatabaseTest, Check_UploadAttemptsNotZero) {
-  // Add a crash report.
-  UUID local_report_id;
-  MakeNewReportOrDie(&local_report_id);
-
-  // Get a report, increment its |upload_attempts|, get the report again, and check
-  // |upload_attempts| was incremented.
-  auto upload_report = database_->GetUploadReport(local_report_id);
-  ASSERT_TRUE(upload_report);
-  EXPECT_EQ(upload_report->GetUploadAttempts(), 0u);
-
-  upload_report.reset();
-  upload_report = database_->GetUploadReport(local_report_id);
-  ASSERT_TRUE(upload_report);
-  EXPECT_EQ(upload_report->GetUploadAttempts(), 1u);
 }
 
 TEST_F(DatabaseTest, Check_ReportInCompleted_MarkAsUploaded) {
@@ -302,23 +283,6 @@ TEST_F(DatabaseTest, Check_ReportInCompleted_MarkAsUploaded) {
 
   // Mark a report as uploaded and check that it's in completed/.
   ASSERT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
-
-  EXPECT_THAT(GetCompletedDirContents(), UnorderedElementsAreArray({
-                                             GetMetadataFilepath(local_report_id),
-                                             GetMinidumpFilepath(local_report_id),
-                                         }));
-}
-
-TEST_F(DatabaseTest, Check_ReportInCompleted_MarkAsTooManyUploadAttempts) {
-  // Add a crash report.
-  UUID local_report_id;
-  MakeNewReportOrDie(&local_report_id);
-
-  auto upload_report = database_->GetUploadReport(local_report_id);
-  ASSERT_TRUE(upload_report);
-
-  // Mark a report as having too many upload attempts and check it's in completed/.
-  ASSERT_TRUE(database_->MarkAsTooManyUploadAttempts(std::move(upload_report)));
 
   EXPECT_THAT(GetCompletedDirContents(), UnorderedElementsAreArray({
                                              GetMetadataFilepath(local_report_id),
@@ -351,21 +315,6 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterMarkAsCompleted) {
 
   // Mark a report as uploaded and check that it's in completed/.
   ASSERT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
-
-  EXPECT_EQ(database_->GetUploadReport(local_report_id), nullptr);
-}
-
-TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterMarkAsTooManyUploadAttempts) {
-  // Add a crash report.
-  UUID local_report_id;
-  MakeNewReportOrDie(
-      /*attachments=*/{{kAttachmentKey, kAttachmentValue}}, &local_report_id);
-
-  auto upload_report = database_->GetUploadReport(local_report_id);
-  ASSERT_TRUE(upload_report);
-
-  // Mark a report as uploaded and check that it's in completed/.
-  ASSERT_TRUE(database_->MarkAsTooManyUploadAttempts(std::move(upload_report)));
 
   EXPECT_EQ(database_->GetUploadReport(local_report_id), nullptr);
 }

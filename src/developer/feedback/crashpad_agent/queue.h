@@ -8,6 +8,7 @@
 #include <map>
 #include <vector>
 
+#include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/database.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
@@ -19,14 +20,8 @@ namespace feedback {
 // Queues pending reports and processes them according to its internal State.
 class Queue {
  public:
-  struct Config {
-    CrashpadDatabaseConfig database_config;
-
-    // Maximum number of times to attempt to upload a report.
-    uint64_t max_upload_attempts;
-  };
-
-  static std::unique_ptr<Queue> TryCreate(Config config, CrashServer* crash_server,
+  static std::unique_ptr<Queue> TryCreate(CrashpadDatabaseConfig database_config,
+                                          CrashServer* crash_server,
                                           InspectManager* inspect_manager);
 
   // Add a report to the queue.
@@ -48,7 +43,7 @@ class Queue {
   void SetStateToLeaveAsPending() { state_ = State::LeaveAsPending; }
 
  private:
-  Queue(Config config, std::unique_ptr<Database> database, CrashServer* crash_server,
+  Queue(std::unique_ptr<Database> database, CrashServer* crash_server,
         InspectManager* inspect_manager);
 
   // How the queue should handle processing existing pending reports and new reports.
@@ -70,7 +65,6 @@ class Queue {
   // Returns false if the report needs to be processed again.
   bool Upload(const crashpad::UUID& local_report_id);
 
-  const Config config_;
   std::unique_ptr<Database> database_;
   CrashServer* crash_server_;
   InspectManager* inspect_manager_;

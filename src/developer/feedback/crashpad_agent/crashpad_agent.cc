@@ -206,7 +206,8 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id) {
   if (!crash_server_->MakeRequest(upload_report->GetAnnotations(), upload_report->GetAttachments(),
                                   &server_report_id)) {
     FX_LOGS(ERROR) << "Error uploading local crash report, ID " << local_report_id.ToString();
-    if (!database_->MarkAsTooManyUploadAttempts(std::move(upload_report))) {
+    upload_report.reset();  // Release the report's lockfile.
+    if (!database_->Archive(local_report_id)) {
       FX_LOGS(ERROR) << fxl::StringPrintf(
           "Error marking local report %s as having too many upload attempts",
           local_report_id.ToString().c_str());

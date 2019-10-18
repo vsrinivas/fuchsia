@@ -13,21 +13,20 @@ namespace feedback {
 using crashpad::FileReader;
 using crashpad::UUID;
 
-std::unique_ptr<Queue> Queue::TryCreate(Config config, CrashServer* crash_server,
+std::unique_ptr<Queue> Queue::TryCreate(CrashpadDatabaseConfig database_config,
+                                        CrashServer* crash_server,
                                         InspectManager* inspect_manager) {
-  auto database = Database::TryCreate(config.database_config);
+  auto database = Database::TryCreate(database_config);
   if (!database) {
     return nullptr;
   }
 
-  return std::unique_ptr<Queue>(
-      new Queue(config, std::move(database), crash_server, inspect_manager));
+  return std::unique_ptr<Queue>(new Queue(std::move(database), crash_server, inspect_manager));
 }
 
-Queue::Queue(Config config, std::unique_ptr<Database> database, CrashServer* crash_server,
+Queue::Queue(std::unique_ptr<Database> database, CrashServer* crash_server,
              InspectManager* inspect_manager)
-    : config_(config),
-      database_(std::move(database)),
+    : database_(std::move(database)),
       crash_server_(crash_server),
       inspect_manager_(inspect_manager) {
   FXL_DCHECK(database_);
@@ -89,17 +88,6 @@ bool Queue::Upload(const UUID& local_report_id) {
   }
 
   FX_LOGS(ERROR) << "Error uploading local crash report " << local_report_id.ToString();
-
-  // |report->GetUploadAttempts()| is not incremented until the destruction of |report| thus there
-  // is a discrepancy between the real number of upload attempts and |report|'s account of how
-  // many times it has been attempted to be uploaded.
-  if (report->GetUploadAttempts() == config_.max_upload_attempts - 1) {
-    FX_LOGS(INFO) << fxl::StringPrintf(
-        "Too many upload attempts for local crash report %s, archiving",
-        local_report_id.ToString().c_str());
-    database_->MarkAsTooManyUploadAttempts(std::move(report));
-    return true;
-  }
 
   return false;
 }

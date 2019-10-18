@@ -46,11 +46,6 @@ class Database {
   bool MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
                       const std::string& server_report_id);
 
-  // Record |upload_report| as having too many upload attempts and clean up the report's annotations
-  //
-  // Return false if there is an error with |database_|.
-  bool MarkAsTooManyUploadAttempts(std::unique_ptr<UploadReport> upload_report);
-
   // Record |local_report_id| as skipped in |database_| and clean up the report's annotations
   //
   // Return false if there is an error with |database_|.

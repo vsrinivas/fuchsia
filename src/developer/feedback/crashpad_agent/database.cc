@@ -125,17 +125,6 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
   return true;
 }
 
-bool Database::MarkAsTooManyUploadAttempts(std::unique_ptr<UploadReport> upload_report) {
-  if (!upload_report) {
-    FX_LOGS(ERROR) << "upload report is null";
-    return false;
-  }
-
-  const UUID local_report_id = upload_report->GetUUID();
-  upload_report.reset();  // Release the lockfile.
-  return Archive(local_report_id);
-}
-
 bool Database::Archive(const crashpad::UUID& local_report_id) {
   if (const auto status =
           database_->SkipReportUpload(local_report_id, CrashSkippedReason::kUploadFailed);

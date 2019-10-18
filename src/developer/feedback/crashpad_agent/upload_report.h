@@ -24,7 +24,6 @@ class UploadReport {
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> TransferUploadReport();
   std::map<std::string, std::string> GetAnnotations() const;
   std::map<std::string, crashpad::FileReader*> GetAttachments() const;
-  size_t GetUploadAttempts() const;
   crashpad::UUID GetUUID() const;
 
  private:

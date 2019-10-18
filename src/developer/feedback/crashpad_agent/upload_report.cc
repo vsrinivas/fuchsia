@@ -38,11 +38,6 @@ std::map<std::string, FileReader*> UploadReport::GetAttachments() const {
   return attachments;
 }
 
-size_t UploadReport::GetUploadAttempts() const {
-  FXL_CHECK(upload_report_);
-  return upload_report_->upload_attempts;
-}
-
 UUID UploadReport::GetUUID() const {
   FXL_CHECK(upload_report_);
   return upload_report_->uuid;

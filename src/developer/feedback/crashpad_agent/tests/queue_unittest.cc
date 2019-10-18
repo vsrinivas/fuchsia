@@ -43,12 +43,11 @@ using testing::UnorderedElementsAreArray;
 
 constexpr uint64_t kMaxTotalReportsSizeInKb = 1024u;
 
-constexpr uint64_t kMaxUploadAttempts = 9;
-
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
 
 constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
+constexpr CrashpadDatabaseConfig kDatabaseConfig{/*max_size_in_kb=*/kMaxTotalReportsSizeInKb};
 
 constexpr char kAttachmentKey[] = "attachment.key";
 constexpr char kAttachmentValue[] = "attachment.value";
@@ -90,12 +89,7 @@ class QueueTest : public ::testing::Test {
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    queue_ = Queue::TryCreate(
-        Queue::Config{
-            CrashpadDatabaseConfig{/*max_size_in_kb=*/kMaxTotalReportsSizeInKb},
-            /*max_upload_attempts=*/kMaxUploadAttempts,
-        },
-        crash_server_.get(), inspect_manager_.get());
+    queue_ = Queue::TryCreate(kDatabaseConfig, crash_server_.get(), inspect_manager_.get());
 
     ASSERT_TRUE(queue_);
   }
@@ -349,16 +343,6 @@ TEST_F(QueueTest, Check_NotIsEmptyQueue_OnMixedUploadResults_MultiplePruned_Mult
   CheckAnnotationsOnServer();
   CheckAttachmentKeysOnServer();
   EXPECT_EQ(queue_->Size(), 2u);
-}
-
-TEST_F(QueueTest, Check_IsEmptyQueue_MaxFailedUploads_MultipleReports) {
-  const size_t kNumReports = 5u;
-  SetUpQueue(std::vector<bool>(kNumReports * kMaxUploadAttempts, kUploadFailed));
-  std::vector<QueueOps> ops(kNumReports, QueueOps::AddNewReport);
-  ops.push_back(QueueOps::SetStateToUpload);
-  ops.insert(ops.end(), kMaxUploadAttempts, QueueOps::ProcessAll);
-  ApplyQueueOps(ops);
-  EXPECT_TRUE(queue_->IsEmpty());
 }
 
 TEST_F(QueueTest, Check_InspectTree) {
