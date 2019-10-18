@@ -37,9 +37,7 @@ size_t HwRngCollector::DrawEntropy(uint8_t* buf, size_t len) {
   // the same physical seed (see ZX-983).
   Guard<Mutex> guard(&lock_);
 
-  // TODO(andrewkrieger): Remove the dev/hw_rng API and move the relevant code
-  // directly into this class.
-  return hw_rng_get_entropy(buf, len, /* block */ true);
+  return hw_rng_get_entropy(buf, len);
 }
 
 }  // namespace entropy

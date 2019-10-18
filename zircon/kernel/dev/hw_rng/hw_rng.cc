@@ -8,9 +8,9 @@
 
 const static struct hw_rng_ops* ops = nullptr;
 
-size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
+size_t hw_rng_get_entropy(void* buf, size_t len) {
   if (ops != nullptr) {
-    return ops->hw_rng_get_entropy(buf, len, block);
+    return ops->hw_rng_get_entropy(buf, len);
   } else {
     return 0;
   }

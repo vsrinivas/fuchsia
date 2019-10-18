@@ -30,7 +30,7 @@ constexpr size_t kRngDrawSize = 4;
 // Max number of retry
 constexpr size_t kMaxRetry = 10000;
 
-static size_t amlogic_hw_rng_get_entropy(void* buf, size_t len, bool block) {
+static size_t amlogic_hw_rng_get_entropy(void* buf, size_t len) {
   if (buf == nullptr) {
     return 0;
   }

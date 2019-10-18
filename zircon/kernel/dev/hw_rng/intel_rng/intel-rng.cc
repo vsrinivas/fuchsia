@@ -19,23 +19,21 @@ enum entropy_instr {
   ENTROPY_INSTR_RDSEED,
   ENTROPY_INSTR_RDRAND,
 };
-static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
+static ssize_t get_entropy_from_instruction(void* buf, size_t len,
                                             enum entropy_instr instr);
-static ssize_t get_entropy_from_rdseed(void* buf, size_t len, bool block);
-static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block);
+static ssize_t get_entropy_from_rdseed(void* buf, size_t len);
+static ssize_t get_entropy_from_rdrand(void* buf, size_t len);
 
 /* @brief Get entropy from the CPU using RDSEED.
  *
  * len must be at most SSIZE_MAX
  *
- * If |block|=true, it will retry the RDSEED instruction until |len| bytes are
- * written to |buf|.  Otherwise, it will fetch data from RDSEED until either
- * |len| bytes are written to |buf| or RDSEED is unable to return entropy.
+ * It will retry the RDSEED instruction until |len| bytes are written to |buf|.
  *
  * Returns the number of bytes written to the buffer on success (potentially 0),
  * and a negative value on error.
  */
-static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
+static ssize_t get_entropy_from_cpu(void* buf, size_t len) {
   /* TODO(security, ZX-984): Move this to a shared kernel/user lib, so we can write usermode
    * tests against this code */
 
@@ -45,9 +43,9 @@ static ssize_t get_entropy_from_cpu(void* buf, size_t len, bool block) {
   }
 
   if (x86_feature_test(X86_FEATURE_RDSEED)) {
-    return get_entropy_from_rdseed(buf, len, block);
+    return get_entropy_from_rdseed(buf, len);
   } else if (x86_feature_test(X86_FEATURE_RDRAND)) {
-    return get_entropy_from_rdrand(buf, len, block);
+    return get_entropy_from_rdrand(buf, len);
   }
 
   /* We don't have an entropy source */
@@ -67,47 +65,43 @@ __attribute__((target("rdrnd,rdseed"))) static bool instruction_step(enum entrop
   }
 }
 
-static ssize_t get_entropy_from_instruction(void* buf, size_t len, bool block,
+static ssize_t get_entropy_from_instruction(void* buf, size_t len,
                                             enum entropy_instr instr) {
   size_t written = 0;
   while (written < len) {
     unsigned long long int val = 0;
     if (!instruction_step(instr, &val)) {
-      if (!block) {
-        break;
-      }
       continue;
     }
     const size_t to_copy = fbl::min(len - written, sizeof(val));
     memcpy(static_cast<uint8_t*>(buf) + written, &val, to_copy);
     written += to_copy;
   }
-  if (block) {
-    DEBUG_ASSERT(written == len);
-  }
+  DEBUG_ASSERT(written == len);
+
   return (ssize_t)written;
 }
 
-static ssize_t get_entropy_from_rdseed(void* buf, size_t len, bool block) {
-  return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDSEED);
+static ssize_t get_entropy_from_rdseed(void* buf, size_t len) {
+  return get_entropy_from_instruction(buf, len, ENTROPY_INSTR_RDSEED);
 }
 
-static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block) {
+static ssize_t get_entropy_from_rdrand(void* buf, size_t len) {
   // TODO(security, ZX-983): This method is not compliant with Intel's "Digital Random
   // Number Generator (DRNG) Software Implementation Guide".  We are using
   // rdrand in a way that is explicitly against their recommendations.  This
   // needs to be corrected, but this fallback is a compromise to allow our
   // development platforms that don't support RDSEED to get some degree of
   // hardware-based randomization.
-  return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDRAND);
+  return get_entropy_from_instruction(buf, len, ENTROPY_INSTR_RDRAND);
 }
 
-static size_t intel_hw_rng_get_entropy(void* buf, size_t len, bool block) {
+static size_t intel_hw_rng_get_entropy(void* buf, size_t len) {
   if (!len) {
     return 0;
   }
 
-  ssize_t res = get_entropy_from_cpu(buf, len, block);
+  ssize_t res = get_entropy_from_cpu(buf, len);
   if (res < 0) {
     return 0;
   }

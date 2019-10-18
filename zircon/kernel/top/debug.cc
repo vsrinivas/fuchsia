@@ -58,7 +58,7 @@ void __stack_chk_fail(void) { panic_no_format("stack canary corrupted!\n"); }
 
 __NO_SAFESTACK uintptr_t choose_stack_guard(void) {
   uintptr_t guard;
-  if (hw_rng_get_entropy(&guard, sizeof(guard), true) != sizeof(guard)) {
+  if (hw_rng_get_entropy(&guard, sizeof(guard)) != sizeof(guard)) {
     // We can't get a random value, so use a randomish value.
     guard = 0xdeadbeef00ff00ffUL ^ (uintptr_t)&guard;
   }

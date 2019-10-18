@@ -16,7 +16,7 @@ static int cmd_rng32(int argc, const cmd_args* argv, uint32_t flags) {
   uint32_t val;
   __UNUSED size_t fetched;
 
-  fetched = hw_rng_get_entropy(&val, sizeof(val), true);
+  fetched = hw_rng_get_entropy(&val, sizeof(val));
 
   if (fetched == 0) {
     printf("hw rng failed. Support may not exist on this platform\n");
@@ -34,10 +34,8 @@ static int cmd_rng(int argc, const cmd_args* argv, uint32_t flags) {
   if ((argc < 2) || (argc > 3)) {
     printf(
         "Invalid argument count\n\n"
-        "Usage : %s <N> [wait]\n"
-        "N     : Number of bytes to generate.\n"
-        "wait  : true  -> wait indefinitely for bytes to be generated\n"
-        "      : false -> terminate if HW generator runs out of entropy (default)\n",
+        "Usage : %s <N>\n"
+        "N     : Number of bytes to generate.\n",
         argv[0].str);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -45,13 +43,12 @@ static int cmd_rng(int argc, const cmd_args* argv, uint32_t flags) {
   printf("Generating %lu random bytes\n", argv[1].u);
 
   size_t offset = 0;
-  bool wait = (argc == 3) ? argv[2].b : false;
   while (offset < argv[1].u) {
     uint8_t bytes[16];
     size_t todo, done;
 
     todo = fbl::min(sizeof(bytes), argv[1].u - offset);
-    done = hw_rng_get_entropy(bytes, todo, wait);
+    done = hw_rng_get_entropy(bytes, todo);
     DEBUG_ASSERT(done <= todo);
 
     hexdump8_ex(bytes, done, offset);
