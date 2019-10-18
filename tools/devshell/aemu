@@ -49,6 +49,23 @@ GRPCWEBPROXY_DIR=""
 CMDLINE=""
 SMP=4
 IMAGE_SIZE=
+EXPERIMENT_ARM64=false
+
+case $(uname -m) in
+x86_64)
+  HOST_ARCH=x64
+  ;;
+aarch64)
+  HOST_ARCH=arm64
+  ;;
+*)
+  fx-error "Unsupported host architecture: $(uname -m)"
+  exit 1
+esac
+
+if [[ "$FUCHSIA_ARCH" != "$HOST_ARCH" ]]; then
+  ACCEL=off
+fi
 
 # Propagate our TERM environment variable as a kernel command line
 # argument.  This is first so that an explicit -c TERM=foo argument
@@ -130,16 +147,20 @@ while [[ $# -ge 1 ]]; do
   --software-gpu)
     GPU="swiftshader_indirect"
     ;;
+  --experiment-arm64)
+    EXPERIMENT_ARM64=true
+    ;;
   *)
     break
   esac
   shift
 done
 
-# aemu is limited to x64 for now
-if [[ "$FUCHSIA_ARCH" != "x64" ]]; then
-  fx-error Unsupported arch
-  exit 1
+if [[ "$FUCHSIA_ARCH" == "arm64" ]]; then
+  if ! "$EXPERIMENT_ARM64"; then
+    fx-error "arm64 support is still experimental, requires --experiment-arm64"
+    exit 1
+  fi
 fi
 
 if [[ -z "$AEMU_DIR" && -d "$PREBUILT_AEMU_DIR" ]]; then
@@ -155,8 +176,6 @@ ARGS=()
 ARGS+=("-m" "2048")
 ARGS+=("-serial" "stdio")
 ARGS+=("-vga" "none")
-ARGS+=("-machine" "q35")
-ARGS+=("-device" "isa-debug-exit,iobase=0xf4,iosize=0x04")
 ARGS+=("-device" "virtio-keyboard-pci")
 ARGS+=("-device" "virtio_input_multi_touch_pci_1")
 
@@ -164,6 +183,7 @@ if [[ $SMP != 1 ]]; then
   ARGS+=("-smp" "${SMP},threads=2")
 fi
 
+# TODO(raggi): do we want to use hda on arm64?
 if (( $AUDIO )); then
   ARGS+=("-soundhw" "hda")
 fi
@@ -178,6 +198,16 @@ if [[ "$ACCEL" == "auto" ]]; then
   fi
 fi
 
+case "$FUCHSIA_ARCH" in
+x64)
+  ARGS+=("-machine" "q35")
+  ARGS+=("-device" "isa-debug-exit,iobase=0xf4,iosize=0x04")
+;;
+arm64)
+  ARGS+=("-machine" "virt")
+;;
+esac
+
 if [[ "$ACCEL" == "kvm" ]]; then
   ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
   FEATURES+=",KVM,GLDirectMem"
@@ -188,11 +218,18 @@ elif [[ "$ACCEL" == "hax" ]]; then
   ARGS+=("-enable-hax" "-cpu" "Haswell")
   FEATURES+=",HAXM,GLDirectMem"
 elif [[ "$ACCEL" == "off" ]]; then
-  ARGS+=("-cpu" "Haswell,+smap,-check,-fsgsbase")
-  FEATURES+=",-GLDirectMem"
+  case "$FUCHSIA_ARCH" in
+  x64)
+    ARGS+=("-cpu" "Haswell,+smap,-check,-fsgsbase")
+    ;;
+  arm64)
+    ARGS+=("-cpu" "cortex-a53")
+    ;;
+  esac
   # disable vulkan as not useful without kvm,hvf,hax and support
   # for coherent host visible memory.
   VULKAN=0
+  FEATURES+=",-GLDirectMem"
 else
   fx-error Unsupported acceleration mode
   exit 1
@@ -279,8 +316,8 @@ fx-zbi -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
 if [[ -n "$IMAGE_FVM_RAW" ]]; then
   fvmimg="${img_dir}/fvm.blk"
   fx-fvm-extend-image "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" "${fvmimg}" "${IMAGE_SIZE}"
-  ARGS+=("-drive" "file=${fvmimg},format=raw,if=none,id=mydisk")
-  ARGS+=("-device" "ich9-ahci,id=ahci" "-device" "ide-drive,drive=mydisk,bus=ahci.0")
+  ARGS+=("-drive" "file=${fvmimg},format=raw,if=none,id=vdisk")
+  ARGS+=("-device" "virtio-blk-pci,drive=vdisk")
 fi
 
 # Start gRPC web proxy if HTTP port is set
