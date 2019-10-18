@@ -55,11 +55,7 @@ typedef enum spn_vk_target_queueing_e
   SPN_VK_TARGET_EXTENSION(EXT_scalar_block_layout)                                                 \
   SPN_VK_TARGET_EXTENSION(EXT_subgroup_size_control)                                               \
   SPN_VK_TARGET_EXTENSION(KHR_incremental_present)                                                 \
-  SPN_VK_TARGET_EXTENSION(KHR_maintenance1)                                                        \
-  SPN_VK_TARGET_EXTENSION(KHR_maintenance2)                                                        \
-  SPN_VK_TARGET_EXTENSION(KHR_maintenance3)                                                        \
   SPN_VK_TARGET_EXTENSION(KHR_pipeline_executable_properties)                                      \
-  SPN_VK_TARGET_EXTENSION(KHR_relaxed_block_layout)                                                \
   SPN_VK_TARGET_EXTENSION(KHR_shader_clock)                                                        \
   SPN_VK_TARGET_EXTENSION(KHR_shader_float16_int8)                                                 \
   SPN_VK_TARGET_EXTENSION(KHR_shader_float_controls)                                               \

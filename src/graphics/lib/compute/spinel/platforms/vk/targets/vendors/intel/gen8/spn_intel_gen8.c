@@ -54,9 +54,6 @@ static struct spn_vk_target const target =
 
     .extensions.named = {
       .EXT_subgroup_size_control          = 1,
-      .KHR_maintenance1                   = 1,
-      .KHR_maintenance2                   = 1,
-      .KHR_maintenance3                   = 1,
       .KHR_shader_float16_int8            = 1,
     },
 

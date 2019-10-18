@@ -53,9 +53,6 @@ static struct spn_vk_target const target =
     .queueing                             = SPN_VK_TARGET_QUEUEING_SIMPLE,
 
     .extensions.named = {
-      .KHR_maintenance1                   = 1,
-      .KHR_maintenance2                   = 1,
-      .KHR_maintenance3                   = 1,
       .NV_shader_subgroup_partitioned     = 1,
     },
 

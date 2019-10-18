@@ -55,9 +55,6 @@ static struct spn_vk_target const target =
     .extensions.named = {
       .AMD_gpu_shader_half_float          = 1,
       .AMD_shader_info                    = 1,
-      .KHR_maintenance1                   = 1,
-      .KHR_maintenance2                   = 1,
-      .KHR_maintenance3                   = 1,
       .KHR_shader_float16_int8            = 1,
     },
 
