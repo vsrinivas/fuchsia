@@ -19,9 +19,6 @@
         "binary": "test/verify_ethernet"
     },
     "sandbox": {
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
             "fuchsia.wlan.service.Wlan",

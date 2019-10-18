@@ -4,15 +4,16 @@
 
 #include "devhost-loader-service.h"
 
-#include <errno.h>
-#include <fcntl.h>
+#include <fbl/string_printf.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
-#include <stdint.h>
 
 #include <array>
-
-#include <fbl/string_printf.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdint.h>
 
 #include "coordinator.h"
 #include "fdio.h"
@@ -42,23 +43,28 @@ zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* vmo) {
   }
   auto self = static_cast<devmgr::DevhostLoaderService*>(ctx);
   fbl::String path = fbl::StringPrintf("/boot/lib/%s", name);
-  fbl::unique_fd fd(openat(self->root().get(), path.c_str(), O_RDONLY));
-  if (!fd) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  zx::vmo nonexec_vmo;
-  zx::vmo exec_vmo;
-  zx_status_t status = fdio_get_vmo_clone(fd.get(), nonexec_vmo.reset_and_get_address());
+  int raw_fd;
+  zx_status_t status = fdio_open_fd_at(self->root().get(), path.c_str(),
+                                       fuchsia_io_OPEN_RIGHT_READABLE |
+                                       fuchsia_io_OPEN_RIGHT_EXECUTABLE,
+                                       &raw_fd);
   if (status != ZX_OK) {
     return status;
   }
-  status = nonexec_vmo.replace_as_executable(zx::handle(), &exec_vmo);
+  fbl::unique_fd fd(raw_fd);
+  zx::vmo exec_vmo;
+  status = fdio_get_vmo_exec(fd.get(), exec_vmo.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = exec_vmo.set_property(ZX_PROP_NAME, path.c_str(), path.size());
   if (status != ZX_OK) {
     return status;
   }
 
   *vmo = exec_vmo.release();
-  return zx_object_set_property(*vmo, ZX_PROP_NAME, path.c_str(), path.size());
+  return ZX_OK;
 }
 
 zx_status_t LoadAbspath(void* ctx, const char* path, zx_handle_t* vmo) {

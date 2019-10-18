@@ -19,9 +19,6 @@
         "binary": "test/sim_client_vs_sim_ap"
     },
     "sandbox": {
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
             "fuchsia.wlan.service.Wlan",

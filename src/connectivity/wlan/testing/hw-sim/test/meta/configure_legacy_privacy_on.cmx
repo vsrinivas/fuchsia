@@ -21,9 +21,6 @@
         "binary": "test/configure_legacy_privacy_on"
     },
     "sandbox": {
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
             "fuchsia.wlan.service.Wlan",

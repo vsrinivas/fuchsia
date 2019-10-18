@@ -3,9 +3,6 @@
     "binary": "test/factory_reset_unittests"
   },
   "sandbox": {
-    "features": [
-      "deprecated-ambient-replace-as-executable"
-    ],
     "boot": [ "bin", "driver", "lib", "config" ],
     "services": [
       "fuchsia.process.Launcher"

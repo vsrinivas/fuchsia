@@ -44,7 +44,8 @@ TEST(LauncherTest, Namespace) {
 
   zx::channel bootfs_client, bootfs_server;
   ASSERT_OK(zx::channel::create(0, &bootfs_client, &bootfs_server));
-  ASSERT_OK(fdio_open("/boot/driver", ZX_FS_RIGHT_READABLE, bootfs_server.release()));
+  ASSERT_OK(fdio_open("/boot/driver", ZX_FS_RIGHT_READABLE |
+                      ZX_FS_RIGHT_EXECUTABLE, bootfs_server.release()));
 
   args.flat_namespace.push_back(std::make_pair("/test_drivers", std::move(bootfs_client)));
 
