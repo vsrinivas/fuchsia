@@ -41,20 +41,31 @@ static constexpr uint16_t kRenderUnderflowErrorInterval = 100;
 
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
+    async_dispatcher_t* dispatcher, ObjectRegistry* object_registry, Routing* routing,
+    AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager) {
+  return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request), dispatcher,
+                                             object_registry, routing, admin, vmar,
+                                             volume_manager));
+}
+
+fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     AudioCoreImpl* owner) {
-  return fbl::AdoptRef(new AudioRendererImpl(
-      std::move(audio_renderer_request), owner->threading_model().FidlDomain().dispatcher(),
-      &owner->device_manager(), &owner->audio_admin(), owner->vmar(), &owner->volume_manager()));
+  return Create(std::move(audio_renderer_request),
+                owner->threading_model().FidlDomain().dispatcher(), &owner->device_manager(),
+                &owner->device_manager(), &owner->audio_admin(), owner->vmar(),
+                &owner->volume_manager());
 }
 
 AudioRendererImpl::AudioRendererImpl(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager, AudioAdmin* admin,
-    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager)
+    async_dispatcher_t* dispatcher, ObjectRegistry* object_registry, Routing* routing,
+    AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager)
     : AudioObject(Type::AudioRenderer),
       usage_(fuchsia::media::AudioRenderUsage::MEDIA),
       dispatcher_(dispatcher),
-      device_manager_(*device_manager),
+      object_registry_(*object_registry),
+      routing_(*routing),
       admin_(*admin),
       vmar_(std::move(vmar)),
       volume_manager_(*volume_manager),
@@ -65,7 +76,8 @@ AudioRendererImpl::AudioRendererImpl(
       partial_underflow_count_(0u) {
   TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
   FXL_DCHECK(admin);
-  FXL_DCHECK(device_manager);
+  FXL_DCHECK(object_registry);
+  FXL_DCHECK(routing);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -132,7 +144,7 @@ void AudioRendererImpl::Shutdown() {
 
   // Make sure we have left the set of active AudioRenderers.
   if (InContainer()) {
-    device_manager_.RemoveAudioRenderer(this);
+    object_registry_.RemoveAudioRenderer(this);
   }
 }
 
@@ -157,7 +169,7 @@ void AudioRendererImpl::RecomputeMinClockLeadTime() {
 
   ForEachDestLink([throttle_ptr = throttle_output_link_.get(), &cur_lead_time](auto& link) {
     if (link.GetDest()->is_output() && &link != throttle_ptr) {
-      const auto output = fbl::RefPtr<AudioOutput>::Downcast(link.GetDest());
+      const auto output = fbl::RefPtr<AudioDevice>::Downcast(link.GetDest());
 
       cur_lead_time = std::max(cur_lead_time, output->min_clock_lead_time());
     }
@@ -426,7 +438,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   // AudioRenderers, and notifying users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
-  device_manager_.SelectOutputsForAudioRenderer(this);
+  routing_.SelectOutputsForAudioRenderer(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.

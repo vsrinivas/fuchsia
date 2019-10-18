@@ -13,6 +13,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_device_settings_persistence.h"
 #include "src/media/audio/audio_core/audio_input.h"
@@ -20,6 +21,7 @@
 #include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/object_registry.h"
+#include "src/media/audio/audio_core/routing.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 
@@ -28,7 +30,9 @@ namespace media::audio {
 class AudioCapturerImpl;
 class SystemGainMuteProvider;
 
-class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public ObjectRegistry {
+class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
+                           public ObjectRegistry,
+                           public Routing {
  public:
   AudioDeviceManager(ThreadingModel* threading_model, EffectsLoader* effects_loader,
                      AudioDeviceSettingsPersistence* device_settings_persistence,
@@ -58,18 +62,16 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void AddDeviceEnumeratorClient(
       fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request);
 
-  // Select the initial set of outputs for a newly-configured AudioRenderer.
-  void SelectOutputsForAudioRenderer(AudioRendererImpl* audio_renderer);
-
-  // Link an output to an AudioRenderer.
-  void LinkOutputToAudioRenderer(AudioOutput* output, AudioRendererImpl* audio_renderer);
-
-  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy);
-
   // SetSystemGain/Mute has been called. 'changed' tells us whether System Gain or Mute values
   // actually changed. If not, only update devices that (because of calls to SetDeviceGain) have
   // diverged from System settings.
   void OnSystemGain(bool changed);
+
+  // |media::audio::Routing|
+  //
+  void SelectOutputsForAudioRenderer(AudioRendererImpl* audio_renderer) override;
+  void LinkOutputToAudioRenderer(AudioOutput* output, AudioRendererImpl* audio_renderer) override;
+  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) override;
 
   // |media::audio::ObjectRegistry|
   void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) override;

@@ -11,6 +11,7 @@ source_set("testing") {
     "fake_audio_driver.h",
     "fake_audio_renderer.cc",
     "fake_audio_renderer.h",
+    "fake_routing.h",
     "fake_object_registry.h",
     "threading_model_fixture.h",
   ]
@@ -21,7 +22,7 @@ source_set("testing") {
   deps = [
     "//garnet/public/lib/gtest",
     "//src/media/audio/audio_core:audio_core_lib",
-    "//src/media/audio/audio_core/mixer:constants",
+    "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/test:message_transceiver",
     "//zircon/public/lib/async-testing",
     "//zircon/public/lib/audio-proto-utils",

@@ -19,6 +19,7 @@
 #include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
+#include "src/media/audio/audio_core/routing.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
@@ -29,7 +30,7 @@ constexpr bool kEnableRendererWavWriters = false;
 
 class AudioAdmin;
 class AudioCoreImpl;
-class AudioDeviceManager;
+class ObjectRegistry;
 
 class AudioRendererImpl : public AudioObject,
                           public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
@@ -37,6 +38,10 @@ class AudioRendererImpl : public AudioObject,
                           public fuchsia::media::audio::GainControl,
                           public StreamVolume {
  public:
+  static fbl::RefPtr<AudioRendererImpl> Create(
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
+      async_dispatcher_t* dispatcher, ObjectRegistry* object_registry, Routing* routing,
+      AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
       AudioCoreImpl* owner);
@@ -126,8 +131,8 @@ class AudioRendererImpl : public AudioObject,
   friend class GainControlBinding;
 
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-                    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager,
-                    AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar,
+                    async_dispatcher_t* dispatcher, ObjectRegistry* object_registry,
+                    Routing* routing, AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar,
                     StreamVolumeManager* volume_manager);
 
   ~AudioRendererImpl() override;
@@ -155,7 +160,8 @@ class AudioRendererImpl : public AudioObject,
   void RealizeVolume(VolumeCommand volume_command) final;
 
   async_dispatcher_t* dispatcher_;
-  AudioDeviceManager& device_manager_;
+  ObjectRegistry& object_registry_;
+  Routing& routing_;
   AudioAdmin& admin_;
   fbl::RefPtr<fzl::VmarManager> vmar_;
   StreamVolumeManager& volume_manager_;

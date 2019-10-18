@@ -11,7 +11,7 @@
 
 #include <trace/event.h>
 
-#include "src/media/audio/audio_core/audio_core_impl.h"
+#include "src/media/audio/audio_core/usage_gain_adjustment.h"
 
 namespace media::audio {
 namespace {

@@ -55,6 +55,12 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   uint64_t GetKey() const { return token(); }
   bool activated() const { return activated_; }
 
+  // AudioObjects with Type::Output must override this; this version should never be called.
+  virtual zx::duration min_clock_lead_time() const {
+    FXL_CHECK(false) << "min_clock_lead_time() not supported on AudioDevice";
+    return zx::nsec(0);
+  }
+
   // AudioObject overrides.
   std::optional<VolumeCurve> GetVolumeCurve() const override;
 

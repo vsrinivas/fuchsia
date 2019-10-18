@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 
+#include "src/lib/fxl/logging.h"
+
 namespace media::audio {
 
 StreamVolumeManager::VolumeSettingImpl::VolumeSettingImpl(fuchsia::media::Usage usage,

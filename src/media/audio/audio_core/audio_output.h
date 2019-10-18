@@ -25,7 +25,7 @@ class AudioOutput : public AudioDevice {
   ~AudioOutput() override = default;
 
   // Minimum clock lead time for this output
-  zx::duration min_clock_lead_time() const { return min_clock_lead_time_; }
+  zx::duration min_clock_lead_time() const override { return min_clock_lead_time_; }
 
  protected:
   AudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry);

@@ -8,7 +8,7 @@
 
 #include <unordered_map>
 
-#include "src/media/audio/audio_core/audio_core_impl.h"
+#include "src/media/audio/audio_core/usage_gain_adjustment.h"
 #include "src/media/audio/lib/test/null_audio_capturer.h"
 #include "src/media/audio/lib/test/null_audio_renderer.h"
 

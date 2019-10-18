@@ -17,6 +17,7 @@
 #include "src/media/audio/audio_core/command_line_options.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/usage_gain_adjustment.h"
 #include "src/media/audio/audio_core/usage_reporter_impl.h"
 
 namespace media::audio {
@@ -25,14 +26,6 @@ class SystemGainMuteProvider {
  public:
   virtual float system_gain_db() const = 0;
   virtual bool system_muted() const = 0;
-};
-
-// TODO(36403): Remove duplication of Render/Capturer functions in this interface and AudioAdmin
-class UsageGainAdjustment {
- public:
-  virtual void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage,
-                                            float gain_db) = 0;
-  virtual void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage, float gain_db) = 0;
 };
 
 class AudioCoreImpl : public fuchsia::media::AudioCore,

@@ -6,6 +6,8 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_DEVICE_H_
 
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/mixer/mixer.h"
+#include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/testing/fake_object_registry.h"
 
 namespace media::audio::testing {
@@ -62,6 +64,25 @@ class FakeAudioOutput : public FakeAudioDevice {
 
   FakeAudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry)
       : FakeAudioDevice(Type::Output, threading_model, registry) {}
+
+  // Required, to allocate and set the mixer+bookkeeping
+  zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) final {
+    auto mix_bookkeeping = std::make_unique<Bookkeeping>();
+    mix_bookkeeping->mixer = std::make_unique<audio::mixer::NoOp>();
+    link->set_bookkeeping(std::move(mix_bookkeeping));
+
+    return ZX_OK;
+  }
+
+  void SetMinClockLeadTime(zx::duration min_clock_lead_time) {
+    min_clock_lead_time_ = min_clock_lead_time;
+  }
+
+  // Must implement, because this class descends from AudioDevice, not AudioOutput
+  zx::duration min_clock_lead_time() const override { return min_clock_lead_time_; }
+
+ private:
+  zx::duration min_clock_lead_time_;
 };
 
 }  // namespace media::audio::testing
