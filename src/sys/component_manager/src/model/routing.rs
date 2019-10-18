@@ -6,8 +6,8 @@ use {
     crate::model::*,
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeSource, ExposeTarget, FrameworkCapabilityDecl,
-        OfferDecl, OfferDirectorySource, OfferServiceSource, OfferStorageSource, StorageDecl,
-        StorageDirectorySource, UseDecl,
+        OfferDecl, OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
+        StorageDecl, StorageDirectorySource, UseDecl,
     },
     failure::format_err,
     fidl::endpoints::ServerEnd,
@@ -25,6 +25,7 @@ enum OfferSource<'a> {
     LegacyService(&'a OfferServiceSource),
     Directory(&'a OfferDirectorySource),
     Storage(&'a OfferStorageSource),
+    Runner(&'a OfferRunnerSource),
 }
 
 /// Describes the source of a capability, as determined by `find_capability_source`
@@ -421,6 +422,7 @@ async fn walk_offer_chain<'a>(
             OfferDecl::LegacyService(s) => OfferSource::LegacyService(&s.source),
             OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
             OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
+            OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
         };
         match source {
             OfferSource::Service(_) => {
@@ -482,6 +484,10 @@ async fn walk_offer_chain<'a>(
                     storage.clone(),
                     current_realm.clone(),
                 )));
+            }
+            OfferSource::Runner(_) => {
+                // TODO(fxb/4761) implement runner support
+                return Err(ModelError::unsupported("runner capability"));
             }
         }
     }

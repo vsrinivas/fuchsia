@@ -226,6 +226,9 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::OfferDecl::Storage(s) => {
                         offers.push(OfferDecl::Storage(s.fidl_into_native()))
                     }
+                    fsys::OfferDecl::Runner(s) => {
+                        offers.push(OfferDecl::Runner(s.fidl_into_native()))
+                    }
                     fsys::OfferDecl::__UnknownVariant { .. } => panic!("invalid variant"),
                 }
             }
@@ -296,6 +299,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                 OfferDecl::Storage(s) => {
                     offers.push(fsys::OfferDecl::Storage(s.native_into_fidl()))
                 }
+                OfferDecl::Runner(s) => offers.push(fsys::OfferDecl::Runner(s.native_into_fidl())),
             }
         }
         fsys::ComponentDecl {
@@ -360,6 +364,7 @@ pub enum OfferDecl {
     LegacyService(OfferLegacyServiceDecl),
     Directory(OfferDirectoryDecl),
     Storage(OfferStorageDecl),
+    Runner(OfferRunnerDecl),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -443,6 +448,14 @@ fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDe
                       source_path: CapabilityPath,
                       target: OfferTarget,
                       target_path: CapabilityPath,
+                  });
+fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
+                  fsys::OfferRunnerDecl,
+                  {
+                      source: OfferRunnerSource,
+                      source_name: CapabilityName,
+                      target: OfferTarget,
+                      target_name: CapabilityName,
                   });
 
 fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
@@ -1027,6 +1040,36 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferStorageSource {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum OfferRunnerSource {
+    Realm,
+    Self_,
+    Child(String),
+}
+
+impl FidlIntoNative<OfferRunnerSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> OfferRunnerSource {
+        match self.unwrap() {
+            fsys::Ref::Realm(_) => OfferRunnerSource::Realm,
+            fsys::Ref::Self_(_) => OfferRunnerSource::Self_,
+            fsys::Ref::Child(c) => OfferRunnerSource::Child(c.name),
+            _ => panic!("invalid OfferRunnerSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for OfferRunnerSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            OfferRunnerSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferRunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            OfferRunnerSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum OfferTarget {
     Child(String),
@@ -1346,6 +1389,17 @@ mod tests {
                            fsys::CollectionRef { name: "modular".to_string() }
                        )),
                    }),
+                   fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
+                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source_name: Some("elf".to_string()),
+                       target: Some(fsys::Ref::Child(
+                          fsys::ChildRef {
+                              name: "echo".to_string(),
+                              collection: None,
+                          }
+                       )),
+                       target_name: Some("elf2".to_string()),
+                   }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/svc/netstack1".to_string()),
@@ -1488,6 +1542,12 @@ mod tests {
                                 target: OfferTarget::Collection("modular".to_string()),
                             }
                         )),
+                        OfferDecl::Runner(OfferRunnerDecl {
+                            source: OfferRunnerSource::Realm,
+                            source_name: "elf".try_into().unwrap(),
+                            target: OfferTarget::Child("echo".to_string()),
+                            target_name: "elf2".try_into().unwrap(),
+                        }),
                         OfferDecl::Service(OfferServiceDecl {
                             sources: vec![
                                 ServiceSource::<OfferServiceSource> {

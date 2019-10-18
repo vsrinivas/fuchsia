@@ -12,6 +12,7 @@ xunion OfferDecl {
     OfferLegacyServiceDecl legacy_service;
     OfferDirectoryDecl directory;
     OfferStorageDecl storage;
+    OfferRunnerDecl runner;
 };
 
 /// Declares a service offered by a component to one of its children, which may

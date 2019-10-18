@@ -171,8 +171,8 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
         all_runners_and_sources: HashMap::new(),
-        child_target_paths: HashMap::new(),
-        collection_target_paths: HashMap::new(),
+        target_paths: HashMap::new(),
+        offered_runner_names: HashMap::new(),
         errors: vec![],
     };
     ctx.validate().map_err(|errs| ErrorList::new(errs))
@@ -199,8 +199,8 @@ struct ValidationContext<'a> {
     all_collections: HashSet<&'a str>,
     all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_runners_and_sources: HashMap<&'a str, Option<&'a str>>,
-    child_target_paths: PathMap<'a>,
-    collection_target_paths: PathMap<'a>,
+    target_paths: PathMap<'a>,
+    offered_runner_names: NameMap<'a>,
     errors: Vec<Error>,
 }
 
@@ -210,7 +210,14 @@ enum AllowablePaths {
     Many,
 }
 
-type PathMap<'a> = HashMap<String, HashMap<&'a str, AllowablePaths>>;
+#[derive(Debug, PartialEq, Eq, Hash)]
+enum TargetId<'a> {
+    Component(&'a str),
+    Collection(&'a str),
+}
+
+type PathMap<'a> = HashMap<TargetId<'a>, HashMap<&'a str, AllowablePaths>>;
+type NameMap<'a> = HashMap<TargetId<'a>, HashSet<&'a str>>;
 
 impl<'a> ValidationContext<'a> {
     fn validate(mut self) -> Result<(), Vec<Error>> {
@@ -629,6 +636,15 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                 );
             }
+            fsys::OfferDecl::Runner(o) => {
+                self.validate_runner_offer_fields(
+                    "OfferRunnerDecl",
+                    o.source.as_ref(),
+                    o.source_name.as_ref(),
+                    o.target.as_ref(),
+                    o.target_name.as_ref(),
+                );
+            }
             fsys::OfferDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "offer"));
             }
@@ -641,7 +657,7 @@ impl<'a> ValidationContext<'a> {
         allowable_paths: AllowablePaths,
         source: Option<&fsys::Ref>,
         source_path: Option<&String>,
-        target: Option<&fsys::Ref>,
+        target: Option<&'a fsys::Ref>,
         target_path: Option<&'a String>,
     ) {
         match source {
@@ -696,6 +712,69 @@ impl<'a> ValidationContext<'a> {
             }
         };
         self.validate_storage_target(decl, storage_source_name, target);
+    }
+
+    fn validate_runner_offer_fields(
+        &mut self,
+        decl: &str,
+        source: Option<&fsys::Ref>,
+        source_name: Option<&String>,
+        target: Option<&'a fsys::Ref>,
+        target_name: Option<&'a String>,
+    ) {
+        // Validate source.
+        match source {
+            Some(fsys::Ref::Realm(_)) => {}
+            Some(fsys::Ref::Self_(_)) => {}
+            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
+            Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
+            None => self.errors.push(Error::missing_field(decl, "source")),
+        }
+        check_name(source_name, decl, "source_name", &mut self.errors);
+
+        // Validate target.
+        let target_key = match target {
+            Some(fsys::Ref::Child(c)) => {
+                self.validate_child_ref(decl, "target", &c);
+                Some(TargetId::Component(&c.name))
+            }
+            Some(fsys::Ref::Collection(c)) => {
+                self.validate_collection_ref(decl, "target", &c);
+                Some(TargetId::Collection(&c.name))
+            }
+            Some(_) => {
+                self.errors.push(Error::invalid_field(decl, "target"));
+                None
+            }
+            None => {
+                self.errors.push(Error::missing_field(decl, "target"));
+                None
+            }
+        };
+        check_name(target_name, decl, "target_name", &mut self.errors);
+
+        // Assuming the target is valid, ensure the target runner name isn't already used.
+        if let (Some(target_key), Some(target_name)) = (target_key, target_name) {
+            if !self
+                .offered_runner_names
+                .entry(target_key)
+                .or_insert(HashSet::new())
+                .insert(target_name)
+            {
+                self.errors.push(Error::duplicate_field(decl, "target_name", target_name as &str));
+            }
+        };
+
+        // Ensure source != target.
+        match (source, target) {
+            (Some(fsys::Ref::Child(source_child)), Some(fsys::Ref::Child(target_child))) => {
+                if source_child.name == target_child.name {
+                    self.errors
+                        .push(Error::offer_target_equals_source(decl, &target_child.name as &str));
+                }
+            }
+            (_, _) => (),
+        }
     }
 
     /// Check a `ChildRef` contains a valid child that exists.
@@ -764,7 +843,7 @@ impl<'a> ValidationContext<'a> {
         &mut self,
         decl: &str,
         allowable_paths: AllowablePaths,
-        child: &fsys::ChildRef,
+        child: &'a fsys::ChildRef,
         source: Option<&fsys::Ref>,
         target_path: Option<&'a String>,
     ) {
@@ -773,7 +852,7 @@ impl<'a> ValidationContext<'a> {
         }
         if let Some(target_path) = target_path {
             let paths_for_target =
-                self.child_target_paths.entry(child.name.to_string()).or_insert(HashMap::new());
+                self.target_paths.entry(TargetId::Component(&child.name)).or_insert(HashMap::new());
             if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
                 if prev_state == AllowablePaths::One || prev_state != allowable_paths {
                     self.errors.push(Error::duplicate_field(
@@ -798,7 +877,7 @@ impl<'a> ValidationContext<'a> {
         &mut self,
         decl: &str,
         allowable_paths: AllowablePaths,
-        collection: &fsys::CollectionRef,
+        collection: &'a fsys::CollectionRef,
         target_path: Option<&'a String>,
     ) {
         if !self.validate_collection_ref(decl, "target", &collection) {
@@ -806,8 +885,8 @@ impl<'a> ValidationContext<'a> {
         }
         if let Some(target_path) = target_path {
             let paths_for_target = self
-                .collection_target_paths
-                .entry(collection.name.to_string())
+                .target_paths
+                .entry(TargetId::Collection(&collection.name))
                 .or_insert(HashMap::new());
             if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
                 if prev_state == AllowablePaths::One || prev_state != allowable_paths {
@@ -972,9 +1051,9 @@ mod tests {
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
             ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeRunnerDecl,
             ExposeServiceDecl, FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl,
-            OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode,
-            StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
-            UseServiceDecl, UseStorageDecl,
+            OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, RunnerDecl,
+            SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl,
+            UseLegacyServiceDecl, UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -1586,9 +1665,9 @@ mod tests {
                             name: "b".repeat(101),
                             collection: None,
                         })),
-                        source_name: Some(format!("{}", "a".repeat(101))),
+                        source_name: Some("a".repeat(101)),
                         target: Some(Ref::Realm(RealmRef {})),
-                        target_name: Some(format!("{}", "b".repeat(101))),
+                        target_name: Some("b".repeat(101)),
                     }),
                 ]);
                 decl
@@ -1768,7 +1847,13 @@ mod tests {
                         type_: None,
                         source: None,
                         target: None,
-                    })
+                    }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: None,
+                        source_name: None,
+                        target: None,
+                        target_name: None,
+                    }),
                 ]);
                 decl
             },
@@ -1788,6 +1873,10 @@ mod tests {
                 Error::missing_field("OfferStorageDecl", "type"),
                 Error::missing_field("OfferStorageDecl", "source"),
                 Error::missing_field("OfferStorageDecl", "target"),
+                Error::missing_field("OfferRunnerDecl", "source"),
+                Error::missing_field("OfferRunnerDecl", "source_name"),
+                Error::missing_field("OfferRunnerDecl", "target"),
+                Error::missing_field("OfferRunnerDecl", "target_name"),
             ])),
         },
         test_validate_offers_long_identifiers => {
@@ -1883,6 +1972,19 @@ mod tests {
                             CollectionRef { name: "b".repeat(101) }
                         )),
                     }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "a".repeat(101),
+                            collection: None,
+                        })),
+                        source_name: Some("b".repeat(101)),
+                        target: Some(Ref::Collection(
+                           CollectionRef {
+                               name: "c".repeat(101),
+                           }
+                        )),
+                        target_name: Some("d".repeat(101)),
+                    }),
                 ]);
                 decl
             },
@@ -1907,6 +2009,10 @@ mod tests {
                 Error::field_too_long("OfferDirectoryDecl", "target_path"),
                 Error::field_too_long("OfferStorageDecl", "target.child.name"),
                 Error::field_too_long("OfferStorageDecl", "target.collection.name"),
+                Error::field_too_long("OfferRunnerDecl", "source.child.name"),
+                Error::field_too_long("OfferRunnerDecl", "source_name"),
+                Error::field_too_long("OfferRunnerDecl", "target.collection.name"),
+                Error::field_too_long("OfferRunnerDecl", "target_name"),
             ])),
         },
         test_validate_offers_extraneous => {
@@ -1965,6 +2071,20 @@ mod tests {
                             }
                         )),
                     }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: Some("modular".to_string()),
+                        })),
+                        source_name: Some("elf".to_string()),
+                        target: Some(Ref::Child(
+                            ChildRef {
+                                name: "netstack".to_string(),
+                                collection: Some("modular".to_string()),
+                            }
+                        )),
+                        target_name: Some("elf".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1976,6 +2096,8 @@ mod tests {
                 Error::extraneous_field("OfferDirectoryDecl", "source.child.collection"),
                 Error::extraneous_field("OfferDirectoryDecl", "target.child.collection"),
                 Error::extraneous_field("OfferStorageDecl", "target.child.collection"),
+                Error::extraneous_field("OfferRunnerDecl", "source.child.collection"),
+                Error::extraneous_field("OfferRunnerDecl", "target.child.collection"),
             ])),
         },
         test_validate_offers_target_equals_source => {
@@ -2024,6 +2146,20 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                     }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("web".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "logger".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("web".to_string()),
+                    }),
                 ]);
                 decl.children = Some(vec![ChildDecl{
                     name: Some("logger".to_string()),
@@ -2036,6 +2172,7 @@ mod tests {
                 Error::offer_target_equals_source("OfferServiceDecl", "logger"),
                 Error::offer_target_equals_source("OfferLegacyServiceDecl", "logger"),
                 Error::offer_target_equals_source("OfferDirectoryDecl", "logger"),
+                Error::offer_target_equals_source("OfferRunnerDecl", "logger"),
             ])),
         },
         test_validate_offers_storage_target_equals_source => {
@@ -2203,6 +2340,22 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                     }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("elf".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string() }
+                        )),
+                        target_name: Some("duplicated".to_string()),
+                    }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("elf".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string() }
+                        )),
+                        target_name: Some("duplicated".to_string()),
+                    }),
                 ]);
                 decl.children = Some(vec![
                     ChildDecl{
@@ -2222,6 +2375,7 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::duplicate_field("OfferServiceDecl", "target_path", "/data"),
                 Error::duplicate_field("OfferDirectoryDecl", "target_path", "/data"),
+                Error::duplicate_field("OfferRunnerDecl", "target_name", "duplicated"),
             ])),
         },
         test_validate_offers_target_invalid => {
@@ -2302,6 +2456,25 @@ mod tests {
                             CollectionRef { name: "modular".to_string(), }
                         )),
                     }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("elf".to_string()),
+                        target: Some(Ref::Child(
+                            ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            }
+                        )),
+                        target_name: Some("elf".to_string()),
+                    }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("elf".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string(), }
+                        )),
+                        target_name: Some("elf".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -2314,6 +2487,8 @@ mod tests {
                 Error::invalid_collection("OfferDirectoryDecl", "target", "modular"),
                 Error::invalid_child("OfferStorageDecl", "target", "netstack"),
                 Error::invalid_collection("OfferStorageDecl", "target", "modular"),
+                Error::invalid_child("OfferRunnerDecl", "target", "netstack"),
+                Error::invalid_collection("OfferRunnerDecl", "target", "modular"),
             ])),
         },
 
