@@ -21,26 +21,6 @@
 namespace wlan {
 namespace brcmfmac {
 
-#if !defined(NDEBUG)
-
-namespace {
-
-// This is the default set of debugging messages that will be printed. Valid values are in
-// enum class Debug::Filter.
-//
-// Include WLANIF messages in log output (at level INFO) to aid in recognizing important events.
-// WLAN-1176: Remove WLANIF once things have stabilized.
-constexpr uint32_t kBrcmfMsgFilter = static_cast<uint32_t>(Debug::Filter::kWLANIF);
-
-}  // namespace
-
-// static
-bool Debug::IsFilterOn(Filter filter) {
-  return (static_cast<uint32_t>(filter) & kBrcmfMsgFilter) != 0;
-}
-
-#endif  // !defined(NDEBUG)
-
 // static
 void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
   constexpr size_t kValuesPerLine = 16;

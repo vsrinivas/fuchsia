@@ -511,7 +511,8 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
   args.code = scan_result_code;
   if (ndev->if_proto.ops != NULL) {
     BRCMF_DBG(SCAN, "Signaling on_scan_end with txn_id %ld and code %d", args.txn_id, args.code);
-    BRCMF_DBG(WLANIF, "Sending scan end event to SME. txn_id: %" PRIu64 ", result: %s\n",
+    BRCMF_DBG(WLANIF, "Sending scan end event to SME. txn_id: %" PRIu64 ", result: %s"
+                      ", APs seen: %" PRIu32 "\n",
               args.txn_id,
               args.code == WLAN_SCAN_RESULT_SUCCESS
                   ? "success"
@@ -520,7 +521,8 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
                         : args.code == WLAN_SCAN_RESULT_INVALID_ARGS
                               ? "invalid args"
                               : args.code == WLAN_SCAN_RESULT_INTERNAL_ERROR ? "internal error"
-                                                                             : "unknown");
+                                                                             : "unknown",
+              ndev->scan_num_results);
     wlanif_impl_ifc_on_scan_end(&ndev->if_proto, &args);
   }
   ndev->scan_busy = false;
@@ -787,8 +789,6 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
         ptr += sizeof(ssid_le);
       }
     }
-  } else {
-    BRCMF_ERR("SSID list received for passive scan\n");
   }
   /* Adding mask to channel numbers */
   params_le->channel_num =
@@ -1858,6 +1858,7 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
   BRCMF_DBG(SCAN, "Returning scan result %.*s, channel %d, dbm %d, id %lu", result.bss.ssid.len,
             result.bss.ssid.data, channel, result.bss.rssi_dbm, result.txn_id);
 
+  ndev->scan_num_results++;
   wlanif_impl_ifc_on_scan_result(&ndev->if_proto, &result);
 }
 
@@ -2682,7 +2683,7 @@ static void brcmf_cfg80211_set_country(struct brcmf_cfg80211_info* cfg,
   // Search through the table until a valid or Null entry is found
   for (i = 0; i < MAX_CC_TABLE_ENTRIES; i++) {
     if (cc_table[i].cc_abbr[0] == 0) {
-      BRCMF_ERR("CC Entry for %s not found\n", ccreq.ccode);
+      BRCMF_ERR("CC Entry for %.*s not found\n", sizeof(ccreq.ccode), ccreq.ccode);
       break;
     }
     if (memcmp(cc_table[i].cc_abbr, code, WLANPHY_ALPHA2_LEN) == 0) {
@@ -2813,6 +2814,7 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
 
   ndev->scan_txn_id = req->txn_id;
   ndev->scan_busy = true;
+  ndev->scan_num_results = 0;
 
   BRCMF_DBG(SCAN, "About to scan! Txn ID %lu\n", ndev->scan_txn_id);
   result = brcmf_cfg80211_scan(ndev, req);

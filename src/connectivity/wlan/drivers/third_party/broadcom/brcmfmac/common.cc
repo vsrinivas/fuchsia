@@ -220,12 +220,16 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     return err;
   }
   // Print out the CLM filename to the log
-  BRCMF_ERR("CLM name %s\n", clm_name);
+  BRCMF_DBG(INFO, "CLM name %s\n", clm_name);
 
   // call request_firmware_nowait() to read out the contents of the
   // file into memory which is then processed by the callback to
   // write it out to firmware.
-  return (request_firmware_nowait((const char*)clm_name, ifp->drvr, ifp, brcmf_request_clm_done));
+  err = request_firmware_nowait((const char*)clm_name, ifp->drvr, ifp, brcmf_request_clm_done);
+  if (err != ZX_OK) {
+    BRCMF_ERR("download CLM blob file '%s' failed, %d\n", clm_name, err);
+  }
+  return err;
 }
 
 static void brcmf_gen_random_mac_addr(uint8_t* mac_addr) {
@@ -325,9 +329,6 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
   /* Do any CLM downloading */
   err = brcmf_c_process_clm_blob(ifp);
-  if (err != ZX_OK) {
-    BRCMF_ERR("download CLM blob file failed, %d\n", err);
-  }
 
   /* query for 'ver' to get version info from firmware */
   memset(buf, 0, sizeof(buf));
@@ -339,7 +340,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     goto done;
   } else {
     /* Print fw version info */
-    BRCMF_ERR("Firmware version = %s\n", buf);
+    BRCMF_INFO("Firmware version = %s\n", buf);
     ptr = (char*)buf;
     strsep(&ptr, "\n");
 
@@ -369,7 +370,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     }
 
     // Print out the CLM version to the log
-    BRCMF_ERR("CLM version = %s\n", clmver);
+    BRCMF_INFO("CLM version = %s\n", clmver);
   }
 
   /* set mpc */

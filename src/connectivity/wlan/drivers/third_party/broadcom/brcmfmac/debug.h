@@ -16,7 +16,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEBUG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEBUG_H_
 
-#include <ddk/debug.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -24,8 +23,9 @@
 #include <cstring>
 #include <utility>
 
-// Some convenience macros for error and debug printing.  The debug versions of the print routines
-// will be optimized out in the NDEBUG case, since the IsFilterOn() check is constexpr false.
+#include <ddk/debug.h>
+
+// Some convenience macros for error and debug printing.
 #define BRCMF_ERR(fmt, ...) \
   ::wlan::brcmfmac::Debug::Print(DDK_LOG_ERROR, __func__, fmt, ##__VA_ARGS__)
 
@@ -38,7 +38,7 @@
 #define BRCMF_DBG(filter, fmt, ...)                                               \
   do {                                                                            \
     if (BRCMF_IS_ON(filter)) {                                                    \
-      ::wlan::brcmfmac::Debug::Print(DDK_LOG_INFO, __func__, fmt, ##__VA_ARGS__); \
+      ::wlan::brcmfmac::Debug::Print(DDK_LOG_WARN, __func__, fmt, ##__VA_ARGS__); \
     }                                                                             \
   } while (0)
 
@@ -102,12 +102,15 @@ class Debug {
     kALL = ~0u,
   };
 
+  // Enabled debug log categories. Include WLANIF messages in the log output (at level INFO) to
+  // aid in recognizing important events.
+  // http://fxb/29792 - Remove WLANIF once things have stabilized.
+  static constexpr uint32_t kBrcmfMsgFilter = static_cast<uint32_t>(Filter::kWLANIF);
+
   // Check if a given debugging filter class is turned on.
-#if defined(NDEBUG)
-  static constexpr bool IsFilterOn(Filter filter) { return false; }
-#else   // defined(NDEBUG)
-  static bool IsFilterOn(Filter filter);
-#endif  // defined(NDEBUG)
+  static constexpr bool IsFilterOn(Filter filter) {
+    return (static_cast<uint32_t>(filter) & kBrcmfMsgFilter) != 0;
+  }
 
   // Print to the debugging output.
   template <typename... Args>

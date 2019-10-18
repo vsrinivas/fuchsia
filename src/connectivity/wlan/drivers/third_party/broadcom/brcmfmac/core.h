@@ -261,6 +261,7 @@ struct net_device {
   bool scan_busy;
   bool multicast_promisc;
   uint64_t scan_txn_id;
+  uint32_t scan_num_results;
   wlanif_impl_ifc_protocol_t if_proto;
   uint8_t dev_addr[ETH_ALEN];
   char name[123];
