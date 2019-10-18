@@ -162,7 +162,11 @@ void DebuggedThread::OnException(zx::exception exception_token,
                     << debug_ipc::ExceptionTypeToString(exception.type);
 
   zx_thread_state_general_regs regs;
-  handle_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+  zx_status_t status = arch_provider_->ReadGeneralState(handle_, &regs);
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "Could not read registers from thread: " << zx_status_get_string(status);
+    return;
+  }
 
   switch (exception.type) {
     case debug_ipc::ExceptionType::kSingleStep:
@@ -396,7 +400,7 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
 
   // State (running, blocked, etc.).
   zx_info_thread info;
-  if (handle_.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) == ZX_OK) {
+  if (arch_provider_->GetInfo(handle_, ZX_INFO_THREAD, &info, sizeof(info)) == ZX_OK) {
     record->state = ThreadStateToEnums(info.state, &record->blocked_reason);
   } else {
     FXL_NOTREACHED();
@@ -414,8 +418,7 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
     zx_thread_state_general_regs queried_regs;  // Storage for fetched regs.
     zx_thread_state_general_regs* regs = nullptr;
     if (!optional_regs) {
-      if (handle_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &queried_regs, sizeof(queried_regs)) ==
-          ZX_OK)
+      if (arch_provider_->ReadGeneralState(handle_, &queried_regs) == ZX_OK)
         regs = &queried_regs;
     } else {
       // We don't change the values here but *InRegs below returns mutable
@@ -553,8 +556,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       // the breakpoint instruction will never go away.
       *arch_provider_->IPInRegs(regs) = arch_provider_->NextInstructionForSoftwareExceptionAddress(
           *arch_provider_->IPInRegs(regs));
-      zx_status_t status = handle_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
-                                               sizeof(zx_thread_state_general_regs));
+      zx_status_t status = arch_provider_->WriteGeneralState(handle_, *regs);
       if (status != ZX_OK) {
         fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
                 static_cast<int>(status));
@@ -649,8 +651,7 @@ void DebuggedThread::FixSoftwareBreakpointAddress(ProcessBreakpoint* process_bre
   // from (after putting back the original instruction), and will be what the client wants to
   // display to the user.
   *arch_provider_->IPInRegs(regs) = process_breakpoint->address();
-  zx_status_t status =
-      handle_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs, sizeof(zx_thread_state_general_regs));
+  zx_status_t status = arch_provider_->WriteGeneralState(handle_, *regs);
   if (status != ZX_OK) {
     fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
             static_cast<int>(status));
@@ -724,10 +725,7 @@ void DebuggedThread::ResumeForRunMode() {
 }
 
 void DebuggedThread::SetSingleStep(bool single_step) {
-  zx_thread_state_single_step_t value = single_step ? 1 : 0;
-  // This could fail for legitimate reasons, like the process could have just
-  // closed the thread.
-  handle_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
+  arch_provider_->WriteSingleStep(handle_, single_step);
 }
 
 const char* DebuggedThread::ClientStateToString(ClientState client_state) {

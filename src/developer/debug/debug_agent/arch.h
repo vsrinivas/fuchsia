@@ -35,17 +35,34 @@ class ArchProvider {
 
   ::debug_ipc::Arch GetArch();
 
+  // Thread Management -----------------------------------------------------------------------------
+
+  // zx_thread_read_state with ZX_THREAD_STATE_GENERAL_REGS.
+  virtual zx_status_t ReadGeneralState(const zx::thread& handle,
+                                       zx_thread_state_general_regs* regs);
+
+  // zx_thread_write_state with ZX_THREAD_STATE_GENERAL_REGS.
+  virtual zx_status_t WriteGeneralState(const zx::thread& handle,
+                                        const zx_thread_state_general_regs& regs);
+
+  virtual zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step);
+
   // Returns the address of the instruction pointer/stack pointer/base pointer
   // in the given reg structure.
-  uint64_t* IPInRegs(zx_thread_state_general_regs* regs);
-  uint64_t* SPInRegs(zx_thread_state_general_regs* regs);
-  uint64_t* BPInRegs(zx_thread_state_general_regs* regs);
+  virtual uint64_t* IPInRegs(zx_thread_state_general_regs* regs);
+  virtual uint64_t* SPInRegs(zx_thread_state_general_regs* regs);
+  virtual uint64_t* BPInRegs(zx_thread_state_general_regs* regs);
 
-  // Software Exceptions -------------------------------------------------------
+  // zx_object_get_info.
+  virtual zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
+                              size_t buffer_size, size_t* actual = nullptr,
+                              size_t* avail = nullptr);
+
+  // Software Exceptions ---------------------------------------------------------------------------
 
   // Returns the address of the breakpoint instruction given the address of
   // a software breakpoint exception.
-  uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
+  virtual uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
 
   // Returns the instruction following the one causing the given software
   // exception.
@@ -84,7 +101,8 @@ class ArchProvider {
   // Currently HW notifications can mean both a single step or a hardware debug
   // register exception. We need platform-specific queries to figure which one
   // is it.
-  debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&, uint32_t exception_type);
+  virtual debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&,
+                                                       uint32_t exception_type);
 
   virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);
   virtual zx_status_t UninstallHWBreakpoint(zx::thread*, uint64_t address);
