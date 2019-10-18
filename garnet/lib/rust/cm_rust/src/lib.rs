@@ -167,6 +167,7 @@ pub struct ComponentDecl {
     pub collections: Vec<CollectionDecl>,
     pub storage: Vec<StorageDecl>,
     pub facets: Option<fdata::Dictionary>,
+    pub runners: Vec<RunnerDecl>,
 }
 
 impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
@@ -245,6 +246,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             collections: self.collections.fidl_into_native(),
             storage: self.storage.fidl_into_native(),
             facets: self.facets.fidl_into_native(),
+            runners: self.runners.fidl_into_native(),
         }
     }
 }
@@ -311,7 +313,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             collections: self.collections.native_into_fidl(),
             storage: self.storage.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
-            runners: None,
+            runners: self.runners.native_into_fidl(),
         }
     }
 }
@@ -327,6 +329,7 @@ impl Clone for ComponentDecl {
             collections: self.collections.clone(),
             storage: self.storage.clone(),
             facets: data::clone_option_dictionary(&self.facets),
+            runners: self.runners.clone(),
         }
     }
 }
@@ -476,11 +479,18 @@ fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::Co
                       name: String,
                       durability: fsys::Durability,
                   });
+fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
+                  {
+                      name: String,
+                      source: RunnerSource,
+                      source_path: CapabilityPath,
+                  });
 
 fidl_into_vec!(UseDecl, fsys::UseDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
 fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
 fidl_into_vec!(StorageDecl, fsys::StorageDecl);
+fidl_into_vec!(RunnerDecl, fsys::RunnerDecl);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
@@ -989,6 +999,36 @@ impl NativeIntoFidl<Option<fsys::Ref>> for StorageDirectorySource {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum RunnerSource {
+    Realm,
+    Self_,
+    Child(String),
+}
+
+impl FidlIntoNative<RunnerSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> RunnerSource {
+        match self.unwrap() {
+            fsys::Ref::Realm(_) => RunnerSource::Realm,
+            fsys::Ref::Self_(_) => RunnerSource::Self_,
+            fsys::Ref::Child(c) => RunnerSource::Child(c.name),
+            _ => panic!("invalid RunnerSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for RunnerSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            RunnerSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            RunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            RunnerSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum OfferDirectorySource {
     Realm,
     Self_,
@@ -1284,6 +1324,7 @@ mod tests {
                 collections: vec![],
                 storage: vec![],
                 facets: None,
+                runners: vec![],
             },
         },
         try_from_all => {
@@ -1469,7 +1510,13 @@ mod tests {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                    }
                ]),
-               runners: None,
+               runners: Some(vec![
+                   fsys::RunnerDecl {
+                       name: Some("elf".to_string()),
+                       source_path: Some("/elf".to_string()),
+                       source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                   }
+               ]),
             },
             result = {
                 ComponentDecl {
@@ -1609,6 +1656,13 @@ mod tests {
                             source_path: "/memfs".try_into().unwrap(),
                             source: StorageDirectorySource::Realm,
                         },
+                    ],
+                    runners: vec![
+                        RunnerDecl {
+                            name: "elf".to_string(),
+                            source: RunnerSource::Self_,
+                            source_path: "/elf".try_into().unwrap(),
+                        }
                     ],
                 }
             },

@@ -75,6 +75,7 @@ pub fn default_component_decl() -> ComponentDecl {
         collections: Vec::new(),
         facets: None,
         storage: Vec::new(),
+        runners: Vec::new(),
     }
 }
 

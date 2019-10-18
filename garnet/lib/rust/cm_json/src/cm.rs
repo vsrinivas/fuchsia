@@ -36,6 +36,9 @@ pub struct Document {
     /// Freeform dictionary containing third-party metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub facets: Option<Map<String, Value>>,
+    /// Runner capability declarations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runners: Option<Vec<Runner>>,
 }
 
 /// A name that can refer to a component, collection, or other entity in the
@@ -103,6 +106,16 @@ pub struct Storage {
     pub source: Ref,
 }
 
+/// A runner capability. See [`RunnerDecl`].
+///
+/// [`RunnerDecl`]: ../../fidl_fuchsia_sys2/struct.RunnerDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Runner {
+    pub name: Name,
+    pub source: Ref,
+    pub source_path: Path,
+}
+
 /// Used capability. See [`UseDecl`].
 ///
 /// [`UseDecl`]: ../../fidl_fuchsia_sys2/enum.UseDecl.html
@@ -117,6 +130,8 @@ pub enum Use {
     Directory(UseDirectory),
     /// Used storage capability.
     Storage(UseStorage),
+    /// Used runner capability.
+    Runner(UseRunner),
 }
 
 /// Used service capability. See [`UseServiceDecl`].
@@ -171,6 +186,15 @@ pub struct UseStorage {
     pub target_path: Option<Path>,
 }
 
+/// Used runner capability. See [`UseRunnerDecl`].
+///
+/// [`UseRunnerDecl`]: ../../fidl_fuchsia_sys2/struct.UseRunnerDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UseRunner {
+    /// Used runner name.
+    pub source_name: Name,
+}
+
 /// Exposed capability destination. See [`ExposeTargetDecl`].
 ///
 /// [`ExposeTargetDecl`]: ../../fidl_fuchsia_sys2/enum.ExposeTargetDecl.html
@@ -190,6 +214,7 @@ pub enum Expose {
     Service(ExposeService),
     LegacyService(ExposeLegacyService),
     Directory(ExposeDirectory),
+    Runner(ExposeRunner),
 }
 
 /// Exposed service capability. See [`ExposeServiceDecl`].
@@ -225,6 +250,17 @@ pub struct ExposeDirectory {
     pub target: ExposeTarget,
 }
 
+/// Exposed runner capability. See [`ExposeRunnerDecl`].
+///
+/// [`ExposeRunnerDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeRunnerDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExposeRunner {
+    pub source: Ref,
+    pub source_name: Name,
+    pub target: ExposeTarget,
+    pub target_name: Name,
+}
+
 /// Offered capability. See [`OfferDecl`].
 ///
 /// [`OfferDecl`]: ../../fidl_fuchsia_sys2/enum.OfferDecl.html
@@ -235,6 +271,7 @@ pub enum Offer {
     LegacyService(OfferLegacyService),
     Directory(OfferDirectory),
     Storage(OfferStorage),
+    Runner(OfferRunner),
 }
 
 /// Offered service capability. See [`OfferServiceDecl`].
@@ -291,6 +328,21 @@ pub struct OfferStorage {
     pub type_: StorageType,
     pub source: Ref,
     pub target: Ref,
+}
+
+/// Offered runner capability. See [`OfferRunnerDecl`].
+///
+/// [`OfferRunnerDecl`]: ../../fidl_fuchsia_sys2/struct.OfferRunnerDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OfferRunner {
+    /// Offered runner source component.
+    pub source: Ref,
+    /// Offered runner source name.
+    pub source_name: Name,
+    /// Offered runner target.
+    pub target: Ref,
+    /// Offered runner target name.
+    pub target_name: Name,
 }
 
 /// The type of storage capability. See [`StorageType`].

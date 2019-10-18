@@ -342,6 +342,7 @@ mod tests {
             collections: vec![],
             storage: vec![],
             facets: None,
+            runners: vec![],
         };
         let sources = capability.find_expose_service_sources(&decl);
         assert_eq!(sources, vec![&net_service, &log_service])
@@ -364,6 +365,7 @@ mod tests {
             collections: vec![],
             storage: vec![],
             facets: None,
+            runners: vec![],
         };
         capability.find_expose_service_sources(&decl);
     }
@@ -434,6 +436,7 @@ mod tests {
             collections: vec![],
             storage: vec![],
             facets: None,
+            runners: vec![],
         };
         let moniker = ChildMoniker::new("child".to_string(), None, 0);
         let sources = capability.find_offer_service_sources(&decl, &moniker);
@@ -457,6 +460,7 @@ mod tests {
             collections: vec![],
             storage: vec![],
             facets: None,
+            runners: vec![],
         };
         let moniker = ChildMoniker::new("".to_string(), None, 0);
         capability.find_offer_service_sources(&decl, &moniker);

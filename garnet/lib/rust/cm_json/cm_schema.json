@@ -158,6 +158,9 @@
           },
           {
             "required": [ "storage" ]
+          },
+          {
+            "required": [ "runner" ]
           }
         ],
         "properties": {
@@ -247,6 +250,19 @@
                 "type": ["null", "string"]
               }
             }
+          },
+          "runner": {
+            "type": "object",
+            "title": "Used runner capability",
+            "required": [
+              "source_name"
+            ],
+            "properties": {
+              "source_name": {
+                "title": "Used runner name",
+                "allOf": [{ "$ref": "#/definitions/name-clause" }]
+              }
+            }
           }
         }
       }
@@ -266,6 +282,9 @@
           },
           {
             "required": [ "directory" ]
+          },
+          {
+            "required": [ "runner" ]
           }
         ],
         "properties": {
@@ -352,6 +371,34 @@
                 "title": "Exposed directory target path"
               }
             }
+          },
+          "runner": {
+            "type": "object",
+            "title": "Exposed runner capability",
+            "required": [
+              "source",
+              "source_name",
+              "target",
+              "target_name"
+            ],
+            "properties": {
+              "source": {
+                "title": "Exposed runner source component",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              },
+              "source_name": {
+                "title": "Exposed runner source name",
+                "allOf": [{ "$ref": "#/definitions/name-clause" }]
+              },
+              "target": {
+                "title": "Exposed runner target component",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              },
+              "target_name": {
+                "allOf": [{ "$ref": "#/definitions/name-clause" }],
+                "title": "Exposed runner target name"
+              }
+            }
           }
         }
       }
@@ -374,6 +421,9 @@
           },
           {
             "required": [ "storage" ]
+          },
+          {
+            "required": [ "runner" ]
           }
         ],
         "properties": {
@@ -407,6 +457,34 @@
               "target": {
                 "title": "Offered storage target",
                 "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              }
+            }
+          },
+          "runner": {
+            "title": "Offered runner",
+            "required": [
+              "source",
+              "source_name",
+              "target",
+              "target_name"
+            ],
+            "properties": {
+              "source": {
+                "title": "Offered runner source component",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              },
+              "source_name": {
+                "title": "Offered runner source name",
+                "allOf": [{ "$ref": "#/definitions/name-clause" }]
+              },
+              "target": {
+                "title": "Offered runner target",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+              },
+              "target_name": {
+                "title": "Offered runner target name",
+                "type": "string",
+                "allOf": [{ "$ref": "#/definitions/name-clause" }]
               }
             }
           }
@@ -493,6 +571,33 @@
       "type": "object",
       "title": "Facets",
       "description": "Freeform dictionary containing third-party metadata"
+    },
+    "runners": {
+      "type": "array",
+      "title": "Runner capabilities",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "source",
+          "source_path"
+        ],
+        "properties": {
+          "name": {
+            "title": "Name of the declared runner",
+            "allOf": [{ "$ref": "#/definitions/name-clause" }]
+          },
+          "source": {
+            "title": "Relative source of the runner service",
+            "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+          },
+          "source_path": {
+            "title": "Path of the capability within the specified source",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }]
+          }
+        }
+      }
     }
   }
 }

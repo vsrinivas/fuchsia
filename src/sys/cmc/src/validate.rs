@@ -1320,6 +1320,58 @@ mod tests {
             result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /collections/0/name")),
         },
 
+        // runners
+        test_cm_runner => {
+            input = json!({
+                "runners": [
+                    {
+                        "name": "elf",
+                        "source_path": "/elf",
+                        "source": {
+                            "child": {
+                                "name": "child"
+                            }
+                        }
+                    },
+                    {
+                        "name": "web",
+                        "source_path": "/web",
+                        "source": {
+                            "self": {}
+                        }
+                    },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cm_runner_missing_fields => {
+            input = json!({
+                "runners": [ { } ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, concat!(
+                "This property is required at /runners/0/name, ",
+                "This property is required at /runners/0/source, ",
+                "This property is required at /runners/0/source_path"
+            ))),
+        },
+        test_cm_runner_invalid_child_name => {
+            input = json!({
+                "runners": [ {
+                    "name": "foo",
+                    "source_path": "/minfs",
+                    "source": {
+                        "child": {
+                            "name": "bad^"
+                        }
+                    }
+                } ]
+            }),
+            result = Err(Error::validate_schema(
+                CM_SCHEMA,
+                "Pattern condition is not met at /runners/0/source/child/name",
+            )),
+        },
+
         // facets
         test_cm_facets => {
             input = json!({

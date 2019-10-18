@@ -54,7 +54,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             collections: self.collections.cm_into()?,
             facets: self.facets.cm_into()?,
             storage: self.storage.cm_into()?,
-            runners: None,
+            runners: self.runners.cm_into()?,
         })
     }
 }
@@ -66,6 +66,7 @@ impl CmInto<fsys::UseDecl> for cm::Use {
             cm::Use::LegacyService(s) => fsys::UseDecl::LegacyService(s.cm_into()?),
             cm::Use::Directory(d) => fsys::UseDecl::Directory(d.cm_into()?),
             cm::Use::Storage(s) => fsys::UseDecl::Storage(s.cm_into()?),
+            cm::Use::Runner(r) => fsys::UseDecl::Runner(r.cm_into()?),
         })
     }
 }
@@ -76,6 +77,7 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
             cm::Expose::Service(s) => fsys::ExposeDecl::Service(s.cm_into()?),
             cm::Expose::LegacyService(s) => fsys::ExposeDecl::LegacyService(s.cm_into()?),
             cm::Expose::Directory(d) => fsys::ExposeDecl::Directory(d.cm_into()?),
+            cm::Expose::Runner(r) => fsys::ExposeDecl::Runner(r.cm_into()?),
         })
     }
 }
@@ -96,6 +98,7 @@ impl CmInto<fsys::OfferDecl> for cm::Offer {
             cm::Offer::LegacyService(s) => fsys::OfferDecl::LegacyService(s.cm_into()?),
             cm::Offer::Directory(d) => fsys::OfferDecl::Directory(d.cm_into()?),
             cm::Offer::Storage(s) => fsys::OfferDecl::Storage(s.cm_into()?),
+            cm::Offer::Runner(r) => fsys::OfferDecl::Runner(r.cm_into()?),
         })
     }
 }
@@ -139,6 +142,12 @@ impl CmInto<fsys::UseStorageDecl> for cm::UseStorage {
     }
 }
 
+impl CmInto<fsys::UseRunnerDecl> for cm::UseRunner {
+    fn cm_into(self) -> Result<fsys::UseRunnerDecl, Error> {
+        Ok(fsys::UseRunnerDecl { source_name: Some(self.source_name.into()) })
+    }
+}
+
 impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
     fn cm_into(self) -> Result<fsys::ExposeServiceDecl, Error> {
         Ok(fsys::ExposeServiceDecl {
@@ -168,6 +177,17 @@ impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
             target: Some(self.target.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::ExposeRunnerDecl> for cm::ExposeRunner {
+    fn cm_into(self) -> Result<fsys::ExposeRunnerDecl, Error> {
+        Ok(fsys::ExposeRunnerDecl {
+            source: Some(self.source.cm_into()?),
+            source_name: Some(self.source_name.into()),
+            target: Some(self.target.cm_into()?),
+            target_name: Some(self.target_name.into()),
         })
     }
 }
@@ -215,6 +235,17 @@ impl CmInto<fsys::OfferStorageDecl> for cm::OfferStorage {
     }
 }
 
+impl CmInto<fsys::OfferRunnerDecl> for cm::OfferRunner {
+    fn cm_into(self) -> Result<fsys::OfferRunnerDecl, Error> {
+        Ok(fsys::OfferRunnerDecl {
+            source: Some(self.source.cm_into()?),
+            source_name: Some(self.source_name.into()),
+            target: Some(self.target.cm_into()?),
+            target_name: Some(self.target_name.into()),
+        })
+    }
+}
+
 impl CmInto<fsys::StorageType> for cm::StorageType {
     fn cm_into(self) -> Result<fsys::StorageType, Error> {
         match self {
@@ -250,6 +281,16 @@ impl CmInto<fsys::StorageDecl> for cm::Storage {
             name: Some(self.name.into()),
             source_path: Some(self.source_path.into()),
             source: Some(self.source.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::RunnerDecl> for cm::Runner {
+    fn cm_into(self) -> Result<fsys::RunnerDecl, Error> {
+        Ok(fsys::RunnerDecl {
+            name: Some(self.name.into()),
+            source: Some(self.source.cm_into()?),
+            source_path: Some(self.source_path.into()),
         })
     }
 }
@@ -595,6 +636,11 @@ mod tests {
                             "type": "cache",
                             "target_path": "/cache"
                         }
+                    },
+                    {
+                        "runner": {
+                            "source_name": "elf"
+                        }
                     }
                 ]
             }),
@@ -633,6 +679,9 @@ mod tests {
                     fsys::UseDecl::Storage(fsys::UseStorageDecl {
                         type_: Some(fsys::StorageType::Cache),
                         target_path: Some("/cache".to_string()),
+                    }),
+                    fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                        source_name: Some("elf".to_string()),
                     }),
                 ];
                 let mut decl = new_component_decl();
@@ -686,6 +735,18 @@ mod tests {
                             "target_path": "/volumes/blobfs",
                             "target": "framework"
                         }
+                    },
+                    {
+                        "runner": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "source_name": "elf",
+                            "target": "realm",
+                            "target_name": "elf"
+                        }
                     }
                 ],
                 "children": [
@@ -727,6 +788,15 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         target_path: Some("/volumes/blobfs".to_string()),
                         target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                    }),
+                    fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
+                        source_name: Some("elf".to_string()),
+                        source: Some(fsys::Ref::Child(fsys::ChildRef{
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some("elf".to_string()),
+                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                     }),
                 ];
                 let children = vec![
@@ -902,7 +972,21 @@ mod tests {
                                 }
                             }
                         }
-                    }
+                    },
+                    {
+                        "runner": {
+                            "source": {
+                                "self": {}
+                            },
+                            "source_name": "elf",
+                            "target": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "target_name": "elf"
+                        }
+                    },
                 ],
                 "children": [
                     {
@@ -1044,6 +1128,17 @@ mod tests {
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef { name: "logger".to_string(), collection: None }
                         )),
+                    }),
+                    fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        source_name: Some("elf".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: "logger".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("elf".to_string()),
                     }),
                 ];
                 let children = vec![
@@ -1202,6 +1297,31 @@ mod tests {
 
             },
         },
+        test_translate_runners => {
+            input = json!({
+                "runners": [
+                    {
+                        "name": "elf",
+                        "source": {
+                            "self": {}
+                        },
+                        "source_path": "/elf"
+                    }
+                ]
+            }),
+            output = {
+                let runners = vec![
+                    fsys::RunnerDecl {
+                        name: Some("elf".to_string()),
+                        source_path: Some("/elf".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                    },
+                ];
+                let mut decl = new_component_decl();
+                decl.runners = Some(runners);
+                decl
+            },
+        },
         test_translate_all_sections => {
             input = json!({
                 "program": {
@@ -1278,6 +1398,15 @@ mod tests {
                             "self": {}
                         }
                     }
+                ],
+                "runners": [
+                    {
+                        "name": "elf",
+                        "source": {
+                            "self": {}
+                        },
+                        "source_path": "/elf"
+                    }
                 ]
             }),
             output = {
@@ -1353,6 +1482,13 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                     },
                 ];
+                let runners = vec![
+                    fsys::RunnerDecl {
+                        name: Some("elf".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                        source_path: Some("/elf".to_string()),
+                    },
+                ];
                 fsys::ComponentDecl {
                     program: Some(program),
                     uses: Some(uses),
@@ -1362,7 +1498,7 @@ mod tests {
                     collections: Some(collections),
                     facets: Some(facets),
                     storage: Some(storages),
-                    runners: None,
+                    runners: Some(runners),
                 }
             },
         },
