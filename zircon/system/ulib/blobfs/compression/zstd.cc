@@ -14,6 +14,7 @@
 #include <zstd/zstd.h>
 
 #include "compressor.h"
+#include "zircon/errors.h"
 
 namespace blobfs {
 
@@ -110,6 +111,11 @@ zx_status_t ZSTDDecompress(void* target_buf, size_t* target_size, const void* sr
   if (ZSTD_isError(r)) {
     FS_TRACE_ERROR("[blobfs][zstd] Failed to initialize dstream: %s\n", ZSTD_getErrorName(r));
     return ZX_ERR_INTERNAL;
+  }
+
+  // Passing zero length buffers to ZSTD_decompress will cause an infinite loop.
+  if (*src_size == 0 || *target_size == 0) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   ZSTD_inBuffer input;

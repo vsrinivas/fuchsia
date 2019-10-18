@@ -16,6 +16,7 @@
 #include "compression/blob-compressor.h"
 #include "compression/lz4.h"
 #include "compression/zstd.h"
+#include "zircon/errors.h"
 
 namespace blobfs {
 namespace {
@@ -170,6 +171,23 @@ TEST(CompressorTests, CompressDecompressZSTDCompressible3) {
 
 TEST(CompressorTests, CompressDecompressZSTDCompressible4) {
   RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
+}
+
+TEST(CompressorTests, DecompressZSTDCompressiblesFailsOnNoSize) {
+  size_t output_size = 512;
+  size_t input_size = 512;
+  size_t invalid_size = 0;
+  std::unique_ptr<char[]> input(GenerateInput(DataType::Compressible, 0, input_size));
+  std::unique_ptr<char[]> output(new char[output_size]);
+
+  ASSERT_STATUS(ZSTDDecompress(output.get(), &output_size, input.get(), &invalid_size),
+                ZX_ERR_INVALID_ARGS);
+  invalid_size = 0;
+  ASSERT_STATUS(ZSTDDecompress(output.get(), &invalid_size, input.get(), &input_size),
+                ZX_ERR_INVALID_ARGS);
+  invalid_size = 0;
+  ASSERT_STATUS(ZSTDDecompress(output.get(), &invalid_size, input.get(), &invalid_size),
+                ZX_ERR_INVALID_ARGS);
 }
 
 void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
