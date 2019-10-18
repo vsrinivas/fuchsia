@@ -377,7 +377,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   if (err != ZX_OK) {
     BRCMF_ERR("failed setting mpc: %s, fw err %s\n", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
-    goto done;
+    // Does not work on all platforms. For now ignore the error and continue
   }
 
   brcmf_c_set_joinpref_default(ifp);
