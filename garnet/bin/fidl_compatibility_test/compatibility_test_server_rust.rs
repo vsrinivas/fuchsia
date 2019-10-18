@@ -81,7 +81,10 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     }
                     responder.send(&mut value).context("Error responding")?;
                 }
-                EchoRequest::EchoTable { value: _, forward_to_server: _, responder: _ } => {
+                EchoRequest::EchoTable { .. } => {
+                    // Enabling this blows the stack.
+                }
+                EchoRequest::EchoXunions { .. } => {
                     // Enabling this blows the stack.
                 }
                 /*
@@ -96,7 +99,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder.send(value)
                         .context("Error responding")?;
                 }
-                */
                 EchoRequest::EchoXunions { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
@@ -107,6 +109,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     }
                     responder.send(&mut value.iter_mut()).context("Error responding")?;
                 }
+                */
             }
             Ok(())
         })

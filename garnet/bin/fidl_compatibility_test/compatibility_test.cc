@@ -1421,8 +1421,8 @@ TEST(Compatibility, EchoTable) {
 }
 
 TEST(Compatibility, EchoXunions) {
-  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                   const std::string& server_url) {
+  ForSomeServers(Exclude({"rust"}), [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                                       const std::string& server_url) {
     // Using randomness to avoid having to come up with varied values by
     // hand. Seed deterministically so that this function's outputs are
     // predictable.
