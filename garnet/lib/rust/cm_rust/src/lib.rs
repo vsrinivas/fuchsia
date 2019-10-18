@@ -7,7 +7,7 @@ use {
     failure::Fail,
     fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
     std::collections::HashMap,
-    std::convert::{TryFrom, TryInto},
+    std::convert::{From, TryFrom, TryInto},
     std::fmt,
 };
 
@@ -191,6 +191,9 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::ExposeDecl::Directory(d) => {
                         exposes.push(ExposeDecl::Directory(d.fidl_into_native()))
                     }
+                    fsys::ExposeDecl::Runner(r) => {
+                        exposes.push(ExposeDecl::Runner(r.fidl_into_native()))
+                    }
                     fsys::ExposeDecl::__UnknownVariant { .. } => panic!("invalid variant"),
                 }
             }
@@ -266,6 +269,9 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                 ExposeDecl::Directory(d) => {
                     exposes.push(fsys::ExposeDecl::Directory(d.native_into_fidl()))
                 }
+                ExposeDecl::Runner(r) => {
+                    exposes.push(fsys::ExposeDecl::Runner(r.native_into_fidl()))
+                }
             }
         }
         let mut offers = vec![];
@@ -338,6 +344,7 @@ pub enum ExposeDecl {
     Service(ExposeServiceDecl),
     LegacyService(ExposeLegacyServiceDecl),
     Directory(ExposeDirectoryDecl),
+    Runner(ExposeRunnerDecl),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -404,6 +411,14 @@ fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirector
                       source_path: CapabilityPath,
                       target: ExposeTarget,
                       target_path: CapabilityPath,
+                  });
+fidl_into_struct!(ExposeRunnerDecl, ExposeRunnerDecl, fsys::ExposeRunnerDecl,
+                  fsys::ExposeRunnerDecl,
+                  {
+                      source: ExposeSource,
+                      source_name: CapabilityName,
+                      target: ExposeTarget,
+                      target_name: CapabilityName,
                   });
 
 fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
@@ -502,6 +517,31 @@ impl TryFrom<&str> for CapabilityPath {
     }
 }
 
+/// A named capability.
+///
+/// Unlike a `CapabilityPath`, a `CapabilityName` doesn't encode any form
+/// of hierarchy.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CapabilityName(pub String);
+
+impl CapabilityName {
+    pub fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+impl From<&str> for CapabilityName {
+    fn from(name: &str) -> CapabilityName {
+        CapabilityName(name.to_string())
+    }
+}
+
+impl From<&CapabilityName> for CapabilityName {
+    fn from(name: &CapabilityName) -> CapabilityName {
+        name.clone()
+    }
+}
+
 // Describes the type of framework capability and its source path.
 #[derive(Clone)]
 pub enum FrameworkCapabilityDecl {
@@ -593,6 +633,19 @@ impl FidlIntoNative<CapabilityPath> for Option<String> {
 }
 
 impl NativeIntoFidl<Option<String>> for CapabilityPath {
+    fn native_into_fidl(self) -> Option<String> {
+        Some(self.to_string())
+    }
+}
+
+impl FidlIntoNative<CapabilityName> for Option<String> {
+    fn fidl_into_native(self) -> CapabilityName {
+        let s: &str = &self.unwrap();
+        s.into()
+    }
+}
+
+impl NativeIntoFidl<Option<String>> for CapabilityName {
     fn native_into_fidl(self) -> Option<String> {
         Some(self.to_string())
     }
@@ -1236,6 +1289,15 @@ mod tests {
                        target_path: Some("/data".to_string()),
                        target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                    }),
+                   fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
+                       source: Some(fsys::Ref::Child(fsys::ChildRef {
+                           name: "netstack".to_string(),
+                           collection: None,
+                       })),
+                       source_name: Some("elf".to_string()),
+                       target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       target_name: Some("elf".to_string()),
+                   }),
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
                            name: "netstack".to_string(),
@@ -1385,6 +1447,12 @@ mod tests {
                             source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
                             target: ExposeTarget::Framework,
+                        }),
+                        ExposeDecl::Runner(ExposeRunnerDecl {
+                            source: ExposeSource::Child("netstack".to_string()),
+                            source_name: "elf".try_into().unwrap(),
+                            target: ExposeTarget::Realm,
+                            target_name: "elf".try_into().unwrap(),
                         }),
                         ExposeDecl::Service(ExposeServiceDecl {
                             sources: vec![

@@ -100,6 +100,10 @@ impl DirTree {
             cm_rust::ExposeDecl::Service(d) => &d.target_path,
             cm_rust::ExposeDecl::LegacyService(d) => &d.target_path,
             cm_rust::ExposeDecl::Directory(d) => &d.target_path,
+            cm_rust::ExposeDecl::Runner(_) => {
+                // Runners do not add directory entries.
+                return;
+            }
         };
         let tree = self.to_directory_node(path);
         let routing_fn = routing_factory(abs_moniker.clone(), expose.clone());
@@ -126,9 +130,9 @@ mod tests {
         super::*,
         crate::model::testing::{mocks, test_helpers, test_helpers::*},
         cm_rust::{
-            CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource,
-            ExposeTarget, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
-            UseStorageDecl,
+            CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl,
+            ExposeLegacyServiceDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl,
+            UseDirectoryDecl, UseLegacyServiceDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -228,6 +232,12 @@ mod tests {
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
                     target: ExposeTarget::Realm,
+                }),
+                ExposeDecl::Runner(ExposeRunnerDecl {
+                    source: ExposeSource::Self_,
+                    source_name: CapabilityName::from("elf"),
+                    target: ExposeTarget::Realm,
+                    target_name: CapabilityName::from("elf"),
                 }),
             ],
             ..default_component_decl()

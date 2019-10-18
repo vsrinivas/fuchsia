@@ -252,8 +252,9 @@ impl<'a> ValidationContext<'a> {
         // Validate "exposes".
         if let Some(exposes) = self.decl.exposes.as_ref() {
             let mut target_paths = HashMap::new();
+            let mut runner_names = HashSet::new();
             for expose in exposes.iter() {
-                self.validate_expose_decl(&expose, &mut target_paths);
+                self.validate_expose_decl(&expose, &mut target_paths, &mut runner_names);
             }
         }
 
@@ -445,6 +446,7 @@ impl<'a> ValidationContext<'a> {
         &mut self,
         expose: &'a fsys::ExposeDecl,
         prev_target_paths: &mut HashMap<&'a str, AllowablePaths>,
+        prev_runner_names: &mut HashSet<&'a str>,
     ) {
         match expose {
             fsys::ExposeDecl::Service(e) => {
@@ -478,6 +480,16 @@ impl<'a> ValidationContext<'a> {
                     e.target_path.as_ref(),
                     e.target.as_ref(),
                     prev_target_paths,
+                );
+            }
+            fsys::ExposeDecl::Runner(e) => {
+                self.validate_expose_runner_fields(
+                    "ExposeRunnerDecl",
+                    e.source.as_ref(),
+                    e.source_name.as_ref(),
+                    e.target.as_ref(),
+                    e.target_name.as_ref(),
+                    prev_runner_names,
                 );
             }
             fsys::ExposeDecl::__UnknownVariant { .. } => {
@@ -530,6 +542,49 @@ impl<'a> ValidationContext<'a> {
                 if prev_state == AllowablePaths::One || prev_state != allowable_paths {
                     self.errors.push(Error::duplicate_field(decl, "target_path", target_path));
                 }
+            }
+        }
+    }
+
+    fn validate_expose_runner_fields(
+        &mut self,
+        decl: &str,
+        source: Option<&fsys::Ref>,
+        source_name: Option<&String>,
+        target: Option<&fsys::Ref>,
+        target_name: Option<&'a String>,
+        prev_runner_names: &mut HashSet<&'a str>,
+    ) {
+        // Ensure our source is valid.
+        match source {
+            Some(fsys::Ref::Self_(_)) => (),
+            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
+            Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
+            None => self.errors.push(Error::missing_field(decl, "source")),
+        }
+
+        // Ensure our target is valid.
+        match target {
+            Some(fsys::Ref::Realm(_)) => {}
+            Some(_) => self.errors.push(Error::invalid_field(decl, "target")),
+            None => self.errors.push(Error::missing_field(decl, "target")),
+        }
+
+        // Ensure source name is valid.
+        check_name(source_name, decl, "source_name", &mut self.errors);
+
+        // Ensure target_name is valid.
+        if check_name(target_name, decl, "target_name", &mut self.errors) {
+            // Ensure that target_name hasn't already been exposed.
+            if !prev_runner_names.insert(target_name.unwrap()) {
+                self.errors.push(Error::duplicate_field(decl, "target_name", target_name.unwrap()));
+            }
+        }
+
+        // If the expose source is ourself, ensure we have a corresponding RunnerDecl.
+        if let (Some(fsys::Ref::Self_(_)), Some(name)) = (source, source_name) {
+            if !self.all_runners_and_sources.contains_key(&name as &str) {
+                self.errors.push(Error::invalid_field(decl, "source"));
             }
         }
     }
@@ -915,10 +970,10 @@ mod tests {
         super::*,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
-            ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeServiceDecl,
-            FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl, OfferServiceDecl,
-            OfferStorageDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, StorageDecl,
-            StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
+            ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeRunnerDecl,
+            ExposeServiceDecl, FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl,
+            OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode,
+            StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
             UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
@@ -1309,6 +1364,12 @@ mod tests {
                         target_path: None,
                         target: None,
                     }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: None,
+                        source_name: None,
+                        target: None,
+                        target_name: None,
+                    }),
                 ]);
                 decl
             },
@@ -1325,6 +1386,10 @@ mod tests {
                 Error::missing_field("ExposeDirectoryDecl", "target"),
                 Error::missing_field("ExposeDirectoryDecl", "source_path"),
                 Error::missing_field("ExposeDirectoryDecl", "target_path"),
+                Error::missing_field("ExposeRunnerDecl", "source"),
+                Error::missing_field("ExposeRunnerDecl", "target"),
+                Error::missing_field("ExposeRunnerDecl", "source_name"),
+                Error::missing_field("ExposeRunnerDecl", "target_name"),
             ])),
         },
         test_validate_exposes_extraneous => {
@@ -1358,6 +1423,15 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "netstack".to_string(),
+                            collection: Some("modular".to_string()),
+                        })),
+                        source_name: Some("elf".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("elf".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1365,6 +1439,7 @@ mod tests {
                 Error::extraneous_field("ExposeServiceDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeLegacyServiceDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeDirectoryDecl", "source.child.collection"),
+                Error::extraneous_field("ExposeRunnerDecl", "source.child.collection"),
             ])),
         },
         test_validate_exposes_invalid_identifiers => {
@@ -1398,6 +1473,15 @@ mod tests {
                         target_path: Some("/".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
                     }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("/path".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("elf!".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1411,6 +1495,9 @@ mod tests {
                 Error::invalid_character_in_field("ExposeDirectoryDecl", "source.child.name", '^'),
                 Error::invalid_field("ExposeDirectoryDecl", "source_path"),
                 Error::invalid_field("ExposeDirectoryDecl", "target_path"),
+                Error::invalid_character_in_field("ExposeRunnerDecl", "source.child.name", '^'),
+                Error::invalid_character_in_field("ExposeRunnerDecl", "source_name", '/'),
+                Error::invalid_character_in_field("ExposeRunnerDecl", "target_name", '!'),
             ])),
         },
         test_validate_exposes_invalid_source_target => {
@@ -1441,6 +1528,12 @@ mod tests {
                         target_path: Some("/h".to_string()),
                         target: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
                     }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        source_name: Some("a".to_string()),
+                        target: Some(Ref::Framework(FrameworkRef {})),
+                        target_name: Some("b".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1453,6 +1546,8 @@ mod tests {
                 Error::invalid_field("ExposeDirectoryDecl", "target"),
                 Error::invalid_field("ExposeDirectoryDecl", "source"),
                 Error::invalid_field("ExposeDirectoryDecl", "target"),
+                Error::invalid_field("ExposeRunnerDecl", "source"),
+                Error::invalid_field("ExposeRunnerDecl", "target"),
             ])),
         },
         test_validate_exposes_long_identifiers => {
@@ -1486,6 +1581,15 @@ mod tests {
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "b".repeat(101),
+                            collection: None,
+                        })),
+                        source_name: Some(format!("{}", "a".repeat(101))),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some(format!("{}", "b".repeat(101))),
+                    }),
                 ]);
                 decl
             },
@@ -1499,6 +1603,9 @@ mod tests {
                 Error::field_too_long("ExposeDirectoryDecl", "source.child.name"),
                 Error::field_too_long("ExposeDirectoryDecl", "source_path"),
                 Error::field_too_long("ExposeDirectoryDecl", "target_path"),
+                Error::field_too_long("ExposeRunnerDecl", "source.child.name"),
+                Error::field_too_long("ExposeRunnerDecl", "source_name"),
+                Error::field_too_long("ExposeRunnerDecl", "target_name"),
             ])),
         },
         test_validate_exposes_invalid_child => {
@@ -1532,6 +1639,15 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("elf".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("elf".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1539,11 +1655,17 @@ mod tests {
                 Error::invalid_child("ExposeServiceDecl", "source", "netstack"),
                 Error::invalid_child("ExposeLegacyServiceDecl", "source", "netstack"),
                 Error::invalid_child("ExposeDirectoryDecl", "source", "netstack"),
+                Error::invalid_child("ExposeRunnerDecl", "source", "netstack"),
             ])),
         },
         test_validate_exposes_duplicate_target => {
             input = {
                 let mut decl = new_component_decl();
+                decl.runners = Some(vec![RunnerDecl{
+                    name: Some("source_elf".to_string()),
+                    source: Some(Ref::Self_(SelfRef{})),
+                    source_path: Some("/path".to_string()),
+                }]);
                 decl.exposes = Some(vec![
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -1575,6 +1697,18 @@ mod tests {
                         target_path: Some("/svc/fuchsia.net.Stack".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("source_elf".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("elf".to_string()),
+                    }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("source_elf".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("elf".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1583,6 +1717,27 @@ mod tests {
                                        "/svc/fuchsia.logger.Log"),
                 Error::duplicate_field("ExposeDirectoryDecl", "target_path",
                                        "/svc/fuchsia.logger.Log"),
+                Error::duplicate_field("ExposeRunnerDecl", "target_name",
+                                       "elf"),
+            ])),
+        },
+        test_validate_exposes_invalid_runner_from_self => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("source_elf".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("elf".to_string()),
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                // We are attempting to expose a runner from "self", but we don't
+                // acutally declare a runner.
+                Error::invalid_field("ExposeRunnerDecl", "source"),
             ])),
         },
 

@@ -521,6 +521,8 @@ async fn walk_expose_chain<'a>(
             ExposeDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
             ExposeDecl::LegacyService(ls) => (&ls.source, &ls.target),
             ExposeDecl::Directory(d) => (&d.source, &d.target),
+            // TODO(fxb/4761): Implement runner routing.
+            ExposeDecl::Runner(_) => return Err(ModelError::unsupported("runner capability")),
         };
         if target != &ExposeTarget::Realm {
             return Err(ModelError::capability_discovery_error(format_err!(

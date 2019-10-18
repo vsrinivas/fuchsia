@@ -10,6 +10,7 @@ xunion ExposeDecl {
     ExposeServiceDecl service;
     ExposeLegacyServiceDecl legacy_service;
     ExposeDirectoryDecl directory;
+    ExposeRunnerDecl runner;
 };
 
 /// Declares a service exposed to a component's containing realm, such as a

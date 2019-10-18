@@ -46,6 +46,7 @@ enum CapabilityType {
     LegacyService,
     Directory,
     Storage,
+    Runner,
 }
 
 impl From<UseDecl> for CapabilityType {
@@ -65,6 +66,7 @@ impl From<ExposeDecl> for CapabilityType {
             ExposeDecl::Service(_) => CapabilityType::Service,
             ExposeDecl::LegacyService(_) => CapabilityType::LegacyService,
             ExposeDecl::Directory(_) => CapabilityType::Directory,
+            ExposeDecl::Runner(_) => CapabilityType::Runner,
         }
     }
 }
@@ -96,6 +98,10 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                     fasync::spawn(async move {
                         let _ = sub_dir.await;
                     });
+                }
+                CapabilityType::Runner => {
+                    // TODO(fxb/4761): Implement routing for runner caps.
+                    panic!("runner capability unsupported");
                 }
             }
         },
