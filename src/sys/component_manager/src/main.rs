@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
                 future::pending::<()>().await
             }
             Err(err) => {
-                error!("Component manager setup failed: {}", err);
+                error!("Component manager setup failed: {:?}", err);
                 process::exit(1)
             }
         }
@@ -53,6 +53,6 @@ async fn run_root(args: startup::Arguments) -> Result<(), Error> {
         .look_up_and_bind_instance(AbsoluteMoniker::root())
         .await
         .map_err(|e| Error::from(e))
-        .context("failed to bind to root component")?;
+        .context(format!("failed to bind to root component {}", args.root_component_url))?;
     Ok(())
 }
