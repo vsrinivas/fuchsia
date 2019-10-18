@@ -12,9 +12,8 @@
 
 #include <memory>
 
-#include <src/lib/fxl/logging.h>
-
 #include "fuchsia/sys/cpp/fidl.h"
+#include "src/lib/fxl/logging.h"
 
 namespace component {
 namespace testing {

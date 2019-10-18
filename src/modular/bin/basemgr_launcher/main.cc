@@ -16,8 +16,9 @@
 #include <vector>
 
 #include <src/lib/files/glob.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_printf.h>
+
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 constexpr char kConfigFilename[] = "startup.config";
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";

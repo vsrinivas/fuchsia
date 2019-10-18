@@ -16,17 +16,16 @@
 #include <unordered_map>
 #include <vector>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
-
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/perfmon/controller.h"
 #include "garnet/lib/perfmon/events.h"
 #include "session_result_spec.h"
 #include "session_spec.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 // Allow space for 999,999,999.
 // This is |int| as it is used as the width arg to fprintf.

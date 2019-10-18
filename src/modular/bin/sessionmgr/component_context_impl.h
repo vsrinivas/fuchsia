@@ -12,8 +12,7 @@
 
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
+#include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 
 namespace modular {

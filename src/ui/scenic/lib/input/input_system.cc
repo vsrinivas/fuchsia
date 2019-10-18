@@ -15,10 +15,10 @@
 #include <memory>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/time/time_point.h>
 #include <trace/event.h>
 
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_point.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/util/type_utils.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"

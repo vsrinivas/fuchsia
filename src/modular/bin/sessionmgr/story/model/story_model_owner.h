@@ -13,9 +13,8 @@
 #include <list>
 #include <memory>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/bin/sessionmgr/story/model/story_mutator.h"
 #include "src/modular/bin/sessionmgr/story/model/story_observer.h"
 

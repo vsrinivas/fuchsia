@@ -6,14 +6,13 @@
 
 #include <ostream>
 
-#include <src/lib/fxl/logging.h>
-
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_parser.h"
 #include "src/lib/fidl_codec/wire_types.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

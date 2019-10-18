@@ -8,9 +8,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fxl/logging.h"
 
 // Simple application that obtains the Process Limbo services and obtains the exceptions from it.
 // Meant to be called manually for testing purposes.

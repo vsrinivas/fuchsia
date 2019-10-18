@@ -11,10 +11,9 @@
 
 #include <unordered_map>
 
-#include <src/lib/fxl/macros.h>
-
 #include "bus.h"
 #include "counter_barrier.h"
+#include "src/lib/fxl/macros.h"
 
 namespace netemul {
 

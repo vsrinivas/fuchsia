@@ -16,11 +16,10 @@
 #include <atomic>
 #include <thread>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
-
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 #include "util.h"
 
 std::atomic_int g_num_threads_running = 0;

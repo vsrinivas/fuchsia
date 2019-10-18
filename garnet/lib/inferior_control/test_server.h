@@ -13,14 +13,13 @@
 #include <string>
 #include <vector>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "garnet/lib/inferior_control/exception_port.h"
 #include "garnet/lib/inferior_control/process.h"
 #include "garnet/lib/inferior_control/server.h"
 #include "garnet/lib/inferior_control/thread.h"
 #include "gtest/gtest.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace inferior_control {
 

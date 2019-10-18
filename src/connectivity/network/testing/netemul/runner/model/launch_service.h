@@ -5,9 +5,8 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_LAUNCH_SERVICE_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_LAUNCH_SERVICE_H_
 
-#include <src/lib/fxl/macros.h>
-
 #include "launch_app.h"
+#include "src/lib/fxl/macros.h"
 #include "src/lib/json_parser/json_parser.h"
 
 namespace netemul {

@@ -14,10 +14,9 @@
 #include <functional>
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
 #include "reader.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/macros.h"
 
 namespace perfmon {
 

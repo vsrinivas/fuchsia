@@ -7,9 +7,8 @@
 #include <lib/fdio/spawn.h>
 #include <zircon/processargs.h>
 
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 #include "test_helper.h"
 #include "util.h"
 

@@ -6,8 +6,7 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 
-#include <src/lib/fxl/strings/string_printf.h>
-
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/guest/serial.h"
 
 void handle_launch(int argc, const char* argv[], async::Loop* loop,

@@ -9,12 +9,11 @@
 
 #include "delegate.h"
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "process.h"
 #include "server.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "thread.h"
 
 namespace inferior_control {

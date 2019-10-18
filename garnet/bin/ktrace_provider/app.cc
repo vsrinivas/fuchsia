@@ -13,13 +13,13 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/ktrace_provider/device_reader.h"
 #include "garnet/bin/ktrace_provider/importer.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ktrace_provider {
 namespace {

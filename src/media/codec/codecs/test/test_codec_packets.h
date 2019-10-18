@@ -11,9 +11,8 @@
 #include <algorithm>
 #include <map>
 
-#include <src/lib/fxl/logging.h>
-
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 
 constexpr uint32_t kBufferLifetimeOrdinal = 1;
 

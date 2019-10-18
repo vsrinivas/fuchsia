@@ -7,7 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/zx/fifo.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 // This is a locally administered MAC address (first byte 0x02) mixed with the
 // Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff

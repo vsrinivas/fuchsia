@@ -7,11 +7,10 @@
 
 #include <cstring>
 
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-
 #include "garnet/lib/debugger_utils/util.h"
 #include "registers.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 
 namespace inferior_control {
 

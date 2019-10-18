@@ -14,13 +14,14 @@
 
 #include <memory>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
+
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 static constexpr int kDefaultCount = 1;
 static constexpr int kDefaultDelaySeconds = 0;

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <src/lib/fxl/arraysize.h>
-
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/bin/cpuperf_provider/intel-events.h"
+#include "src/lib/fxl/arraysize.h"
 
 namespace cpuperf_provider {
 

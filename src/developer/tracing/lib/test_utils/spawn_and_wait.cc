@@ -10,8 +10,9 @@
 #include <zircon/types.h>
 
 #include <src/lib/files/file.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/join_strings.h>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 static void StringArgvToCArgv(const std::vector<std::string>& argv,
                               std::vector<const char*>* c_argv) {

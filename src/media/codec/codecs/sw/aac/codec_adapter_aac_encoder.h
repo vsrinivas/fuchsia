@@ -14,12 +14,12 @@
 #include <atomic>
 #include <variant>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/synchronization/thread_annotations.h>
 #include <third_party/android/platform/external/aac/libAACenc/include/aacenc_lib.h>
 
 #include "chunk_input_stream.h"
 #include "output_sink.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 class CodecAdapterAacEncoder : public CodecAdapter {
  public:

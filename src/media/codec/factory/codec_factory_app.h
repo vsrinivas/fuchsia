@@ -13,9 +13,8 @@
 #include <list>
 #include <memory>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/lib/fsl/io/device_watcher.h"
+#include "src/lib/fxl/logging.h"
 
 namespace codec_factory {
 

@@ -7,13 +7,12 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include <src/lib/fxl/strings/trim.h>
-
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/trim.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace modular {

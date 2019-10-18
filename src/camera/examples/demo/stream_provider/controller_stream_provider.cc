@@ -10,7 +10,8 @@
 #include <lib/fzl/vmo-mapper.h>
 
 #include <fbl/unique_fd.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 static constexpr const char* kDevicePath = "/dev/camera-controller/camera-controller-device";
 

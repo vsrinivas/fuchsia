@@ -14,9 +14,8 @@
 
 #include <optional>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/lib/component/cpp/startup_context.h"
+#include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
 

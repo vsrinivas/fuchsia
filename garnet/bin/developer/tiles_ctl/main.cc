@@ -17,11 +17,11 @@
 #include <string>
 
 #include <src/lib/files/unique_fd.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/memory/unique_object.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/memory/unique_object.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 using ControllerPtr = fuchsia::developer::tiles::ControllerSyncPtr;
 

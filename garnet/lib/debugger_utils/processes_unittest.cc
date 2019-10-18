@@ -9,10 +9,10 @@
 #include <zircon/processargs.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
 
 #include "jobs.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 #include "test_helper.h"
 #include "test_helper_fixture.h"
 #include "util.h"

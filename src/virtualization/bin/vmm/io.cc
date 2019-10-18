@@ -7,8 +7,7 @@
 #include <lib/zx/port.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 static constexpr IoValue kBellValue = {};

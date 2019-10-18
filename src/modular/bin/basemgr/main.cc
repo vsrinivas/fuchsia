@@ -15,10 +15,10 @@
 #include <iostream>
 #include <memory>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 #include "src/modular/bin/basemgr/basemgr_settings.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"

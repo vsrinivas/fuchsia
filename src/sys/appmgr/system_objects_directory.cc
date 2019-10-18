@@ -7,9 +7,9 @@
 #include <algorithm>
 
 #include <fs/pseudo_file.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include "debug_info_retriever.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 using fxl::StringPrintf;
 

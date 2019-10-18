@@ -23,9 +23,6 @@
 #include <memory>
 #include <vector>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
-
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/a11y_settings_watcher.h"
 #include "garnet/bin/ui/root_presenter/activity_notifier.h"
@@ -33,6 +30,8 @@
 #include "garnet/bin/ui/root_presenter/media_buttons_handler.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "src/lib/component/cpp/startup_context.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
 

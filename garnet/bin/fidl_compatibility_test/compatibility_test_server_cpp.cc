@@ -14,9 +14,9 @@
 #include <string>
 
 #include <fidl/test/compatibility/cpp/fidl.h>
-#include <src/lib/fxl/logging.h>
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fidl {
 namespace test {

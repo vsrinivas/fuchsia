@@ -16,8 +16,7 @@
 
 #include <vector>
 
-#include <src/lib/fxl/macros.h>
-
+#include "src/lib/fxl/macros.h"
 #include "src/modular/lib/fidl/app_client.h"
 
 namespace modular {

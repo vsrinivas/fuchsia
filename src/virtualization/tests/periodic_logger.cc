@@ -6,7 +6,7 @@
 
 #include <lib/zx/clock.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 PeriodicLogger::PeriodicLogger(std::string operation, zx::duration logging_interval)
     : start_time_(zx::clock::get_monotonic()),

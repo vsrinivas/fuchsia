@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
 
 #include "garnet/lib/perfmon/events.h"
 #include "intel_tests.h"
+#include "src/lib/fxl/logging.h"
 
 class LastBranchVerifier : public Verifier {
  public:

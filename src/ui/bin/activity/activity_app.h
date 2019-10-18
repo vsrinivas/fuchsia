@@ -12,8 +12,7 @@
 #include <map>
 #include <memory>
 
-#include <src/lib/fxl/macros.h>
-
+#include "src/lib/fxl/macros.h"
 #include "src/ui/bin/activity/activity_provider_connection.h"
 #include "src/ui/bin/activity/activity_tracker_connection.h"
 

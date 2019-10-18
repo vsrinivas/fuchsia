@@ -18,14 +18,13 @@
 #include <stack>
 #include <thread>
 
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/join_strings.h>
-#include <src/lib/fxl/strings/split_string.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include <src/lib/fxl/strings/substitute.h>
-
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
 #include "src/lib/inspect_deprecated/query/read.h"
 #include "src/lib/inspect_deprecated/reader.h"

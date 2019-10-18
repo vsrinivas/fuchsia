@@ -12,11 +12,10 @@
 #include <memory>
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
 #include "garnet/lib/perfmon/config.h"
 #include "garnet/lib/perfmon/properties.h"
 #include "garnet/lib/perfmon/reader.h"
+#include "src/lib/fxl/macros.h"
 
 namespace perfmon {
 

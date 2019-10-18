@@ -10,10 +10,9 @@
 #include <cstdint>
 #include <memory>
 
-#include <src/lib/fxl/logging.h>
-
 #include "gtest/gtest.h"
 #include "lib/fit/single_threaded_executor.h"
+#include "src/lib/fxl/logging.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_arena_member.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 

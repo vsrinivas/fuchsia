@@ -12,9 +12,8 @@
 #include <memory>
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
 #include "records.h"
+#include "src/lib/fxl/macros.h"
 #include "types.h"
 
 namespace perfmon {

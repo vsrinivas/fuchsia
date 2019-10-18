@@ -11,7 +11,8 @@
 #include <zircon/status.h>
 
 #include <fbl/unique_fd.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {

@@ -7,10 +7,10 @@
 #include <hid-parser/usages.h>
 #include <hid/ft3x27.h>
 #include <hid/paradise.h>
-#include <src/lib/fxl/time/time_point.h>
 
 #include "garnet/bin/ui/input_reader/tests/touchscreen_test_data.h"
 #include "garnet/bin/ui/input_reader/touch.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace input {
 

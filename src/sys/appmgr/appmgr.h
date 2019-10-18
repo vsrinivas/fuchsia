@@ -10,9 +10,9 @@
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
-#include <src/lib/fxl/macros.h>
 
 #include "garnet/lib/loader/package_loader.h"
+#include "src/lib/fxl/macros.h"
 #include "src/sys/appmgr/realm.h"
 #include "src/sys/appmgr/storage_watchdog.h"
 #include "src/sys/appmgr/util.h"

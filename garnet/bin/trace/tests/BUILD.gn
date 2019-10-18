@@ -149,8 +149,8 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/trace-with-static-engine",
     "//zircon/public/lib/trace-reader",
+    "//zircon/public/lib/trace-with-static-engine",
   ]
 }
 
@@ -166,6 +166,7 @@ executable("trace_integration_tests") {
     ":gtest_main",
     ":integration_test_utils",
     ":run_test",
+    "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

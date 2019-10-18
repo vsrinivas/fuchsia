@@ -8,10 +8,9 @@
 
 #include <string>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
-
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/macros.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {

@@ -12,7 +12,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <glm/ext.hpp>
 #include <lib/ui/scenic/cpp/resources.h>
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/macros.h"
 
 #include "src/ui/scenic/lib/scenic/util/rk4_spring_simulation.h"
 

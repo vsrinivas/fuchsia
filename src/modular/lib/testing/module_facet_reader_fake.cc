@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/testing/module_facet_reader_fake.h"
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace modular {
 

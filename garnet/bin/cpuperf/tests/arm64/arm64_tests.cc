@@ -4,7 +4,7 @@
 
 #include "arm64_tests.h"
 
-#include <src/lib/fxl/arraysize.h>
+#include "src/lib/fxl/arraysize.h"
 
 // List of tests.
 // A test automatically fails if it's not listed here.

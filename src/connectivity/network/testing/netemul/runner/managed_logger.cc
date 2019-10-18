@@ -11,10 +11,9 @@
 
 #include <iostream>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "format.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace netemul {
 

@@ -7,8 +7,7 @@
 #include <endian.h>
 #include <stdio.h>
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/rtc.h"
 

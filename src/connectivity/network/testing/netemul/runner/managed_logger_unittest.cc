@@ -6,10 +6,9 @@
 
 #include <lib/gtest/real_loop_fixture.h>
 
-#include <src/lib/fxl/strings/join_strings.h>
-
 #include "log_listener.h"
 #include "log_listener_test_helpers.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 namespace netemul {
 namespace testing {

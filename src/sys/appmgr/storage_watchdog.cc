@@ -13,8 +13,9 @@
 
 #include <src/lib/files/directory.h>
 #include <src/lib/files/path.h>
-#include <src/lib/fxl/strings/concatenate.h>
 #include <trace/event.h>
+
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace {
 // Delete the given dirent inside the openend directory. If the dirent is a

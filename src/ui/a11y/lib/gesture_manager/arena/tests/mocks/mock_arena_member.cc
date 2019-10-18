@@ -4,9 +4,8 @@
 
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_arena_member.h"
 
-#include <src/lib/fxl/logging.h>
-
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 
 namespace accessibility_test {
 

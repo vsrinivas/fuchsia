@@ -6,10 +6,9 @@
 
 #include <zircon/syscalls/debug.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "garnet/lib/debugger_utils/registers.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debugger_utils {
 

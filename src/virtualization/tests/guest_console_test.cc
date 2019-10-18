@@ -4,8 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/tests/socket.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

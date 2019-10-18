@@ -12,12 +12,11 @@
 #include <memory>
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-
 #include "arch.h"
 #include "breakpoint.h"
 #include "registers.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace inferior_control {
 

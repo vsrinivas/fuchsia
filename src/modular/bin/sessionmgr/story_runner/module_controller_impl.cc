@@ -11,9 +11,8 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_request.h>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/time/time_delta.h>
-
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_delta.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/clone.h"

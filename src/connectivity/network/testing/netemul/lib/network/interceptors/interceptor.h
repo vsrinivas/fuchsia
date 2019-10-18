@@ -9,9 +9,8 @@
 
 #include <vector>
 
-#include <src/lib/fxl/macros.h>
-
 #include "../consumer.h"
+#include "src/lib/fxl/macros.h"
 
 namespace netemul {
 

@@ -15,8 +15,9 @@
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/unique_fd.h>
-#include <src/lib/fxl/log_level.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/log_level.h"
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 

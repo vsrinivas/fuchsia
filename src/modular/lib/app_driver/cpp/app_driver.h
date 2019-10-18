@@ -15,9 +15,10 @@
 #include <memory>
 #include <utility>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 #include <src/modular/lib/lifecycle/cpp/lifecycle_impl.h>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace modular {
 

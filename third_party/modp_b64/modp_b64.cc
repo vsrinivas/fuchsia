@@ -45,23 +45,8 @@
 /* public header */
 #include "modp_b64.h"
 
-/*
- * If you are ripping this out of the library, comment out the next
- * line and uncomment the next lines as approrpiate
- */
-#include <src/lib/fxl/build_config.h>
-
-#ifndef ARCH_CPU_LITTLE_ENDIAN
-
-/* if on motoral, sun, ibm; uncomment this */
-#define WORDS_BIGENDIAN 1
-
-#else
-
-/* else for Intel, Amd; uncomment this */
+/* for Intel, Amd; uncomment this */
 #undef WORDS_BIGENDIAN
-
-#endif  // ARCH_CPU_LITTLE_ENDIAN
 
 #include "modp_b64_data.h"
 

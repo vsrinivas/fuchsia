@@ -13,14 +13,14 @@
 #include <memory>
 
 #include <src/lib/files/unique_fd.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/string_view.h>
 
 #include "delegate.h"
 #include "exception_port.h"
 #include "garnet/lib/process/process_builder.h"
 #include "io_loop.h"
 #include "process.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_view.h"
 #include "thread.h"
 
 namespace inferior_control {

@@ -8,9 +8,6 @@
 #include <lib/vfs/cpp/vmo_file.h>
 
 #include <src/lib/files/file.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/join_strings.h>
-#include <src/lib/fxl/strings/substitute.h>
 
 #include "fixture.h"
 #include "fuchsia/io/cpp/fidl.h"
@@ -19,6 +16,9 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/query/location.h"

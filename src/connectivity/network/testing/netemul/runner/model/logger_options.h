@@ -5,9 +5,8 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_LOGGER_OPTIONS_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_LOGGER_OPTIONS_H_
 
-#include <src/lib/fxl/macros.h>
-
 #include "logger_filter_options.h"
+#include "src/lib/fxl/macros.h"
 #include "src/lib/json_parser/json_parser.h"
 
 namespace netemul {

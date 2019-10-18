@@ -10,8 +10,8 @@
 #include <zircon/boot/e820.h>
 
 #include <fbl/unique_fd.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/guest_config.h"

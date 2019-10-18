@@ -16,11 +16,11 @@
 #include <cstdlib>
 #include <string>
 
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 #include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
 

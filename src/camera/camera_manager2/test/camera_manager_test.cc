@@ -18,9 +18,8 @@
 #include <memory>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 

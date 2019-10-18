@@ -9,8 +9,7 @@
 
 #include <cmath>
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace accessibility_test {

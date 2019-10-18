@@ -22,15 +22,15 @@
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/split_string.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include "gtest/gtest.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/sys/appmgr/util.h"
 
 namespace chrealm {

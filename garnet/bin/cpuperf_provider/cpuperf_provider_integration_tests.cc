@@ -7,12 +7,12 @@
 
 #include <gtest/gtest.h>
 #include <src/developer/tracing/lib/test_utils/spawn_and_wait.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/test/test_settings.h>
 #include <trace-reader/file_reader.h>
 
 #include "garnet/lib/perfmon/controller.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/test/test_settings.h"
 
 const char kTracePath[] = "/bin/trace";
 

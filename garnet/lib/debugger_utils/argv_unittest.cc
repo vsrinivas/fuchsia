@@ -5,7 +5,8 @@
 #include "garnet/lib/debugger_utils/argv.h"
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/arraysize.h>
+
+#include "src/lib/fxl/arraysize.h"
 
 namespace debugger_utils {
 namespace {

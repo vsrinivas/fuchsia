@@ -11,12 +11,12 @@
 #include <lib/async-loop/default.h>
 #include <stdlib.h>
 
-#include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/self_contained_provider.h"
+#include "src/lib/fxl/logging.h"
 
 #define TEST_NAME "two-providers-two-engines"
 

@@ -6,11 +6,10 @@
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "garnet/lib/perfmon/config_impl.h"
 #include "garnet/lib/perfmon/device_reader.h"
 #include "garnet/lib/perfmon/properties_impl.h"
+#include "src/lib/fxl/logging.h"
 
 namespace perfmon {
 namespace internal {

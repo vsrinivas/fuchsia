@@ -21,11 +21,10 @@
 #include <thread>
 #include <vector>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/modular/bin/sessionctl/logger.h"
 #include "src/modular/bin/sessionctl/session_ctl_app.h"
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"

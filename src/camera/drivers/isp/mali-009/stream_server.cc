@@ -9,9 +9,9 @@
 
 #include <ddktl/protocol/isp.h>
 #include <fbl/auto_lock.h>
-#include <src/lib/fxl/logging.h>
 
 #include "../modules/dma-mgr.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 static const auto kDmaPixelFormat = camera::DmaFormat::PixelType::NV12_YUV;

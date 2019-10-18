@@ -7,12 +7,12 @@
 #include <fuchsia/inspect/deprecated/cpp/fidl.h>
 
 #include <src/lib/files/path.h>
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/join_strings.h>
-#include <src/lib/fxl/strings/split_string.h>
-#include <src/lib/fxl/strings/substitute.h>
 
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 namespace inspect_deprecated {
 

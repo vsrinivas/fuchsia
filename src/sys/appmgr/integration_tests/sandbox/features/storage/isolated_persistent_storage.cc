@@ -9,9 +9,9 @@
 #include <memory>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/sys/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 
 namespace {

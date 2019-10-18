@@ -20,12 +20,11 @@
 #include <utility>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fidl_codec/display_handle.h"
 #include "src/lib/fidl_codec/display_options.h"
 #include "src/lib/fidl_codec/message_decoder.h"
+#include "src/lib/fxl/logging.h"
 #include "tools/fidlcat/lib/decode_options.h"
 #include "tools/fidlcat/lib/exception_decoder.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
@@ -1155,7 +1154,8 @@ class Syscall {
   // Adds an input buffer to display.
   template <typename Type, typename FromType, typename SizeType>
   void InputBuffer(std::string_view name, SyscallType syscall_type,
-                   std::unique_ptr<Access<Type>> buffer, std::unique_ptr<Access<SizeType>> elem_size,
+                   std::unique_ptr<Access<Type>> buffer,
+                   std::unique_ptr<Access<SizeType>> elem_size,
                    std::unique_ptr<Access<SizeType>> elem_count = nullptr) {
     inputs_.push_back(std::make_unique<SyscallInputOutputBuffer<Type, FromType, SizeType>>(
         0, name, syscall_type, std::move(buffer), std::move(elem_size), std::move(elem_count)));

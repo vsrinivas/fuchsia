@@ -10,9 +10,9 @@
 #include <fstream>
 
 #include <src/lib/files/file.h>
-#include <src/lib/fxl/logging.h>
 
 #include "src/developer/memory/metrics/printer.h"
+#include "src/lib/fxl/logging.h"
 
 namespace monitor {
 

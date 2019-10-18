@@ -9,10 +9,9 @@
 
 #include <utility>
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/ledger/lib/socket/socket_drainer_client.h"
 #include "src/ledger/lib/socket/socket_pair.h"
+#include "src/lib/fxl/macros.h"
 
 namespace socket {
 namespace {

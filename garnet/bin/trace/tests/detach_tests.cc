@@ -6,9 +6,9 @@
 #include <lib/zx/process.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/trace/tests/run_test.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {

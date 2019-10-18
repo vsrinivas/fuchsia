@@ -12,8 +12,8 @@
 #include <fs/lazy_dir.h>
 #include <fs/vfs.h>
 #include <perftest/perftest.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "util.h"
 
 namespace {

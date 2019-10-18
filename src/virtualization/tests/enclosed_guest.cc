@@ -20,9 +20,8 @@
 #include <optional>
 #include <string>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/tests/logger.h"
 #include "src/virtualization/tests/periodic_logger.h"

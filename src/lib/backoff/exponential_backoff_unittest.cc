@@ -6,10 +6,9 @@
 
 #include <stdlib.h>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
-
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace backoff {
 

@@ -5,10 +5,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include <src/lib/fxl/log_level.h>
-#include <src/lib/fxl/logging.h>
-
 #include "src/camera/camera_manager2/camera_manager_app.h"
+#include "src/lib/fxl/log_level.h"
+#include "src/lib/fxl/logging.h"
 
 int main() {
   FXL_LOG(INFO) << "Camera Manager Starting";

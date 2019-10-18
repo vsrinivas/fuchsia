@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/macros.h"
 
 namespace modular {
 

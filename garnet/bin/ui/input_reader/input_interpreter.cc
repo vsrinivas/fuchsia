@@ -17,14 +17,14 @@
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/time/time_point.h>
 #include <trace/event.h>
 
 #include "garnet/bin/ui/input_reader/device.h"
 #include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
 #include "garnet/bin/ui/input_reader/protocols.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace {
 

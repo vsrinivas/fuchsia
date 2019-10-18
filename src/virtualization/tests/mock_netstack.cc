@@ -11,7 +11,7 @@
 #include <netinet/ip6.h>
 #include <zircon/device/ethernet.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 static constexpr size_t kMtu = 1500;
 static constexpr size_t kVmoSize = kMtu * 2;

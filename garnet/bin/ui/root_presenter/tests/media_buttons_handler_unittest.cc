@@ -10,11 +10,10 @@
 #include <lib/ui/tests/mocks/mock_input_device.h>
 #include <stdlib.h>
 
-#include <src/lib/fxl/macros.h>
-
 #include "gtest/gtest.h"
 #include "lib/async/dispatcher.h"
 #include "src/lib/component/cpp/testing/test_with_context.h"
+#include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
 namespace {

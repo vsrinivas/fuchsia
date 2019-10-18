@@ -8,8 +8,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
-#include <src/lib/fxl/macros.h>
-
+#include "src/lib/fxl/macros.h"
 #include "src/modular/bin/agents/clipboard/clipboard_storage.h"
 
 namespace modular {

@@ -9,13 +9,12 @@
 #include <memory>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/lib/fidl_codec/colors.h"
 #include "src/lib/fidl_codec/display_handle.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

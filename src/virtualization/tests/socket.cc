@@ -8,7 +8,7 @@
 
 #include <array>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 static constexpr size_t kSerialBufferSize = 1024;
 

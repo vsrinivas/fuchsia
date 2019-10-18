@@ -10,7 +10,8 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <fbl/auto_call.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 // NOTE: In this test, we are actually just unit testing the ControllerImpl class
 

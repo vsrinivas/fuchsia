@@ -12,10 +12,9 @@
 
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/lib/fidl/app_client.h"
 
 namespace modular_testing {

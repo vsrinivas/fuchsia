@@ -6,12 +6,12 @@
 #include <lib/async-loop/default.h>
 #include <lib/ui/base_view/cpp/view_provider_component.h>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/yuv_to_image_pipe/yuv_cyclic_view.h"
 #include "garnet/examples/ui/yuv_to_image_pipe/yuv_input_view.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 // fx shell "killall scenic; killall basemgr; killall root_presenter;
 // killall present_view"

@@ -10,12 +10,11 @@
 
 #include <memory>
 
-#include <src/lib/fxl/macros.h>
-
 #include "log_listener.h"
 #include "managed_launcher.h"
 #include "managed_logger.h"
 #include "sandbox_env.h"
+#include "src/lib/fxl/macros.h"
 #include "virtual_data.h"
 #include "virtual_devices.h"
 

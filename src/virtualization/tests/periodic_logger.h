@@ -7,7 +7,7 @@
 
 #include <lib/zx/time.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 // Print a log message every |logging_interval| units of time.
 //

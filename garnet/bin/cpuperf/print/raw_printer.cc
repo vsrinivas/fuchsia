@@ -12,13 +12,12 @@
 #include <string>
 #include <vector>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "garnet/lib/perfmon/file_reader.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace cpuperf {
 

@@ -8,8 +8,8 @@
 #include <zircon/boot/image.h>
 
 #include <libzbi/zbi.h>
-#include <src/lib/fxl/logging.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
 // I8250 state flags.

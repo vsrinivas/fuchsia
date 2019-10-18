@@ -6,11 +6,10 @@
 
 #include <zircon/fidl.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "rapidjson/error/en.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/wire_object.h"
+#include "src/lib/fxl/logging.h"
 
 // See wire_types.h for details.
 

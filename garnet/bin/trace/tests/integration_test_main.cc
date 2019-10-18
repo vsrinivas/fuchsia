@@ -18,13 +18,13 @@
 #include <iostream>
 
 #include <src/lib/files/file.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 const char kUsageString[] = {
     "Test runner usage:\n"
@@ -43,8 +43,7 @@ static int RunTest(const tracing::Spec& spec, tracing::test::TestRunner* run) {
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-static int VerifyTest(const tracing::Spec& spec,
-                      tracing::test::TestVerifier* verify,
+static int VerifyTest(const tracing::Spec& spec, tracing::test::TestVerifier* verify,
                       const std::string& test_output_file) {
   if (!verify(spec, test_output_file))
     return EXIT_FAILURE;

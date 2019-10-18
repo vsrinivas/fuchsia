@@ -10,12 +10,11 @@
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-
 #include "garnet/lib/perfmon/controller.h"
 #include "garnet/lib/perfmon/properties.h"
 #include "garnet/lib/perfmon/reader.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace perfmon {
 namespace internal {

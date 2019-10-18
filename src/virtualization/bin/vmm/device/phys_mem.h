@@ -7,7 +7,7 @@
 
 #include <lib/zx/vmo.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 class PhysMem {
  public:

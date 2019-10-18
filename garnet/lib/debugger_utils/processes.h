@@ -16,10 +16,9 @@
 #include <string>
 #include <vector>
 
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "garnet/lib/debugger_utils/argv.h"
 #include "garnet/lib/process/process_builder.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace debugger_utils {
 

@@ -10,10 +10,9 @@
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
-#include <src/lib/fxl/strings/substitute.h>
-
 #include "gmock/gmock.h"
 #include "src/lib/files/glob.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 
 namespace component {

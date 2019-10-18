@@ -10,7 +10,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <lib/ui/scenic/cpp/commands.h>
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
 

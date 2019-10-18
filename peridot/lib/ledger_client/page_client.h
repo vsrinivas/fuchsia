@@ -12,9 +12,8 @@
 #include <array>
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
 #include "peridot/lib/ledger_client/types.h"
+#include "src/lib/fxl/macros.h"
 
 namespace modular {
 

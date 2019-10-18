@@ -8,8 +8,8 @@
 #include <filesystem>
 
 #include <grpc/support/log.h>
-#include <src/lib/fxl/logging.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/platform_interface/platform_interface.h"
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"

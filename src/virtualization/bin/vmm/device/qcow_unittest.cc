@@ -8,9 +8,9 @@
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
 
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/device/qcow_test_data.h"
 
 namespace {

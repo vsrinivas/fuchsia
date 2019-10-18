@@ -9,8 +9,7 @@
 
 #include <memory>
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/ui/bin/activity/activity_app.h"
 #include "src/ui/bin/activity/state_machine_driver.h"
 

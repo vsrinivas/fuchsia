@@ -4,8 +4,7 @@
 
 #include "launch_app.h"
 
-#include <src/lib/fxl/strings/string_printf.h>
-
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace netemul {

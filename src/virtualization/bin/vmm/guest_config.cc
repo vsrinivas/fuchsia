@@ -11,9 +11,10 @@
 #include <iostream>
 
 #include <rapidjson/document.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
+
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 static void print_usage(fxl::CommandLine& cl) {
   // clang-format off

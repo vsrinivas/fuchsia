@@ -9,7 +9,7 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 static constexpr const char* kDevicePath = "/dev/class/isp-device-test/000";
 

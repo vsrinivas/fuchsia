@@ -12,10 +12,9 @@
 #include <cstdint>
 #include <string>
 
-#include <src/lib/fxl/time/time_delta.h>
-
 #include "garnet/lib/perfmon/config.h"
 #include "garnet/lib/perfmon/events.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace cpuperf {
 

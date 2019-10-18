@@ -11,8 +11,8 @@
 #include <ostream>
 #include <string>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_view.h>
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace tracing {
 

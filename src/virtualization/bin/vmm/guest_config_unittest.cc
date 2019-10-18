@@ -7,7 +7,8 @@
 #include <zircon/compiler.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/arraysize.h>
+
+#include "src/lib/fxl/arraysize.h"
 
 class GuestConfigParserTest : public ::testing::Test {
  protected:

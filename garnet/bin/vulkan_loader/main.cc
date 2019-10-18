@@ -12,9 +12,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 // Implements the vulkan loader's Loader service which provides the client
 // driver portion to the loader as a VMO.

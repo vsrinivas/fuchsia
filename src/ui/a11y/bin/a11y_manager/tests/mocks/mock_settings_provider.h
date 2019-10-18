@@ -12,7 +12,7 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <math.h>
 
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/macros.h"
 
 namespace accessibility_test {
 using fuchsia::accessibility::ColorCorrection;

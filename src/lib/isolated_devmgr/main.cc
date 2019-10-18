@@ -11,13 +11,12 @@
 
 #include <iostream>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/split_string.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "isolated_devmgr.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 #define DEVICE_IDS_VID_LOC 0
 #define DEVICE_IDS_PID_LOC 1

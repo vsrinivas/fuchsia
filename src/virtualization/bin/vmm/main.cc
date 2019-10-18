@@ -29,11 +29,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include <src/lib/fxl/strings/string_printf.h>
 #include <trace-provider/provider.h>
 
 #include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 #include "src/virtualization/bin/vmm/controller/virtio_block.h"
 #include "src/virtualization/bin/vmm/controller/virtio_console.h"

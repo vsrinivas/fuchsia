@@ -6,8 +6,7 @@
 
 #include <lib/fit/function.h>
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/guest_manager/guest_services.h"
 
 RealmImpl::RealmImpl(uint32_t id, const std::string& label, component::StartupContext* context,

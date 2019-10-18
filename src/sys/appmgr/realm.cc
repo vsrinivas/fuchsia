@@ -22,9 +22,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include <src/lib/fxl/strings/substitute.h>
 #include <trace/event.h>
 
 #include "garnet/lib/cmx/cmx.h"
@@ -39,6 +36,9 @@
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/pkg_url/url_resolver.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"

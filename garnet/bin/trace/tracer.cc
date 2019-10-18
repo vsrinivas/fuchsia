@@ -9,9 +9,10 @@
 
 #include <utility>
 
-#include <src/lib/fxl/logging.h>
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

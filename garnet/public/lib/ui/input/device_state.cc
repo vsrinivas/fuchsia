@@ -9,10 +9,11 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/time/time_delta.h>
-#include <src/lib/fxl/time/time_point.h>
 #include <trace/event.h>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace {
 int64_t InputEventTimestampNow() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }

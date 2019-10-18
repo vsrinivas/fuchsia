@@ -15,7 +15,8 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 static constexpr const char* kDevicePath = "/dev/class/input";
 

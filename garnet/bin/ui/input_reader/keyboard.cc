@@ -16,9 +16,9 @@
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
 #include <hid/usages.h>
-#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/ui/input_reader/device.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ui_input {
 

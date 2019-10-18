@@ -12,11 +12,11 @@
 
 #include <memory>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/strings/split_string.h>
 #include <trace-provider/provider.h>
 
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/sessionmgr_impl.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"

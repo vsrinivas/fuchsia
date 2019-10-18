@@ -6,8 +6,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/ui/a11y/lib/gesture_manager/interaction.h"
 
 namespace a11y {

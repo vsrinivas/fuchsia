@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/engine/duration_predictor.h"
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {

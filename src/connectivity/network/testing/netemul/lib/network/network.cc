@@ -4,13 +4,12 @@
 
 #include "network.h"
 
-#include <src/lib/fxl/memory/weak_ptr.h>
-
 #include "fake_endpoint.h"
 #include "interceptors/latency.h"
 #include "interceptors/packet_loss.h"
 #include "interceptors/reorder.h"
 #include "network_context.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace netemul {
 namespace impl {

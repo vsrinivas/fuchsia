@@ -14,12 +14,12 @@
 #include <map>
 
 #include <src/lib/files/unique_fd.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/trim.h>
 #include <src/virtualization/tests/guest_console.h>
 #include <src/virtualization/tests/mock_netstack.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/trim.h"
 #include "src/virtualization/lib/grpc/fdio_util.h"
 #include "src/virtualization/lib/guest_interaction/client/client_impl.h"
 #include "src/virtualization/lib/guest_interaction/common.h"

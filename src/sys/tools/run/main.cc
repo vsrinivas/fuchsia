@@ -18,7 +18,7 @@
 
 #include <utility>
 
-#include <src/lib/fxl/strings/string_printf.h>
+#include "src/lib/fxl/strings/string_printf.h"
 
 using fuchsia::sys::TerminationReason;
 using fuchsia::sys::index::ComponentIndex_FuzzySearch_Response;

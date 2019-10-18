@@ -6,10 +6,9 @@
 
 #include <string>
 
-#include <src/lib/fxl/logging.h>
-
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "src/lib/fxl/logging.h"
 
 namespace modular {
 

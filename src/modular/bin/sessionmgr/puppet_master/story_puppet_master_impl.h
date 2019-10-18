@@ -10,8 +10,7 @@
 
 #include <memory>
 
-#include <src/lib/fxl/memory/weak_ptr.h>
-
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
 #include "src/modular/lib/async/cpp/operation.h"
 

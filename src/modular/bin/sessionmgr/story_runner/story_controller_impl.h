@@ -27,12 +27,11 @@
 #include <string>
 #include <vector>
 
-#include <src/lib/fxl/macros.h>
-
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_mutator.h"

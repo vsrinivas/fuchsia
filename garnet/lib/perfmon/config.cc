@@ -4,10 +4,9 @@
 
 #include "garnet/lib/perfmon/config.h"
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "garnet/lib/perfmon/config_impl.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace perfmon {
 

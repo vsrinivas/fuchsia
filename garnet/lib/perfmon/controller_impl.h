@@ -7,9 +7,8 @@
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
 
-#include <src/lib/fxl/memory/weak_ptr.h>
-
 #include "garnet/lib/perfmon/controller.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace perfmon {
 namespace internal {

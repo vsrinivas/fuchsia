@@ -7,8 +7,8 @@
 
 #include <lib/zx/socket.h>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace socket {
 

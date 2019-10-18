@@ -19,9 +19,8 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/sysinfo.h"
 
 static constexpr uint32_t trap_kind(TrapType type) {

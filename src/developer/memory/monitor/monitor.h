@@ -14,12 +14,12 @@
 
 #include <memory>
 
-#include <src/lib/fxl/command_line.h>
 #include <trace/observer.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/metrics.h"
+#include "src/lib/fxl/command_line.h"
 
 namespace monitor {
 

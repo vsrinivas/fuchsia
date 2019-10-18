@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/root_presenter/tests/fakes/fake_session.h"
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
 namespace testing {

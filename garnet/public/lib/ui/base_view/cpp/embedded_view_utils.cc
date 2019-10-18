@@ -6,7 +6,7 @@
 
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace scenic {
 

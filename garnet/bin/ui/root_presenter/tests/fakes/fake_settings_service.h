@@ -10,9 +10,8 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <math.h>
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/lib/component/cpp/startup_context.h"
+#include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
 namespace testing {

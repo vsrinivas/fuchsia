@@ -7,8 +7,7 @@
 
 #include <memory>
 
-#include <src/lib/fxl/command_line.h>
-
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/inspect_deprecated/query/formatter.h"
 
 namespace iquery {

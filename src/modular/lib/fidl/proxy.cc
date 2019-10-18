@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/fidl/proxy.h"
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace modular {
 

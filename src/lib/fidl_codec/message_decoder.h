@@ -12,14 +12,13 @@
 #include <unordered_set>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-
 #include "lib/fidl/cpp/message.h"
 #include "lib/fidl/txn_header.h"
 #include "src/lib/fidl_codec/colors.h"
 #include "src/lib/fidl_codec/display_options.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/memory_helpers.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

@@ -9,13 +9,12 @@
 #include <lib/vfs/cpp/service.h>
 #include <sys/types.h>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-#include <src/lib/fxl/strings/split_string.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/modular/lib/module_manifest_source/json.h"
 #include "src/modular/lib/module_manifest_source/package_util.h"
 

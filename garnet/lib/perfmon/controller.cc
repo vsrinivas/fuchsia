@@ -9,13 +9,13 @@
 #include <sys/stat.h>
 
 #include <fbl/algorithm.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/lib/perfmon/config_impl.h"
 #include "garnet/lib/perfmon/controller_impl.h"
 #include "garnet/lib/perfmon/device_reader.h"
 #include "garnet/lib/perfmon/properties_impl.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace perfmon {
 

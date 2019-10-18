@@ -16,8 +16,8 @@
 #include <thread>
 
 #include <grpc/support/log.h>
-#include <src/lib/fxl/logging.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"
 
 #include <grpc++/grpc++.h>

@@ -8,9 +8,9 @@
 #include <string.h>
 
 #include <fbl/algorithm.h>
-#include <src/lib/fxl/arraysize.h>
 #include <virtio/wl.h>
 
+#include "src/lib/fxl/arraysize.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 

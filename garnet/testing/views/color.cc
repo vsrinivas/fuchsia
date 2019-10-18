@@ -4,10 +4,9 @@
 
 #include "garnet/testing/views/color.h"
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "src/lib/fsl/vmo/vector.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace scenic {
 

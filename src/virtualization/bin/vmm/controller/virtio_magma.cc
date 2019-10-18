@@ -7,7 +7,7 @@
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/services.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 static constexpr char kVirtioMagmaUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cmx";

@@ -5,9 +5,9 @@
 #include "session_spec.h"
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/arraysize.h>
 
 #include "garnet/lib/perfmon/events.h"
+#include "src/lib/fxl/arraysize.h"
 
 namespace cpuperf {
 

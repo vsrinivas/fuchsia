@@ -9,11 +9,10 @@
 
 #include <vector>
 
-#include <src/lib/fxl/macros.h>
-
 #include "environment.h"
 #include "guest.h"
 #include "network.h"
+#include "src/lib/fxl/macros.h"
 #include "src/lib/json_parser/json_parser.h"
 
 namespace netemul {

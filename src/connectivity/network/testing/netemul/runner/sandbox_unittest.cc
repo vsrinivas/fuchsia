@@ -12,10 +12,9 @@
 #include <iostream>
 #include <unordered_set>
 
-#include <src/lib/fxl/strings/join_strings.h>
-
 #include "lib/gtest/real_loop_fixture.h"
 #include "log_listener_test_helpers.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 static const char* kBusName = "test-bus";
 static const char* kBusClientName = "sandbox_unittest";

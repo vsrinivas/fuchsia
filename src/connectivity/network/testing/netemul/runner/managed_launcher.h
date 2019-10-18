@@ -10,9 +10,8 @@
 
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
 #include "managed_logger.h"
+#include "src/lib/fxl/macros.h"
 
 namespace netemul {
 class ManagedEnvironment;

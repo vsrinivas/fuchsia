@@ -5,10 +5,9 @@
 
 #include <lib/fostr/fidl/fuchsia/modular/formatting.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/logging.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "src/modular/lib/entity/cpp/json.h"
 #include "src/modular/lib/fidl/clone.h"

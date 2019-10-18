@@ -6,10 +6,10 @@
 
 #include <stdio.h>
 
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"

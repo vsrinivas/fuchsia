@@ -11,8 +11,6 @@
 #include <iostream>
 #include <mutex>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <trace-provider/fdio_connect.h>
 #include <trace-provider/provider.h>
 #include <trace/observer.h>
@@ -21,6 +19,8 @@
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/metrics/summary.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 using namespace memory;
 

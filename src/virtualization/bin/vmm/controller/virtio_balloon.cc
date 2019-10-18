@@ -6,7 +6,7 @@
 
 #include <lib/svc/cpp/services.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 static constexpr char kVirtioBalloonUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";

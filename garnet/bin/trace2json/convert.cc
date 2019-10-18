@@ -11,11 +11,11 @@
 #include <iostream>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
 #include <trace-reader/reader.h>
 
 #include "garnet/bin/trace2json/trace_parser.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 

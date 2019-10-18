@@ -4,9 +4,8 @@
 
 #include "controller-protocol.h"
 
-#include <src/lib/fxl/logging.h>
-
 #include "fuchsia/camera2/cpp/fidl.h"
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 

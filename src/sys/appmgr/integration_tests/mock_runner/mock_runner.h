@@ -15,8 +15,9 @@
 
 #include <unordered_map>
 
-#include <src/lib/fxl/macros.h>
 #include <test/component/mockrunner/cpp/fidl.h>
+
+#include "src/lib/fxl/macros.h"
 
 namespace component {
 namespace testing {

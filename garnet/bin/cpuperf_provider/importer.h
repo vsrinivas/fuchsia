@@ -12,12 +12,12 @@
 
 #include <unordered_map>
 
-#include <src/lib/fxl/logging.h>
 #include <trace-engine/context.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/events.h"
 #include "garnet/lib/perfmon/reader.h"
+#include "src/lib/fxl/logging.h"
 
 namespace cpuperf_provider {
 

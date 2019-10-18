@@ -13,11 +13,11 @@
 #include <zircon/device/vfs.h>
 
 #include <sdk/lib/inspect/testing/cpp/inspect.h>
-#include <src/lib/fxl/strings/substitute.h>
 
 #include "gmock/gmock.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"

@@ -8,7 +8,8 @@
 
 #include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
 #include <src/connectivity/network/testing/netemul/lib/network/ethertap_client.h>
-#include <src/lib/fxl/strings/string_printf.h>
+
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace netemul {
 namespace testing {

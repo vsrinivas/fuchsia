@@ -14,14 +14,13 @@
 
 #include <cinttypes>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/processes.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "server.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace inferior_control {
 

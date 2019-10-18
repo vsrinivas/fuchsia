@@ -12,7 +12,8 @@
 #include <zircon/syscalls/debug.h>
 
 #include <fbl/function.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 #define print_error(...)                                                \
   do {                                                                  \

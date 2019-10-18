@@ -19,10 +19,10 @@
 
 #include <fs/pseudo_dir.h>
 #include <fs/synchronous_vfs.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 
 #include "garnet/examples/ui/tile/tile_params.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace examples {
 

@@ -11,9 +11,8 @@
 #include <cstdint>
 #include <memory>
 
-#include <src/lib/fxl/macros.h>
-
 #include "buffer_reader.h"
+#include "src/lib/fxl/macros.h"
 
 namespace perfmon {
 

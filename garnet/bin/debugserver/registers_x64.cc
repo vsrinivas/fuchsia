@@ -4,11 +4,10 @@
 
 #include <zircon/syscalls/debug.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/inferior_control/thread.h"
 #include "registers.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debugserver {
 

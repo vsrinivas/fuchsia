@@ -9,9 +9,9 @@
 #include <lib/async/time.h>
 #include <zircon/syscalls.h>
 
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/displays/display.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/util/collection_utils.h"

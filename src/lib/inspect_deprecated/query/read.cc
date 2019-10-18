@@ -10,9 +10,9 @@
 #include <lib/fit/promise.h>
 
 #include <src/lib/files/path.h>
-#include <src/lib/fxl/strings/substitute.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 namespace inspect_deprecated {
 namespace {

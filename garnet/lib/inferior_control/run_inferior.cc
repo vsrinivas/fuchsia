@@ -9,14 +9,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
-
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "process.h"
 #include "server.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 const char kUsageString[] =
     "Usage: run_inferior [options] [--] path [arg1 ...]\n"

@@ -5,7 +5,8 @@
 #include "stream_protocol.h"
 
 #include <fbl/auto_lock.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 camera::StreamImpl::StreamImpl(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher),

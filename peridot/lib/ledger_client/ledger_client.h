@@ -14,10 +14,9 @@
 #include <memory>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
-
 #include "peridot/lib/ledger_client/types.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 #include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {

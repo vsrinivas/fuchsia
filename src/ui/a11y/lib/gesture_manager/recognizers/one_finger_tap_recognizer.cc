@@ -6,10 +6,9 @@
 
 #include <valarray>
 
-#include <src/lib/fxl/logging.h>
-
 #include "lib/async/cpp/task.h"
 #include "lib/async/default.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 

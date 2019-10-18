@@ -15,11 +15,11 @@
 
 #include <iosfwd>
 
-#include <src/lib/fxl/memory/weak_ptr.h>
 #include <trace-reader/reader_internal.h>
 
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "garnet/bin/trace_manager/util.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace tracing {
 

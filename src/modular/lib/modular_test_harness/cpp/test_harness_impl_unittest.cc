@@ -14,12 +14,12 @@
 #include <peridot/lib/util/pseudo_dir_server.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
-#include <src/lib/fxl/strings/split_string.h>
-#include <src/lib/fxl/strings/substitute.h>
 #include <src/modular/lib/modular_config/modular_config.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 constexpr char kFakeBaseShellUrl[] =
     "fuchsia-pkg://example.com/FAKE_BASE_SHELL_PKG/fake_base_shell.cmx";

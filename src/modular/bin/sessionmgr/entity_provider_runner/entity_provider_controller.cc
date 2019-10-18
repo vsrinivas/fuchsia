@@ -4,8 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_controller.h"
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 
 namespace modular {

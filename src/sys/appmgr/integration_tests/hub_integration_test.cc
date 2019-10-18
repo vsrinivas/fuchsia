@@ -9,16 +9,15 @@
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
-#include <src/lib/fxl/strings/concatenate.h>
-#include <src/lib/fxl/strings/join_strings.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "garnet/bin/sysmgr/config.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
 #include "src/lib/inspect_deprecated/query/location.h"
 #include "src/lib/inspect_deprecated/query/read.h"

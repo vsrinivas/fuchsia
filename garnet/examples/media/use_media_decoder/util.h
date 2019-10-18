@@ -15,7 +15,8 @@
 #include <memory>
 
 #include <openssl/sha.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 #define VLOG_ENABLED 0
 

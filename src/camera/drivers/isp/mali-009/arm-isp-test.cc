@@ -11,10 +11,10 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
-#include <src/lib/fxl/logging.h>
 
 #include "arm-isp.h"
 #include "src/camera/drivers/test_utils/fake-buffer-collection.h"
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 

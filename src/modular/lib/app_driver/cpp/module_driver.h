@@ -16,8 +16,9 @@
 
 #include <memory>
 
-#include <src/lib/fxl/logging.h>
 #include <src/modular/lib/lifecycle/cpp/lifecycle_impl.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace modular {
 

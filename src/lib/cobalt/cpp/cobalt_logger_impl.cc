@@ -12,11 +12,10 @@
 
 #include <set>
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/fxl/macros.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::cobalt::LoggerFactory;

@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <src/lib/fxl/logging.h>
-
 #include "breakpoint.h"
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "process.h"
 #include "registers.h"
+#include "src/lib/fxl/logging.h"
 #include "thread.h"
 
 namespace inferior_control {

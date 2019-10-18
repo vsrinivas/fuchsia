@@ -15,10 +15,9 @@
 #include <utility>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
-
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {

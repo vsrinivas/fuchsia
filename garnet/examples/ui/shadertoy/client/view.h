@@ -15,7 +15,7 @@
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
-#include <src/lib/fxl/macros.h>
+#include "src/lib/fxl/macros.h"
 
 namespace shadertoy_client {
 

@@ -15,10 +15,10 @@
 #include <zircon/device/audio.h>
 
 #include <fbl/algorithm.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace virtual_audio {
 

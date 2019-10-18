@@ -22,7 +22,8 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 // If true, print to log files received Session commands.
 constexpr bool kTraceCommands = false;

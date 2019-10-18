@@ -15,12 +15,12 @@
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
-#include <src/lib/fxl/logging.h>
 #include <trace-reader/file_reader.h>
 #include <trace/event.h>
 #include <trace/observer.h>
 
 #include "garnet/bin/trace/spec.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {
@@ -49,8 +49,8 @@ bool CreateProviderSynchronously(async::Loop& loop, const char* name,
 
   std::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
-  if (!trace::TraceProviderWithFdio::CreateSynchronously(
-        dispatcher, name, &provider, &already_started)) {
+  if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, name, &provider,
+                                                         &already_started)) {
     FXL_LOG(ERROR) << "Failed to create provider " << name;
     return false;
   }
@@ -79,8 +79,7 @@ bool CreateProviderSynchronouslyAndWait(
     // has started. But we haven't received the Start() request yet, which
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     if (!WaitForTracingToStart(loop, kStartTimeout)) {
-      FXL_LOG(ERROR) << "Provider " << name
-                     << " timed out waiting for tracing to start";
+      FXL_LOG(ERROR) << "Provider " << name << " timed out waiting for tracing to start";
       return false;
     }
   }
@@ -91,9 +90,8 @@ bool CreateProviderSynchronouslyAndWait(
 
 void WriteTestEvents(size_t num_records) {
   for (size_t i = 0; i < num_records; ++i) {
-    TRACE_INSTANT(kWriteTestEventsCategoryName,
-                  kWriteTestEventsInstantEventName, TRACE_SCOPE_PROCESS,
-                  "arg1", 1, "arg2", 2, "arg3", 3);
+    TRACE_INSTANT(kWriteTestEventsCategoryName, kWriteTestEventsInstantEventName,
+                  TRACE_SCOPE_PROCESS, "arg1", 1, "arg2", 2, "arg3", 3);
   }
 }
 
@@ -109,8 +107,7 @@ bool IsWriteTestEvent(const trace::Record& record) {
   return false;
 }
 
-bool VerifyTestEventsFromJson(const std::string& test_output_file,
-                              size_t* out_num_events) {
+bool VerifyTestEventsFromJson(const std::string& test_output_file, size_t* out_num_events) {
   // We don't know how many records got dropped, but we can count them,
   // and verify they are what we expect.
   std::ifstream in(test_output_file);
@@ -172,8 +169,7 @@ bool VerifyTestEventsFromJson(const std::string& test_output_file,
       return false;
     }
     if (strcmp(event_name.GetString(), kWriteTestEventsInstantEventName) != 0) {
-      FXL_LOG(ERROR) << "Expected event not present in event, got: "
-                     << event_name.GetString();
+      FXL_LOG(ERROR) << "Expected event not present in event, got: " << event_name.GetString();
       return false;
     }
   }
@@ -183,9 +179,8 @@ bool VerifyTestEventsFromJson(const std::string& test_output_file,
   return true;
 }
 
-bool VerifyTestEventsFromFxt(
-    const std::string& test_output_file,
-    trace::TraceReader::RecordConsumer record_consumer) {
+bool VerifyTestEventsFromFxt(const std::string& test_output_file,
+                             trace::TraceReader::RecordConsumer record_consumer) {
   size_t num_errors = 0;
   auto error_handler = [&num_errors](fbl::String error) {
     ++num_errors;
@@ -198,8 +193,7 @@ bool VerifyTestEventsFromFxt(
   };
 
   std::unique_ptr<trace::FileReader> reader;
-  if (!trace::FileReader::Create(test_output_file.c_str(),
-                                 std::move(record_consumer),
+  if (!trace::FileReader::Create(test_output_file.c_str(), std::move(record_consumer),
                                  std::move(error_handler), &reader)) {
     FXL_LOG(ERROR) << "Error creating trace::FileReader";
     return false;
@@ -293,9 +287,7 @@ bool WaitForTracingToStart(async::Loop& loop, zx::duration timeout) {
     return true;
   }
 
-  async::TaskClosure timeout_task([&loop] {
-    loop.Quit();
-  });
+  async::TaskClosure timeout_task([&loop] { loop.Quit(); });
   timeout_task.PostDelayed(loop.dispatcher(), timeout);
   zx_status_t status = loop.Run();
   if (status != ZX_OK && status != ZX_ERR_CANCELED) {

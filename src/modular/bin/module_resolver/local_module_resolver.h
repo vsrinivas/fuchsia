@@ -13,8 +13,7 @@
 #include <set>
 #include <vector>
 
-#include <src/lib/fxl/memory/weak_ptr.h>
-
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/module_manifest_source/module_manifest_source.h"
 

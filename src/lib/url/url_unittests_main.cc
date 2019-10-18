@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/test/test_settings.h>
 
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/icu_data/cpp/icu_data.h"
 
 int main(int argc, char **argv) {

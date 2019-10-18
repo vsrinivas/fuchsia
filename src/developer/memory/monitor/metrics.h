@@ -8,12 +8,11 @@
 #include <string>
 #include <unordered_map>
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/watcher.h"
 #include "src/developer/memory/monitor/memory_metrics_registry.cb.h"
+#include "src/lib/fxl/macros.h"
 
 namespace monitor {
 

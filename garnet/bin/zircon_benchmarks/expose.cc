@@ -12,8 +12,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
 #include <perftest/perftest.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/inspect_deprecated/deprecated/exposed_object.h"
 
 namespace {

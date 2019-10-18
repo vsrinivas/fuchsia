@@ -16,10 +16,10 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <src/lib/fxl/strings/join_strings.h>
 
 #include "fixture.h"
 #include "fuchsia/inspect/deprecated/cpp/fidl.h"
+#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/query/location.h"

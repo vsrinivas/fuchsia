@@ -10,8 +10,8 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
-#include <src/lib/fxl/logging.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace tracing {

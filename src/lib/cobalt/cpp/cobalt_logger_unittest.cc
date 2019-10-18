@@ -13,10 +13,9 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/macros.h"
 
 using fuchsia::cobalt::ReleaseStage;
 

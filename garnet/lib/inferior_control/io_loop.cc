@@ -8,10 +8,9 @@
 #include <lib/fit/function.h>
 #include <unistd.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "garnet/lib/debugger_utils/util.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fxl/logging.h"
 
 namespace inferior_control {
 

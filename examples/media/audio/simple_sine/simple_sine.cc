@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <math.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace {
 // Set the AudioRenderer stream type to: 48 kHz, mono, 32-bit float.

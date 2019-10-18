@@ -5,10 +5,9 @@
 // This file contains arm64 events.
 // When needed separate files will describe various models.
 
-#include <src/lib/fxl/arraysize.h>
-
 #include "garnet/lib/perfmon/event-registry.h"
 #include "garnet/lib/perfmon/events.h"
+#include "src/lib/fxl/arraysize.h"
 
 namespace perfmon {
 

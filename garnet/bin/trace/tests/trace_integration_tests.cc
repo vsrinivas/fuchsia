@@ -12,13 +12,13 @@
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/test/test_settings.h>
 
 #include "garnet/bin/trace/tests/component_context.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/run_test.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/test/test_settings.h"
 
 namespace tracing {
 namespace test {

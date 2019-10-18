@@ -13,12 +13,11 @@
 #include <unistd.h>
 #include <zircon/processargs.h>
 
-#include <src/lib/fxl/strings/concatenate.h>
-
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/fxl/strings/concatenate.h"
 #include "src/sys/appmgr/allowlist.h"
 
 namespace component {

@@ -14,10 +14,9 @@
 
 #include <random>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
-
 #include "peridot/examples/todo_cpp/generator.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/macros.h"
 
 namespace todo {
 

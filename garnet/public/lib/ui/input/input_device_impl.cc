@@ -1,7 +1,8 @@
 #include <lib/ui/input/input_device_impl.h>
 
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace ui_input {
 

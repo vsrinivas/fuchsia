@@ -12,10 +12,9 @@
 #include <string_view>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/message_decoder.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

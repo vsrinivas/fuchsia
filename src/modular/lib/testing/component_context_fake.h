@@ -12,8 +12,7 @@
 
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
+#include "src/lib/fxl/macros.h"
 #include "src/modular/lib/testing/entity_resolver_fake.h"
 
 namespace modular {

@@ -22,7 +22,8 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 // This file implements a minimal fuschsia::ui::scenic::Scenic implementation.
 //

@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/guest_impl.h"
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 static zx::socket duplicate(const zx::socket& socket) {
   zx::socket dup;

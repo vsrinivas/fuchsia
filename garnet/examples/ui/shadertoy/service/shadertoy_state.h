@@ -12,8 +12,8 @@
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
-#include <src/lib/fxl/memory/ref_counted.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/resources/resource.h"

@@ -9,11 +9,10 @@
 #include <sstream>
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/summary.h"
+#include "src/lib/fxl/macros.h"
 
 namespace memory {
 

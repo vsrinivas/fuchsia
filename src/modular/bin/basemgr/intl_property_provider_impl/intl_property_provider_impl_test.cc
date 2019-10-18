@@ -13,10 +13,9 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include <src/lib/fxl/log_settings.h>
-
 #include "lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "src/lib/fidl_fuchsia_intl_ext/cpp/fidl_ext.h"
+#include "src/lib/fxl/log_settings.h"
 
 namespace modular_testing {
 namespace {

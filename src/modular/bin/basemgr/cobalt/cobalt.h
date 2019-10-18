@@ -10,8 +10,7 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <src/lib/fxl/memory/ref_ptr.h>
-
+#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/modular/bin/basemgr/cobalt/basemgr_metrics_registry.cb.h"
 
 namespace modular {

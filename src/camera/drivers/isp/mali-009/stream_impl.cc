@@ -6,7 +6,8 @@
 
 #include <ddktl/protocol/isp.h>
 #include <fbl/auto_lock.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 

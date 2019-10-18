@@ -4,9 +4,8 @@
 
 #include "src/sys/appmgr/appmgr.h"
 
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "lib/sys/cpp/termination_reason.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 using fuchsia::sys::TerminationReason;
 

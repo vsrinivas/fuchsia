@@ -15,9 +15,10 @@
 #include <hid/ft3x27.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
+
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 

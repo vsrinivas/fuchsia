@@ -5,12 +5,11 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/wire_format.h>
 
-#include <src/lib/fxl/strings/join_strings.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "log_listener.h"
 #include "log_listener_log_sink.h"
 #include "log_listener_test_helpers.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace netemul {
 namespace testing {

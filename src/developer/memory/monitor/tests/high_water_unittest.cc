@@ -12,10 +12,10 @@
 
 #include <gtest/gtest.h>
 #include <src/lib/files/file.h>
-#include <src/lib/fxl/logging.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
+#include "src/lib/fxl/logging.h"
 
 using namespace memory;
 

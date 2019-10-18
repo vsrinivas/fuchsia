@@ -9,10 +9,9 @@
 #include <iostream>
 #include <regex>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "logger.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 static constexpr zx::duration kTestTimeout = zx::sec(300);
 static constexpr zx::duration kSerialStableDelay = zx::msec(800);

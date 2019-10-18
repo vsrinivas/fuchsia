@@ -17,12 +17,12 @@
 
 #include <thread>
 
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
 #include <src/media/lib/raw_video_writer/raw_video_writer.h>
 
 #include "in_stream_peeker.h"
 #include "lib/zx/time.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 #include "util.h"
 
 namespace {

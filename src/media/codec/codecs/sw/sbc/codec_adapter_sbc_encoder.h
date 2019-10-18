@@ -8,10 +8,9 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "chunk_input_stream.h"
 #include "codec_adapter_sw.h"
+#include "src/lib/fxl/logging.h"
 #include "timestamp_extrapolator.h"
 
 // This must be included after fuchsia.media FIDL because it defines macros

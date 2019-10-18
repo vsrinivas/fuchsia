@@ -18,13 +18,12 @@
 #include <cstring>
 #include <thread>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/strings/string_number_conversions.h>
-
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 using debugger_utils::ZxErrorString;
 

@@ -6,11 +6,11 @@
 #include <lib/zx/process.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
 #include <trace-reader/file_reader.h>
 
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/run_test.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {
@@ -41,9 +41,8 @@ TEST(ProviderDestruction, StressTest) {
     ASSERT_TRUE(RunTraceAndWait(job, args));
 
     size_t num_events;
-    ASSERT_TRUE(
-        VerifyTestEventsFromJson(std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath,
-                                 &num_events));
+    ASSERT_TRUE(VerifyTestEventsFromJson(std::string(kTestTmpPath) + "/" + kRelativeOutputFilePath,
+                                         &num_events));
     FXL_VLOG(1) << "Got " << num_events << " events";
   }
 }

@@ -9,9 +9,9 @@
 
 #include <array>
 
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/log_level.h>
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/log_level.h"
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 

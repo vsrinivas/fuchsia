@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 TextNode::TextNode(scenic::Session* session) : scenic::Node(session) {
   session->Enqueue(scenic::NewCreateShapeNodeCmd(id()));

@@ -7,9 +7,8 @@
 #include <string>
 #include <vector>
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/lib/fsl/types/type_converters.h"
+#include "src/lib/fxl/macros.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/entity/cpp/json.h"
 

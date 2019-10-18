@@ -14,9 +14,8 @@
 #include <memory>
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/time/time_delta.h>
-
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/time/time_delta.h"
 #include "src/modular/lib/common/async_holder.h"
 
 namespace modular {

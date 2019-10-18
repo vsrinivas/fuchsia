@@ -14,7 +14,6 @@
 #include <vector>
 
 #include <fidl/examples/echo/cpp/fidl.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include "fuchsia/sys/cpp/fidl.h"
 #include "gmock/gmock.h"
@@ -24,6 +23,7 @@
 #include "lib/fidl/internal.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/sys/appmgr/integration_tests/mock_runner_registry.h"
 
 namespace component {

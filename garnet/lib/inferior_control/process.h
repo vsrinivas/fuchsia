@@ -16,8 +16,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <src/lib/fxl/macros.h>
-
 #include "breakpoint.h"
 #include "delegate.h"
 #include "exception_port.h"
@@ -26,6 +24,7 @@
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/process/process_builder.h"
 #include "memory_process.h"
+#include "src/lib/fxl/macros.h"
 #include "thread.h"
 
 namespace inferior_control {

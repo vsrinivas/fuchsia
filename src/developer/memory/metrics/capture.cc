@@ -16,9 +16,10 @@
 
 #include <memory>
 
-#include <src/lib/fxl/logging.h>
 #include <task-utils/walker.h>
 #include <trace/event.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace memory {
 

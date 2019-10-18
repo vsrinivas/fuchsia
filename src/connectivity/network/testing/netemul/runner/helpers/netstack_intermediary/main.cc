@@ -7,10 +7,9 @@
 
 #include <iostream>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-
 #include "netstack_intermediary.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 static void usage() {

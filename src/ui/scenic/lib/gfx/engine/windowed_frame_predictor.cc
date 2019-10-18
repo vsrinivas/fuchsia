@@ -4,8 +4,9 @@
 
 #include "src/ui/scenic/lib/gfx/engine/windowed_frame_predictor.h"
 
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {

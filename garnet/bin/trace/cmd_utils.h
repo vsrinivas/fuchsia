@@ -12,9 +12,8 @@
 #include <string>
 #include <vector>
 
-#include <src/lib/fxl/strings/string_view.h>
-
 #include "garnet/bin/trace/spec.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace tracing {
 

@@ -11,10 +11,9 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
-
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 #include "src/modular/bin/module_resolver/local_module_resolver.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/entity/cpp/json.h"

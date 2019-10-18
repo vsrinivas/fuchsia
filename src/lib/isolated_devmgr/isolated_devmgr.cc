@@ -14,7 +14,8 @@
 
 #include <ddk/platform-defs.h>
 #include <libzbi/zbi-cpp.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace isolated_devmgr {
 

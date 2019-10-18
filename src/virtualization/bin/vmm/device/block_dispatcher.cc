@@ -7,9 +7,9 @@
 #include <lib/zx/vmo.h>
 
 #include <bitmap/rle-bitmap.h>
-#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"
 

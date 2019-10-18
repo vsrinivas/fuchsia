@@ -5,7 +5,8 @@
 #include <zircon/syscalls.h>
 
 #include <src/camera/simple_camera/simple_camera_lib/frame_scheduler.h>
-#include <src/lib/fxl/command_line.h>
+
+#include "src/lib/fxl/command_line.h"
 
 namespace simple_camera {
 

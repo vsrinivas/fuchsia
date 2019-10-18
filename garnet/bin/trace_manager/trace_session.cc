@@ -9,10 +9,10 @@
 
 #include <numeric>
 
-#include <src/lib/fxl/logging.h>
 #include <trace-engine/fields.h>
 
 #include "garnet/bin/trace_manager/util.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

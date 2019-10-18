@@ -6,8 +6,7 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include <src/lib/fxl/arraysize.h>
-
+#include "src/lib/fxl/arraysize.h"
 #include "src/virtualization/bin/vmm/phys_mem_fake.h"
 #include "src/virtualization/bin/vmm/virtio_queue_fake.h"
 

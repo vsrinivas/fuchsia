@@ -4,7 +4,7 @@
 
 #include "peridot/lib/util/pseudo_dir_utils.h"
 
-#include <src/lib/fxl/strings/split_string.h>
+#include "src/lib/fxl/strings/split_string.h"
 
 namespace modular {
 

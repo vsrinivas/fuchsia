@@ -15,11 +15,11 @@
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
 #include <src/lib/files/unique_fd.h>
-#include <src/lib/fxl/strings/split_string.h>
-#include <src/lib/fxl/strings/substitute.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 class ModularConfigReaderTest : public gtest::RealLoopFixture {};
 

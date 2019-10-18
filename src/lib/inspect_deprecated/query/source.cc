@@ -13,7 +13,8 @@
 
 #include <fbl/array.h>
 #include <src/lib/files/file.h>
-#include <src/lib/fxl/strings/substitute.h>
+
+#include "src/lib/fxl/strings/substitute.h"
 
 namespace inspect_deprecated {
 

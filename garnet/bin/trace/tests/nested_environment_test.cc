@@ -11,8 +11,9 @@
 
 #include <string>
 
-#include <src/lib/fxl/logging.h>
 #include <task-utils/walker.h>
+
+#include "src/lib/fxl/logging.h"
 
 // Helper program to be executed as a benchmark. Verifies that it is executed
 // under the nested environment created in trace record and returns with

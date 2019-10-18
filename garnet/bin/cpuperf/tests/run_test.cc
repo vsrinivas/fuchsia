@@ -14,10 +14,10 @@
 #include <string>
 #include <vector>
 
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/join_strings.h>
-#include <src/lib/fxl/strings/string_printf.h>
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 // The path of the trace program.
 // cpuperf is a "shell=true" program, and thus has a stub for it in /bin

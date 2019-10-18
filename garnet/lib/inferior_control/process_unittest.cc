@@ -8,11 +8,10 @@
 #include <lib/zx/channel.h>
 #include <string.h>
 
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "garnet/lib/inferior_control/test_helper.h"
 #include "garnet/lib/inferior_control/test_server.h"
 #include "gtest/gtest.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace inferior_control {
 namespace {

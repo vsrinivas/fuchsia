@@ -6,8 +6,7 @@
 
 #include <lib/svc/cpp/services.h>
 
-#include <src/lib/fxl/logging.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/device/input.h"
 
 static constexpr char kVirtioInputUrl[] =

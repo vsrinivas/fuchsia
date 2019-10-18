@@ -15,9 +15,8 @@
 #include <unistd.h>
 #include <zircon/types.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "example_view_provider_service.h"
+#include "src/lib/fxl/logging.h"
 
 // Returns a human-readable string for a given embedder process type -
 // either container or subview.

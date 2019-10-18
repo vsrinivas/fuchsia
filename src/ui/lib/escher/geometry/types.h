@@ -12,7 +12,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 #include "src/ui/lib/escher/util/debug_print.h"
 

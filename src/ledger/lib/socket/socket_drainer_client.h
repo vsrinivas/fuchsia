@@ -11,10 +11,9 @@
 #include <memory>
 #include <string>
 
-#include <src/lib/fxl/macros.h>
-
 #include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/fsl/socket/socket_drainer.h"
+#include "src/lib/fxl/macros.h"
 
 namespace socket {
 

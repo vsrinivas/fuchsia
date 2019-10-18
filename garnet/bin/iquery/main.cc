@@ -10,10 +10,9 @@
 
 #include <iostream>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-
 #include "garnet/bin/iquery/modes.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
 
 int main(int argc, const char** argv) {

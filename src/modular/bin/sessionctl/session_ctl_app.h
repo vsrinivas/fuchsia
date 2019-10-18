@@ -14,9 +14,8 @@
 #include <iostream>
 #include <string>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/modular/bin/sessionctl/logger.h"
 #include "src/modular/lib/async/cpp/future.h"
 

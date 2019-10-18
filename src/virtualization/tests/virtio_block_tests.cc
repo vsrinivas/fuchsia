@@ -12,11 +12,11 @@
 
 #include <fbl/unique_fd.h>
 #include <gmock/gmock.h>
-#include <src/lib/fxl/arraysize.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include "guest_test.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"
 #include "src/virtualization/bin/vmm/device/qcow_test_data.h"

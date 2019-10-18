@@ -4,12 +4,11 @@
 
 #include "arch_x64.h"
 
-#include <src/lib/fxl/logging.h>
-
 #include "arch.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
+#include "src/lib/fxl/logging.h"
 #include "thread.h"
 
 namespace inferior_control {

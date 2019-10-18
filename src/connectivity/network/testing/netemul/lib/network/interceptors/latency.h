@@ -10,9 +10,8 @@
 
 #include <random>
 
-#include <src/lib/fxl/macros.h>
-
 #include "interceptor.h"
+#include "src/lib/fxl/macros.h"
 
 namespace netemul {
 namespace interceptor {

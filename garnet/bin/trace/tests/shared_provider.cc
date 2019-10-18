@@ -9,12 +9,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/trace/tests/integration_test_utils.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 const char kProviderName[] = "shared-provider-write-events";
 

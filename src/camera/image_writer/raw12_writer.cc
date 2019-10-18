@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 

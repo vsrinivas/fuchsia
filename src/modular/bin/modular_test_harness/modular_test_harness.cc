@@ -11,9 +11,9 @@
 #include <memory>
 
 #include <sdk/lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/logging.h>
 #include <src/modular/lib/modular_test_harness/cpp/test_harness_impl.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_impl.h"
 
 int main(int argc, const char** argv) {

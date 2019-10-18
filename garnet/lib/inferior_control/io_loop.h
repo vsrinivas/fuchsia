@@ -11,9 +11,9 @@
 #include <atomic>
 #include <thread>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/memory/ref_ptr.h>
-#include <src/lib/fxl/strings/string_view.h>
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace inferior_control {
 

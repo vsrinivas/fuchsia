@@ -4,11 +4,10 @@
 
 #include "library_loader.h"
 
-#include <src/lib/fxl/logging.h>
-
 #include "rapidjson/error/en.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_types.h"
+#include "src/lib/fxl/logging.h"
 
 // See library_loader.h for details.
 

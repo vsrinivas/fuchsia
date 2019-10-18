@@ -13,9 +13,8 @@
 
 #include <memory>
 
-#include <src/lib/fxl/logging.h>
-
 #include "local_single_codec_factory.h"
+#include "src/lib/fxl/logging.h"
 
 // If a software can only provide an encoder or decoder, the other should be
 // assigned NoAdapter in the template arguments, e.g.:

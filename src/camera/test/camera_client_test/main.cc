@@ -9,9 +9,8 @@
 
 #include <iostream>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/camera/test/camera_client_test/camera_client_test.h"
+#include "src/lib/fxl/logging.h"
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 

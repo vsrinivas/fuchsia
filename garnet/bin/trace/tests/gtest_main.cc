@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/test/test_settings.h>
 
 #include "garnet/bin/trace/tests/component_context.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/test/test_settings.h"
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {

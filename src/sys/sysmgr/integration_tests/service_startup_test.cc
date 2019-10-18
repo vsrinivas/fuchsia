@@ -10,10 +10,10 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
-#include <src/lib/fxl/logging.h>
 #include <test/sysmgr/cpp/fidl.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 #include "src/sys/appmgr/appmgr.h"
 
 namespace sysmgr {

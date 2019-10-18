@@ -9,9 +9,8 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 #include "src/ui/a11y/lib/settings/tests/mocks/mock_settings_service.h"
 #include "src/ui/a11y/lib/settings/tests/mocks/mock_settings_watcher.h"
 

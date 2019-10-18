@@ -10,8 +10,7 @@
 
 #include <algorithm>
 
-#include <src/lib/fxl/strings/split_string.h>
-
+#include "src/lib/fxl/strings/split_string.h"
 #include "src/modular/lib/entity/cpp/json.h"
 #include "src/modular/lib/fidl/clone.h"
 

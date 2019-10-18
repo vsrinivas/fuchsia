@@ -12,8 +12,7 @@
 #include <queue>
 #include <unordered_set>
 
-#include <src/lib/fxl/memory/weak_ptr.h>
-
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 
 namespace scenic_impl {

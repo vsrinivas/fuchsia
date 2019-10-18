@@ -8,17 +8,16 @@
 
 #include <string>
 
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-#include <src/lib/fxl/time/stopwatch.h>
-
 #include "garnet/bin/cpuperf/session_result_spec.h"
 #include "printer_config.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/time/stopwatch.h"
 
 static constexpr char kUsageString[] =
     "cpuperf_print [options]\n"

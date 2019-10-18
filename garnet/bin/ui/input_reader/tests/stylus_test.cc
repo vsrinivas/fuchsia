@@ -11,7 +11,8 @@
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
 #include <hid/paradise.h>
-#include <src/lib/fxl/time/time_point.h>
+
+#include "src/lib/fxl/time/time_point.h"
 
 namespace input {
 

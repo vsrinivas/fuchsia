@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 static constexpr netemul::EthernetConfig eth_config = {.buff_size = 2048, .nbufs = 256};
 

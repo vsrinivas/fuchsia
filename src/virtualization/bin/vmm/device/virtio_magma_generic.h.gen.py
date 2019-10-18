@@ -46,7 +46,7 @@ def guards(begin):
 def includes():
     ret = ''
     ret += '#include <fbl/unique_fd.h>\n'
-    ret += '#include <src/lib/fxl/macros.h>\n'
+    ret += '#include "src/lib/fxl/macros.h"\n'
     ret += '#include <trace/event.h>\n'
     ret += '#include <zircon/status.h>\n'
     ret += '#include "src/virtualization/bin/vmm/device/virtio_queue.h"\n'

@@ -10,9 +10,8 @@
 #include <lib/sync/completion.h>
 #include <zircon/processargs.h>
 
-#include <src/lib/fxl/logging.h>
-
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scoped_tmpfs {
 

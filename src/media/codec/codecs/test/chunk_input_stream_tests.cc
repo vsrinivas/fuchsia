@@ -6,10 +6,9 @@
 
 #include <algorithm>
 
-#include <src/lib/fxl/logging.h>
-
 #include "../chunk_input_stream.h"
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 #include "test_codec_packets.h"
 
 size_t AlignUp(size_t v, size_t alignment) {

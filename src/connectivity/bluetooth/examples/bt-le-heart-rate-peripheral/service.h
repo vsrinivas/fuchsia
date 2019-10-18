@@ -12,7 +12,7 @@
 
 #include <unordered_set>
 
-#include <src/lib/fxl/memory/weak_ptr.h>
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace bt_le_heart_rate {
 

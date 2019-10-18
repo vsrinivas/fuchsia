@@ -6,13 +6,11 @@
 #include <lib/zx/process.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
 #include <trace-reader/file_reader.h>
 
-#include "garnet/bin/trace/tests/run_test.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"
+#include "garnet/bin/trace/tests/run_test.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {

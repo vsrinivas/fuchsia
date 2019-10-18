@@ -17,10 +17,9 @@
 #include <optional>
 #include <queue>
 
-#include <src/lib/fxl/macros.h>
-#include <src/lib/fxl/synchronization/thread_annotations.h>
-
 #include "buffer_pool.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/lib/mpsc_queue/mpsc_queue.h"
 
 // TODO(turnage): Allow a range of packet count for the client instead of

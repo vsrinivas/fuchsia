@@ -6,7 +6,7 @@
 
 #include <lib/trace/event.h>
 
-#include <src/lib/fxl/logging.h>
+#include "src/lib/fxl/logging.h"
 
 namespace simplest_app {
 

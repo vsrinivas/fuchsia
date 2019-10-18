@@ -8,12 +8,11 @@
 #include <cinttypes>
 #include <cstring>
 
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
-
 #include "arch_x64.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "registers.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "thread.h"
 
 namespace inferior_control {
