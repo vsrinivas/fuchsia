@@ -225,47 +225,47 @@ TEST_F(WireParserTest, ParseSingleString) {
 namespace {
 
 template <class T>
-std::string FieldToJson(const std::string& key, T value) {
+std::string ValueToJson(const std::string& key, T value) {
   return "\"" + key + "\":\"" + std::to_string(value) + "\"";
 }
 
 template <>
-std::string FieldToJson(const std::string& key, bool value) {
+std::string ValueToJson(const std::string& key, bool value) {
   return "\"" + key + "\":\"" + (value ? "true" : "false") + "\"";
 }
 
 template <>
-std::string FieldToJson(const std::string& key, const char* value) {
+std::string ValueToJson(const std::string& key, const char* value) {
   return "\"" + key + "\":\"" + value + "\"";
 }
 
 template <>
-std::string FieldToJson(const std::string& key, std::string value) {
+std::string ValueToJson(const std::string& key, std::string value) {
   return "\"" + key + "\":\"" + value + "\"";
 }
 
 template <class T>
 std::string SingleToJson(const std::string& key, T value) {
-  return "{ " + FieldToJson(key, value) + " }";
+  return "{ " + ValueToJson(key, value) + " }";
 }
 
 template <class T>
-std::string FieldToPretty(const std::string& key, const std::string& type, T value) {
+std::string ValueToPretty(const std::string& key, const std::string& type, T value) {
   return key + ": #gre#" + type + "#rst# = #blu#" + std::to_string(value) + "#rst#";
 }
 
 template <>
-std::string FieldToPretty(const std::string& key, const std::string& type, bool value) {
+std::string ValueToPretty(const std::string& key, const std::string& type, bool value) {
   return key + ": #gre#" + type + "#rst# = #blu#" + (value ? "true" : "false") + "#rst#";
 }
 
 template <>
-std::string FieldToPretty(const std::string& key, const std::string& type, const char* value) {
+std::string ValueToPretty(const std::string& key, const std::string& type, const char* value) {
   return key + ": #gre#" + type + "#rst# = #red#\"" + value + "\"#rst#";
 }
 
 template <>
-std::string FieldToPretty(const std::string& key, const std::string& type, std::string value) {
+std::string ValueToPretty(const std::string& key, const std::string& type, std::string value) {
   return key + ": #gre#" + type + "#rst# = #red#\"" + value + "\"#rst#";
 }
 
@@ -289,7 +289,7 @@ std::string HandleToPretty(const std::string& key, zx_handle_t value) {
 
 template <class T>
 std::string SingleToPretty(const std::string& key, const std::string& type, T value) {
-  return "{ " + FieldToPretty(key, type, value) + " }";
+  return "{ " + ValueToPretty(key, type, value) + " }";
 }
 
 }  // namespace
@@ -327,13 +327,13 @@ TEST_SINGLE(Float32, Float32, f32, float32, kFloatValue)
 TEST_SINGLE(Float64, Float64, f64, float64, kDoubleValue)
 
 TEST_DECODE_WIRE(TwoTuple, Complex, R"({"real":"1", "imaginary":"2"})",
-                 "{ " + FieldToPretty("real", "int32", 1) + ", " +
-                     FieldToPretty("imaginary", "int32", 2) + " }",
+                 "{ " + ValueToPretty("real", "int32", 1) + ", " +
+                     ValueToPretty("imaginary", "int32", 2) + " }",
                  1, 2);
 
 TEST_DECODE_WIRE(StringInt, StringInt, R"({"s":"groucho", "i32":"4"})",
-                 "{ " + FieldToPretty("s", "string", "groucho") + ", " +
-                     FieldToPretty("i32", "int32", 4) + " }",
+                 "{ " + ValueToPretty("s", "string", "groucho") + ", " +
+                     ValueToPretty("i32", "int32", 4) + " }",
                  "groucho", 4)
 
 // Vector / Array Tests
@@ -376,7 +376,7 @@ std::array<std::string, 2> TwoStringArrayFromVals(const std::string& v1, const s
 
 TEST_DECODE_WIRE(TwoStringArrayInt, TwoStringArrayInt, R"({"arr":["harpo","chico"], "i32":"1"})",
                  R"({ arr: #gre#array<string>#rst# = [ #red#"harpo"#rst#, #red#"chico"#rst# ], )" +
-                     FieldToPretty("i32", "int32", 1) + " }",
+                     ValueToPretty("i32", "int32", 1) + " }",
                  TwoStringArrayFromVals("harpo", "chico"), 1)
 
 namespace {
@@ -416,7 +416,7 @@ std::vector<uint32_t> VectorUint32() {
 
 TEST_DECODE_WIRE(TwoStringVectorInt, TwoStringVectorInt, R"({"vec":["harpo", "chico"], "i32":"1"})",
                  R"({ vec: #gre#vector<string>#rst# = [ #red#"harpo"#rst#, #red#"chico"#rst# ], )" +
-                     FieldToPretty("i32", "int32", 1) + " }",
+                     ValueToPretty("i32", "int32", 1) + " }",
                  TwoStringVectorFromVals("harpo", "chico"), 1)
 
 TEST_DECODE_WIRE(TwoStringVectors, TwoStringVectors,
@@ -502,30 +502,30 @@ class StructSupport {
 
   std::string GetJson() {
     std::ostringstream es;
-    es << R"({"p":{)" << FieldToJson("s", pt.s) << "," << FieldToJson("b", pt.b) << ","
-       << FieldToJson("i8", pt.i8) << "," << FieldToJson("i16", pt.i16) << ","
-       << FieldToJson("i32", pt.i32) << "," << FieldToJson("i64", pt.i64) << ","
-       << FieldToJson("u8", pt.u8) << "," << FieldToJson("u16", pt.u16) << ","
-       << FieldToJson("u32", pt.u32) << "," << FieldToJson("u64", pt.u64) << ","
-       << FieldToJson("f32", pt.f32) << "," << FieldToJson("f64", pt.f64) << "}}";
+    es << R"({"p":{)" << ValueToJson("s", pt.s) << "," << ValueToJson("b", pt.b) << ","
+       << ValueToJson("i8", pt.i8) << "," << ValueToJson("i16", pt.i16) << ","
+       << ValueToJson("i32", pt.i32) << "," << ValueToJson("i64", pt.i64) << ","
+       << ValueToJson("u8", pt.u8) << "," << ValueToJson("u16", pt.u16) << ","
+       << ValueToJson("u32", pt.u32) << "," << ValueToJson("u64", pt.u64) << ","
+       << ValueToJson("f32", pt.f32) << "," << ValueToJson("f64", pt.f64) << "}}";
     return es.str();
   }
   std::string GetPretty() {
     std::ostringstream es;
     es << "{\n"
        << "  p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = {\n"
-       << "    " << FieldToPretty("s", "string", pt.s) << "\n"
-       << "    " << FieldToPretty("b", "bool", pt.b) << "\n"
-       << "    " << FieldToPretty("i8", "int8", pt.i8) << "\n"
-       << "    " << FieldToPretty("i16", "int16", pt.i16) << "\n"
-       << "    " << FieldToPretty("i32", "int32", pt.i32) << "\n"
-       << "    " << FieldToPretty("i64", "int64", pt.i64) << "\n"
-       << "    " << FieldToPretty("u8", "uint8", pt.u8) << "\n"
-       << "    " << FieldToPretty("u16", "uint16", pt.u16) << "\n"
-       << "    " << FieldToPretty("u32", "uint32", pt.u32) << "\n"
-       << "    " << FieldToPretty("u64", "uint64", pt.u64) << "\n"
-       << "    " << FieldToPretty("f32", "float32", pt.f32) << "\n"
-       << "    " << FieldToPretty("f64", "float64", pt.f64) << "\n"
+       << "    " << ValueToPretty("s", "string", pt.s) << "\n"
+       << "    " << ValueToPretty("b", "bool", pt.b) << "\n"
+       << "    " << ValueToPretty("i8", "int8", pt.i8) << "\n"
+       << "    " << ValueToPretty("i16", "int16", pt.i16) << "\n"
+       << "    " << ValueToPretty("i32", "int32", pt.i32) << "\n"
+       << "    " << ValueToPretty("i64", "int64", pt.i64) << "\n"
+       << "    " << ValueToPretty("u8", "uint8", pt.u8) << "\n"
+       << "    " << ValueToPretty("u16", "uint16", pt.u16) << "\n"
+       << "    " << ValueToPretty("u32", "uint32", pt.u32) << "\n"
+       << "    " << ValueToPretty("u64", "uint64", pt.u64) << "\n"
+       << "    " << ValueToPretty("f32", "float32", pt.f32) << "\n"
+       << "    " << ValueToPretty("f64", "float64", pt.f64) << "\n"
        << "  }\n"
        << "}";
     return es.str();
@@ -571,10 +571,10 @@ std::unique_ptr<test::fidlcodec::examples::TwoStringStruct> TwoStringStructFromV
 
 std::string TwoStringStructIntPretty(const char* s1, const char* s2, int v) {
   std::string result = "{\n  s: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = {\n";
-  result += "    " + FieldToPretty("value1", "string", s1) + "\n";
-  result += "    " + FieldToPretty("value2", "string", s2) + "\n";
+  result += "    " + ValueToPretty("value1", "string", s1) + "\n";
+  result += "    " + ValueToPretty("value2", "string", s2) + "\n";
   result += "  }\n";
-  result += "  " + FieldToPretty("i32", "int32", v) + "\n";
+  result += "  " + ValueToPretty("i32", "int32", v) + "\n";
   result += "}";
   return result;
 }
@@ -631,8 +631,8 @@ std::unique_ptr<T> GetStructUnionPtr(const std::string& v1, const std::string& v
 std::string IntUnionIntPretty(const std::string& name, int u, int v) {
   std::string result = "{\n";
   result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
-            FieldToPretty("variant_i", "int32", u) + " }\n";
-  result += "  " + FieldToPretty("i", "int32", v) + "\n";
+            ValueToPretty("variant_i", "int32", u) + " }\n";
+  result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "}";
   return result;
 }
@@ -643,33 +643,33 @@ std::string StructUnionIntPretty(const std::string& name, const char* u1, const 
   result +=
       "    variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = "
       "{\n";
-  result += "      " + FieldToPretty("value1", "string", u1) + "\n";
-  result += "      " + FieldToPretty("value2", "string", u2) + "\n";
+  result += "      " + ValueToPretty("value1", "string", u1) + "\n";
+  result += "      " + ValueToPretty("value2", "string", u2) + "\n";
   result += "    }\n";
   result += "  }\n";
-  result += "  " + FieldToPretty("i", "int32", v) + "\n";
+  result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "}";
   return result;
 }
 
 std::string IntIntUnionPretty(const std::string& name, int v, int u) {
   std::string result = "{\n";
-  result += "  " + FieldToPretty("i", "int32", v) + "\n";
+  result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
-            FieldToPretty("variant_i", "int32", u) + " }\n";
+            ValueToPretty("variant_i", "int32", u) + " }\n";
   result += "}";
   return result;
 }
 
 std::string IntStructUnionPretty(const std::string& name, int v, const char* u1, const char* u2) {
   std::string result = "{\n";
-  result += "  " + FieldToPretty("i", "int32", v) + "\n";
+  result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "  isu: #gre#test.fidlcodec.examples/" + name + "#rst# = {\n";
   result +=
       "    variant_tss: #gre#test.fidlcodec.examples/TwoStringStruct#rst# = "
       "{\n";
-  result += "      " + FieldToPretty("value1", "string", u1) + "\n";
-  result += "      " + FieldToPretty("value2", "string", u2) + "\n";
+  result += "      " + ValueToPretty("value1", "string", u1) + "\n";
+  result += "      " + ValueToPretty("value2", "string", u2) + "\n";
   result += "    }\n";
   result += "  }\n";
   result += "}";
@@ -751,8 +751,8 @@ std::string ShortUnionPretty(const std::string& name, const char* field, const c
                              int v) {
   std::string result = "{\n";
   result += "  u: #gre#test.fidlcodec.examples/" + name + "#rst# = { " +
-            FieldToPretty(field, type, u) + " }\n";
-  result += "  " + FieldToPretty("i", "int32", v) + "\n";
+            ValueToPretty(field, type, u) + " }\n";
+  result += "  " + ValueToPretty("i", "int32", v) + "\n";
   result += "}";
   return result;
 }
@@ -813,35 +813,35 @@ std::string TablePretty(std::optional<int16_t> first_int16, std::optional<std::s
                         int i) {
   if (!first_int16.has_value() && !value1.has_value() && !third_union_val.has_value()) {
     std::string result = "{ table: #gre#test.fidlcodec.examples/ValueTable#rst# = {}, ";
-    result += FieldToPretty("i", "int32", i);
+    result += ValueToPretty("i", "int32", i);
     result += " }";
     return result;
   }
   std::string result = "{\n";
   if (!value1.has_value() && !third_union_val.has_value()) {
     result += "  table: #gre#test.fidlcodec.examples/ValueTable#rst# = { ";
-    result += FieldToPretty("first_int16", "int16", *first_int16) + " }\n";
+    result += ValueToPretty("first_int16", "int16", *first_int16) + " }\n";
   } else {
     result += "  table: #gre#test.fidlcodec.examples/ValueTable#rst# = {\n";
     if (first_int16.has_value()) {
-      result += "    " + FieldToPretty("first_int16", "int16", *first_int16) + "\n";
+      result += "    " + ValueToPretty("first_int16", "int16", *first_int16) + "\n";
     }
     if (value1.has_value()) {
       result +=
           "    second_struct: "
           "#gre#test.fidlcodec.examples/TwoStringStruct#rst# = {\n";
-      result += "      " + FieldToPretty("value1", "string", *value1) + "\n";
-      result += "      " + FieldToPretty("value2", "string", *value2) + "\n";
+      result += "      " + ValueToPretty("value1", "string", *value1) + "\n";
+      result += "      " + ValueToPretty("value2", "string", *value2) + "\n";
       result += "    }\n";
     }
     if (third_union_val.has_value()) {
       result += "    third_union: #gre#test.fidlcodec.examples/IntStructUnion#rst# = {\n";
-      result += "      " + FieldToPretty("variant_i", "int32", *third_union_val) + "\n";
+      result += "      " + ValueToPretty("variant_i", "int32", *third_union_val) + "\n";
       result += "    }\n";
     }
     result += "  }\n";
   }
-  result += "  " + FieldToPretty("i", "int32", i) + "\n";
+  result += "  " + ValueToPretty("i", "int32", i) + "\n";
   result += "}";
   return result;
 }
@@ -1152,10 +1152,6 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
 
   delete[] handle_infos;
 }
-
-namespace {
-
-}  // namespace
 
 // TODO(fidlcat): Remove this test and its dependencies when the union migration will be finished.
 

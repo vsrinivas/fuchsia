@@ -49,10 +49,9 @@ class Type {
   // Returns the size of this type when embedded in another object.
   virtual size_t InlineSize() const;
 
-  // Decodes the type's inline part. It generates a Field and, eventually,
+  // Decodes the type's inline part. It generates a Value and, eventually,
   // registers the field for further decoding (secondary objects).
-  virtual std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                        uint64_t offset) const;
+  virtual std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const;
 
   // Gets a Type object representing the |type|.  |type| is a JSON object a
   // field "kind" that states the type (e.g., "array", "vector", "foo.bar/Baz").
@@ -92,8 +91,7 @@ class RawType : public Type {
 
   virtual size_t InlineSize() const override { return inline_size_; }
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
  private:
   size_t inline_size_;
@@ -105,8 +103,7 @@ class StringType : public Type {
 
   virtual size_t InlineSize() const override { return sizeof(uint64_t) + sizeof(uint64_t); }
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 };
 
 // A generic type that can be used for any numeric value that corresponds to a
@@ -130,9 +127,8 @@ class NumericType : public Type {
 
   virtual size_t InlineSize() const override { return sizeof(T); }
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override {
-    return std::make_unique<NumericField<T>>(name, this, decoder->GetAddress(offset, sizeof(T)));
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
+    return std::make_unique<NumericValue<T>>(this, decoder->GetAddress(offset, sizeof(T)));
   }
 };
 
@@ -192,8 +188,7 @@ class BoolType : public Type {
 
   virtual size_t InlineSize() const override { return sizeof(uint8_t); }
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 };
 
 class StructType : public Type {
@@ -204,8 +199,7 @@ class StructType : public Type {
 
   virtual size_t InlineSize() const override;
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
  private:
   const Struct& struct_;
@@ -220,8 +214,7 @@ class TableType : public Type {
 
   virtual size_t InlineSize() const override;
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
  private:
   const Table& table_;
@@ -235,8 +228,7 @@ class UnionType : public Type {
 
   virtual size_t InlineSize() const override;
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
  private:
   const Union& union_;
@@ -251,8 +243,7 @@ class XUnionType : public Type {
 
   virtual size_t InlineSize() const override;
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
  private:
   const XUnion& xunion_;
@@ -277,8 +268,7 @@ class ArrayType : public ElementSequenceType {
 
   virtual size_t InlineSize() const override { return component_type_->InlineSize() * count_; }
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
  private:
   uint32_t count_;
@@ -294,8 +284,7 @@ class VectorType : public ElementSequenceType {
 
   virtual size_t InlineSize() const override { return sizeof(uint64_t) + sizeof(uint64_t); }
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 };
 
 class EnumType : public Type {
@@ -306,8 +295,7 @@ class EnumType : public Type {
 
   virtual size_t InlineSize() const override { return enum_.size(); }
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
  private:
   const Enum& enum_;
@@ -321,8 +309,7 @@ class HandleType : public Type {
 
   virtual size_t InlineSize() const override { return sizeof(zx_handle_t); }
 
-  std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
-                                uint64_t offset) const override;
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 };
 
 }  // namespace fidl_codec

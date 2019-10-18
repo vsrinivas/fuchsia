@@ -102,10 +102,9 @@ const UnionMember* Union::MemberWithOrdinal(Ordinal32 ordinal) const {
   return nullptr;
 }
 
-std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder, std::string_view name,
-                                               const Type* type, uint64_t offset,
-                                               bool nullable) const {
-  std::unique_ptr<UnionField> result = std::make_unique<UnionField>(name, type, *this);
+std::unique_ptr<UnionValue> Union::DecodeUnion(MessageDecoder* decoder, const Type* type,
+                                               uint64_t offset, bool nullable) const {
+  std::unique_ptr<UnionValue> result = std::make_unique<UnionValue>(type, *this);
   if (nullable) {
     result->DecodeNullable(decoder, offset, size_);
   } else {
@@ -114,9 +113,8 @@ std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder, std::str
   return result;
 }
 
-std::unique_ptr<XUnionField> Union::DecodeXUnion(MessageDecoder* decoder, std::string_view name,
-                                                 const Type* type, uint64_t offset,
-                                                 bool nullable) const {
+std::unique_ptr<XUnionValue> Union::DecodeXUnion(MessageDecoder* decoder, const Type* type,
+                                                 uint64_t offset, bool nullable) const {
   uint32_t ordinal = 0;
   if (decoder->GetValueAt(offset, &ordinal)) {
     if ((ordinal == 0) && !nullable) {
@@ -125,18 +123,20 @@ std::unique_ptr<XUnionField> Union::DecodeXUnion(MessageDecoder* decoder, std::s
   }
   offset += sizeof(uint64_t);  // Skips ordinal + padding.
 
-  std::unique_ptr<XUnionField> result = std::make_unique<XUnionField>(name, type, *this);
+  std::unique_ptr<XUnionValue> result = std::make_unique<XUnionValue>(type, *this);
 
-  std::unique_ptr<EnvelopeField> envelope;
+  std::unique_ptr<EnvelopeValue> envelope;
   const UnionMember* member = MemberWithOrdinal(ordinal);
+  std::string key_name;
   if (member == nullptr) {
-    std::string key_name = std::string("unknown$") + std::to_string(ordinal);
-    envelope = std::make_unique<EnvelopeField>(key_name, nullptr);
+    key_name = std::string("unknown$") + std::to_string(ordinal);
+    envelope = std::make_unique<EnvelopeValue>(nullptr);
   } else {
-    envelope = std::make_unique<EnvelopeField>(member->name(), member->type());
+    key_name = member->name();
+    envelope = std::make_unique<EnvelopeValue>(member->type());
   }
   envelope->DecodeAt(decoder, offset);
-  result->set_field(std::move(envelope));
+  result->set_field(Field(key_name, std::move(envelope)));
   return result;
 }
 
@@ -172,10 +172,9 @@ void Struct::DecodeResponseTypes() {
   DecodeTypes("response", "maybe_response_size", "maybe_response");
 }
 
-std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, std::string_view name,
-                                             const Type* type, uint64_t offset,
-                                             bool nullable) const {
-  std::unique_ptr<Object> result = std::make_unique<Object>(name, type, *this);
+std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, const Type* type,
+                                             uint64_t offset, bool nullable) const {
+  std::unique_ptr<Object> result = std::make_unique<Object>(type, *this);
   if (nullable) {
     result->DecodeNullable(decoder, offset, size_);
   } else {

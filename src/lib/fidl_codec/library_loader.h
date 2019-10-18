@@ -62,9 +62,9 @@ class Struct;
 class Table;
 class Type;
 class Union;
-class UnionField;
+class UnionValue;
 class XUnion;
-class XUnionField;
+class XUnionValue;
 
 class Enum {
  public:
@@ -136,10 +136,10 @@ class Union {
 
   const UnionMember* MemberWithOrdinal(Ordinal32 ordinal) const;
 
-  std::unique_ptr<UnionField> DecodeUnion(MessageDecoder* decoder, std::string_view name,
-                                          const Type* type, uint64_t offset, bool nullable) const;
-  std::unique_ptr<XUnionField> DecodeXUnion(MessageDecoder* decoder, std::string_view name,
-                                            const Type* type, uint64_t offset, bool nullable) const;
+  std::unique_ptr<UnionValue> DecodeUnion(MessageDecoder* decoder, const Type* type,
+                                          uint64_t offset, bool nullable) const;
+  std::unique_ptr<XUnionValue> DecodeXUnion(MessageDecoder* decoder, const Type* type,
+                                            uint64_t offset, bool nullable) const;
 
  private:
   Union(Library* enclosing_library, const rapidjson::Value& value);
@@ -194,8 +194,8 @@ class Struct {
   uint32_t size() const { return size_; }
   const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
 
-  std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder, std::string_view name,
-                                       const Type* type, uint64_t offset, bool nullable) const;
+  std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder, const Type* type, uint64_t offset,
+                                       bool nullable) const;
 
  private:
   Struct(Library* enclosing_library, const rapidjson::Value& value);

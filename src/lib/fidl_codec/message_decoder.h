@@ -22,7 +22,7 @@
 
 namespace fidl_codec {
 
-class Field;
+class Value;
 class Object;
 class Struct;
 class Type;
@@ -149,7 +149,7 @@ class MessageDecoder {
   std::unique_ptr<Object> DecodeMessage(const Struct& message_format);
 
   // Decodes a field. Used by envelopes.
-  std::unique_ptr<Field> DecodeField(std::string_view name, const Type* type);
+  std::unique_ptr<Value> DecodeValue(const Type* type);
 
  private:
   // The size of the message bytes.

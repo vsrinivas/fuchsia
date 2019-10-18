@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/message.h>
 
+#include <map>
 #include <memory>
 #include <string_view>
 #include <vector>
@@ -20,47 +21,60 @@ namespace fidl_codec {
 
 class Visitor;
 
-// Base class for all the fields we can find within a message.
-class Field {
+// Base class for all the values we can find within a message.
+class Value {
  public:
-  Field(std::string_view name, const Type* type) : name_(name), type_(type) {}
-  virtual ~Field() = default;
+  Value(const Type* type) : type_(type) {}
+  virtual ~Value() = default;
 
-  const std::string& name() const { return name_; }
   const Type* type() const { return type_; }
 
-  // Returns the size needed to display the field. If the needed size is
+  // Returns the size needed to display the value. If the needed size is
   // greater than |remaining_size|, the return value can be anything greater
-  // than |remaining_size| and the only useful information is that the field
+  // than |remaining_size| and the only useful information is that the value
   // can't fit in |remaining_size|.
   // Remaining size is just an optimization parameter. It avoids to compute the
   // whole display size for an object: the computation is stopped as soon as we
   // find that the object doesn't fit.
   virtual int DisplaySize(int remaining_size) const = 0;
 
-  // Returns the uint8_t value of the field. If the field is not a uint8_t value this returns zero.
+  // Returns the uint8_t value of the value. If the value is not a uint8_t value this returns zero.
   // This is used to eventually display a vector of uint8_t values as a string.
   virtual uint8_t GetUint8Value() const { return 0; }
 
-  // Decode the extra content of the field (in a secondary object).
+  // Decode the extra content of the value (in a secondary object).
   virtual void DecodeContent(MessageDecoder* decoder, uint64_t offset) = 0;
 
-  // Pretty print of the field.
+  // Pretty print of the value.
   virtual void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
                            int tabs, int remaining_size, int max_line_size) const = 0;
 
-  // Use a visitor on this field;
+  // Use a visitor on this value;
   virtual void Visit(Visitor* visitor) const = 0;
 
  private:
-  const std::string name_;
   const Type* const type_;
 };
 
-// Base class for fields which are nullable.
-class NullableField : public Field {
+// A name-value pair.
+class Field {
  public:
-  NullableField(std::string_view name, const Type* type) : Field(name, type) {}
+  Field() = default;
+  Field(const std::string& name, std::unique_ptr<Value> value)
+      : name_(name), value_(std::move(value)) {}
+
+  const std::string& name() const { return name_; }
+  const std::unique_ptr<Value>& value() const { return value_; }
+
+ private:
+  std::string name_;
+  std::unique_ptr<Value> value_;
+};
+
+// Base class for values which are nullable.
+class NullableValue : public Value {
+ public:
+  NullableValue(const Type* type) : Value(type) {}
 
   bool is_null() const { return is_null_; }
 
@@ -72,11 +86,25 @@ class NullableField : public Field {
   bool is_null_ = false;
 };
 
-// Base class for inlined fields (the data is not in a secondary object).
-class InlineField : public Field {
+// A name-value pair where the value is nullable.
+class NullableField {
  public:
-  InlineField(std::string_view name, const Type* type, const uint8_t* data)
-      : Field(name, type), data_(data) {}
+  NullableField() = default;
+  NullableField(const std::string& name, std::unique_ptr<NullableValue> value)
+      : name_(name), value_(std::move(value)) {}
+
+  const std::string& name() const { return name_; }
+  const std::unique_ptr<NullableValue>& value() const { return value_; }
+
+ private:
+  std::string name_;
+  std::unique_ptr<NullableValue> value_;
+};
+
+// Base class for inlined values (the data is not in a secondary object).
+class InlineValue : public Value {
+ public:
+  InlineValue(const Type* type, const uint8_t* data) : Value(type), data_(data) {}
 
   const uint8_t* data() const { return data_; }
 
@@ -88,11 +116,11 @@ class InlineField : public Field {
   const uint8_t* const data_;
 };
 
-// A field with no known representation (we only print the raw data).
-class RawField : public InlineField {
+// A value with no known representation (we only print the raw data).
+class RawValue : public InlineValue {
  public:
-  RawField(std::string_view name, const Type* type, const uint8_t* data, uint64_t size)
-      : InlineField(name, type, data), size_(size) {}
+  RawValue(const Type* type, const uint8_t* data, uint64_t size)
+      : InlineValue(type, data), size_(size) {}
 
   int DisplaySize(int remaining_size) const override;
 
@@ -105,12 +133,11 @@ class RawField : public InlineField {
   const uint64_t size_;
 };
 
-// All numeric fields (integer and floating point numbers).
+// All numeric values (integer and floating point numbers).
 template <typename T>
-class NumericField : public InlineField {
+class NumericValue : public InlineValue {
  public:
-  NumericField(std::string_view name, const Type* type, const uint8_t* data)
-      : InlineField(name, type, data) {}
+  NumericValue(const Type* type, const uint8_t* data) : InlineValue(type, data) {}
 
   int DisplaySize(int remaining_size) const override {
     return (data() == nullptr)
@@ -137,11 +164,11 @@ class NumericField : public InlineField {
   void Visit(Visitor* visitor) const override;
 };
 
-// A string field.
-class StringField : public NullableField {
+// A string value.
+class StringValue : public NullableValue {
  public:
-  StringField(std::string_view name, const Type* type, uint64_t string_length)
-      : NullableField(name, type), string_length_(string_length) {}
+  StringValue(const Type* type, uint64_t string_length)
+      : NullableValue(type), string_length_(string_length) {}
 
   uint64_t string_length() const { return string_length_; }
   const uint8_t* data() const { return data_; }
@@ -160,11 +187,10 @@ class StringField : public NullableField {
   const uint8_t* data_ = nullptr;
 };
 
-// A Boolean field.
-class BoolField : public InlineField {
+// A Boolean value.
+class BoolValue : public InlineValue {
  public:
-  BoolField(std::string_view name, const Type* type, const uint8_t* data)
-      : InlineField(name, type, data) {}
+  BoolValue(const Type* type, const uint8_t* data) : InlineValue(type, data) {}
 
   int DisplaySize(int remaining_size) const override;
 
@@ -175,12 +201,13 @@ class BoolField : public InlineField {
 };
 
 // An object. This represents a struct, a request or a response.
-class Object : public NullableField {
+class Object : public NullableValue {
  public:
-  Object(std::string_view name, const Type* type, const Struct& struct_definition)
-      : NullableField(name, type), struct_definition_(struct_definition) {}
+  Object(const Type* type, const Struct& struct_definition)
+      : NullableValue(type), struct_definition_(struct_definition) {}
 
-  const std::vector<std::unique_ptr<Field>>& fields() const { return fields_; }
+  const std::vector<Field>& fields() const { return fields_; }
+  const Struct& struct_definition() { return struct_definition_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -198,18 +225,18 @@ class Object : public NullableField {
 
  private:
   const Struct& struct_definition_;
-  std::vector<std::unique_ptr<Field>> fields_;
+  std::vector<Field> fields_;
 };
 
-// An envelope (used by TableField and XUnion).
-class EnvelopeField : public NullableField {
+// An envelope (used by TableValue and XUnion).
+class EnvelopeValue : public NullableValue {
  public:
-  EnvelopeField(std::string_view name, const Type* type);
+  EnvelopeValue(const Type* type);
 
   uint32_t num_bytes() const { return num_bytes_; }
   uint32_t num_handles() const { return num_handles_; }
-  const Field* field() const { return field_.get(); }
-  void set_field(std::unique_ptr<Field> field) { field_ = std::move(field); }
+  const Value* value() const { return value_.get(); }
+  void set_value(std::unique_ptr<Value> value) { value_ = std::move(value); }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -225,16 +252,15 @@ class EnvelopeField : public NullableField {
  private:
   uint32_t num_bytes_ = 0;
   uint32_t num_handles_ = 0;
-  std::unique_ptr<Field> field_ = nullptr;
+  std::unique_ptr<Value> value_ = nullptr;
 };
 
 // A table.
-class TableField : public NullableField {
+class TableValue : public NullableValue {
  public:
-  TableField(std::string_view name, const Type* type, const Table& table_definition,
-             uint64_t envelope_count);
+  TableValue(const Type* type, const Table& table_definition, uint64_t envelope_count);
 
-  const std::vector<std::unique_ptr<EnvelopeField>>& envelopes() const { return envelopes_; }
+  const std::vector<NullableField>& envelopes() const { return envelopes_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -250,17 +276,17 @@ class TableField : public NullableField {
  private:
   const Table& table_definition_;
   const uint64_t envelope_count_;
-  std::vector<std::unique_ptr<EnvelopeField>> envelopes_;
+  std::vector<NullableField> envelopes_;
 };
 
 // An union.
-class UnionField : public NullableField {
+class UnionValue : public NullableValue {
  public:
-  UnionField(std::string_view name, const Type* type, const Union& union_definition)
-      : NullableField(name, type), union_definition_(union_definition) {}
+  UnionValue(const Type* type, const Union& union_definition)
+      : NullableValue(type), union_definition_(union_definition) {}
 
-  const std::unique_ptr<Field>& field() const { return field_; }
-  void set_field(std::unique_ptr<Field> field) { field_ = std::move(field); }
+  const Field& field() const { return field_; }
+  void set_field(Field field) { field_ = std::move(field); }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -275,26 +301,26 @@ class UnionField : public NullableField {
 
  private:
   const Union& union_definition_;
-  std::unique_ptr<Field> field_;
+  Field field_;
 };
 
 // An xunion.
-class XUnionField : public UnionField {
+class XUnionValue : public UnionValue {
  public:
-  XUnionField(std::string_view name, const Type* type, const Union& xunion_definition)
-      : UnionField(name, type, xunion_definition) {}
+  XUnionValue(const Type* type, const Union& xunion_definition)
+      : UnionValue(type, xunion_definition) {}
 
   void Visit(Visitor* visitor) const override;
 };
 
 // An array.
-class ArrayField : public Field {
+class ArrayValue : public Value {
  public:
-  ArrayField(std::string_view name, const Type* type) : Field(name, type) {}
+  ArrayValue(const Type* type) : Value(type) {}
 
-  const std::vector<std::unique_ptr<Field>>& fields() const { return fields_; }
+  const std::vector<std::unique_ptr<Value>>& values() const { return values_; }
 
-  void AddField(std::unique_ptr<Field> field) { fields_.push_back(std::move(field)); }
+  void AddValue(std::unique_ptr<Value> value) { values_.push_back(std::move(value)); }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -306,16 +332,16 @@ class ArrayField : public Field {
   void Visit(Visitor* visitor) const override;
 
  private:
-  std::vector<std::unique_ptr<Field>> fields_;
+  std::vector<std::unique_ptr<Value>> values_;
 };
 
 // A vector.
-class VectorField : public NullableField {
+class VectorValue : public NullableValue {
  public:
-  VectorField(std::string_view name, const Type* type, uint64_t size, const Type* component_type)
-      : NullableField(name, type), size_(size), component_type_(component_type) {}
+  VectorValue(const Type* type, uint64_t size, const Type* component_type)
+      : NullableValue(type), size_(size), component_type_(component_type) {}
 
-  const std::vector<std::unique_ptr<Field>>& fields() const { return fields_; }
+  const std::vector<std::unique_ptr<Value>>& values() const { return values_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -329,17 +355,16 @@ class VectorField : public NullableField {
  private:
   const uint64_t size_;
   const Type* const component_type_;
-  std::vector<std::unique_ptr<Field>> fields_;
+  std::vector<std::unique_ptr<Value>> values_;
   bool is_string_ = false;
   bool has_new_line_ = false;
 };
 
 // An enum.
-class EnumField : public InlineField {
+class EnumValue : public InlineValue {
  public:
-  EnumField(std::string_view name, const Type* type, const uint8_t* data,
-            const Enum& enum_definition)
-      : InlineField(name, type, data), enum_definition_(enum_definition) {}
+  EnumValue(const Type* type, const uint8_t* data, const Enum& enum_definition)
+      : InlineValue(type, data), enum_definition_(enum_definition) {}
 
   const Enum& enum_definition() const { return enum_definition_; };
 
@@ -355,10 +380,9 @@ class EnumField : public InlineField {
 };
 
 // A handle.
-class HandleField : public Field {
+class HandleValue : public Value {
  public:
-  HandleField(std::string_view name, const Type* type, const zx_handle_info_t& handle)
-      : Field(name, type), handle_(handle) {}
+  HandleValue(const Type* type, const zx_handle_info_t& handle) : Value(type), handle_(handle) {}
 
   int DisplaySize(int remaining_size) const override;
 
