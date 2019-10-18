@@ -53,10 +53,16 @@ using fuchsia::feedback::Screenshot;
 using inspect::testing::PropertyList;
 using inspect::testing::UintIs;
 
-bool PropEquals(const inspect::PropertyValue& value, const std::string& expected_name,
-                uint64_t expected_value) {
+bool InspectUintPropertyEquals(const inspect::PropertyValue& value,
+                               const std::string& expected_name, uint64_t expected_value) {
   return value.name() == expected_name &&
          value.Get<inspect::UintPropertyValue>().value() == expected_value;
+}
+
+inspect::Hierarchy ReadInspectTree(const std::string& path) {
+  std::vector<uint8_t> buffer;
+  EXPECT_TRUE(files::ReadFileToVector(path, &buffer));
+  return inspect::ReadFromBuffer(std::move(buffer)).take_value();
 }
 
 class LogListener : public fuchsia::logger::LogListener {
@@ -83,7 +89,7 @@ class LogListener : public fuchsia::logger::LogListener {
 
 // Smoke-tests the real environment service for the fuchsia.feedback.DataProvider FIDL interface,
 // connecting through FIDL.
-class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment {
+class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
  public:
   FeedbackAgentIntegrationTest()
       : test_name_(testing::UnitTest::GetInstance()->current_test_info()->name()) {}
@@ -105,41 +111,6 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
   }
 
  protected:
-  void CheckFeedbackAgentInspectTree(const uint64_t expected_total_num_connections,
-                                     const uint64_t expected_current_num_connections) {
-    const std::string glob_pattern =
-        fxl::Substitute("/hub/r/$0/*/c/feedback_agent.cmx/*/*/inspect/root.inspect", test_name_);
-    // Wait until the |root.inspect| file is created.
-    RunLoopUntil([&glob_pattern] {
-      files::Glob glob(glob_pattern);
-      return glob.size() > 0;
-    });
-
-    files::Glob glob(glob_pattern);
-    EXPECT_EQ(glob.size(), 1u);
-
-    RunLoopUntil([&] {
-      inspect::Hierarchy tree = ReadInspectTree(*glob.begin());
-      tree.Sort();
-      const auto& props = tree.node().properties();
-      return PropEquals(props[0], "current_num_connections", expected_current_num_connections) &&
-             PropEquals(props[1], "total_num_connections", expected_total_num_connections);
-    });
-
-    inspect::Hierarchy tree = ReadInspectTree(*glob.begin());
-    EXPECT_THAT(tree.node(),
-                PropertyList(testing::UnorderedElementsAreArray({
-                    UintIs("total_num_connections", expected_total_num_connections),
-                    UintIs("current_num_connections", expected_current_num_connections),
-                })));
-  }
-
-  inspect::Hierarchy ReadInspectTree(const std::string& path) {
-    std::vector<uint8_t> buffer;
-    EXPECT_TRUE(files::ReadFileToVector(path, &buffer));
-    return inspect::ReadFromBuffer(std::move(buffer)).take_value();
-  }
-
   // Makes sure the component serving fuchsia.logger.Log is up and running as the DumpLogs() request
   // could time out on machines where the component is too slow to start.
   //
@@ -190,9 +161,10 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
     RunLoopUntil([&ready] { return ready; });
   }
 
-  // Create an enclosing environment for the test to run in isolation, and return it. Use this
-  // |EnclosingEnvironment| to connect to its DataProvider service. This environment does not
-  // support |*SyncPtr|.
+  // Creates an enclosing environment for the test to run in isolation, and returns it.
+  //
+  // Use this |EnclosingEnvironment| to connect to its DataProvider service. This environment does
+  // not support |*SyncPtr|.
   //
   // Using this environment provides a fresh copy of |feedback_agent.cmx|, and resets Inspect
   // across test cases (especially |total_num_connections|).
@@ -219,6 +191,7 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
     return env;
   }
 
+  // Waits for the process serving the DataProvider connection to be spawned.
   void WaitForDataProvider(DataProviderPtr* provider) {
     ASSERT_NE(provider, nullptr);
     // As the connection is asynchronous, we make a call and wait for a response to make sure the
@@ -228,9 +201,8 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
     RunLoopUntil([&done] { return done; });
   }
 
-  // EXPECTs that there is a feedback_agent.cmx process running in a child job of the test
-  // environment job and that this process has sibling processes with the names in
-  // |expected_proc_names|.
+  // EXPECTs that there is a "feedback_agent.cmx" process running in a child job of the test
+  // environment job and that this process has |expected_num_data_providers| sibling processes.
   void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_providers) {
     // We want to check how many data_provider subprocesses feedback_agent has spawned.
     //
@@ -261,6 +233,8 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
     EXPECT_EQ(num_feedback_agents, 1u);
   }
 
+  // Returns the current number of processes in the test environment named "feedback_agent.cmx" and
+  // "feedback_data_provider".
   void GetNumberOfDataProviderProcesses(uint32_t* num_feedback_agents,
                                         uint32_t* num_data_providers) {
     fuchsia::sys::JobProviderSyncPtr job_provider;
@@ -283,17 +257,47 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
       auto processes = GetChildProcesses(child_job.get());
       ASSERT_GE(processes.size(), 1u);
 
-      bool contains_feedback_agent = false;
       for (const auto& process : processes) {
         const std::string process_name = fsl::GetObjectName(process.get());
         if (process_name == "feedback_agent.cmx") {
-          contains_feedback_agent = true;
           (*num_feedback_agents)++;
         } else if (process_name == "feedback_data_provider") {
           (*num_data_providers)++;
         }
       }
     }
+  }
+
+  // Checks the Inspect tree for "feedback_agent.cmx".
+  void CheckFeedbackAgentInspectTree(const uint64_t expected_total_num_connections,
+                                     const uint64_t expected_current_num_connections) {
+    const std::string glob_pattern =
+        fxl::Substitute("/hub/r/$0/*/c/feedback_agent.cmx/*/*/inspect/root.inspect", test_name_);
+    // Wait until the |root.inspect| file is created.
+    RunLoopUntil([&glob_pattern] {
+      files::Glob glob(glob_pattern);
+      return glob.size() > 0;
+    });
+
+    files::Glob glob(glob_pattern);
+    EXPECT_EQ(glob.size(), 1u);
+
+    RunLoopUntil([&] {
+      inspect::Hierarchy tree = ReadInspectTree(*glob.begin());
+      tree.Sort();
+      const auto& props = tree.node().properties();
+      return InspectUintPropertyEquals(props[0], "current_num_connections",
+                                       expected_current_num_connections) &&
+             InspectUintPropertyEquals(props[1], "total_num_connections",
+                                       expected_total_num_connections);
+    });
+
+    inspect::Hierarchy tree = ReadInspectTree(*glob.begin());
+    EXPECT_THAT(tree.node(),
+                PropertyList(testing::UnorderedElementsAreArray({
+                    UintIs("total_num_connections", expected_total_num_connections),
+                    UintIs("current_num_connections", expected_current_num_connections),
+                })));
   }
 
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
