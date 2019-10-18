@@ -26,6 +26,11 @@ zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptio
       std::make_unique<Connection>(vfs, fbl::RefPtr(this), std::move(channel), options));
 }
 
+zx_status_t Vnode::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_handle_close_many(msg->handles, msg->num_handles);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Vnode::WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
   return ZX_ERR_NOT_SUPPORTED;
 }

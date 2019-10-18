@@ -7,24 +7,15 @@
 
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 
-#include <fs/connection.h>
-#include <fs/vfs.h>
-
 namespace fs_pty::internal {
 
-// This class exists so that we don't need to templatize all of the
-// implementation, just the ctor.  The extra argument to the ctor is discarded.
-class TtyConnectionImpl : public ::llcpp::fuchsia::hardware::pty::Device::Interface,
-                          public fs::Connection {
+// We would like to construct a |NullPtyDevice| with some arbitrary arguments.
+// This class exists so that we don't need to templatize all of the implementation,
+// just the ctor.  The extra argument to the ctor in |NullPtyDevice| is discarded.
+class NullPtyDeviceImpl : public ::llcpp::fuchsia::hardware::pty::Device::Interface {
  public:
-  TtyConnectionImpl(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                    fs::VnodeConnectionOptions options)
-      : fs::Connection(vfs, std::move(vnode), std::move(channel), options) {}
-
-  ~TtyConnectionImpl() override = default;
-
-  // From fs::Connection
-  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
+  NullPtyDeviceImpl() = default;
+  ~NullPtyDeviceImpl() override = default;
 
   // fuchsia.hardware.pty.Device methods
   void OpenClient(uint32_t id, zx::channel client, OpenClientCompleter::Sync completer) final;
@@ -35,7 +26,7 @@ class TtyConnectionImpl : public ::llcpp::fuchsia::hardware::pty::Device::Interf
   void SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size,
                      SetWindowSizeCompleter::Sync completer) final;
 
-  // fuchsia.io.File methods
+  // fuchsia.io.File methods (which were composed by fuchsia.hardware.pty.Device)
   void Read(uint64_t count, ReadCompleter::Sync completer) final;
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) final;
 
@@ -60,13 +51,10 @@ class TtyConnectionImpl : public ::llcpp::fuchsia::hardware::pty::Device::Interf
 };
 
 template <typename Console>
-class TtyConnection final : public TtyConnectionImpl {
+class NullPtyDevice : public NullPtyDeviceImpl {
  public:
-  TtyConnection(Console, fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                fs::VnodeConnectionOptions options)
-      : TtyConnectionImpl(vfs, std::move(vnode), std::move(channel), options) {}
-
-  ~TtyConnection() override = default;
+  NullPtyDevice(Console console) : NullPtyDeviceImpl() {}
+  ~NullPtyDevice() override = default;
 };
 
 }  // namespace fs_pty::internal

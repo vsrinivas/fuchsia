@@ -22,17 +22,16 @@ source_set("common") {
   sources = [
     "fifo.cc",
     "fifo.h",
-    "pty-client-connection.cc",
-    "pty-client-connection.h",
+    "pty-client-device.cc",
+    "pty-client-device.h",
     "pty-client-vnode.h",
     "pty-client.cc",
     "pty-client.h",
-    "pty-server-connection.cc",
-    "pty-server-connection.h",
+    "pty-server-device.cc",
+    "pty-server-device.h",
     "pty-server-vnode.h",
     "pty-server.cc",
     "pty-server.h",
-    "pty-transaction.h",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",

@@ -60,7 +60,11 @@ class Directory final : public fs::Vnode {
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
   zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
   void Sync(SyncCallback closure) final;
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, fs::VnodeConnectionOptions options) final;
+
+#ifdef __Fuchsia__
+  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
+  static const fuchsia_blobfs_Blobfs_ops* Ops();
+#endif
 
   ////////////////
   // Other methods.

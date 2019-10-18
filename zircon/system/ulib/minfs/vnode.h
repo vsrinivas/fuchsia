@@ -90,7 +90,8 @@ class VnodeMinfs : public fs::Vnode,
 
   // fs::Vnode interface (invoked publicly).
 #ifdef __Fuchsia__
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, fs::VnodeConnectionOptions options) final;
+  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
+  static const fuchsia_minfs_Minfs_ops* Ops();
 #endif
   zx_status_t Open(fs::VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t Close() final;

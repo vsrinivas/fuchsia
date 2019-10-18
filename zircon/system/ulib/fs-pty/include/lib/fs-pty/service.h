@@ -5,10 +5,12 @@
 #ifndef LIB_FS_PTY_SERVICE_H_
 #define LIB_FS_PTY_SERVICE_H_
 
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fs-pty/tty-connection-internal.h>
 #include <lib/zx/eventpair.h>
 
+#include <type_traits>
 #include <utility>
 
 #include <fs/vfs.h>
@@ -17,17 +19,29 @@
 
 namespace fs_pty {
 
+namespace internal {
+
+zx_status_t DispatchPtyDeviceMessage(::llcpp::fuchsia::hardware::pty::Device::Interface* interface,
+                                     fidl_msg_t* msg, fidl_txn_t* txn);
+
+}
+
 // This is roughly the same as fs::Service, but GetNodeInfo returns a TTY type
 // ConsoleOps should be a type that implements methods
 // static zx_status_t Read(const Console&, void* data, size_t len, size_t* out_actual);
 // static zx_status_t Write(const Console&, const void* data, size_t len, size_t* out_actual);
 // static zx_status_t GetEvent(const Console&, zx::eventpair* event);
-template <typename Connection, typename ConsoleOps, typename Console>
+//
+// |PtyDeviceImpl| allows users to inject an implementation of |fuchsia.hardware.pty/Device|.
+template <typename PtyDeviceImpl, typename ConsoleOps, typename Console>
 class Service : public fs::Vnode {
  public:
-  using SelfType = Service<Connection, ConsoleOps, Console>;
+  using SelfType = Service<PtyDeviceImpl, ConsoleOps, Console>;
 
-  explicit Service(Console console) : console_(std::move(console)) {}
+  static_assert(
+      std::is_base_of<::llcpp::fuchsia::hardware::pty::Device::Interface, PtyDeviceImpl>::value);
+
+  explicit Service(Console console) : pty_device_impl_(console), console_(console) {}
 
   ~Service() override = default;
 
@@ -46,10 +60,11 @@ class Service : public fs::Vnode {
     return ZX_OK;
   }
 
-  zx_status_t Serve(fs::Vfs* vfs, zx::channel svc_request,
-                    fs::VnodeConnectionOptions options) override {
-    return vfs->ServeConnection(std::make_unique<Connection>(console_, vfs, fbl::RefPtr(this),
-                                                             std::move(svc_request), options));
+  // From fs::Vnode
+  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) override {
+    auto pty_device_interface =
+        static_cast<::llcpp::fuchsia::hardware::pty::Device::Interface*>(&pty_device_impl_);
+    return internal::DispatchPtyDeviceMessage(pty_device_interface, msg, txn);
   }
 
   zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
@@ -75,6 +90,7 @@ class Service : public fs::Vnode {
   }
 
  protected:
+  PtyDeviceImpl pty_device_impl_;
   Console console_;
 };
 
@@ -98,7 +114,7 @@ struct SimpleConsoleOps {
 // An alias for a service that just wants to return ZX_ERR_NOT_SUPPORTED for all
 // of the PTY requests.
 template <typename ConsoleOps, typename Console>
-using TtyService = Service<::fs_pty::internal::TtyConnection<Console>, ConsoleOps, Console>;
+using TtyService = Service<::fs_pty::internal::NullPtyDevice<Console>, ConsoleOps, Console>;
 
 }  // namespace fs_pty
 

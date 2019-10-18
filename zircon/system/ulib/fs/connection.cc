@@ -1085,11 +1085,6 @@ zx_status_t Connection::DirectoryAdminGetDevicePath(fidl_txn_t* txn) {
   return fuchsia_io_DirectoryAdminGetDevicePath_reply(txn, status, name, actual);
 }
 
-zx_status_t Connection::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  zx_handle_close_many(msg->handles, msg->num_handles);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t Connection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   zx_status_t status = fuchsia_io_Node_try_dispatch(this, txn, msg, &kNodeOps);
   if (status != ZX_ERR_NOT_SUPPORTED) {
@@ -1107,7 +1102,7 @@ zx_status_t Connection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   if (status != ZX_ERR_NOT_SUPPORTED) {
     return status;
   }
-  return HandleFsSpecificMessage(msg, txn);
+  return vnode_->HandleFsSpecificMessage(msg, txn);
 }
 
 }  // namespace fs

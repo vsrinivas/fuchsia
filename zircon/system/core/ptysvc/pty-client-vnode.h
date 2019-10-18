@@ -9,13 +9,13 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "pty-client-connection.h"
+#include "pty-client-device.h"
 #include "pty-client.h"
 
 // Vnode representing a single pty client.  It will live as long as there are
 // active connections to the client.
 using PtyClientVnodeBase =
-    fs_pty::Service<PtyClientConnection, fs_pty::SimpleConsoleOps<fbl::RefPtr<PtyClient>>,
+    fs_pty::Service<PtyClientDevice, fs_pty::SimpleConsoleOps<fbl::RefPtr<PtyClient>>,
                     fbl::RefPtr<PtyClient>>;
 class PtyClientVnode : public PtyClientVnodeBase {
  public:

@@ -34,53 +34,24 @@
 #include "vnode.h"
 
 namespace minfs {
-namespace {
 
 #ifdef __Fuchsia__
 
-// MinfsConnection overrides the base Connection class to allow Minfs to
-// dispatch its own ordinals.
-class MinfsConnection : public fs::Connection {
- public:
-  using MinfsConnectionBinder = fidl::Binder<MinfsConnection>;
+const fuchsia_minfs_Minfs_ops* VnodeMinfs::Ops() {
+  using MinfsConnectionBinder = fidl::Binder<VnodeMinfs>;
+  static const fuchsia_minfs_Minfs_ops kMinfsOps = {
+      .GetMetrics = MinfsConnectionBinder::BindMember<&VnodeMinfs::GetMetrics>,
+      .ToggleMetrics = MinfsConnectionBinder::BindMember<&VnodeMinfs::ToggleMetrics>,
+      .GetAllocatedRegions = MinfsConnectionBinder::BindMember<&VnodeMinfs::GetAllocatedRegions>,
+  };
+  return &kMinfsOps;
+}
 
-  MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                  fs::VnodeConnectionOptions options)
-      : Connection(vfs, std::move(vnode), std::move(channel), options) {}
+zx_status_t VnodeMinfs::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* transaction) {
+  return fuchsia_minfs_Minfs_dispatch(this, transaction, msg, Ops());
+}
 
- private:
-  VnodeMinfs& GetVnodeMinfs() const { return reinterpret_cast<VnodeMinfs&>(GetVnode()); }
-
-  zx_status_t GetMetrics(fidl_txn_t* transaction) {
-    return GetVnodeMinfs().GetMetrics(transaction);
-  }
-
-  zx_status_t ToggleMetrics(bool enable, fidl_txn_t* transaction) {
-    return GetVnodeMinfs().ToggleMetrics(enable, transaction);
-  }
-
-  zx_status_t GetAllocatedRegions(fidl_txn_t* transaction) {
-    return GetVnodeMinfs().GetAllocatedRegions(transaction);
-  }
-
-  static const fuchsia_minfs_Minfs_ops* Ops() {
-    static const fuchsia_minfs_Minfs_ops kMinfsOps = {
-        .GetMetrics = MinfsConnectionBinder::BindMember<&MinfsConnection::GetMetrics>,
-        .ToggleMetrics = MinfsConnectionBinder::BindMember<&MinfsConnection::ToggleMetrics>,
-        .GetAllocatedRegions =
-            MinfsConnectionBinder::BindMember<&MinfsConnection::GetAllocatedRegions>,
-    };
-    return &kMinfsOps;
-  }
-
-  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* transaction) final {
-    return fuchsia_minfs_Minfs_dispatch(this, transaction, msg, Ops());
-  }
-};
-
-#endif
-
-}  // namespace
+#endif  // __Fuchsia__
 
 void VnodeMinfs::SetIno(ino_t ino) {
   ZX_DEBUG_ASSERT(ino_ == 0);
@@ -803,14 +774,6 @@ VnodeMinfs::~VnodeMinfs() {
   }
 #endif
 }
-
-#ifdef __Fuchsia__
-zx_status_t VnodeMinfs::Serve(fs::Vfs* vfs, zx::channel channel,
-                              fs::VnodeConnectionOptions options) {
-  return vfs->ServeConnection(
-      std::make_unique<MinfsConnection>(vfs, fbl::RefPtr(this), std::move(channel), options));
-}
-#endif
 
 zx_status_t VnodeMinfs::Open(fs::VnodeConnectionOptions, fbl::RefPtr<Vnode>* out_redirect) {
   fd_count_++;

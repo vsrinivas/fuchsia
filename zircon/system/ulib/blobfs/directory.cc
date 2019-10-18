@@ -176,43 +176,22 @@ void Directory::Sync(SyncCallback closure) {
   });
 }
 
-// DirectoryConnection overrides the base Connection class to allow Directory to
-// dispatch its own ordinals.
-class DirectoryConnection : public fs::Connection {
- public:
-  using DirectoryConnectionBinder = fidl::Binder<DirectoryConnection>;
-
-  DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                      fs::VnodeConnectionOptions options)
-      : Connection(vfs, std::move(vnode), std::move(channel), options) {}
-
- private:
-  Directory& GetDirectory() const { return reinterpret_cast<Directory&>(GetVnode()); }
-
-  zx_status_t GetAllocatedRegions(fidl_txn_t* txn) {
-    return GetDirectory().GetAllocatedRegions(txn);
-  }
-
-  static const fuchsia_blobfs_Blobfs_ops* Ops() {
-    static const fuchsia_blobfs_Blobfs_ops kBlobfsOps = {
-        .GetAllocatedRegions =
-            DirectoryConnectionBinder::BindMember<&DirectoryConnection::GetAllocatedRegions>,
-    };
-    return &kBlobfsOps;
-  }
-
-  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final {
-    return fuchsia_blobfs_Blobfs_dispatch(this, txn, msg, Ops());
-  }
-};
-
 #ifdef __Fuchsia__
-zx_status_t Directory::Serve(fs::Vfs* vfs, zx::channel channel,
-                             fs::VnodeConnectionOptions options) {
-  return vfs->ServeConnection(
-      std::make_unique<DirectoryConnection>(vfs, fbl::RefPtr(this), std::move(channel), options));
+
+const fuchsia_blobfs_Blobfs_ops* Directory::Ops() {
+  using DirectoryConnectionBinder = fidl::Binder<Directory>;
+  static const fuchsia_blobfs_Blobfs_ops kBlobfsOps = {
+      .GetAllocatedRegions =
+          DirectoryConnectionBinder::BindMember<&Directory::GetAllocatedRegions>,
+  };
+  return &kBlobfsOps;
 }
-#endif
+
+zx_status_t Directory::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_blobfs_Blobfs_dispatch(this, txn, msg, Ops());
+}
+
+#endif  // __Fuchsia__
 
 zx_status_t Directory::GetAllocatedRegions(fidl_txn_t* txn) const {
   zx::vmo vmo;

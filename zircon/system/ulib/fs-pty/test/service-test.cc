@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/fs-pty/service.h>
+#include <lib/fs-pty/tty-connection-internal.h>
 #include <lib/sync/completion.h>
 
 #include <fs/managed_vfs.h>
@@ -23,25 +24,6 @@ struct TestConsoleState {
   std::atomic<uint64_t> last_seen_ordinal = 0;
 };
 
-class TestConnection : public fs::Connection {
- public:
-  TestConnection(TestConsoleState* state, fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-                 zx::channel channel, fs::VnodeConnectionOptions options)
-      : fs::Connection(vfs, std::move(vnode), std::move(channel), options), state_(state) {}
-
-  ~TestConnection() override = default;
-
-  // From fs::Connection
-  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) override {
-    auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
-    state_->last_seen_ordinal.store(hdr->ordinal);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
- private:
-  TestConsoleState* state_;
-};
-
 struct TestConsoleOps {
   static zx_status_t Read(TestConsoleState* const& state, void* data, size_t len,
                           size_t* out_actual) {
@@ -56,6 +38,24 @@ struct TestConsoleOps {
   }
 };
 
+class TestService : public fs_pty::Service<fs_pty::internal::NullPtyDevice<TestConsoleState*>,
+                                           TestConsoleOps, TestConsoleState*> {
+ public:
+  TestService(TestConsoleState* state) : Service(state), state_(state) {}
+
+  ~TestService() override = default;
+
+  // From fs_pty::Service
+  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) override {
+    auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
+    state_->last_seen_ordinal.store(hdr->ordinal);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+ private:
+  TestConsoleState* state_;
+};
+
 class PtyTestCase : public zxtest::Test {
  public:
   ~PtyTestCase() override = default;
@@ -63,8 +63,7 @@ class PtyTestCase : public zxtest::Test {
  protected:
   void SetUp() override {
     ASSERT_OK(loop_.StartThread("pty-test-case-async-loop"));
-    svc_ = fbl::MakeRefCounted<fs_pty::Service<TestConnection, TestConsoleOps, TestConsoleState*>>(
-        &state_);
+    svc_ = fbl::MakeRefCounted<TestService>(&state_);
   }
 
   void TearDown() override {

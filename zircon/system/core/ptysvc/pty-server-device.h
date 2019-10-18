@@ -16,18 +16,11 @@
 
 #include "pty-server.h"
 
-class PtyServerConnection : public ::llcpp::fuchsia::hardware::pty::Device::Interface,
-                            public fs::Connection {
+class PtyServerDevice : public ::llcpp::fuchsia::hardware::pty::Device::Interface {
  public:
-  PtyServerConnection(fbl::RefPtr<PtyServer> server, fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-                      zx::channel channel, fs::VnodeConnectionOptions options)
-      : fs::Connection(vfs, std::move(vnode), std::move(channel), options),
-        server_(std::move(server)) {}
+  explicit PtyServerDevice(fbl::RefPtr<PtyServer> server) : server_(std::move(server)) {}
 
-  ~PtyServerConnection() override = default;
-
-  // From fs::Connection
-  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
+  ~PtyServerDevice() override = default;
 
   // fuchsia.hardware.pty.Device methods
   void OpenClient(uint32_t id, zx::channel client, OpenClientCompleter::Sync completer) final;

@@ -121,21 +121,6 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   zx_status_t DirectoryAdminQueryFilesystem(fidl_txn_t* txn);
   zx_status_t DirectoryAdminGetDevicePath(fidl_txn_t* txn);
 
- protected:
-  // Dispatches incoming FIDL messages which aren't recognized by
-  // |HandleMessage|.
-  //
-  // Takes ownership of the FIDL message's handles.
-  // The default implementation just closes these handles.
-  //
-  // This implementation may be overridden to support additional non-VFS
-  // FIDL protocols.
-  virtual zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-
-  // Acquires the vnode so subclasses of Connection can cast and dispatch
-  // the Vnode to more specific subclasses.
-  fs::Vnode& GetVnode() const { return *vnode_.get(); }
-
  private:
   // Callback for when new signals arrive on the channel, which could be:
   // readable, peer closed, async teardown request, etc.

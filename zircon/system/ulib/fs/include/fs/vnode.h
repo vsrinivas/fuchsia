@@ -124,6 +124,14 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // |options| are the flags and rights which were previously provided to |Open()|.
   virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options);
 
+  // Dispatches incoming FIDL messages which aren't recognized by |Connection::HandleMessage|.
+  //
+  // Takes ownership of the FIDL message's handles.
+  // The default implementation just closes these handles.
+  //
+  // This implementation may be overridden to support additional non-fuchsia.io FIDL protocols.
+  virtual zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
   // Extract handle, type, and extra info from a vnode.
   //
   // The |protocol| argument specifies which protocol the connection is negotiated to speak.

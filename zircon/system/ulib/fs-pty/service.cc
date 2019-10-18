@@ -4,6 +4,7 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fs-pty/service.h>
 #include <lib/fs-pty/tty-connection-internal.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
@@ -56,7 +57,7 @@ class Transaction : public fidl::Transaction {
   void Close(zx_status_t close_status) final { status_ = close_status; }
 
   std::unique_ptr<fidl::Transaction> TakeOwnership() final {
-    ZX_ASSERT_MSG(false, "DdkTransaction cannot take ownership of the transaction.\n");
+    ZX_ASSERT_MSG(false, "fs-pty Transaction cannot take ownership of the transaction.\n");
   }
 
  private:
@@ -69,9 +70,10 @@ class Transaction : public fidl::Transaction {
 
 namespace fs_pty::internal {
 
-zx_status_t TtyConnectionImpl::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t DispatchPtyDeviceMessage(::llcpp::fuchsia::hardware::pty::Device::Interface* interface,
+                                     fidl_msg_t* msg, fidl_txn_t* txn) {
   Transaction transaction{txn};
-  if (!::llcpp::fuchsia::hardware::pty::Device::TryDispatch(this, msg, &transaction)) {
+  if (!::llcpp::fuchsia::hardware::pty::Device::Dispatch(interface, msg, &transaction)) {
     __UNUSED auto ignore = transaction.Status();
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -79,89 +81,90 @@ zx_status_t TtyConnectionImpl::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn
 }
 
 // Return ZX_ERR_NOT_SUPPORTED for all of the PTY things we don't actually support
-void TtyConnectionImpl::OpenClient(uint32_t id, zx::channel client,
+void NullPtyDeviceImpl::OpenClient(uint32_t id, zx::channel client,
                                    OpenClientCompleter::Sync completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::OpenClientResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
-void TtyConnectionImpl::ClrSetFeature(uint32_t clr, uint32_t set,
+void NullPtyDeviceImpl::ClrSetFeature(uint32_t clr, uint32_t set,
                                       ClrSetFeatureCompleter::Sync completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::ClrSetFeatureResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void TtyConnectionImpl::GetWindowSize(GetWindowSizeCompleter::Sync completer) {
+void NullPtyDeviceImpl::GetWindowSize(GetWindowSizeCompleter::Sync completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::GetWindowSizeResponse> buf;
   ::llcpp::fuchsia::hardware::pty::WindowSize wsz = {.width = 0, .height = 0};
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, wsz);
 }
 
-void TtyConnectionImpl::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync completer) {
+void NullPtyDeviceImpl::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::MakeActiveResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
-void TtyConnectionImpl::ReadEvents(ReadEventsCompleter::Sync completer) {
+void NullPtyDeviceImpl::ReadEvents(ReadEventsCompleter::Sync completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::ReadEventsResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void TtyConnectionImpl::SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size,
+void NullPtyDeviceImpl::SetWindowSize(::llcpp::fuchsia::hardware::pty::WindowSize size,
                                       SetWindowSizeCompleter::Sync completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::SetWindowSizeResponse> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
+// We need to provide these methods because |fuchsia.hardware.pty.Device| composes |fuchsia.io|.
 // Assert in all of these, since these should be handled by fs::Connection before our
 // HandleFsSpecificMessage() is called.
-void TtyConnectionImpl::Read(uint64_t count, ReadCompleter::Sync completer) { ZX_ASSERT(false); }
+void NullPtyDeviceImpl::Read(uint64_t count, ReadCompleter::Sync completer) { ZX_ASSERT(false); }
 
-void TtyConnectionImpl::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) {
+void NullPtyDeviceImpl::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::Clone(uint32_t flags, zx::channel node, CloneCompleter::Sync completer) {
+void NullPtyDeviceImpl::Clone(uint32_t flags, zx::channel node, CloneCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::Close(CloseCompleter::Sync completer) { ZX_ASSERT(false); }
+void NullPtyDeviceImpl::Close(CloseCompleter::Sync completer) { ZX_ASSERT(false); }
 
-void TtyConnectionImpl::Describe(DescribeCompleter::Sync completer) { ZX_ASSERT(false); }
+void NullPtyDeviceImpl::Describe(DescribeCompleter::Sync completer) { ZX_ASSERT(false); }
 
-void TtyConnectionImpl::GetAttr(GetAttrCompleter::Sync completer) { ZX_ASSERT(false); }
+void NullPtyDeviceImpl::GetAttr(GetAttrCompleter::Sync completer) { ZX_ASSERT(false); }
 
-void TtyConnectionImpl::GetFlags(GetFlagsCompleter::Sync completer) { ZX_ASSERT(false); }
+void NullPtyDeviceImpl::GetFlags(GetFlagsCompleter::Sync completer) { ZX_ASSERT(false); }
 
-void TtyConnectionImpl::ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) {
+void NullPtyDeviceImpl::ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
+void NullPtyDeviceImpl::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
                                 WriteAtCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
+void NullPtyDeviceImpl::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
                              SeekCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::Truncate(uint64_t length, TruncateCompleter::Sync completer) {
+void NullPtyDeviceImpl::Truncate(uint64_t length, TruncateCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::SetFlags(uint32_t flags, SetFlagsCompleter::Sync completer) {
+void NullPtyDeviceImpl::SetFlags(uint32_t flags, SetFlagsCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::GetBuffer(uint32_t flags, GetBufferCompleter::Sync completer) {
+void NullPtyDeviceImpl::GetBuffer(uint32_t flags, GetBufferCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
 
-void TtyConnectionImpl::Sync(SyncCompleter::Sync completer) { ZX_ASSERT(false); }
+void NullPtyDeviceImpl::Sync(SyncCompleter::Sync completer) { ZX_ASSERT(false); }
 
-void TtyConnectionImpl::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+void NullPtyDeviceImpl::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
                                 SetAttrCompleter::Sync completer) {
   ZX_ASSERT(false);
 }
