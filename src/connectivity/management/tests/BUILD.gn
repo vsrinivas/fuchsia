@@ -59,3 +59,28 @@ group("tests") {
     "//src/connectivity/network/testing/netemul",
   ]
 }
+
+action_foreach("verify_cmdline_params_zedboot") {
+  script = "scripts/verify_cmdline_params.sh"
+  sources = [
+    "$root_out_dir/zedboot.zbi",
+  ]
+  deps = [
+    "//build/images/zedboot:zbi",
+  ]
+  outputs = [
+    "$root_out_dir/verify_cmdline_params_{{source_name_part}}.null",
+  ]
+  args = [
+    "-z",
+    rebase_path("$zircon_tools_dir/zbi"),
+    "-i",
+    rebase_path("$root_out_dir/zedboot.zbi"),
+    "-o",
+    rebase_path(
+        "$root_out_dir/verify_cmdline_params_{{source_name_part}}.null"),
+    "--",
+    "netsvc.interface=/dev/sys/pci/00:1f.6/e1000/ethernet",
+    "netsvc.disable=false",
+  ]
+}

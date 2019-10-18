@@ -14,4 +14,9 @@ declare_args() {
   # required by this board. See also kernel_cmdline_args in
   # //build/images/BUILD.gn
   board_kernel_cmdline_args = []
+
+  # List of kernel command line arguments to bake into the zedboot image that are
+  # required by this board. See also zedboot_cmdline_args in
+  # //build/images/zedboot/BUILD.gn
+  board_zedboot_cmdline_args = []
 }

@@ -484,6 +484,10 @@ currently running instance of zircon.
 
 This setting implies **zircon.system.disable-automount=true**
 
+## netsvc.disable=\<bool>
+
+If set to true (default), `netsvc` is disabled.
+
 ## netsvc.advertise=\<bool>
 
 If true, netsvc will seek a bootserver by sending netboot advertisements.

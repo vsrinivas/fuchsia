@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
@@ -140,6 +141,8 @@ root_manifests_target_name = get_label_info(root_manifests_label, "name")
 root_manifests_manifest =
     root_manifests_target_dir + "/" + root_manifests_target_name
 
+# Note: This output is also used by a test in
+# //src/connectivity/management/tests:verify_cmdline_params_zedboot
 zbi("zbi") {
   output_name = "zedboot"
   deps = [
@@ -182,7 +185,8 @@ zbi("zbi") {
       },
     ]
   }
-  cmdline = [ "netsvc.disable=false" ] + zedboot_cmdline_args
+  cmdline = [ "netsvc.disable=false" ] + zedboot_cmdline_args +
+            board_zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
 
   metadata = {
