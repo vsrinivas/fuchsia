@@ -2720,7 +2720,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_system_mexec_payload_get->Input<size_t>(
         "buffer_size", std::make_unique<ArgumentAccess<size_t>>(buffer_size));
     // Outputs
-    zx_system_mexec_payload_get->OutputBuffer<uint8_t, uint8_t>(
+    zx_system_mexec_payload_get->OutputBuffer<uint8_t, uint8_t, size_t>(
         ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
@@ -2776,7 +2776,7 @@ void SyscallDecoderDispatcher::Populate() {
     auto handles = zx_handle_close_many->PointerArgument<zx_handle_t>(SyscallType::kHandle);
     auto num_handles = zx_handle_close_many->Argument<size_t>(SyscallType::kSize);
     // Inputs
-    zx_handle_close_many->InputBuffer<zx_handle_t, zx_handle_t>(
+    zx_handle_close_many->InputBuffer<zx_handle_t, zx_handle_t, size_t>(
         "handles", SyscallType::kHandle, std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
         std::make_unique<ArgumentAccess<size_t>>(num_handles));
   }
@@ -3054,9 +3054,9 @@ void SyscallDecoderDispatcher::Populate() {
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_PROCESS_THREADS);
     zx_object_get_info
-        ->OutputBuffer<zx_koid_t, uint8_t>(ZX_OK, "info", SyscallType::kKoid,
-                                           std::make_unique<ArgumentAccess<uint8_t>>(buffer),
-                                           std::make_unique<ArgumentAccess<size_t>>(actual))
+        ->OutputBuffer<zx_koid_t, uint8_t, size_t>(
+            ZX_OK, "info", SyscallType::kKoid, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            std::make_unique<ArgumentAccess<size_t>>(actual))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_PROCESS_THREADS);
     zx_object_get_info
@@ -3111,9 +3111,9 @@ void SyscallDecoderDispatcher::Populate() {
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_JOB_CHILDREN);
     zx_object_get_info
-        ->OutputBuffer<zx_koid_t, uint8_t>(ZX_OK, "info", SyscallType::kKoid,
-                                           std::make_unique<ArgumentAccess<uint8_t>>(buffer),
-                                           std::make_unique<ArgumentAccess<size_t>>(actual))
+        ->OutputBuffer<zx_koid_t, uint8_t, size_t>(
+            ZX_OK, "info", SyscallType::kKoid, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            std::make_unique<ArgumentAccess<size_t>>(actual))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_JOB_CHILDREN);
     zx_object_get_info
@@ -3123,9 +3123,9 @@ void SyscallDecoderDispatcher::Populate() {
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_JOB_PROCESSES);
     zx_object_get_info
-        ->OutputBuffer<zx_koid_t, uint8_t>(ZX_OK, "info", SyscallType::kKoid,
-                                           std::make_unique<ArgumentAccess<uint8_t>>(buffer),
-                                           std::make_unique<ArgumentAccess<size_t>>(actual))
+        ->OutputBuffer<zx_koid_t, uint8_t, size_t>(
+            ZX_OK, "info", SyscallType::kKoid, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            std::make_unique<ArgumentAccess<size_t>>(actual))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_JOB_PROCESSES);
     zx_object_get_info
@@ -3393,7 +3393,7 @@ void SyscallDecoderDispatcher::Populate() {
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
     zx_socket_write->Input<uint32_t>("options",
                                      std::make_unique<ArgumentAccess<uint32_t>>(options));
-    zx_socket_write->InputBuffer<uint8_t, uint8_t>(
+    zx_socket_write->InputBuffer<uint8_t, uint8_t, size_t>(
         "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
     // Outputs
@@ -3420,7 +3420,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_socket_read->OutputActualAndRequested<size_t>(
         ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
-    zx_socket_read->OutputBuffer<uint8_t, uint8_t>(
+    zx_socket_read->OutputBuffer<uint8_t, uint8_t, size_t>(
         ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(actual));
   }
@@ -3715,7 +3715,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_process_read_memory->Input<size_t>("buffer_size",
                                           std::make_unique<ArgumentAccess<size_t>>(buffer_size));
     // Outputs
-    zx_process_read_memory->OutputBuffer<uint8_t, uint8_t>(
+    zx_process_read_memory->OutputBuffer<uint8_t, uint8_t, size_t>(
         ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(actual));
   }
@@ -3733,7 +3733,7 @@ void SyscallDecoderDispatcher::Populate() {
         "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
     zx_process_write_memory->Input<zx_vaddr_t>("vaddr",
                                                std::make_unique<ArgumentAccess<zx_vaddr_t>>(vaddr));
-    zx_process_write_memory->InputBuffer<uint8_t, uint8_t>(
+    zx_process_write_memory->InputBuffer<uint8_t, uint8_t, size_t>(
         "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
     // Outputs
@@ -4172,7 +4172,7 @@ void SyscallDecoderDispatcher::Populate() {
                                     std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
     zx_vmo_read->Input<uint64_t>("offset", std::make_unique<ArgumentAccess<uint64_t>>(offset));
     // Outputs
-    zx_vmo_read->OutputBuffer<uint8_t, uint8_t>(
+    zx_vmo_read->OutputBuffer<uint8_t, uint8_t, size_t>(
         ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
@@ -4188,7 +4188,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_vmo_write->Input<zx_handle_t>("handle",
                                      std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
     zx_vmo_write->Input<uint64_t>("offset", std::make_unique<ArgumentAccess<uint64_t>>(offset));
-    zx_vmo_write->InputBuffer<uint8_t, uint8_t>(
+    zx_vmo_write->InputBuffer<uint8_t, uint8_t, size_t>(
         "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
@@ -4434,7 +4434,7 @@ void SyscallDecoderDispatcher::Populate() {
     auto buffer = zx_cprng_draw->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
     auto buffer_size = zx_cprng_draw->Argument<size_t>(SyscallType::kSize);
     // Outputs
-    zx_cprng_draw->OutputBuffer<uint8_t, uint8_t>(
+    zx_cprng_draw->OutputBuffer<uint8_t, uint8_t, size_t>(
         ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
@@ -4445,7 +4445,7 @@ void SyscallDecoderDispatcher::Populate() {
     auto buffer = zx_cprng_add_entropy->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
     auto buffer_size = zx_cprng_add_entropy->Argument<size_t>(SyscallType::kSize);
     // Inputs
-    zx_cprng_add_entropy->InputBuffer<uint8_t, uint8_t>(
+    zx_cprng_add_entropy->InputBuffer<uint8_t, uint8_t, size_t>(
         "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
@@ -4487,7 +4487,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_fifo_read->OutputActualAndRequested<size_t>(
         ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual_count),
         std::make_unique<ArgumentAccess<size_t>>(count));
-    zx_fifo_read->OutputBuffer<uint8_t, uint8_t>(
+    zx_fifo_read->OutputBuffer<uint8_t, uint8_t, size_t>(
         ZX_OK, "data", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(data),
         std::make_unique<ArgumentAccess<size_t>>(elem_size),
         std::make_unique<ArgumentAccess<size_t>>(actual_count));
@@ -4506,7 +4506,7 @@ void SyscallDecoderDispatcher::Populate() {
                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
     zx_fifo_write->Input<size_t>("elem_size", std::make_unique<ArgumentAccess<size_t>>(elem_size));
     zx_fifo_write->Input<size_t>("count", std::make_unique<ArgumentAccess<size_t>>(count));
-    zx_fifo_write->InputBuffer<uint8_t, uint8_t>(
+    zx_fifo_write->InputBuffer<uint8_t, uint8_t, size_t>(
         "data", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(data),
         std::make_unique<ArgumentAccess<size_t>>(elem_size),
         std::make_unique<ArgumentAccess<size_t>>(count));
@@ -4564,7 +4564,7 @@ void SyscallDecoderDispatcher::Populate() {
                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
     zx_debuglog_write->Input<uint32_t>("options",
                                        std::make_unique<ArgumentAccess<uint32_t>>(options));
-    zx_debuglog_write->InputBuffer<uint8_t, uint8_t>(
+    zx_debuglog_write->InputBuffer<uint8_t, uint8_t, size_t>(
         "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
@@ -4582,7 +4582,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_debuglog_read->Input<uint32_t>("options",
                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
     // Outputs
-    zx_debuglog_read->OutputBuffer<uint8_t, uint8_t>(
+    zx_debuglog_read->OutputBuffer<uint8_t, uint8_t, size_t>(
         ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
   }
@@ -4603,7 +4603,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_ktrace_read->OutputActualAndRequested<size_t>(
         ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual),
         std::make_unique<ArgumentAccess<size_t>>(data_size));
-    zx_ktrace_read->OutputBuffer<uint8_t, uint8_t>(
+    zx_ktrace_read->OutputBuffer<uint8_t, uint8_t, size_t>(
         ZX_OK, "data", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(data),
         std::make_unique<ArgumentAccess<size_t>>(actual));
   }
@@ -4661,7 +4661,7 @@ void SyscallDecoderDispatcher::Populate() {
                                        std::make_unique<ArgumentAccess<uint32_t>>(action));
     zx_mtrace_control->Input<uint32_t>("options",
                                        std::make_unique<ArgumentAccess<uint32_t>>(options));
-    zx_mtrace_control->InputBuffer<uint8_t, uint8_t>(
+    zx_mtrace_control->InputBuffer<uint8_t, uint8_t, size_t>(
         "ptr", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(ptr),
         std::make_unique<ArgumentAccess<size_t>>(ptr_size));
   }
@@ -4891,7 +4891,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_bti_pin->Input<uint64_t>("offset", std::make_unique<ArgumentAccess<uint64_t>>(offset));
     zx_bti_pin->Input<uint64_t>("size", std::make_unique<ArgumentAccess<uint64_t>>(size));
     // Outputs
-    zx_bti_pin->OutputBuffer<zx_paddr_t, zx_paddr_t>(
+    zx_bti_pin->OutputBuffer<zx_paddr_t, zx_paddr_t, size_t>(
         ZX_OK, "addrs", SyscallType::kPaddr, std::make_unique<ArgumentAccess<zx_paddr_t>>(addrs),
         std::make_unique<ArgumentAccess<size_t>>(addrs_count));
     zx_bti_pin->Output<zx_handle_t>(ZX_OK, "pmt",

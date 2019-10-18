@@ -819,13 +819,13 @@ class SyscallInputOutputIndirect : public SyscallInputOutputBase {
 
 // An input/output which is a composed of several items of the same type.
 // This is always displayed outline.
-template <typename Type, typename FromType>
+template <typename Type, typename FromType, typename SizeType>
 class SyscallInputOutputBuffer : public SyscallInputOutputBase {
  public:
   SyscallInputOutputBuffer(int64_t error_code, std::string_view name, SyscallType syscall_type,
                            std::unique_ptr<Access<FromType>> buffer,
-                           std::unique_ptr<Access<size_t>> elem_size,
-                           std::unique_ptr<Access<size_t>> elem_count)
+                           std::unique_ptr<Access<SizeType>> elem_size,
+                           std::unique_ptr<Access<SizeType>> elem_count)
       : SyscallInputOutputBase(error_code, name),
         syscall_type_(syscall_type),
         buffer_(std::move(buffer)),
@@ -841,7 +841,7 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
 
     if (elem_size_->Loaded(decoder, stage) &&
         ((elem_count_ == nullptr) || elem_count_->Loaded(decoder, stage))) {
-      size_t value = elem_size_->Value(decoder, stage);
+      SizeType value = elem_size_->Value(decoder, stage);
       if (elem_count_ != nullptr) {
         value *= elem_count_->Value(decoder, stage);
       }
@@ -860,9 +860,9 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
   // Access to the buffer which contains all the items.
   const std::unique_ptr<Access<FromType>> buffer_;
   // Size in bytes of one element in the buffer.
-  const std::unique_ptr<Access<size_t>> elem_size_;
+  const std::unique_ptr<Access<SizeType>> elem_size_;
   // Element count in the buffer. If null, we have exactly one element.
-  const std::unique_ptr<Access<size_t>> elem_count_;
+  const std::unique_ptr<Access<SizeType>> elem_count_;
 };
 
 // An input/output which is a string. This is always displayed inline.
@@ -1153,11 +1153,11 @@ class Syscall {
   }
 
   // Adds an input buffer to display.
-  template <typename Type, typename FromType>
+  template <typename Type, typename FromType, typename SizeType>
   void InputBuffer(std::string_view name, SyscallType syscall_type,
-                   std::unique_ptr<Access<Type>> buffer, std::unique_ptr<Access<size_t>> elem_size,
-                   std::unique_ptr<Access<size_t>> elem_count = nullptr) {
-    inputs_.push_back(std::make_unique<SyscallInputOutputBuffer<Type, FromType>>(
+                   std::unique_ptr<Access<Type>> buffer, std::unique_ptr<Access<SizeType>> elem_size,
+                   std::unique_ptr<Access<SizeType>> elem_count = nullptr) {
+    inputs_.push_back(std::make_unique<SyscallInputOutputBuffer<Type, FromType, SizeType>>(
         0, name, syscall_type, std::move(buffer), std::move(elem_size), std::move(elem_count)));
   }
 
@@ -1267,12 +1267,12 @@ class Syscall {
   }
 
   // Adds an output buffer to display.
-  template <typename Type, typename FromType>
-  SyscallInputOutputBuffer<Type, FromType>* OutputBuffer(
+  template <typename Type, typename FromType, typename SizeType>
+  SyscallInputOutputBuffer<Type, FromType, SizeType>* OutputBuffer(
       int64_t error_code, std::string_view name, SyscallType syscall_type,
-      std::unique_ptr<Access<FromType>> buffer, std::unique_ptr<Access<size_t>> elem_size,
-      std::unique_ptr<Access<size_t>> elem_count = nullptr) {
-    auto object = std::make_unique<SyscallInputOutputBuffer<Type, FromType>>(
+      std::unique_ptr<Access<FromType>> buffer, std::unique_ptr<Access<SizeType>> elem_size,
+      std::unique_ptr<Access<SizeType>> elem_count = nullptr) {
+    auto object = std::make_unique<SyscallInputOutputBuffer<Type, FromType, SizeType>>(
         error_code, name, syscall_type, std::move(buffer), std::move(elem_size),
         std::move(elem_count));
     auto result = object.get();
@@ -2230,11 +2230,10 @@ const char* SyscallInputOutputIndirect<Type, FromType>::DisplayInline(
   return ", ";
 }
 
-template <typename Type, typename FromType>
-void SyscallInputOutputBuffer<Type, FromType>::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                                              SyscallDecoder* decoder, Stage stage,
-                                                              std::string_view line_header,
-                                                              int tabs, std::ostream& os) const {
+template <typename Type, typename FromType, typename SizeType>
+void SyscallInputOutputBuffer<Type, FromType, SizeType>::DisplayOutline(
+    SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+    std::string_view line_header, int tabs, std::ostream& os) const {
   os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name();
   const fidl_codec::Colors& colors = dispatcher->colors();
   DisplayType(colors, syscall_type_, os);
@@ -2262,7 +2261,7 @@ void SyscallInputOutputBuffer<Type, FromType>::DisplayOutline(SyscallDisplayDisp
 }
 
 template <>
-inline void SyscallInputOutputBuffer<uint8_t, uint8_t>::DisplayOutline(
+inline void SyscallInputOutputBuffer<uint8_t, uint8_t, size_t>::DisplayOutline(
     SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
     std::string_view line_header, int tabs, std::ostream& os) const {
   os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << name();
