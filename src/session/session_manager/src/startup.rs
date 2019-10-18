@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::cobalt,
     argh::FromArgs,
-    failure::{self, format_err, Error, ResultExt},
-    fidl_fuchsia_sys2 as fsys,
+    failure::{self, Fail},
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    realm_management,
+    fuchsia_zircon as zx, realm_management,
 };
 
 #[derive(FromArgs)]
@@ -16,6 +17,22 @@ pub struct SessionManagerArgs {
     #[argh(option, short = 's')]
     /// the URL for the session to start.
     pub session_url: String,
+}
+
+/// Errors returned by calls startup functions.
+#[derive(Debug, Fail, Clone, PartialEq)]
+pub enum StartupError {
+    #[fail(display = "Could not connect to Realm.")]
+    RealmConnection,
+
+    #[fail(display = "Existing session not destroyed at \"{}/{}\": {:?}", collection, name, err)]
+    NotDestroyed { name: String, collection: String, err: fsys::Error },
+
+    #[fail(display = "Session {} not created at \"{}/{}\": {:?}", url, collection, name, err)]
+    NotCreated { name: String, collection: String, url: String, err: fsys::Error },
+
+    #[fail(display = "Session {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
+    NotBound { name: String, collection: String, url: String, err: fsys::Error },
 }
 
 /// The name of the session child component.
@@ -35,21 +52,157 @@ pub fn get_session_url() -> String {
     session_url
 }
 
-/// Launches the "root" session, as specified in `std::env::args()`.
+/// Launches the specified session.
 ///
-/// # Returns
-/// `Ok` if the session component is added and bound successfully.
-pub async fn launch_session() -> Result<(), Error> {
-    let session_url = get_session_url();
+/// Any existing session child will be destroyed prior to launching the new session.
+///
+/// # Parameters
+/// - `session_url`: The URL of the session to launch.
+///
+/// # Erorrs
+/// If there was a problem creating or binding to the session component instance.
+pub async fn launch_session(session_url: &str) -> Result<(), StartupError> {
     let realm =
-        connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
+        connect_to_service::<fsys::RealmMarker>().map_err(|_| StartupError::RealmConnection)?;
+
+    let start_time = zx::Time::get(zx::ClockId::Monotonic);
+    set_session(&session_url, realm).await?;
+    let end_time = zx::Time::get(zx::ClockId::Monotonic);
+
+    let url = session_url.to_string();
+    fasync::spawn_local(async move {
+        if let Ok(cobalt_logger) = cobalt::get_logger() {
+            // The result is disregarded as there is not retry-logic if it fails, and the error is
+            // not meant to be fatal.
+            let _ =
+                cobalt::log_session_launch_time(cobalt_logger, &url, start_time, end_time).await;
+        }
+    });
+
+    Ok(())
+}
+
+/// Sets the currently active session.
+///
+/// If an existing session is running, the session's component instance will be destroyed prior to
+/// creating the new session, effectively replacing the session.
+///
+/// # Parameters
+/// - `session_url`: The URL of the session to instantiate.
+/// - `realm`: The realm in which to create the session.
+///
+/// # Errors
+/// Returns an error if any of the realm operations fail, or the realm is unavailable.
+async fn set_session(session_url: &str, realm: fsys::RealmProxy) -> Result<(), StartupError> {
+    realm_management::destroy_child(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
+        .await
+        .or_else(|err: fsys::Error| match err {
+            // Since the intent is simply to clear out the existing session child if it exists,
+            // related errors are disregarded.
+            fsys::Error::InvalidArguments
+            | fsys::Error::InstanceNotFound
+            | fsys::Error::CollectionNotFound => Ok(()),
+            _ => Err(err),
+        })
+        .map_err(|err| StartupError::NotDestroyed {
+            name: SESSION_NAME.to_string(),
+            collection: SESSION_CHILD_COLLECTION.to_string(),
+            err,
+        })?;
 
     realm_management::create_child(SESSION_NAME, &session_url, SESSION_CHILD_COLLECTION, &realm)
         .await
-        .map_err(|err| format_err!("Could not create session {:?}", err))?;
-    realm_management::bind_child(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
-        .await
-        .map_err(|err| format_err!("Could not bind to session {:?}", err))?;
+        .map_err(|err| StartupError::NotCreated {
+            name: SESSION_NAME.to_string(),
+            collection: SESSION_CHILD_COLLECTION.to_string(),
+            url: session_url.to_string(),
+            err,
+        })?;
+
+    realm_management::bind_child(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm).await.map_err(
+        |err| StartupError::NotBound {
+            name: SESSION_NAME.to_string(),
+            collection: SESSION_CHILD_COLLECTION.to_string(),
+            url: session_url.to_string(),
+            err,
+        },
+    )?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::{set_session, SESSION_CHILD_COLLECTION, SESSION_NAME},
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        futures::prelude::*,
+    };
+
+    /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
+    /// The provided `request_handler` is notified when an incoming request is received.
+    ///
+    /// # Parameters
+    /// - `request_handler`: A function which is called with incoming requests to the spawned
+    ///                      `Realm` server.
+    /// # Returns
+    /// A `RealmProxy` to the spawned server.
+    fn spawn_realm_server<F: 'static>(mut request_handler: F) -> fsys::RealmProxy
+    where
+        F: FnMut(fsys::RealmRequest) + Send,
+    {
+        let (realm_proxy, mut realm_server) = create_proxy_and_stream::<fsys::RealmMarker>()
+            .expect("Failed to create realm proxy and server.");
+
+        fasync::spawn(async move {
+            while let Some(realm_request) = realm_server.try_next().await.unwrap() {
+                request_handler(realm_request);
+            }
+        });
+
+        realm_proxy
+    }
+
+    /// Tests that setting the session calls the appropriate realm methods, in the appropriate
+    /// order.
+    #[fasync::run_singlethreaded(test)]
+    async fn set_session_test() {
+        let session_url = "session";
+        // The number of realm calls which have been made so far.
+        let mut num_realm_requests: i32 = 0;
+
+        let realm = spawn_realm_server(move |realm_request| {
+            match realm_request {
+                fsys::RealmRequest::DestroyChild { child, responder } => {
+                    assert_eq!(num_realm_requests, 0);
+                    assert_eq!(child.collection, Some(SESSION_CHILD_COLLECTION.to_string()));
+                    assert_eq!(child.name, SESSION_NAME);
+
+                    let _ = responder.send(&mut Ok(()));
+                }
+                fsys::RealmRequest::CreateChild { collection, decl, responder } => {
+                    assert_eq!(num_realm_requests, 1);
+                    assert_eq!(decl.url.unwrap(), session_url);
+                    assert_eq!(decl.name.unwrap(), SESSION_NAME);
+                    assert_eq!(&collection.name, SESSION_CHILD_COLLECTION);
+
+                    let _ = responder.send(&mut Ok(()));
+                }
+                fsys::RealmRequest::BindChild { child, exposed_dir: _, responder } => {
+                    assert_eq!(num_realm_requests, 2);
+                    assert_eq!(child.collection, Some(SESSION_CHILD_COLLECTION.to_string()));
+                    assert_eq!(child.name, SESSION_NAME);
+
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => {
+                    assert!(false);
+                }
+            };
+            num_realm_requests += 1;
+        });
+
+        assert!(set_session(session_url, realm).await.is_ok());
+    }
 }

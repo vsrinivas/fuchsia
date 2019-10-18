@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/component_manager"
+        "binary": "bin/component_manager_sfw"
     },
     "sandbox": {
         "features": [

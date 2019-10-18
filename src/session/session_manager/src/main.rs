@@ -4,18 +4,17 @@
 
 use {
     failure::Error,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    session_manager_lib::{cobalt, startup},
+    fuchsia_async as fasync,
+    session_manager_lib::{service_management, startup},
 };
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let start_time = zx::Time::get(zx::ClockId::Monotonic);
-    startup::launch_session().await?;
-    let end_time = zx::Time::get(zx::ClockId::Monotonic);
-
-    let cobalt_logger = cobalt::get_logger()?;
+    // Launch the session which was provided to the session manager at startup.
     let session_url = startup::get_session_url();
-    cobalt::log_session_launch_time(cobalt_logger, &session_url, start_time, end_time).await?;
+    startup::launch_session(&session_url).await?;
+
+    // Start serving the services exposed by session manager.
+    service_management::expose_services().await?;
     Ok(())
 }

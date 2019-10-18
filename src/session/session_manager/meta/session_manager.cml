@@ -4,6 +4,12 @@
         // The root session.
         "args": [ "-s", "fuchsia-pkg://fuchsia.com/graphical_session#meta/graphical_session.cm" ],
     },
+    "expose": [
+        {
+            "legacy_service": "/svc/fuchsia.session.Launcher",
+            "from": "self",
+        }
+    ],
     "use": [
         {
             // The Realm service allows session_manager to start components.

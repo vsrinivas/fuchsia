@@ -35,6 +35,7 @@ rustc_library("lib") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/argh",
     "//src/session/realm_management",
@@ -51,19 +52,8 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    ":session_framework_metrics_registry_rustlib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/argh",
-    "//src/session/realm_management",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
-    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
