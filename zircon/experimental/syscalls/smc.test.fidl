@@ -30,10 +30,10 @@ struct SmcResult {
     uint64 arg6; // at least one implementation uses it as a way to return session_id.
 };
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Smc {
     // TODO(ZX-2967): handle No rights required?
     // TODO(scottmg): No handle type?
     /// Make Secure Monitor Call (SMC) from user space.
-    Call(handle handle, SmcParameters parameters) -> (status status, SmcResult out_smc_result);
+    smc_call(handle handle, SmcParameters parameters) -> (status status, SmcResult out_smc_result);
 };

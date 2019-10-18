@@ -8,13 +8,13 @@
 
 library zz;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Mtrace {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    Control(handle<resource> handle,
-            uint32 kind,
-            uint32 action,
-            uint32 options,
-            mutable_vector_void ptr) ->
-        (status status);
+    mtrace_control(handle<resource> handle,
+                   uint32 kind,
+                   uint32 action,
+                   uint32 options,
+                   mutable_vector_void ptr)
+        -> (status status);
 };

@@ -8,9 +8,9 @@
 
 library zz;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Cache {
     /// Flush CPU data and/or instruction caches.
     [Vdsocall]
-    Flush(const_voidptr addr, usize size, uint32 options) -> (status status);
+    cache_flush(const_voidptr addr, usize size, uint32 options) -> (status status);
 };

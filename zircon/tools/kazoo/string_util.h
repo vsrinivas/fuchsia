@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_KAZOO_STRING_UTIL_H_
-#define TOOLS_KAZOO_STRING_UTIL_H_
+#ifndef ZIRCON_TOOLS_KAZOO_STRING_UTIL_H_
+#define ZIRCON_TOOLS_KAZOO_STRING_UTIL_H_
 
 #include <zircon/compiler.h>
 
@@ -60,4 +60,6 @@ inline char ToLowerASCII(char c) { return (c >= 'A' && c <= 'Z') ? (c + ('a' - '
 
 int StringToInt(const std::string& str);
 
-#endif  // TOOLS_KAZOO_STRING_UTIL_H_
+bool StartsWith(const std::string& str, const std::string& prefix);
+
+#endif  // ZIRCON_TOOLS_KAZOO_STRING_UTIL_H_

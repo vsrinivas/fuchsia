@@ -8,8 +8,8 @@
 
 library zz;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Eventpair {
     /// Create an event pair.
-    Create(uint32 options) -> (status status, handle<event> out0, handle<event> out1);
+    eventpair_create(uint32 options) -> (status status, handle<event> out0, handle<event> out1);
 };

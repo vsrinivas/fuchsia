@@ -185,18 +185,17 @@ bool Syscall::MapRequestResponseToKernelAbi() {
     return constness;
   };
 
-  auto output_optionality =
-      [](Optionality optionality) {
-        // If explicitly made optional then leave it alone, otherwise mark non-optional.
-        if (optionality == Optionality::kOutputOptional) {
-          return optionality;
-        }
-        return Optionality::kOutputNonOptional;
-      };
+  auto output_optionality = [](Optionality optionality) {
+    // If explicitly made optional then leave it alone, otherwise mark non-optional.
+    if (optionality == Optionality::kOutputOptional) {
+      return optionality;
+    }
+    return Optionality::kOutputNonOptional;
+  };
 
   auto get_vector_size_name = [](const StructMember& member) {
     std::string prefix, suffix;
-      // If it's a char* or void*, blah_size seems more natural, otherwise, num_blahs is moreso.
+    // If it's a char* or void*, blah_size seems more natural, otherwise, num_blahs is moreso.
     if ((member.type().DataAsVector().contained_type().IsChar() ||
          member.type().DataAsVector().contained_type().IsVoid()) &&
         (member.name() != "bytes")) {
@@ -266,6 +265,9 @@ bool Syscall::MapRequestResponseToKernelAbi() {
           m.name(),
           Type(TypePointer(Type(TypeChar{})), Constness::kMutable, Optionality::kOutputOptional));
       kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}));
+    } else if (type.IsPointer()) {
+      kernel_arguments_.emplace_back(
+          m.name(), Type(type.type_data(), Constness::kMutable, Optionality::kOutputOptional));
     } else {
       // Everything else becomes a T* (to make it an out parameter).
       kernel_arguments_.emplace_back(m.name(), Type(TypePointer(type), Constness::kMutable,
@@ -455,8 +457,11 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
       syscall->id_ = interface_name;
       syscall->original_name_ = method["name"].GetString();
       syscall->category_ = category;
-      syscall->name_ =
-          category + (category.empty() ? "" : "_") + CamelToSnake(method["name"].GetString());
+      std::string snake_name = CamelToSnake(method["name"].GetString());
+      if (!StartsWith(snake_name, category)) {
+        snake_name = category + (category.empty() ? "" : "_") + snake_name;
+      }
+      syscall->name_ = snake_name;
       syscall->is_noreturn_ = !method["has_response"].GetBool();
       const auto doc_attribute = GetDocAttribute(method);
       syscall->short_description_ = GetShortDescriptionFromDocAttribute(doc_attribute);
@@ -504,7 +509,7 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
 
 // static
 bool SyscallLibraryLoader::LoadStructs(const rapidjson::Document& document,
-                                          SyscallLibrary* library) {
+                                       SyscallLibrary* library) {
   // TODO(scottmg): In transition, we're still relying on the existing Zircon headers to define all
   // these structures. So we only load their names for the time being, which is enough for now to
   // know that there's something in the .fidl file where the struct is declared. Note also that
@@ -535,6 +540,10 @@ bool SyscallLibraryLoader::MakeSyscallOrderMatchOldDeclarationOrder(SyscallLibra
       "clock_adjust",
       "ticks_get_via_kernel",
       "clock_get_monotonic_via_kernel",
+      "clock_create",
+      "clock_read",
+      "clock_get_details",
+      "clock_update",
       "system_get_dcache_line_size",
       "system_get_num_cpus",
       "system_get_version",

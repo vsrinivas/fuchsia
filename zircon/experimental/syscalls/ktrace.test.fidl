@@ -8,21 +8,22 @@
 
 library zz;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Ktrace {
     // TODO(scottmg): This is another one where it's:
     //   (handle, data, offset, data_size)
     // rather than:
     //   (handle, data, data_size, offset).
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    [ArgReorder="handle,data,offset,data_size,actual"]
-    Read(handle<resource> handle, uint32 offset) ->
-        (status status, vector_void data, usize actual);
+    [ArgReorder = "handle, data, offset, data_size, actual"]
+    ktrace_read(handle<resource> handle, uint32 offset)
+        -> (status status, vector_void data, usize actual);
 
     // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    Control(handle<resource> handle, uint32 action, uint32 options, voidptr ptr) -> (status status);
+    ktrace_control(handle<resource> handle, uint32 action, uint32 options, voidptr ptr)
+        -> (status status);
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    Write(handle<resource> handle, uint32 id, uint32 arg0, uint32 arg1) -> (status status);
+    ktrace_write(handle<resource> handle, uint32 id, uint32 arg0, uint32 arg1) -> (status status);
 };

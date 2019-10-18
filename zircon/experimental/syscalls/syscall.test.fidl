@@ -8,31 +8,31 @@
 
 library zz;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Syscall {
-    Test_0() -> (status status);
+    syscall_test_0() -> (status status);
 
     [TestCategory1]
-    Test_1(int32 a) -> (status status);
+    syscall_test_1(int32 a) -> (status status);
 
     [TestCategory1]
-    Test_2(int32 a, int32 b) -> (status status);
+    syscall_test_2(int32 a, int32 b) -> (status status);
 
     [TestCategory2]
-    Test_3(int32 a, int32 b, int32 c) -> (status status);
+    syscall_test_3(int32 a, int32 b, int32 c) -> (status status);
 
-    Test_4(int32 a, int32 b, int32 c, int32 d) -> (status status);
+    syscall_test_4(int32 a, int32 b, int32 c, int32 d) -> (status status);
 
-    Test_5(int32 a, int32 b, int32 c, int32 d, int32 e) -> (status status);
+    syscall_test_5(int32 a, int32 b, int32 c, int32 d, int32 e) -> (status status);
 
-    Test_6(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f) -> (status status);
+    syscall_test_6(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f) -> (status status);
 
-    Test_7(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g) -> (status status);
+    syscall_test_7(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g) -> (status status);
 
-    Test_8(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g, int32 h) ->
-        (status status);
+    syscall_test_8(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g, int32 h)
+        -> (status status);
 
-    TestWrapper(int32 a, int32 b, int32 c) -> (status status);
+    syscall_test_wrapper(int32 a, int32 b, int32 c) -> (status status);
 
-    TestHandleCreate(status return_value) -> (status status, handle<event> out);
+    syscall_test_handle_create(status return_value) -> (status status, handle<event> out);
 };

@@ -11,57 +11,58 @@ library zz;
 struct SystemPowerctlArg {
     // TODO(scottmg): More unnamed unions.
     //union {
-        //struct {
-            //uint8_t target_s_state; // Value between 1 and 5 indicating which S-state
-            //uint8_t sleep_type_a;   // Value from ACPI VM (SLP_TYPa)
-            //uint8_t sleep_type_b;   // Value from ACPI VM (SLP_TYPb)
-        //} acpi_transition_s_state;
-        //struct {
-            //uint32_t power_limit; // PL1 value in milliwatts
-            //uint32_t time_window; // PL1 time window in microseconds
-            //uint8_t clamp;        // PL1 clamping enable
-            //uint8_t enable;       // PL1 enable
-        //} x86_power_limit;
+    //  struct {
+    //    uint8_t target_s_state; // Value between 1 and 5 indicating which S-state
+    //    uint8_t sleep_type_a;   // Value from ACPI VM (SLP_TYPa)
+    //    uint8_t sleep_type_b;   // Value from ACPI VM (SLP_TYPb)
+    //  } acpi_transition_s_state;
+    //  struct {
+    //    uint32_t power_limit; // PL1 value in milliwatts
+    //    uint32_t time_window; // PL1 time window in microseconds
+    //    uint8_t clamp;        // PL1 clamping enable
+    //    uint8_t enable;       // PL1 enable
+    //  } x86_power_limit;
     //};
 };
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol System {
     [Const, Vdsocall]
-    GetDcacheLineSize() -> (uint32 size);
+    system_get_dcache_line_size() -> (uint32 size);
 
     /// Get number of logical processors on the system.
     [Const, Vdsocall]
-    GetNumCpus() -> (uint32 count);
+    system_get_num_cpus() -> (uint32 count);
 
     /// Get version string for system.
     [Vdsocall]
-    GetVersion(mutable_string version) -> (status status);
+    system_get_version(mutable_string version) -> (status status);
 
     /// Get amount of physical memory on the system.
     [Vdsocall]
-    GetPhysmem() -> (uint64 physmem);
+    system_get_physmem() -> (uint64 physmem);
 
     // TODO(scottmg): "features" has a features attribute. I'm not sure if/how it's used.
     /// Get supported hardware capabilities.
     [Vdsocall]
-    GetFeatures(uint32 kind) -> (status status, uint32 features);
+    system_get_features(uint32 kind) -> (status status, uint32 features);
 
     /// Retrieve a handle to a system event.
     /// Rights: None.
-    GetEvent(handle<job> root_job, uint32 kind) -> (status status, handle<event> event);
+    system_get_event(handle<job> root_job, uint32 kind) -> (status status, handle<event> event);
 
     /// Soft reboot the system with a new kernel and bootimage.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     /// Rights: kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     /// Rights: bootimage_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-    Mexec(handle<resource> resource, handle<vmo> kernel_vmo, handle<vmo> bootimage_vmo) ->
-        (status status);
+    system_mexec(handle<resource> resource, handle<vmo> kernel_vmo, handle<vmo> bootimage_vmo)
+        -> (status status);
 
     /// Return a ZBI containing ZBI entries necessary to boot this system.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    MexecPayloadGet(handle<resource> resource) -> (status status, vector_void buffer);
+    system_mexec_payload_get(handle<resource> resource) -> (status status, vector_void buffer);
 
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    Powerctl(handle<resource> resource, uint32 cmd, SystemPowerctlArg arg) -> (status status);
+    system_powerctl(handle<resource> resource, uint32 cmd, SystemPowerctlArg arg)
+        -> (status status);
 };

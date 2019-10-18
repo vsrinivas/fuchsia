@@ -8,20 +8,20 @@
 
 library zz;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Framebuffer {
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    GetInfo(handle<resource> resource) ->
-        (status status, uint32 format, uint32 width, uint32 height, uint32 stride);
+    framebuffer_get_info(handle<resource> resource)
+        -> (status status, uint32 format, uint32 width, uint32 height, uint32 stride);
 
     // TODO(ZX-2967): vmo ZX_OBJ_TYPE_VMO; No rights required?
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    SetRange(handle<resource> resource,
-             handle<vmo> vmo,
-             uint32 len,
-             uint32 format,
-             uint32 width,
-             uint32 height,
-             uint32 stride) ->
-        (status status);
+    framebuffer_set_range(handle<resource> resource,
+                          handle<vmo> vmo,
+                          uint32 len,
+                          uint32 format,
+                          uint32 width,
+                          uint32 height,
+                          uint32 stride)
+        -> (status status);
 };

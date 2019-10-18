@@ -6,6 +6,7 @@
 #include "tools/kazoo/syscall_library.h"
 #include "tools/kazoo/test.h"
 #include "tools/kazoo/test_ir_test_kernel_cases.test.h"
+#include "tools/kazoo/test_ir_test_out_voidptr.test.h"
 #include "tools/kazoo/test_ir_test_rights_specs.test.h"
 #include "tools/kazoo/test_ir_test_rust_selection.test.h"
 #include "tools/kazoo/test_ir_test_selection.test.h"
@@ -895,6 +896,49 @@ TEST(JsonOutput, RightsSpecs) {
         }
       ],
       "return_type": "void"
+    }
+  ]
+}
+)");
+}
+
+TEST(JsonOutput, OutVoidptr) {
+  SyscallLibrary library;
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_out_voidptr, &library));
+
+  StringWriter writer;
+  ASSERT_TRUE(JsonOutput(library, &writer));
+
+  EXPECT_EQ(writer.Out(),
+            R"({
+  "syscalls": [
+    {
+      "name": "ovp_void_pointer_out",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        
+      ],
+      "requirements": [
+      ],
+      "arguments": [
+        {
+          "name": "handle",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "details",
+          "type": "any",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
     }
   ]
 }

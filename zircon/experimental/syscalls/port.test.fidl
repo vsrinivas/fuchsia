@@ -42,16 +42,16 @@ struct PacketGuestBell {
 // TODO(scottmg): Arch-specific definition.
 struct PacketGuestMem {
     gpaddr addr;
-//#if __aarch64__
+    //#if __aarch64__
     //uint8_t access_size;
     //bool sign_extend;
     //uint8_t xt;
     //bool read;
     //uint64_t data;
     //uint64_t reserved;
-//#elif __x86_64__
-//// NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
-//#define X86_MAX_INST_LEN 15u
+    //#elif __x86_64__
+    //// NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
+    //#define X86_MAX_INST_LEN 15u
     //uint8_t inst_len;
     //uint8_t inst_buf[X86_MAX_INST_LEN];
     //// This is the default operand size as determined by the CS and EFER register (Volume 3,
@@ -60,7 +60,7 @@ struct PacketGuestMem {
     //// 64-bits (Volume 2, Section 2.2.1.7), and not the 32-bits that will be given here.
     //uint8_t default_operand_size;
     //uint8_t reserved[7];
-//#endif
+    //#endif
 };
 
 struct PacketGuestIo {
@@ -69,10 +69,10 @@ struct PacketGuestIo {
     bool input;
     // TODO(scottmg): Unnamed union.
     //union {
-        //uint8_t u8;
-        //uint16_t u16;
-        //uint32_t u32;
-        //uint8_t data[4];
+    //  uint8_t u8;
+    //  uint16_t u16;
+    //  uint32_t u32;
+    //  uint8_t data[4];
     //};
     uint64 reserved0;
     uint64 reserved1;
@@ -82,14 +82,14 @@ struct PacketGuestIo {
 struct PacketGuestVcpu {
     // TODO(scottmg): Unnamed union.
     //union {
-        //struct {
-            //uint64_t mask;
-            //uint8_t vector;
-        //} interrupt;
-        //struct {
-            //uint64_t id;
-            //zx_gpaddr_t entry;
-        //} startup;
+    //  struct {
+    //    uint64_t mask;
+    //    uint8_t vector;
+    //  } interrupt;
+    //  struct {
+    //    uint64_t id;
+    //    zx_gpaddr_t entry;
+    //  } startup;
     //};
     uint8 type;
     uint64 reserved;
@@ -117,33 +117,33 @@ struct PortPacket {
     status status;
     // TODO(scottmg): Unnamed union.
     // union {
-        PacketUser user;
-        PacketSignal signal;
-        PacketException exception;
-        PacketGuestBell guest_bell;
-        PacketGuestMem guest_mem;
-        PacketGuestIo guest_io;
-        PacketGuestVcpu guest_vcpu;
-        PacketInterrupt interrupt;
-        PacketPageRequest page_request;
+    PacketUser user;
+    PacketSignal signal;
+    PacketException exception;
+    PacketGuestBell guest_bell;
+    PacketGuestMem guest_mem;
+    PacketGuestIo guest_io;
+    PacketGuestVcpu guest_vcpu;
+    PacketInterrupt interrupt;
+    PacketPageRequest page_request;
     // };
 };
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Port {
     /// Create an IO port.
-    Create(uint32 options) -> (status status, handle<port> out);
+    port_create(uint32 options) -> (status status, handle<port> out);
 
     /// Queue a packet to a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    Queue(handle<port> handle, PortPacket packet) -> (status status);
+    port_queue(handle<port> handle, PortPacket packet) -> (status status);
 
     /// Wait for a packet arrival in a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_READ.
     [Blocking]
-    Wait(handle<port> handle, time deadline) -> (status status, optional_PortPacket packet);
+    port_wait(handle<port> handle, time deadline) -> (status status, optional_PortPacket packet);
 
     /// Cancels async port notifications on an object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    Cancel(handle<port> handle, handle source, uint64 key) -> (status status);
+    port_cancel(handle<port> handle, handle source, uint64 key) -> (status status);
 };

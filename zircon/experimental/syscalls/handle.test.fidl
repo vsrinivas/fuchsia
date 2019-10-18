@@ -8,21 +8,21 @@
 
 library zz;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Handle {
     /// Close a handle.
     /// Rights: None.
-    Close(handle handle) -> (status status);
+    handle_close(handle handle) -> (status status);
 
     /// Close a number of handles.
     /// Rights: None.
-    CloseMany(vector<handle> handles) -> (status status);
+    handle_close_many(vector<handle> handles) -> (status status);
 
     /// Duplicate a handle.
     /// Rights: handle must have ZX_RIGHT_DUPLICATE.
-    Duplicate(handle handle, rights rights) -> (status status, handle out);
+    handle_duplicate(handle handle, rights rights) -> (status status, handle out);
 
     /// Replace a handle.
     /// Rights: None.
-    Replace(handle handle, rights rights) -> (status status, handle out);
+    handle_replace(handle handle, rights rights) -> (status status, handle out);
 };

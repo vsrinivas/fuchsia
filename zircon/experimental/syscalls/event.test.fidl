@@ -8,8 +8,8 @@
 
 library zz;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Event {
     /// Create an event.
-    Create(uint32 options) -> (status status, handle<event> out);
+    event_create(uint32 options) -> (status status, handle<event> out);
 };

@@ -95,7 +95,8 @@ std::string TrimString(const std::string& str, const std::string& chars_to_trim)
   return str.substr(start_index, end_index - start_index + 1);
 }
 
-std::vector<std::string> SplitString(const std::string& input, char delimiter, WhitespaceHandling whitespace) {
+std::vector<std::string> SplitString(const std::string& input, char delimiter,
+                                     WhitespaceHandling whitespace) {
   std::vector<std::string> result;
 
   auto start = input.begin();
@@ -116,4 +117,8 @@ std::vector<std::string> SplitString(const std::string& input, char delimiter, W
 
 int StringToInt(const std::string& str) {
   return static_cast<int>(strtol(str.c_str(), nullptr, 10));
+}
+
+bool StartsWith(const std::string& str, const std::string& prefix) {
+  return str.compare(0, prefix.size(), prefix) == 0;
 }
