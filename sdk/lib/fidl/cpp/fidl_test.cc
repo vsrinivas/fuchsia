@@ -100,12 +100,6 @@ TEST(FidlTest, UnionComparison) {
   unions.push_back(std::move(s));
   s.set_s({1});
   unions.push_back(std::move(s));
-  s.set_os(Int64StructPtr());
-  unions.push_back(std::move(s));
-  s.set_os(fidl::MakeOptional(Int64Struct({0})));
-  unions.push_back(std::move(s));
-  s.set_os(fidl::MakeOptional(Int64Struct({1})));
-  unions.push_back(std::move(s));
 
   EXPECT_TRUE(CheckComparison(unions));
 }

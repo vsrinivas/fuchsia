@@ -63,6 +63,11 @@ union MultipleHandlesUnion {
 
 union MaybeRecurse {
     handle h;
+    MaybeRecurseHelper more;
+};
+
+// Unions cannot have nullable fields, so wrap it in a struct.
+struct MaybeRecurseHelper {
     MaybeRecurse? more;
 };
 

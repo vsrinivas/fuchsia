@@ -12,11 +12,11 @@
 
 namespace {
 
-static bool Compiles(const std::string& source_code) {
+bool Compiles(const std::string& source_code) {
   return TestLibrary("test.fidl", source_code).Compile();
 }
 
-static bool compiling() {
+bool compiling() {
   BEGIN_TEST;
 
   // Populated fields.
@@ -97,14 +97,24 @@ struct Bar {
 };
 )FIDL"));
 
-  // Infinite recursion is not allowed.
-  EXPECT_FALSE(Compiles(R"FIDL(
-library fidl.test.xunions;
+  END_TEST;
+}
+
+bool no_directly_recursive_xunions() {
+    BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
 
 xunion Value {
   Value value;
 };
-)FIDL"));
+
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "There is an includes-cycle in declarations");
 
   END_TEST;
 }
@@ -177,11 +187,52 @@ protocol Example {
   END_TEST;
 }
 
+bool no_nullable_members_in_unions() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union Foo {
+  string? bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "Union members cannot be nullable");
+
+  END_TEST;
+}
+
+bool no_nullable_members_in_xunions() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+xunion Foo {
+  string? bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "Extensible union members cannot be nullable");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(xunion_tests)
 RUN_TEST(compiling)
+RUN_TEST(no_directly_recursive_xunions)
 RUN_TEST(invalid_empty_xunions)
 RUN_TEST(union_xunion_same_ordinals)
 RUN_TEST(error_syntax_explicit_ordinals)
+RUN_TEST(no_nullable_members_in_unions)
+RUN_TEST(no_nullable_members_in_xunions)
 END_TEST_CASE(xunion_tests)

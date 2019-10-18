@@ -1728,6 +1728,11 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(member->type_ctor), location, &type_ctor))
       return false;
+
+    if (type_ctor->nullability != types::Nullability::kNonnullable) {
+      return Fail(member->location(), "Union members cannot be nullable");
+    }
+
     auto attributes = std::move(member->attributes);
     members.emplace_back(std::move(xunion_ordinal), std::move(type_ctor), location,
                          std::move(attributes));
