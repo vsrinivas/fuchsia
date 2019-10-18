@@ -15,6 +15,7 @@ use fidl_fuchsia_auth::{
 use fidl_fuchsia_identity_account::{
     AuthListenerMarker, Error as ApiError, Lifetime, PersonaRequest, PersonaRequestStream,
 };
+use fidl_fuchsia_identity_keys::KeyManagerMarker;
 use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
@@ -139,6 +140,11 @@ impl Persona {
                     self.get_token_manager(context, application_url, token_manager).await;
                 responder.send(&mut response)?;
             }
+            PersonaRequest::GetKeyManager { application_url, key_manager, responder } => {
+                let mut response =
+                    self.get_key_manager(context, application_url, key_manager).await;
+                responder.send(&mut response)?;
+            }
         }
         Ok(())
     }
@@ -191,6 +197,16 @@ impl Persona {
             .await
             .map_err(|_| ApiError::RemovalInProgress)?;
         Ok(())
+    }
+
+    async fn get_key_manager<'a>(
+        &'a self,
+        _context: &'a PersonaContext,
+        _application_url: String,
+        _key_manager_server_end: ServerEnd<KeyManagerMarker>,
+    ) -> Result<(), ApiError> {
+        // TODO(satsukiu): Implement KeyManager API
+        Err(ApiError::UnsupportedOperation)
     }
 }
 
@@ -364,6 +380,22 @@ mod tests {
                     (fidl_fuchsia_auth::Status::Ok, vec![])
                 );
 
+                Ok(())
+            }
+        })
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_key_manager() {
+        let mut test = Test::new();
+        test.run(test.create_persona(), |proxy| {
+            async move {
+                let (_, key_manager_server_end) = create_endpoints().unwrap();
+                assert_eq!(
+                    proxy.get_key_manager(&TEST_APPLICATION_URL, key_manager_server_end).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
                 Ok(())
             }
         })
