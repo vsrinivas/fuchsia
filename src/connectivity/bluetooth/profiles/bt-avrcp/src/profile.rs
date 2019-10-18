@@ -9,7 +9,10 @@ use {
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
-    futures::{future, future::BoxFuture, future::FutureExt, stream::BoxStream, stream::StreamExt},
+    futures::{
+        future::{self, BoxFuture, FutureExt},
+        stream::{BoxStream, StreamExt},
+    },
     std::{fmt::Debug, string::String},
 };
 

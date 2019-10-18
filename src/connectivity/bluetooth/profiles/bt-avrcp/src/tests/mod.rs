@@ -2,36 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::packets::{
-    Decodable, Encodable, GetCapabilitiesCapabilityId, GetCapabilitiesCommand,
-    GetCapabilitiesResponse, GetElementAttributesCommand, GetElementAttributesResponse,
-    NotificationEventId, PduId, PlaybackPosChangedNotificationResponse,
-    RegisterNotificationCommand, RequestContinuingResponseCommand, SetAbsoluteVolumeCommand,
-    SetAbsoluteVolumeResponse, VendorDependent, VendorDependentPreamble,
+use {
+    bt_avctp::{AvcCommand, AvcPeer, AvcResponseType},
+    failure::{format_err, Error},
+    fidl::endpoints::{create_endpoints, Proxy, RequestStream, ServiceMarker},
+    fidl_fuchsia_bluetooth_avrcp::*,
+    fidl_fuchsia_bluetooth_avrcp_test::*,
+    fidl_fuchsia_bluetooth_bredr::PSM_AVCTP,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::{
+        channel::mpsc, future, future::BoxFuture, future::FutureExt, stream, stream::BoxStream,
+        stream::StreamExt,
+    },
+    parking_lot::Mutex,
+    pin_utils::pin_mut,
+    std::{collections::VecDeque, convert::TryFrom},
 };
-use crate::peer::PeerManager;
-use crate::profile::{
-    AvcrpTargetFeatures, AvrcpProfileEvent, AvrcpProtocolVersion, AvrcpService, ProfileService,
+
+use crate::{
+    packets::*,
+    peer::PeerManager,
+    profile::{
+        AvcrpTargetFeatures, AvrcpProfileEvent, AvrcpProtocolVersion, AvrcpService, ProfileService,
+    },
+    service,
+    types::PeerId,
 };
-use crate::service;
-use crate::types::PeerId;
-use bt_avctp::{AvcCommand, AvcPeer, AvcResponseType};
-use failure::{format_err, Error};
-use fidl::endpoints::{create_endpoints, Proxy};
-use fidl::endpoints::{RequestStream, ServiceMarker};
-use fidl_fuchsia_bluetooth_avrcp::*;
-use fidl_fuchsia_bluetooth_avrcp_test::*;
-use fidl_fuchsia_bluetooth_bredr::PSM_AVCTP;
-use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
-use futures::channel::mpsc;
-use futures::{
-    future, future::BoxFuture, future::FutureExt, stream, stream::BoxStream, stream::StreamExt,
-};
-use parking_lot::Mutex;
-use pin_utils::pin_mut;
-use std::collections::VecDeque;
-use std::convert::TryFrom;
 
 pub fn create_fidl_endpoints<S: ServiceMarker>() -> Result<(S::Proxy, S::RequestStream), Error> {
     let (client, server) = zx::Channel::create()?;

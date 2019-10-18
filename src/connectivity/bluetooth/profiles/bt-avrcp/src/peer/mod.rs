@@ -14,14 +14,22 @@ use {
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
-        self, channel::mpsc, channel::oneshot, future::BoxFuture, future::FutureExt, ready,
-        stream::FusedStream, stream::FuturesUnordered, stream::SelectAll, stream::StreamExt,
-        stream::TryStreamExt, task::Context, Poll, Stream,
+        self,
+        channel::{mpsc, oneshot},
+        future::{BoxFuture, FutureExt},
+        ready,
+        stream::{FusedStream, FuturesUnordered, SelectAll, StreamExt, TryStreamExt},
+        task::Context,
+        Poll, Stream,
     },
     parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard},
     pin_utils::pin_mut,
     std::{
-        collections::HashMap, convert::TryFrom, pin::Pin, string::String, sync::Arc, sync::Weak,
+        collections::HashMap,
+        convert::TryFrom,
+        pin::Pin,
+        string::String,
+        sync::{Arc, Weak},
     },
 };
 

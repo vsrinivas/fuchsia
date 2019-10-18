@@ -4,8 +4,10 @@
 
 use {
     failure::{format_err, Error},
-    fidl::encoding::Decodable as FidlDecodable,
-    fidl::endpoints::{RequestStream, ServiceMarker},
+    fidl::{
+        encoding::Decodable as FidlDecodable,
+        endpoints::{RequestStream, ServiceMarker},
+    },
     fidl_fuchsia_bluetooth_avrcp::*,
     fidl_fuchsia_bluetooth_avrcp_test::*,
     fuchsia_async as fasync,
@@ -13,15 +15,20 @@ use {
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{
-        self, channel::mpsc, future::FutureExt, future::TryFutureExt, stream::StreamExt,
-        stream::TryStreamExt, Future,
+        self,
+        channel::mpsc,
+        future::{FutureExt, TryFutureExt},
+        stream::{StreamExt, TryStreamExt},
+        Future,
     },
     std::collections::VecDeque,
 };
 
-use crate::packets::PlaybackStatus as PacketPlaybackStatus;
-use crate::peer::{PeerController, PeerControllerEvent, PeerControllerRequest};
-use crate::types::PeerError;
+use crate::{
+    packets::PlaybackStatus as PacketPlaybackStatus,
+    peer::{PeerController, PeerControllerEvent, PeerControllerRequest},
+    types::PeerError,
+};
 
 impl From<PeerError> for ControllerError {
     fn from(e: PeerError) -> Self {

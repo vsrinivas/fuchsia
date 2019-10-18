@@ -114,8 +114,8 @@ impl ControlChannelCommandHandler {
         body: &[u8],
     ) -> Result<(AvcResponseType, Vec<u8>), Error> {
         match pdu_id {
-            PduId::GetCapabilities => {
-                if let Ok(get_cap_cmd) = GetCapabilitiesCommand::decode(body) {
+            PduId::GetCapabilities => match GetCapabilitiesCommand::decode(body) {
+                Ok(get_cap_cmd) => {
                     fx_vlog!(tag: "avrcp", 2, "Received GetCapabilities Command {:#?}", get_cap_cmd);
 
                     match get_cap_cmd.capability_id() {
@@ -132,13 +132,14 @@ impl ControlChannelCommandHandler {
                             Ok((AvcResponseType::ImplementedStable, buf))
                         }
                     }
-                } else {
+                }
+                _ => {
                     fx_vlog!(tag: "avrcp", 2, "Unable to parse GetCapabilitiesCommand, sending rejection.");
                     let response = RejectResponse::new(&pdu_id, &StatusCode::InvalidParameter);
                     let buf = response.encode_packet().map_err(|e| Error::PacketError(e))?;
                     Ok((AvcResponseType::Rejected, buf))
                 }
-            }
+            },
             PduId::GetElementAttributes => {
                 let get_element_attrib_command =
                     GetElementAttributesCommand::decode(body).map_err(|e| Error::PacketError(e))?;

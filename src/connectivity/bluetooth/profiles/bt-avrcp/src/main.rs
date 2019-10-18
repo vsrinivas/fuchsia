@@ -9,8 +9,7 @@ use {
     futures::{channel::mpsc, try_join},
 };
 
-use crate::peer::PeerManager;
-use crate::profile::ProfileServiceImpl;
+use crate::{peer::PeerManager, profile::ProfileServiceImpl};
 
 mod packets;
 mod peer;
