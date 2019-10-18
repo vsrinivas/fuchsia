@@ -7,6 +7,12 @@ import("//build/images/manifest.gni")
 # Creates a devmgr_manifest to be used by isolated devmgr components.
 # TODO(brunodalbo) expand this template in the future to allow specifying which drivers specifically
 #  we want to include in the component.
+#
+# Note that only one target per build file may use this template.
+#
+# Outputs
+#   $target_gen_dir/devmgr.manifest
+#     The generated manifest.
 template("devmgr_manifest") {
   action(target_name) {
     forward_variables_from(invoker,
@@ -28,7 +34,7 @@ template("devmgr_manifest") {
     ]
     foreach(manifest, sources) {
       args += [
-        "--cwd=" + rebase_path(get_path_info(manifest, "dir"), root_build_dir),
+        "--cwd=" + rebase_path(zircon_root_build_dir, root_build_dir),
         "--manifest=" + rebase_path(manifest, root_build_dir),
       ]
     }

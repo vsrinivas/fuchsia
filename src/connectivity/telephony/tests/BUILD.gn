@@ -18,6 +18,8 @@ test_package("telephony-tests") {
     "driver-integration:telephony-qmi-usb-integration-test",
   ]
 
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
   tests = [
     {
       name = "telephony-qmi-usb-integration-test"

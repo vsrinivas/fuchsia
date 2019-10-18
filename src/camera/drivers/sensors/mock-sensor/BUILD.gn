@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
-import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
 driver_module("mock-sensor-driver") {
   testonly = true

@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 import("//build/images/manifest.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
 executable("tests") {
   testonly = true
@@ -45,25 +46,7 @@ executable("tests") {
   ]
 }
 
-action("devmgr-manifest") {
-  visibility = [ ":*" ]
-  sources = zircon_boot_manifests
-  outputs = [
-    "$target_gen_dir/devmgr.manifest",
-  ]
-  script = "//build/images/manifest.py"
-  args = [
-    "--include=bin/devcoordinator",
-    "--include=bin/fshost",
-    "--output=" + rebase_path(outputs[0], root_build_dir),
-  ]
-  foreach(manifest, sources) {
-    args += [
-      "--cwd=" + rebase_path(get_path_info(manifest, "dir"), root_build_dir),
-      "--manifest=" + rebase_path(manifest, root_build_dir),
-    ]
-  }
-}
+devmgr_manifest("devmgr-manifest") {}
 
 test_package("libdriver-integration-test") {
   deprecated_shell = "//build"
