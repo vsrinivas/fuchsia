@@ -1036,8 +1036,9 @@ spn_tile_cover_evenodd()
                                                                                                    \
     const SPN_RENDER_PIXEL_AREA  trapabs = abs(area);                                              \
     const SPN_RENDER_PIXEL_AREA  maskabs = trapabs & SPN_TTS_FILL_EVEN_ODD_MASK;                   \
-    const SPN_RENDER_PIXEL_AREA  reflect = abs(SPN_TTS_FILL_MAX_AREA - maskabs);                   \
-    const SPN_RENDER_PIXEL_COVER evenodd = SPN_RENDER_PIXEL_COVER(reflect);                        \
+    const SPN_RENDER_PIXEL_AREA  reflect = abs(maskabs - SPN_TTS_FILL_MAX_AREA);                   \
+    const SPN_RENDER_PIXEL_COVER evenodd =                                                         \
+      SPN_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA - reflect);                                     \
                                                                                                    \
     cover_wip##I = evenodd * SPN_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32);                \
                                                                                                    \

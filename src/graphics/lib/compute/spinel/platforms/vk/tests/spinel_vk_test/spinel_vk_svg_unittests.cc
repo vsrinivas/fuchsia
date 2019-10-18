@@ -53,7 +53,7 @@ param const params[] = {
     }
   },
   {
-    .name    = "rasters_prefix_fix",
+    .name    = "rasters_prefix_fix", // bug:39620
     .surface = { 1024, 300 },
     .svg     =  //
     "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
@@ -76,7 +76,21 @@ param const params[] = {
           { param::NVIDIA, {}                    } } // all nvidia
       },
     }
-  }
+  },
+  {
+    .name    = "evenodd", // bug:42114
+    .surface = { 256, 256 },
+    .svg     =  //
+    "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+    "  <path fill-rule=\"nonzero\" d=\"M24,8  h8 v8 h-8 z\n"
+    "                                  M26,10 h4 v4 h-4 z\"/>\n"
+    "  <path fill-rule=\"evenodd\" d=\"M8,8   h8 v8 h-8 z\n"
+    "                                  M10,10 h4 v4 h-4 z\"/>\n"
+    "</svg>\n",
+    .checksums = { //
+      { 0x8FFF0070, {} }
+    }
+  },
 };
 
 //
