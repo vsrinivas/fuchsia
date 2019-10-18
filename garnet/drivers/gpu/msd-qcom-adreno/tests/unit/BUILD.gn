@@ -16,6 +16,7 @@ executable("msd_qcom_adreno_unittests") {
 
   sources = [
     "test_device.cc",
+    "test_instructions.cc",
     "test_register_io.cc",
   ]
 

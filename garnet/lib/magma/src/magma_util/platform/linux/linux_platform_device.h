@@ -61,6 +61,8 @@ class LinuxPlatformDevice : public PlatformDevice {
   // Maps if |map| is true; unmaps otherwise
   static bool MagmaMapGpu(int device_fd, bool map, uint64_t gpu_addr, uint32_t token);
 
+  static void MagmaResetGmu(int device_fd);
+
  private:
   LinuxPlatformHandle handle_;
 };

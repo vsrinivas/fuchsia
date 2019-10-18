@@ -4,8 +4,11 @@
 
 #include "msd_qcom_device.h"
 
+#include <platform_barriers.h>
+
 #include <magma_util/macros.h>
 
+#include "instructions.h"
 #include "msd_qcom_platform_device.h"
 #include "registers.h"
 
@@ -58,13 +61,85 @@ bool MsdQcomDevice::Init(void* device_handle, std::unique_ptr<magma::RegisterIo:
   if (!firmware_->Map(address_space_))
     return DRETF(false, "Failed to map firmware");
 
+  qcom_platform_device_->ResetGmu();
+
   if (!HardwareInit())
     return DRETF(false, "HardwareInit failed");
 
   if (!InitRingbuffer())
     return DRETF(false, "InitRingbuffer failed");
 
+  if (!InitControlProcessor())
+    return DRETF(false, "InitControlProcessor failed");
+
   return true;
+}
+
+void MsdQcomDevice::GetCpInitPacket(std::vector<uint32_t>& packet) {
+  packet = {
+      0x0000002f,              // Feature bit flags; parameters (one per line):
+      0x00000003,              // multiple contexts
+      0x20000000,              // error detection
+      0x00000000, 0x00000000,  // disable header dump
+      0x00000000,              // no workarounds
+      0x00000000, 0x00000000,  // padding
+  };
+}
+
+bool MsdQcomDevice::InitControlProcessor() {
+  std::vector<uint32_t> packet;
+  GetCpInitPacket(packet);
+
+  DASSERT(ringbuffer_);
+  Packet7::write(ringbuffer_.get(), Packet7::OpCode::CpMeInit, packet);
+
+  uint32_t tail = ringbuffer_->tail() / sizeof(uint32_t);
+
+  FlushRingbuffer(tail);
+  if (!WaitForIdleRingbuffer(tail))
+    return false;
+
+  // Switch to unsecure mode
+  registers::A6xxRbbmSecvidTrustControl::CreateFrom(0).WriteTo(register_io_.get());
+
+  return true;
+}
+
+void MsdQcomDevice::FlushRingbuffer(uint32_t tail) {
+  DASSERT(ringbuffer_);
+  DLOG("Flushing ringbuffer to tail %d", tail);
+
+  magma::barriers::Barrier();
+
+  registers::A6xxCpRingbufferWritePointer::CreateFrom(tail).WriteTo(register_io_.get());
+}
+
+bool MsdQcomDevice::WaitForIdleRingbuffer(uint32_t tail) {
+  DASSERT(ringbuffer_);
+
+  auto read_ptr = registers::A6xxCpRingbufferReadPointer::CreateFrom(register_io_.get());
+  auto rbbm_status = registers::A6xxRbbmStatus::CreateFrom(register_io_.get());
+
+  auto start = std::chrono::steady_clock::now();
+  while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                               start)
+             .count() < 1000) {
+    if (read_ptr.reg_value() == tail) {
+      if (rbbm_status.gpu_idle()) {
+        DLOG("Idle success: read ptr %d tail %d rbbm_status 0x%x", read_ptr.reg_value(), tail,
+             rbbm_status.reg_value());
+        return true;
+      } else {
+        rbbm_status.ReadFrom(register_io_.get());
+      }
+    } else {
+      read_ptr.ReadFrom(register_io_.get());
+    }
+  }
+
+  auto rbbm_status_int0 = registers::A6xxRbbmStatusInt0::CreateFrom(register_io_.get());
+  return DRETF(false, "Failed to idle: read ptr %d tail %d rbbm_status 0x%x rbbm_status_int0 0x%x",
+               read_ptr.reg_value(), tail, rbbm_status.reg_value(), rbbm_status_int0.reg_value());
 }
 
 bool MsdQcomDevice::InitRingbuffer() {

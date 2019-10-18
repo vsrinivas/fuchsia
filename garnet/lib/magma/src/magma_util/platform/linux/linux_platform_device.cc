@@ -21,6 +21,7 @@ namespace {
 #define DRM_COMMAND_BASE 0x40
 #define DRM_COMMAND_END 0xA0
 #define DRM_IOWR(nr, type) _IOWR(DRM_IOCTL_BASE, nr, type)
+#define DRM_IO(nr) _IO(DRM_IOCTL_BASE, nr)
 
 }  // namespace
 
@@ -65,12 +66,14 @@ struct magma_map_gpu {
 #define DRM_MAGMA_GET_PARAM 0x20
 #define DRM_MAGMA_MAP_PAGE_RANGE_BUS 0x21
 #define DRM_MAGMA_MAP_GPU 0x22
+#define DRM_MAGMA_RESET_GMU 0x23
 
 #define DRM_IOCTL_MAGMA_GET_PARAM \
   DRM_IOWR(DRM_COMMAND_BASE + DRM_MAGMA_GET_PARAM, struct magma_param)
 #define DRM_IOCTL_MAGMA_MAP_PAGE_RANGE_BUS \
   DRM_IOWR(DRM_COMMAND_BASE + DRM_MAGMA_MAP_PAGE_RANGE_BUS, struct magma_map_page_range_bus)
 #define DRM_IOCTL_MAGMA_MAP_GPU DRM_IOWR(DRM_COMMAND_BASE + DRM_MAGMA_MAP_GPU, struct magma_map_gpu)
+#define DRM_IOCTL_MAGMA_RESET_GMU DRM_IO(DRM_COMMAND_BASE + DRM_MAGMA_RESET_GMU)
 
 }  // namespace
 
@@ -140,6 +143,13 @@ bool LinuxPlatformDevice::MagmaGetParam(int device_fd, MagmaGetParamKey key, uin
 
   *value_out = param.value;
   return true;
+}
+
+void LinuxPlatformDevice::MagmaResetGmu(int device_fd) {
+  int ret = ioctl(device_fd, DRM_IOCTL_MAGMA_RESET_GMU, nullptr);
+  if (ret != 0) {
+    magma::log(magma::LOG_WARNING, "DRM_IOCTL_MAGMA_RESET_GMU failed: %d", ret);
+  }
 }
 
 std::unique_ptr<PlatformMmio> LinuxPlatformDevice::CpuMapMmio(

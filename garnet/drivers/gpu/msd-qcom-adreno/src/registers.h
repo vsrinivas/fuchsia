@@ -31,10 +31,41 @@ class A6xxRbbmSecvidTsbTrustedSize : public magma::RegisterBase {
   }
 };
 
+class A6xxRbbmSecvidTrustControl : public magma::RegisterBase {
+ public:
+  static auto CreateFrom(uint32_t value) {
+    return magma::RegisterAddr<A6xxRbbmSecvidTrustControl>(0x0000f400 << 2).FromValue(value);
+  }
+};
+
 class A6xxRbbmClockControl : public magma::RegisterBase {
  public:
   static auto CreateFrom(magma::RegisterIo* reg_io) {
     return magma::RegisterAddr<A6xxRbbmClockControl>(0x000000ae << 2).ReadFrom(reg_io);
+  }
+};
+
+class A6xxRbbmStatus : public magma::RegisterBase {
+ public:
+  static constexpr uint32_t kControlProcessorAhbBusyCxMaster = 0x1;
+  static constexpr uint32_t kControlProcessorAhbBusyCpMaster = 0x2;
+  static constexpr uint32_t kControlProcessorBusy = 0x4;
+  // Many other bits...
+
+  bool gpu_idle() {
+    // Idle if no bits are set other than 0x1
+    return (reg_value() & ~kControlProcessorAhbBusyCxMaster) == 0;
+  }
+
+  static auto CreateFrom(magma::RegisterIo* reg_io) {
+    return magma::RegisterAddr<A6xxRbbmStatus>(0x00000210 << 2).ReadFrom(reg_io);
+  }
+};
+
+class A6xxRbbmStatusInt0 : public magma::RegisterBase {
+ public:
+  static auto CreateFrom(magma::RegisterIo* reg_io) {
+    return magma::RegisterAddr<A6xxRbbmStatusInt0>(0x00000201 << 2).ReadFrom(reg_io);
   }
 };
 
@@ -261,6 +292,20 @@ class A6xxCpRingbufferBase : public magma::RegisterPairBase {
  public:
   static auto CreateFrom(uint64_t value) {
     return magma::RegisterAddr<A6xxCpRingbufferBase>(0x00000800 << 2).FromValue(value);
+  }
+};
+
+class A6xxCpRingbufferReadPointer : public magma::RegisterBase {
+ public:
+  static auto CreateFrom(magma::RegisterIo* reg_io) {
+    return magma::RegisterAddr<A6xxCpRingbufferReadPointer>(0x00000806 << 2).ReadFrom(reg_io);
+  }
+};
+
+class A6xxCpRingbufferWritePointer : public magma::RegisterBase {
+ public:
+  static auto CreateFrom(uint32_t value) {
+    return magma::RegisterAddr<A6xxCpRingbufferWritePointer>(0x00000807 << 2).FromValue(value);
   }
 };
 

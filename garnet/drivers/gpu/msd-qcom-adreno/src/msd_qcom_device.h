@@ -22,7 +22,10 @@ class MsdQcomDevice : public magma::AddressSpaceOwner {
 
   uint32_t GetGmemSize() { return qcom_platform_device_->GetGmemSize(); }
 
+  static void GetCpInitPacket(std::vector<uint32_t>& packet);
+
  private:
+  std::shared_ptr<AddressSpace> address_space() { return address_space_; }
   magma::RegisterIo* register_io() { return register_io_.get(); }
   magma::Ringbuffer<GpuMapping>* ringbuffer() { return ringbuffer_.get(); }
   Firmware* firmware() { return firmware_.get(); }
@@ -37,6 +40,9 @@ class MsdQcomDevice : public magma::AddressSpaceOwner {
   bool HardwareInit();
   bool EnableClockGating(bool enable);
   bool InitRingbuffer();
+  bool InitControlProcessor();
+  void FlushRingbuffer(uint32_t tail);
+  bool WaitForIdleRingbuffer(uint32_t tail);
 
   std::unique_ptr<MsdQcomPlatformDevice> qcom_platform_device_;
   std::unique_ptr<magma::RegisterIo> register_io_;

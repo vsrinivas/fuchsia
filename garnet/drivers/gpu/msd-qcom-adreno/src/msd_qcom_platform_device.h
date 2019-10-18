@@ -21,6 +21,8 @@ class MsdQcomPlatformDevice {
   // Returns the size of the on-chip graphics memory
   virtual uint32_t GetGmemSize() const = 0;
 
+  virtual void ResetGmu() = 0;
+
   static std::unique_ptr<MsdQcomPlatformDevice> Create(void* platform_device_handle);
 
  protected:

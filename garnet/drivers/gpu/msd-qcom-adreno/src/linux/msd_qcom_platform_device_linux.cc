@@ -18,6 +18,14 @@ class MsdQcomPlatformDeviceLinux : public MsdQcomPlatformDevice {
 
   uint32_t GetGmemSize() const override { return gmem_size_; }
 
+  void ResetGmu() override {
+    magma::LinuxPlatformDevice::MagmaResetGmu(linux_platform_device()->fd());
+  }
+
+  magma::LinuxPlatformDevice* linux_platform_device() {
+    return reinterpret_cast<magma::LinuxPlatformDevice*>(platform_device_.get());
+  }
+
  private:
   uint32_t chip_id_;
   // Gmem is on-chip graphics memory
