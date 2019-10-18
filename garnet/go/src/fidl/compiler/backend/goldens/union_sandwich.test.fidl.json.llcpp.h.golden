@@ -20,35 +20,35 @@ namespace test {
 namespace fidl {
 namespace unionsandwich {
 
-struct UnionSize8Aligned4;
-struct Sandwich1;
-struct UnionSize30Alignment4;
-struct Sandwich4;
-struct UnionSize12Aligned4;
-struct Sandwich2;
+struct UnionSize8Alignment4;
+struct SandwichUnionSize8Alignment4;
+struct UnionSize36Alignment4;
+struct SandwichUnionSize36Alignment4;
+struct UnionSize12Alignment4;
+struct SandwichUnionSize12Alignment4;
 struct StructSize16Alignment8;
 struct UnionSize24Alignment8;
-struct Sandwich3;
+struct SandwichUnionSize24Alignment8;
 
-extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize8Aligned4Table;
+extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table;
 
-struct UnionSize8Aligned4 {
+struct UnionSize8Alignment4 {
   enum class Tag : fidl_union_tag_t {
     kVariant = 0,
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  UnionSize8Aligned4();
-  ~UnionSize8Aligned4();
+  UnionSize8Alignment4();
+  ~UnionSize8Alignment4();
 
-  UnionSize8Aligned4(UnionSize8Aligned4&& other) {
+  UnionSize8Alignment4(UnionSize8Alignment4&& other) {
     tag_ = Tag::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
   }
 
-  UnionSize8Aligned4& operator=(UnionSize8Aligned4&& other) {
+  UnionSize8Alignment4& operator=(UnionSize8Alignment4&& other) {
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -59,8 +59,8 @@ struct UnionSize8Aligned4 {
 
   bool is_variant() const { return tag_ == Tag::kVariant; }
 
-  static UnionSize8Aligned4 WithVariant(uint32_t&& val) {
-    UnionSize8Aligned4 result;
+  static UnionSize8Alignment4 WithVariant(uint32_t&& val) {
+    UnionSize8Alignment4 result;
     result.set_variant(std::move(val));
     return result;
   }
@@ -83,7 +83,7 @@ struct UnionSize8Aligned4 {
 
   Tag which() const { return tag_; }
 
-  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize8Aligned4Table;
+  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize8Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -91,7 +91,7 @@ struct UnionSize8Aligned4 {
 
  private:
   void Destroy();
-  void MoveImpl_(UnionSize8Aligned4&& other);
+  void MoveImpl_(UnionSize8Alignment4&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
@@ -101,7 +101,7 @@ struct UnionSize8Aligned4 {
 
 
 
-struct Sandwich1 {
+struct SandwichUnionSize8Alignment4 {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
@@ -110,30 +110,30 @@ struct Sandwich1 {
 
   uint32_t before = {};
 
-  ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4 union_ = {};
+  ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4 union_ = {};
 
   uint32_t after = {};
 };
 
-extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize30Alignment4Table;
+extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table;
 
-struct UnionSize30Alignment4 {
+struct UnionSize36Alignment4 {
   enum class Tag : fidl_union_tag_t {
     kVariant = 0,
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  UnionSize30Alignment4();
-  ~UnionSize30Alignment4();
+  UnionSize36Alignment4();
+  ~UnionSize36Alignment4();
 
-  UnionSize30Alignment4(UnionSize30Alignment4&& other) {
+  UnionSize36Alignment4(UnionSize36Alignment4&& other) {
     tag_ = Tag::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
   }
 
-  UnionSize30Alignment4& operator=(UnionSize30Alignment4&& other) {
+  UnionSize36Alignment4& operator=(UnionSize36Alignment4&& other) {
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -144,31 +144,31 @@ struct UnionSize30Alignment4 {
 
   bool is_variant() const { return tag_ == Tag::kVariant; }
 
-  static UnionSize30Alignment4 WithVariant(::fidl::Array<uint8_t, 30>&& val) {
-    UnionSize30Alignment4 result;
+  static UnionSize36Alignment4 WithVariant(::fidl::Array<uint8_t, 32>&& val) {
+    UnionSize36Alignment4 result;
     result.set_variant(std::move(val));
     return result;
   }
 
-  ::fidl::Array<uint8_t, 30>& mutable_variant();
+  ::fidl::Array<uint8_t, 32>& mutable_variant();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 30>>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 32>>::value && std::is_copy_assignable<T>::value>
   set_variant(const T& v) {
     mutable_variant() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 30>>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 32>>::value && std::is_move_assignable<T>::value>
   set_variant(T&& v) {
     mutable_variant() = std::move(v);
   }
 
-  ::fidl::Array<uint8_t, 30> const & variant() const { return variant_; }
+  ::fidl::Array<uint8_t, 32> const & variant() const { return variant_; }
 
   Tag which() const { return tag_; }
 
-  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize30Alignment4Table;
+  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize36Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 36;
   [[maybe_unused]]
@@ -176,18 +176,18 @@ struct UnionSize30Alignment4 {
 
  private:
   void Destroy();
-  void MoveImpl_(UnionSize30Alignment4&& other);
+  void MoveImpl_(UnionSize36Alignment4&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    ::fidl::Array<uint8_t, 30> variant_;
+    ::fidl::Array<uint8_t, 32> variant_;
   };
 };
 
-extern "C" const fidl_type_t test_fidl_unionsandwich_Sandwich4Table;
 
-struct Sandwich4 {
-  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_Sandwich4Table;
+
+struct SandwichUnionSize36Alignment4 {
+  static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 44;
   [[maybe_unused]]
@@ -195,30 +195,30 @@ struct Sandwich4 {
 
   uint32_t before = {};
 
-  ::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4 union_ = {};
+  ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4 union_ = {};
 
   uint32_t after = {};
 };
 
-extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize12Aligned4Table;
+extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table;
 
-struct UnionSize12Aligned4 {
+struct UnionSize12Alignment4 {
   enum class Tag : fidl_union_tag_t {
     kVariant = 0,
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  UnionSize12Aligned4();
-  ~UnionSize12Aligned4();
+  UnionSize12Alignment4();
+  ~UnionSize12Alignment4();
 
-  UnionSize12Aligned4(UnionSize12Aligned4&& other) {
+  UnionSize12Alignment4(UnionSize12Alignment4&& other) {
     tag_ = Tag::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
   }
 
-  UnionSize12Aligned4& operator=(UnionSize12Aligned4&& other) {
+  UnionSize12Alignment4& operator=(UnionSize12Alignment4&& other) {
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -229,8 +229,8 @@ struct UnionSize12Aligned4 {
 
   bool is_variant() const { return tag_ == Tag::kVariant; }
 
-  static UnionSize12Aligned4 WithVariant(::fidl::Array<uint8_t, 6>&& val) {
-    UnionSize12Aligned4 result;
+  static UnionSize12Alignment4 WithVariant(::fidl::Array<uint8_t, 6>&& val) {
+    UnionSize12Alignment4 result;
     result.set_variant(std::move(val));
     return result;
   }
@@ -253,7 +253,7 @@ struct UnionSize12Aligned4 {
 
   Tag which() const { return tag_; }
 
-  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize12Aligned4Table;
+  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize12Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
@@ -261,7 +261,7 @@ struct UnionSize12Aligned4 {
 
  private:
   void Destroy();
-  void MoveImpl_(UnionSize12Aligned4&& other);
+  void MoveImpl_(UnionSize12Alignment4&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
@@ -269,10 +269,10 @@ struct UnionSize12Aligned4 {
   };
 };
 
-extern "C" const fidl_type_t test_fidl_unionsandwich_Sandwich2Table;
+extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
 
-struct Sandwich2 {
-  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_Sandwich2Table;
+struct SandwichUnionSize12Alignment4 {
+  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 20;
   [[maybe_unused]]
@@ -280,9 +280,9 @@ struct Sandwich2 {
 
   uint32_t before = {};
 
-  ::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4 union_ = {};
+  ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4 union_ = {};
 
-  uint32_t after = {};
+  int32_t after = {};
 };
 
 
@@ -368,10 +368,10 @@ struct UnionSize24Alignment8 {
   };
 };
 
-extern "C" const fidl_type_t test_fidl_unionsandwich_Sandwich3Table;
+extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
 
-struct Sandwich3 {
-  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_Sandwich3Table;
+struct SandwichUnionSize24Alignment8 {
+  static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
@@ -392,40 +392,40 @@ struct Sandwich3 {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4>);
+struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4>);
 
 template <>
-struct IsFidlType<::llcpp::test::fidl::unionsandwich::Sandwich1> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::Sandwich1>);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich1, before) == 0);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich1, union_) == 4);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich1, after) == 12);
-static_assert(sizeof(::llcpp::test::fidl::unionsandwich::Sandwich1) == ::llcpp::test::fidl::unionsandwich::Sandwich1::PrimarySize);
+struct IsFidlType<::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4>);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4, before) == 0);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4, union_) == 4);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4, after) == 12);
+static_assert(sizeof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4) == ::llcpp::test::fidl::unionsandwich::SandwichUnionSize8Alignment4::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4>);
+struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4>);
 
 template <>
-struct IsFidlType<::llcpp::test::fidl::unionsandwich::Sandwich4> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::Sandwich4>);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich4, before) == 0);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich4, union_) == 4);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich4, after) == 40);
-static_assert(sizeof(::llcpp::test::fidl::unionsandwich::Sandwich4) == ::llcpp::test::fidl::unionsandwich::Sandwich4::PrimarySize);
+struct IsFidlType<::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4>);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4, before) == 0);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4, union_) == 4);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4, after) == 40);
+static_assert(sizeof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4) == ::llcpp::test::fidl::unionsandwich::SandwichUnionSize36Alignment4::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4>);
+struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4>);
 
 template <>
-struct IsFidlType<::llcpp::test::fidl::unionsandwich::Sandwich2> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::Sandwich2>);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich2, before) == 0);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich2, union_) == 4);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich2, after) == 16);
-static_assert(sizeof(::llcpp::test::fidl::unionsandwich::Sandwich2) == ::llcpp::test::fidl::unionsandwich::Sandwich2::PrimarySize);
+struct IsFidlType<::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4>);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4, before) == 0);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4, union_) == 4);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4, after) == 16);
+static_assert(sizeof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4) == ::llcpp::test::fidl::unionsandwich::SandwichUnionSize12Alignment4::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8> : public std::true_type {};
@@ -439,11 +439,11 @@ struct IsFidlType<::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8> : p
 static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8>);
 
 template <>
-struct IsFidlType<::llcpp::test::fidl::unionsandwich::Sandwich3> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::Sandwich3>);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich3, before) == 0);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich3, union_) == 8);
-static_assert(offsetof(::llcpp::test::fidl::unionsandwich::Sandwich3, after) == 32);
-static_assert(sizeof(::llcpp::test::fidl::unionsandwich::Sandwich3) == ::llcpp::test::fidl::unionsandwich::Sandwich3::PrimarySize);
+struct IsFidlType<::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8>);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8, before) == 0);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8, union_) == 8);
+static_assert(offsetof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8, after) == 32);
+static_assert(sizeof(::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8) == ::llcpp::test::fidl::unionsandwich::SandwichUnionSize24Alignment8::PrimarySize);
 
 }  // namespace fidl

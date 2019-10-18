@@ -9,15 +9,15 @@ namespace test {
 namespace fidl {
 namespace unionsandwich {
 
-::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::UnionSize8Aligned4() {
+::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::UnionSize8Alignment4() {
   tag_ = Tag::Invalid;
 }
 
-::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::~UnionSize8Aligned4() {
+::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::~UnionSize8Alignment4() {
   Destroy();
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::Destroy() {
+void ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::Destroy() {
   switch (which()) {
   default:
     break;
@@ -25,7 +25,7 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::MoveImpl_(UnionSize8Aligned4&& other) {
+void ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::MoveImpl_(UnionSize8Alignment4&& other) {
   switch (other.which()) {
   case Tag::kVariant:
     mutable_variant() = std::move(other.mutable_variant());
@@ -36,13 +36,13 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::MoveImpl_(UnionSize
   other.Destroy();
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4, variant_) == 4);
-  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4) == ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::PrimarySize);
+void ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4, variant_) == 4);
+  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4) == ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::PrimarySize);
 }
 
 
-uint32_t& ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::mutable_variant() {
+uint32_t& ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::mutable_variant() {
   if (which() != Tag::kVariant) {
     Destroy();
     new (&variant_) uint32_t;
@@ -52,15 +52,15 @@ uint32_t& ::llcpp::test::fidl::unionsandwich::UnionSize8Aligned4::mutable_varian
 }
 
 
-::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::UnionSize30Alignment4() {
+::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::UnionSize36Alignment4() {
   tag_ = Tag::Invalid;
 }
 
-::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::~UnionSize30Alignment4() {
+::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::~UnionSize36Alignment4() {
   Destroy();
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::Destroy() {
+void ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::Destroy() {
   switch (which()) {
   case Tag::kVariant:
     variant_.~Array();
@@ -71,7 +71,7 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::MoveImpl_(UnionSize30Alignment4&& other) {
+void ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::MoveImpl_(UnionSize36Alignment4&& other) {
   switch (other.which()) {
   case Tag::kVariant:
     mutable_variant() = std::move(other.mutable_variant());
@@ -82,31 +82,31 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::MoveImpl_(UnionS
   other.Destroy();
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4, variant_) == 4);
-  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4) == ::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::PrimarySize);
+void ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4, variant_) == 4);
+  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4) == ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::PrimarySize);
 }
 
 
-::fidl::Array<uint8_t, 30>& ::llcpp::test::fidl::unionsandwich::UnionSize30Alignment4::mutable_variant() {
+::fidl::Array<uint8_t, 32>& ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::mutable_variant() {
   if (which() != Tag::kVariant) {
     Destroy();
-    new (&variant_) ::fidl::Array<uint8_t, 30>;
+    new (&variant_) ::fidl::Array<uint8_t, 32>;
   }
   tag_ = Tag::kVariant;
   return variant_;
 }
 
 
-::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::UnionSize12Aligned4() {
+::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::UnionSize12Alignment4() {
   tag_ = Tag::Invalid;
 }
 
-::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::~UnionSize12Aligned4() {
+::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::~UnionSize12Alignment4() {
   Destroy();
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::Destroy() {
+void ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::Destroy() {
   switch (which()) {
   case Tag::kVariant:
     variant_.~Array();
@@ -117,7 +117,7 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::MoveImpl_(UnionSize12Aligned4&& other) {
+void ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::MoveImpl_(UnionSize12Alignment4&& other) {
   switch (other.which()) {
   case Tag::kVariant:
     mutable_variant() = std::move(other.mutable_variant());
@@ -128,13 +128,13 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::MoveImpl_(UnionSiz
   other.Destroy();
 }
 
-void ::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4, variant_) == 4);
-  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4) == ::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::PrimarySize);
+void ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4, variant_) == 4);
+  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4) == ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::PrimarySize);
 }
 
 
-::fidl::Array<uint8_t, 6>& ::llcpp::test::fidl::unionsandwich::UnionSize12Aligned4::mutable_variant() {
+::fidl::Array<uint8_t, 6>& ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::mutable_variant() {
   if (which() != Tag::kVariant) {
     Destroy();
     new (&variant_) ::fidl::Array<uint8_t, 6>;

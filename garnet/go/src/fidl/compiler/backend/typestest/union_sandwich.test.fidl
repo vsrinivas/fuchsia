@@ -4,13 +4,27 @@ library test.fidl.unionsandwich;
 // explicitly designed as test cases for the wire format migration where the FIDL union type is
 // changing from a static union on-the-wire (the "old" format) to an extensible union on-the-wire
 // (the "v1" format).
+//
+// See typeshape_tests.cc for furher details.
 
-union UnionSize8Aligned4 {
-    uint32 variant;  // xunion ordinal = 0x5e1f64a7
+union UnionSize8Alignment4 {
+    uint32 variant;
 };
 
-union UnionSize12Aligned4 {
-    array<uint8>:6 variant;  // xunion ordinal = 0x55688d73
+struct SandwichUnionSize8Alignment4 {
+    uint32 before;
+    UnionSize8Alignment4 union;
+    uint32 after;
+};
+
+union UnionSize12Alignment4 {
+    array<uint8>:6 variant;
+};
+
+struct SandwichUnionSize12Alignment4 {
+    uint32 before;
+    UnionSize12Alignment4 union;
+    int32 after;
 };
 
 struct StructSize16Alignment8 {
@@ -19,35 +33,21 @@ struct StructSize16Alignment8 {
 };
 
 union UnionSize24Alignment8 {
-    StructSize16Alignment8 variant;  // xunion ordinal = 0x2a62eab0
+    StructSize16Alignment8 variant;
 };
 
-union UnionSize30Alignment4 {
-    array<uint8>:30 variant;  // xunion ordinal = 0x1a5412f2
+struct SandwichUnionSize24Alignment8 {
+    uint32 before;
+    UnionSize24Alignment8 union;
+    uint32 after;
 };
 
-// The following structs should have their field offsets changed--as described in the comments--when
-// the wire format changes from old to v1.
-struct Sandwich1 {
-   uint32 before;
-   UnionSize8Aligned4 union;  // 4 -> 8 (due to alignment of xunion header)
-   uint32 after;  // 12 -> 32 (due to alignment + 24 bytes for xunion header)
+union UnionSize36Alignment4 {
+    array<uint8>:32 variant;
 };
 
-struct Sandwich2 {
-   uint32 before;
-   UnionSize12Aligned4 union;  // 4 -> 8 (due to alignment of xunion header)
-   uint32 after;  // 16 -> 32 (due to alignment + 24 bytes for xunion header)
-};
-
-struct Sandwich3 {
-   uint32 before;
-   UnionSize24Alignment8 union;  // 8 for both old & v1
-   uint32 after;  // 32 for both old & v1
-};
-
-struct Sandwich4 {
-   uint32 before;
-   UnionSize30Alignment4 union;  // 4 -> 8 (due to alignment of xunion header)
-   uint32 after;  // 40 -> 32 (due to alignment + 24 bytes for xunion header)
+struct SandwichUnionSize36Alignment4 {
+    uint32 before;
+    UnionSize36Alignment4 union;
+    uint32 after;
 };

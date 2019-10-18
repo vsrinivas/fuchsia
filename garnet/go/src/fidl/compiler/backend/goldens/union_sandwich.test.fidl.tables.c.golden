@@ -4,47 +4,47 @@
 
 extern "C" {
 
-extern const fidl_type_t test_fidl_unionsandwich_UnionSize8Aligned4Table;
-extern const fidl_type_t test_fidl_unionsandwich_Sandwich1Table;
-extern const fidl_type_t test_fidl_unionsandwich_UnionSize30Alignment4Table;
-extern const fidl_type_t test_fidl_unionsandwich_Sandwich4Table;
-extern const fidl_type_t test_fidl_unionsandwich_UnionSize12Aligned4Table;
-extern const fidl_type_t test_fidl_unionsandwich_Sandwich2Table;
+extern const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table;
+extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
+extern const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table;
+extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
+extern const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table;
+extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
 extern const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table;
 extern const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8Table;
-extern const fidl_type_t test_fidl_unionsandwich_Sandwich3Table;
+extern const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
 
 
 
-static const ::fidl::FidlUnionField Fields42test_fidl_unionsandwich_UnionSize8Aligned4[] = {
+static const ::fidl::FidlUnionField Fields44test_fidl_unionsandwich_UnionSize8Alignment4[] = {
     ::fidl::FidlUnionField(nullptr, 0u)
 };
-const fidl_type_t test_fidl_unionsandwich_UnionSize8Aligned4Table = fidl_type_t(::fidl::FidlCodedUnion(Fields42test_fidl_unionsandwich_UnionSize8Aligned4, 1u, 4u, 8u, "test.fidl.unionsandwich/UnionSize8Aligned4"));
+const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table = fidl_type_t(::fidl::FidlCodedUnion(Fields44test_fidl_unionsandwich_UnionSize8Alignment4, 1u, 4u, 8u, "test.fidl.unionsandwich/UnionSize8Alignment4"));
 
-static const ::fidl::FidlStructField Fields33test_fidl_unionsandwich_Sandwich1[] = {
-    ::fidl::FidlStructField(&test_fidl_unionsandwich_UnionSize8Aligned4Table, 4u, 0u)
+static const ::fidl::FidlStructField Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4[] = {
+    ::fidl::FidlStructField(&test_fidl_unionsandwich_UnionSize8Alignment4Table, 4u, 0u)
 };
-const fidl_type_t test_fidl_unionsandwich_Sandwich1Table = fidl_type_t(::fidl::FidlCodedStruct(Fields33test_fidl_unionsandwich_Sandwich1, 1u, 16u, "test.fidl.unionsandwich/Sandwich1"));
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4, 1u, 16u, "test.fidl.unionsandwich/SandwichUnionSize8Alignment4"));
 
-static const ::fidl::FidlUnionField Fields45test_fidl_unionsandwich_UnionSize30Alignment4[] = {
+static const ::fidl::FidlUnionField Fields45test_fidl_unionsandwich_UnionSize36Alignment4[] = {
+    ::fidl::FidlUnionField(nullptr, 0u)
+};
+const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table = fidl_type_t(::fidl::FidlCodedUnion(Fields45test_fidl_unionsandwich_UnionSize36Alignment4, 1u, 4u, 36u, "test.fidl.unionsandwich/UnionSize36Alignment4"));
+
+static const ::fidl::FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4[] = {
+    ::fidl::FidlStructField(&test_fidl_unionsandwich_UnionSize36Alignment4Table, 4u, 0u)
+};
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4, 1u, 44u, "test.fidl.unionsandwich/SandwichUnionSize36Alignment4"));
+
+static const ::fidl::FidlUnionField Fields45test_fidl_unionsandwich_UnionSize12Alignment4[] = {
     ::fidl::FidlUnionField(nullptr, 2u)
 };
-const fidl_type_t test_fidl_unionsandwich_UnionSize30Alignment4Table = fidl_type_t(::fidl::FidlCodedUnion(Fields45test_fidl_unionsandwich_UnionSize30Alignment4, 1u, 4u, 36u, "test.fidl.unionsandwich/UnionSize30Alignment4"));
+const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table = fidl_type_t(::fidl::FidlCodedUnion(Fields45test_fidl_unionsandwich_UnionSize12Alignment4, 1u, 4u, 12u, "test.fidl.unionsandwich/UnionSize12Alignment4"));
 
-static const ::fidl::FidlStructField Fields33test_fidl_unionsandwich_Sandwich4[] = {
-    ::fidl::FidlStructField(&test_fidl_unionsandwich_UnionSize30Alignment4Table, 4u, 0u)
+static const ::fidl::FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4[] = {
+    ::fidl::FidlStructField(&test_fidl_unionsandwich_UnionSize12Alignment4Table, 4u, 0u)
 };
-const fidl_type_t test_fidl_unionsandwich_Sandwich4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields33test_fidl_unionsandwich_Sandwich4, 1u, 44u, "test.fidl.unionsandwich/Sandwich4"));
-
-static const ::fidl::FidlUnionField Fields43test_fidl_unionsandwich_UnionSize12Aligned4[] = {
-    ::fidl::FidlUnionField(nullptr, 2u)
-};
-const fidl_type_t test_fidl_unionsandwich_UnionSize12Aligned4Table = fidl_type_t(::fidl::FidlCodedUnion(Fields43test_fidl_unionsandwich_UnionSize12Aligned4, 1u, 4u, 12u, "test.fidl.unionsandwich/UnionSize12Aligned4"));
-
-static const ::fidl::FidlStructField Fields33test_fidl_unionsandwich_Sandwich2[] = {
-    ::fidl::FidlStructField(&test_fidl_unionsandwich_UnionSize12Aligned4Table, 4u, 0u)
-};
-const fidl_type_t test_fidl_unionsandwich_Sandwich2Table = fidl_type_t(::fidl::FidlCodedStruct(Fields33test_fidl_unionsandwich_Sandwich2, 1u, 20u, "test.fidl.unionsandwich/Sandwich2"));
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4, 1u, 20u, "test.fidl.unionsandwich/SandwichUnionSize12Alignment4"));
 
 static const ::fidl::FidlStructField Fields46test_fidl_unionsandwich_StructSize16Alignment8[] = {};
 const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields46test_fidl_unionsandwich_StructSize16Alignment8, 0u, 16u, "test.fidl.unionsandwich/StructSize16Alignment8"));
@@ -54,11 +54,11 @@ static const ::fidl::FidlUnionField Fields45test_fidl_unionsandwich_UnionSize24A
 };
 const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8Table = fidl_type_t(::fidl::FidlCodedUnion(Fields45test_fidl_unionsandwich_UnionSize24Alignment8, 1u, 8u, 24u, "test.fidl.unionsandwich/UnionSize24Alignment8"));
 
-static const ::fidl::FidlStructField Fields33test_fidl_unionsandwich_Sandwich3[] = {
+static const ::fidl::FidlStructField Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
     ::fidl::FidlStructField(&test_fidl_unionsandwich_UnionSize24Alignment8Table, 8u, 0u),
     ::fidl::FidlStructField(nullptr, 36u, 4u)
 };
-const fidl_type_t test_fidl_unionsandwich_Sandwich3Table = fidl_type_t(::fidl::FidlCodedStruct(Fields33test_fidl_unionsandwich_Sandwich3, 3u, 40u, "test.fidl.unionsandwich/Sandwich3"));
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8, 3u, 40u, "test.fidl.unionsandwich/SandwichUnionSize24Alignment8"));
 
 } // extern "C"

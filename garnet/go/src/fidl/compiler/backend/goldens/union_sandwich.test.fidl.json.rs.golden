@@ -26,7 +26,7 @@ use fidl::{
 
 fidl_union! {
   #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: UnionSize8Aligned4,
+  name: UnionSize8Alignment4,
   members: [
     Variant {
       ty: u32,
@@ -39,7 +39,7 @@ fidl_union! {
 
 fidl_union! {
   #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: UnionSize12Aligned4,
+  name: UnionSize12Alignment4,
   members: [
     Variant {
       ty: [u8; 6],
@@ -65,14 +65,68 @@ fidl_union! {
 
 fidl_union! {
   #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: UnionSize30Alignment4,
+  name: UnionSize36Alignment4,
   members: [
     Variant {
-      ty: [u8; 30],
+      ty: [u8; 32],
       offset: 4,
     },
   ],
   size: 36,
+  align: 4,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct SandwichUnionSize8Alignment4 {
+  pub before: u32,
+  pub union: UnionSize8Alignment4,
+  pub after: u32,
+}
+
+fidl_struct! {
+  name: SandwichUnionSize8Alignment4,
+  members: [
+    before {
+      ty: u32,
+      offset: 0,
+    },
+    union {
+      ty: UnionSize8Alignment4,
+      offset: 4,
+    },
+    after {
+      ty: u32,
+      offset: 12,
+    },
+  ],
+  size: 16,
+  align: 4,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct SandwichUnionSize12Alignment4 {
+  pub before: u32,
+  pub union: UnionSize12Alignment4,
+  pub after: i32,
+}
+
+fidl_struct! {
+  name: SandwichUnionSize12Alignment4,
+  members: [
+    before {
+      ty: u32,
+      offset: 0,
+    },
+    union {
+      ty: UnionSize12Alignment4,
+      offset: 4,
+    },
+    after {
+      ty: i32,
+      offset: 16,
+    },
+  ],
+  size: 20,
   align: 4,
 }
 
@@ -99,68 +153,14 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Sandwich1 {
-  pub before: u32,
-  pub union: UnionSize8Aligned4,
-  pub after: u32,
-}
-
-fidl_struct! {
-  name: Sandwich1,
-  members: [
-    before {
-      ty: u32,
-      offset: 0,
-    },
-    union {
-      ty: UnionSize8Aligned4,
-      offset: 4,
-    },
-    after {
-      ty: u32,
-      offset: 12,
-    },
-  ],
-  size: 16,
-  align: 4,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Sandwich2 {
-  pub before: u32,
-  pub union: UnionSize12Aligned4,
-  pub after: u32,
-}
-
-fidl_struct! {
-  name: Sandwich2,
-  members: [
-    before {
-      ty: u32,
-      offset: 0,
-    },
-    union {
-      ty: UnionSize12Aligned4,
-      offset: 4,
-    },
-    after {
-      ty: u32,
-      offset: 16,
-    },
-  ],
-  size: 20,
-  align: 4,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Sandwich3 {
+pub struct SandwichUnionSize24Alignment8 {
   pub before: u32,
   pub union: UnionSize24Alignment8,
   pub after: u32,
 }
 
 fidl_struct! {
-  name: Sandwich3,
+  name: SandwichUnionSize24Alignment8,
   members: [
     before {
       ty: u32,
@@ -180,21 +180,21 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Sandwich4 {
+pub struct SandwichUnionSize36Alignment4 {
   pub before: u32,
-  pub union: UnionSize30Alignment4,
+  pub union: UnionSize36Alignment4,
   pub after: u32,
 }
 
 fidl_struct! {
-  name: Sandwich4,
+  name: SandwichUnionSize36Alignment4,
   members: [
     before {
       ty: u32,
       offset: 0,
     },
     union {
-      ty: UnionSize30Alignment4,
+      ty: UnionSize36Alignment4,
       offset: 4,
     },
     after {
