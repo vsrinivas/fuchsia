@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+
+source_set("system_data_updater_server_provider") {
+  testonly = true
+
+  sources = [
+    "system_data_updater_server_provider.cc",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp/fuzzing",
+    "//sdk/lib/sys/cpp",
+    "//src/cobalt/bin/app:lib",
+    "//zircon/system/fidl/fuchsia-cobalt",
+  ]
+}
+
+fidl_protocol_fuzzer("system_data_updater_fuzzer") {
+  fidl = "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt"
+  protocol = "fuchsia.cobalt.SystemDataUpdater"
+  deps = [
+    ":system_data_updater_server_provider",
+  ]
+}
+
+fuzzers_package("cobalt_fuzzers") {
+  fuzzers = [ ":system_data_updater_fuzzer" ]
+}
