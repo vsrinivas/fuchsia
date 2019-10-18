@@ -20,7 +20,6 @@
 
 #include "garnet/testing/views/embedder_view.h"
 #include "src/lib/fxl/logging.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 
@@ -36,7 +35,7 @@ class ViewEmbedderTest : public gfx::PixelTest {
   ViewEmbedderTest() : gfx::PixelTest("ViewEmbedderTest") {}
 };
 
-VK_TEST_F(ViewEmbedderTest, BouncingBall) {
+TEST_F(ViewEmbedderTest, BouncingBall) {
   auto info = scenic::LaunchComponentAndCreateView(
       environment_->launcher_ptr(),
       "fuchsia-pkg://fuchsia.com/bouncing_ball#meta/bouncing_ball.cmx", {});
@@ -53,7 +52,7 @@ VK_TEST_F(ViewEmbedderTest, BouncingBall) {
       zx::sec(kTestTimeout)));
 }
 
-VK_TEST_F(ViewEmbedderTest, ProtectedVkcube) {
+TEST_F(ViewEmbedderTest, ProtectedVkcube) {
   // vkcube_on_scenic does not produce protected content if platform does not allow. Check if
   // protected memory is available beforehand to skip these cases.
   {
