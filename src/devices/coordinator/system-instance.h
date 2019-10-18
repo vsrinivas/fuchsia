@@ -64,7 +64,7 @@ class SystemInstance : public devmgr::FsProvider {
 
  private:
   // Private helper functions.
-  void do_autorun(const char* name, const char* cmd);
+  void do_autorun(const char* name, const char* cmd, const zx::resource& root_resource);
   void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
                     zx::channel fshost_server);
 

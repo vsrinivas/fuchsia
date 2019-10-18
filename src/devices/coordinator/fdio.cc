@@ -74,9 +74,9 @@ DevmgrLauncher::DevmgrLauncher(FsProvider* fs_provider) : fs_provider_(fs_provid
 zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* name,
                                              zx::vmo executable, zx::channel loader,
                                              const char* const* argv, const char** initial_envp,
-                                             int stdiofd, const zx_handle_t* handles,
-                                             const uint32_t* types, size_t hcount,
-                                             zx::process* out_proc, uint32_t flags) {
+                                             int stdiofd, const zx::resource& root_resource,
+                                             const zx_handle_t* handles, const uint32_t* types,
+                                             size_t hcount, zx::process* out_proc, uint32_t flags) {
   zx::job job_copy;
   zx_status_t status = job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
   if (status != ZX_OK) {
@@ -86,7 +86,7 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
 
   zx::debuglog debuglog;
   if (stdiofd < 0) {
-    if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) != ZX_OK)) {
+    if ((status = zx::debuglog::create(root_resource, 0, &debuglog) != ZX_OK)) {
       return status;
     }
   }
@@ -188,10 +188,11 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
 
 zx_status_t DevmgrLauncher::Launch(const zx::job& job, const char* name, const char* const* argv,
                                    const char** initial_envp, int stdiofd,
-                                   const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-                                   zx::process* out_proc, uint32_t flags) {
-  return LaunchWithLoader(job, name, zx::vmo(), zx::channel(), argv, initial_envp, stdiofd, handles,
-                          types, hcount, out_proc, flags);
+                                   const zx::resource& root_resource, const zx_handle_t* handles,
+                                   const uint32_t* types, size_t hcount, zx::process* out_proc,
+                                   uint32_t flags) {
+  return LaunchWithLoader(job, name, zx::vmo(), zx::channel(), argv, initial_envp, stdiofd,
+                          root_resource, handles, types, hcount, out_proc, flags);
 }
 
 ArgumentVector ArgumentVector::FromCmdline(const char* cmdline) {

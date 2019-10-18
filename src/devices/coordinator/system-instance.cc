@@ -634,9 +634,9 @@ int SystemInstance::ConsoleStarter(const devmgr::BootArgs* arg) {
 
     const char* argv_sh[] = {"/boot/bin/sh", nullptr};
     zx::process proc;
-    status =
-        launcher_.LaunchWithLoader(svc_job_, "sh:console", zx::vmo(), std::move(ldsvc), argv_sh,
-                                   envp, fd.release(), nullptr, nullptr, 0, &proc, FS_ALL);
+    status = launcher_.LaunchWithLoader(svc_job_, "sh:console", zx::vmo(), std::move(ldsvc),
+                                        argv_sh, envp, fd.release(), zx::resource(), nullptr,
+                                        nullptr, 0, &proc, FS_ALL);
     if (status != ZX_OK) {
       printf("devcoordinator: failed to launch console shell (%s)\n", zx_status_get_string(status));
       return 1;
@@ -698,8 +698,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
     }
 
     launcher_.LaunchWithLoader(svc_job_, "miscsvc", zx::vmo(), std::move(ldsvc), args, nullptr, -1,
-                               handles, types, countof(handles), nullptr,
-                               FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
+                               coordinator->root_resource(), handles, types, countof(handles),
+                               nullptr, FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
   }
 
   bool netboot = false;
@@ -728,7 +728,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
 
     zx::process proc;
     zx_status_t status =
-        launcher_.Launch(svc_job_, "netsvc", args, nullptr, -1, nullptr, nullptr, 0, &proc, FS_ALL);
+        launcher_.Launch(svc_job_, "netsvc", args, nullptr, -1, coordinator->root_resource(),
+                         nullptr, nullptr, 0, &proc, FS_ALL);
     if (status == ZX_OK) {
       if (vruncmd) {
         zx_info_handle_basic_t info = {};
@@ -761,8 +762,9 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       args[argc++] = nodename;
     }
 
-    launcher_.Launch(svc_job_, "device-name-provider", args, nullptr, -1, handles, types,
-                     countof(handles), nullptr, FS_DEV);
+    launcher_.Launch(svc_job_, "device-name-provider", args, nullptr, -1,
+                     coordinator->root_resource(), handles, types, countof(handles), nullptr,
+                     FS_DEV);
   }
 
   if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
@@ -795,8 +797,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       args[3] = "--run";
       args[4] = vcmd.data();
     }
-    launcher_.Launch(svc_job_, "virtual-console", args, env.data(), -1, handles, types,
-                     handle_count, nullptr, FS_ALL);
+    launcher_.Launch(svc_job_, "virtual-console", args, env.data(), -1,
+                     coordinator->root_resource(), handles, types, handle_count, nullptr, FS_ALL);
   }
 
   const char* backstop = coordinator->boot_args().Get("clock.backstop");
@@ -806,7 +808,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
     zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset);
   }
 
-  do_autorun("autorun:boot", coordinator->boot_args().Get("zircon.autorun.boot"));
+  do_autorun("autorun:boot", coordinator->boot_args().Get("zircon.autorun.boot"),
+             coordinator->root_resource());
 
   auto starter_args = std::make_unique<ServiceStarterArgs>();
   starter_args->instance = this;
@@ -884,12 +887,13 @@ int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
         appmgr_hnd_count++;
       }
       launcher_.LaunchWithLoader(fuchsia_job_, "appmgr", zx::vmo(), std::move(ldsvc), argv_appmgr,
-                                 nullptr, -1, appmgr_hnds, appmgr_ids, appmgr_hnd_count, nullptr,
-                                 FS_FOR_APPMGR);
+                                 nullptr, -1, coordinator->root_resource(), appmgr_hnds, appmgr_ids,
+                                 appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
       appmgr_started = true;
     }
     if (!autorun_started) {
-      do_autorun("autorun:system", coordinator->boot_args().Get("zircon.autorun.system"));
+      do_autorun("autorun:system", coordinator->boot_args().Get("zircon.autorun.system"),
+                 coordinator->root_resource());
       autorun_started = true;
     }
   } while (!appmgr_started);
@@ -913,7 +917,8 @@ zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
   return result.Unwrap()->rv;
 }
 
-void SystemInstance::do_autorun(const char* name, const char* cmd) {
+void SystemInstance::do_autorun(const char* name, const char* cmd,
+                                const zx::resource& root_resource) {
   if (cmd != nullptr) {
     auto args = devmgr::ArgumentVector::FromCmdline(cmd);
     args.Print("autorun");
@@ -926,7 +931,7 @@ void SystemInstance::do_autorun(const char* name, const char* cmd) {
     }
 
     launcher_.LaunchWithLoader(svc_job_, name, zx::vmo(), std::move(ldsvc), args.argv(), nullptr,
-                               -1, nullptr, nullptr, 0, nullptr, FS_ALL);
+                               -1, root_resource, nullptr, nullptr, 0, nullptr, FS_ALL);
   }
 }
 
@@ -999,8 +1004,8 @@ void SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
   coordinator->boot_args().Collect("zircon.system", &env);
   env.push_back(nullptr);
 
-  launcher_.Launch(svc_job_, "fshost", args.data(), env.data(), -1, handles, types, n, nullptr,
-                   FS_BOOT | FS_DEV | FS_SVC);
+  launcher_.Launch(svc_job_, "fshost", args.data(), env.data(), -1, coordinator->root_resource(),
+                   handles, types, n, nullptr, FS_BOOT | FS_DEV | FS_SVC);
 }
 
 zx::channel SystemInstance::CloneFs(const char* path) {

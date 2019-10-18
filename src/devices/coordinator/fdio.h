@@ -69,12 +69,14 @@ class DevmgrLauncher {
   // If |loader| is invalid, the default loader service is used.
   zx_status_t LaunchWithLoader(const zx::job& job, const char* name, zx::vmo executable,
                                zx::channel loader, const char* const* argv,
-                               const char** initial_envp, int stdiofd, const zx_handle_t* handles,
+                               const char** initial_envp, int stdiofd,
+                               const zx::resource& root_resource, const zx_handle_t* handles,
                                const uint32_t* types, size_t hcount, zx::process* out_proc,
                                uint32_t flags);
   zx_status_t Launch(const zx::job& job, const char* name, const char* const* argv,
-                     const char** envp, int stdiofd, const zx_handle_t* handles,
-                     const uint32_t* types, size_t hcount, zx::process* proc_out, uint32_t flags);
+                     const char** envp, int stdiofd, const zx::resource& root_resource,
+                     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
+                     zx::process* proc_out, uint32_t flags);
 
  private:
   FsProvider* fs_provider_;
