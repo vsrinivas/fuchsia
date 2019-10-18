@@ -41,7 +41,8 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 }  // namespace
 
 std::unique_ptr<DataProvider> DataProvider::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services) {
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    std::function<void()> after_timeout, zx::duration timeout) {
   Config config;
 
   // We use the default config included in the package of this component if no override config was
@@ -68,14 +69,21 @@ std::unique_ptr<DataProvider> DataProvider::TryCreate(
     }
   }
 
-  return std::make_unique<DataProvider>(dispatcher, std::move(services), config);
+  return std::make_unique<DataProvider>(dispatcher, std::move(services), config, after_timeout,
+                                        timeout);
 }
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services, const Config& config)
-    : dispatcher_(dispatcher), executor_(dispatcher), services_(services), config_(config) {}
+                           std::shared_ptr<sys::ServiceDirectory> services, const Config& config,
+                           std::function<void()> after_timeout, zx::duration timeout)
+    : dispatcher_(dispatcher),
+      executor_(dispatcher),
+      services_(services),
+      config_(config),
+      after_timeout_(dispatcher, after_timeout, timeout) {}
 
 void DataProvider::GetData(GetDataCallback callback) {
+  after_timeout_.Acquire();
   auto annotations =
       fit::join_promise_vector(
           GetAnnotations(dispatcher_, services_, config_.annotation_allowlist, kDataTimeout))
@@ -154,14 +162,16 @@ void DataProvider::GetData(GetDataCallback callback) {
                 return fit::ok(std::move(data));
               })
           .or_else([]() { return fit::error(ZX_ERR_INTERNAL); })
-          .then([callback = std::move(callback)](fit::result<Data, zx_status_t>& result) {
+          .then([this, callback = std::move(callback)](fit::result<Data, zx_status_t>& result) {
             callback(std::move(result));
+            after_timeout_.Release();
           });
 
   executor_.schedule_task(std::move(promise));
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
+  after_timeout_.Acquire();
   auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout)
                      .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                                    -> fit::result<Screenshot> {
@@ -180,12 +190,13 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
                        }
                        return fit::ok(std::move(screenshot));
                      })
-                     .then([callback = std::move(callback)](fit::result<Screenshot>& result) {
+                     .then([this, callback = std::move(callback)](fit::result<Screenshot>& result) {
                        if (!result.is_ok()) {
                          callback(/*screenshot=*/nullptr);
                        } else {
                          callback(std::make_unique<Screenshot>(result.take_value()));
                        }
+                       after_timeout_.Release();
                      });
 
   executor_.schedule_task(std::move(promise));
