@@ -2,36 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("lib") {
-  sources = [
-    "present_view.cc",
-    "present_view.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-
-  deps = [
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fxl",
-  ]
-}
-
 executable("present_view") {
   sources = [
     "main.cc",
   ]
 
   deps = [
-    ":lib",
+    "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/component/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//src/lib/pkg_url",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
