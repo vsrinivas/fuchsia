@@ -4,14 +4,27 @@
 
 use super::*;
 
+#[derive(Debug, Clone)]
+pub enum ControllerEvent {
+    PlaybackStatusChanged(PlaybackStatus),
+    TrackIdChanged(u64),
+    PlaybackPosChanged(u32),
+}
+
+pub type ControllerEventStream = mpsc::Receiver<ControllerEvent>;
+
 /// Controller interface for a remote peer returned by the PeerManager using the
 /// PeerControllerRequest stream for a given PeerControllerRequest.
 #[derive(Debug)]
-pub struct PeerController {
-    pub(super) peer: Arc<RemotePeer>,
+pub struct Controller {
+    peer: Arc<RemotePeer>,
 }
 
-impl PeerController {
+impl Controller {
+    pub fn new(peer: Arc<RemotePeer>) -> Controller {
+        Controller { peer }
+    }
+
     pub async fn send_avc_passthrough_keypress(&self, avc_keycode: u8) -> Result<(), Error> {
         self.peer.send_avc_passthrough_keypress(avc_keycode).await
     }
@@ -41,7 +54,8 @@ impl PeerController {
         }
     }
 
-    /// Informational only. Intended for logging only. Inherently racey.
+    /// For the FIDL test controller. Informational only and intended for logging only. The state is
+    /// inherently racey.
     pub fn is_connected(&self) -> bool {
         let connection = self.peer.control_channel.read();
         match *connection {
@@ -50,8 +64,9 @@ impl PeerController {
         }
     }
 
-    pub fn take_event_stream(&self) -> PeerControllerEventStream {
-        let (sender, receiver) = mpsc::channel(512);
+    /// Returns notification events from the peer.
+    pub fn take_event_stream(&self) -> ControllerEventStream {
+        let (sender, receiver) = mpsc::channel(2);
         self.peer.controller_listeners.lock().push(sender);
         receiver
     }

@@ -44,28 +44,19 @@ use crate::{
 };
 
 use command_handler::ControlChannelCommandHandler;
-pub use controller::PeerController;
+pub use controller::{Controller, ControllerEvent, ControllerEventStream};
 use remote_peer::{NotificationStream, PeerChannel, RemotePeer};
 
-#[derive(Debug, Clone)]
-pub enum PeerControllerEvent {
-    PlaybackStatusChanged(PlaybackStatus),
-    TrackIdChanged(u64),
-    PlaybackPosChanged(u32),
-}
-
-pub type PeerControllerEventStream = mpsc::Receiver<PeerControllerEvent>;
-
 #[derive(Debug)]
-pub struct PeerControllerRequest {
-    /// The peer id that the peer manager client wants obtain a peer controller for.
+pub struct ControllerRequest {
+    /// The peer id that the peer manager client wants obtain a controller for.
     peer_id: PeerId,
     /// The async reply back to the calling task with the PeerController.
-    reply: oneshot::Sender<PeerController>,
+    reply: oneshot::Sender<Controller>,
 }
 
-impl PeerControllerRequest {
-    pub fn new(peer_id: PeerId) -> (oneshot::Receiver<PeerController>, PeerControllerRequest) {
+impl ControllerRequest {
+    pub fn new(peer_id: PeerId) -> (oneshot::Receiver<Controller>, ControllerRequest) {
         let (sender, receiver) = oneshot::channel();
         (receiver, Self { peer_id: peer_id.clone(), reply: sender })
     }
@@ -80,7 +71,7 @@ pub struct PeerManager<'a> {
     /// Incoming requests to obtain a PeerController proxy to a given peer id. Typically requested
     /// by the frontend FIDL service. Using a channel so we can serialize all peer connection related
     /// functions on to peer managers single select loop.
-    peer_request: mpsc::Receiver<PeerControllerRequest>,
+    peer_request: mpsc::Receiver<ControllerRequest>,
 
     /// Futures waiting on an outgoing connect attempt to remote peer's control channel PSM.
     new_control_connection_futures:
@@ -99,7 +90,7 @@ pub struct PeerManager<'a> {
 impl<'a> PeerManager<'a> {
     pub fn new(
         profile_svc: Box<dyn ProfileService + Send + Sync>,
-        peer_request: mpsc::Receiver<PeerControllerRequest>,
+        peer_request: mpsc::Receiver<ControllerRequest>,
     ) -> Result<Self, FailureError> {
         Ok(Self {
             inner: Arc::new(PeerManagerInner::new(profile_svc)),
@@ -289,7 +280,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventPlaybackStatusChanged => {
                         let response = PlaybackStatusChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.broadcast_event(PeerControllerEvent::PlaybackStatusChanged(
+                        peer.broadcast_event(ControllerEvent::PlaybackStatusChanged(
                             response.playback_status(),
                         ));
                         Ok(false)
@@ -297,7 +288,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventTrackChanged => {
                         let response = TrackChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.broadcast_event(PeerControllerEvent::TrackIdChanged(
+                        peer.broadcast_event(ControllerEvent::TrackIdChanged(
                             response.identifier(),
                         ));
                         Ok(false)
@@ -305,7 +296,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventPlaybackPosChanged => {
                         let response = PlaybackPosChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.broadcast_event(PeerControllerEvent::PlaybackPosChanged(
+                        peer.broadcast_event(ControllerEvent::PlaybackPosChanged(
                             response.position(),
                         ));
                         Ok(false)
@@ -404,8 +395,7 @@ impl<'a> PeerManager<'a> {
                 },
                 request = self.peer_request.select_next_some() => {
                     let peer = inner.get_remote_peer(&request.peer_id);
-                    let peer_controller =
-                        PeerController { peer };
+                    let peer_controller = Controller::new(peer);
                     // ignoring error if we failed to reply.
                     let _ = request.reply.send(peer_controller);
                 },

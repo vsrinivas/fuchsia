@@ -38,7 +38,7 @@ pub struct RemotePeer {
     // browse_channel: RwLock<PeerChannel<AvtcpPeer>>,
     //
     /// Contains a vec of all PeerControllers that have taken an event stream waiting for events from this peer.
-    pub controller_listeners: Mutex<Vec<mpsc::Sender<PeerControllerEvent>>>,
+    pub controller_listeners: Mutex<Vec<mpsc::Sender<ControllerEvent>>>,
 
     /// Processes commands received as AVRCP target and holds state for continuations and requested
     /// notifications for the control channel. Only set once we have enough information to determine
@@ -61,7 +61,7 @@ impl RemotePeer {
     }
 
     /// Enumerates all listening controller_listeners queues and sends a clone of the event to each
-    pub fn broadcast_event(&self, event: PeerControllerEvent) {
+    pub fn broadcast_event(&self, event: ControllerEvent) {
         let mut listeners = self.controller_listeners.lock();
         // remove all the dead listeners from the list.
         listeners.retain(|i| !i.is_closed());

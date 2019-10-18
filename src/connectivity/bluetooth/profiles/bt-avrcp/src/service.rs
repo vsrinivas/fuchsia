@@ -26,7 +26,10 @@ use {
 
 use crate::{
     packets::PlaybackStatus as PacketPlaybackStatus,
-    peer::{PeerController, PeerControllerEvent, PeerControllerRequest},
+    peer::{
+        Controller, ControllerEvent as PeerControllerEvent,
+        ControllerRequest as PeerControllerRequest,
+    },
     types::PeerError,
 };
 
@@ -47,7 +50,7 @@ impl From<PeerError> for ControllerError {
 
 /// FIDL wrapper for a internal PeerController.
 struct AvrcpClientController {
-    controller: PeerController,
+    controller: Controller,
     fidl_stream: ControllerRequestStream,
     notification_filter: Notifications,
     position_change_interval: u32,
@@ -58,7 +61,7 @@ struct AvrcpClientController {
 impl AvrcpClientController {
     const EVENT_WINDOW_LIMIT: u32 = 3;
 
-    fn new(controller: PeerController, fidl_stream: ControllerRequestStream) -> Self {
+    fn new(controller: Controller, fidl_stream: ControllerRequestStream) -> Self {
         Self {
             controller,
             fidl_stream,
@@ -205,7 +208,7 @@ impl AvrcpClientController {
 
 /// FIDL wrapper for a internal PeerController for the test (ControllerExt) interface methods.
 struct TestAvrcpClientController {
-    controller: PeerController,
+    controller: Controller,
     fidl_stream: ControllerExtRequestStream,
 }
 
@@ -263,10 +266,7 @@ impl TestAvrcpClientController {
 }
 
 /// Spawns a future that facilitates communication between a PeerController and a FIDL client.
-pub fn spawn_avrcp_client_controller(
-    controller: PeerController,
-    fidl_stream: ControllerRequestStream,
-) {
+pub fn spawn_avrcp_client_controller(controller: Controller, fidl_stream: ControllerRequestStream) {
     fasync::spawn(
         async move {
             let mut acc = AvrcpClientController::new(controller, fidl_stream);
@@ -280,7 +280,7 @@ pub fn spawn_avrcp_client_controller(
 
 /// Spawns a future that facilitates communication between a PeerController and a test FIDL client.
 pub fn spawn_test_avrcp_client_controller(
-    controller: PeerController,
+    controller: Controller,
     fidl_stream: ControllerExtRequestStream,
 ) {
     fasync::spawn(
@@ -313,7 +313,7 @@ pub async fn avrcp_client_stream_handler<F>(
     spawn_fn: F,
 ) -> Result<(), failure::Error>
 where
-    F: Fn(PeerController, ControllerRequestStream),
+    F: Fn(Controller, ControllerRequestStream),
 {
     while let Some(PeerManagerRequest::GetControllerForTarget { peer_id, client, responder }) =
         stream.try_next().await?
@@ -358,7 +358,7 @@ pub async fn test_avrcp_client_stream_handler<F>(
     spawn_fn: F,
 ) -> Result<(), failure::Error>
 where
-    F: Fn(PeerController, ControllerExtRequestStream),
+    F: Fn(Controller, ControllerExtRequestStream),
 {
     while let Some(req) = stream.try_next().await? {
         match req {
@@ -429,7 +429,7 @@ mod tests {
 
         let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
 
-        let test_fn = |_controller: PeerController, _fidl_stream: ControllerRequestStream| {
+        let test_fn = |_controller: Controller, _fidl_stream: ControllerRequestStream| {
             control_handle.shutdown();
         };
 
@@ -473,7 +473,7 @@ mod tests {
 
         let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
 
-        let test_fn = |_controller: PeerController, _fidl_stream: ControllerExtRequestStream| {
+        let test_fn = |_controller: Controller, _fidl_stream: ControllerExtRequestStream| {
             control_handle.shutdown();
         };
 
