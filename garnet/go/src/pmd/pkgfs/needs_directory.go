@@ -11,7 +11,6 @@ import (
 )
 
 // needsRoot presents the following tree:
-//  /pkgfs/needs/blobs/$BLOB_HASH
 //  /pkgfs/needs/packages/$PACKAGE_HASH/$BLOB_HASH
 // the files are "needsFile" vnodes, so they're writable to blobfs.
 type needsRoot struct {
@@ -37,12 +36,6 @@ func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 	parts := strings.SplitN(name, "/", 2)
 
 	switch parts[0] {
-	case "blobs":
-		nbd := &needsBlobsDir{unsupportedDirectory: unsupportedDirectory("/needs/blobs"), fs: d.fs}
-		if len(parts) > 1 {
-			return nbd.Open(parts[1], flags)
-		}
-		return nil, nbd, nil, nil
 	case "packages":
 		npr := &needsPkgRoot{unsupportedDirectory: unsupportedDirectory("/needs/packages"), fs: d.fs}
 		if len(parts) > 1 {
@@ -60,7 +53,7 @@ func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 }
 
 func (d *needsRoot) Read() ([]fs.Dirent, error) {
-	return []fs.Dirent{dirDirEnt("blobs"), dirDirEnt("packages")}, nil
+	return []fs.Dirent{dirDirEnt("packages")}, nil
 }
 
 func (d *needsRoot) Stat() (int64, time.Time, time.Time, error) {
@@ -166,51 +159,6 @@ func (d *needsPkgDir) Read() ([]fs.Dirent, error) {
 }
 
 func (d *needsPkgDir) Stat() (int64, time.Time, time.Time, error) {
-	// TODO(raggi): provide more useful values
-	return 0, d.fs.mountTime, d.fs.mountTime, nil
-}
-
-type needsBlobsDir struct {
-	unsupportedDirectory
-
-	fs *Filesystem
-}
-
-func (d *needsBlobsDir) Dup() (fs.Directory, error) {
-	return d, nil
-}
-
-func (d *needsBlobsDir) Close() error {
-	return nil
-}
-
-func (d *needsBlobsDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
-	name = clean(name)
-	if name == "" {
-		return nil, d, nil, nil
-	}
-
-	if strings.Contains(name, "/") {
-		return nil, nil, nil, fs.ErrNotFound
-	}
-
-	if !d.fs.index.HasNeed(name) {
-		return nil, nil, nil, fs.ErrNotFound
-	}
-
-	return &installFile{fs: d.fs, name: name, isPkg: false}, nil, nil, nil
-}
-
-func (d *needsBlobsDir) Read() ([]fs.Dirent, error) {
-	names := d.fs.index.NeedsList()
-	dirents := make([]fs.Dirent, len(names))
-	for i := range names {
-		dirents[i] = fileDirEnt(names[i])
-	}
-	return dirents, nil
-}
-
-func (d *needsBlobsDir) Stat() (int64, time.Time, time.Time, error) {
 	// TODO(raggi): provide more useful values
 	return 0, d.fs.mountTime, d.fs.mountTime, nil
 }

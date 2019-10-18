@@ -162,29 +162,16 @@ func TestAddPackage(t *testing.T) {
 	}
 	sort.Strings(expectedNeeds)
 
-	f, err = iou.OpenFrom(pkgfsDir, filepath.Join("needs", "blobs"), os.O_RDONLY|syscall.O_DIRECTORY, 0777)
-	panicerr(err)
-	needsBlobs, err := f.Readdirnames(256)
-	panicerr(f.Close())
-	panicerr(err)
-
 	f, err = iou.OpenFrom(pkgfsDir, filepath.Join("needs", "packages", merkleroot), os.O_RDONLY|syscall.O_DIRECTORY, 0777)
 	needsPkgs, err := f.Readdirnames(256)
 	panicerr(f.Close())
 	panicerr(err)
 
-	if got, want := len(needsBlobs), len(expectedNeeds); got != want {
-		t.Errorf("needs/blobs/* count: got %d, want %d", got, want)
-	}
 	if got, want := len(needsPkgs), len(expectedNeeds); got != want {
 		t.Errorf("needs/packages/{root}/* count: got %d, want %d", got, want)
 	}
-	sort.Strings(needsBlobs)
 	sort.Strings(needsPkgs)
 	for i := range expectedNeeds {
-		if got, want := filepath.Base(needsBlobs[i]), expectedNeeds[i]; got != want {
-			t.Errorf("needs/blobs/{file} got %q, want %q", got, want)
-		}
 		if got, want := filepath.Base(needsPkgs[i]), expectedNeeds[i]; got != want {
 			t.Errorf("needs/packages/{root}/{file} got %q, want %q", got, want)
 		}

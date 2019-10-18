@@ -243,18 +243,11 @@ func (idx *DynamicIndex) Fulfill(need string) {
 	}
 }
 
-func (idx *DynamicIndex) HasNeed(root string) bool {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	_, found := idx.needs[root]
-	return found
-}
-
 func (idx *DynamicIndex) PkgHasNeed(pkg, root string) bool {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
+	// TODO(computerdruid): replace this with logic that uses idx.waiting and delete idx.needs
 	needs, found := idx.needs[pkg]
 	if !found {
 		return found
@@ -265,18 +258,6 @@ func (idx *DynamicIndex) PkgHasNeed(pkg, root string) bool {
 		}
 	}
 	return false
-}
-
-func (idx *DynamicIndex) NeedsList() []string {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	names := make([]string, 0, len(idx.needs))
-	for name := range idx.needs {
-		names = append(names, name)
-	}
-
-	return names
 }
 
 func (idx *DynamicIndex) PkgNeedsList(pkgRoot string) []string {
