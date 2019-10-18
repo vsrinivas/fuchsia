@@ -19,15 +19,17 @@ namespace {
 zx_status_t LaunchBlobfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
   FshostFsProvider fs_provider;
   DevmgrLauncher launcher(&fs_provider);
-  return launcher.Launch(*zx::job::default_job(), "blobfs:/blob", argv, nullptr, -1, hnd,
-                         ids, len, nullptr, FS_FOR_FSPROC);
+  return launcher.Launch(*zx::job::default_job(), "blobfs:/blob", argv, nullptr, -1,
+                         /* TODO(fxb/32044) */ zx::resource(), hnd, ids, len, nullptr,
+                         FS_FOR_FSPROC);
 }
 
 zx_status_t LaunchMinfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
   FshostFsProvider fs_provider;
   DevmgrLauncher launcher(&fs_provider);
-  return launcher.Launch(*zx::job::default_job(), "minfs:/data", argv, nullptr, -1, hnd,
-                         ids, len, nullptr, FS_FOR_FSPROC);
+  return launcher.Launch(*zx::job::default_job(), "minfs:/data", argv, nullptr, -1,
+                         /* TODO(fxb/32044) */ zx::resource(), hnd, ids, len, nullptr,
+                         FS_FOR_FSPROC);
 }
 
 }  // namespace
