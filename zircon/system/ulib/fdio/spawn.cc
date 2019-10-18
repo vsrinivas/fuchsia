@@ -730,6 +730,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   if (!shared_dirs.empty() || (flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0) {
     status = fdio_ns_export_root(&flat);
     if (status != ZX_OK) {
+      report_error(err_msg, "Could not make copy of root namespace: %d", status);
       goto cleanup;
     }
 

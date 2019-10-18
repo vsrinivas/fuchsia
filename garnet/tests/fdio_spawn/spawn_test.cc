@@ -257,6 +257,7 @@ TEST(SpawnTest, SpawnEnviron) {
   zx::process process;
   int64_t return_code;
   const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
   setenv("SPAWN_TEST_PARENT", "1", 1);
 
@@ -264,8 +265,8 @@ TEST(SpawnTest, SpawnEnviron) {
     const char* argv[] = {bin_path, "--env", "empty", nullptr};
     const char* env[] = {nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC, bin_path, argv, env, 0,
-                            nullptr, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 61);
   }
@@ -274,8 +275,8 @@ TEST(SpawnTest, SpawnEnviron) {
     const char* argv[] = {bin_path, "--env", "one", nullptr};
     const char* env[] = {"SPAWN_TEST_CHILD=1", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC, bin_path, argv, env, 0,
-                            nullptr, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 62);
   }
@@ -284,8 +285,8 @@ TEST(SpawnTest, SpawnEnviron) {
     const char* argv[] = {bin_path, "--env", "one", nullptr};
     const char* env[] = {"SPAWN_TEST_CHILD=1", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, env, 0,
-                            nullptr, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 62);
   }
@@ -294,8 +295,8 @@ TEST(SpawnTest, SpawnEnviron) {
     const char* argv[] = {bin_path, "--env", "two", nullptr};
     const char* env[] = {"SPAWN_TEST_CHILD=1", "SPAWN_TEST_CHILD2=1", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, env, 0,
-                            nullptr, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 63);
   }
@@ -303,8 +304,8 @@ TEST(SpawnTest, SpawnEnviron) {
   {
     const char* argv[] = {bin_path, "--env", "clone", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 0,
-                            nullptr, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 64);
   }
@@ -317,12 +318,13 @@ TEST(SpawnTest, SpawnActionsFd) {
   zx::process process;
   int64_t return_code;
   const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
   {
     const char* argv[] = {nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 0,
-                            nullptr, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
+                            nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, status) << err_msg;
   }
 
   {
@@ -332,8 +334,8 @@ TEST(SpawnTest, SpawnActionsFd) {
 
     const char* argv[] = {nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                            &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 42);
 
@@ -355,8 +357,8 @@ TEST(SpawnTest, SpawnActionsFd) {
 
     const char* argv[] = {bin_path, "--action", "clone-fd", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                            &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 71);
     EXPECT_TRUE(has_fd(fd));
@@ -376,8 +378,8 @@ TEST(SpawnTest, SpawnActionsFd) {
 
     const char* argv[] = {bin_path, "--action", "transfer-fd", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                            &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 72);
     EXPECT_FALSE(has_fd(fd));
@@ -399,8 +401,8 @@ TEST(SpawnTest, SpawnActionsFd) {
 
     const char* argv[] = {bin_path, "--action", "clone-and-transfer-fd", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 2,
-                            actions, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            actions, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 73);
     EXPECT_FALSE(has_fd(fd));
@@ -412,6 +414,7 @@ TEST(SpawnTest, SpawnActionsAddNamespaceEntry) {
   zx::process process;
   int64_t return_code;
   const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
   {
     zx::channel h1, h2;
@@ -424,8 +427,8 @@ TEST(SpawnTest, SpawnActionsAddNamespaceEntry) {
 
     const char* argv[] = {bin_path, "--action", "ns-entry", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                            &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 74);
   }
@@ -436,6 +439,7 @@ TEST(SpawnTest, SpawnActionAddHandle) {
   zx::process process;
   int64_t return_code;
   const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
   {
     zx::channel h1, h2;
@@ -448,8 +452,8 @@ TEST(SpawnTest, SpawnActionAddHandle) {
 
     const char* argv[] = {bin_path, "--action", "add-handle", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                            &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 75);
   }
@@ -460,6 +464,7 @@ TEST(SpawnTest, SpawnActionsSetName) {
   zx::process process;
   int64_t return_code;
   const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
   {
     fdio_spawn_action_t actions[2];
@@ -470,8 +475,8 @@ TEST(SpawnTest, SpawnActionsSetName) {
 
     const char* argv[] = {bin_path, nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 2,
-                            actions, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            actions, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 43);
     char name[ZX_MAX_NAME_LEN];
@@ -485,6 +490,7 @@ TEST(SpawnTest, SpawnActionsCloneDir) {
   zx::process process;
   int64_t return_code;
   const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
   {
     fdio_spawn_action_t action;
@@ -493,8 +499,8 @@ TEST(SpawnTest, SpawnActionsCloneDir) {
 
     const char* argv[] = {bin_path, "--flags", "namespace", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC, bin_path, argv, nullptr, 1,
-                            &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 53);
   }
@@ -512,8 +518,8 @@ TEST(SpawnTest, SpawnActionsCloneDir) {
 
     const char* argv[] = {bin_path, "--action", "ns-entry", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS, bin_path, argv,
-                            nullptr, 1, &action, process.reset_and_get_address(), nullptr);
-    EXPECT_EQ(ZX_OK, status);
+                            nullptr, 1, &action, process.reset_and_get_address(), err_msg);
+    EXPECT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 74);
 
@@ -537,8 +543,8 @@ TEST(SpawnTest, SpawnActionsCloneDir) {
 
     const char* argv[] = {bin_path, "--stat", "/foo/bar", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS, bin_path, argv,
-                            nullptr, 1, &action, process.reset_and_get_address(), nullptr);
-    EXPECT_EQ(ZX_OK, status);
+                            nullptr, 1, &action, process.reset_and_get_address(), err_msg);
+    EXPECT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 76);
 
@@ -561,8 +567,8 @@ TEST(SpawnTest, SpawnActionsCloneDir) {
 
     const char* argv[] = {bin_path, "--stat", "/foo/bar", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS, bin_path, argv,
-                            nullptr, 1, &action, process.reset_and_get_address(), nullptr);
-    EXPECT_EQ(ZX_OK, status);
+                            nullptr, 1, &action, process.reset_and_get_address(), err_msg);
+    EXPECT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, -6);
 
@@ -579,8 +585,8 @@ TEST(SpawnTest, SpawnActionsCloneDir) {
 
     const char* argv[] = {bin_path, "--action", "ns-entry", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS, bin_path, argv,
-                            nullptr, 1, &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            nullptr, 1, &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, -4);
   }
@@ -592,6 +598,7 @@ TEST(SpawnTest, SpawnErrors) {
   int64_t return_code;
   const char* bin_path = kSpawnChild;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  char err_msg2[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   const char* argv[] = {bin_path, nullptr};
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path,
@@ -599,7 +606,7 @@ TEST(SpawnTest, SpawnErrors) {
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                           nullptr, process.reset_and_get_address(), nullptr));
+                           nullptr, process.reset_and_get_address(), err_msg2));
 
   {
     fdio_spawn_action_t action;
@@ -609,7 +616,7 @@ TEST(SpawnTest, SpawnErrors) {
 
     ASSERT_EQ(ZX_ERR_INVALID_ARGS,
               fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                             &action, process.reset_and_get_address(), nullptr));
+                             &action, process.reset_and_get_address(), err_msg2));
   }
 
   {
@@ -620,7 +627,7 @@ TEST(SpawnTest, SpawnErrors) {
 
     ASSERT_EQ(ZX_ERR_INVALID_ARGS,
               fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                             &action, process.reset_and_get_address(), nullptr));
+                             &action, process.reset_and_get_address(), err_msg2));
   }
 
   {
@@ -630,7 +637,7 @@ TEST(SpawnTest, SpawnErrors) {
 
     ASSERT_EQ(ZX_ERR_INVALID_ARGS,
               fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                             &action, process.reset_and_get_address(), nullptr));
+                             &action, process.reset_and_get_address(), err_msg2));
   }
 
   {
@@ -691,8 +698,8 @@ TEST(SpawnTest, SpawnErrors) {
     action.fd.target_fd = 21;
 
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                            &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status) << err_msg;
     ASSERT_EQ(0, close(fd));
   }
 
@@ -708,8 +715,8 @@ TEST(SpawnTest, SpawnErrors) {
     action.fd.target_fd = 21;
 
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 1,
-                            &action, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+                            &action, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status) << err_msg;
     ASSERT_EQ(-1, close(fd));
   }
 
@@ -727,8 +734,8 @@ TEST(SpawnTest, SpawnErrors) {
 
     const char* argv[] = {bin_path, "--action", "ns-entry", nullptr};
     status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL_EXCEPT_NS, bin_path, argv,
-                            nullptr, 1, &action, process.reset_and_get_address(), nullptr);
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+                            nullptr, 1, &action, process.reset_and_get_address(), err_msg);
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status) << err_msg;
 
     // Unbind the test namespace.
     EXPECT_EQ(ZX_OK, fdio_ns_unbind(ns, "/foo/bar/baz"));
@@ -740,6 +747,7 @@ TEST(SpawnTest, SpawnVmo) {
   zx::process process;
   int64_t return_code;
   const char* bin_path = kSpawnChild;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
   {
     int fd;
@@ -752,8 +760,8 @@ TEST(SpawnTest, SpawnVmo) {
 
     const char* argv[] = {bin_path, nullptr};
     status = fdio_spawn_vmo(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, vmo.release(), argv, nullptr,
-                            0, nullptr, process.reset_and_get_address(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+                            0, nullptr, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 43);
   }
