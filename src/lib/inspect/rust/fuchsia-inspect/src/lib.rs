@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! The Fuchsia Inspect format for structured metrics trees.
+
 use {
     crate::{
         format::{
@@ -174,12 +176,14 @@ macro_rules! inspect_type_impl {
 
             #[cfg(test)]
             impl $name {
+                #[allow(missing_docs)]
                 pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
                     self.inner.as_ref().and_then(|inner| {
                         inner.state.lock().heap.get_block(inner.block_index).ok()
                     })
                 }
 
+                #[allow(missing_docs)]
                 pub fn block_index(&self) -> u32 {
                     self.inner.as_ref().unwrap().block_index
                 }
@@ -241,6 +245,7 @@ macro_rules! create_numeric_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
             #[must_use]
+            #[allow(missing_docs)]
             pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
                 -> [<$name_cap Property>] {
                     self.inner.as_ref().and_then(|inner| {
@@ -266,6 +271,7 @@ macro_rules! create_array_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
             #[must_use]
+            #[allow(missing_docs)]
             pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: usize)
                 -> [<$name_cap ArrayProperty>] {
                     self.[<create_ $name _array_internal>](name, slots, ArrayFormat::Default)
@@ -288,6 +294,7 @@ macro_rules! create_array_property_fn {
     };
 }
 
+#[allow(missing_docs)]
 pub struct LinearHistogramParams<T> {
     pub floor: T,
     pub step_size: T,
@@ -302,6 +309,7 @@ macro_rules! create_linear_histogram_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
             #[must_use]
+            #[allow(missing_docs)]
             pub fn [<create_ $name _linear_histogram>](
                 &self, name: impl AsRef<str>, params: LinearHistogramParams<$type>)
                 -> [<$name_cap LinearHistogramProperty>] {
@@ -320,6 +328,7 @@ macro_rules! create_linear_histogram_property_fn {
     };
 }
 
+#[allow(missing_docs)]
 pub struct ExponentialHistogramParams<T> {
     pub floor: T,
     pub initial_step: T,
@@ -335,6 +344,7 @@ macro_rules! create_exponential_histogram_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
             #[must_use]
+            #[allow(missing_docs)]
             pub fn [<create_ $name _exponential_histogram>](
               &self, name: impl AsRef<str>, params: ExponentialHistogramParams<$type>)
               -> [<$name_cap ExponentialHistogramProperty>] {
@@ -519,6 +529,7 @@ impl Drop for LazyNode {
 
 /// Trait implemented by properties.
 pub trait Property<'t> {
+    #[allow(missing_docs)]
     type Type;
 
     /// Set the property value to |value|.
@@ -661,7 +672,9 @@ macro_rules! property {
 property!(String, str, value.as_bytes());
 property!(Bytes, [u8], value);
 
+#[allow(missing_docs)]
 pub trait ArrayProperty {
+    #[allow(missing_docs)]
     type Type;
 
     /// Set the array value to |value| at the given |index|.
@@ -724,10 +737,14 @@ array_property!(int, Int, i64);
 array_property!(uint, Uint, u64);
 array_property!(double, Double, f64);
 
+#[allow(missing_docs)]
 pub trait HistogramProperty {
+    #[allow(missing_docs)]
     type Type;
 
+    #[allow(missing_docs)]
     fn insert(&self, value: Self::Type);
+    #[allow(missing_docs)]
     fn insert_multiple(&self, value: Self::Type, count: usize);
 }
 

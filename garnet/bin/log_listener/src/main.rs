@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
+//! `log_listener` listens to messages from `fuchsia.logger.Log` and prints them to stdout and/or
+//! writes them to disk.
+
 use chrono::TimeZone;
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;

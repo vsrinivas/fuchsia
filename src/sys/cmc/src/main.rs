@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
+//! `cmc` is the Component Manifest Compiler.
+
 use cm_json::Error;
 use std::fs;
 use std::path::PathBuf;

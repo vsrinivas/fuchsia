@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
+//! Searches the local component index for matching programs.
+
 use failure::{err_msg, format_err, Error, ResultExt};
 use fidl_fuchsia_sys_index::{ComponentIndexMarker, FuzzySearchError};
 use fuchsia_async as fasync;

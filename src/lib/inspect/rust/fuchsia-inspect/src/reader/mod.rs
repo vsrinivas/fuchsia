@@ -24,6 +24,7 @@ use {
 
 pub use crate::format::block::ArrayFormat;
 
+#[allow(missing_docs)]
 pub mod snapshot;
 
 /// Each item of the iterator returns pairs (Vec<String>, Property) where the string vector
@@ -202,12 +203,14 @@ pub enum Property {
     UintArray(String, ArrayValue<u64>),
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Clone)]
 pub struct ArrayValue<T> {
     pub format: ArrayFormat,
     pub values: Vec<T>,
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq)]
 pub struct ArrayBucket<T> {
     pub floor: T,
@@ -222,10 +225,12 @@ impl<T> ArrayBucket<T> {
 }
 
 impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayValue<T> {
+    #[allow(missing_docs)]
     pub fn new(values: Vec<T>, format: ArrayFormat) -> Self {
         Self { format, values }
     }
 
+    #[allow(missing_docs)]
     pub fn buckets(&self) -> Option<Vec<ArrayBucket<T>>> {
         match self.format {
             ArrayFormat::Default => None,
@@ -284,6 +289,7 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayValue<T> 
 }
 
 impl Property {
+    #[allow(missing_docs)]
     pub fn name(&self) -> &str {
         match self {
             Property::String(name, _)

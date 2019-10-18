@@ -19,6 +19,7 @@ pub struct Rule {
     path_prefix_replacement: String,
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Eq)]
 pub struct RuleInspectState {
     _host_match_property: inspect::StringProperty,
@@ -32,6 +33,7 @@ pub struct RuleInspectState {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
 pub enum RuleConfig {
+    #[allow(missing_docs)]
     #[serde(rename = "1")]
     Version1(Vec<Rule>),
 }
@@ -122,6 +124,7 @@ impl Rule {
         })
     }
 
+    #[allow(missing_docs)]
     pub fn create_inspect_state(&self, node: inspect::Node) -> RuleInspectState {
         RuleInspectState {
             _host_match_property: node.create_string("host_match", &self.host_match),

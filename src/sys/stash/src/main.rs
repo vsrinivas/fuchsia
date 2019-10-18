@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
+//! `stash` provides key/value storage to components.
+
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
 use fuchsia_async as fasync;

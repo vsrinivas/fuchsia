@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 pub mod bitfields;
+#[allow(missing_docs)]
 pub mod block;
+#[allow(missing_docs)]
 pub mod block_type;
+#[allow(missing_docs)]
 pub mod constants;

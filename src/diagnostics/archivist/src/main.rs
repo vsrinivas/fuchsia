@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! The Archivist collects and stores diagnostic data from components.
+
 #![allow(dead_code)]
+#![warn(missing_docs)]
 
 use {
     failure::Error,

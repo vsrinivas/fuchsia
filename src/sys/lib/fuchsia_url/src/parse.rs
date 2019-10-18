@@ -6,7 +6,7 @@ fn lowercase_alphanumeric(b: u8) -> bool {
     (b >= b'0' && b <= b'9') || (b >= b'a' && b <= b'z')
 }
 
-// Check if a string conforms to r"^[0-9a-z\-\._]{1,100}$"
+/// Check if a string conforms to r"^[0-9a-z\-\._]{1,100}$"
 pub fn is_name(string: &str) -> bool {
     let len = string.len();
     if len == 0 || len > 100 {
@@ -15,7 +15,7 @@ pub fn is_name(string: &str) -> bool {
     string.bytes().all(|b| lowercase_alphanumeric(b) || b == b'-' || b == b'.' || b == b'_')
 }
 
-// Check if a string conforms to r"^[0-9a-z]{64}$"
+/// Check if a string conforms to r"^[0-9a-z]{64}$"
 pub fn is_hash(string: &str) -> bool {
     if string.len() != 64 {
         return false;

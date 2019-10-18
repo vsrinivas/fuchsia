@@ -7,6 +7,7 @@ use {
     std::fmt,
 };
 
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive)]
 pub enum BlockType {
     // Contains index of the next free block of the same order.
@@ -67,6 +68,7 @@ impl fmt::Display for BlockType {
 }
 
 impl BlockType {
+    #[allow(missing_docs)]
     pub fn is_any_value(&self) -> bool {
         match *self {
             BlockType::NodeValue
@@ -80,6 +82,7 @@ impl BlockType {
         }
     }
 
+    #[allow(missing_docs)]
     pub fn is_numeric_value(&self) -> bool {
         match *self {
             BlockType::IntValue | BlockType::UintValue | BlockType::DoubleValue => true,
@@ -87,6 +90,7 @@ impl BlockType {
         }
     }
 
+    #[allow(missing_docs)]
     pub fn is_node_or_tombstone(&self) -> bool {
         match *self {
             BlockType::NodeValue | BlockType::Tombstone => true,

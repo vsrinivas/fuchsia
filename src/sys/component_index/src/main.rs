@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
+//! `component_index` provides a fuzzy search for locally-known component URLs.
+
 use failure::{Error, ResultExt};
 use fidl_fuchsia_sys_index::{
     ComponentIndexRequest, ComponentIndexRequestStream, FuzzySearchError,

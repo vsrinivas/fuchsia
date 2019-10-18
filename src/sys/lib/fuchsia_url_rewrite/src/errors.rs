@@ -4,6 +4,7 @@
 
 use failure::Fail;
 
+#[allow(missing_docs)]
 #[derive(Fail, Debug, PartialEq, Eq)]
 pub enum RuleParseError {
     #[fail(display = "invalid hostname")]
@@ -16,6 +17,7 @@ pub enum RuleParseError {
     InconsistentPaths,
 }
 
+#[allow(missing_docs)]
 #[derive(Fail, Debug, PartialEq, Eq)]
 pub enum RuleDecodeError {
     #[fail(display = "unknown variant")]

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
 use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints::{create_proxy, ServerEnd};
 use fidl_fuchsia_io::{DirectoryProxy, FileMarker, NodeMarker};

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(missing_docs)]
+
 use bitfield::bitfield;
 
 bitfield! {
@@ -33,6 +35,7 @@ bitfield! {
     pub value, _: 63, 0;
 }
 
+#[allow(missing_docs)]
 bitfield! {
     /// Represents the payload of inspect VMO Blocks (except for EXTENT and NAME).
     pub struct Payload(u64);

@@ -147,6 +147,7 @@ macro_rules! assert_inspect_tree {
     }};
 }
 
+#[allow(missing_docs)]
 pub trait NodeHierarchyGetter {
     fn get_node_hierarchy(&self) -> Cow<NodeHierarchy>;
 }
@@ -206,10 +207,12 @@ impl TreeAssertion {
         }
     }
 
+    #[allow(missing_docs)]
     pub fn add_property_assertion(&mut self, key: &str, assertion: Box<dyn PropertyAssertion>) {
         self.properties.push((key.to_string(), assertion));
     }
 
+    #[allow(missing_docs)]
     pub fn add_child_assertion(&mut self, mut assertion: TreeAssertion) {
         assertion.path = format!("{}.{}", self.path, assertion.name);
         self.children.push(assertion);
@@ -256,6 +259,7 @@ impl TreeAssertion {
     }
 }
 
+#[allow(missing_docs)]
 pub trait PropertyAssertion {
     /// Check whether |actual| property satisfies criteria. Return `Ok` if assertion passes and
     /// `Error` if assertion fails.

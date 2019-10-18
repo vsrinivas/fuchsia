@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
+//! `cs` performs a Component Search on the current system.
+
 use cs::inspect::{generate_inspect_object_tree, InspectObject};
 use failure::{err_msg, Error};
 use fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue};
