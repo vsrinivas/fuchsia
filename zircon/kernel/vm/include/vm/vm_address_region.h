@@ -330,14 +330,6 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   // search for a spot to allocate for a region of a given size
   zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot);
 
-  // Allocators
-  zx_status_t LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                                          vaddr_t* spot);
-  zx_status_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                        uint arch_mmu_flags, vaddr_t* spot);
-  zx_status_t CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                     uint arch_mmu_flags, vaddr_t* spot);
-
   // Utility for allocators for iterating over gaps between allocations
   // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
   // If func returns false, the iteration stops.  gap_base will be aligned in

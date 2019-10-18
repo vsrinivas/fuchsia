@@ -498,24 +498,6 @@ not_found:
   return true;  // not_found: stop search
 }
 
-zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
-                                             vaddr_t* spot) {
-  canary_.Assert();
-  DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
-
-  LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu\n", this, size, align_pow2);
-
-  if (aspace_->is_aslr_enabled()) {
-    if (flags_ & VMAR_FLAG_COMPACT) {
-      return CompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags, spot);
-    } else {
-      return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags, spot);
-    }
-  }
-  return LinearRegionAllocatorLocked(size, align_pow2, arch_mmu_flags, spot);
-}
-
 bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
   canary_.Assert();
   DEBUG_ASSERT(ve != nullptr);
@@ -832,38 +814,6 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
   return ZX_OK;
 }
 
-zx_status_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                         uint arch_mmu_flags, vaddr_t* spot) {
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
-
-  const vaddr_t base = 0;
-
-  if (align_pow2 < PAGE_SIZE_SHIFT) {
-    align_pow2 = PAGE_SIZE_SHIFT;
-  }
-  const vaddr_t align = 1UL << align_pow2;
-
-  // Find the first gap in the address space which can contain a region of the
-  // requested size.
-  auto before_iter = subregions_.end();
-  auto after_iter = subregions_.begin();
-
-  do {
-    if (CheckGapLocked(before_iter, after_iter, spot, base, align, size, 0, arch_mmu_flags)) {
-      if (*spot != static_cast<vaddr_t>(-1)) {
-        return ZX_OK;
-      } else {
-        return ZX_ERR_NO_MEMORY;
-      }
-    }
-
-    before_iter = after_iter++;
-  } while (before_iter.IsValid());
-
-  // couldn't find anything
-  return ZX_ERR_NO_MEMORY;
-}
-
 template <typename F>
 void VmAddressRegion::ForEachGap(F func, uint8_t align_pow2) {
   const vaddr_t align = 1UL << align_pow2;
@@ -901,26 +851,30 @@ constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, ui
 
 }  // namespace
 
-// Perform allocations for VMARs that aren't using the COMPACT policy. This allocator works by
-// choosing uniformly at random from a set of positions that could satisfy the allocation. The set
-// of positions are the 'left' most positions of the address space and are capped by the address
-// spaces entropy limit.
-zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size,
-                                                                       uint8_t align_pow2,
-                                                                       uint arch_mmu_flags,
-                                                                       vaddr_t* spot) {
+// Perform allocations for VMARs. This allocator works by choosing uniformly at random from a set of
+// positions that could satisfy the allocation. The set of positions are the 'left' most positions
+// of the address space and are capped by the address entropy limit. The entropy limit is retrieved
+// from the address space, and can vary based on whether the user has requested compact allocations
+// or not.
+zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
+                                             vaddr_t* spot) {
+  canary_.Assert();
+  DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
   DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
   DEBUG_ASSERT(spot);
+
+  LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu\n", this, size, align_pow2);
 
   align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
   const vaddr_t align = 1UL << align_pow2;
 
   // Ensure our candidate calculation shift will not overflow.
-  DEBUG_ASSERT(aspace_->AslrEntropyBits() < sizeof(size_t) * 8);
+  const uint8_t entropy = aspace_->AslrEntropyBits(flags_ & VMAR_FLAG_COMPACT);
+  DEBUG_ASSERT(entropy < sizeof(size_t) * 8);
   // Calculate the number of spaces that we can fit this allocation in.
   size_t candidate_spaces = 0;
   // This is the maximum number of spaces we need to consider based on our desired entropy.
-  const size_t max_candidate_spaces = 1ul << aspace_->AslrEntropyBits();
+  const size_t max_candidate_spaces = 1ul << entropy;
   ForEachGap(
       [align, align_pow2, size, &candidate_spaces, &max_candidate_spaces](vaddr_t gap_base,
                                                                           size_t gap_len) -> bool {
@@ -946,7 +900,15 @@ zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t si
   }
 
   // Choose the index of the allocation to use.
-  size_t selected_index = aspace_->AslrPrng().RandInt(candidate_spaces);
+  //
+  // Avoid calling the PRNG when ASLR is disabled, as it won't be initialized.
+  size_t selected_index;
+  if (candidate_spaces > 1) {
+    DEBUG_ASSERT(aspace_->is_aslr_enabled());
+    selected_index = aspace_->AslrPrng().RandInt(candidate_spaces);
+  } else {
+    selected_index = 0;
+  }
   DEBUG_ASSERT(selected_index < candidate_spaces);
 
   // Find which allocation we picked.
@@ -986,79 +948,4 @@ zx_status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t si
     return ZX_OK;
   }
   panic("Unexpected allocation failure\n");
-}
-
-// The COMPACT allocator begins by picking a random offset in the region to
-// start allocations at, and then places new allocations to the left and right
-// of the original region with small random-length gaps between.
-zx_status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                                    uint arch_mmu_flags,
-                                                                    vaddr_t* spot) {
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
-
-  align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
-  const vaddr_t align = 1UL << align_pow2;
-
-  if (align > PAGE_SIZE) {
-    // TODO(ZX-3978): the semi-compact allocator does not support
-    // larger than 4KB alignments.
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (unlikely(subregions_.size() == 0)) {
-    return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags, spot);
-  }
-
-  // Decide if we're allocating before or after the existing allocations, and
-  // how many gap pages to use.
-  bool alloc_before;
-  size_t num_gap_pages;
-  {
-    uint8_t entropy;
-    aspace_->AslrPrng().Draw(&entropy, sizeof(entropy));
-    alloc_before = entropy & 1;
-    num_gap_pages = (entropy >> 1) + 1;
-  }
-
-  // Try our first choice for *num_gap_pages*, but if that fails, try fewer
-  for (size_t gap_pages = num_gap_pages; gap_pages > 0; gap_pages >>= 1) {
-    // Try our first choice for *alloc_before*, but if that fails, try the other
-    for (size_t i = 0; i < 2; ++i, alloc_before = !alloc_before) {
-      ChildList::iterator before_iter;
-      ChildList::iterator after_iter;
-      vaddr_t chosen_base;
-      if (alloc_before) {
-        before_iter = subregions_.end();
-        after_iter = subregions_.begin();
-
-        vaddr_t base;
-        if (sub_overflow(after_iter->base(), size, &base) ||
-            sub_overflow(base, PAGE_SIZE * gap_pages, &base)) {
-          continue;
-        }
-
-        chosen_base = base;
-      } else {
-        before_iter = --subregions_.end();
-        after_iter = subregions_.end();
-        DEBUG_ASSERT(before_iter.IsValid());
-
-        vaddr_t base;
-        if (add_overflow(before_iter->base(), before_iter->size(), &base) ||
-            add_overflow(base, PAGE_SIZE * gap_pages, &base)) {
-          continue;
-        }
-
-        chosen_base = base;
-      }
-
-      if (CheckGapLocked(before_iter, after_iter, spot, chosen_base, align, size, 0,
-                         arch_mmu_flags) &&
-          *spot != static_cast<vaddr_t>(-1)) {
-        return ZX_OK;
-      }
-    }
-  }
-
-  return ZX_ERR_NO_MEMORY;
 }

@@ -173,7 +173,9 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
     return aslr_prng_;
   }
 
-  uint8_t AslrEntropyBits() const { return aslr_entropy_bits_; }
+  uint8_t AslrEntropyBits(bool compact) const {
+    return compact ? aslr_compact_entropy_bits_ : aslr_entropy_bits_;
+  }
 
  private:
   // can only be constructed via factory
@@ -206,6 +208,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   bool aspace_destroyed_ = false;
   bool aslr_enabled_ = false;
   uint8_t aslr_entropy_bits_ = 0;
+  uint8_t aslr_compact_entropy_bits_ = 0;
 
   mutable DECLARE_MUTEX(VmAspace) lock_;
 
