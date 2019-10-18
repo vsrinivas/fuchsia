@@ -347,7 +347,7 @@ Status PageDbImpl::GetClock(coroutine::CoroutineHandler* handler,
 
 Status PageDbImpl::SetDeviceId(coroutine::CoroutineHandler* handler, DeviceIdView device_id) {
   // DeviceId should not be set.
-  FXL_DCHECK(db_->HasKey(handler, ClockRow::kDeviceIdKey) == Status::INTERNAL_NOT_FOUND);
+  RETURN_ON_ERROR(DCheckDeviceIdNotSet(handler));
 
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
@@ -366,6 +366,19 @@ Status PageDbImpl::SetClockEntry(coroutine::CoroutineHandler* handler, DeviceIdV
 Status PageDbImpl::GetCommitIdFromRemoteId(coroutine::CoroutineHandler* handler,
                                            fxl::StringView remote_id, CommitId* commit_id) {
   return db_->Get(handler, RemoteCommitIdToLocalRow::GetKeyFor(remote_id), commit_id);
+}
+
+Status PageDbImpl::DCheckDeviceIdNotSet(coroutine::CoroutineHandler* handler) {
+#ifdef NDEBUG
+  return Status::OK;
+#else
+  Status status = db_->HasKey(handler, ClockRow::kDeviceIdKey);
+  if (status == Status::INTERRUPTED) {
+    return status;
+  }
+  FXL_DCHECK(status == Status::INTERNAL_NOT_FOUND);
+  return Status::OK;
+#endif
 }
 
 }  // namespace storage

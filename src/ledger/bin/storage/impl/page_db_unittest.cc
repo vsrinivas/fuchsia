@@ -17,6 +17,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
 #include "src/ledger/bin/storage/impl/db_serialization.h"
@@ -861,6 +862,46 @@ TEST_F(PageDbTest, DeviceId) {
 
     EXPECT_EQ(actual_device_id, device_id);
   });
+}
+
+class FakeDbInterruptedHasKey : public storage::fake::FakeDb {
+ public:
+  FakeDbInterruptedHasKey(async_dispatcher_t* dispatcher) : FakeDb(dispatcher) {}
+
+  Status HasKey(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key) override {
+    if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
+      return Status::INTERRUPTED;
+    }
+    return Status::OK;
+  }
+};
+
+TEST_F(PageDbTest, SetDeviceIdInterrupted) {
+#ifndef NDEBUG
+  PageDbImpl page_db(&environment_, page_storage_.GetObjectIdentifierFactory(),
+                     std::make_unique<FakeDbInterruptedHasKey>(dispatcher()));
+
+  CoroutineHandler* handler_ptr = nullptr;
+  environment_.coroutine_service()->StartCoroutine([&](CoroutineHandler* handler) {
+    handler_ptr = handler;
+    // On debug mode, |SetDeviceId| is interrupted because of the call to |Db::HasKey|.
+    EXPECT_EQ(page_db.SetDeviceId(handler, "device_id"), Status::INTERRUPTED);
+
+    handler_ptr = nullptr;
+  });
+  ASSERT_TRUE(handler_ptr);
+
+  // Reach the yield point.
+  RunLoopUntilIdle();
+
+  handler_ptr->Resume(coroutine::ContinuationStatus::INTERRUPTED);
+
+  // Finish the test.
+  RunLoopUntilIdle();
+
+  // Ensures that the coroutine has terminated.
+  ASSERT_FALSE(handler_ptr);
+#endif
 }
 
 TEST_F(PageDbTest, GetClock) {

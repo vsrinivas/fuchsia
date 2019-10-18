@@ -101,6 +101,10 @@ class PageDbImpl : public PageDb {
                                  CommitId* commit_id) override;
 
  private:
+  // DChecks that the DeviceId has not already been set. Returns |OK| on success, or |INTERRUPTED|
+  // if the coroutine was interrupted.
+  Status DCheckDeviceIdNotSet(coroutine::CoroutineHandler* handler);
+
   ledger::Environment* environment_;
   ObjectIdentifierFactory* const object_identifier_factory_;
   std::unique_ptr<Db> db_;
