@@ -2,8 +2,7 @@
 
 To enable remote management, including KVM, you need to configure Intel AMT (Active Management Technology).
 
-
-NOTE: This assumes you're using NUC connected to the EdgeRouter. If
+Note: This assumes you're using NUC connected to the EdgeRouter. If
 your networking setup is different, you may need a different network
 configuration.
 
