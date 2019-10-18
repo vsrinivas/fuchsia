@@ -151,7 +151,7 @@ const Block* GetBlock(const Snapshot* snapshot, BlockIndex index) {
   const auto* ret = reinterpret_cast<const Block*>(snapshot->data() + index * kMinOrderSize);
 
   // Check that the entire declared size of the block fits in the snapshot.
-  auto size = OrderToSize(BlockFields::Order::Get<size_t>(ret->header));
+  auto size = OrderToSize(GetOrder(ret));
   if (index * kMinOrderSize + size > snapshot->size()) {
     return nullptr;
   }

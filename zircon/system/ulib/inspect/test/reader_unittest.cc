@@ -108,4 +108,31 @@ TEST(Reader, LargeExtentsWithCycle) {
   EXPECT_EQ(1u, result.value().node().properties().size());
 }
 
+TEST(Reader, NameDoesNotFit) {
+  std::vector<uint8_t> buf;
+  buf.resize(4096);
+
+  Block* header = reinterpret_cast<Block*>(buf.data());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+
+  // Manually create a node.
+  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize);
+  value->header = ValueBlockFields::Order::Make(0) |
+                  ValueBlockFields::Type::Make(BlockType::kNodeValue) |
+                  ValueBlockFields::NameIndex::Make(2);
+
+  Block* name = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
+  name->header = NameBlockFields::Order::Make(0) | NameBlockFields::Type::Make(BlockType::kName) |
+                 NameBlockFields::Length::Make(10);
+  memcpy(name->payload.data, "a", 2);
+
+  auto result = inspect::ReadFromBuffer(std::move(buf));
+  EXPECT_TRUE(result.is_ok());
+  EXPECT_EQ(0u, result.value().children().size());
+}
+
 }  // namespace

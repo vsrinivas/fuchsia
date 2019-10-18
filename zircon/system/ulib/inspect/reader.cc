@@ -95,11 +95,14 @@ fit::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
   if (!block) {
     return {};
   }
-  size_t size = OrderToSize(GetOrder(block));
+
+  size_t capacity = PayloadCapacity(GetOrder(block));
   auto len = NameBlockFields::Length::Get<size_t>(block->header);
-  if (len > size) {
+  // Do not parse the name if the declared length is greater than what the block can hold.
+  if (len > capacity) {
     return {};
   }
+
   return std::string(block->payload.data, len);
 }
 
