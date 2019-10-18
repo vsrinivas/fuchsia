@@ -37,7 +37,7 @@ use crate::{
 
 use command_handler::ControlChannelCommandHandler;
 pub use controller::PeerController;
-use remote_peer::{NotificationStream, RemotePeer};
+use remote_peer::{NotificationStream, PeerChannel, RemotePeer};
 
 #[derive(Debug, Clone)]
 pub enum PeerControllerEvent {
@@ -246,8 +246,10 @@ impl<'a> PeerManager<'a> {
             let supported_notifications: Vec<NotificationEventId> =
                 SUPPORTED_NOTIFICATIONS.iter().cloned().collect();
 
+            let peer = inner.get_remote_peer(&peer_id);
+
             // look up what notifications we support on this peer first
-            let remote_supported_notifications = match inner.get_supported_events(&peer_id).await {
+            let remote_supported_notifications = match peer.get_supported_events().await {
                 Ok(x) => x,
                 Err(_) => return,
             };
@@ -258,9 +260,7 @@ impl<'a> PeerManager<'a> {
                     .filter(|k| supported_notifications.contains(k))
                     .collect();
 
-            let peer = inner.get_remote_peer(&peer_id);
-
-            // TODO(36320): move to remote peer. 
+            // TODO(36320): move to remote peer.
             fn handle_response(
                 notif: &NotificationEventId,
                 peer: &Arc<RemotePeer>,
@@ -395,8 +395,9 @@ impl<'a> PeerManager<'a> {
                     self.handle_control_channel_command(&peer_id, command);
                 },
                 request = self.peer_request.select_next_some() => {
+                    let peer = inner.get_remote_peer(&request.peer_id);
                     let peer_controller =
-                        PeerController { peer_id: request.peer_id.clone(), inner: self.inner.clone() };
+                        PeerController { peer };
                     // ignoring error if we failed to reply.
                     let _ = request.reply.send(peer_controller);
                 },
@@ -424,22 +425,6 @@ impl<'a> PeerManager<'a> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum PeerChannel<T> {
-    Connected(Arc<T>),
-    Connecting,
-    Disconnected,
-}
-
-impl<T> PeerChannel<T> {
-    fn connection(&self) -> Option<Arc<T>> {
-        match self {
-            PeerChannel::Connected(t) => Some(t.clone()),
-            _ => None,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct PeerManagerInner {
     profile_svc: Box<dyn ProfileService + Send + Sync>,
@@ -459,206 +444,8 @@ impl PeerManagerInner {
         }
     }
 
-    fn get_remote_peer(&self, peer_id: &str) -> Arc<RemotePeer> {
+    pub fn get_remote_peer(&self, peer_id: &str) -> Arc<RemotePeer> {
         self.insert_if_needed(peer_id);
         self.remotes.read().get(peer_id).unwrap().clone()
-    }
-
-    /// Send a generic "status" vendor dependent command and returns the result as a future.
-    /// This method encodes the `command` packet, awaits and decodes all responses, will issue
-    /// continuation commands for incomplete responses (eg "get_element_attributes" command), and
-    /// will return a result of the decoded packet or an error for any non stable response received
-    async fn send_status_vendor_dependent_command<'a>(
-        peer: &'a AvcPeer,
-        command: &'a impl VendorDependent,
-    ) -> Result<Vec<u8>, Error> {
-        let mut buf = vec![];
-        let packet = command.encode_packet().expect("unable to encode packet");
-        let mut stream = peer.send_vendor_dependent_command(AvcCommandType::Status, &packet[..])?;
-
-        loop {
-            let response = loop {
-                if let Some(result) = stream.next().await {
-                    let response: AvcCommandResponse = result.map_err(|e| Error::AvctpError(e))?;
-                    fx_vlog!(tag: "avrcp", 1, "vendor response {:#?}", response);
-                    match response.response_type() {
-                        AvcResponseType::Interim => continue,
-                        AvcResponseType::NotImplemented => return Err(Error::CommandNotSupported),
-                        AvcResponseType::Rejected => return Err(Error::CommandFailed),
-                        AvcResponseType::InTransition => return Err(Error::UnexpectedResponse),
-                        AvcResponseType::Changed => return Err(Error::UnexpectedResponse),
-                        AvcResponseType::Accepted => return Err(Error::UnexpectedResponse),
-                        AvcResponseType::ImplementedStable => break response.1,
-                    }
-                } else {
-                    return Err(Error::CommandFailed);
-                }
-            };
-
-            match VendorDependentPreamble::decode(&response[..]) {
-                Ok(preamble) => {
-                    buf.extend_from_slice(&response[preamble.encoded_len()..]);
-                    match preamble.packet_type() {
-                        PacketType::Single | PacketType::Stop => {
-                            break;
-                        }
-                        // Still more to decode. Queue up a continuation call.
-                        _ => {}
-                    }
-                }
-                Err(e) => {
-                    fx_log_info!("Unable to parse vendor dependent preamble: {:?}", e);
-                    return Err(Error::PacketError(e));
-                }
-            };
-
-            let packet = RequestContinuingResponseCommand::new(u8::from(&command.pdu_id()))
-                .encode_packet()
-                .expect("unable to encode packet");
-
-            stream = peer.send_vendor_dependent_command(AvcCommandType::Control, &packet[..])?;
-        }
-        Ok(buf)
-    }
-
-    async fn send_avc_passthrough_keypress<'a>(
-        &'a self,
-        peer_id: &'a str,
-        avc_keycode: u8,
-    ) -> Result<(), Error> {
-        let remote = self.get_remote_peer(peer_id);
-        {
-            // key_press
-            let payload_1 = &[avc_keycode, 0x00];
-            let r = remote.control_channel.read().connection();
-            if let Some(peer) = r {
-                let response = peer.send_avc_passthrough_command(payload_1).await;
-                match response {
-                    Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => {}
-                    Ok(AvcCommandResponse(AvcResponseType::NotImplemented, _)) => {
-                        return Err(Error::CommandNotSupported);
-                    }
-                    Err(e) => {
-                        fx_log_err!("error sending avc command to {}: {:?}", peer_id, e);
-                        return Err(Error::CommandFailed);
-                    }
-                    Ok(response) => {
-                        fx_log_err!(
-                            "error sending avc command. unhandled response {}: {:?}",
-                            peer_id,
-                            response
-                        );
-                        return Err(Error::CommandFailed);
-                    }
-                }
-            } else {
-                return Err(Error::RemoteNotFound);
-            }
-        }
-        {
-            // key_release
-            let payload_2 = &[avc_keycode | 0x80, 0x00];
-            let r = remote.control_channel.read().connection();
-            if let Some(peer) = r {
-                let response = peer.send_avc_passthrough_command(payload_2).await;
-                match response {
-                    Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => {
-                        return Ok(());
-                    }
-                    Ok(AvcCommandResponse(AvcResponseType::Rejected, _)) => {
-                        fx_log_info!("avrcp command rejected {}: {:?}", peer_id, response);
-                        return Err(Error::CommandNotSupported);
-                    }
-                    Err(e) => {
-                        fx_log_err!("error sending avc command to {}: {:?}", peer_id, e);
-                        return Err(Error::CommandFailed);
-                    }
-                    _ => {
-                        fx_log_err!(
-                            "error sending avc command. unhandled response {}: {:?}",
-                            peer_id,
-                            response
-                        );
-                        return Err(Error::CommandFailed);
-                    }
-                }
-            } else {
-                Err(Error::RemoteNotFound)
-            }
-        }
-    }
-
-    async fn set_absolute_volume<'a>(
-        &'a self,
-        peer_id: &'a PeerId,
-        volume: u8,
-    ) -> Result<u8, Error> {
-        let remote = self.get_remote_peer(peer_id);
-        let conn = remote.control_channel.read().connection();
-        match conn {
-            Some(peer) => {
-                let cmd =
-                    SetAbsoluteVolumeCommand::new(volume).map_err(|e| Error::PacketError(e))?;
-                fx_vlog!(tag: "avrcp", 1, "set_absolute_volume send command {:#?}", cmd);
-                let buf = Self::send_status_vendor_dependent_command(&peer, &cmd).await?;
-                let response = SetAbsoluteVolumeResponse::decode(&buf[..])
-                    .map_err(|e| Error::PacketError(e))?;
-                fx_vlog!(tag: "avrcp", 1, "set_absolute_volume received response {:#?}", response);
-                Ok(response.volume())
-            }
-            _ => Err(Error::RemoteNotFound),
-        }
-    }
-
-    async fn get_media_attributes<'a>(
-        &'a self,
-        peer_id: &'a PeerId,
-    ) -> Result<MediaAttributes, Error> {
-        let remote = self.get_remote_peer(peer_id);
-        let conn = remote.control_channel.read().connection();
-        match conn {
-            Some(peer) => {
-                let mut media_attributes = MediaAttributes::new_empty();
-                let cmd = GetElementAttributesCommand::all_attributes();
-                fx_vlog!(tag: "avrcp", 1, "get_media_attributes send command {:#?}", cmd);
-                let buf = Self::send_status_vendor_dependent_command(&peer, &cmd).await?;
-                let response = GetElementAttributesResponse::decode(&buf[..])
-                    .map_err(|e| Error::PacketError(e))?;
-                fx_vlog!(tag: "avrcp", 1, "get_media_attributes received response {:#?}", response);
-                media_attributes.title = response.title.unwrap_or("".to_string());
-                media_attributes.artist_name = response.artist_name.unwrap_or("".to_string());
-                media_attributes.album_name = response.album_name.unwrap_or("".to_string());
-                media_attributes.track_number = response.track_number.unwrap_or("".to_string());
-                media_attributes.total_number_of_tracks =
-                    response.total_number_of_tracks.unwrap_or("".to_string());
-                media_attributes.genre = response.genre.unwrap_or("".to_string());
-                media_attributes.playing_time = response.playing_time.unwrap_or("".to_string());
-                Ok(media_attributes)
-            }
-            _ => Err(Error::RemoteNotFound),
-        }
-    }
-
-    async fn get_supported_events<'a>(
-        &'a self,
-        peer_id: &'a PeerId,
-    ) -> Result<Vec<NotificationEventId>, Error> {
-        let remote = self.get_remote_peer(peer_id);
-        let conn = remote.control_channel.read().connection();
-        match conn {
-            Some(peer) => {
-                let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
-                fx_vlog!(tag: "avrcp", 1, "get_capabilities(events) send command {:#?}", cmd);
-                let buf = Self::send_status_vendor_dependent_command(&peer, &cmd).await?;
-                let capabilities =
-                    GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
-                let mut event_ids = vec![];
-                for event_id in capabilities.event_ids() {
-                    event_ids.push(NotificationEventId::try_from(event_id)?);
-                }
-                Ok(event_ids)
-            }
-            _ => Err(Error::RemoteNotFound),
-        }
     }
 }

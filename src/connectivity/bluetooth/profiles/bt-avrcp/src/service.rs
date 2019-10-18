@@ -388,7 +388,7 @@ pub fn run_services(
     let mut fs = ServiceFs::new();
     let sender_avrcp = sender.clone();
     let sender_test = sender.clone();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service_at(PeerManagerExtMarker::NAME, move |stream| {
             spawn_test_avrcp_client(stream, sender_test.clone());
         })
