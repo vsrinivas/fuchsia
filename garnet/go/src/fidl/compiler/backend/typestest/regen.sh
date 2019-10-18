@@ -31,6 +31,7 @@ cd "${FUCHSIA_DIR}"
 for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     src_name="$( basename "${src_path}" )"
     json_name=${src_name}.json
+    coding_tables_name=${src_name}.tables.c
     cpp_header_name=${json_name}.h
     cpp_test_header_name=${json_name}_test_base.h
     cpp_source_name=${json_name}.cc
@@ -44,6 +45,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
 
     GOLDENS+=(
       $json_name,
+      "${coding_tables_name}.golden",
       "${cpp_header_name}.golden",
       "${cpp_test_header_name}.golden",
       "${cpp_source_name}.golden",
@@ -57,9 +59,12 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     echo -e "\033[1mexample: ${src_name}\033[0m"
 
     echo "  json ir: ${src_name} > ${json_name}"
+    echo "  coding tables: ${src_name} > ${coding_tables_name}"
     ${FIDLC} \
         --json "${GOLDENS_DIR}/${json_name}" \
+        --tables "${GOLDENS_DIR}/${coding_tables_name}" \
         --files "${EXAMPLE_DIR}/${src_name}"
+    mv "${GOLDENS_DIR}/${coding_tables_name}" "${GOLDENS_DIR}/${coding_tables_name}.golden"
 
     echo "  cpp: ${json_name} > ${cpp_header_name}, ${cpp_source_name}, and ${cpp_test_header_name}"
     ${FIDLGEN} \
