@@ -45,18 +45,24 @@ struct DebuggedProcessCreateInfo {
   zx_koid_t koid = 0;
   zx::process handle;
 
+  // Required.
+  std::shared_ptr<arch::ArchProvider> arch_provider;
+  std::shared_ptr<ObjectProvider> object_provider;
+
+  // Optional.
+  // This is meant as a way to override the memory accessor that a process uses, mostly for testing.
+  // For the default case, do not set this and the process will create a memory accessor for itself.
+  std::unique_ptr<ProcessMemoryAccessor> memory_accessor;
+
   // Optional.
   std::string name;
   zx::socket out;  // stdout.
   zx::socket err;  // stderr.
-
-  std::shared_ptr<arch::ArchProvider> arch_provider;
-  std::shared_ptr<ObjectProvider> object_provider;
 };
 
 // Creates a CreateInfo struct from only the required fields.
 
-class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public ProcessMemoryAccessor {
+class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
  public:
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
@@ -65,7 +71,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
 
   zx_koid_t koid() const { return koid_; }
   DebugAgent* debug_agent() const { return debug_agent_; }
-  zx::process& process() { return process_; }
+  zx::process& handle() { return handle_; }
   uint64_t dl_debug_addr() const { return dl_debug_addr_; }
 
   const std::string& name() const { return name_; }
@@ -168,9 +174,15 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   };
   const std::deque<StepOverTicket>& step_over_queue() const { return step_over_queue_; }
 
+  const std::map<uint64_t, std::unique_ptr<SoftwareBreakpoint>>& software_breakpoints() const {
+    return software_breakpoints_;
+  }
+
  protected:
   std::shared_ptr<arch::ArchProvider> arch_provider_;
   std::shared_ptr<ObjectProvider> object_provider_;
+
+  std::unique_ptr<ProcessMemoryAccessor> memory_accessor_;
 
  private:
   // ZirconExceptionWatcher implementation.
@@ -203,19 +215,13 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   // within the queue.
   void PruneStepOverQueue();
 
-  // ProcessMemoryAccessor implementation.
-  zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
-                                size_t* actual) override;
-  zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
-                                 size_t* actual) override;
-
   zx_status_t RegisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterSoftwareBreakpoint(Breakpoint* bp, uint64_t address);
 
   DebugAgent* debug_agent_ = nullptr;  // Non-owning.
 
   zx_koid_t koid_;
-  zx::process process_;
+  zx::process handle_;
 
   std::string name_;
 

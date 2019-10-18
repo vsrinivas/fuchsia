@@ -429,7 +429,7 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
-      UnwindStack(process_->process(), process_->dl_debug_addr(), handle_, *regs, max_stack_depth,
+      UnwindStack(process_->handle(), process_->dl_debug_addr(), handle_, *regs, max_stack_depth,
                   &record->frames);
     }
   } else {
@@ -547,7 +547,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   } else {
     // Hit a software breakpoint that doesn't correspond to any current
     // breakpoint.
-    if (arch_provider_->IsBreakpointInstruction(process_->process(), breakpoint_address)) {
+    if (arch_provider_->IsBreakpointInstruction(process_->handle(), breakpoint_address)) {
       // The breakpoint is a hardcoded instruction in the program code. In
       // this case we want to continue from the following instruction since
       // the breakpoint instruction will never go away.

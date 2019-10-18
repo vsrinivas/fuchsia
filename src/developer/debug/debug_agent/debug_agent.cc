@@ -207,7 +207,7 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
   auto debug_process = GetDebuggedProcess(request.process_koid);
 
-  if (!debug_process || !debug_process->process().is_valid()) {
+  if (!debug_process || !debug_process->handle().is_valid()) {
     reply->status = ZX_ERR_NOT_FOUND;
     return;
   }
@@ -281,7 +281,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
     }
     case debug_ipc::TaskType::kProcess: {
       auto debug_process = GetDebuggedProcess(request.koid);
-      if (debug_process && debug_process->process().is_valid()) {
+      if (debug_process && debug_process->handle().is_valid()) {
         RemoveDebuggedProcess(request.koid);
         reply->status = ZX_OK;
       } else {

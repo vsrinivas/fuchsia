@@ -5,12 +5,16 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_MEMORY_ACCESSOR_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_MEMORY_ACCESSOR_H_
 
+#include <zircon/status.h>
+
 namespace debug_agent {
 
 // An abstract class that represents the ability to read and write from a
 // process' memory. This allows such tasks to be mocked out for testing.
 class ProcessMemoryAccessor {
  public:
+  virtual ~ProcessMemoryAccessor() = default;
+
   virtual zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
                                         size_t* actual) = 0;
 
