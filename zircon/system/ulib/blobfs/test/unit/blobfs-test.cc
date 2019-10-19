@@ -184,14 +184,11 @@ TEST_F(BlobfsTest, TrimsData) {
   EXPECT_FALSE(device_->saw_trim());
   ASSERT_OK(root_node->Unlink(info->path, false));
 
-  zx_status_t sync_result;
   sync_completion_t completion;
-  fs_->Sync([&sync_result, &completion](zx_status_t status) {
+  fs_->Sync([&completion](zx_status_t status) {
     sync_completion_signal(&completion);
-    sync_result = status;
   });
   EXPECT_OK(sync_completion_wait(&completion, zx::duration::infinite().get()));
-  EXPECT_OK(sync_result);
 
   ASSERT_TRUE(device_->saw_trim());
 }
