@@ -367,7 +367,7 @@ void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
                                  debug_ipc::ReadRegistersReply* reply) {
   DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
-    thread->ReadRegisters(request.categories, &reply->categories);
+    thread->ReadRegisters(request.categories, &reply->registers);
   } else {
     FXL_LOG(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
   }

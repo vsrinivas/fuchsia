@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_H_
 
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -37,11 +36,8 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   void StepInstruction() override;
   const Stack& GetStack() const override;
   Stack& GetStack() override;
-  void ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-                     fit::callback<void(const Err&, const RegisterSet&)>) override;
-
-  // NOTE: If the registers are not up to date, the set can be null.
-  const RegisterSet* registers() const { return registers_.get(); }
+  void ReadRegisters(std::vector<debug_ipc::RegisterCategory> cats_to_get,
+                     fit::callback<void(const Err&, std::vector<debug_ipc::Register>)>) override;
 
   // Updates the thread metadata with new state from the agent. Does not issue
   // any notifications. When an exception is hit for example, everything needs
@@ -72,11 +68,6 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
 
   Stack stack_;
 
-  // Register state queried from the DebugAgent.
-  // NOTE: Depending on the request, it could be that the register set does
-  //       not hold the complete register state from the CPU (eg. it could be
-  //       missing the vector or debug registers).
-  std::unique_ptr<RegisterSet> registers_;
   std::string name_;
   debug_ipc::ThreadRecord::State state_;
   debug_ipc::ThreadRecord::BlockedReason blocked_reason_;

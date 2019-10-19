@@ -43,10 +43,6 @@ bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
   return Deserialize(reader, &settings->locations);
 }
 
-bool Deserialize(MessageReader* reader, RegisterCategory::Type* type) {
-  return reader->ReadUint32(reinterpret_cast<uint32_t*>(type));
-}
-
 bool Deserialize(MessageReader* reader, ConfigAction* action) {
   uint32_t type = 0;
   if (!reader->ReadUint32(&type) || type >= static_cast<uint32_t>(ConfigAction::Type::kLast)) {
@@ -95,11 +91,6 @@ void Serialize(const Module& module, MessageWriter* writer) {
   writer->WriteString(module.name);
   writer->WriteUint64(module.base);
   writer->WriteString(module.build_id);
-}
-
-void Serialize(const RegisterCategory& reg_cat, MessageWriter* writer) {
-  writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg_cat.type));
-  Serialize(reg_cat.registers, writer);
 }
 
 void Serialize(const StackFrame& frame, MessageWriter* writer) {
@@ -509,7 +500,7 @@ bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request, uint32_t*
 
 void WriteReply(const ReadRegistersReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kReadRegisters, transaction_id);
-  Serialize(reply.categories, writer);
+  Serialize(reply.registers, writer);
 }
 
 // WriteRegisters ----------------------------------------------------------------------------------

@@ -178,11 +178,6 @@ class DataForSyscallTest {
     }
   }
 
-  void PopulateRegisters(uint64_t process_koid, debug_ipc::RegisterCategory& category) {
-    category.type = debug_ipc::RegisterCategory::Type::kGeneral;
-    PopulateRegisters(process_koid, &category.registers);
-  }
-
   void Step(uint64_t process_koid) {
     // Increment the stack pointer to make it look as if we've stepped out of
     // the zx_channel function.
@@ -276,7 +271,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
       fit::callback<void(const zxdb::Err&, debug_ipc::ReadRegistersReply)> cb) override {
     // TODO: Parameterize this so we can have more than one test.
     debug_ipc::ReadRegistersReply reply;
-    data_.PopulateRegisters(request.process_koid, reply.categories.emplace_back());
+    data_.PopulateRegisters(request.process_koid, &reply.registers);
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(zxdb::Err(), reply); });
   }
@@ -358,8 +353,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   void PerformExceptionTest(ProcessController* controller,
                             std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
                             debug_ipc::ExceptionType type);
-  void TriggerException(uint64_t process_koid, uint64_t thread_koid,
-                        debug_ipc::ExceptionType type);
+  void TriggerException(uint64_t process_koid, uint64_t thread_koid, debug_ipc::ExceptionType type);
 
  protected:
   DataForSyscallTest data_;

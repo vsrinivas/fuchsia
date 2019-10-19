@@ -83,14 +83,14 @@ class ArchProvider {
   static void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                               std::vector<debug_ipc::Register>* out);
 
-  virtual zx_status_t ReadRegisters(const debug_ipc::RegisterCategory::Type& cat, const zx::thread&,
+  // The registers in the given category are appended to the given output vector.
+  virtual zx_status_t ReadRegisters(const debug_ipc::RegisterCategory& cat, const zx::thread&,
                                     std::vector<debug_ipc::Register>* out);
 
-  // The RegisterCategory will have the corresponding register values, which
-  // the arch will make sure it writes correctly. Since each category is a
-  // different syscall anyway, there is no need to group many categories into
-  // one call.
-  virtual zx_status_t WriteRegisters(const debug_ipc::RegisterCategory&, zx::thread*);
+  // The registers must all be in the same category.
+  virtual zx_status_t WriteRegisters(const debug_ipc::RegisterCategory&,
+                                     const std::vector<debug_ipc::Register>& registers,
+                                     zx::thread*);
 
   // Hardware Exceptions -------------------------------------------------------
 

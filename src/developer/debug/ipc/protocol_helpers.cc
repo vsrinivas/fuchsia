@@ -34,4 +34,12 @@ bool Deserialize(MessageReader* reader, Register* reg) {
   return reader->ReadBytes(length, &reg->data[0]);
 }
 
+void Serialize(RegisterCategory type, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(type));
+}
+
+bool Deserialize(MessageReader* reader, RegisterCategory* type) {
+  return reader->ReadUint32(reinterpret_cast<uint32_t*>(type));
+}
+
 }  // namespace debug_ipc

@@ -13,7 +13,6 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
@@ -230,13 +229,13 @@ void MemoryAnalysis::IssueError(const Err& err) {
   callback_ = Callback();
 }
 
-void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<Register>& regs) {
+void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<debug_ipc::Register>& regs) {
   // Frames can have saved registers. Sometimes these will be the same as frame
   // 0 (the current CPU state). We want to make them say, e.g. "rax" if the
   // value matches the top frame, but if the current frame's register value is
   // different, we want e.g. "frame 5's rax".
   for (const auto& r : regs) {
-    if (r.size() > sizeof(uint64_t))
+    if (r.data.size() > sizeof(uint64_t))
       continue;  // Weird register, don't bother.
 
     uint64_t value = r.GetValue();
@@ -244,16 +243,16 @@ void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<Register>& reg
 
     if (frame_no == 0) {
       // Frame 0 always gets added with no frame annotation.
-      reg_desc = RegisterIDToString(r.id());
-      frame_0_regs_[r.id()] = value;
+      reg_desc = RegisterIDToString(r.id);
+      frame_0_regs_[r.id] = value;
     } else {
       // Later frames get an annotation and only get added if they're
       // different than frame 0.
-      auto found_frame_0 = frame_0_regs_.find(r.id());
+      auto found_frame_0 = frame_0_regs_.find(r.id);
       if (found_frame_0 != frame_0_regs_.end() && found_frame_0->second == value)
         continue;  // Matches frame 0, don't add a record.
 
-      reg_desc = fxl::StringPrintf("frame %d %s", frame_no, RegisterIDToString(r.id()));
+      reg_desc = fxl::StringPrintf("frame %d %s", frame_no, RegisterIDToString(r.id));
     }
 
     AddAnnotation(value, reg_desc);

@@ -77,7 +77,6 @@ source_set("tests") {
     "decode_exception_unittests.cc",
     "message_unittests.cc",
     "protocol_unittests.cc",
-    "records_unittest.cc",
     "register_desc_unittest.cc",
   ]
 

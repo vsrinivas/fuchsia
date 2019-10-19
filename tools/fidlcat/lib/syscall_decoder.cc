@@ -16,7 +16,6 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
@@ -44,11 +43,11 @@ T GetValueFromBytes(const std::vector<uint8_t>& bytes, size_t offset) {
   return ret;
 }
 
-uint64_t GetRegisterValue(const std::vector<zxdb::Register>& general_registers,
+uint64_t GetRegisterValue(const std::vector<debug_ipc::Register>& general_registers,
                           const debug_ipc::RegisterID register_id) {
   for (const auto& reg : general_registers) {
-    if (reg.id() == register_id) {
-      return GetValueFromBytes<uint64_t>(reg.data(), 0);
+    if (reg.id == register_id) {
+      return GetValueFromBytes<uint64_t>(reg.data, 0);
     }
   }
   return 0;
@@ -136,9 +135,8 @@ void SyscallDecoder::DoDecode() {
     const zxdb::Frame* caller = stack[i];
     caller_locations_.push_back(caller->GetLocation());
   }
-  static std::vector<debug_ipc::RegisterCategory::Type> types = {
-      debug_ipc::RegisterCategory::Type::kGeneral};
-  const std::vector<zxdb::Register>& general_registers =
+  static std::vector<debug_ipc::RegisterCategory> types = {debug_ipc::RegisterCategory::kGeneral};
+  const std::vector<debug_ipc::Register>& general_registers =
       thread_->GetStack()[0]->GetGeneralRegisters();
 
   // The order of parameters in the System V AMD64 ABI we use, according to
@@ -259,7 +257,7 @@ void SyscallDecoder::StepToReturnAddress() {
 }
 
 void SyscallDecoder::LoadSyscallReturnValue() {
-  const std::vector<zxdb::Register>& general_registers =
+  const std::vector<debug_ipc::Register>& general_registers =
       thread_->GetStack()[0]->GetGeneralRegisters();
 
   debug_ipc::RegisterID result_register = (arch_ == debug_ipc::Arch::kX64)

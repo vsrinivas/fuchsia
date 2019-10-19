@@ -10,7 +10,6 @@
 #include <map>
 
 #include "src/developer/debug/shared/regex.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -24,6 +23,7 @@
 
 namespace zxdb {
 
+using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
 using debug_ipc::RegisterID;
 
@@ -42,135 +42,81 @@ void InternalFormatGeneric(const std::vector<Register>& registers, OutputBuffer*
               rows, out);
 }
 
-Err FormatCategory(const FormatRegisterOptions& options, RegisterCategory::Type category,
-                   const std::vector<Register>& registers, OutputBuffer* out) {
-  auto title =
-      fxl::StringPrintf("%s Registers\n", debug_ipc::RegisterCategory::TypeToString(category));
+void FormatCategory(const FormatRegisterOptions& options, RegisterCategory category,
+                    const std::vector<Register>& registers, OutputBuffer* out) {
+  auto title = fxl::StringPrintf("%s Registers\n", debug_ipc::RegisterCategoryToString(category));
   out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
 
   if (registers.empty()) {
     out->Append("No registers to show in this category.");
-    return Err();
+    return;
   }
 
-  // We see if architecture specific printing wants to take over.
-  Err err;
-  OutputBuffer category_out;
+  // Check for architecture-specific printing.
   if (options.arch == debug_ipc::Arch::kX64) {
-    if (FormatCategoryX64(options, category, registers, &category_out, &err)) {
-      if (err.ok())
-        out->Append(std::move(category_out));
-      return err;
-    }
+    if (FormatCategoryX64(options, category, registers, out))
+      return;
   } else if (options.arch == debug_ipc::Arch::kArm64) {
-    if (FormatCategoryARM64(options, category, registers, &category_out, &err)) {
-      if (err.ok())
-        out->Append(std::move(category_out));
-      return err;
-    }
+    if (FormatCategoryARM64(options, category, registers, out))
+      return;
   }
 
-  // Generic case.
-  InternalFormatGeneric(registers, &category_out);
-
-  out->Append(std::move(category_out));
-  return Err();
+  // General formatting.
+  InternalFormatGeneric(registers, out);
 }
 
 }  // namespace
 
-Err FilterRegisters(const FormatRegisterOptions& options, const RegisterSet& register_set,
-                    FilteredRegisterSet* out) {
-  const auto& category_map = register_set.category_map();
-  // Used to track how many registers we found when filtering.
-  int registers_found = 0;
-  for (const auto& category : options.categories) {
-    auto it = category_map.find(category);
-    if (it == category_map.end())
-      continue;
+std::vector<Register> FilterRegisters(const FormatRegisterOptions& options,
+                                      const std::vector<Register>& registers) {
+  std::vector<Register> result;
 
-    out->insert({category, {}});
-    (*out)[category] = {};
-    auto& registers = (*out)[category];
+  for (const Register& reg : registers) {
+    RegisterCategory category = RegisterIDToCategory(reg.id);
+    if (std::find(options.categories.begin(), options.categories.end(), category) ==
+        options.categories.end())
+      continue;  // Register filtered out by category.
 
-    if (options.filter_regexp.empty()) {
-      // Add all registers.
-      registers.reserve(it->second.size());
-      for (const auto& reg : it->second) {
-        registers.emplace_back(reg);
-        registers_found++;
-      }
+    if (options.filter_regex.valid()) {
+      // Filter by regex.
+      if (options.filter_regex.Match(RegisterIDToString(reg.id)))
+        result.push_back(reg);
     } else {
-      // We use insensitive case regexp matching.
-      debug_ipc::Regex regex;
-      if (!regex.Init(options.filter_regexp)) {
-        return Err("Could not initialize regex %s.", options.filter_regexp.c_str());
-      }
-
-      for (const auto& reg : it->second) {
-        const char* reg_name = RegisterIDToString(reg.id());
-        if (regex.Match(reg_name)) {
-          registers.push_back(reg);
-          registers_found++;
-        }
-      }
+      // Unconditional addition.
+      result.push_back(reg);
     }
   }
 
-  if (registers_found == 0) {
-    if (options.filter_regexp.empty()) {
-      return Err("Could not find registers in the selected categories");
-    } else {
-      return Err(
-          "Could not find any registers that match \"%s\" in the selected "
-          "categories",
-          options.filter_regexp.data());
-    }
-  }
-
-  return Err();
+  return result;
 }
 
-Err FormatRegisters(const FormatRegisterOptions& options, const FilteredRegisterSet& filtered_set,
-                    OutputBuffer* out) {
-  // We should have detected on the filtering stage that we didn't find any
-  // register.
-  FXL_DCHECK(!filtered_set.empty());
+OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
+                             const std::vector<Register>& registers) {
+  OutputBuffer out;
 
-  std::vector<OutputBuffer> out_buffers;
-  out_buffers.reserve(filtered_set.size());
-  for (auto kv : filtered_set) {
-    if (kv.second.empty())
-      continue;
-    OutputBuffer cat_out;
-    Err err = FormatCategory(options, kv.first, kv.second, &cat_out);
-    if (!err.ok())
-      return err;
-    out_buffers.emplace_back(std::move(cat_out));
-  }
+  // Group register by category.
+  std::map<RegisterCategory, std::vector<Register>> categorized;
+  for (const Register& reg : registers)
+    categorized[RegisterIDToCategory(reg.id)].push_back(reg);
 
-  // Each section is separated by a new line.
-  for (const auto& buf : out_buffers) {
-    out->Append(std::move(buf));
-    out->Append("\n");
+  for (const auto& [category, cat_regs] : categorized) {
+    FormatCategory(options, category, cat_regs, &out);
+    out.Append("\n");
   }
-  return Err();
+  return out;
 }
-
-// Formatting helpers ----------------------------------------------------------
 
 std::vector<OutputBuffer> DescribeRegister(const Register& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(RegisterIDToString(reg.id()), color);
+  result.emplace_back(RegisterIDToString(reg.id), color);
 
-  if (reg.size() <= 8) {
+  if (reg.data.size() <= 8) {
     // Treat <= 64 bit registers as numbers.
-    uint64_t value = reg.GetValue();
+    uint64_t value = static_cast<uint64_t>(reg.GetValue());
     result.emplace_back(fxl::StringPrintf("0x%" PRIx64, value), color);
 
-    // For plausible small integers, show the decimal value also. This size
-    // check is intended to avoid cluttering up the results with large numbers
-    // corresponding to pointers.
+    // For plausible small integers, show the decimal value also. This size check is intended to
+    // avoid cluttering up the results with large numbers corresponding to pointers.
     constexpr uint64_t kMaxSmallMagnitude = 0xffff;
     if (value <= kMaxSmallMagnitude || llabs(static_cast<long long int>(value)) <=
                                            static_cast<long long int>(kMaxSmallMagnitude)) {
@@ -180,12 +126,7 @@ std::vector<OutputBuffer> DescribeRegister(const Register& reg, TextForegroundCo
     }
   } else {
     // Assume anything bigger than 64 bits is a vector and print with grouping.
-    std::string hex_out;
-    Err err = GetLittleEndianHexOutput(reg.data(), &hex_out);
-    if (!err.ok())
-      result.emplace_back(err.msg(), color);
-    else
-      result.emplace_back(std::move(hex_out), color);
+    result.emplace_back(GetLittleEndianHexOutput(reg.data));
   }
 
   return result;

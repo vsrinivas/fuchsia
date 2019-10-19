@@ -45,7 +45,7 @@ void SetRegisterValue(Register* reg, uint64_t value) {
   uint8_t* ptr = reinterpret_cast<uint8_t*>(&value);
   for (size_t i = 0; i < 8; i++, ptr++)
     data.emplace_back(*ptr);
-  reg->data() = data;
+  reg->data = data;
 }
 
 Register CreateRegisterWithValue(RegisterID id, uint64_t value) {
@@ -54,73 +54,52 @@ Register CreateRegisterWithValue(RegisterID id, uint64_t value) {
   return reg;
 }
 
-void GetCategories(RegisterSet* registers) {
-  std::vector<debug_ipc::RegisterCategory> categories;
+std::vector<Register> GetRegisters() {
+  std::vector<Register> result;
 
-  RegisterCategory cat1;
-  cat1.type = RegisterCategory::Type::kGeneral;
-  cat1.registers.push_back(CreateRegister(RegisterID::kX64_rax, 8, 1));
-  cat1.registers.push_back(CreateRegister(RegisterID::kX64_rbx, 8, 2));
-  cat1.registers.push_back(CreateRegister(RegisterID::kX64_rcx, 8, 4));
-  cat1.registers.push_back(CreateRegister(RegisterID::kX64_rdx, 8, 8));
-  categories.push_back(cat1);
+  result.push_back(CreateRegister(RegisterID::kX64_rax, 8, 1));
+  result.push_back(CreateRegister(RegisterID::kX64_rbx, 8, 2));
+  result.push_back(CreateRegister(RegisterID::kX64_rcx, 8, 4));
+  result.push_back(CreateRegister(RegisterID::kX64_rdx, 8, 8));
 
   // Sanity check
-  ASSERT_EQ(*(uint8_t*)&(cat1.registers[0].data[0]), 0x01u);
-  ASSERT_EQ(*(uint16_t*)&(cat1.registers[1].data[0]), 0x0102u);
-  ASSERT_EQ(*(uint32_t*)&(cat1.registers[2].data[0]), 0x01020304u);
-  ASSERT_EQ(*(uint64_t*)&(cat1.registers[3].data[0]), 0x0102030405060708u);
+  EXPECT_EQ(*(uint8_t*)&(result[0].data[0]), 0x01u);
+  EXPECT_EQ(*(uint16_t*)&(result[1].data[0]), 0x0102u);
+  EXPECT_EQ(*(uint32_t*)&(result[2].data[0]), 0x01020304u);
+  EXPECT_EQ(*(uint64_t*)&(result[3].data[0]), 0x0102030405060708u);
 
-  RegisterCategory cat2;
-  cat2.type = RegisterCategory::Type::kVector;
-  cat2.registers.push_back(CreateRegister(RegisterID::kX64_xmm0, 16, 1));
-  cat2.registers.push_back(CreateRegister(RegisterID::kX64_xmm1, 16, 2));
-  cat2.registers.push_back(CreateRegister(RegisterID::kX64_xmm2, 16, 4));
-  cat2.registers.push_back(CreateRegister(RegisterID::kX64_xmm3, 16, 8));
-  cat2.registers.push_back(CreateRegister(RegisterID::kX64_xmm4, 16, 16));
-  categories.push_back(cat2);
+  result.push_back(CreateRegister(RegisterID::kX64_xmm0, 16, 1));
+  result.push_back(CreateRegister(RegisterID::kX64_xmm1, 16, 2));
+  result.push_back(CreateRegister(RegisterID::kX64_xmm2, 16, 4));
+  result.push_back(CreateRegister(RegisterID::kX64_xmm3, 16, 8));
+  result.push_back(CreateRegister(RegisterID::kX64_xmm4, 16, 16));
 
-  RegisterCategory cat3;
-  cat3.type = RegisterCategory::Type::kFP;
-  cat3.registers.push_back(CreateRegister(RegisterID::kX64_st0, 16, 4));
-  cat3.registers.push_back(CreateRegister(RegisterID::kX64_st1, 16, 4));
+  result.push_back(CreateRegister(RegisterID::kX64_st0, 16, 4));
+  result.push_back(CreateRegister(RegisterID::kX64_st1, 16, 4));
   // Invalid
-  cat3.registers.push_back(CreateRegister(RegisterID::kX64_st2, 16, 16));
+  result.push_back(CreateRegister(RegisterID::kX64_st2, 16, 16));
   // Push a valid 16-byte long double value.
-  auto& reg = cat3.registers.back();
+  auto& reg = result.back();
   // Clear all (create a 0 value).
   for (size_t i = 0; i < reg.data.size(); i++)
     reg.data[i] = 0;
 
-  categories.push_back(cat3);
-
-  RegisterSet regs(debug_ipc::Arch::kArm64, std::move(categories));
-  *registers = std::move(regs);
+  return result;
 }
 
 }  // namespace
 
 TEST(FormatRegisters, GeneralRegisters) {
-  RegisterSet registers;
-  GetCategories(&registers);
+  auto registers = GetRegisters();
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::Type::kGeneral};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, registers, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  options.categories = {RegisterCategory::kGeneral};
 
   // Force rcx to -2 to test negative integer formatting.
-  auto& reg = filtered_set[RegisterCategory::Type::kGeneral];
-  Register& rcx = reg[2];
-  EXPECT_EQ(RegisterID::kX64_rcx, rcx.id());
+  Register& rcx = registers[2];
+  EXPECT_EQ(RegisterID::kX64_rcx, rcx.id);
   SetRegisterValue(&rcx, static_cast<uint64_t>(-2));
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -129,24 +108,15 @@ TEST(FormatRegisters, GeneralRegisters) {
       "  rcx  0xfffffffffffffffe = -2\n"
       "  rdx   0x102030405060708 \n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
 
 TEST(FormatRegisters, VectorRegisters) {
-  RegisterSet registers;
-  GetCategories(&registers);
+  auto registers = GetRegisters();
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::Type::kVector};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, registers, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  options.categories = {RegisterCategory::kVector};
 
   EXPECT_EQ(
       "Vector Registers\n"
@@ -156,24 +126,16 @@ TEST(FormatRegisters, VectorRegisters) {
       "  xmm3 00000000 00000000 01020304 05060708\n"
       "  xmm4 01020304 05060708 090a0b0c 0d0e0f10\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
 
 TEST(FormatRegisters, AllRegisters) {
-  RegisterSet registers;
-  GetCategories(&registers);
+  auto registers = GetRegisters();
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFP,
-                        RegisterCategory::Type::kVector};
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, registers, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  options.categories = {RegisterCategory::kGeneral, RegisterCategory::kFloatingPoint,
+                        RegisterCategory::kVector};
 
   // TODO(donosoc): Detect the maximum length and make the tables coincide.
   EXPECT_EQ(
@@ -195,50 +157,32 @@ TEST(FormatRegisters, AllRegisters) {
       "  xmm3 00000000 00000000 01020304 05060708\n"
       "  xmm4 01020304 05060708 090a0b0c 0d0e0f10\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, registers).AsString());
 }
 
 TEST(FormatRegisters, OneRegister) {
-  RegisterSet registers;
-  GetCategories(&registers);
+  auto registers = GetRegisters();
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.filter_regexp = "xmm3";
-  options.categories = {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFP,
-                        RegisterCategory::Type::kVector};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, registers, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  ASSERT_TRUE(options.filter_regex.Init("xmm3"));
+  options.categories = {RegisterCategory::kGeneral, RegisterCategory::kFloatingPoint,
+                        RegisterCategory::kVector};
 
   EXPECT_EQ(
       "Vector Registers\n"
       "  xmm3 00000000 00000000 01020304 05060708\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
 
 TEST(FormatRegister, RegexSearch) {
-  RegisterSet registers;
-  GetCategories(&registers);
+  auto registers = GetRegisters();
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.filter_regexp = "XMm[2-4]$";
-  options.categories = {RegisterCategory::Type::kVector};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, registers, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  ASSERT_TRUE(options.filter_regex.Init("XMm[2-4]$"));
+  options.categories = {RegisterCategory::kVector};
 
   EXPECT_EQ(
       "Vector Registers\n"
@@ -246,40 +190,28 @@ TEST(FormatRegister, RegexSearch) {
       "  xmm3 00000000 00000000 01020304 05060708\n"
       "  xmm4 01020304 05060708 090a0b0c 0d0e0f10\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
 
 TEST(FormatRegisters, CannotFindRegister) {
-  RegisterSet registers;
-  GetCategories(&registers);
+  auto registers = GetRegisters();
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.filter_regexp = "W0";
-  options.categories = {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFP,
-                        RegisterCategory::Type::kVector};
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, registers, &filtered_set);
-  EXPECT_TRUE(err.has_error());
+  ASSERT_TRUE(options.filter_regex.Init("W0"));
+  options.categories = {RegisterCategory::kGeneral, RegisterCategory::kFloatingPoint,
+                        RegisterCategory::kVector};
+
+  EXPECT_TRUE(FilterRegisters(options, registers).empty());
 }
 
 TEST(FormatRegisters, WithRflags) {
-  RegisterSet register_set;
-  GetCategories(&register_set);
-  auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
+  auto registers = GetRegisters();
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::Type::kGeneral};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, register_set, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  options.categories = {RegisterCategory::kGeneral};
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -290,69 +222,44 @@ TEST(FormatRegisters, WithRflags) {
       "  rflags         0x00000000 CF=0, PF=0, AF=0, ZF=0, SF=0, TF=0, IF=0, "
       "DF=0, OF=0\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
 
 TEST(FormatRegisters, RFlagsValues) {
-  RegisterSet register_set;
-  auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
+  auto registers = GetRegisters();
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
+  SetRegisterValue(&registers.back(), X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
+                                          X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
+                                          X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF));
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.filter_regexp = "rflags";
-  options.categories = {RegisterCategory::Type::kGeneral};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, register_set, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  // filtered_set now holds a pointer to rflags that we can change.
-  auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
-  SetRegisterValue(&reg, X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
-                             X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
-                             X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF));
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  ASSERT_TRUE(options.filter_regex.Init("rflags"));
+  options.categories = {RegisterCategory::kGeneral};
 
   EXPECT_EQ(
       "General Purpose Registers\n"
       "  rflags  0x00000555 CF=1, PF=1, AF=1, ZF=1, SF=0, TF=1, IF=0, DF=1, "
       "OF=0\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
 
 TEST(FormatRegisters, RFlagsValuesExtended) {
-  RegisterSet register_set;
-  auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
+  std::vector<Register> registers;
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
+  SetRegisterValue(&registers.back(), X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
+                                          X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
+                                          X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF) |
+                                          // Extended flags
+                                          (0b10 << kRflagsIOPLShift) | X86_FLAG_MASK(RflagsNT) |
+                                          X86_FLAG_MASK(RflagsVM) | X86_FLAG_MASK(RflagsVIF) |
+                                          X86_FLAG_MASK(RflagsID));
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.filter_regexp = "rflags";
   options.extended = true;
-  options.categories = {RegisterCategory::Type::kGeneral};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, register_set, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  // filtered_set now holds a pointer to rflags that we can change.
-  auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
-
-  SetRegisterValue(
-      &reg, X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) | X86_FLAG_MASK(RflagsAF) |
-                X86_FLAG_MASK(RflagsZF) | X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF) |
-                // Extended flags
-                (0b10 << kRflagsIOPLShift) | X86_FLAG_MASK(RflagsNT) | X86_FLAG_MASK(RflagsVM) |
-                X86_FLAG_MASK(RflagsVIF) | X86_FLAG_MASK(RflagsID));
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  options.categories = {RegisterCategory::kGeneral};
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -361,79 +268,53 @@ TEST(FormatRegisters, RFlagsValuesExtended) {
       "                     IOPL=2, NT=1, RF=0, VM=1, AC=0, VIF=1, VIP=0, "
       "ID=1\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, registers).AsString());
 }
 
 TEST(FormatRegisters, CPSRValues) {
-  RegisterSet register_set;
-  auto& cat = register_set.category_map()[RegisterCategory::Type::kGeneral];
-  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_cpsr, 0));
+  std::vector<Register> registers;
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_cpsr, 0));
+  SetRegisterValue(&registers.back(), ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N));
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kArm64;
-  options.filter_regexp = "cpsr";
-  options.categories = {RegisterCategory::Type::kGeneral};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, register_set, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  // filtered_set now holds a pointer to rflags that we can change.
-  auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
-  SetRegisterValue(&reg, ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N));
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  options.categories = {RegisterCategory::kGeneral};
 
   EXPECT_EQ(
       "General Purpose Registers\n"
       "  cpsr  0xa0000000 V=0, C=1, Z=0, N=1\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, registers).AsString());
 
   // Check out extended
-  SetRegisterValue(&reg, ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N) |
-                             // Extended flags.
-                             ARM64_FLAG_MASK(Cpsr, EL) | ARM64_FLAG_MASK(Cpsr, I) |
-                             ARM64_FLAG_MASK(Cpsr, A) | ARM64_FLAG_MASK(Cpsr, IL) |
-                             ARM64_FLAG_MASK(Cpsr, PAN) | ARM64_FLAG_MASK(Cpsr, UAO));
+  SetRegisterValue(&registers.back(), ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N) |
+                                          // Extended flags.
+                                          ARM64_FLAG_MASK(Cpsr, EL) | ARM64_FLAG_MASK(Cpsr, I) |
+                                          ARM64_FLAG_MASK(Cpsr, A) | ARM64_FLAG_MASK(Cpsr, IL) |
+                                          ARM64_FLAG_MASK(Cpsr, PAN) | ARM64_FLAG_MASK(Cpsr, UAO));
 
   options.extended = true;
-  out = OutputBuffer();
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
   EXPECT_EQ(
       "General Purpose Registers\n"
       "  cpsr  0xa0d00181 V=0, C=1, Z=0, N=1\n"
       "                   EL=1, F=0, I=1, A=1, D=0, IL=1, SS=0, PAN=1, UAO=1\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, registers).AsString());
 }
 
 TEST(FormatRegisters, DebugRegisters_x86) {
-  RegisterSet register_set;
-  auto& cat = register_set.category_map()[RegisterCategory::Type::kDebug];
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr0, 0x1234));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr1, 0x1234567));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr2, 0x123456789ab));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr3, 0x123456789abcdef));
+  std::vector<Register> registers;
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr0, 0x1234));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr1, 0x1234567));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr2, 0x123456789ab));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr3, 0x123456789abcdef));
 
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr6, 0xaffa));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr7, 0xaaaa26aa));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr6, 0xaffa));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr7, 0xaaaa26aa));
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::Type::kDebug};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, register_set, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  options.categories = {RegisterCategory::kDebug};
 
   EXPECT_EQ(
       "Debug Registers\n"
@@ -442,34 +323,29 @@ TEST(FormatRegisters, DebugRegisters_x86) {
       "  dr2      0x123456789ab \n"
       "  dr3  0x123456789abcdef \n"
       "  dr6         0x0000affa B0=0, B1=1, B2=0, B3=1, BD=1, BS=0, BT=1\n"
-      "  dr7         0xaaaa26aa L0=0, G0=1, L1=0, G1=1, L2=0, G2=1, L3=0, "
-      "G4=1, "
-      "LE=0, GE=1, GD=1\n"
-      "                         R/W0=2, LEN0=2, R/W1=2, LEN1=2, R/W2=2, "
-      "LEN2=2, "
-      "R/W3=2, LEN3=2\n"
+      "  dr7         0xaaaa26aa L0=0, G0=1, L1=0, G1=1, L2=0, G2=1, L3=0, G4=1, LE=0, GE=1, GD=1\n"
+      "                         R/W0=2, LEN0=2, R/W1=2, LEN1=2, R/W2=2, LEN2=2, R/W3=2, LEN3=2\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, registers).AsString());
 }
 
 TEST(FormatRegisters, DebugRegisters_arm64) {
-  RegisterSet register_set;
-  auto& cat = register_set.category_map()[RegisterCategory::Type::kDebug];
-  cat.push_back(CreateRegisterWithValue(
+  std::vector<Register> registers;
+  registers.push_back(CreateRegisterWithValue(
       RegisterID::kARMv8_dbgbcr0_el1,
       ARM64_FLAG_MASK(DBGBCR, PMC) | ARM64_FLAG_MASK(DBGBCR, HMC) | ARM64_FLAG_MASK(DBGBCR, LBN)));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xdeadbeefaabbccdd));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbcr15_el1,
-                                        ARM64_FLAG_MASK(DBGBCR, E) | ARM64_FLAG_MASK(DBGBCR, BAS) |
-                                            ARM64_FLAG_MASK(DBGBCR, SSC) |
-                                            ARM64_FLAG_MASK(DBGBCR, BT)));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xaabbccdd11223344));
-  cat.push_back(CreateRegisterWithValue(
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xdeadbeefaabbccdd));
+  registers.push_back(CreateRegisterWithValue(
+      RegisterID::kARMv8_dbgbcr15_el1, ARM64_FLAG_MASK(DBGBCR, E) | ARM64_FLAG_MASK(DBGBCR, BAS) |
+                                           ARM64_FLAG_MASK(DBGBCR, SSC) |
+                                           ARM64_FLAG_MASK(DBGBCR, BT)));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xaabbccdd11223344));
+  registers.push_back(CreateRegisterWithValue(
       RegisterID::kARMv8_id_aa64dfr0_el1,
       ARM64_FLAG_MASK(ID_AA64DFR0_EL1, DV) | ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMUV) |
           ARM64_FLAG_MASK(ID_AA64DFR0_EL1, BRP) | ARM64_FLAG_MASK(ID_AA64DFR0_EL1, WRP) |
           ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMSV)));
-  cat.push_back(CreateRegisterWithValue(
+  registers.push_back(CreateRegisterWithValue(
       RegisterID::kARMv8_mdscr_el1,
       ARM64_FLAG_MASK(MDSCR_EL1, SS) | ARM64_FLAG_MASK(MDSCR_EL1, TDCC) |
           ARM64_FLAG_MASK(MDSCR_EL1, MDE) | ARM64_FLAG_MASK(MDSCR_EL1, TXU) |
@@ -477,15 +353,7 @@ TEST(FormatRegisters, DebugRegisters_arm64) {
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kArm64;
-  options.categories = {RegisterCategory::Type::kDebug};
-
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, register_set, &filtered_set);
-  ASSERT_FALSE(err.has_error()) << err.msg();
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  ASSERT_FALSE(err.has_error()) << err.msg();
+  options.categories = {RegisterCategory::kDebug};
 
   // clang-format off
   EXPECT_EQ(
@@ -497,7 +365,7 @@ TEST(FormatRegisters, DebugRegisters_arm64) {
       "  id_aa64dfr0_el1         0xf00f0ff0f DV=15, TV=0, PMUV=15, BRP=16, WRP=16, CTX_CMP=1, PMSV=15\n"
       "        mdscr_el1          0x44009001 SS=1, TDCC=1, KDE=0, HDE=0, MDE=1, RAZ/WI=0, TDA=0, INTdis=0, TXU=1, RXO=0, TXfull=0, RXfull=1\n"
       "\n",
-      out.AsString());
+      FormatRegisters(options, registers).AsString());
   // clang-format on
 }
 

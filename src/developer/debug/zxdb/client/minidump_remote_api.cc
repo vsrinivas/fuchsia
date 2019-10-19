@@ -24,6 +24,10 @@
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
+using debug_ipc::Register;
+using debug_ipc::RegisterCategory;
+using debug_ipc::RegisterID;
+
 namespace zxdb {
 
 namespace {
@@ -96,195 +100,183 @@ void Succeed(fit::callback<void(const Err&, ReplyType)> cb, ReplyType r) {
 }
 
 template <typename ValueType>
-void AddReg(debug_ipc::RegisterCategory* category, debug_ipc::RegisterID id,
-            const ValueType& value) {
-  auto& reg = category->registers.emplace_back();
+void AddReg(debug_ipc::RegisterID id, const ValueType& value, std::vector<Register>* output) {
+  auto& reg = output->emplace_back();
   reg.id = id;
   reg.data.resize(sizeof(ValueType));
-  std::memcpy(reg.data.data(), reinterpret_cast<const void*>(&value), reg.data.size());
+  std::memcpy(reg.data.data(), &value, reg.data.size());
 }
 
-template <typename IterType>
-debug_ipc::RegisterCategory* MakeCategory(IterType& pos, debug_ipc::RegisterCategory::Type type,
-                                          debug_ipc::ReadRegistersReply* reply) {
-  if (*pos == type) {
-    pos++;
-    auto category = &reply->categories.emplace_back();
-    category->type = type;
-    return category;
-  }
+void PopulateRegistersARM64General(const crashpad::CPUContextARM64& ctx,
+                                   std::vector<Register>* output) {
+  AddReg(RegisterID::kARMv8_x0, ctx.regs[0], output);
+  AddReg(RegisterID::kARMv8_x1, ctx.regs[1], output);
+  AddReg(RegisterID::kARMv8_x2, ctx.regs[2], output);
+  AddReg(RegisterID::kARMv8_x3, ctx.regs[3], output);
+  AddReg(RegisterID::kARMv8_x4, ctx.regs[4], output);
+  AddReg(RegisterID::kARMv8_x5, ctx.regs[5], output);
+  AddReg(RegisterID::kARMv8_x6, ctx.regs[6], output);
+  AddReg(RegisterID::kARMv8_x7, ctx.regs[7], output);
+  AddReg(RegisterID::kARMv8_x8, ctx.regs[8], output);
+  AddReg(RegisterID::kARMv8_x9, ctx.regs[9], output);
+  AddReg(RegisterID::kARMv8_x10, ctx.regs[10], output);
+  AddReg(RegisterID::kARMv8_x11, ctx.regs[11], output);
+  AddReg(RegisterID::kARMv8_x12, ctx.regs[12], output);
+  AddReg(RegisterID::kARMv8_x13, ctx.regs[13], output);
+  AddReg(RegisterID::kARMv8_x14, ctx.regs[14], output);
+  AddReg(RegisterID::kARMv8_x15, ctx.regs[15], output);
+  AddReg(RegisterID::kARMv8_x16, ctx.regs[16], output);
+  AddReg(RegisterID::kARMv8_x17, ctx.regs[17], output);
+  AddReg(RegisterID::kARMv8_x18, ctx.regs[18], output);
+  AddReg(RegisterID::kARMv8_x19, ctx.regs[19], output);
+  AddReg(RegisterID::kARMv8_x20, ctx.regs[20], output);
+  AddReg(RegisterID::kARMv8_x21, ctx.regs[21], output);
+  AddReg(RegisterID::kARMv8_x22, ctx.regs[22], output);
+  AddReg(RegisterID::kARMv8_x23, ctx.regs[23], output);
+  AddReg(RegisterID::kARMv8_x24, ctx.regs[24], output);
+  AddReg(RegisterID::kARMv8_x25, ctx.regs[25], output);
+  AddReg(RegisterID::kARMv8_x26, ctx.regs[26], output);
+  AddReg(RegisterID::kARMv8_x27, ctx.regs[27], output);
+  AddReg(RegisterID::kARMv8_x28, ctx.regs[28], output);
+  AddReg(RegisterID::kARMv8_x29, ctx.regs[29], output);
+  AddReg(RegisterID::kARMv8_lr, ctx.regs[30], output);
+  AddReg(RegisterID::kARMv8_sp, ctx.sp, output);
+  AddReg(RegisterID::kARMv8_pc, ctx.pc, output);
+  AddReg(RegisterID::kARMv8_cpsr, ctx.spsr, output);
+}
 
-  return nullptr;
+void PopulateRegistersARM64Vector(const crashpad::CPUContextARM64& ctx,
+                                  std::vector<Register>* output) {
+  AddReg(RegisterID::kARMv8_fpcr, ctx.fpcr, output);
+  AddReg(RegisterID::kARMv8_fpsr, ctx.fpsr, output);
+  AddReg(RegisterID::kARMv8_v0, ctx.fpsimd[0], output);
+  AddReg(RegisterID::kARMv8_v1, ctx.fpsimd[1], output);
+  AddReg(RegisterID::kARMv8_v2, ctx.fpsimd[2], output);
+  AddReg(RegisterID::kARMv8_v3, ctx.fpsimd[3], output);
+  AddReg(RegisterID::kARMv8_v4, ctx.fpsimd[4], output);
+  AddReg(RegisterID::kARMv8_v5, ctx.fpsimd[5], output);
+  AddReg(RegisterID::kARMv8_v6, ctx.fpsimd[6], output);
+  AddReg(RegisterID::kARMv8_v7, ctx.fpsimd[7], output);
+  AddReg(RegisterID::kARMv8_v8, ctx.fpsimd[8], output);
+  AddReg(RegisterID::kARMv8_v9, ctx.fpsimd[9], output);
+  AddReg(RegisterID::kARMv8_v10, ctx.fpsimd[10], output);
+  AddReg(RegisterID::kARMv8_v11, ctx.fpsimd[11], output);
+  AddReg(RegisterID::kARMv8_v12, ctx.fpsimd[12], output);
+  AddReg(RegisterID::kARMv8_v13, ctx.fpsimd[13], output);
+  AddReg(RegisterID::kARMv8_v14, ctx.fpsimd[14], output);
+  AddReg(RegisterID::kARMv8_v15, ctx.fpsimd[15], output);
+  AddReg(RegisterID::kARMv8_v16, ctx.fpsimd[16], output);
+  AddReg(RegisterID::kARMv8_v17, ctx.fpsimd[17], output);
+  AddReg(RegisterID::kARMv8_v18, ctx.fpsimd[18], output);
+  AddReg(RegisterID::kARMv8_v19, ctx.fpsimd[19], output);
+  AddReg(RegisterID::kARMv8_v20, ctx.fpsimd[20], output);
+  AddReg(RegisterID::kARMv8_v21, ctx.fpsimd[21], output);
+  AddReg(RegisterID::kARMv8_v22, ctx.fpsimd[22], output);
+  AddReg(RegisterID::kARMv8_v23, ctx.fpsimd[23], output);
+  AddReg(RegisterID::kARMv8_v24, ctx.fpsimd[24], output);
+  AddReg(RegisterID::kARMv8_v25, ctx.fpsimd[25], output);
+  AddReg(RegisterID::kARMv8_v26, ctx.fpsimd[26], output);
+  AddReg(RegisterID::kARMv8_v27, ctx.fpsimd[27], output);
+  AddReg(RegisterID::kARMv8_v28, ctx.fpsimd[28], output);
+  AddReg(RegisterID::kARMv8_v29, ctx.fpsimd[29], output);
+  AddReg(RegisterID::kARMv8_v30, ctx.fpsimd[30], output);
+  AddReg(RegisterID::kARMv8_v31, ctx.fpsimd[31], output);
 }
 
 void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
                             const debug_ipc::ReadRegistersRequest& request,
                             debug_ipc::ReadRegistersReply* reply) {
-  auto pos = request.categories.begin();
-
-  using R = debug_ipc::RegisterID;
-
-  auto category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kGeneral, reply);
-  if (category != nullptr) {
-    AddReg(category, R::kARMv8_x0, ctx.regs[0]);
-    AddReg(category, R::kARMv8_x1, ctx.regs[1]);
-    AddReg(category, R::kARMv8_x2, ctx.regs[2]);
-    AddReg(category, R::kARMv8_x3, ctx.regs[3]);
-    AddReg(category, R::kARMv8_x4, ctx.regs[4]);
-    AddReg(category, R::kARMv8_x5, ctx.regs[5]);
-    AddReg(category, R::kARMv8_x6, ctx.regs[6]);
-    AddReg(category, R::kARMv8_x7, ctx.regs[7]);
-    AddReg(category, R::kARMv8_x8, ctx.regs[8]);
-    AddReg(category, R::kARMv8_x9, ctx.regs[9]);
-    AddReg(category, R::kARMv8_x10, ctx.regs[10]);
-    AddReg(category, R::kARMv8_x11, ctx.regs[11]);
-    AddReg(category, R::kARMv8_x12, ctx.regs[12]);
-    AddReg(category, R::kARMv8_x13, ctx.regs[13]);
-    AddReg(category, R::kARMv8_x14, ctx.regs[14]);
-    AddReg(category, R::kARMv8_x15, ctx.regs[15]);
-    AddReg(category, R::kARMv8_x16, ctx.regs[16]);
-    AddReg(category, R::kARMv8_x17, ctx.regs[17]);
-    AddReg(category, R::kARMv8_x18, ctx.regs[18]);
-    AddReg(category, R::kARMv8_x19, ctx.regs[19]);
-    AddReg(category, R::kARMv8_x20, ctx.regs[20]);
-    AddReg(category, R::kARMv8_x21, ctx.regs[21]);
-    AddReg(category, R::kARMv8_x22, ctx.regs[22]);
-    AddReg(category, R::kARMv8_x23, ctx.regs[23]);
-    AddReg(category, R::kARMv8_x24, ctx.regs[24]);
-    AddReg(category, R::kARMv8_x25, ctx.regs[25]);
-    AddReg(category, R::kARMv8_x26, ctx.regs[26]);
-    AddReg(category, R::kARMv8_x27, ctx.regs[27]);
-    AddReg(category, R::kARMv8_x28, ctx.regs[28]);
-    AddReg(category, R::kARMv8_x29, ctx.regs[29]);
-    AddReg(category, R::kARMv8_lr, ctx.regs[30]);
-    AddReg(category, R::kARMv8_sp, ctx.sp);
-    AddReg(category, R::kARMv8_pc, ctx.pc);
-    AddReg(category, R::kARMv8_cpsr, ctx.spsr);
+  for (const debug_ipc::RegisterCategory cat : request.categories) {
+    if (cat == RegisterCategory::kGeneral)
+      PopulateRegistersARM64General(ctx, &reply->registers);
+    if (cat == RegisterCategory::kVector)
+      PopulateRegistersARM64Vector(ctx, &reply->registers);
   }
+}
 
-  // ARM doesn't define any registers in this category.
-  MakeCategory(pos, debug_ipc::RegisterCategory::Type::kFP, reply);
+void PopulateRegistersX64General(const crashpad::CPUContextX86_64& ctx,
+                                 std::vector<Register>* output) {
+  AddReg(RegisterID::kX64_rax, ctx.rax, output);
+  AddReg(RegisterID::kX64_rbx, ctx.rbx, output);
+  AddReg(RegisterID::kX64_rcx, ctx.rcx, output);
+  AddReg(RegisterID::kX64_rdx, ctx.rdx, output);
+  AddReg(RegisterID::kX64_rsi, ctx.rsi, output);
+  AddReg(RegisterID::kX64_rdi, ctx.rdi, output);
+  AddReg(RegisterID::kX64_rbp, ctx.rbp, output);
+  AddReg(RegisterID::kX64_rsp, ctx.rsp, output);
+  AddReg(RegisterID::kX64_r8, ctx.r8, output);
+  AddReg(RegisterID::kX64_r9, ctx.r9, output);
+  AddReg(RegisterID::kX64_r10, ctx.r10, output);
+  AddReg(RegisterID::kX64_r11, ctx.r11, output);
+  AddReg(RegisterID::kX64_r12, ctx.r12, output);
+  AddReg(RegisterID::kX64_r13, ctx.r13, output);
+  AddReg(RegisterID::kX64_r14, ctx.r14, output);
+  AddReg(RegisterID::kX64_r15, ctx.r15, output);
+  AddReg(RegisterID::kX64_rip, ctx.rip, output);
+  AddReg(RegisterID::kX64_rflags, ctx.rflags, output);
+}
 
-  category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
-  if (category != nullptr) {
-    AddReg(category, R::kARMv8_fpcr, ctx.fpcr);
-    AddReg(category, R::kARMv8_fpsr, ctx.fpsr);
-    AddReg(category, R::kARMv8_v0, ctx.fpsimd[0]);
-    AddReg(category, R::kARMv8_v1, ctx.fpsimd[1]);
-    AddReg(category, R::kARMv8_v2, ctx.fpsimd[2]);
-    AddReg(category, R::kARMv8_v3, ctx.fpsimd[3]);
-    AddReg(category, R::kARMv8_v4, ctx.fpsimd[4]);
-    AddReg(category, R::kARMv8_v5, ctx.fpsimd[5]);
-    AddReg(category, R::kARMv8_v6, ctx.fpsimd[6]);
-    AddReg(category, R::kARMv8_v7, ctx.fpsimd[7]);
-    AddReg(category, R::kARMv8_v8, ctx.fpsimd[8]);
-    AddReg(category, R::kARMv8_v9, ctx.fpsimd[9]);
-    AddReg(category, R::kARMv8_v10, ctx.fpsimd[10]);
-    AddReg(category, R::kARMv8_v11, ctx.fpsimd[11]);
-    AddReg(category, R::kARMv8_v12, ctx.fpsimd[12]);
-    AddReg(category, R::kARMv8_v13, ctx.fpsimd[13]);
-    AddReg(category, R::kARMv8_v14, ctx.fpsimd[14]);
-    AddReg(category, R::kARMv8_v15, ctx.fpsimd[15]);
-    AddReg(category, R::kARMv8_v16, ctx.fpsimd[16]);
-    AddReg(category, R::kARMv8_v17, ctx.fpsimd[17]);
-    AddReg(category, R::kARMv8_v18, ctx.fpsimd[18]);
-    AddReg(category, R::kARMv8_v19, ctx.fpsimd[19]);
-    AddReg(category, R::kARMv8_v20, ctx.fpsimd[20]);
-    AddReg(category, R::kARMv8_v21, ctx.fpsimd[21]);
-    AddReg(category, R::kARMv8_v22, ctx.fpsimd[22]);
-    AddReg(category, R::kARMv8_v23, ctx.fpsimd[23]);
-    AddReg(category, R::kARMv8_v24, ctx.fpsimd[24]);
-    AddReg(category, R::kARMv8_v25, ctx.fpsimd[25]);
-    AddReg(category, R::kARMv8_v26, ctx.fpsimd[26]);
-    AddReg(category, R::kARMv8_v27, ctx.fpsimd[27]);
-    AddReg(category, R::kARMv8_v28, ctx.fpsimd[28]);
-    AddReg(category, R::kARMv8_v29, ctx.fpsimd[29]);
-    AddReg(category, R::kARMv8_v30, ctx.fpsimd[30]);
-    AddReg(category, R::kARMv8_v31, ctx.fpsimd[31]);
-  }
+void PopulateRegistersX64Float(const crashpad::CPUContextX86_64& ctx,
+                               std::vector<Register>* output) {
+  AddReg(RegisterID::kX64_fcw, ctx.fxsave.fcw, output);
+  AddReg(RegisterID::kX64_fsw, ctx.fxsave.fsw, output);
+  AddReg(RegisterID::kX64_ftw, ctx.fxsave.ftw, output);
+  AddReg(RegisterID::kX64_fop, ctx.fxsave.fop, output);
+  AddReg(RegisterID::kX64_fip, ctx.fxsave.fpu_ip_64, output);
+  AddReg(RegisterID::kX64_fdp, ctx.fxsave.fpu_dp_64, output);
+  AddReg(RegisterID::kX64_st0, ctx.fxsave.st_mm[0], output);
+  AddReg(RegisterID::kX64_st1, ctx.fxsave.st_mm[1], output);
+  AddReg(RegisterID::kX64_st2, ctx.fxsave.st_mm[2], output);
+  AddReg(RegisterID::kX64_st3, ctx.fxsave.st_mm[3], output);
+  AddReg(RegisterID::kX64_st4, ctx.fxsave.st_mm[4], output);
+  AddReg(RegisterID::kX64_st5, ctx.fxsave.st_mm[5], output);
+  AddReg(RegisterID::kX64_st6, ctx.fxsave.st_mm[6], output);
+  AddReg(RegisterID::kX64_st7, ctx.fxsave.st_mm[7], output);
+}
 
-  // ARM Doesn't define any registers in this category either.
-  MakeCategory(pos, debug_ipc::RegisterCategory::Type::kDebug, reply);
+void PopulateRegistersX64Vector(const crashpad::CPUContextX86_64& ctx,
+                                std::vector<Register>* output) {
+  AddReg(RegisterID::kX64_mxcsr, ctx.fxsave.mxcsr, output);
+  AddReg(RegisterID::kX64_xmm0, ctx.fxsave.xmm[0], output);
+  AddReg(RegisterID::kX64_xmm1, ctx.fxsave.xmm[1], output);
+  AddReg(RegisterID::kX64_xmm2, ctx.fxsave.xmm[2], output);
+  AddReg(RegisterID::kX64_xmm3, ctx.fxsave.xmm[3], output);
+  AddReg(RegisterID::kX64_xmm4, ctx.fxsave.xmm[4], output);
+  AddReg(RegisterID::kX64_xmm5, ctx.fxsave.xmm[5], output);
+  AddReg(RegisterID::kX64_xmm6, ctx.fxsave.xmm[6], output);
+  AddReg(RegisterID::kX64_xmm7, ctx.fxsave.xmm[7], output);
+  AddReg(RegisterID::kX64_xmm8, ctx.fxsave.xmm[8], output);
+  AddReg(RegisterID::kX64_xmm9, ctx.fxsave.xmm[9], output);
+  AddReg(RegisterID::kX64_xmm10, ctx.fxsave.xmm[10], output);
+  AddReg(RegisterID::kX64_xmm11, ctx.fxsave.xmm[11], output);
+  AddReg(RegisterID::kX64_xmm12, ctx.fxsave.xmm[12], output);
+  AddReg(RegisterID::kX64_xmm13, ctx.fxsave.xmm[13], output);
+  AddReg(RegisterID::kX64_xmm14, ctx.fxsave.xmm[14], output);
+  AddReg(RegisterID::kX64_xmm15, ctx.fxsave.xmm[15], output);
+}
+
+void PopulateRegistersX64Debug(const crashpad::CPUContextX86_64& ctx,
+                               std::vector<Register>* output) {
+  AddReg(RegisterID::kX64_dr0, ctx.dr0, output);
+  AddReg(RegisterID::kX64_dr1, ctx.dr1, output);
+  AddReg(RegisterID::kX64_dr2, ctx.dr2, output);
+  AddReg(RegisterID::kX64_dr3, ctx.dr3, output);
+  AddReg(RegisterID::kX64_dr6, ctx.dr6, output);
+  AddReg(RegisterID::kX64_dr7, ctx.dr7, output);
 }
 
 void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
                              const debug_ipc::ReadRegistersRequest& request,
                              debug_ipc::ReadRegistersReply* reply) {
-  auto pos = request.categories.begin();
-
-  using R = debug_ipc::RegisterID;
-
-  auto category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kGeneral, reply);
-  if (category != nullptr) {
-    AddReg(category, R::kX64_rax, ctx.rax);
-    AddReg(category, R::kX64_rbx, ctx.rbx);
-    AddReg(category, R::kX64_rcx, ctx.rcx);
-    AddReg(category, R::kX64_rdx, ctx.rdx);
-    AddReg(category, R::kX64_rsi, ctx.rsi);
-    AddReg(category, R::kX64_rdi, ctx.rdi);
-    AddReg(category, R::kX64_rbp, ctx.rbp);
-    AddReg(category, R::kX64_rsp, ctx.rsp);
-    AddReg(category, R::kX64_r8, ctx.r8);
-    AddReg(category, R::kX64_r9, ctx.r9);
-    AddReg(category, R::kX64_r10, ctx.r10);
-    AddReg(category, R::kX64_r11, ctx.r11);
-    AddReg(category, R::kX64_r12, ctx.r12);
-    AddReg(category, R::kX64_r13, ctx.r13);
-    AddReg(category, R::kX64_r14, ctx.r14);
-    AddReg(category, R::kX64_r15, ctx.r15);
-    AddReg(category, R::kX64_rip, ctx.rip);
-    AddReg(category, R::kX64_rflags, ctx.rflags);
-  }
-
-  category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kFP, reply);
-  if (category != nullptr) {
-    AddReg(category, R::kX64_fcw, ctx.fxsave.fcw);
-    AddReg(category, R::kX64_fsw, ctx.fxsave.fsw);
-    AddReg(category, R::kX64_ftw, ctx.fxsave.ftw);
-    AddReg(category, R::kX64_fop, ctx.fxsave.fop);
-    AddReg(category, R::kX64_fip, ctx.fxsave.fpu_ip_64);
-    AddReg(category, R::kX64_fdp, ctx.fxsave.fpu_dp_64);
-    AddReg(category, R::kX64_st0, ctx.fxsave.st_mm[0]);
-    AddReg(category, R::kX64_st1, ctx.fxsave.st_mm[1]);
-    AddReg(category, R::kX64_st2, ctx.fxsave.st_mm[2]);
-    AddReg(category, R::kX64_st3, ctx.fxsave.st_mm[3]);
-    AddReg(category, R::kX64_st4, ctx.fxsave.st_mm[4]);
-    AddReg(category, R::kX64_st5, ctx.fxsave.st_mm[5]);
-    AddReg(category, R::kX64_st6, ctx.fxsave.st_mm[6]);
-    AddReg(category, R::kX64_st7, ctx.fxsave.st_mm[7]);
-  }
-
-  category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
-  if (category != nullptr) {
-    AddReg(category, R::kX64_mxcsr, ctx.fxsave.mxcsr);
-    AddReg(category, R::kX64_xmm0, ctx.fxsave.xmm[0]);
-    AddReg(category, R::kX64_xmm1, ctx.fxsave.xmm[1]);
-    AddReg(category, R::kX64_xmm2, ctx.fxsave.xmm[2]);
-    AddReg(category, R::kX64_xmm3, ctx.fxsave.xmm[3]);
-    AddReg(category, R::kX64_xmm4, ctx.fxsave.xmm[4]);
-    AddReg(category, R::kX64_xmm5, ctx.fxsave.xmm[5]);
-    AddReg(category, R::kX64_xmm6, ctx.fxsave.xmm[6]);
-    AddReg(category, R::kX64_xmm7, ctx.fxsave.xmm[7]);
-    AddReg(category, R::kX64_xmm8, ctx.fxsave.xmm[8]);
-    AddReg(category, R::kX64_xmm9, ctx.fxsave.xmm[9]);
-    AddReg(category, R::kX64_xmm10, ctx.fxsave.xmm[10]);
-    AddReg(category, R::kX64_xmm11, ctx.fxsave.xmm[11]);
-    AddReg(category, R::kX64_xmm12, ctx.fxsave.xmm[12]);
-    AddReg(category, R::kX64_xmm13, ctx.fxsave.xmm[13]);
-    AddReg(category, R::kX64_xmm14, ctx.fxsave.xmm[14]);
-    AddReg(category, R::kX64_xmm15, ctx.fxsave.xmm[15]);
-
-    // YMM registers are missing from minidump at this time.
-  }
-
-  category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kDebug, reply);
-  if (category != nullptr) {
-    AddReg(category, R::kX64_dr0, ctx.dr0);
-    AddReg(category, R::kX64_dr1, ctx.dr1);
-    AddReg(category, R::kX64_dr2, ctx.dr2);
-    AddReg(category, R::kX64_dr3, ctx.dr3);
-    AddReg(category, R::kX64_dr6, ctx.dr6);
-    AddReg(category, R::kX64_dr7, ctx.dr7);
+  for (const debug_ipc::RegisterCategory cat : request.categories) {
+    if (cat == RegisterCategory::kGeneral)
+      PopulateRegistersX64General(ctx, &reply->registers);
+    if (cat == RegisterCategory::kFloatingPoint)
+      PopulateRegistersX64Float(ctx, &reply->registers);
+    if (cat == RegisterCategory::kVector)
+      PopulateRegistersX64Vector(ctx, &reply->registers);
+    if (cat == RegisterCategory::kDebug)
+      PopulateRegistersX64Debug(ctx, &reply->registers);
   }
 }
 

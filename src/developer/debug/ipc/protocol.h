@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 17;
+constexpr uint32_t kProtocolVersion = 18;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -342,11 +342,11 @@ struct ReadRegistersRequest {
   uint64_t process_koid = 0;
   uint64_t thread_koid = 0;
   // What categories do we want to receive data from.
-  std::vector<RegisterCategory::Type> categories;
+  std::vector<RegisterCategory> categories;
 };
 
 struct ReadRegistersReply {
-  std::vector<RegisterCategory> categories;
+  std::vector<Register> registers;
 };
 
 // WriteRegisters --------------------------------------------------------------

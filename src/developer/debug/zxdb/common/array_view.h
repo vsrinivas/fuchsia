@@ -43,6 +43,7 @@ class array_view {
         end_(vect.empty() ? nullptr : &vect[0] + vect.size()) {}
 
   const T& operator[](size_t i) const { return begin_[i]; }
+  const T* data() const { return begin_; }
 
   const T& front() const { return *begin_; };
   const T& back() const { return *(end_ - 1); }

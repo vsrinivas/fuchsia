@@ -187,18 +187,18 @@ uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) { return &r
 
 ::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kArm64; }
 
-zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory::Type& cat,
+zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,
                                         const zx::thread& thread,
                                         std::vector<debug_ipc::Register>* out) {
   switch (cat) {
-    case debug_ipc::RegisterCategory::Type::kGeneral:
+    case debug_ipc::RegisterCategory::kGeneral:
       return ReadGeneralRegs(thread, out);
-    case debug_ipc::RegisterCategory::Type::kFP:
+    case debug_ipc::RegisterCategory::kFloatingPoint:
       // No FP registers
       return true;
-    case debug_ipc::RegisterCategory::Type::kVector:
+    case debug_ipc::RegisterCategory::kVector:
       return ReadVectorRegs(thread, out);
-    case debug_ipc::RegisterCategory::Type::kDebug:
+    case debug_ipc::RegisterCategory::kDebug:
       return ReadDebugRegs(thread, out);
     default:
       FXL_LOG(ERROR) << "Invalid category: " << static_cast<uint32_t>(cat);
@@ -206,7 +206,8 @@ zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory::Type&
   }
 }
 
-zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory&, zx::thread*) {
+zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory&,
+                                         const std::vector<debug_ipc::Register>&, zx::thread*) {
   // TODO(donosoc): Implement.
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -217,7 +218,7 @@ debug_ipc::ExceptionType HardwareNotificationType(const zx::thread&) {
 }
 
 debug_ipc::ExceptionType ArchProvider::DecodeExceptionType(const DebuggedThread& thread,
-                                                                   uint32_t exception_type) {
+                                                           uint32_t exception_type) {
   ExceptionInfo info(thread);
   return debug_ipc::DecodeException(exception_type, &info);
 }

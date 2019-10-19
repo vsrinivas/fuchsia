@@ -8,24 +8,20 @@
 
 #include <limits>
 
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
-Err GetLittleEndianHexOutput(const std::vector<uint8_t>& value, std::string* out, int length) {
-  if (value.empty())
-    return Err("Invalid size for hex printing: 0");
-
-  if (length == 0)
-    length = std::numeric_limits<int>::max();
+std::string GetLittleEndianHexOutput(array_view<uint8_t> data) {
+  if (data.empty())
+    return std::string();
 
   // For now we print into chunks of 32-bits, shortening the ends.
-  auto cur = value.data();
-  auto end = cur + value.size();
+  auto cur = data.data();
+  auto end = cur + data.size();
   std::vector<std::string> chunks;
-  int added_bytes = 0;
-  while (cur < end && added_bytes < length) {
+  size_t added_bytes = 0;
+  while (cur < end && added_bytes < data.size()) {
     uint32_t val = 0;
     auto diff = end - cur;
     for (int i = 0; i < 4 && i < diff; i++) {
@@ -42,33 +38,36 @@ Err GetLittleEndianHexOutput(const std::vector<uint8_t>& value, std::string* out
   // Though each particular chunk correctly keeps the endianness, the order is
   // backwards, as the last bits of the register would be printed first.
   // For that we append the chunks backwards.
-  out->clear();
+  std::string result;
   auto cit = chunks.rbegin();
   while (cit != chunks.rend()) {
-    out->append(*cit);
+    result.append(*cit);
     cit++;
     if (cit != chunks.rend())
-      out->append(" ");
+      result.append(" ");
   }
-  return Err();
+  return result;
 }
 
-Err GetFPString(const std::vector<uint8_t>& value, std::string* out, int precision) {
+std::string GetFPString(array_view<uint8_t> value, int precision) {
   switch (value.size()) {
     case 4:
       precision = precision != 0 ? precision : FLT_DIG;
-      *out = fxl::StringPrintf("%.*e", precision, *(const float*)(value.data()));
-      return Err();
+      return fxl::StringPrintf("%.*e", precision, *(const float*)(value.data()));
     case 8:
       precision = precision != 0 ? precision : DBL_DIG;
-      *out = fxl::StringPrintf("%.*e", precision, *(const double*)(value.data()));
-      return Err();
+      return fxl::StringPrintf("%.*e", precision, *(const double*)(value.data()));
     case 16:
-      precision = precision != 0 ? precision : LDBL_DIG;
-      *out = fxl::StringPrintf("%.*Le", precision, *(const long double*)(value.data()));
-      return Err();
+      if (sizeof(long double) == sizeof(double)) {
+        // On systems that don't have a longer "long double" type (ARM), printf won't format it
+        // properly.
+        return "Can't format a 'long double' on this system.";
+      } else {
+        precision = precision != 0 ? precision : LDBL_DIG;
+        return fxl::StringPrintf("%.*Le", precision, *(const long double*)(value.data()));
+      }
     default:
-      return Err(fxl::StringPrintf("Wrong size for floating point printing: %zu", value.size()));
+      return fxl::StringPrintf("Wrong size for floating point printing: %zu", value.size());
   }
 }
 

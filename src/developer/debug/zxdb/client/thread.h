@@ -26,7 +26,6 @@ namespace zxdb {
 class Err;
 class Frame;
 class Process;
-class RegisterSet;
 class ThreadController;
 
 // The flow control commands on this object (Pause, Continue, Step...) apply
@@ -112,8 +111,8 @@ class Thread : public ClientObject {
   //
   // The returned structures are architecture independent, but the contents
   // will be dependent on the architecture the target is running on.
-  virtual void ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-                             fit::callback<void(const Err&, const RegisterSet&)>) = 0;
+  virtual void ReadRegisters(std::vector<debug_ipc::RegisterCategory> cats_to_get,
+                             fit::callback<void(const Err&, std::vector<debug_ipc::Register>)>) = 0;
 
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();

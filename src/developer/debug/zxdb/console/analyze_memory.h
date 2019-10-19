@@ -16,6 +16,10 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
+namespace debug_ipc {
+struct Register;
+}
+
 namespace zxdb {
 
 class Err;
@@ -24,7 +28,6 @@ class OutputBuffer;
 class Process;
 class Stack;
 class Thread;
-class Register;
 
 struct AnalyzeMemoryOptions {
   // Required.
@@ -89,7 +92,7 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   void IssueError(const Err& err);
 
   // Saves the registers for the given frame index.
-  void AddRegisters(int frame_no, const std::vector<Register>& regs);
+  void AddRegisters(int frame_no, const std::vector<debug_ipc::Register>& regs);
 
   // Adds to the annotations map the given description for the given address. If there is already an
   // annotation at that address, adds to the end.

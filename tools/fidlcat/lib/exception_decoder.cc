@@ -6,7 +6,6 @@
 
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fxl/logging.h"
 

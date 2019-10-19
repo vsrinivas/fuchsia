@@ -10,7 +10,6 @@
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/mock_thread.h"
 #include "src/developer/debug/zxdb/client/process.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -58,7 +57,6 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   Location location(stack.ip, FileLine("file.cc", 12), 0, symbol_context, function);
 
   MockThread thread(process);
-  thread.register_contents().set_arch(debug_ipc::Arch::kX64);
 
   std::vector<std::unique_ptr<Frame>> frames;
   frames.push_back(std::make_unique<FrameImpl>(&thread, stack, location));

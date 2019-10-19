@@ -11,7 +11,7 @@
 namespace zxdb {
 
 MockFrame::MockFrame(Session* session, Thread* thread, const Location& location, uint64_t sp,
-                     uint64_t cfa, std::vector<Register> regs, uint64_t frame_base,
+                     uint64_t cfa, std::vector<debug_ipc::Register> regs, uint64_t frame_base,
                      const Frame* physical_frame, bool is_ambiguous_inline)
     : Frame(session),
       thread_(thread),
@@ -47,7 +47,9 @@ const Frame* MockFrame::GetPhysicalFrame() const {
 
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return location_.address(); }
-const std::vector<Register>& MockFrame::GetGeneralRegisters() const { return registers_; }
+const std::vector<debug_ipc::Register>& MockFrame::GetGeneralRegisters() const {
+  return registers_;
+}
 std::optional<uint64_t> MockFrame::GetBasePointer() const { return frame_base_; }
 void MockFrame::GetBasePointerAsync(fit::callback<void(uint64_t)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(

@@ -8,7 +8,6 @@
 #include "src/developer/debug/zxdb/client/finish_thread_controller.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/step_into_thread_controller.h"
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
@@ -1094,22 +1093,7 @@ Examples
 constexpr int kRegsCategoriesSwitch = 1;
 constexpr int kRegsExtendedSwitch = 2;
 
-// Converts the saved registers on a given stack frame to the right format for printing.
-RegisterSet FrameRegistersToSet(const Frame* frame) {
-  RegisterSet result_set;
-  result_set.set_arch(frame->session()->arch());
-  auto& general = result_set.category_map()[debug_ipc::RegisterCategory::Type::kGeneral];
-
-  for (const Register& reg : frame->GetGeneralRegisters())
-    general.push_back(reg);
-
-  std::sort(general.begin(), general.end(), [](auto& a, auto& b) {
-    return static_cast<uint32_t>(a.id()) < static_cast<uint32_t>(b.id());
-  });
-  return result_set;
-}
-
-void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
+void OnRegsComplete(const Err& cmd_err, const std::vector<debug_ipc::Register>& registers,
                     const FormatRegisterOptions& options, bool show_non_topmost_warning) {
   Console* console = Console::get();
   if (cmd_err.has_error()) {
@@ -1122,26 +1106,11 @@ void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
   if (show_non_topmost_warning) {
     OutputBuffer warning_out;
     warning_out.Append(Syntax::kWarning, GetExclamation());
-    warning_out.Append(
-        " Stack frame is not topmost. Only saved registers will be "
-        "available.\n");
+    warning_out.Append(" Stack frame is not topmost. Only saved registers will be available.\n");
     console->Output(warning_out);
   }
 
-  FilteredRegisterSet filtered_set;
-  Err err = FilterRegisters(options, register_set, &filtered_set);
-  if (!err.ok()) {
-    console->Output(err);
-    return;
-  }
-
-  OutputBuffer out;
-  err = FormatRegisters(options, filtered_set, &out);
-  if (!err.ok()) {
-    console->Output(err);
-    return;
-  }
-  console->Output(out);
+  console->Output(FormatRegisters(options, FilterRegisters(options, registers)));
 }
 
 Err DoRegs(ConsoleContext* context, const Command& cmd) {
@@ -1149,61 +1118,60 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
+  FormatRegisterOptions options;
+  options.arch = cmd.thread()->session()->arch();
+
   // When empty, print all the registers.
-  std::string regex_filter;
   if (!cmd.args().empty()) {
     // We expect only one name.
-    if (cmd.args().size() > 1u) {
+    if (cmd.args().size() > 1u)
       return Err("Only one register regular expression filter expected.");
-    }
-    regex_filter = cmd.args().front();
+
+    if (!options.filter_regex.Init(cmd.args().front()))
+      return Err("Invalid regular expression '%s'.", cmd.args().front().c_str());
   }
 
   bool top_stack_frame = (cmd.frame() == cmd.thread()->GetStack()[0]);
 
   // General purpose are the default. Other categories can only be shown for the top stack frame
   // since they require reading from the current CPU state.
-  std::vector<RegisterCategory::Type> cats_to_show = {RegisterCategory::Type::kGeneral};
+  std::vector<RegisterCategory> categories = {RegisterCategory::kGeneral};
   if (top_stack_frame && cmd.HasSwitch(kRegsCategoriesSwitch)) {
     auto option = cmd.GetSwitchValue(kRegsCategoriesSwitch);
     if (option == "all") {
-      cats_to_show = {
-          debug_ipc::RegisterCategory::Type::kGeneral,
-          debug_ipc::RegisterCategory::Type::kFP,
-          debug_ipc::RegisterCategory::Type::kVector,
-          debug_ipc::RegisterCategory::Type::kDebug,
+      categories = {
+          debug_ipc::RegisterCategory::kGeneral,
+          debug_ipc::RegisterCategory::kFloatingPoint,
+          debug_ipc::RegisterCategory::kVector,
+          debug_ipc::RegisterCategory::kDebug,
       };
     } else if (option == "general") {
-      cats_to_show = {RegisterCategory::Type::kGeneral};
+      categories = {RegisterCategory::kGeneral};
     } else if (option == "fp") {
-      cats_to_show = {RegisterCategory::Type::kFP};
+      categories = {RegisterCategory::kFloatingPoint};
     } else if (option == "vector") {
-      cats_to_show = {RegisterCategory::Type::kVector};
+      categories = {RegisterCategory::kVector};
     } else if (option == "debug") {
-      cats_to_show = {RegisterCategory::Type::kDebug};
+      categories = {RegisterCategory::kDebug};
     } else {
       return Err(fxl::StringPrintf("Unknown category: %s", option.c_str()));
     }
   }
 
-  // Formatting options.
-  FormatRegisterOptions options;
-  options.arch = cmd.thread()->session()->arch();
-  options.categories = cats_to_show;
   options.extended = cmd.HasSwitch(kRegsExtendedSwitch);
-  options.filter_regexp = std::move(regex_filter);
+  options.categories = categories;  // Make a copy, original used below.
 
   if (top_stack_frame) {
     // Always request the current registers even if we're only printing the general ones (which will
     // be cached on the top stack frame). The thread state could have changed out from under us.
     cmd.thread()->ReadRegisters(
-        std::move(cats_to_show),
-        [options = std::move(options)](const Err& err, const RegisterSet& registers) {
+        categories,
+        [options = std::move(options)](const Err& err, std::vector<debug_ipc::Register> registers) {
           OnRegsComplete(err, registers, std::move(options), false);
         });
   } else {
     // Non-topmost, read the available registers directly off the stack frame.
-    OnRegsComplete(Err(), FrameRegistersToSet(cmd.frame()), options, true);
+    OnRegsComplete(Err(), cmd.frame()->GetGeneralRegisters(), options, true);
   }
   return Err();
 }

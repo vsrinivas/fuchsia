@@ -442,65 +442,59 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
   }
 }
 
-void DebuggedThread::ReadRegisters(
-    const std::vector<debug_ipc::RegisterCategory::Type>& cats_to_get,
-    std::vector<debug_ipc::RegisterCategory>* out) const {
+void DebuggedThread::ReadRegisters(const std::vector<debug_ipc::RegisterCategory>& cats_to_get,
+                                   std::vector<debug_ipc::Register>* out) const {
   out->clear();
   for (const auto& cat_type : cats_to_get) {
-    auto& cat = out->emplace_back();
-    cat.type = cat_type;
-    zx_status_t status = arch_provider_->ReadRegisters(cat_type, handle_, &cat.registers);
+    zx_status_t status = arch_provider_->ReadRegisters(cat_type, handle_, out);
     if (status != ZX_OK) {
-      out->pop_back();
       FXL_LOG(ERROR) << "Could not get register state for category: "
-                     << debug_ipc::RegisterCategory::TypeToString(cat_type);
+                     << debug_ipc::RegisterCategoryToString(cat_type);
     }
   }
 }
 
 zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register>& regs) {
-  // We use a map to keep track of which categories will change.
-  std::map<debug_ipc::RegisterCategory::Type, debug_ipc::RegisterCategory> categories;
-
   bool rip_change = false;
   debug_ipc::RegisterID rip_id =
       GetSpecialRegisterID(arch_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP);
 
-  // We append each register to the correct category to be changed.
+  // Figure out which registers will change.
+  std::map<debug_ipc::RegisterCategory, std::vector<debug_ipc::Register>> categories;
   for (const debug_ipc::Register& reg : regs) {
-    auto cat_type = debug_ipc::RegisterCategory::RegisterIDToCategory(reg.id);
-    if (cat_type == debug_ipc::RegisterCategory::Type::kNone) {
+    auto cat_type = debug_ipc::RegisterIDToCategory(reg.id);
+    if (cat_type == debug_ipc::RegisterCategory::kNone) {
       FXL_LOG(WARNING) << "Attempting to change register without category: "
                        << RegisterIDToString(reg.id);
       continue;
     }
 
-    // We are changing the RIP, meaning that we're not going to jump over a
-    // breakpoint.
+    // We are changing the RIP, meaning that we're not going to jump over a breakpoint.
     if (reg.id == rip_id)
       rip_change = true;
 
-    auto& category = categories[cat_type];
-    category.type = cat_type;
-    category.registers.push_back(reg);
+    categories[cat_type].push_back(reg);
   }
 
-  for (const auto& [cat_type, cat] : categories) {
-    FXL_DCHECK(cat_type != debug_ipc::RegisterCategory::Type::kNone);
-    zx_status_t res = arch_provider_->WriteRegisters(cat, &handle_);
+  for (const auto& [cat_type, cat_regs] : categories) {
+    FXL_DCHECK(cat_type != debug_ipc::RegisterCategory::kNone);
+    zx_status_t res = arch_provider_->WriteRegisters(cat_type, cat_regs, &handle_);
     if (res != ZX_OK) {
       FXL_LOG(WARNING) << "Could not write category "
-                       << debug_ipc::RegisterCategory::TypeToString(cat_type) << ": "
+                       << debug_ipc::RegisterCategoryToString(cat_type) << ": "
                        << debug_ipc::ZxStatusToString(res);
     }
   }
-  // If the debug agent wrote to the thread IP directly, then current state is
-  // no longer valid. Specifically, if we're currently on a breakpoint, we have
-  // to now know the fact that we're no longer in a breakpoint.
+
+  // If the debug agent wrote to the thread IP directly, then current state is no longer valid.
+  // Specifically, if we're currently on a breakpoint, we have to now know the fact that we're no
+  // longer in a breakpoint.
   //
-  // This is necessary to avoid the single-stepping logic that the thread does
-  // when resuming from a breakpoint.
-  current_breakpoint_ = nullptr;
+  // This is necessary to avoid the single-stepping logic that the thread does when resuming from a
+  // breakpoint.
+  if (rip_change)
+    current_breakpoint_ = nullptr;
+
   return ZX_OK;
 }
 

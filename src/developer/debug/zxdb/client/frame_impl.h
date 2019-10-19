@@ -10,7 +10,6 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/frame.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
@@ -33,7 +32,7 @@ class FrameImpl final : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  const std::vector<Register>& GetGeneralRegisters() const override;
+  const std::vector<debug_ipc::Register>& GetGeneralRegisters() const override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -56,7 +55,7 @@ class FrameImpl final : public Frame {
 
   uint64_t sp_;
   uint64_t cfa_;
-  std::vector<Register> registers_;
+  std::vector<debug_ipc::Register> registers_;
 
   mutable Location location_;                                          // Lazily symbolized.
   mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.

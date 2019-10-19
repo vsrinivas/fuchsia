@@ -58,8 +58,7 @@ bool Deserialize(MessageReader* reader, ThreadRecord* record) {
 }
 
 bool Deserialize(MessageReader* reader, ProcessRecord* record) {
-  if (!reader->ReadUint64(&record->process_koid) ||
-      !reader->ReadString(&record->process_name)) {
+  if (!reader->ReadUint64(&record->process_koid) || !reader->ReadString(&record->process_name)) {
     return false;
   }
 
@@ -92,12 +91,6 @@ bool Deserialize(MessageReader* reader, Module* module) {
   if (!reader->ReadString(&module->build_id))
     return false;
   return true;
-}
-
-bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat) {
-  if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&reg_cat->type)))
-    return false;
-  return Deserialize(reader, &reg_cat->registers);
 }
 
 bool Deserialize(MessageReader* reader, StackFrame* frame) {
@@ -146,10 +139,6 @@ void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   writer->WriteBool(settings.one_shot);
   writer->WriteUint32(static_cast<uint32_t>(settings.stop));
   Serialize(settings.locations, writer);
-}
-
-void Serialize(const RegisterCategory::Type& type, MessageWriter* writer) {
-  writer->WriteUint32(static_cast<uint32_t>(type));
 }
 
 void Serialize(const ConfigAction& action, MessageWriter* writer) {
@@ -415,7 +404,7 @@ bool ReadReply(MessageReader* reader, ReadRegistersReply* reply, uint32_t* trans
     return false;
 
   *transaction_id = header.transaction_id;
-  return Deserialize(reader, &reply->categories);
+  return Deserialize(reader, &reply->registers);
 }
 
 // WriteRegisters ----------------------------------------------------------------------------------

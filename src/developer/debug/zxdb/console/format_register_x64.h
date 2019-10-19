@@ -7,19 +7,19 @@
 
 #include "src/developer/debug/ipc/records.h"
 
+namespace debug_ipc {
+struct Register;
+}
+
 namespace zxdb {
 
-class Err;
-class OutputBuffer;
-class Register;
-
 struct FormatRegisterOptions;
+class OutputBuffer;
 
-// Processed is true if the register belongs to the X64 family, and the output
-// was processed by this function.
-// |err| should be checked for errors if the result was processed.
-bool FormatCategoryX64(const FormatRegisterOptions&, debug_ipc::RegisterCategory::Type category,
-                       const std::vector<Register>& registers, OutputBuffer* out, Err* err);
+// Does x64-specific formatting of the registesrs of a given category. Returns true if this catgory
+// was handled. False means ther is no special X64 handling for this category.
+bool FormatCategoryX64(const FormatRegisterOptions& options, debug_ipc::RegisterCategory category,
+                       const std::vector<debug_ipc::Register>& registers, OutputBuffer* out);
 
 }  // namespace zxdb
 

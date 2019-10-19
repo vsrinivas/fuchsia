@@ -7,7 +7,6 @@
 #include <inttypes.h>
 
 #include "src/developer/debug/shared/arch_arm64.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
@@ -15,6 +14,7 @@
 #include "src/developer/debug/zxdb/console/string_formatters.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
+using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
 using debug_ipc::RegisterID;
 
@@ -28,17 +28,15 @@ TextForegroundColor GetRowColor(size_t table_len) {
   return table_len % 2 == 0 ? TextForegroundColor::kDefault : TextForegroundColor::kLightGray;
 }
 
-// Format General Registers
-// -----------------------------------------------------
+// General registers -------------------------------------------------------------------------------
 
 std::vector<OutputBuffer> DescribeCPSR(const Register& cpsr, TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(RegisterIDToString(cpsr.id()), color);
+  result.emplace_back(RegisterIDToString(cpsr.id), color);
 
-  uint64_t value = cpsr.GetValue();
+  uint32_t value = static_cast<uint32_t>(cpsr.GetValue());
 
-  // Hex value: rflags is a 32 bit value.
-  result.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
+  result.emplace_back(fxl::StringPrintf("0x%08x", value), color);
 
   // Decode individual flags.
   result.emplace_back(
@@ -56,7 +54,7 @@ std::vector<OutputBuffer> DescribeCPSRExtended(const Register& cpsr, TextForegro
   result.emplace_back(OutputBuffer());
   result.emplace_back(OutputBuffer());
 
-  uint64_t value = cpsr.GetValue();
+  uint32_t value = static_cast<uint32_t>(cpsr.GetValue());
 
   result.emplace_back(
       fxl::StringPrintf("EL=%d, F=%d, I=%d, A=%d, D=%d, IL=%d, SS=%d, PAN=%d, UAO=%d",
@@ -75,7 +73,7 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
 
   for (const Register& reg : registers) {
     auto color = GetRowColor(rows.size());
-    if (reg.id() == RegisterID::kARMv8_cpsr) {
+    if (reg.id == RegisterID::kARMv8_cpsr) {
       rows.push_back(DescribeCPSR(reg, color));
       if (options.extended)
         rows.push_back(DescribeCPSRExtended(reg, color));
@@ -92,12 +90,12 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
   }
 }
 
-// DBGBCR ----------------------------------------------------------------------
+// DBGBCR ------------------------------------------------------------------------------------------
 
 std::vector<OutputBuffer> FormatDBGBCR(const Register& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
-  row.emplace_back(RegisterIDToString(reg.id()), color);
+  row.emplace_back(RegisterIDToString(reg.id), color);
 
   uint64_t value = reg.GetValue();
   row.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
@@ -112,14 +110,14 @@ std::vector<OutputBuffer> FormatDBGBCR(const Register& reg, TextForegroundColor 
   return row;
 }
 
-// ID_AA64DFR0_EL1 -------------------------------------------------------------
+// ID_AA64DFR0_EL1 ---------------------------------------------------------------------------------
 
 std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const Register& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
-  row.emplace_back(RegisterIDToString(reg.id()), color);
+  row.emplace_back(RegisterIDToString(reg.id), color);
 
-  uint64_t value = reg.GetValue();
+  uint64_t value = static_cast<uint64_t>(reg.GetValue());
   row.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
 
   row.emplace_back(fxl::StringPrintf("DV=%d, TV=%d, PMUV=%d, BRP=%d, WRP=%d, CTX_CMP=%d, PMSV=%d",
@@ -135,14 +133,14 @@ std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const Register& reg, TextForegrou
   return row;
 }
 
-// MDSCR -----------------------------------------------------------------------
+// MDSCR -------------------------------------------------------------------------------------------
 
 std::vector<OutputBuffer> FormatMDSCR(const Register& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
-  row.emplace_back(RegisterIDToString(reg.id()), color);
+  row.emplace_back(RegisterIDToString(reg.id), color);
 
-  uint64_t value = reg.GetValue();
+  uint64_t value = static_cast<uint64_t>(reg.GetValue());
   row.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
 
   row.emplace_back(
@@ -167,7 +165,7 @@ void FormatDebugRegisters(const FormatRegisterOptions& options,
 
   for (const Register& reg : registers) {
     auto color = GetRowColor(rows.size() + 1);
-    switch (reg.id()) {
+    switch (reg.id) {
       case RegisterID::kARMv8_dbgbcr0_el1:
       case RegisterID::kARMv8_dbgbcr1_el1:
       case RegisterID::kARMv8_dbgbcr2_el1:
@@ -207,21 +205,18 @@ void FormatDebugRegisters(const FormatRegisterOptions& options,
 
 }  // namespace
 
-bool FormatCategoryARM64(const FormatRegisterOptions& options,
-                         debug_ipc::RegisterCategory::Type category,
-                         const std::vector<Register>& registers, OutputBuffer* out, Err* err) {
+bool FormatCategoryARM64(const FormatRegisterOptions& options, debug_ipc::RegisterCategory category,
+                         const std::vector<Register>& registers, OutputBuffer* out) {
   switch (category) {
-    case RegisterCategory::Type::kGeneral:
+    case RegisterCategory::kGeneral:
       FormatGeneralRegisters(options, registers, out);
       return true;
-    case RegisterCategory::Type::kDebug:
+    case RegisterCategory::kDebug:
       FormatDebugRegisters(options, registers, out);
       return true;
     default:
       return false;
   }
-
-  return true;
 }
 
 }  // namespace zxdb

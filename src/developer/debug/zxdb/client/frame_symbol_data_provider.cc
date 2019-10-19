@@ -10,7 +10,6 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -51,9 +50,9 @@ bool FrameSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
     return false;  // Don't have non-general register synchronously.
 
   for (const auto& r : frame_->GetGeneralRegisters()) {
-    if (r.id() == id) {
+    if (r.id == id) {
       // Currently we expect all general registers to be <= 128 bits.
-      if (r.size() > 0 && r.size() <= sizeof(uint128_t))
+      if (r.data.size() > 0 && r.data.size() <= sizeof(uint128_t))
         *value = r.GetValue();
       return true;
     }

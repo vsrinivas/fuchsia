@@ -214,8 +214,9 @@ const Stack& ThreadImpl::GetStack() const { return stack_; }
 
 Stack& ThreadImpl::GetStack() { return stack_; }
 
-void ThreadImpl::ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-                               fit::callback<void(const Err&, const RegisterSet&)> cb) {
+void ThreadImpl::ReadRegisters(
+    std::vector<debug_ipc::RegisterCategory> cats_to_get,
+    fit::callback<void(const Err&, std::vector<debug_ipc::Register>)> cb) {
   debug_ipc::ReadRegistersRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
@@ -224,10 +225,7 @@ void ThreadImpl::ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> ca
   session()->remote_api()->ReadRegisters(
       request, [thread = weak_factory_.GetWeakPtr(), cb = std::move(cb)](
                    const Err& err, debug_ipc::ReadRegistersReply reply) mutable {
-        thread->registers_ =
-            std::make_unique<RegisterSet>(thread->session()->arch(), std::move(reply.categories));
-        if (cb)
-          cb(err, *thread->registers_.get());
+        cb(err, std::move(reply.registers));
       });
 }
 

@@ -14,12 +14,15 @@
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/macros.h"
 
+namespace debug_ipc {
+struct Register;
+}
+
 namespace zxdb {
 
 class EvalContext;
 class Location;
 class Thread;
-class Register;
 
 // Represents one stack frame.
 //
@@ -60,7 +63,7 @@ class Frame : public ClientObject {
   //
   // Inline frames will report the registers from the physical frame they're
   // associated with.
-  virtual const std::vector<Register>& GetGeneralRegisters() const = 0;
+  virtual const std::vector<debug_ipc::Register>& GetGeneralRegisters() const = 0;
 
   // The frame base pointer.
   //

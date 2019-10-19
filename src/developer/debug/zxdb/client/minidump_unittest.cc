@@ -227,95 +227,85 @@ TEST_F(MinidumpTest, Registers) {
   debug_ipc::ReadRegistersRequest request;
   debug_ipc::ReadRegistersReply reply;
 
-  using C = debug_ipc::RegisterCategory::Type;
+  using C = debug_ipc::RegisterCategory;
   using R = debug_ipc::RegisterID;
 
   request.process_koid = kTestExampleMinidumpKOID;
   request.thread_koid = kTestExampleMinidumpThreadKOID;
   request.categories = {
       C::kGeneral,
-      C::kFP,
+      C::kFloatingPoint,
       C::kVector,
       C::kDebug,
   };
   DoRequest(request, reply, err, &RemoteAPI::ReadRegisters);
   ASSERT_ZXDB_SUCCESS(err);
 
-  EXPECT_EQ(4UL, reply.categories.size());
-
-  EXPECT_EQ(C::kGeneral, reply.categories[0].type);
-  EXPECT_EQ(C::kFP, reply.categories[1].type);
-  EXPECT_EQ(C::kVector, reply.categories[2].type);
-  EXPECT_EQ(C::kDebug, reply.categories[3].type);
-
-  std::map<std::pair<C, R>, std::vector<uint8_t>> got;
-  for (const auto& cat : reply.categories) {
-    for (const auto& reg : cat.registers) {
-      got[std::pair(cat.type, reg.id)] = reg.data;
-    }
-  }
+  std::map<R, std::vector<uint8_t>> got;
+  for (const auto& reg : reply.registers)
+    got[reg.id] = reg.data;
 
   std::vector<uint8_t> zero_short = {0, 0};
   std::vector<uint8_t> zero_128 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-  EXPECT_EQ(AsData(0x83UL), got[std::pair(C::kGeneral, R::kX64_rax)]);
-  EXPECT_EQ(AsData(0x2FE150062100UL), got[std::pair(C::kGeneral, R::kX64_rbx)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kGeneral, R::kX64_rcx)]);
-  EXPECT_EQ(AsData(0x4DC647A67264UL), got[std::pair(C::kGeneral, R::kX64_rdx)]);
-  EXPECT_EQ(AsData(0x5283B9A79945UL), got[std::pair(C::kGeneral, R::kX64_rsi)]);
-  EXPECT_EQ(AsData(0x4DC647A671D8UL), got[std::pair(C::kGeneral, R::kX64_rdi)]);
-  EXPECT_EQ(AsData(0x37F880986D70UL), got[std::pair(C::kGeneral, R::kX64_rbp)]);
-  EXPECT_EQ(AsData(0x37F880986D48UL), got[std::pair(C::kGeneral, R::kX64_rsp)]);
-  EXPECT_EQ(AsData(0x1UL), got[std::pair(C::kGeneral, R::kX64_r8)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kGeneral, R::kX64_r9)]);
-  EXPECT_EQ(AsData(0x4DC647A671D8UL), got[std::pair(C::kGeneral, R::kX64_r10)]);
-  EXPECT_EQ(AsData(0x83UL), got[std::pair(C::kGeneral, R::kX64_r11)]);
-  EXPECT_EQ(AsData(0x2FE150077070UL), got[std::pair(C::kGeneral, R::kX64_r12)]);
-  EXPECT_EQ(AsData(0x3F4C20970A28UL), got[std::pair(C::kGeneral, R::kX64_r13)]);
-  EXPECT_EQ(AsData(0xFFFFFFF5UL), got[std::pair(C::kGeneral, R::kX64_r14)]);
-  EXPECT_EQ(AsData(0x2FE150062138UL), got[std::pair(C::kGeneral, R::kX64_r15)]);
-  EXPECT_EQ(AsData(0x4DC6479A5B1EUL), got[std::pair(C::kGeneral, R::kX64_rip)]);
-  EXPECT_EQ(AsData(0x10206UL), got[std::pair(C::kGeneral, R::kX64_rflags)]);
+  EXPECT_EQ(AsData(0x83UL), got[R::kX64_rax]);
+  EXPECT_EQ(AsData(0x2FE150062100UL), got[R::kX64_rbx]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_rcx]);
+  EXPECT_EQ(AsData(0x4DC647A67264UL), got[R::kX64_rdx]);
+  EXPECT_EQ(AsData(0x5283B9A79945UL), got[R::kX64_rsi]);
+  EXPECT_EQ(AsData(0x4DC647A671D8UL), got[R::kX64_rdi]);
+  EXPECT_EQ(AsData(0x37F880986D70UL), got[R::kX64_rbp]);
+  EXPECT_EQ(AsData(0x37F880986D48UL), got[R::kX64_rsp]);
+  EXPECT_EQ(AsData(0x1UL), got[R::kX64_r8]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_r9]);
+  EXPECT_EQ(AsData(0x4DC647A671D8UL), got[R::kX64_r10]);
+  EXPECT_EQ(AsData(0x83UL), got[R::kX64_r11]);
+  EXPECT_EQ(AsData(0x2FE150077070UL), got[R::kX64_r12]);
+  EXPECT_EQ(AsData(0x3F4C20970A28UL), got[R::kX64_r13]);
+  EXPECT_EQ(AsData(0xFFFFFFF5UL), got[R::kX64_r14]);
+  EXPECT_EQ(AsData(0x2FE150062138UL), got[R::kX64_r15]);
+  EXPECT_EQ(AsData(0x4DC6479A5B1EUL), got[R::kX64_rip]);
+  EXPECT_EQ(AsData(0x10206UL), got[R::kX64_rflags]);
 
-  EXPECT_EQ(zero_short, got[std::pair(C::kFP, R::kX64_fcw)]);
-  EXPECT_EQ(zero_short, got[std::pair(C::kFP, R::kX64_fsw)]);
-  EXPECT_EQ(AsData('\0'), got[std::pair(C::kFP, R::kX64_ftw)]);
-  EXPECT_EQ(zero_short, got[std::pair(C::kFP, R::kX64_fop)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kFP, R::kX64_fip)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kFP, R::kX64_fdp)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st0)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st1)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st2)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st3)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st4)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st5)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st6)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kFP, R::kX64_st7)]);
+  EXPECT_EQ(zero_short, got[R::kX64_fcw]);
+  EXPECT_EQ(zero_short, got[R::kX64_fsw]);
+  EXPECT_EQ(AsData('\0'), got[R::kX64_ftw]);
+  EXPECT_EQ(zero_short, got[R::kX64_fop]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_fip]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_fdp]);
+  EXPECT_EQ(zero_128, got[R::kX64_st0]);
+  EXPECT_EQ(zero_128, got[R::kX64_st1]);
+  EXPECT_EQ(zero_128, got[R::kX64_st2]);
+  EXPECT_EQ(zero_128, got[R::kX64_st3]);
+  EXPECT_EQ(zero_128, got[R::kX64_st4]);
+  EXPECT_EQ(zero_128, got[R::kX64_st5]);
+  EXPECT_EQ(zero_128, got[R::kX64_st6]);
+  EXPECT_EQ(zero_128, got[R::kX64_st7]);
 
-  EXPECT_EQ(AsData(0x0U), got[std::pair(C::kVector, R::kX64_mxcsr)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm0)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm1)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm2)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm3)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm4)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm5)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm6)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm7)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm8)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm9)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm10)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm11)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm12)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm13)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm14)]);
-  EXPECT_EQ(zero_128, got[std::pair(C::kVector, R::kX64_xmm15)]);
+  EXPECT_EQ(AsData(0x0U), got[R::kX64_mxcsr]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm0]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm1]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm2]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm3]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm4]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm5]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm6]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm7]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm8]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm9]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm10]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm11]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm12]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm13]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm14]);
+  EXPECT_EQ(zero_128, got[R::kX64_xmm15]);
 
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kDebug, R::kX64_dr0)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kDebug, R::kX64_dr1)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kDebug, R::kX64_dr2)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kDebug, R::kX64_dr3)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kDebug, R::kX64_dr6)]);
-  EXPECT_EQ(AsData(0x0UL), got[std::pair(C::kDebug, R::kX64_dr7)]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr0]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr1]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr2]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr3]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr6]);
+  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr7]);
 }
 
 TEST_F(MinidumpTest, Modules) {

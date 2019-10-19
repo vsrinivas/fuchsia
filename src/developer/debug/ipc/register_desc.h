@@ -441,6 +441,20 @@ enum class RegisterID : uint32_t {
   kX64_dr7 = 2607,
 };
 
+// Categories --------------------------------------------------------------------------------------
+
+enum class RegisterCategory : uint32_t {
+  kGeneral,
+  kFloatingPoint,
+  kVector,
+  kDebug,
+
+  kNone,
+};
+
+const char* RegisterCategoryToString(RegisterCategory);
+RegisterCategory RegisterIDToCategory(RegisterID);
+
 }  // namespace debug_ipc
 
 #endif  // SRC_DEVELOPER_DEBUG_IPC_REGISTER_DESC_H_

@@ -8,7 +8,6 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/stack.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -28,22 +27,6 @@ class AnalyzeMemoryTest : public testing::Test {
 
  private:
   debug_ipc::PlatformMessageLoop loop_;
-};
-
-class MyMockRegisterSet : public RegisterSet {
- public:
-  void AddRegister(RegisterCategory::Type cat_type, RegisterID id, uint32_t length,
-                   uint64_t value) {
-    std::vector<uint8_t> data(sizeof(value));
-    memcpy(&data[0], &value, sizeof(value));
-    debug_ipc::Register ipc_reg({id, std::move(data)});
-    cat_map_[cat_type].push_back(Register(std::move(ipc_reg)));
-  }
-
-  const CategoryMap& category_map() const override { return cat_map_; }
-
- private:
-  CategoryMap cat_map_;
 };
 
 }  // namespace

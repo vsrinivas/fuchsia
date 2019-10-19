@@ -87,6 +87,9 @@ struct Register {
     memcpy(&data[0], &val, sizeof(val));
   }
 
+  // Retrieves the low up-to-128 bits of the register value as a number.
+  __int128 GetValue() const;
+
   // Comparisons (primarily for tests).
   bool operator==(const Register& other) const { return id == other.id && data == other.data; }
   bool operator!=(const Register& other) const { return !operator==(other); }
@@ -303,24 +306,6 @@ struct AddressRegion {
 };
 
 // ReadRegisters ---------------------------------------------------------------
-
-// Division of RegisterSections, according to their usage.
-struct RegisterCategory {
-  // Categories will always be sorted from lower to upper
-  enum class Type : uint32_t {
-    kGeneral,
-    kFP,
-    kVector,
-    kDebug,
-
-    kNone,
-  };
-  static const char* TypeToString(Type);
-  static Type RegisterIDToCategory(RegisterID);
-
-  Type type = Type::kNone;
-  std::vector<Register> registers;
-};
 
 struct ConfigAction {
   enum class Type : uint32_t {

@@ -11,13 +11,14 @@
 
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 
-namespace zxdb {
+namespace debug_ipc {
+struct Register;
+}
 
-class Err;
-class Register;
-class RegisterSet;
+namespace zxdb {
 
 // Struct meant to configure how the FilterRegister/FormatRegister calls will
 // behave.
@@ -25,33 +26,32 @@ struct FormatRegisterOptions {
   // What arch this FormatRegisters call belongs to.
   debug_ipc::Arch arch = debug_ipc::Arch::kUnknown;
 
-  // The categories to filter within the FilterRegister step.
-  std::vector<debug_ipc::RegisterCategory::Type> categories;
+  // The categories to filter within the FilterRegister step. Applied by FilterRegisters();
+  std::vector<debug_ipc::RegisterCategory> categories;
 
-  // Regexp used to filter what registers to show. Empty means no filter.
-  std::string filter_regexp;
+  // Regex used to filter what registers to show. !valid() means no filter. Applied by
+  // FilterRegisters();
+  debug_ipc::Regex filter_regex;
 
   // Whether to print extra information about the registers.
   bool extended = false;
 };
 
-using FilteredRegisterSet = std::map<debug_ipc::RegisterCategory::Type, std::vector<Register>>;
-
-// Filters the available registers to the ones matching the given categories and
-// matching the registers.
-// Not defining a regexp will let all the registers pass.
-Err FilterRegisters(const FormatRegisterOptions&, const RegisterSet&, FilteredRegisterSet* out);
+// Filters the available registers to the ones matching the given categories and matching the
+// registers. Not defining a regexp will let all the registers pass.
+std::vector<debug_ipc::Register> FilterRegisters(const FormatRegisterOptions& options,
+                                                 const std::vector<debug_ipc::Register>& registers);
 
 // Format the output of the FilterRegisters call into a console readable format.
-Err FormatRegisters(const FormatRegisterOptions&, const FilteredRegisterSet&, OutputBuffer* out);
-
-// Formatting helpers ----------------------------------------------------------
+OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
+                             const std::vector<debug_ipc::Register>& registers);
 
 // Formats the register and returns a vector with the following information:
 //  - name
 //  - hex value
 //  - comment (may be empty if inapplicable).
-std::vector<OutputBuffer> DescribeRegister(const Register& reg, TextForegroundColor color);
+std::vector<OutputBuffer> DescribeRegister(const debug_ipc::Register& reg,
+                                           TextForegroundColor color);
 
 }  // namespace zxdb
 

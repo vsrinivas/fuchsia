@@ -20,85 +20,19 @@ std::vector<uint8_t> CreateData(size_t length) {
 }
 
 TEST(GetLittleEndianHexOutput, Lengths) {
-  Err err;
-  std::string out;
-  std::vector<uint8_t> data;
+  EXPECT_EQ("", GetLittleEndianHexOutput(array_view<uint8_t>()));
 
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_TRUE(err.has_error());
-  EXPECT_EQ(err.msg(), "Invalid size for hex printing: 0");
-
-  data = CreateData(1);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "00000001");
-
-  data = CreateData(2);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "00000102");
-
-  data = CreateData(3);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "00010203");
-
-  data = CreateData(4);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "01020304");
-
-  data = CreateData(5);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "00000001 02030405");
-
-  data = CreateData(6);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "00000102 03040506");
-
-  data = CreateData(8);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "01020304 05060708");
-
-  data = CreateData(10);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "00000102 03040506 0708090a");
-
-  data = CreateData(12);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "01020304 05060708 090a0b0c");
-
-  data = CreateData(17);
-  err = GetLittleEndianHexOutput(data, &out);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "00000001 02030405 06070809 0a0b0c0d 0e0f1011");
-}
-
-TEST(GetLittleEndianHexOutput, LimitOutput) {
-  Err err;
-  std::string out;
-  std::vector<uint8_t> data = CreateData(17);
-
-  err = GetLittleEndianHexOutput(data, &out, 4);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "0e0f1011");
-
-  err = GetLittleEndianHexOutput(data, &out, 6);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "0a0b0c0d 0e0f1011");
-
-  err = GetLittleEndianHexOutput(data, &out, 8);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "0a0b0c0d 0e0f1011");
-
-  err = GetLittleEndianHexOutput(data, &out, 12);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(out, "06070809 0a0b0c0d 0e0f1011");
+  EXPECT_EQ("00000001", GetLittleEndianHexOutput(CreateData(1)));
+  EXPECT_EQ("00000102", GetLittleEndianHexOutput(CreateData(2)));
+  EXPECT_EQ("00010203", GetLittleEndianHexOutput(CreateData(3)));
+  EXPECT_EQ("01020304", GetLittleEndianHexOutput(CreateData(4)));
+  EXPECT_EQ("00000001 02030405", GetLittleEndianHexOutput(CreateData(5)));
+  EXPECT_EQ("00000102 03040506", GetLittleEndianHexOutput(CreateData(6)));
+  EXPECT_EQ("01020304 05060708", GetLittleEndianHexOutput(CreateData(8)));
+  EXPECT_EQ("00000102 03040506 0708090a", GetLittleEndianHexOutput(CreateData(10)));
+  EXPECT_EQ("01020304 05060708 090a0b0c", GetLittleEndianHexOutput(CreateData(12)));
+  EXPECT_EQ("00000001 02030405 06070809 0a0b0c0d 0e0f1011",
+            GetLittleEndianHexOutput(CreateData(17)));
 }
 
 }  // namespace zxdb

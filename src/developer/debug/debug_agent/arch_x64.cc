@@ -221,45 +221,46 @@ uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) { return &r
 
 ::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kX64; }
 
-zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory::Type& cat,
+zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,
                                         const zx::thread& thread,
                                         std::vector<debug_ipc::Register>* out) {
   switch (cat) {
-    case debug_ipc::RegisterCategory::Type::kGeneral:
+    case debug_ipc::RegisterCategory::kGeneral:
       return ReadGeneralRegs(thread, out);
-    case debug_ipc::RegisterCategory::Type::kFP:
+    case debug_ipc::RegisterCategory::kFloatingPoint:
       return ReadFPRegs(thread, out);
-    case debug_ipc::RegisterCategory::Type::kVector:
+    case debug_ipc::RegisterCategory::kVector:
       return ReadVectorRegs(thread, out);
-    case debug_ipc::RegisterCategory::Type::kDebug:
+    case debug_ipc::RegisterCategory::kDebug:
       return ReadDebugRegs(thread, out);
-    case debug_ipc::RegisterCategory::Type::kNone:
+    case debug_ipc::RegisterCategory::kNone:
       FXL_LOG(ERROR) << "Asking to get none category";
       return ZX_ERR_INVALID_ARGS;
   }
 }
 
-zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cat,
+zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& category,
+                                         const std::vector<debug_ipc::Register>& registers,
                                          zx::thread* thread) {
-  switch (cat.type) {
-    case debug_ipc::RegisterCategory::Type::kGeneral: {
+  switch (category) {
+    case debug_ipc::RegisterCategory::kGeneral: {
       zx_thread_state_general_regs_t regs;
       zx_status_t res = thread->read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
         return res;
 
       // Overwrite the values.
-      res = WriteGeneralRegisters(cat.registers, &regs);
+      res = WriteGeneralRegisters(registers, &regs);
       if (res != ZX_OK)
         return res;
 
       return thread->write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::Type::kFP:
-    case debug_ipc::RegisterCategory::Type::kVector:
-    case debug_ipc::RegisterCategory::Type::kDebug:
+    case debug_ipc::RegisterCategory::kFloatingPoint:
+    case debug_ipc::RegisterCategory::kVector:
+    case debug_ipc::RegisterCategory::kDebug:
       return ZX_ERR_NOT_SUPPORTED;
-    case debug_ipc::RegisterCategory::Type::kNone:
+    case debug_ipc::RegisterCategory::kNone:
       break;
   }
   FXL_NOTREACHED();

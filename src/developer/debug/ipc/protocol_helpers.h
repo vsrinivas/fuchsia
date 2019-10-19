@@ -32,6 +32,9 @@ bool Deserialize(MessageReader* reader, int32_t* data);
 void Serialize(const Register& reg, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, Register* reg);
 
+void Serialize(RegisterCategory type, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat);
+
 // Will call Serialize for each element in the vector.
 template <typename T>
 inline void Serialize(const std::vector<T>& v, MessageWriter* writer) {

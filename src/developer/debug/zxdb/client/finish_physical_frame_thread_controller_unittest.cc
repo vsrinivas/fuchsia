@@ -178,10 +178,10 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
   // the returned-to frame.
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 2);
-  mock_frames.insert(mock_frames.begin(),
-                     std::make_unique<MockFrame>(nullptr, nullptr, second_inline_loc, kMiddleSP,
-                                                 kBottomSP, std::vector<Register>(), kMiddleSP,
-                                                 mock_frames[0]->GetPhysicalFrame(), true));
+  mock_frames.insert(mock_frames.begin(), std::make_unique<MockFrame>(
+                                              nullptr, nullptr, second_inline_loc, kMiddleSP,
+                                              kBottomSP, std::vector<debug_ipc::Register>(),
+                                              kMiddleSP, mock_frames[0]->GetPhysicalFrame(), true));
 
   InjectExceptionWithStack(
       process()->GetKoid(), thread()->GetKoid(), debug_ipc::ExceptionType::kSingleStep,

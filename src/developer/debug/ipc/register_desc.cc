@@ -554,4 +554,47 @@ bool IsGeneralRegister(RegisterID id) {
           static_cast<uint32_t>(id) <= static_cast<uint32_t>(kX64GeneralEnd));
 }
 
+const char* RegisterCategoryToString(RegisterCategory cat) {
+  switch (cat) {
+    case RegisterCategory::kGeneral:
+      return "General Purpose";
+    case RegisterCategory::kFloatingPoint:
+      return "Floating Point";
+    case RegisterCategory::kVector:
+      return "Vector";
+    case RegisterCategory::kDebug:
+      return "Debug";
+    case RegisterCategory::kNone:
+      break;
+  }
+  FXL_NOTREACHED();
+  return nullptr;
+}
+
+RegisterCategory RegisterIDToCategory(RegisterID id) {
+  uint32_t val = static_cast<uint32_t>(id);
+
+  // ARM.
+  if (val >= kARMv8GeneralBegin && val <= kARMv8GeneralEnd) {
+    return RegisterCategory::kGeneral;
+  } else if (val >= kARMv8VectorBegin && val <= kARMv8VectorEnd) {
+    return RegisterCategory::kVector;
+  } else if (val >= kARMv8DebugBegin && val <= kARMv8DebugEnd) {
+    return RegisterCategory::kDebug;
+  }
+
+  // x64.
+  if (val >= kX64GeneralBegin && val <= kX64GeneralEnd) {
+    return RegisterCategory::kGeneral;
+  } else if (val >= kX64FPBegin && val <= kX64FPEnd) {
+    return RegisterCategory::kFloatingPoint;
+  } else if (val >= kX64VectorBegin && val <= kX64VectorEnd) {
+    return RegisterCategory::kVector;
+  } else if (val >= kX64DebugBegin && val <= kX64DebugEnd) {
+    return RegisterCategory::kDebug;
+  }
+
+  return RegisterCategory::kNone;
+}
+
 }  // namespace debug_ipc

@@ -118,30 +118,30 @@ std::unique_ptr<MockFrame> InlineThreadControllerTest::GetTopInlineFrame(uint64_
                                                                          MockFrame* top) {
   // The location is ambiguous if the address is at the beginning of the range.
   return std::make_unique<MockFrame>(nullptr, nullptr, GetTopInlineLocation(address), kTopSP,
-                                     kMiddleSP, std::vector<Register>(), kTopSP, top,
+                                     kMiddleSP, std::vector<debug_ipc::Register>(), kTopSP, top,
                                      address == kTopInlineFunctionRange.begin());
 }
 
 // static
 std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleFrame(uint64_t address) {
   return std::make_unique<MockFrame>(nullptr, nullptr, GetMiddleLocation(address), kMiddleSP,
-                                     kBottomSP, std::vector<Register>(), kMiddleSP);
+                                     kBottomSP, std::vector<debug_ipc::Register>(), kMiddleSP);
 }
 
 // static
 std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline1Frame(uint64_t address,
                                                                              MockFrame* middle) {
   return std::make_unique<MockFrame>(nullptr, nullptr, GetMiddleInline1Location(address), kMiddleSP,
-                                     kBottomSP, std::vector<Register>(), kMiddleSP, middle,
-                                     address == kMiddleInline1FunctionRange.begin());
+                                     kBottomSP, std::vector<debug_ipc::Register>(), kMiddleSP,
+                                     middle, address == kMiddleInline1FunctionRange.begin());
 }
 
 // static
 std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline2Frame(uint64_t address,
                                                                              MockFrame* middle) {
   return std::make_unique<MockFrame>(nullptr, nullptr, GetMiddleInline2Location(address), kMiddleSP,
-                                     kBottomSP, std::vector<Register>(), kMiddleSP, middle,
-                                     address == kMiddleInline2FunctionRange.begin());
+                                     kBottomSP, std::vector<debug_ipc::Register>(), kMiddleSP,
+                                     middle, address == kMiddleInline2FunctionRange.begin());
 }
 
 // static

@@ -144,8 +144,8 @@ class DebuggedThread {
                                 debug_ipc::ThreadRecord* record) const;
 
   // Register reading and writing.
-  void ReadRegisters(const std::vector<debug_ipc::RegisterCategory::Type>& cats_to_get,
-                     std::vector<debug_ipc::RegisterCategory>* out) const;
+  void ReadRegisters(const std::vector<debug_ipc::RegisterCategory>& cats_to_get,
+                     std::vector<debug_ipc::Register>* out) const;
   zx_status_t WriteRegisters(const std::vector<debug_ipc::Register>& regs);
 
   // Sends a notification to the client about the state of this thread.

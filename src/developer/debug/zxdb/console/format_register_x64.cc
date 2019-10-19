@@ -10,7 +10,6 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/arch_x86.h"
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
@@ -26,28 +25,24 @@ namespace zxdb {
 
 namespace {
 
-inline void PushName(const Register& reg, TextForegroundColor color,
-                     std::vector<OutputBuffer>* row) {
-  row->emplace_back(RegisterIDToString(reg.id()), color);
+using debug_ipc::Register;
+using debug_ipc::RegisterCategory;
+
+void PushName(const Register& reg, TextForegroundColor color, std::vector<OutputBuffer>* row) {
+  row->emplace_back(RegisterIDToString(reg.id), color);
 }
 
-inline Err PushHex(const Register& reg, TextForegroundColor color, std::vector<OutputBuffer>* row,
-                   int length) {
-  std::string hex_out;
-  Err err = GetLittleEndianHexOutput(reg.data(), &hex_out, length);
-  if (!err.ok())
-    return err;
-  row->emplace_back(std::move(hex_out), color);
-  return Err();
+// A nonzero length will case that number of bytes to be printed.
+void PushHex(const Register& reg, TextForegroundColor color, int length,
+             std::vector<OutputBuffer>* row) {
+  array_view<uint8_t> view = reg.data;
+  if (length > 0)
+    view = view.subview(0, length);
+  row->emplace_back(GetLittleEndianHexOutput(view), color);
 }
 
-inline Err PushFP(const Register& reg, TextForegroundColor color, std::vector<OutputBuffer>* row) {
-  std::string fp_val;
-  Err err = GetFPString(reg.data(), &fp_val);
-  if (!err.ok())
-    return err;
-  row->emplace_back(std::move(fp_val), color);
-  return Err();
+void PushFP(const Register& reg, TextForegroundColor color, std::vector<OutputBuffer>* row) {
+  row->emplace_back(GetFPString(reg.data), color);
 }
 
 // Function used for interleaving color, for easier reading of a table.
@@ -55,16 +50,16 @@ TextForegroundColor GetRowColor(size_t table_len) {
   return table_len % 2 == 0 ? TextForegroundColor::kDefault : TextForegroundColor::kLightGray;
 }
 
-// Format General Registers ----------------------------------------------------
+// Format General Registers ------------------------------------------------------------------------
 
 std::vector<OutputBuffer> DescribeRflags(const Register& rflags, TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(RegisterIDToString(rflags.id()), color);
+  result.emplace_back(RegisterIDToString(rflags.id), color);
 
-  uint64_t value = rflags.GetValue();
+  uint32_t value = static_cast<uint32_t>(rflags.GetValue());
 
   // Hex value: rflags is a 32 bit value.
-  result.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
+  result.emplace_back(fxl::StringPrintf("0x%08x", value), color);
 
   // Decode individual flags.
   result.emplace_back(
@@ -86,7 +81,7 @@ std::vector<OutputBuffer> DescribeRflagsExtended(const Register& rflags,
   result.emplace_back(OutputBuffer());
   result.emplace_back(OutputBuffer());
 
-  uint64_t value = rflags.GetValue();
+  uint32_t value = rflags.GetValue();
 
   // Decode individual flags.
   result.emplace_back(
@@ -106,7 +101,7 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
 
   for (const Register& reg : registers) {
     auto color = GetRowColor(rows.size());
-    if (reg.id() == RegisterID::kX64_rflags) {
+    if (reg.id == RegisterID::kX64_rflags) {
       rows.push_back(DescribeRflags(reg, color));
       if (options.extended)
         rows.push_back(DescribeRflagsExtended(reg, color));
@@ -137,25 +132,24 @@ inline const std::set<RegisterID>& GetFPValueRegistersSet() {
   return regs;
 }
 
-Err FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out) {
-  // We want to look up the registers in two sets: control & values,
-  // and display them differently.
-  // There is no memory movement the inpue, so taking pointers is fine.
+void FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out) {
+  // We want to look up the registers in two sets: control & values, and display them differently.
+  // There is no memory movement the input, so taking pointers is fine.
   const auto& control_set = GetFPControlRegistersSet();
   std::vector<const Register*> control_registers;
   const auto& value_set = GetFPValueRegistersSet();
   std::vector<const Register*> value_registers;
   for (const Register& reg : registers) {
-    if (control_set.find(reg.id()) != control_set.end()) {
+    if (control_set.find(reg.id) != control_set.end()) {
       control_registers.push_back(&reg);
-    } else if (value_set.find(reg.id()) != value_set.end()) {
+    } else if (value_set.find(reg.id) != value_set.end()) {
       value_registers.push_back(&reg);
     } else {
-      FXL_NOTREACHED() << "UNCATEGORIZED FP REGISTER: " << RegisterIDToString(reg.id());
+      FXL_NOTREACHED() << "UNCATEGORIZED FP REGISTER: " << RegisterIDToString(reg.id);
     }
   }
 
-  // We format the control register first.
+  // Format the control register first.
   if (!control_registers.empty()) {
     std::vector<std::vector<OutputBuffer>> rows;
     rows.reserve(control_registers.size());
@@ -165,21 +159,15 @@ Err FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out)
       auto& row = rows[i];
       auto color = GetRowColor(rows.size());
 
-      Err err;
-      switch (reg.id()) {
+      switch (reg.id) {
         default: {
           // TODO: Placeholder. Remove when all control registers have their
           //       custom output implemented.
           PushName(reg, color, &row);
-          err = PushHex(reg, color, &row, 4);
-          if (!err.ok())
-            return err;
+          PushHex(reg, color, 4, &row);
           row.emplace_back();
         }
       }
-
-      if (!err.ok())
-        return err;
     }
 
     // Output the control table.
@@ -191,7 +179,7 @@ Err FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out)
     out->Append(std::move(control_out));
   }
 
-  // We format the value registers.
+  // Format the value registers.
   if (!value_registers.empty()) {
     std::vector<std::vector<OutputBuffer>> rows;
     rows.reserve(value_registers.size());
@@ -202,12 +190,8 @@ Err FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out)
       auto& row = rows[i];
       row.reserve(3);
       PushName(reg, color, &row);
-      Err err = PushFP(reg, color, &row);
-      if (!err.ok())
-        return err;
-      err = PushHex(reg, color, &row, 16);
-      if (!err.ok())
-        return err;
+      PushFP(reg, color, &row);
+      PushHex(reg, color, 16, &row);
     }
 
     // The "value" for the floating point registers is left-aligned here rather
@@ -221,18 +205,17 @@ Err FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out)
     FormatTable(std::move(colspecs), rows, &value_out);
     out->Append(std::move(value_out));
   }
-  return Err();
 }
 
-// Format Debug Registers ------------------------------------------------------
+// Debug Registers ---------------------------------------------------------------------------------
 
 std::vector<OutputBuffer> FormatDr6(const Register& dr6, TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(RegisterIDToString(dr6.id()), color);
+  result.emplace_back(RegisterIDToString(dr6.id), color);
 
   // Write as padded 32-bit value.
-  uint64_t value = dr6.GetValue();
-  result.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
+  uint32_t value = static_cast<uint32_t>(dr6.GetValue());
+  result.emplace_back(fxl::StringPrintf("0x%08x", value), color);
 
   result.emplace_back(fxl::StringPrintf("B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d",
                                         X86_FLAG_VALUE(value, DR6B0), X86_FLAG_VALUE(value, DR6B1),
@@ -251,9 +234,9 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
   auto& first_row = rows->back();
 
   // First row gets the name and raw value (padded 32 bits).
-  first_row.emplace_back(RegisterIDToString(dr7.id()), color);
-  uint64_t value = dr7.GetValue();
-  first_row.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
+  first_row.emplace_back(RegisterIDToString(dr7.id), color);
+  uint32_t value = static_cast<uint32_t>(dr7.GetValue());
+  first_row.emplace_back(fxl::StringPrintf("0x%08x", value), color);
 
   // First row decoded values.
   first_row.emplace_back(
@@ -291,9 +274,9 @@ void FormatDebugRegisters(const std::vector<Register>& registers, OutputBuffer* 
     auto color = GetRowColor(rows.size() + 1);
 
     // We do special formatting for dr6/dr7
-    if (reg.id() == RegisterID::kX64_dr6) {
+    if (reg.id == RegisterID::kX64_dr6) {
       rows.push_back(FormatDr6(reg, color));
-    } else if (reg.id() == RegisterID::kX64_dr7) {
+    } else if (reg.id == RegisterID::kX64_dr7) {
       FormatDr7(reg, color, &rows);
     } else {
       // Generic formatting for now.
@@ -310,17 +293,16 @@ void FormatDebugRegisters(const std::vector<Register>& registers, OutputBuffer* 
 
 }  // namespace
 
-bool FormatCategoryX64(const FormatRegisterOptions& options,
-                       debug_ipc::RegisterCategory::Type category,
-                       const std::vector<Register>& registers, OutputBuffer* out, Err* err) {
+bool FormatCategoryX64(const FormatRegisterOptions& options, RegisterCategory category,
+                       const std::vector<Register>& registers, OutputBuffer* out) {
   switch (category) {
-    case RegisterCategory::Type::kGeneral:
+    case RegisterCategory::kGeneral:
       FormatGeneralRegisters(options, registers, out);
       return true;
-    case RegisterCategory::Type::kFP:
-      *err = FormatFPRegisters(registers, out);
+    case RegisterCategory::kFloatingPoint:
+      FormatFPRegisters(registers, out);
       return true;
-    case RegisterCategory::Type::kDebug:
+    case RegisterCategory::kDebug:
       FormatDebugRegisters(registers, out);
       return true;
     default:

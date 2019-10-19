@@ -5,7 +5,6 @@
 #ifndef TOOLS_FIDLCAT_LIB_EXCEPTION_DECODER_H_
 #define TOOLS_FIDLCAT_LIB_EXCEPTION_DECODER_H_
 
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
