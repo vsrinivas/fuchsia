@@ -44,17 +44,33 @@ ddk_mock::MockMmioReg& GetMockReg(ddk_mock::MockMmioRegRegion& registers) {
 class TaskTest : public zxtest::Test {
  public:
   void ProcessFrameCallback(uint32_t output_buffer_id) {
+    fbl::AutoLock al(&lock_);
     callback_check_.push_back(output_buffer_id);
-    sync_completion_signal(&event_);
+    frame_ready_ = true;
+    event_.Signal();
   }
 
   void WaitAndReset() {
-    sync_completion_wait(&event_, ZX_TIME_INFINITE);
-    sync_completion_reset(&event_);
+    fbl::AutoLock al(&lock_);
+    while (frame_ready_ == false) {
+      event_.Wait(&lock_);
+    }
+    frame_ready_ = false;
+  }
+
+  uint32_t GetCallbackSize() {
+    fbl::AutoLock al(&lock_);
+    return callback_check_.size();
+  }
+
+  uint32_t GetCallbackBack() {
+    fbl::AutoLock al(&lock_);
+    return callback_check_.back();
   }
 
  protected:
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
+    frame_ready_ = false;
     camera::GetImageFormat2(input_image_format_, kWidth, kHeight);
     camera::GetImageFormat2(output_image_format_table_[0], kWidth, kHeight);
     camera::GetImageFormat2(output_image_format_table_[1], kWidth / 2, kHeight / 2);
@@ -150,8 +166,11 @@ class TaskTest : public zxtest::Test {
   // Input Image format.
   image_format_2_t input_image_format_;
   std::unique_ptr<Ge2dDevice> ge2d_device_;
+private:
   std::vector<uint32_t> callback_check_;
-  sync_completion_t event_;
+  bool frame_ready_;
+  fbl::Mutex lock_;
+  fbl::ConditionVariable event_;
 };
 
 TEST_F(TaskTest, BasicCreationTest) {
@@ -333,7 +352,7 @@ TEST_F(TaskTest, ProcessFrameTest) {
 
   // Check if the callback was called.
   WaitAndReset();
-  EXPECT_EQ(1, callback_check_.size());
+  EXPECT_EQ(1, GetCallbackSize());
 
   ASSERT_OK(ge2d_device_->StopThread());
 
@@ -358,12 +377,12 @@ TEST_F(TaskTest, ReleaseValidFrameTest) {
 
   // Check if the callback was called.
   WaitAndReset();
-  EXPECT_EQ(1, callback_check_.size());
+  EXPECT_EQ(1, GetCallbackSize());
 
   // There is no output buffer to release at the moment. But let's keep this code
   // in place so we can add a test for this later.
   ASSERT_NO_DEATH(([this, resize_task_id]() {
-    ge2d_device_->Ge2dReleaseFrame(resize_task_id, callback_check_.back());
+    ge2d_device_->Ge2dReleaseFrame(resize_task_id, GetCallbackBack());
   }));
 
   ASSERT_OK(ge2d_device_->StopThread());
@@ -387,11 +406,11 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
 
   // Check if the callback was called.
   WaitAndReset();
-  EXPECT_EQ(1, callback_check_.size());
+  EXPECT_EQ(1, GetCallbackSize());
 
   // Test releasing an invalid frame (invalid task id).
   ASSERT_DEATH(([this, resize_task_id]() {
-    ge2d_device_->Ge2dReleaseFrame(resize_task_id + 1, callback_check_.back());
+    ge2d_device_->Ge2dReleaseFrame(resize_task_id + 1, GetCallbackBack());
   }));
 
   ASSERT_OK(ge2d_device_->StopThread());
@@ -424,7 +443,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
 
     // Check if the callback was called once.
     WaitAndReset();
-    EXPECT_EQ(t, callback_check_.size());
+    EXPECT_EQ(t, GetCallbackSize());
   }
 
   // This time adding another frame to process while its
@@ -439,7 +458,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
 
     // Check if the callback was called once.
     WaitAndReset();
-    EXPECT_EQ(t + 3, callback_check_.size());
+    EXPECT_EQ(t + 3, GetCallbackSize());
   }
 
   ASSERT_OK(ge2d_device_->StopThread());
