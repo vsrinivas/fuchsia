@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
+
 group("test") {
   testonly = true
   deps = [
     ":affine",
+    ":affine-fuzzer",
   ]
 }
 
@@ -20,5 +23,14 @@ test("affine") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+fuzzer("affine-fuzzer") {
+  sources = [
+    "affine-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/affine",
   ]
 }
