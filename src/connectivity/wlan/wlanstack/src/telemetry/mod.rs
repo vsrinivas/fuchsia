@@ -53,10 +53,6 @@ const NEIGHBOR_NETWORKS_STANDARD_MAPPING: [(Standard, NeighborNetworksMetricStan
     (Standard::Dot11Ac, NeighborNetworksMetricStandardLabel::_802_11ac),
 ];
 
-/// Threshold required to consider a particular failure step or timeout as representative.
-/// Used for successive failure metrics where we need to summarize multiple failures.
-const REPRESENTATIVE_FAILURE_THRESHOLD: f64 = 0.6;
-
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
 pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender: CobaltSender) {
     // TODO(NET-1386): Make this module resilient to Wlanstack2 downtime.
@@ -507,7 +503,6 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
             0,
             1,
         );
-        log_successive_connect_failure_stats(sender, &connect_stats);
 
         if let ConnectFailure::SelectNetwork(select_network_failure) = failure {
             let error_reason_dim = convert_select_network_failure(&select_network_failure);
@@ -612,97 +607,6 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
         },
         _ => (),
     }
-}
-
-// Log successive connect failure stats from ConnectStats.
-// Should only be called if latest connect result is a failure.
-fn log_successive_connect_failure_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
-    let last_ten_failures = &connect_stats.last_ten_failures;
-    if last_ten_failures.len() <= 1 {
-        return;
-    }
-
-    let count_dim = {
-        use metrics::SuccessiveConnectionFailureBreakdownMetricDimensionSuccessiveFailureCount::*;
-        match last_ten_failures.len() {
-            0 | 1 => return,
-            2 => Two,
-            3 => Three,
-            4 => Four,
-            5 => Five,
-            _ => MoreThanFive,
-        }
-    };
-
-    let (fail_at_dim, timeout_dim) = get_main_failure_type(last_ten_failures);
-    let oui = connect_stats.candidate_network.as_ref().map(|bss| bss.bssid.to_oui_uppercase(""));
-
-    sender.with_component().log_event_count::<_, String, _>(
-        metrics::SUCCESSIVE_CONNECTION_FAILURE_METRIC_ID,
-        count_dim as u32,
-        oui.clone(),
-        0,
-        1,
-    );
-    sender.with_component().log_event_count::<_, String, _>(
-        metrics::SUCCESSIVE_CONNECTION_FAILURE_BREAKDOWN_METRIC_ID,
-        [count_dim as u32, fail_at_dim as u32, timeout_dim as u32],
-        oui,
-        0,
-        1,
-    )
-}
-
-// Given the last ten failures, return whether they are mostly represented by a particular
-// failure step and timeout.
-fn get_main_failure_type(
-    last_ten_failures: &[ConnectFailure],
-) -> (
-    metrics::SuccessiveConnectionFailureBreakdownMetricDimensionFailAt,
-    metrics::SuccessiveConnectionFailureBreakdownMetricDimensionTimeout,
-) {
-    let mut fail_at_count = HashMap::new();
-    let mut timeout_count = 0;
-    for failure in last_ten_failures.iter() {
-        let fail_at_dim = convert_to_fail_at_dim(failure);
-        let entry = fail_at_count.entry(fail_at_dim).or_insert(0);
-        *entry += 1;
-
-        if failure.is_timeout() {
-            timeout_count += 1;
-        }
-    }
-
-    let threshold = REPRESENTATIVE_FAILURE_THRESHOLD;
-    let total_failures = last_ten_failures.len();
-    let fail_at_dim = {
-        use metrics::ConnectionFailureMetricDimensionFailAt as FailAt;
-        use metrics::SuccessiveConnectionFailureBreakdownMetricDimensionFailAt as SuccessiveFailAt;
-
-        match fail_at_count
-            .into_iter()
-            .filter(|(_, c)| *c as f64 / total_failures as f64 >= threshold)
-            .next()
-        {
-            Some((dim, _)) => match dim {
-                FailAt::Scan => SuccessiveFailAt::Scan,
-                FailAt::NetworkSelection => SuccessiveFailAt::NetworkSelection,
-                FailAt::Join => SuccessiveFailAt::Join,
-                FailAt::Authentication => SuccessiveFailAt::Authentication,
-                FailAt::Association => SuccessiveFailAt::Association,
-                FailAt::EstablishRsna => SuccessiveFailAt::EstablishRsna,
-            },
-            None => SuccessiveFailAt::DifferentSteps,
-        }
-    };
-    let timeout_dim = if timeout_count as f64 / total_failures as f64 >= threshold {
-        metrics::SuccessiveConnectionFailureBreakdownMetricDimensionTimeout::Yes
-    } else if (total_failures - timeout_count) as f64 / total_failures as f64 >= threshold {
-        metrics::SuccessiveConnectionFailureBreakdownMetricDimensionTimeout::No
-    } else {
-        metrics::SuccessiveConnectionFailureBreakdownMetricDimensionTimeout::DifferentCauses
-    };
-    (fail_at_dim, timeout_dim)
 }
 
 fn log_time_to_connect_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
@@ -872,10 +776,6 @@ mod tests {
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
         futures::channel::mpsc,
         maplit::hashset,
-        metrics::{
-            SuccessiveConnectionFailureBreakdownMetricDimensionFailAt as SuccessiveFailAt,
-            SuccessiveConnectionFailureBreakdownMetricDimensionTimeout as SuccessiveTimeout,
-        },
         pin_utils::pin_mut,
         std::collections::HashSet,
         wlan_common::assert_variant,
@@ -1117,85 +1017,6 @@ mod tests {
             metrics::ESTABLISH_RSNA_FAILURE_METRIC_ID,
         };
         test_metric_subset(&connect_stats, expected_metrics_subset, hashset! {});
-    }
-
-    #[test]
-    fn test_log_successive_connection_failure() {
-        let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InvalidArgs);
-        let connect_stats = ConnectStats {
-            result: failure.clone().into(),
-            last_ten_failures: vec![failure.clone(), failure],
-            ..fake_connect_stats()
-        };
-        let expected_metrics_subset = hashset! {
-            metrics::CONNECTION_RESULT_METRIC_ID,
-            metrics::CONNECTION_FAILURE_METRIC_ID,
-            metrics::SUCCESSIVE_CONNECTION_FAILURE_METRIC_ID,
-            metrics::SUCCESSIVE_CONNECTION_FAILURE_BREAKDOWN_METRIC_ID,
-        };
-        test_metric_subset(&connect_stats, expected_metrics_subset, hashset! {});
-    }
-
-    #[test]
-    fn test_do_not_log_successive_connect_failure_on_successful_latest_attempt() {
-        let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InvalidArgs);
-        let connect_stats = ConnectStats {
-            result: ConnectResult::Success,
-            last_ten_failures: vec![failure.clone(), failure],
-            ..fake_connect_stats()
-        };
-        let expected_metrics_subset = hashset! {
-            metrics::CONNECTION_RESULT_METRIC_ID,
-        };
-        let unexpected_metrics = hashset! {
-            metrics::CONNECTION_FAILURE_METRIC_ID,
-            metrics::SUCCESSIVE_CONNECTION_FAILURE_METRIC_ID,
-            metrics::SUCCESSIVE_CONNECTION_FAILURE_BREAKDOWN_METRIC_ID,
-        };
-        test_metric_subset(&connect_stats, expected_metrics_subset, unexpected_metrics);
-    }
-
-    #[test]
-    fn test_get_main_failure_type_fail_at_same_step_with_timeout() {
-        let auth_timeout = ConnectFailure::AuthenticationFailure(
-            fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout,
-        );
-        let last_ten_failures = vec![
-            auth_timeout.clone(),
-            SelectNetworkFailure::NoScanResultWithSsid.into(),
-            auth_timeout,
-        ];
-        let (fail_at_dim, timeout_dim) = get_main_failure_type(&last_ten_failures[..]);
-        assert_eq!(fail_at_dim, SuccessiveFailAt::Authentication);
-        assert_eq!(timeout_dim, SuccessiveTimeout::Yes);
-    }
-
-    #[test]
-    fn test_get_main_failure_type_different_errors_in_same_step() {
-        let last_ten_failures = vec![
-            ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InvalidArgs),
-            SelectNetworkFailure::NoScanResultWithSsid.into(),
-            ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InternalError),
-        ];
-        let (fail_at_dim, timeout_dim) = get_main_failure_type(&last_ten_failures[..]);
-        assert_eq!(fail_at_dim, SuccessiveFailAt::Scan);
-        assert_eq!(timeout_dim, SuccessiveTimeout::No);
-    }
-
-    #[test]
-    fn test_get_main_failure_type_no_representative_error() {
-        let auth_timeout = ConnectFailure::AuthenticationFailure(
-            fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout,
-        );
-        let last_ten_failures = vec![
-            auth_timeout.clone(),
-            auth_timeout,
-            ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InvalidArgs),
-            ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InvalidArgs),
-        ];
-        let (fail_at_dim, timeout_dim) = get_main_failure_type(&last_ten_failures[..]);
-        assert_eq!(fail_at_dim, SuccessiveFailAt::DifferentSteps);
-        assert_eq!(timeout_dim, SuccessiveTimeout::DifferentCauses);
     }
 
     #[test]
