@@ -86,6 +86,52 @@ class SessionShellTest : public modular_testing::TestHarnessFixture {
   std::unique_ptr<modular_testing::FakeSessionShell> fake_session_shell_;
 };
 
+class TestComponent : public modular_testing::FakeComponent {
+ public:
+  // |on_created| is called when the component is launched. |on_destroyed| is called when the
+  // component is terminated.
+  TestComponent(fit::function<void()> on_created, fit::function<void()> on_destroyed)
+      : FakeComponent({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+                       .sandbox_services = {"fuchsia.modular.SessionShellContext"}}),
+        on_created_(std::move(on_created)),
+        on_destroyed_(std::move(on_destroyed)) {}
+
+ protected:
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override { on_created_(); }
+
+  void OnDestroy() override { on_destroyed_(); }
+
+  fit::function<void()> on_created_;
+  fit::function<void()> on_destroyed_;
+};
+
+TEST_F(SessionShellTest, RestartShell) {
+  modular_testing::TestHarnessBuilder builder;
+
+  // Overriding OnDestroy() and OnCreate() to ensure that there isn't a race condition when
+  // verifying that the session_shell restarts properly.
+  bool stopped = false;
+  bool started = false;
+
+  TestComponent session_shell([&] { started = true; }, [&] { stopped = true; });
+  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
+  builder.BuildAndRun(test_harness());
+
+  EXPECT_FALSE(session_shell.is_running());
+  RunLoopUntil([&] { return session_shell.is_running(); });
+
+  started = false;
+
+  fuchsia::modular::SessionShellContextPtr session_shell_context;
+  session_shell.component_context()->svc()->Connect(session_shell_context.NewRequest());
+  session_shell_context->Restart();
+
+  RunLoopUntil([&] { return stopped; });
+
+  // Tests that the session shell is restarted after a call to SessionShellContext::Restart.
+  RunLoopUntil([&] { return started; });
+}
+
 TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
   RunHarnessAndInterceptSessionShell();
 

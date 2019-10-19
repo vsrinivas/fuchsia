@@ -67,6 +67,9 @@ protocol SessionShellContext {
     /// Requests logout of the user. This causes the basemgr to tear down the
     /// `Sessionmgr` instance of the user.
     Logout();
+
+    /// Restarts the session without logging out the user.
+    Restart();
 };
 
 /// Session shell provides this service to the framework which may plumb it to

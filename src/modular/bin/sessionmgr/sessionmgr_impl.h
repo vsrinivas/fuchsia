@@ -122,6 +122,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
   void Logout() override;
+  void Restart() override;
   void Shutdown();
 
   // |EntityProviderLauncher|

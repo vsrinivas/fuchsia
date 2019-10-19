@@ -137,6 +137,10 @@ void SessionContextImpl::Logout() {
   Shutdown(/* logout_users= */ true, [] {});
 }
 
+void SessionContextImpl::Restart() {
+  Shutdown(/* logout_users= */ false, [] {});
+}
+
 void SessionContextImpl::Shutdown() {
   Shutdown(/* logout_users= */ false, [] {});
 }

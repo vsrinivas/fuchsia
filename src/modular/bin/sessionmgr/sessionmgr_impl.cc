@@ -795,6 +795,8 @@ void SessionmgrImpl::GetStoryProvider(
 
 void SessionmgrImpl::Logout() { session_context_->Logout(); }
 
+void SessionmgrImpl::Restart() { session_context_->Restart(); }
+
 void SessionmgrImpl::Shutdown() { session_context_->Shutdown(); }
 
 // |EntityProviderLauncher|
