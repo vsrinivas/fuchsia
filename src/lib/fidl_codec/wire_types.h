@@ -75,6 +75,9 @@ class Type {
   static std::unique_ptr<Type> TypeFromIdentifier(LibraryLoader* loader,
                                                   const rapidjson::Value& type, size_t inline_size);
 
+  // Whether this is a nullable type.
+  virtual bool Nullable() const { return false; }
+
   Type& operator=(const Type& other) = default;
   Type(const Type& other) = default;
 };
@@ -93,6 +96,8 @@ class RawType : public Type {
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
+  bool Nullable() const override { return true; }
+
  private:
   size_t inline_size_;
 };
@@ -104,6 +109,8 @@ class StringType : public Type {
   virtual size_t InlineSize() const override { return sizeof(uint64_t) + sizeof(uint64_t); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
+
+  bool Nullable() const override { return true; }
 };
 
 // A generic type that can be used for any numeric value that corresponds to a
@@ -195,6 +202,8 @@ class StructType : public Type {
  public:
   StructType(const Struct& str, bool nullable) : struct_(str), nullable_(nullable) {}
 
+  bool Nullable() const override { return nullable_; }
+
   std::string Name() const override { return struct_.name(); }
 
   virtual size_t InlineSize() const override;
@@ -225,6 +234,7 @@ class UnionType : public Type {
   UnionType(const Union& uni, bool nullable);
 
   std::string Name() const override { return union_.name(); }
+  bool Nullable() const override { return nullable_; }
 
   virtual size_t InlineSize() const override;
 
@@ -240,6 +250,7 @@ class XUnionType : public Type {
   XUnionType(const XUnion& uni, bool nullable);
 
   std::string Name() const override { return xunion_.name(); }
+  bool Nullable() const override { return nullable_; }
 
   virtual size_t InlineSize() const override;
 
@@ -281,6 +292,8 @@ class VectorType : public ElementSequenceType {
   std::string Name() const override {
     return std::string("vector<") + component_type_->Name() + ">";
   }
+
+  bool Nullable() const override { return true; }
 
   virtual size_t InlineSize() const override { return sizeof(uint64_t) + sizeof(uint64_t); }
 

@@ -14,6 +14,7 @@ static_library("fidl_codec") {
     "colors.h",
     "display_handle.h",
     "display_options.h",
+    "encoder.h",
     "library_loader.h",
     "memory_helpers.h",
     "message_decoder.h",
@@ -24,6 +25,7 @@ static_library("fidl_codec") {
 
   sources = [
     "display_handle.cc",
+    "encoder.cc",
     "library_loader.cc",
     "message_decoder.cc",
     "wire_object.cc",
@@ -56,6 +58,7 @@ executable("fidl_codec_test_bin") {
     "//sdk/lib/fidl/cpp:test_support",
     "//sdk/lib/fidl/cpp/test",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",

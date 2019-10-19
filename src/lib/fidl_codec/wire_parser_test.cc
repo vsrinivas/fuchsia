@@ -13,10 +13,12 @@
 #include <string>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "src/lib/fidl_codec/encoder.h"
 #include "src/lib/fidl_codec/fidl_codec_test.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/library_loader_test_data.h"
@@ -202,6 +204,15 @@ TEST_F(WireParserTest, ParseSingleString) {
       std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                  \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for handle size " << actual         \
                                       << " instead of " << message.handles().actual();             \
+    }                                                                                              \
+                                                                                                   \
+    auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,         \
+                                                header.magic_number, *object.get());               \
+    ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));                \
+    ASSERT_EQ(message.handles().size(), encode_result.handles.size());                             \
+                                                                                                   \
+    for (uint32_t i = 0; i < message.handles().size(); ++i) {                                      \
+      EXPECT_EQ(message.handles().data()[i], encode_result.handles[i].handle);                     \
     }                                                                                              \
     delete[] handle_infos;                                                                         \
   } while (0)

@@ -121,6 +121,8 @@ class RawValue : public InlineValue {
   RawValue(const Type* type, const uint8_t* data, uint64_t size)
       : InlineValue(type, data), size_(size) {}
 
+  uint64_t size() const { return size_; }
+
   int DisplaySize(int remaining_size) const override;
 
   void PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header, int tabs,
@@ -284,6 +286,8 @@ class UnionValue : public NullableValue {
   UnionValue(const Type* type, const Union& union_definition)
       : NullableValue(type), union_definition_(union_definition) {}
 
+  const Union& definition() const { return union_definition_; }
+
   const Field& field() const { return field_; }
   void set_field(Field field) { field_ = std::move(field); }
 
@@ -340,6 +344,7 @@ class VectorValue : public NullableValue {
   VectorValue(const Type* type, uint64_t size, const Type* component_type)
       : NullableValue(type), size_(size), component_type_(component_type) {}
 
+  size_t size() const { return size_; }
   const std::vector<std::unique_ptr<Value>>& values() const { return values_; }
 
   int DisplaySize(int remaining_size) const override;
@@ -382,6 +387,8 @@ class EnumValue : public InlineValue {
 class HandleValue : public Value {
  public:
   HandleValue(const Type* type, const zx_handle_info_t& handle) : Value(type), handle_(handle) {}
+
+  const zx_handle_info_t& handle() const { return handle_; }
 
   int DisplaySize(int remaining_size) const override;
 
