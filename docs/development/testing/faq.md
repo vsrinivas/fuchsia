@@ -161,3 +161,38 @@ A: Clicking on CQ dry run (aka +1) will take your CL's properly defined unit
 test and run it on multiple bots, one for each build target (*x86-64* versus
 *arm64*, *release* versus *debug*). Each job will have an output page showing
 all the tests that ran.
+
+## Q: How do I use some build time artifacts in my unit test?
+
+A: The simplest artifact is just a file that is in your source directory.  For
+this you just need to add it to `resources` attribute of the package definition
+of your unit test.  For example, you may do something like this in your
+`BUILD.gn`:
+
+```code
+rustc_binary("my-great-app") {
+  with_unit_tests = true
+
+  ...
+}
+
+test_package("my-great-app-tests") {
+  deps = [
+    ":my-great-app_test",
+  ]
+
+  resources = [
+    {
+      path = "source.zip"
+      dest = "testing.zip"
+    }
+  ]
+```
+
+The file will be available as `/pkg/data/testing.zip` inside the environment
+where the test binary will be executed.
+
+TODO: If you want an artifact that is generated as part of the build process,
+you should probably add the rule that generates the artifact to the `data_deps`
+array of the `test_package` rule.  But I have not tried it yet.  Update this
+section when you will try it :)
