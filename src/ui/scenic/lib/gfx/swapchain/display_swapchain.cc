@@ -17,8 +17,8 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
+#include "src/ui/scenic/lib/display/display_controller_listener.h"
 #include "src/ui/scenic/lib/gfx/displays/display.h"
-#include "src/ui/scenic/lib/gfx/displays/display_controller_listener.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 
@@ -74,8 +74,8 @@ vk::ImageUsageFlags GetFramebufferImageUsage();
 DisplaySwapchain::DisplaySwapchain(
     Sysmem* sysmem,
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-    std::shared_ptr<DisplayControllerListener> display_controller_listener, Display* display,
-    escher::Escher* escher)
+    std::shared_ptr<display::DisplayControllerListener> display_controller_listener,
+    Display* display, escher::Escher* escher)
     : escher_(escher),
       sysmem_(sysmem),
       display_(display),
@@ -512,7 +512,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
   Flip(display_->display_id(), buffer.fb_id, frame_record->render_finished_event_id,
-                         frame_record->retired_event_id);
+       frame_record->retired_event_id);
 
   if ((*display_controller_)->ReleaseEvent(frame_record->render_finished_event_id) != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to release display controller event.";

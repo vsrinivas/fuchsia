@@ -32,7 +32,6 @@ source_set("mocks") {
   sources = [
     "frame_scheduler_mocks.cc",
     "frame_scheduler_mocks.h",
-    "mock_display_controller.h",
     "mocks.cc",
     "mocks.h",
   ]
@@ -79,6 +78,7 @@ source_set("testing_deps") {
     "//src/ui/lib/escher",
     "//src/ui/lib/escher/test:gtest_escher",
     "//src/ui/lib/glm_workaround",
+    "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/gfx",
     "//src/ui/scenic/lib/scenic/tests:testing_deps",
     "//src/ui/scenic/lib/scenic/util",
@@ -144,7 +144,6 @@ executable("unittests") {
     "camera_unittest.cc",
     "compositor_unittest.cc",
     "default_frame_scheduler_unittest.cc",
-    "display_controller_listener_test.cc",
     "dump_visitor_unittest.cc",
     "duration_predictor_unittest.cc",
     "escher_vulkan_smoke_test.cc",

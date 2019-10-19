@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_MOCK_DISPLAY_CONTROLLER_H_
-#define SRC_UI_SCENIC_LIB_GFX_TESTS_MOCK_DISPLAY_CONTROLLER_H_
+#ifndef SRC_UI_SCENIC_LIB_DISPLAY_TESTS_MOCK_DISPLAY_CONTROLLER_H_
+#define SRC_UI_SCENIC_LIB_DISPLAY_TESTS_MOCK_DISPLAY_CONTROLLER_H_
 
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl_test_base.h>
@@ -12,7 +12,7 @@
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 namespace test {
 
 class MockDisplayController : public fuchsia::hardware::display::testing::Controller_TestBase {
@@ -88,7 +88,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 };
 
 }  // namespace test
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl
 
-#endif  // SRC_UI_SCENIC_LIB_GFX_TESTS_MOCK_DISPLAY_CONTROLLER_H_
+#endif  // SRC_UI_SCENIC_LIB_DISPLAY_TESTS_MOCK_DISPLAY_CONTROLLER_H_

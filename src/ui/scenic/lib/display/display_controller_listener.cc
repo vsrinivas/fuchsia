@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/gfx/displays/display_controller_listener.h"
+#include "src/ui/scenic/lib/display/display_controller_listener.h"
 
 #include <lib/async/default.h>
 #include <zircon/types.h>
@@ -10,7 +10,7 @@
 #include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 
 DisplayControllerListener::DisplayControllerListener(
     zx::channel device_channel,
@@ -40,6 +40,8 @@ DisplayControllerListener::DisplayControllerListener(
 }
 
 DisplayControllerListener::~DisplayControllerListener() {
+  ClearCallbacks();
+
   if (wait_event_msg_.object() != ZX_HANDLE_INVALID) {
     wait_event_msg_.Cancel();
   }
@@ -66,6 +68,15 @@ void DisplayControllerListener::InitializeCallbacks(
   event_dispatcher->ClientOwnershipChange = std::move(client_ownership_change_cb);
 }
 
+void DisplayControllerListener::ClearCallbacks() {
+  auto event_dispatcher =
+      static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
+  event_dispatcher->DisplaysChanged = nullptr;
+  event_dispatcher->ClientOwnershipChange = nullptr;
+  event_dispatcher->Vsync = nullptr;
+  on_invalid_cb_ = nullptr;
+}
+
 void DisplayControllerListener::SetVsyncCallback(VsyncCallback vsync_cb) {
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
   auto event_dispatcher =
@@ -90,9 +101,14 @@ void DisplayControllerListener::OnPeerClosedAsync(async_dispatcher_t* dispatcher
     // both waits.
     wait_device_closed_.Cancel();
     wait_controller_closed_.Cancel();
-    auto callback = std::move(on_invalid_cb_);
-    callback();
-    // Don't do anything else here, since this could be destroyed.
+    if (on_invalid_cb_) {
+      // We want |on_invalid_cb_| to be cleared when we're done, so move it out.
+      auto callback = std::move(on_invalid_cb_);
+      callback();
+      // See warning below.
+    }
+    // Warning!
+    // Don't do anything else after callback() is invoked, since |this| could be destroyed.
     return;
   }
   FXL_NOTREACHED();
@@ -125,5 +141,5 @@ void DisplayControllerListener::OnEventMsgAsync(async_dispatcher_t* dispatcher,
   FXL_NOTREACHED();
 }
 
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl

@@ -28,7 +28,7 @@ void DisplayManager::BindDefaultDisplayController(zx::channel dc_device, zx::cha
   zx_handle_t dc_channel_handle = dc_channel.get();
   default_display_controller_ = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
   default_display_controller_->Bind(std::move(dc_channel));
-  default_display_controller_listener_ = std::make_shared<DisplayControllerListener>(
+  default_display_controller_listener_ = std::make_shared<display::DisplayControllerListener>(
       std::move(dc_device), default_display_controller_, dc_channel_handle);
   default_display_controller_listener_->InitializeCallbacks(
       /*on_invalid_cb=*/nullptr, fit::bind_member(this, &DisplayManager::OnDisplaysChanged),

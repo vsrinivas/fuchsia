@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/gfx/displays/display_controller_watcher.h"
+#include "src/ui/scenic/lib/display/display_controller_watcher.h"
 
 #include <fcntl.h>
 #include <fuchsia/hardware/display/c/fidl.h>
@@ -15,7 +15,7 @@
 #include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 
 static const std::string kDisplayDir = "/dev/class/display-controller";
 
@@ -81,5 +81,5 @@ void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callb
   callback(std::move(device_client), std::move(dc_client));
 }
 
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl

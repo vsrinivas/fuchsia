@@ -12,9 +12,9 @@
 
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/gfx/displays/display_manager.h"
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
-#include "src/ui/scenic/lib/gfx/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
 
@@ -105,7 +105,7 @@ TEST_F(CompositorTest, Validation) {
                       controller_channel = std::move(controller_channel.server)]() mutable {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-    MockDisplayController mock_display_controller;
+    display::test::MockDisplayController mock_display_controller;
 
     mock_display_controller.set_display_color_conversion_fn(
         [&](uint64_t display_id, std::array<float, 3> preoffsets_out,
@@ -131,7 +131,7 @@ using CompositorTestSimple = gtest::TestLoopFixture;
 
 TEST_F(CompositorTestSimple, ColorConversionConfigChecking) {
   fuchsia::hardware::display::ControllerSyncPtr display_controller;
-  MockDisplayController mock_display_controller;
+  display::test::MockDisplayController mock_display_controller;
 
   ChannelPair device_channel = CreateChannelPair();
   ChannelPair controller_channel = CreateChannelPair();

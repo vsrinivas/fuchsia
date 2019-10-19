@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/gfx/displays/display_controller_listener.h"
+#include "src/ui/scenic/lib/display/display_controller_listener.h"
 
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/zx/channel.h>
@@ -12,10 +12,10 @@
 
 #include "lib/fidl/cpp/comparison.h"
 #include "src/lib/fxl/logging.h"
-#include "src/ui/scenic/lib/gfx/tests/mock_display_controller.h"
+#include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 namespace test {
 
 namespace {
@@ -39,9 +39,9 @@ class DisplayControllerListenerTest : public gtest::TestLoopFixture {
     ChannelPair device_channel = CreateChannelPair();
     ChannelPair controller_channel = CreateChannelPair();
 
-    mock_display_controller_driver_ = std::make_unique<MockDisplayController>();
-    mock_display_controller_driver_->Bind(std::move(device_channel.server),
-                                          std::move(controller_channel.server));
+    mock_display_controller_ = std::make_unique<MockDisplayController>();
+    mock_display_controller_->Bind(std::move(device_channel.server),
+                                   std::move(controller_channel.server));
 
     zx_handle_t controller_handle = controller_channel.client.get();
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
@@ -54,14 +54,13 @@ class DisplayControllerListenerTest : public gtest::TestLoopFixture {
     return display_controller_listener_.get();
   };
 
-  void ResetMockDisplayController() { mock_display_controller_driver_.reset(); }
+  void ResetMockDisplayController() { mock_display_controller_.reset(); }
+  void ResetDisplayControllerListener() { display_controller_listener_.reset(); }
 
-  MockDisplayController* mock_display_controller_driver() {
-    return mock_display_controller_driver_.get();
-  }
+  MockDisplayController* mock_display_controller() { return mock_display_controller_.get(); }
 
  private:
-  std::unique_ptr<MockDisplayController> mock_display_controller_driver_;
+  std::unique_ptr<MockDisplayController> mock_display_controller_;
   std::unique_ptr<DisplayControllerListener> display_controller_listener_;
 };
 
@@ -115,7 +114,7 @@ TEST_F(DisplayControllerListenerBasicTest, ConstructorArgs) {
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     controller->Bind(std::move(empty_channel));
     DisplayControllerListener listener(std::move(device_channel.client), controller,
-                                       empty_channel.get());
+                                       controller_handle);
 
     EXPECT_FALSE(listener.valid());
   }
@@ -128,10 +127,10 @@ TEST_F(DisplayControllerListenerTest, Connect) {
                                                      /*client_ownership_change_cb=*/nullptr);
 
   EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller_driver()->binding().is_bound());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
   RunLoopUntilIdle();
   EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller_driver()->binding().is_bound());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
 }
 
 // Verify that DisplayController becomes invalid when the device channel is closed.
@@ -143,15 +142,19 @@ TEST_F(DisplayControllerListenerTest, DisconnectDeviceChannel) {
                                                      /*client_ownership_change_cb=*/nullptr);
 
   EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller_driver()->binding().is_bound());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
   RunLoopUntilIdle();
   EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller_driver()->binding().is_bound());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
 
-  mock_display_controller_driver()->ResetDeviceChannel();
+  mock_display_controller()->ResetDeviceChannel();
   RunLoopUntilIdle();
   EXPECT_EQ(1u, on_invalid_count);
   EXPECT_FALSE(display_controller_listener()->valid());
+
+  // Expect no crashes on teardown.
+  ResetDisplayControllerListener();
+  RunLoopUntilIdle();
 }
 
 // Verify that DisplayController becomes invalid when the controller channel is closed.
@@ -163,18 +166,44 @@ TEST_F(DisplayControllerListenerTest, DisconnectControllerChannel) {
                                                      /*client_ownership_change_cb=*/nullptr);
 
   EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller_driver()->binding().is_bound());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
   RunLoopUntilIdle();
   EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller_driver()->binding().is_bound());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
 
-  mock_display_controller_driver()->ResetControllerBinding();
+  mock_display_controller()->ResetControllerBinding();
   RunLoopUntilIdle();
   EXPECT_EQ(1u, on_invalid_count);
   EXPECT_FALSE(display_controller_listener()->valid());
+
+  // Expect no crashes on teardown.
+  ResetDisplayControllerListener();
+  RunLoopUntilIdle();
 }
 
-// Verify that DisplayController becomes invalid when the controller channel is closed.
+// Verify that DisplayController becomes invalid when the controller channel is closed, but that we
+// don't receive a callback after ClearCallbacks.
+TEST_F(DisplayControllerListenerTest, DisconnectControllerChannelAfterClearCallbacks) {
+  uint on_invalid_count = 0;
+  auto on_invalid_cb = [&on_invalid_count]() { on_invalid_count++; };
+  display_controller_listener()->InitializeCallbacks(std::move(on_invalid_cb),
+                                                     /*displays_changed_cb=*/nullptr,
+                                                     /*client_ownership_change_cb=*/nullptr);
+
+  EXPECT_TRUE(display_controller_listener()->valid());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(display_controller_listener()->valid());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
+  display_controller_listener()->ClearCallbacks();
+  mock_display_controller()->ResetControllerBinding();
+  RunLoopUntilIdle();
+  EXPECT_EQ(0u, on_invalid_count);
+  EXPECT_FALSE(display_controller_listener()->valid());
+}
+
+// Verify that DisplayController becomes invalid when the device and controller channel is closed,
+// and that we don't get the callback twice.
 TEST_F(DisplayControllerListenerTest, DisconnectControllerAndDeviceChannel) {
   uint on_invalid_count = 0;
   auto on_invalid_cb = [&on_invalid_count]() { on_invalid_count++; };
@@ -183,15 +212,19 @@ TEST_F(DisplayControllerListenerTest, DisconnectControllerAndDeviceChannel) {
                                                      /*client_ownership_change_cb=*/nullptr);
 
   EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller_driver()->binding().is_bound());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
   RunLoopUntilIdle();
   EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller_driver()->binding().is_bound());
+  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
 
   ResetMockDisplayController();
   RunLoopUntilIdle();
   EXPECT_EQ(1u, on_invalid_count);
   EXPECT_FALSE(display_controller_listener()->valid());
+
+  // Expect no crashes on teardown.
+  ResetDisplayControllerListener();
+  RunLoopUntilIdle();
 }
 
 TEST_F(DisplayControllerListenerTest, DisplaysChanged) {
@@ -221,8 +254,8 @@ TEST_F(DisplayControllerListenerTest, DisplaysChanged) {
   test_display.monitor_name = "fake_monitor_name";
   test_display.monitor_serial = "fake_monitor_serial";
 
-  mock_display_controller_driver()->events().DisplaysChanged(/*added=*/{test_display},
-                                                             /*removed=*/{2u});
+  mock_display_controller()->events().DisplaysChanged(/*added=*/{test_display},
+                                                      /*removed=*/{2u});
   ASSERT_EQ(0u, displays_added.size());
   ASSERT_EQ(0u, displays_removed.size());
   RunLoopUntilIdle();
@@ -230,6 +263,21 @@ TEST_F(DisplayControllerListenerTest, DisplaysChanged) {
   ASSERT_EQ(1u, displays_removed.size());
   EXPECT_TRUE(fidl::Equals(displays_added[0], test_display));
   EXPECT_EQ(displays_removed[0], 2u);
+
+  // Verify we stop getting callbacks after ClearCallbacks().
+  display_controller_listener()->ClearCallbacks();
+  mock_display_controller()->events().DisplaysChanged(/*added=*/{},
+                                                      /*removed=*/{3u});
+  RunLoopUntilIdle();
+
+  // Expect that nothing changed.
+  ASSERT_EQ(1u, displays_added.size());
+  ASSERT_EQ(1u, displays_removed.size());
+  EXPECT_EQ(displays_removed[0], 2u);
+
+  // Expect no crashes on teardown.
+  ResetDisplayControllerListener();
+  RunLoopUntilIdle();
 }
 
 TEST_F(DisplayControllerListenerTest, ClientOwnershipChangeCallback) {
@@ -240,10 +288,21 @@ TEST_F(DisplayControllerListenerTest, ClientOwnershipChangeCallback) {
       /*on_invalid_cb=*/nullptr, /*displays_changed_cb=*/nullptr,
       std::move(client_ownership_change_cb));
 
-  mock_display_controller_driver()->events().ClientOwnershipChange(true);
+  mock_display_controller()->events().ClientOwnershipChange(true);
   EXPECT_FALSE(has_ownership);
   RunLoopUntilIdle();
   EXPECT_TRUE(has_ownership);
+
+  // Verify we stop getting callbacks after ClearCallbacks().
+  display_controller_listener()->ClearCallbacks();
+  mock_display_controller()->events().ClientOwnershipChange(false);
+  RunLoopUntilIdle();
+  // Expect that nothing changed.
+  EXPECT_TRUE(has_ownership);
+
+  // Expect no crashes on teardown.
+  ResetDisplayControllerListener();
+  RunLoopUntilIdle();
 }
 
 TEST_F(DisplayControllerListenerTest, VsyncCallback) {
@@ -264,15 +323,26 @@ TEST_F(DisplayControllerListenerTest, VsyncCallback) {
   const uint64_t kTestDisplayId = 1u;
   const uint64_t kTestTimestamp = 111111u;
   const uint64_t kTestImageId = 2u;
-  mock_display_controller_driver()->events().Vsync(kTestDisplayId, kTestTimestamp, {kTestImageId});
+  mock_display_controller()->events().Vsync(kTestDisplayId, kTestTimestamp, {kTestImageId});
   ASSERT_EQ(0u, last_images.size());
   RunLoopUntilIdle();
   EXPECT_EQ(kTestDisplayId, last_display_id);
   EXPECT_EQ(kTestTimestamp, last_timestamp);
   ASSERT_EQ(1u, last_images.size());
   EXPECT_EQ(last_images[0], kTestImageId);
+
+  // Verify we stop getting callbacks after ClearCallbacks().
+  display_controller_listener()->ClearCallbacks();
+  mock_display_controller()->events().Vsync(kTestDisplayId + 1, kTestTimestamp, {kTestImageId});
+  // Expect that nothing changed.
+  RunLoopUntilIdle();
+  EXPECT_EQ(kTestDisplayId, last_display_id);
+
+  // Expect no crashes on teardown.
+  ResetDisplayControllerListener();
+  RunLoopUntilIdle();
 }
 
 }  // namespace test
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl

@@ -38,6 +38,7 @@ test_package("scenic_tests") {
     "presentation_mode/tests",
     "root_presenter/tests",
     "//garnet/public/lib/ui/geometry/cpp:tests",
+    "//src/ui/scenic/lib/display/tests",
     "//src/ui/scenic/lib/flatland/tests",
     "//src/ui/scenic/lib/gfx/tests",
     "//src/ui/scenic/lib/gfx/util/tests",
@@ -96,6 +97,10 @@ test_package("scenic_tests") {
     },
     {
       name = "flatland_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "display_unittests"
       environments = basic_envs
     },
   ]

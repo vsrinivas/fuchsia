@@ -17,7 +17,7 @@
 #include "src/ui/lib/escher/resources/resource_manager.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
-#include "src/ui/scenic/lib/gfx/displays/display_controller_listener.h"
+#include "src/ui/scenic/lib/display/display_controller_listener.h"
 #include "src/ui/scenic/lib/gfx/swapchain/swapchain.h"
 
 #include <vulkan/vulkan.hpp>
@@ -36,8 +36,8 @@ class DisplaySwapchain : public Swapchain {
   DisplaySwapchain(
       Sysmem* sysmem,
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-      std::shared_ptr<DisplayControllerListener> display_controller_listener, Display* display,
-      escher::Escher* escher);
+      std::shared_ptr<display::DisplayControllerListener> display_controller_listener,
+      Display* display, escher::Escher* escher);
   ~DisplaySwapchain() override;
 
   // Callback to call on every vsync. Arguments are:
@@ -136,7 +136,7 @@ class DisplaySwapchain : public Swapchain {
 
   // The display controller driver binding.
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
-  std::shared_ptr<DisplayControllerListener> display_controller_listener_;
+  std::shared_ptr<display::DisplayControllerListener> display_controller_listener_;
 
   // Ids used to talk to display controller. If we use |display_controller_|
   // in multiple places, we'll have to centralize this logic.

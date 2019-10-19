@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_CONTROLLER_LISTENER_H_
-#define SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_CONTROLLER_LISTENER_H_
+#ifndef SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_CONTROLLER_LISTENER_H_
+#define SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_CONTROLLER_LISTENER_H_
 
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 
 // DisplayControllerListener wraps a |fuchsia::hardware::display::Controller| interface, allowing
 // registering for event callbacks.
@@ -43,6 +43,9 @@ class DisplayControllerListener {
   // invalid.
   void InitializeCallbacks(fit::closure on_invalid, DisplaysChangedCallback displays_changed_cb,
                            ClientOwnershipChangeCallback client_ownership_change_cb);
+
+  // Removes all callbacks. Once this is done, there is no way to re-initialize the callbacks.
+  void ClearCallbacks();
 
   void SetVsyncCallback(VsyncCallback vsync_callback);
 
@@ -87,7 +90,7 @@ class DisplayControllerListener {
   fidl::InterfacePtr<fuchsia::hardware::display::Controller> event_dispatcher_;
 };
 
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl
 
-#endif  // SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_CONTROLLER_LISTENER_H_
+#endif  // SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_CONTROLLER_LISTENER_H_

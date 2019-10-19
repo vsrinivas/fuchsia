@@ -31,7 +31,10 @@ executable("bin") {
 
   if (enable_gfx_subsystem) {
     defines += [ "SCENIC_ENABLE_GFX_SUBSYSTEM" ]
-    deps += [ "//src/ui/scenic/lib/gfx" ]
+    deps += [
+      "//src/ui/scenic/lib/display",
+      "//src/ui/scenic/lib/gfx",
+    ]
   }
 
   if (enable_input_subsystem) {

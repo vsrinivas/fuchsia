@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_CONTROLLER_WATCHER_H_
-#define SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_CONTROLLER_WATCHER_H_
+#ifndef SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_CONTROLLER_WATCHER_H_
+#define SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_CONTROLLER_WATCHER_H_
 
 #include <lib/fit/function.h>
 
@@ -13,7 +13,7 @@
 #include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 
 // Waits for a display device to be available, and returns the display
 // attributes through a callback.
@@ -38,7 +38,7 @@ class DisplayControllerWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayControllerWatcher);
 };
 
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl
 
-#endif  // SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_CONTROLLER_WATCHER_H_
+#endif  // SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_CONTROLLER_WATCHER_H_

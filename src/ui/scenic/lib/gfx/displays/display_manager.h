@@ -6,9 +6,9 @@
 #define SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_MANAGER_H_
 
 #include "src/lib/fxl/macros.h"
+#include "src/ui/scenic/lib/display/display_controller_listener.h"
+#include "src/ui/scenic/lib/display/display_controller_watcher.h"
 #include "src/ui/scenic/lib/gfx/displays/display.h"
-#include "src/ui/scenic/lib/gfx/displays/display_controller_listener.h"
-#include "src/ui/scenic/lib/gfx/displays/display_controller_watcher.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -22,8 +22,7 @@ class DisplayManager {
   using VsyncCallback =
       fit::function<void(zx::time timestamp, const std::vector<uint64_t>& images)>;
 
-  // Waits for the default display to become available then invokes the
-  // callback.
+  // Waits for the default display to become available then invokes the callback.
   void WaitForDefaultDisplayController(fit::closure display_available_cb);
 
   void BindDefaultDisplayController(zx::channel dc_device, zx::channel dc_channel);
@@ -36,7 +35,7 @@ class DisplayManager {
     return default_display_controller_;
   }
 
-  std::shared_ptr<DisplayControllerListener> default_display_controller_listener() {
+  std::shared_ptr<display::DisplayControllerListener> default_display_controller_listener() {
     return default_display_controller_listener_;
   }
 
@@ -51,11 +50,11 @@ class DisplayManager {
   void OnClientOwnershipChange(bool has_ownership);
 
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> default_display_controller_;
-  std::shared_ptr<DisplayControllerListener> default_display_controller_listener_;
+  std::shared_ptr<display::DisplayControllerListener> default_display_controller_listener_;
 
   std::unique_ptr<Display> default_display_;
 
-  DisplayControllerWatcher dc_watcher_;
+  display::DisplayControllerWatcher dc_watcher_;
   fit::closure display_available_cb_;
   // A boolean indicating whether or not we have ownership of the display
   // controller (not just individual displays). The default is no.

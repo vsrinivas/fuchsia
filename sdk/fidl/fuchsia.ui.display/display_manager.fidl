@@ -1,0 +1,65 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.display;
+
+using fuchsia.hardware.display;
+
+/// Unique identifier for a display.
+/// Also serves as a capability, enabling the owner to perform certain
+/// operations on displays in the DisplayManager protocol and other protocols
+/// (like Scenic).
+struct DisplayRef {
+    handle<event> reference;
+};
+
+// === Mode flags ===
+
+const int32 MODES_MAX_LEN = 256;
+
+// Flag for interlaced display modes.
+const int32 MODE_INTERLACED = 0x1;
+
+const uint32 IDENTIFIER_MAX_LEN = 128;
+using DisplayIdentifier = string:IDENTIFIER_MAX_LEN;
+
+table Info {
+    // Unique identifier for the display.
+    1: DisplayRef display_ref;
+
+    // Modes supported by the attached display. The first entry is the
+    // preferred mode.
+    2: vector<fuchsia.hardware.display.Mode>:MODES_MAX_LEN modes;
+
+    3: DisplayIdentifier manufacturer_name;
+    4: DisplayIdentifier monitor_name;
+};
+
+const int32 DISPLAYS_MAX_LEN = 1024;
+
+/// Display Listener protocol implemented by clients.
+protocol DisplayListener {
+    /// Called when displays are added. This method will also be called when
+    /// the listener is registered for any connected displays.
+    OnDisplayAdded(Info display);
+
+    /// Called when displays are removed.
+    OnDisplayRemoved(DisplayRef display);
+
+    /// Called when the client gains or loses ownership of the displays.
+    ///
+    /// New clients should assume they do not have ownership of the display
+    /// until informed otherwise by this method. Ownership can be lost and
+    /// gained more than once.
+    OnDisplayOwnershipChanged(vector<DisplayRef>:DISPLAYS_MAX_LEN displays,
+                              bool owned_by_display_controller);
+};
+
+/// |DisplayManager| is a service that informs the client of new or removed
+/// displays and allows changing of display configuration. Every display is
+/// associated with a DisplayRef which can also be used as a parameter to other
+/// apis (e.g. Scenic).
+protocol DisplayManager {
+    AddDisplayListener(DisplayListener listener);
+};
