@@ -9,6 +9,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include <cstdint>
 #include <unordered_map>
 
 #include "src/lib/fxl/logging.h"
@@ -39,7 +40,7 @@ class FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
 
  private:
   // |fuchsia::scheduler::ProfileProvider|
-  void GetProfile(uint32_t priority, std::string name, GetProfileCallback callback) {
+  void GetProfile(uint32_t priority, std::string name, GetProfileCallback callback) override {
     auto it = profiles_by_priority_.find(priority);
     if (it == profiles_by_priority_.end()) {
       callback(ZX_ERR_NOT_FOUND, zx::profile());
@@ -47,6 +48,11 @@ class FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
       callback(ZX_OK, std::move(it->second));
     }
   }
+
+  // |fuchsia::scheduler::ProfileProvider|
+  // TODO(eieio): Temporary until the deadline scheduler fully lands in tree.
+  void GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period, std::string name,
+                          GetProfileCallback callback) override {}
 
   std::unordered_map<uint32_t, zx::profile> profiles_by_priority_;
   fidl::BindingSet<fuchsia::scheduler::ProfileProvider> bindings_;

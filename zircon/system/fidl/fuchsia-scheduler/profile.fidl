@@ -10,4 +10,8 @@ using zx;
 protocol ProfileProvider {
     // Obtain a profile handle.
     GetProfile(uint32 priority, string:64 name) -> (zx.status status, handle<profile>? profile);
+
+    // Obtain a deadline profile handle.
+    GetDeadlineProfile(uint64 capacity, uint64 deadline, uint64 period, string:64 name)
+        -> (zx.status status, handle<profile>? profile);
 };

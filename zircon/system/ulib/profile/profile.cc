@@ -17,9 +17,9 @@
 
 namespace {
 
-zx_status_t GetProfileSimple(void* ctx, uint32_t priority, const char* name_data, size_t name_size,
-                             fidl_txn_t* txn) {
-  zx_handle_t root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx));
+zx_status_t GetProfileSimple(void* ctx, uint32_t priority, const char* /*name_data*/,
+                             size_t /*name_size*/, fidl_txn_t* txn) {
+  auto root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx));
 
   zx_profile_info_t info = {};
   info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY;
@@ -32,7 +32,27 @@ zx_status_t GetProfileSimple(void* ctx, uint32_t priority, const char* name_data
       txn, status, status == ZX_OK ? profile.release() : ZX_HANDLE_INVALID);
 }
 
-fuchsia_scheduler_ProfileProvider_ops ops = {.GetProfile = GetProfileSimple};
+zx_status_t GetDeadlineProfileSimple(void* ctx, uint64_t capacity, uint64_t relative_deadline,
+                                     uint64_t period, const char* /*name_data*/,
+                                     size_t /*name_size*/, fidl_txn_t* txn) {
+  auto root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx));
+
+  zx_profile_info_t info = {};
+  info.flags = ZX_PROFILE_INFO_FLAG_DEADLINE;
+  info.deadline_params.capacity = capacity;
+  info.deadline_params.relative_deadline = relative_deadline;
+  info.deadline_params.period = period;
+
+  zx::profile profile;
+  zx_status_t status = zx_profile_create(root_job, 0u, &info, profile.reset_and_get_address());
+  return fuchsia_scheduler_ProfileProviderGetDeadlineProfile_reply(
+      txn, status, status == ZX_OK ? profile.release() : ZX_HANDLE_INVALID);
+}
+
+fuchsia_scheduler_ProfileProvider_ops ops = {
+    .GetProfile = GetProfileSimple,
+    .GetDeadlineProfile = GetDeadlineProfileSimple,
+};
 
 constexpr const char* profile_svc_names[] = {
     fuchsia_scheduler_ProfileProvider_Name,
@@ -41,7 +61,7 @@ constexpr const char* profile_svc_names[] = {
 
 }  // namespace
 
-static zx_status_t init(void** out_ctx) {
+static zx_status_t init(void** /*out_ctx*/) {
   // *out_ctx is already the root job handle, don't nuke it.
   return ZX_OK;
 }
@@ -49,8 +69,11 @@ static zx_status_t init(void** out_ctx) {
 static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request) {
   if (strcmp(service_name, fuchsia_scheduler_ProfileProvider_Name) == 0) {
-    return fidl_bind(dispatcher, request,
-                     (fidl_dispatch_t*)fuchsia_scheduler_ProfileProvider_dispatch, ctx, &ops);
+    auto callback_adapter = [](void* ctx, fidl_txn* txn, fidl_msg* msg, const void* ops) -> int {
+      const auto* provider_ops = static_cast<const fuchsia_scheduler_ProfileProvider_ops_t*>(ops);
+      return fuchsia_scheduler_ProfileProvider_dispatch(ctx, txn, msg, provider_ops);
+    };
+    return fidl_bind(dispatcher, request, callback_adapter, ctx, &ops);
   }
 
   zx_handle_close(request);
