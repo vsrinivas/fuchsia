@@ -169,21 +169,14 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   // Using this environment provides a fresh copy of |feedback_agent.cmx|, and resets Inspect
   // across test cases (especially |total_num_connections|).
   std::unique_ptr<sys::testing::EnclosingEnvironment> CreateDataProviderEnvironment() {
-    const struct {
-      const char* name;
-      const char* url;
-    } kAvailableServices[] = {
-        {"fuchsia.feedback.DataProvider",
-         "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
-        {"fuchsia.logger.Log", "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"},
-        {"fuchsia.process.Launcher", "fuchsia-pkg://fuchsia.com/launcher#meta/launcher.cmx"},
-    };
     std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
-    for (const auto& service : kAvailableServices) {
-      fuchsia::sys::LaunchInfo launch_info;
-      launch_info.url = service.url;
-      services->AddServiceWithLaunchInfo(std::move(launch_info), service.name);
-    }
+    // We inject a fresh copy of |feedback_agent.cmx| in the environment.
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx";
+    services->AddServiceWithLaunchInfo(std::move(launch_info), "fuchsia.feedback.DataProvider");
+    // We inherit the other injected services from the parent environment.
+    services->AllowParentService("fuchsia.boot.ReadOnlyLog");
+    services->AllowParentService("fuchsia.logger.Log");
     services->AllowParentService("fuchsia.update.channel.Provider");
 
     auto env = CreateNewEnclosingEnvironment(test_name_, std::move(services));

@@ -25,6 +25,7 @@
             "vulkan"
         ],
         "services": [
+            "fuchsia.boot.ReadOnlyLog",
             "fuchsia.feedback.DataProvider",
             "fuchsia.logger.Log",
             "fuchsia.sys.Environment",
