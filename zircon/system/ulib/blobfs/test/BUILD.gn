@@ -95,3 +95,15 @@ fuzzer("zstd-fuzzer") {
   ]
   include_dirs = [ ".." ]
 }
+
+fuzzer("lz4-fuzzer") {
+  sources = [
+    "zstd-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/blobfs",
+    "$zx/third_party/ulib/lz4",
+    "$zx/third_party/ulib/zstd",
+  ]
+  include_dirs = [ ".." ]
+}
