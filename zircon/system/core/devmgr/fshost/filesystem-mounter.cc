@@ -77,4 +77,11 @@ zx_status_t FilesystemMounter::MountBlob(fbl::unique_fd fd, mount_options_t* opt
   return status;
 }
 
+void FilesystemMounter::TryMountPkgfs() {
+  if (!pkgfs_mounted_ && blob_mounted_ && data_mounted_) {
+    LaunchPkgfs(this);
+    pkgfs_mounted_ = true;
+  }
+}
+
 }  // namespace devmgr

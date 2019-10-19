@@ -46,6 +46,12 @@ class FilesystemMounter {
   // Fails if already mounted.
   zx_status_t MountBlob(fbl::unique_fd fd, mount_options_t* options);
 
+  // Attempts to mount pkgfs if all preconditions have been met:
+  // - Pkgfs has not previously been mounted
+  // - Blobfs has been mounted
+  // - The data partition has been mounted
+  void TryMountPkgfs();
+
   // Returns a pointer to the |FsHostMetrics| instance.
   FsHostMetrics* mutable_metrics() { return fshost_->mutable_metrics(); }
 
@@ -58,6 +64,7 @@ class FilesystemMounter {
   bool data_mounted_ = false;
   bool install_mounted_ = false;
   bool blob_mounted_ = false;
+  bool pkgfs_mounted_ = false;
 };
 
 }  // namespace devmgr

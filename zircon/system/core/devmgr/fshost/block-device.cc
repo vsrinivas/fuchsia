@@ -348,15 +348,20 @@ zx_status_t BlockDevice::MountFilesystem() {
       if (status != ZX_OK) {
         printf("fshost: Failed to mount blobfs partition: %s.\n", zx_status_get_string(status));
         return status;
-      } else {
-        LaunchBlobInit(mounter_);
       }
+      mounter_->TryMountPkgfs();
       return ZX_OK;
     }
     case DISK_FORMAT_MINFS: {
       mount_options_t options = default_mount_options;
       fprintf(stderr, "fshost: BlockDevice::MountFilesystem(minfs)\n");
-      return MountMinfs(mounter_, std::move(cloned_fd), &options);
+      zx_status_t status = MountMinfs(mounter_, std::move(cloned_fd), &options);
+      if (status != ZX_OK) {
+        printf("fshost: Failed to mount minfs partition: %s.\n", zx_status_get_string(status));
+        return status;
+      }
+      mounter_->TryMountPkgfs();
+      return ZX_OK;
     }
     default:
       fprintf(stderr, "fshost: BlockDevice::MountFilesystem(unknown)\n");

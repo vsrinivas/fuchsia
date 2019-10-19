@@ -225,6 +225,6 @@ bool pkgfs_launch(FilesystemMounter* filesystems) {
 
 }  // namespace
 
-void LaunchBlobInit(FilesystemMounter* filesystems) { pkgfs_launch(filesystems); }
+void LaunchPkgfs(FilesystemMounter* filesystems) { pkgfs_launch(filesystems); }
 
 }  // namespace devmgr
