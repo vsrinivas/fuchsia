@@ -776,9 +776,17 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
           return;
         }
 
+        // Notify about previously connected processes.
         if (!reply.processes.empty()) {
           for (auto& observer : observers_) {
             observer.HandlePreviousConnectedProcesses(reply.processes);
+          }
+        }
+
+        // Notify about processes on limbo.
+        if (!reply.limbo.empty()) {
+          for (auto& observer : observers_) {
+            observer.HandleProcessesInLimbo(reply.limbo);
           }
         }
       });

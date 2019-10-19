@@ -34,6 +34,8 @@ class SessionObserver {
   virtual void HandleNotification(NotificationType, const std::string&) {}
 
   virtual void HandlePreviousConnectedProcesses(const std::vector<debug_ipc::ProcessRecord>&) {}
+
+  virtual void HandleProcessesInLimbo(const std::vector<debug_ipc::ProcessRecord>&) {}
 };
 
 }  // namespace zxdb

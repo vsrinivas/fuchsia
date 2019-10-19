@@ -127,19 +127,6 @@ class SessionThreadObserver : public ThreadObserver {
   std::vector<Breakpoint*> breakpoints_;
 };
 
-class TestSessionObserver : public SessionObserver {
- public:
-  void HandlePreviousConnectedProcesses(
-      const std::vector<debug_ipc::ProcessRecord>& processes) override {
-    records_.insert(records_.end(), processes.begin(), processes.end());
-  }
-
-  const std::vector<debug_ipc::ProcessRecord>& records() const { return records_; }
-
- private:
-  std::vector<debug_ipc::ProcessRecord> records_;
-};
-
 class SessionTest : public RemoteAPITest {
  public:
   SessionTest() = default;
@@ -331,8 +318,6 @@ TEST_F(SessionTest, FilterExistingProcesses) {
 }
 
 TEST_F(SessionTest, StatusRequest) {
-  TestSessionObserver observer;
-
   constexpr uint64_t kProcessKoid1 = 1;
   constexpr uint64_t kProcessKoid2 = 2;
   const std::string kProcessName1 = "process-1";
@@ -340,7 +325,6 @@ TEST_F(SessionTest, StatusRequest) {
 
   sink()->AppendProcessRecord({kProcessKoid1, kProcessName1, {}});
   sink()->AppendProcessRecord({kProcessKoid2, kProcessName2, {}});
-
 
   bool called = false;
   debug_ipc::StatusReply status = {};

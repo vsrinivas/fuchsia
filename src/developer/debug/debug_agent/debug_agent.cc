@@ -164,11 +164,16 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
   if (limbo_provider_) {
     std::vector<fuchsia::exception::ProcessExceptionMetadata> limbo_processes;
     zx_status_t status = limbo_provider_->ListProcessesOnLimbo(&limbo_processes);
+
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "Could not get processes on limbo: " << zx_status_get_string(status);
     } else {
       reply->limbo.reserve(limbo_processes.size());
       for (auto& process_metadata : limbo_processes) {
+        DEBUG_LOG(Agent) << "Found process on limbo. Process: "
+                         << process_metadata.info().process_koid
+                         << ", thread: " << process_metadata.info().thread_koid;
+
         debug_ipc::ProcessRecord process_record = {};
         process_record.process_koid = process_metadata.info().process_koid;
         process_record.process_name = object_provider_->NameForObject(process_metadata.process());

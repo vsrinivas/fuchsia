@@ -98,7 +98,7 @@ void ExceptionBroker::ListProcessesWaitingOnException(ListProcessesWaitingOnExce
   exceptions.reserve(max_size);
 
   // The new rights of the handles we're going to duplicate.
-  zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY;
+  zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_TRANSFER;
   for (const auto& [process_koid, limbo_exception] : limbo_) {
     ProcessExceptionMetadata metadata = {};
 
