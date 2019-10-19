@@ -175,10 +175,19 @@ devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
 
 __EXPORT
 IsolatedDevmgr::~IsolatedDevmgr() {
-  // Destroy the isolated devmgr
+  Terminate();
+}
+
+__EXPORT
+void IsolatedDevmgr::Terminate() {
   if (job_.is_valid()) {
     job_.kill();
+
+    // Best-effort; ignores error.
+    zx_signals_t observed = 0;
+    job_.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &observed);
   }
+  job_.reset();
 }
 
 __EXPORT

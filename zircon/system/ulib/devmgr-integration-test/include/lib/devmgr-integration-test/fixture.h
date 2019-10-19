@@ -25,6 +25,7 @@ class IsolatedDevmgr {
       devfs_root_(std::move(other.devfs_root_)) {}
 
   IsolatedDevmgr& operator=(IsolatedDevmgr&& other) {
+    Terminate();
     job_ = std::move(other.job_);
     devfs_root_ = std::move(other.devfs_root_);
     svc_root_dir_ = std::move(other.svc_root_dir_);
@@ -51,9 +52,15 @@ class IsolatedDevmgr {
   // used for things like binding to an exception port.
   const zx::job& containing_job() const { return job_; }
 
-  void reset() { *this = IsolatedDevmgr(); }
+  void reset() {
+    Terminate();
+    *this = IsolatedDevmgr();
+  }
 
  private:
+  // If |job_| exists, terminate it.
+  void Terminate();
+
   // Job that contains the devmgr environment
   zx::job job_;
 
