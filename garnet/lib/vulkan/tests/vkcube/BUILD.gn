@@ -4,12 +4,17 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-source_set("vkcube") {
+executable("vkcube_on_scenic") {
   sources = [
-    "../../third_party/vkcube/cube.cc",
-    "../../third_party/vkcube/cube.h",
+    "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
+    "//garnet/lib/vulkan/third_party/vkcube/cube.h",
+    "main.cc",
+    "test_vk_cube.h",
   ]
-  cflags = [ "-Wno-reorder-init-list" ]
+  defines = [
+    "VK_USE_PLATFORM_FUCHSIA",
+    "CUBE_USE_IMAGE_PIPE",
+  ]
   deps = [
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",
@@ -20,20 +25,6 @@ source_set("vkcube") {
     "//src/graphics/lib/vulkan",
     "//zircon/public/lib/syslog",
   ]
-}
-
-executable("vkcube_on_scenic") {
-  sources = [
-    "main.cc",
-    "test_vk_cube.h",
-  ]
-  defines = [
-    "VK_USE_PLATFORM_FUCHSIA",
-    "CUBE_USE_IMAGE_PIPE",
-  ]
-  deps = [
-    ":vkcube",
-  ]
   public_deps = [
     "//zircon/public/lib/fit",
   ]
@@ -41,12 +32,20 @@ executable("vkcube_on_scenic") {
 
 executable("vkcube_on_fb") {
   sources = [
+    "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
+    "//garnet/lib/vulkan/third_party/vkcube/cube.h",
     "main.cc",
     "test_vk_cube.h",
   ]
   defines = [ "VK_USE_PLATFORM_FUCHSIA" ]
   deps = [
-    ":vkcube",
+    "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/async-loop-default",
+    "$zircon_build_root/public/lib/trace",
+    "$zircon_build_root/public/lib/trace-provider-with-fdio",
+    "//src/graphics/lib/vulkan",
+    "//zircon/public/lib/syslog",
   ]
   public_deps = [
     "//zircon/public/lib/fit",
@@ -55,6 +54,8 @@ executable("vkcube_on_fb") {
 
 executable("vkcube_skip_present") {
   sources = [
+    "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
+    "//garnet/lib/vulkan/third_party/vkcube/cube.h",
     "main.cc",
     "test_vk_cube.h",
   ]
@@ -63,7 +64,13 @@ executable("vkcube_skip_present") {
     "CUBE_SKIP_PRESENT",
   ]
   deps = [
-    ":vkcube",
+    "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/async-loop-default",
+    "$zircon_build_root/public/lib/trace",
+    "$zircon_build_root/public/lib/trace-provider",
+    "//src/graphics/lib/vulkan",
+    "//zircon/public/lib/syslog",
   ]
   public_deps = [
     "//zircon/public/lib/fit",
