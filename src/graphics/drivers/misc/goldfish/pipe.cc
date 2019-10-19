@@ -7,7 +7,7 @@
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/hardware/goldfish/pipe/c/fidl.h>
+#include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/bti.h>
 
@@ -17,7 +17,7 @@ namespace {
 constexpr size_t DEFAULT_BUFFER_SIZE = 8192;
 
 constexpr zx_signals_t SIGNALS =
-    fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE | fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE;
+    fuchsia_hardware_goldfish_SIGNAL_READABLE | fuchsia_hardware_goldfish_SIGNAL_WRITABLE;
 
 constexpr uint32_t kConcurrencyCap = 64;
 
@@ -45,7 +45,7 @@ void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* f
   }
 }
 
-const fuchsia_hardware_goldfish_pipe_Pipe_ops_t Pipe::kOps = {
+const fuchsia_hardware_goldfish_Pipe_ops_t Pipe::kOps = {
     fidl::Binder<Pipe>::BindMember<&Pipe::SetBufferSize>,
     fidl::Binder<Pipe>::BindMember<&Pipe::SetEvent>,
     fidl::Binder<Pipe>::BindMember<&Pipe::GetBuffer>,
@@ -139,7 +139,7 @@ zx_status_t Pipe::SetBufferSize(uint64_t size, fidl_txn_t* txn) {
     return status;
   }
 
-  return fuchsia_hardware_goldfish_pipe_PipeSetBufferSize_reply(txn, status);
+  return fuchsia_hardware_goldfish_PipeSetBufferSize_reply(txn, status);
 }
 
 zx_status_t Pipe::SetEvent(zx_handle_t event_handle) {
@@ -180,7 +180,7 @@ zx_status_t Pipe::GetBuffer(fidl_txn_t* txn) {
     return status;
   }
 
-  return fuchsia_hardware_goldfish_pipe_PipeGetBuffer_reply(txn, ZX_OK, vmo.release());
+  return fuchsia_hardware_goldfish_PipeGetBuffer_reply(txn, ZX_OK, vmo.release());
 }
 
 zx_status_t Pipe::Read(size_t count, zx_off_t offset, fidl_txn_t* txn) {
@@ -196,9 +196,9 @@ zx_status_t Pipe::Read(size_t count, zx_off_t offset, fidl_txn_t* txn) {
 
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                                      fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE,
+                                      fuchsia_hardware_goldfish_SIGNAL_READABLE,
                                       buffer_.phys + offset, count, 0, 0, &actual);
-  return fuchsia_hardware_goldfish_pipe_PipeRead_reply(txn, status, actual);
+  return fuchsia_hardware_goldfish_PipeRead_reply(txn, status, actual);
 }
 
 zx_status_t Pipe::Write(size_t count, zx_off_t offset, fidl_txn_t* txn) {
@@ -214,9 +214,9 @@ zx_status_t Pipe::Write(size_t count, zx_off_t offset, fidl_txn_t* txn) {
 
   size_t actual;
   zx_status_t status = TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                                      fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
+                                      fuchsia_hardware_goldfish_SIGNAL_WRITABLE,
                                       buffer_.phys + offset, count, 0, 0, &actual);
-  return fuchsia_hardware_goldfish_pipe_PipeWrite_reply(txn, status, actual);
+  return fuchsia_hardware_goldfish_PipeWrite_reply(txn, status, actual);
 }
 
 zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_t read_offset,
@@ -247,9 +247,9 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
   // Blocking write. This should always make progress or fail.
   while (remaining) {
     size_t actual;
-    zx_status_t status = TransferLocked(
-        cmd, PIPE_CMD_CODE_WAKE_ON_WRITE, fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE,
-        buffer_.phys + offset, remaining, read_paddr, read_count, &actual);
+    zx_status_t status =
+        TransferLocked(cmd, PIPE_CMD_CODE_WAKE_ON_WRITE, fuchsia_hardware_goldfish_SIGNAL_WRITABLE,
+                       buffer_.phys + offset, remaining, read_paddr, read_count, &actual);
     if (status == ZX_OK) {
       // Calculate bytes written and bytes read. Adjust counts and offsets accordingly.
       size_t actual_write = std::min(actual, remaining);
@@ -261,7 +261,7 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
       continue;
     }
     if (status != ZX_ERR_SHOULD_WAIT) {
-      return fuchsia_hardware_goldfish_pipe_PipeCall_reply(txn, status, 0);
+      return fuchsia_hardware_goldfish_PipeCall_reply(txn, status, 0);
     }
     signal_cvar_.Wait(&lock_);
   }
@@ -271,14 +271,14 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
   if (read_count && remaining_read == read_count) {
     size_t actual = 0;
     status = TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
-                            fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE,
-                            buffer_.phys + read_offset, remaining_read, 0, 0, &actual);
+                            fuchsia_hardware_goldfish_SIGNAL_READABLE, buffer_.phys + read_offset,
+                            remaining_read, 0, 0, &actual);
     if (status == ZX_OK) {
       remaining_read -= actual;
     }
   }
   size_t actual_read = read_count - remaining_read;
-  return fuchsia_hardware_goldfish_pipe_PipeCall_reply(txn, status, actual_read);
+  return fuchsia_hardware_goldfish_PipeCall_reply(txn, status, actual_read);
 }
 
 // This function can be trusted to complete fairly quickly. It will cause a
@@ -362,13 +362,13 @@ void Pipe::OnSignal(void* ctx, int32_t flags) {
 
   zx_signals_t state_set = 0;
   if (flags & PIPE_WAKE_FLAG_CLOSED) {
-    state_set |= fuchsia_hardware_goldfish_pipe_SIGNAL_HANGUP;
+    state_set |= fuchsia_hardware_goldfish_SIGNAL_HANGUP;
   }
   if (flags & PIPE_WAKE_FLAG_READ) {
-    state_set |= fuchsia_hardware_goldfish_pipe_SIGNAL_READABLE;
+    state_set |= fuchsia_hardware_goldfish_SIGNAL_READABLE;
   }
   if (flags & PIPE_WAKE_FLAG_WRITE) {
-    state_set |= fuchsia_hardware_goldfish_pipe_SIGNAL_WRITABLE;
+    state_set |= fuchsia_hardware_goldfish_SIGNAL_WRITABLE;
   }
 
   auto pipe = static_cast<Pipe*>(ctx);

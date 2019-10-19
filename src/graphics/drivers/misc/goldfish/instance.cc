@@ -5,7 +5,7 @@
 #include "instance.h"
 
 #include <ddk/debug.h>
-#include <fuchsia/hardware/goldfish/pipe/c/fidl.h>
+#include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -83,11 +83,11 @@ zx_status_t Instance::FidlOpenPipe(zx_handle_t pipe_request_handle) {
 zx_status_t Instance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   using Binder = fidl::Binder<Instance>;
 
-  static const fuchsia_hardware_goldfish_pipe_Device_ops_t kOps = {
+  static const fuchsia_hardware_goldfish_PipeDevice_ops_t kOps = {
       .OpenPipe = Binder::BindMember<&Instance::FidlOpenPipe>,
   };
 
-  return fuchsia_hardware_goldfish_pipe_Device_dispatch(this, txn, msg, &kOps);
+  return fuchsia_hardware_goldfish_PipeDevice_dispatch(this, txn, msg, &kOps);
 }
 
 zx_status_t Instance::DdkClose(uint32_t flags) { return ZX_OK; }

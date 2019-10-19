@@ -4,7 +4,7 @@
 
 #include "address_space_device.h"
 
-#include <fuchsia/hardware/goldfish/address/space/c/fidl.h>
+#include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fidl-utils/bind.h>
 #include <limits.h>
@@ -71,8 +71,8 @@ class Instance : public InstanceType {
     uint32_t result = device_->AllocateBlock(&size, &offset);
     if (result) {
       zxlogf(ERROR, "%s: failed to allocate block: %lu %d\n", kTag, size, result);
-      return fuchsia_hardware_goldfish_address_space_DeviceAllocateBlock_reply(
-          txn, ZX_ERR_INTERNAL, 0, ZX_HANDLE_INVALID);
+      return fuchsia_hardware_goldfish_AddressSpaceDeviceAllocateBlock_reply(txn, ZX_ERR_INTERNAL,
+                                                                             0, ZX_HANDLE_INVALID);
     }
 
     auto deallocate_block =
@@ -99,8 +99,7 @@ class Instance : public InstanceType {
 
     deallocate_block.cancel();
     blocks_[paddr] = {offset, std::move(pmt)};
-    return fuchsia_hardware_goldfish_address_space_DeviceAllocateBlock_reply(txn, ZX_OK, paddr,
-                                                                             vmo);
+    return fuchsia_hardware_goldfish_AddressSpaceDeviceAllocateBlock_reply(txn, ZX_OK, paddr, vmo);
   }
 
   zx_status_t FidlDeallocateBlock(uint64_t paddr, fidl_txn_t* txn) {
@@ -115,24 +114,24 @@ class Instance : public InstanceType {
     uint32_t result = device_->DeallocateBlock(it->second.offset);
     if (result) {
       zxlogf(ERROR, "%s: failed to deallocate block: %lu %d\n", kTag, paddr, result);
-      return fuchsia_hardware_goldfish_address_space_DeviceDeallocateBlock_reply(txn,
-                                                                                 ZX_ERR_INTERNAL);
+      return fuchsia_hardware_goldfish_AddressSpaceDeviceDeallocateBlock_reply(txn,
+                                                                               ZX_ERR_INTERNAL);
     }
 
     blocks_.erase(it);
-    return fuchsia_hardware_goldfish_address_space_DeviceDeallocateBlock_reply(txn, ZX_OK);
+    return fuchsia_hardware_goldfish_AddressSpaceDeviceDeallocateBlock_reply(txn, ZX_OK);
   }
 
   // Device protocol implementation.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     using Binder = fidl::Binder<Instance>;
 
-    static const fuchsia_hardware_goldfish_address_space_Device_ops_t kOps = {
+    static const fuchsia_hardware_goldfish_AddressSpaceDevice_ops_t kOps = {
         .AllocateBlock = Binder::BindMember<&Instance::FidlAllocateBlock>,
         .DeallocateBlock = Binder::BindMember<&Instance::FidlDeallocateBlock>,
     };
 
-    return fuchsia_hardware_goldfish_address_space_Device_dispatch(this, txn, msg, &kOps);
+    return fuchsia_hardware_goldfish_AddressSpaceDevice_dispatch(this, txn, msg, &kOps);
   }
   zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
   void DdkRelease() { delete this; }

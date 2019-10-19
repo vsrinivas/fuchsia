@@ -31,7 +31,7 @@ driver_module("goldfish_driver") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.goldfish.pipe",
-    "//zircon/system/fidl/fuchsia-hardware-goldfish-pipe:c",
+    "//zircon/system/fidl/fuchsia-hardware-goldfish:c",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

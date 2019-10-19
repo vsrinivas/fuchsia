@@ -18,7 +18,7 @@ executable("bin") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-goldfish-pipe:c",
+    "//zircon/system/fidl/fuchsia-hardware-goldfish:c",
   ]
 }
 

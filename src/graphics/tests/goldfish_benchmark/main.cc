@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/goldfish/pipe/c/fidl.h>
+#include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -103,12 +103,12 @@ void RunAndMeasure(const char* test_name, unsigned iterations, const T& closure)
 
 void RunPingPongBenchmark(zx_handle_t channel, unsigned size, unsigned iterations) {
   int32_t res;
-  ZX_ASSERT(fuchsia_hardware_goldfish_pipe_PipeSetBufferSize(channel, size, &res) == ZX_OK);
+  ZX_ASSERT(fuchsia_hardware_goldfish_PipeSetBufferSize(channel, size, &res) == ZX_OK);
   ZX_ASSERT(res == ZX_OK);
 
   zx::vmo vmo;
-  ZX_ASSERT(fuchsia_hardware_goldfish_pipe_PipeGetBuffer(channel, &res,
-                                                         vmo.reset_and_get_address()) == ZX_OK);
+  ZX_ASSERT(fuchsia_hardware_goldfish_PipeGetBuffer(channel, &res, vmo.reset_and_get_address()) ==
+            ZX_OK);
   ZX_ASSERT(res == ZX_OK);
 
   {
@@ -124,7 +124,7 @@ void RunPingPongBenchmark(zx_handle_t channel, unsigned size, unsigned iteration
   RunAndMeasure(test_name, iterations, [channel, size] {
     int32_t res;
     uint64_t actual;
-    ZX_ASSERT(fuchsia_hardware_goldfish_pipe_PipeCall(channel, size, 0, size, 0, &res, &actual) ==
+    ZX_ASSERT(fuchsia_hardware_goldfish_PipeCall(channel, size, 0, size, 0, &res, &actual) ==
               ZX_OK);
     ZX_ASSERT(res == ZX_OK);
     ZX_ASSERT(actual == size);
@@ -143,13 +143,13 @@ int main(int argc, char** argv) {
   zx::channel pipe_client;
   zx::channel pipe_server;
   ZX_ASSERT(zx::channel::create(0, &pipe_client, &pipe_server) == ZX_OK);
-  ZX_ASSERT(fuchsia_hardware_goldfish_pipe_DeviceOpenPipe(channel.get(), pipe_server.release()) ==
+  ZX_ASSERT(fuchsia_hardware_goldfish_PipeDeviceOpenPipe(channel.get(), pipe_server.release()) ==
             ZX_OK);
 
   zx::vmo vmo;
   int32_t res;
-  ZX_ASSERT(fuchsia_hardware_goldfish_pipe_PipeGetBuffer(pipe_client.get(), &res,
-                                                         vmo.reset_and_get_address()) == ZX_OK);
+  ZX_ASSERT(fuchsia_hardware_goldfish_PipeGetBuffer(pipe_client.get(), &res,
+                                                    vmo.reset_and_get_address()) == ZX_OK);
   ZX_ASSERT(res == ZX_OK);
 
   // Connect to pingpong service.
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
   size_t bytes = strlen(kPipeName) + 1;
   ZX_ASSERT(vmo.write(kPipeName, 0, bytes) == ZX_OK);
   uint64_t actual;
-  ZX_ASSERT(fuchsia_hardware_goldfish_pipe_PipeWrite(pipe_client.get(), bytes, 0, &res, &actual) ==
+  ZX_ASSERT(fuchsia_hardware_goldfish_PipeWrite(pipe_client.get(), bytes, 0, &res, &actual) ==
             ZX_OK);
   ZX_ASSERT(res == ZX_OK);
   ZX_ASSERT(actual == bytes);

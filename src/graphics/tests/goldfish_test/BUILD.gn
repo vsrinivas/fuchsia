@@ -19,9 +19,7 @@ executable("bin") {
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-goldfish-address-space:c",
-    "//zircon/system/fidl/fuchsia-hardware-goldfish-control:c",
-    "//zircon/system/fidl/fuchsia-hardware-goldfish-pipe:c",
+    "//zircon/system/fidl/fuchsia-hardware-goldfish:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }

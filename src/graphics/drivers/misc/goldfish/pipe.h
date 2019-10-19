@@ -11,7 +11,7 @@
 #include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/goldfish/pipe/c/fidl.h>
+#include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/fidl-async-2/fidl_server.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -26,8 +26,8 @@ void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* f
 
 // An instance of this class serves a Pipe connection.
 class Pipe : public FidlServer<Pipe,
-                               SimpleBinding<Pipe, fuchsia_hardware_goldfish_pipe_Pipe_ops_t,
-                                             fuchsia_hardware_goldfish_pipe_Pipe_dispatch>,
+                               SimpleBinding<Pipe, fuchsia_hardware_goldfish_Pipe_ops_t,
+                                             fuchsia_hardware_goldfish_Pipe_dispatch>,
                                vLog> {
  public:
   // Public for std::unique_ptr<Pipe>:
@@ -55,7 +55,7 @@ class Pipe : public FidlServer<Pipe,
 
   static void OnSignal(void* ctx, int32_t flags);
 
-  static const fuchsia_hardware_goldfish_pipe_Pipe_ops_t kOps;
+  static const fuchsia_hardware_goldfish_Pipe_ops_t kOps;
 
   fbl::Mutex lock_;
   fbl::ConditionVariable signal_cvar_;

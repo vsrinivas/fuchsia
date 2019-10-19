@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.goldfish.control;
+library fuchsia.hardware.goldfish;
 
 using zx;
 
 /// Color buffer formats.
-enum FormatType : uint32 {
+enum ColorBufferFormatType : uint32 {
     RGBA = 0x1908;
     BGRA = 0x80E1;
 };
 
+/// Interface for the Goldfish control driver providing color buffers.
 [Layout = "Simple"]
-protocol Device {
+protocol ControlDevice {
     /// Create shared color buffer. Color buffer is automatically freed when
     /// all references to `vmo` have been closed. Fails if VMO is not
     /// associated with goldfish heap memory.
@@ -21,7 +22,7 @@ protocol Device {
     CreateColorBuffer(handle<vmo> vmo,
                       uint32 width,
                       uint32 height,
-                      FormatType format)
+                      ColorBufferFormatType format)
         -> (zx.status res);
 
     /// Get color buffer for VMO. Fails if VMO is not associated with a color

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.goldfish.pipe;
+library fuchsia.hardware.goldfish;
 
 using zx;
 
@@ -18,8 +18,9 @@ const uint32 SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
 /// disconnected.
 const uint32 SIGNAL_HANGUP = 0x04000000; // ZX_USER_SIGNAL_2
 
+/// Interface for the Goldfish pipe driver.
 [Layout = "Simple"]
-protocol Device {
+protocol PipeDevice {
     /// Open pipe. A protocol request |pipe_request| provides an interface
     /// to the pipe. Multiple pipes can be opened for a single device.
     /// Closing the device connection will also close all pipe connections.

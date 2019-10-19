@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.goldfish.address.space;
+library fuchsia.hardware.goldfish;
 
 using zx;
 
+/// Interface for the Goldfish address space driver allocating memory blocks.
 [Layout = "Simple"]
-protocol Device {
+protocol AddressSpaceDevice {
     // Allocates goldfish address space of given size.
     AllocateBlock(uint64 size) -> (zx.status res, uint64 paddr, handle<vmo>? vmo);
     // Free goldfish address space associated with given ID.

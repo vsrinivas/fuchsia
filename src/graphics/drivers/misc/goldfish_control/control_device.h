@@ -12,7 +12,7 @@
 #include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/goldfish/control/c/fidl.h>
+#include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>

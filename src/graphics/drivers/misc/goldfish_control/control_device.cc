@@ -322,8 +322,8 @@ zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t widt
   }
 
   if (it->second) {
-    return fuchsia_hardware_goldfish_control_DeviceCreateColorBuffer_reply(txn,
-                                                                           ZX_ERR_ALREADY_EXISTS);
+    return fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer_reply(txn,
+                                                                          ZX_ERR_ALREADY_EXISTS);
   }
 
   uint32_t id;
@@ -345,7 +345,7 @@ zx_status_t Control::FidlCreateColorBuffer(zx_handle_t vmo_handle, uint32_t widt
 
   close_color_buffer.cancel();
   it->second = id;
-  return fuchsia_hardware_goldfish_control_DeviceCreateColorBuffer_reply(txn, ZX_OK);
+  return fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer_reply(txn, ZX_OK);
 }
 
 zx_status_t Control::FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn) {
@@ -361,11 +361,10 @@ zx_status_t Control::FidlGetColorBuffer(zx_handle_t vmo_handle, fidl_txn_t* txn)
 
   auto it = color_buffers_.find(koid);
   if (it == color_buffers_.end()) {
-    return fuchsia_hardware_goldfish_control_DeviceGetColorBuffer_reply(txn, ZX_ERR_INVALID_ARGS,
-                                                                        0);
+    return fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer_reply(txn, ZX_ERR_INVALID_ARGS, 0);
   }
 
-  return fuchsia_hardware_goldfish_control_DeviceGetColorBuffer_reply(txn, ZX_OK, it->second);
+  return fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer_reply(txn, ZX_OK, it->second);
 }
 
 void Control::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
@@ -375,12 +374,12 @@ void Control::DdkRelease() { delete this; }
 zx_status_t Control::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   using Binder = fidl::Binder<Control>;
 
-  static const fuchsia_hardware_goldfish_control_Device_ops_t kOps = {
+  static const fuchsia_hardware_goldfish_ControlDevice_ops_t kOps = {
       .CreateColorBuffer = Binder::BindMember<&Control::FidlCreateColorBuffer>,
       .GetColorBuffer = Binder::BindMember<&Control::FidlGetColorBuffer>,
   };
 
-  return fuchsia_hardware_goldfish_control_Device_dispatch(this, txn, msg, &kOps);
+  return fuchsia_hardware_goldfish_ControlDevice_dispatch(this, txn, msg, &kOps);
 }
 
 zx_status_t Control::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {

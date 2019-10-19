@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/goldfish/address/space/c/fidl.h>
-#include <fuchsia/hardware/goldfish/control/c/fidl.h>
-#include <fuchsia/hardware/goldfish/pipe/c/fidl.h>
+#include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -29,19 +27,18 @@ static bool GoldfishPipeTest() {
   zx::channel pipe_client;
   zx::channel pipe_server;
   EXPECT_EQ(zx::channel::create(0, &pipe_client, &pipe_server), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_DeviceOpenPipe(channel.get(), pipe_server.release()),
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeDeviceOpenPipe(channel.get(), pipe_server.release()),
             ZX_OK);
 
   int32_t res;
   const size_t kSize = 3 * 4096;
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeSetBufferSize(pipe_client.get(), kSize, &res),
-            ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeSetBufferSize(pipe_client.get(), kSize, &res), ZX_OK);
   EXPECT_EQ(res, ZX_OK);
 
   zx::vmo vmo;
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeGetBuffer(pipe_client.get(), &res,
-                                                         vmo.reset_and_get_address()),
-            ZX_OK);
+  EXPECT_EQ(
+      fuchsia_hardware_goldfish_PipeGetBuffer(pipe_client.get(), &res, vmo.reset_and_get_address()),
+      ZX_OK);
   EXPECT_EQ(res, ZX_OK);
 
   // Connect to pingpong service.
@@ -49,21 +46,19 @@ static bool GoldfishPipeTest() {
   size_t bytes = strlen(kPipeName) + 1;
   EXPECT_EQ(vmo.write(kPipeName, 0, bytes), ZX_OK);
   uint64_t actual;
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeWrite(pipe_client.get(), bytes, 0, &res, &actual),
-            ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeWrite(pipe_client.get(), bytes, 0, &res, &actual), ZX_OK);
   EXPECT_EQ(res, ZX_OK);
   EXPECT_EQ(actual, bytes);
 
   // Write 1 byte.
   const uint8_t kSentinel = 0xaa;
   EXPECT_EQ(vmo.write(&kSentinel, 0, 1), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeWrite(pipe_client.get(), 1, 0, &res, &actual),
-            ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeWrite(pipe_client.get(), 1, 0, &res, &actual), ZX_OK);
   EXPECT_EQ(res, ZX_OK);
   EXPECT_EQ(actual, 1);
 
   // Read 1 byte result.
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeRead(pipe_client.get(), 1, 0, &res, &actual), ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeRead(pipe_client.get(), 1, 0, &res, &actual), ZX_OK);
   EXPECT_EQ(res, ZX_OK);
   EXPECT_EQ(actual, 1);
   uint8_t result = 0;
@@ -76,14 +71,12 @@ static bool GoldfishPipeTest() {
   uint8_t send_buffer[kSize];
   memset(send_buffer, kSentinel, kSize);
   EXPECT_EQ(vmo.write(send_buffer, 0, kSize), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeWrite(pipe_client.get(), kSize, 0, &res, &actual),
-            ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeWrite(pipe_client.get(), kSize, 0, &res, &actual), ZX_OK);
   EXPECT_EQ(res, ZX_OK);
   EXPECT_EQ(actual, kSize);
 
   // Read 3 * 4096 bytes.
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeRead(pipe_client.get(), kSize, 0, &res, &actual),
-            ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeRead(pipe_client.get(), kSize, 0, &res, &actual), ZX_OK);
   EXPECT_EQ(res, ZX_OK);
   EXPECT_EQ(actual, kSize);
   uint8_t recv_buffer[kSize];
@@ -97,8 +90,8 @@ static bool GoldfishPipeTest() {
   const size_t kRecvOffset = kSmallSize;
   memset(send_buffer, kSentinel, kSmallSize);
   EXPECT_EQ(vmo.write(send_buffer, 0, kSmallSize), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_pipe_PipeCall(pipe_client.get(), kSmallSize, 0, kSmallSize,
-                                                    kRecvOffset, &res, &actual),
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeCall(pipe_client.get(), kSmallSize, 0, kSmallSize,
+                                               kRecvOffset, &res, &actual),
             ZX_OK);
   EXPECT_EQ(res, ZX_OK);
   EXPECT_EQ(actual, kSmallSize);
@@ -188,9 +181,9 @@ static bool GoldfishControlTest() {
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
 
   status2 = ZX_OK;
-  EXPECT_EQ(fuchsia_hardware_goldfish_control_DeviceCreateColorBuffer(
+  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer(
                 channel.get(), vmo_copy.release(), 64, 64,
-                fuchsia_hardware_goldfish_control_FormatType_BGRA, &status2),
+                fuchsia_hardware_goldfish_ColorBufferFormatType_BGRA, &status2),
             ZX_OK);
   EXPECT_EQ(status2, ZX_OK);
 
@@ -199,7 +192,7 @@ static bool GoldfishControlTest() {
 
   status2 = ZX_OK;
   uint32_t id = 0;
-  EXPECT_EQ(fuchsia_hardware_goldfish_control_DeviceGetColorBuffer(
+  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceGetColorBuffer(
                 channel.get(), vmo_copy2.release(), &status2, &id),
             ZX_OK);
   EXPECT_EQ(status2, ZX_OK);
@@ -209,9 +202,9 @@ static bool GoldfishControlTest() {
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy3), ZX_OK);
 
   status2 = ZX_OK;
-  EXPECT_EQ(fuchsia_hardware_goldfish_control_DeviceCreateColorBuffer(
+  EXPECT_EQ(fuchsia_hardware_goldfish_ControlDeviceCreateColorBuffer(
                 channel.get(), vmo_copy3.release(), 64, 64,
-                fuchsia_hardware_goldfish_control_FormatType_BGRA, &status2),
+                fuchsia_hardware_goldfish_ColorBufferFormatType_BGRA, &status2),
             ZX_OK);
   EXPECT_EQ(status2, ZX_ERR_ALREADY_EXISTS);
 
@@ -237,7 +230,7 @@ static bool GoldfishAddressSpaceTest() {
   uint64_t actual_size = 0;
   uint64_t paddr = 0;
   zx::vmo vmo;
-  EXPECT_EQ(fuchsia_hardware_goldfish_address_space_DeviceAllocateBlock(
+  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceDeviceAllocateBlock(
                 channel.get(), kHeapSize, &res, &paddr, vmo.reset_and_get_address()),
             ZX_OK);
   EXPECT_EQ(res, ZX_OK);
@@ -248,7 +241,7 @@ static bool GoldfishAddressSpaceTest() {
 
   uint64_t paddr2 = 0;
   zx::vmo vmo2;
-  EXPECT_EQ(fuchsia_hardware_goldfish_address_space_DeviceAllocateBlock(
+  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceDeviceAllocateBlock(
                 channel.get(), kHeapSize, &res, &paddr2, vmo2.reset_and_get_address()),
             ZX_OK);
   EXPECT_EQ(res, ZX_OK);
@@ -258,13 +251,12 @@ static bool GoldfishAddressSpaceTest() {
   EXPECT_EQ(vmo.get_size(&actual_size), ZX_OK);
   EXPECT_GE(actual_size, kHeapSize);
 
-  EXPECT_EQ(
-      fuchsia_hardware_goldfish_address_space_DeviceDeallocateBlock(channel.get(), paddr, &res),
-      ZX_OK);
+  EXPECT_EQ(fuchsia_hardware_goldfish_AddressSpaceDeviceDeallocateBlock(channel.get(), paddr, &res),
+            ZX_OK);
   EXPECT_EQ(res, ZX_OK);
 
   EXPECT_EQ(
-      fuchsia_hardware_goldfish_address_space_DeviceDeallocateBlock(channel.get(), paddr2, &res),
+      fuchsia_hardware_goldfish_AddressSpaceDeviceDeallocateBlock(channel.get(), paddr2, &res),
       ZX_OK);
   EXPECT_EQ(res, ZX_OK);
 
