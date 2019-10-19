@@ -40,7 +40,7 @@ struct percpu {
   struct list_node run_queue[NUM_PRIORITIES];
   uint32_t run_queue_bitmap;
 
-#if WITH_FAIR_SCHEDULER
+#if WITH_FAIR_SCHEDULER || WITH_UNIFIED_SCHEDULER
   Scheduler scheduler;
 #endif
 

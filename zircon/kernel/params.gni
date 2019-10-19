@@ -31,8 +31,9 @@ declare_args() {
   # Enable kernel lock dependency tracking.
   enable_lock_dep = false
 
-  # Enable fair scheduler by default on all architectures.
-  enable_fair_scheduler = true
+  # Select an available scheduler.
+  # Valid values are: "legacy", "fair", "unified"
+  select_scheduler = "fair"
 
   # Enable detailed scheduler traces.
   detailed_scheduler_tracing = false

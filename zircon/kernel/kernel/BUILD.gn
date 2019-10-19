@@ -22,10 +22,14 @@ source_set("kernel") {
     "wait.cc",
   ]
 
-  if (enable_fair_scheduler) {
+  if (select_scheduler == "legacy") {
+    sources += [ "legacy_scheduler.cc" ]
+  } else if (select_scheduler == "fair") {
+    sources += [ "fair_scheduler.cc" ]
+  } else if (select_scheduler == "unified") {
     sources += [ "scheduler.cc" ]
   } else {
-    sources += [ "legacy_scheduler.cc" ]
+    assert(false, "Invalid scheduler selection!")
   }
 
   deps = [

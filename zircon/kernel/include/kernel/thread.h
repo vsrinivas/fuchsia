@@ -131,7 +131,7 @@ struct thread_t {
   int priority_boost;
   int inherited_priority;
 
-#if WITH_FAIR_SCHEDULER
+#if WITH_FAIR_SCHEDULER || WITH_UNIFIED_SCHEDULER
   // state used by the new scheduler.
   // TODO(eieio): Find a way to abstract the O(1) scheduler state so that code
   // outside of the sched implementation uses a uniform interface to

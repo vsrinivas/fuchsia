@@ -269,7 +269,7 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
   return 0;
 }
 
-#if WITH_FAIR_SCHEDULER
+#if WITH_FAIR_SCHEDULER || WITH_UNIFIED_SCHEDULER
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
   static RecurringCallback callback([]() {
     printf("----------------------------------------------------\n");
