@@ -358,7 +358,10 @@ impl Repository {
             )?;
         }
 
-        let pm_serve_spawn_time = zx::Time::get(zx::ClockId::Monotonic);
+        println!(
+            "fxb/38441 timing: pm.spawn {}ms",
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
+        );
         let pm = pm.spawn(launcher)?;
         let pm_controller = pm.controller().clone();
 
@@ -397,19 +400,21 @@ impl Repository {
         .boxed();
 
         println!(
-            "waiting for 'pm serve' to respond to http requests {}ms",
-            (zx::Time::get(zx::ClockId::Monotonic) - pm_serve_spawn_time).into_millis()
+            "fxb/38441 timing: waiting for pm to respond {}ms",
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
         );
         let wait_pm_down = match future::select(wait_pm_up, wait_pm_down).await {
             future::Either::Left((res, wait_pm_down)) => {
                 if let Err(e) = res {
                     pm_controller.kill().unwrap();
                     let output = wait_pm_down.await.unwrap().ok();
+                    println!(
+                        "fxb/38441 timing: pm timed out {}ms",
+                        zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
+                    );
                     panic!(
-                        "'pm serve' hasn't responded to http requests in {}ms\n {:?}\n{:?}",
-                        (zx::Time::get(zx::ClockId::Monotonic) - pm_serve_spawn_time).into_millis(),
-                        e,
-                        output
+                        "'pm serve' took too long to respond to http requests {:?}\n{:?}",
+                        e, output
                     );
                 }
                 wait_pm_down
@@ -471,12 +476,20 @@ impl<'a> ServedRepository<'a> {
 pub(crate) async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
     let request = Request::get(url.as_ref()).body(Body::empty()).map_err(|e| Error::from(e))?;
     let client = fuchsia_hyper::new_client();
+    println!(
+        "fxb/38441 timing: making hyper request to pm {}ms",
+        zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
+    );
     let response = client.request(request).compat().await?;
 
     if response.status() != StatusCode::OK {
         bail!("unexpected status code: {:?}", response.status());
     }
 
+    println!(
+        "fxb/38441 timing: hyper downloading pm response body {}ms",
+        zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
+    );
     let body = response.into_body().compat().try_concat().await?.collect();
 
     Ok(body)
