@@ -143,10 +143,20 @@ zx_status_t Snapshot::ParseHeader(uint8_t* buffer, uint64_t* out_generation_coun
 
 namespace internal {
 const Block* GetBlock(const Snapshot* snapshot, BlockIndex index) {
+  // Check that the block's index fits in the snapshot.
+  // This means that the whole first 16 bytes of the block are valid to read.
   if (index >= IndexForOffset(snapshot->size())) {
     return nullptr;
   }
-  return reinterpret_cast<const Block*>(snapshot->data() + index * kMinOrderSize);
+  const auto* ret = reinterpret_cast<const Block*>(snapshot->data() + index * kMinOrderSize);
+
+  // Check that the entire declared size of the block fits in the snapshot.
+  auto size = OrderToSize(BlockFields::Order::Get<size_t>(ret->header));
+  if (index * kMinOrderSize + size > snapshot->size()) {
+    return nullptr;
+  }
+
+  return ret;
 }
 }  // namespace internal
 

@@ -13,6 +13,8 @@ namespace {
 using inspect::Snapshot;
 using inspect::internal::Block;
 using inspect::internal::BlockType;
+using inspect::internal::FreeBlockFields;
+using inspect::internal::GetBlock;
 using inspect::internal::HeaderBlockFields;
 using inspect::internal::kMagicNumber;
 using inspect::internal::kMinOrderSize;
@@ -46,6 +48,54 @@ TEST(Snapshot, InvalidBufferSize) {
     std::vector<uint8_t> buffer;
     buffer.resize(i);
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, Snapshot::Create(std::move(buffer), &snapshot));
+  }
+}
+
+TEST(Snapshot, GetBlock) {
+  fzl::OwnedVmoMapper vmo;
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
+  memset(vmo.start(), 'a', 4096);
+  Block* header = reinterpret_cast<Block*>(vmo.start());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+
+  {
+    Snapshot snapshot;
+    zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
+    EXPECT_OK(status);
+    // Can get block 0.
+    EXPECT_NE(nullptr, GetBlock(&snapshot, 0));
+    // Cannot get block past the end of the snapshot.
+    EXPECT_EQ(nullptr, GetBlock(&snapshot, 4096 / kMinOrderSize));
+  }
+
+  Block* tester =
+      reinterpret_cast<Block*>(reinterpret_cast<uint8_t*>(vmo.start()) + 4096 - kMinOrderSize * 2);
+  size_t tester_index = 4096 / kMinOrderSize - 2;
+
+  {
+    tester->header =
+        FreeBlockFields::Order::Make(1) | FreeBlockFields::Type::Make(BlockType::kFree);
+
+    Snapshot snapshot;
+    zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
+    EXPECT_OK(status);
+    // Can get tester, since it's adjacent to the end of the snapshot.
+    EXPECT_NE(nullptr, GetBlock(&snapshot, tester_index));
+  }
+  {
+    // Set the order to be too large for the buffer
+    tester->header =
+        FreeBlockFields::Order::Make(2) | FreeBlockFields::Type::Make(BlockType::kFree);
+
+    Snapshot snapshot;
+    zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
+    EXPECT_OK(status);
+    // Cannot get block, since its order is too large for the remaining space.
+    EXPECT_EQ(nullptr, GetBlock(&snapshot, tester_index));
   }
 }
 
