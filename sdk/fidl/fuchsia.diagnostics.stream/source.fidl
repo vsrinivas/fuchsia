@@ -1,0 +1,82 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.diagnostics.stream;
+using zx;
+
+/// A component with records for the Diagnostics system to retrieve.
+///
+/// To record diagnostics, a component allocates a VMO and begins writing records into the buffer,
+/// incrementing a header value after each write to inform readers how much of the buffer has been
+/// filled.
+///
+/// If any retrievers are connected, the `Source` sends them `OnBufferInit` events for each
+/// diagnostic buffer created.
+///
+/// When the buffer fills, the `Source` sends `OnBufferDone` to the retrievers, and will wait for
+/// all notified retrievers to reply with `RetireBuffer` when they have finished reading from the
+/// buffer.
+///
+/// When all readers of the buffer have finished, the `Source` may recycle the buffer by zeroing it
+/// and sending `OnBufferInit` again to connected retrievers.
+///
+/// Once a `Source` has sent `OnBufferDone` to a retriever, it is up to the `Source` to handle new
+/// records that are generated while the retriever drains the buffer. Double buffering is
+/// recommended to prevent excessive blocking, but this protocol does not mandate a specific
+/// approach to handling records generated while buffers are full.
+[Discoverable]
+protocol Source {
+    /// Notifies the connected retriever of a new stream buffer. Should be emitted as soon as each
+    /// buffer is (re)initialized.
+    ///
+    /// `latest` should be read-only.
+    -> OnBufferInit(handle<vmo> latest);
+
+    /// Asks the connected retriever to finish working with `buffer`, usually because the `Source`
+    /// does not intend to write further records.
+    -> OnBufferDone(zx.koid buffer);
+
+    /// Notifies the `Source` that the retriever is done reading from the buffer. If the `Source`
+    /// wishes it should zero the buffer's contents and recycle it for future records. Buffers must
+    /// be re-sent via `OnBufferInit` after they're zeroed.
+    RetireBuffer(zx.koid buffer);
+
+    /// Notifies the component of interest in a subset of diagnostic records.
+    ///
+    /// Before the component receives this request it should filter according to a default interest
+    /// specifier.
+    ///
+    /// After receiving this message components begin writing records according to the new
+    /// specifier. `Source` components must be prepared to handle multiple client connections,
+    /// and may filter records according to the union of all interest specifiers. Clients may
+    /// receive records outside the scope of their interest.
+    RegisterInterest(Interest desired);
+};
+
+/// The system's current interest in records.
+///
+/// Without having received an interest specifier or receiving one with empty fields, components
+/// should assume a default interest specifier, as documented for each field in this table.
+table Interest {
+    /// Minimum desired severity. The default is `INFO`.
+    1: Severity min_severity;
+};
+
+/// The severity of a given record.
+enum Severity {
+    /// Components should only record fatal records prior to terminating operation. Fatal
+    /// records are informative only, and front-end libraries which trigger an exit in response
+    /// to them should clearly document this behavior to their users.
+    FATAL = 5;
+    /// Components should include error records as well as more severe records.
+    ERROR = 4;
+    /// Components should include warning records as well as more severe records.
+    WARN = 3;
+    /// Components should include informative records as well as more severe records. (default)
+    INFO = 2;
+    /// Components should include developer-facing debug records as well as more severe records.
+    DEBUG = 1;
+    /// Components should include all records.
+    ANY = 0;
+};
