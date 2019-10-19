@@ -38,7 +38,7 @@ async fn run_trial(
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
         run_actions(&mut step.actions, data, puppet, &trial.name, step_index, results).await?;
         if step.do_metrics {
-            results.remember_metrics(puppet.read_metrics(&trial.name, step_index)?);
+            results.remember_metrics(puppet.metrics()?, &trial.name, step_index);
         }
     }
     Ok(())

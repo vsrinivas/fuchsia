@@ -3,20 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    super::validate::{self, Number, ROOT_ID},
+    super::{
+        metrics::Metrics,
+        validate::{self, Number, ROOT_ID},
+    },
     failure::{bail, Error},
-    fuchsia_inspect::{self, format::block::ArrayFormat, reader as ireader},
-    fuchsia_zircon::Vmo,
+    fuchsia_inspect::{self, format::block::ArrayFormat},
     num_derive::{FromPrimitive, ToPrimitive},
-    scanner::Scanner,
     std::{
         self,
         collections::{HashMap, HashSet},
-        convert::{TryFrom, TryInto},
+        convert::TryInto,
     },
 };
 
 mod scanner;
+pub use scanner::Scanner;
 
 #[cfg(test)]
 use num_traits::ToPrimitive;
@@ -700,29 +702,8 @@ impl Data {
         ret
     }
 
-    pub fn build(nodes: HashMap<u32, Node>, properties: HashMap<u32, Property>) -> Data {
+    fn build(nodes: HashMap<u32, Node>, properties: HashMap<u32, Property>) -> Data {
         Data { nodes, properties }
-    }
-
-    // ***** These functions load from a VMO or byte array.
-
-    /// Loads the Inspect tree data from a byte array in Inspect file format.
-    #[cfg(test)]
-    pub fn try_from_bytes(bytes: &[u8]) -> Result<Data, Error> {
-        let snapshot = ireader::snapshot::Snapshot::try_from(bytes);
-        match snapshot {
-            Err(e) => Err(e),
-            Ok(snapshot) => Scanner::scan(snapshot),
-        }
-    }
-
-    /// Loads the Inspect tree data from a VMO in Inspect file format.
-    pub fn try_from_vmo(vmo: &Vmo) -> Result<Data, Error> {
-        let snapshot = ireader::snapshot::Snapshot::try_from(vmo);
-        match snapshot {
-            Err(e) => Err(e),
-            Ok(snapshot) => Scanner::scan(snapshot),
-        }
     }
 }
 

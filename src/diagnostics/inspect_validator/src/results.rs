@@ -13,7 +13,7 @@ pub struct Results {
     messages: Vec<String>,
     unimplemented: HashSet<String>,
     failed: bool,
-    metrics: Vec<Metrics>,
+    metrics: Vec<TrialMetrics>,
 }
 
 trait Summary {
@@ -84,6 +84,13 @@ impl Summary for Action {
     }
 }
 
+#[derive(Serialize, Debug)]
+struct TrialMetrics {
+    step_index: usize,
+    trial_name: String,
+    metrics: Metrics,
+}
+
 impl Results {
     pub fn new() -> Results {
         Results {
@@ -103,8 +110,8 @@ impl Results {
         self.unimplemented.insert(format!("{}: {}", puppet_name, action.summary()));
     }
 
-    pub fn remember_metrics(&mut self, metrics: Metrics) {
-        self.metrics.push(metrics);
+    pub fn remember_metrics(&mut self, metrics: Metrics, trial_name: &str, step_index: usize) {
+        self.metrics.push(TrialMetrics { metrics, trial_name: trial_name.into(), step_index });
     }
 
     pub fn to_json(&self) -> String {
@@ -112,6 +119,26 @@ impl Results {
             Ok(string) => string,
             Err(e) => format!("{{error: \"Converting to json: {:?}\"}}", e),
         }
+    }
+
+    fn print_pretty_metric(metric: &TrialMetrics) {
+        println!(
+            "Name: \"{}\" Step: {} Blocks: {} Size: {}",
+            metric.trial_name, metric.step_index, metric.metrics.block_count, metric.metrics.size
+        );
+        println!("Count\tHeader\tData\tTotal\tData %\tType");
+        for (name, statistics) in metric.metrics.block_statistics.iter() {
+            println!(
+                "{}\t{}\t{}\t{}\t{}\t{}",
+                statistics.count,
+                statistics.header_bytes,
+                statistics.data_bytes,
+                statistics.total_bytes,
+                statistics.data_percent,
+                name
+            );
+        }
+        println!("");
     }
 
     pub fn print_pretty_text(&self) {
@@ -132,7 +159,7 @@ impl Results {
         if self.metrics.len() > 0 {
             println!("\nMetrics:");
             for metric in self.metrics.iter() {
-                println!("  {:?}", metric);
+                Self::print_pretty_metric(metric);
             }
         }
     }
@@ -257,5 +284,29 @@ mod tests {
         assert!(!results.to_json().contains("42"));
         assert!(!results.to_json().contains("bar"));
         assert!(!results.to_json().contains("Unknown"));
+    }
+
+    #[test]
+    fn metric_remembering() {
+        let mut results = Results::new();
+        let mut metrics = metrics::Metrics::new();
+        let sample = metrics::BlockMetrics::sample_for_test("MyBlock".to_owned(), 8, 4, 16);
+        // NotUsed should set data size (the "4" parameter) to 0.
+        metrics.record(&sample, metrics::BlockStatus::NotUsed);
+        // Recording the same sample twice should double all the values.
+        metrics.record(&sample, metrics::BlockStatus::Used);
+        metrics.record(&sample, metrics::BlockStatus::Used);
+        results.remember_metrics(metrics, "FooTrial", 42);
+        let json = results.to_json();
+        assert!(
+            json.contains(
+                "\"metrics\":[{\"step_index\":42,\"trial_name\":\"FooTrial\",\"metrics\":"
+            ),
+            json
+        );
+        assert!(json.contains(
+            "\"MyBlock(UNUSED)\":{\"count\":1,\"header_bytes\":8,\"data_bytes\":0,\"total_bytes\":16,\"data_percent\":0}"), json);
+        assert!(json.contains(
+            "\"MyBlock\":{\"count\":2,\"header_bytes\":16,\"data_bytes\":8,\"total_bytes\":32,\"data_percent\":25}"), json);
     }
 }

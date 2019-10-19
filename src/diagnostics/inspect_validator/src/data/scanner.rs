@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    super::{validate::ROOT_ID, Data, Node, Payload, Property, ROOT_NAME},
+    super::{validate::ROOT_ID, Data, Metrics, Node, Payload, Property, ROOT_NAME},
+    crate::metrics::{BlockMetrics, BlockStatus},
     failure::{bail, format_err, Error},
     fuchsia_inspect::{
         self,
@@ -13,10 +14,12 @@ use {
         },
         reader as ireader,
     },
+    fuchsia_zircon::Vmo,
     std::{
         self,
         cmp::min,
         collections::{HashMap, HashSet},
+        convert::TryFrom,
     },
 };
 
@@ -46,53 +49,96 @@ pub struct Scanner {
     names: HashMap<u32, ScannedName>,
     properties: HashMap<u32, ScannedProperty>,
     extents: HashMap<u32, ScannedExtent>,
+    final_nodes: HashMap<u32, Node>,
+    final_properties: HashMap<u32, Property>,
+    metrics: Metrics,
+}
+
+impl TryFrom<&[u8]> for Scanner {
+    type Error = Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        Scanner::scan(ireader::snapshot::Snapshot::try_from(bytes)?)
+    }
+}
+
+impl TryFrom<&Vmo> for Scanner {
+    type Error = Error;
+    fn try_from(bytes: &Vmo) -> Result<Self, Self::Error> {
+        Scanner::scan(ireader::snapshot::Snapshot::try_from(bytes)?)
+    }
 }
 
 impl Scanner {
-    pub fn scan(snapshot: ireader::snapshot::Snapshot) -> Result<Data, Error> {
-        let mut objects = Scanner::new();
+    pub fn scan(snapshot: ireader::snapshot::Snapshot) -> Result<Self, Error> {
+        let mut ret = Scanner::new();
         for block in snapshot.scan() {
             match block.block_type_or() {
-                Ok(BlockType::Free) => objects.process_free(block)?,
-                Ok(BlockType::Reserved) => objects.process_reserved(block)?,
-                Ok(BlockType::Header) => objects.process_header(block)?,
-                Ok(BlockType::NodeValue) => objects.process_node(block)?,
+                Ok(BlockType::Free) => ret.process_free(block)?,
+                Ok(BlockType::Reserved) => ret.process_reserved(block)?,
+                Ok(BlockType::Header) => ret.process_header(block)?,
+                Ok(BlockType::NodeValue) => ret.process_node(block)?,
                 Ok(BlockType::IntValue)
                 | Ok(BlockType::UintValue)
                 | Ok(BlockType::DoubleValue)
                 | Ok(BlockType::ArrayValue)
-                | Ok(BlockType::PropertyValue) => objects.process_property(block)?,
-                Ok(BlockType::Extent) => objects.process_extent(block)?,
-                Ok(BlockType::Name) => objects.process_name(block)?,
-                Ok(BlockType::Tombstone) => objects.process_tombstone(block)?,
+                | Ok(BlockType::PropertyValue) => ret.process_property(block)?,
+                Ok(BlockType::Extent) => ret.process_extent(block)?,
+                Ok(BlockType::Name) => ret.process_name(block)?,
+                Ok(BlockType::Tombstone) => ret.process_tombstone(block)?,
                 Ok(BlockType::LinkValue) => bail!("LinkValue isn't supported yet."),
                 Err(error) => return Err(error),
             }
         }
-        let (mut new_nodes, mut new_properties) = objects.make_valid_node_tree(ROOT_ID)?;
-        let mut nodes = HashMap::new();
+        let (mut new_nodes, mut new_properties) = ret.make_valid_node_tree(ROOT_ID)?;
         for (node, id) in new_nodes.drain(..) {
-            nodes.insert(id, node);
+            ret.final_nodes.insert(id, node);
         }
-        let mut properties = HashMap::new();
         for (property, id) in new_properties.drain(..) {
-            properties.insert(id, property);
+            ret.final_properties.insert(id, property);
         }
-        Ok(Data::build(nodes, properties))
+        ret.record_unused_metrics();
+        Ok(ret)
+    }
+
+    pub fn data(self) -> Data {
+        Data::build(self.final_nodes, self.final_properties)
+    }
+
+    pub fn metrics(self) -> Metrics {
+        self.metrics
     }
 
     // ***** Utility functions
-
+    fn record_unused_metrics(&mut self) {
+        for (_, node) in self.nodes.drain() {
+            if let Some(metrics) = node.metrics {
+                self.metrics.record(&metrics, BlockStatus::NotUsed);
+            }
+        }
+        for (_, name) in self.names.drain() {
+            self.metrics.record(&name.metrics, BlockStatus::NotUsed);
+        }
+        for (_, property) in self.properties.drain() {
+            self.metrics.record(&property.metrics, BlockStatus::NotUsed);
+        }
+        for (_, extent) in self.extents.drain() {
+            self.metrics.record(&extent.metrics, BlockStatus::NotUsed);
+        }
+    }
     fn new() -> Scanner {
-        let mut objects = Scanner {
+        let mut ret = Scanner {
             nodes: HashMap::new(),
             names: HashMap::new(),
             properties: HashMap::new(),
             extents: HashMap::new(),
+            metrics: Metrics::new(),
+            final_nodes: HashMap::new(),
+            final_properties: HashMap::new(),
         };
         // The ScannedNode at 0 is the "root" node. It exists to receive pointers to objects
         // whose parent is 0 while scanning the VMO.
-        objects.nodes.insert(
+        ret.nodes.insert(
             0,
             ScannedNode {
                 validated: true,
@@ -100,26 +146,44 @@ impl Scanner {
                 name: 0,
                 children: HashSet::new(),
                 properties: HashSet::new(),
+                metrics: None,
             },
         );
-        objects
+        ret
     }
 
-    fn get_node(&self, node_id: u32) -> Result<&ScannedNode, Error> {
-        self.nodes.get(&node_id).ok_or(format_err!("No node at index {}", node_id))
+    fn use_node(&mut self, node_id: u32) -> Result<ScannedNode, Error> {
+        let mut node =
+            self.nodes.remove(&node_id).ok_or(format_err!("No node at index {}", node_id))?;
+        match node.metrics {
+            None => {
+                if node_id != 0 {
+                    bail!("Invalid node (no metrics) at index {}", node_id)
+                }
+            }
+            Some(metrics) => {
+                // I actually want as_deref() but that's nightly-only.
+                self.metrics.record(&metrics, BlockStatus::Used);
+                node.metrics = Some(metrics); // Put it back after I borrow it.
+            }
+        }
+        Ok(node)
     }
 
-    fn get_property(&self, property_id: u32) -> Result<&ScannedProperty, Error> {
-        self.properties.get(&property_id).ok_or(format_err!("No property at index {}", property_id))
+    fn use_property(&mut self, property_id: u32) -> Result<ScannedProperty, Error> {
+        let property = self
+            .properties
+            .remove(&property_id)
+            .ok_or(format_err!("No property at index {}", property_id))?;
+        self.metrics.record(&property.metrics, BlockStatus::Used);
+        Ok(property)
     }
 
-    fn get_owned_name(&self, name_id: u32) -> Result<String, Error> {
-        Ok(self
-            .names
-            .get(&name_id)
-            .ok_or(format_err!("No string at index {}", name_id))?
-            .name
-            .clone())
+    fn use_owned_name(&mut self, name_id: u32) -> Result<String, Error> {
+        let name =
+            self.names.remove(&name_id).ok_or(format_err!("No string at index {}", name_id))?;
+        self.metrics.record(&name.metrics, BlockStatus::Used);
+        Ok(name.name.clone())
     }
 
     // ***** Functions which read fuchsia_inspect::format::block::Block (actual
@@ -133,32 +197,43 @@ impl Scanner {
     // Note: process_ functions are only called from the scan() iterator on the
     // VMO's blocks, so indexes of the blocks themselves will never be duplicated; that's one
     // thing we don't have to verify.
-    fn process_free(&self, _block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_free(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+        self.metrics.process(block)?;
         Ok(())
     }
 
-    fn process_header(&self, _block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_header(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+        self.metrics.process(block)?;
         Ok(())
     }
 
-    fn process_tombstone(&self, _block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_tombstone(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+        self.metrics.process(block)?;
         Ok(())
     }
 
-    fn process_reserved(&self, _block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_reserved(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+        self.metrics.process(block)?;
         Ok(())
     }
 
     fn process_extent(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
         self.extents.insert(
             block.index(),
-            ScannedExtent { next: block.next_extent()?, data: block.extent_contents()? },
+            ScannedExtent {
+                next: block.next_extent()?,
+                data: block.extent_contents()?,
+                metrics: Metrics::analyze(block)?,
+            },
         );
         Ok(())
     }
 
     fn process_name(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
-        self.names.insert(block.index(), ScannedName { name: block.name_contents()? });
+        self.names.insert(
+            block.index(),
+            ScannedName { name: block.name_contents()?, metrics: Metrics::analyze(block)? },
+        );
         Ok(())
     }
 
@@ -167,12 +242,14 @@ impl Scanner {
         let id = block.index();
         let name = block.name_index()?;
         let mut node;
+        let metrics = Some(Metrics::analyze(block)?);
         if let Some(placeholder) = self.nodes.remove(&id) {
             // We need to preserve the children and properties.
             node = placeholder;
             node.validated = true;
             node.parent = parent;
             node.name = name;
+            node.metrics = metrics;
         } else {
             node = ScannedNode {
                 validated: true,
@@ -180,6 +257,7 @@ impl Scanner {
                 parent,
                 children: HashSet::new(),
                 properties: HashSet::new(),
+                metrics,
             }
         }
         self.nodes.insert(id, node);
@@ -202,6 +280,7 @@ impl Scanner {
                     parent: 0,
                     children: HashSet::new(),
                     properties: HashSet::new(),
+                    metrics: None,
                 },
             );
         }
@@ -261,7 +340,12 @@ impl Scanner {
         let parent = block.parent_index()?;
         let block_type = block.block_type_or()?;
         let payload = Self::build_scanned_payload(&block, block_type)?;
-        let property = ScannedProperty { name: block.name_index()?, parent, payload };
+        let property = ScannedProperty {
+            name: block.name_index()?,
+            parent,
+            payload,
+            metrics: Metrics::analyze(block)?,
+        };
         self.properties.insert(id, property);
         self.add_to_parent(parent, id, |node| &mut node.properties);
         Ok(())
@@ -270,10 +354,10 @@ impl Scanner {
     // ***** Functions which convert Scanned* objects into Node and Property objects.
 
     fn make_valid_node_tree(
-        &self,
+        &mut self,
         id: u32,
     ) -> Result<(Vec<(Node, u32)>, Vec<(Property, u32)>), Error> {
-        let scanned_node = self.get_node(id)?;
+        let scanned_node = self.use_node(id)?;
         if !scanned_node.validated {
             bail!("No node at {}", id)
         }
@@ -288,7 +372,7 @@ impl Scanner {
             properties_under.push((self.make_valid_property(*property_id)?, *property_id));
         }
         let name =
-            if id == 0 { ROOT_NAME.to_owned() } else { self.get_owned_name(scanned_node.name)? };
+            if id == 0 { ROOT_NAME.to_owned() } else { self.use_owned_name(scanned_node.name)? };
         let this_node = Node {
             name,
             parent: scanned_node.parent,
@@ -299,14 +383,14 @@ impl Scanner {
         Ok((nodes_in_tree, properties_under))
     }
 
-    fn make_valid_property(&self, id: u32) -> Result<Property, Error> {
-        let scanned_property = self.get_property(id)?;
-        let name = self.get_owned_name(scanned_property.name)?;
+    fn make_valid_property(&mut self, id: u32) -> Result<Property, Error> {
+        let scanned_property = self.use_property(id)?;
+        let name = self.use_owned_name(scanned_property.name)?;
         let payload = self.make_valid_payload(&scanned_property.payload)?;
         Ok(Property { id, name, parent: scanned_property.parent, payload })
     }
 
-    fn make_valid_payload(&self, payload: &ScannedPayload) -> Result<Payload, Error> {
+    fn make_valid_payload(&mut self, payload: &ScannedPayload) -> Result<Payload, Error> {
         Ok(match payload {
             ScannedPayload::Int(data) => Payload::Int(*data),
             ScannedPayload::Uint(data) => Payload::Uint(*data),
@@ -329,14 +413,17 @@ impl Scanner {
         })
     }
 
-    fn make_valid_vector(&self, length: usize, link: u32) -> Result<Vec<u8>, Error> {
+    fn make_valid_vector(&mut self, length: usize, link: u32) -> Result<Vec<u8>, Error> {
         let mut dest = vec![];
         let mut length_remaining = length;
         let mut next_link = link;
         while length_remaining > 0 {
-            let extent =
-                self.extents.get(&next_link).ok_or(format_err!("No extent at {}", next_link))?;
+            // This is effectively use_extent()
+            let mut extent =
+                self.extents.remove(&next_link).ok_or(format_err!("No extent at {}", next_link))?;
             let copy_len = min(extent.data.len(), length_remaining);
+            extent.metrics.set_data_bytes(copy_len);
+            self.metrics.record(&extent.metrics, BlockStatus::Used);
             dest.extend_from_slice(&extent.data[..copy_len]);
             length_remaining -= copy_len;
             next_link = extent.next;
@@ -358,6 +445,7 @@ struct ScannedNode {
     parent: u32,
     children: HashSet<u32>,
     properties: HashSet<u32>,
+    metrics: Option<BlockMetrics>,
 }
 
 #[derive(Debug)]
@@ -365,17 +453,20 @@ struct ScannedProperty {
     name: u32,
     parent: u32,
     payload: ScannedPayload,
+    metrics: BlockMetrics,
 }
 
 #[derive(Debug)]
 struct ScannedName {
     name: String,
+    metrics: BlockMetrics,
 }
 
 #[derive(Debug)]
 struct ScannedExtent {
     next: u32,
     data: Vec<u8>,
+    metrics: BlockMetrics,
 }
 
 #[derive(Debug)]
@@ -417,7 +508,7 @@ mod tests {
         let location = index * 16 + offset;
         let previous = buffer[location];
         buffer[location] = value;
-        let actual = Data::try_from_bytes(buffer).map(|d| d.to_string());
+        let actual = data::Scanner::try_from(buffer as &[u8]).map(|d| d.data().to_string());
         if predicted.is_none() {
             if actual.is_err() {
                 println!(
@@ -456,7 +547,7 @@ mod tests {
                     predicted.unwrap(),
                     actual.as_ref().unwrap()
                 );
-                println!("Raw data: {:?}", Data::try_from_bytes(buffer))
+                println!("Raw data: {:?}", data::Scanner::try_from(buffer as &[u8]))
             }
         }
         assert_eq!(predicted, actual.as_ref().ok().map(|s| &s[..]));

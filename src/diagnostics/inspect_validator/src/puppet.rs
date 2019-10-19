@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    super::{data::Data, metrics::Metrics},
+    super::{
+        data::{self, Data},
+        metrics::Metrics,
+    },
     failure::{bail, err_msg, Error, ResultExt},
     fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{self as zx, Vmo},
-    std::{path::Path, str::FromStr},
+    std::{convert::TryFrom, path::Path, str::FromStr},
 };
 
 pub const VMO_SIZE: u64 = 4096;
@@ -69,11 +72,11 @@ impl Puppet {
     }
 
     pub fn read_data(&self) -> Result<Data, Error> {
-        Data::try_from_vmo(&self.vmo)
+        Ok(data::Scanner::try_from(&self.vmo)?.data())
     }
 
-    pub fn read_metrics(&self, trial_name: &str, step_index: usize) -> Result<Metrics, Error> {
-        Metrics::from_vmo(&self.vmo, trial_name, step_index)
+    pub fn metrics(&self) -> Result<Metrics, Error> {
+        Ok(data::Scanner::try_from(&self.vmo)?.metrics())
     }
 }
 
@@ -158,7 +161,7 @@ pub(crate) mod tests {
         let mut action = create_node!(parent: ROOT_ID, id: 1, name: "child");
         puppet.apply(&mut action).await?;
         data.apply(&action)?;
-        let tree = Data::try_from_vmo(&puppet.vmo)?;
+        let tree = data::Scanner::try_from(&puppet.vmo)?.data();
         assert_eq!(tree.to_string(), " root ->\n\n>  child ->\n\n\n\n".to_string());
         tree.compare(&data)?;
         Ok(())
