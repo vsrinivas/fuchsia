@@ -141,25 +141,21 @@ type PathMap<'a> = HashMap<String, HashSet<&'a str>>;
 
 impl<'a> ValidationContext<'a> {
     fn validate(&mut self) -> Result<(), Error> {
+        // Ensure child components, collections, and storage don't use the
+        // same name.
+        //
+        // We currently have the ability to distinguish between storage and
+        // children/collections based on context, but still enforce name
+        // uniqueness to give us flexibility in future.
         let all_children_names =
             self.document.all_children_names().into_iter().zip(iter::repeat("children"));
         let all_collection_names =
             self.document.all_collection_names().into_iter().zip(iter::repeat("collections"));
         let all_storage_names =
             self.document.all_storage_names().into_iter().zip(iter::repeat("storage"));
-
-        let all_references =
-            all_children_names.chain(all_collection_names).chain(all_storage_names);
-        let mut seen_references = HashMap::new();
-
-        for (reference, reference_source) in all_references {
-            if let Some(preexisting_source) = seen_references.insert(reference, reference_source) {
-                return Err(Error::validate(format!(
-                    "identifier \"{}\" is defined twice, once in \"{}\" and once in \"{}\"",
-                    reference, reference_source, preexisting_source
-                )));
-            }
-        }
+        ensure_no_duplicates(
+            all_children_names.chain(all_collection_names).chain(all_storage_names),
+        )?;
 
         // Populate the sets of children and collections.
         self.all_children = self.document.all_children_names().into_iter().collect();
@@ -506,6 +502,24 @@ impl<'a> ValidationContext<'a> {
         }
         Ok(())
     }
+}
+
+/// Given an iterator with `(key, name)` tuples, ensure that `key` doesn't
+/// appear twice. `name` is used in generated error messages.
+fn ensure_no_duplicates<'a, I>(values: I) -> Result<(), Error>
+where
+    I: Iterator<Item = (&'a str, &'a str)>,
+{
+    let mut seen_keys = HashMap::new();
+    for (key, name) in values {
+        if let Some(preexisting_name) = seen_keys.insert(key, name) {
+            return Err(Error::validate(format!(
+                "identifier \"{}\" is defined twice, once in \"{}\" and once in \"{}\"",
+                key, name, preexisting_name
+            )));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
