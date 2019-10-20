@@ -8,6 +8,7 @@ test("blobfs") {
     "blobfs.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-blobfs:c",
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
     "$zx/system/fidl/fuchsia-io:c",

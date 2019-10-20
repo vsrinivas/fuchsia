@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/iterator/vector-extent-iterator.h>
-#include <blobfs/iterator/block-iterator.h>
+#include "iterator/vector-extent-iterator.h"
+
 #include <zxtest/zxtest.h>
 
+#include "iterator/block-iterator.h"
 #include "utils.h"
 
 namespace blobfs {

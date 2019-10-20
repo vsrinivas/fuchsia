@@ -9,12 +9,12 @@
 #error Fuchsia-only Header
 #endif
 
-#include <blobfs/allocator.h>
 #include <fbl/unique_ptr.h>
 #include <fs/journal/journal.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vnode.h>
 
+#include "allocator/allocator.h"
 #include "metrics.h"
 
 namespace blobfs {

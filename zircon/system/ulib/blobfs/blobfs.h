@@ -22,14 +22,9 @@
 #include <lib/zx/vmo.h>
 
 #include <bitmap/raw-bitmap.h>
-#include <blobfs/allocator.h>
 #include <blobfs/common.h>
-#include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
-#include <blobfs/iterator/allocated-extent-iterator.h>
-#include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/mount.h>
-#include <blobfs/node-reserver.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/block-group-registry.h>
 #include <block-client/cpp/client.h>
@@ -51,8 +46,13 @@
 #include <storage/operation/unbuffered-operations-builder.h>
 #include <trace/event.h>
 
+#include "allocator/allocator.h"
+#include "allocator/extent-reserver.h"
+#include "allocator/node-reserver.h"
 #include "blob-cache.h"
 #include "directory.h"
+#include "iterator/allocated-extent-iterator.h"
+#include "iterator/extent-iterator.h"
 #include "metrics.h"
 #include "transaction-manager.h"
 
@@ -126,9 +126,8 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
                             uint64_t* first_unset = nullptr) const {
     return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
   }
-  AllocatedExtentIterator GetExtents(uint32_t node_index) {
-    return AllocatedExtentIterator(allocator_.get(), node_index);
-  }
+
+  NodeFinder* GetNodeFinder() { return allocator_.get(); }
 
   Allocator* GetAllocator() { return allocator_.get(); }
 

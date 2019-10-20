@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_NODE_POPULATOR_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_NODE_POPULATOR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
-#include <blobfs/allocator.h>
-#include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
-#include <blobfs/node-reserver.h>
 #include <fbl/function.h>
 #include <fbl/vector.h>
-#include <zircon/types.h>
+
+#include "allocator/allocator.h"
+#include "allocator/extent-reserver.h"
+#include "allocator/node-reserver.h"
 
 namespace blobfs {
 
@@ -64,3 +66,5 @@ class NodePopulator {
 };
 
 }  // namespace blobfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_NODE_POPULATOR_H_

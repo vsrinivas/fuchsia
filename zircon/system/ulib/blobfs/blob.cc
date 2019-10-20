@@ -18,11 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include <blobfs/iterator/allocated-extent-iterator.h>
-#include <blobfs/iterator/block-iterator.h>
-#include <blobfs/iterator/extent-iterator.h>
-#include <blobfs/iterator/node-populator.h>
-#include <blobfs/iterator/vector-extent-iterator.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
@@ -36,6 +31,11 @@
 #include "blobfs.h"
 #include "compression/lz4.h"
 #include "compression/zstd.h"
+#include "iterator/allocated-extent-iterator.h"
+#include "iterator/block-iterator.h"
+#include "iterator/extent-iterator.h"
+#include "iterator/node-populator.h"
+#include "iterator/vector-extent-iterator.h"
 #include "metrics.h"
 
 namespace blobfs {

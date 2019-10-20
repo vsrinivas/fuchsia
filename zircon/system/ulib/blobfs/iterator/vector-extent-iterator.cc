@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "vector-extent-iterator.h"
+
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <blobfs/format.h>
-#include <blobfs/iterator/vector-extent-iterator.h>
 #include <fbl/vector.h>
-#include <zircon/types.h>
 
 namespace blobfs {
 

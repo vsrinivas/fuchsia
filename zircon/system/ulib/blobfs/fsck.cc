@@ -6,12 +6,12 @@
 #include <zircon/status.h>
 
 #include <blobfs/fsck.h>
-#include <blobfs/iterator/extent-iterator.h>
 #include <fs/journal/replay.h>
 #include <fs/trace.h>
 
 #include "blobfs-checker.h"
 #include "blobfs.h"
+#include "iterator/extent-iterator.h"
 
 namespace blobfs {
 

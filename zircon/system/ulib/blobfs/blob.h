@@ -20,11 +20,8 @@
 
 #include <atomic>
 
-#include <blobfs/allocator.h>
 #include <blobfs/common.h>
-#include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
-#include <blobfs/node-reserver.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -36,6 +33,9 @@
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
+#include "allocator/allocator.h"
+#include "allocator/extent-reserver.h"
+#include "allocator/node-reserver.h"
 #include "blob-cache.h"
 #include "compression/blob-compressor.h"
 #include "compression/compressor.h"

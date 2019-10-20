@@ -4,18 +4,29 @@
 
 // This file includes host-side functionality for accessing Blobfs.
 
-#pragma once
+#ifndef BLOBFS_HOST_H_
+#define BLOBFS_HOST_H_
 
 #ifdef __Fuchsia__
 #error Host-only Header
 #endif
 
-#include <optional>
+#include <assert.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <zircon/types.h>
+
+#include <mutex>
+#include <optional>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
+#include <blobfs/common.h>
+#include <blobfs/format.h>
+#include <blobfs/node-finder.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
@@ -24,18 +35,6 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <zircon/types.h>
-
-#include <assert.h>
-#include <limits.h>
-#include <mutex>
-#include <stdbool.h>
-#include <stdint.h>
-
-#include <blobfs/common.h>
-#include <blobfs/iterator/allocated-extent-iterator.h>
-#include <blobfs/iterator/extent-iterator.h>
-#include <blobfs/format.h>
 
 class FileSizeRecorder;
 
@@ -149,9 +148,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   // Access the |node_index|-th inode
   Inode* GetNode(uint32_t node_index) final;
 
-  AllocatedExtentIterator GetExtents(uint32_t node_index) {
-    return AllocatedExtentIterator(this, node_index);
-  }
+  NodeFinder* GetNodeFinder() { return this; }
 
   // TODO(smklein): Consider deduplicating the host and target allocation systems.
   bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
@@ -273,3 +270,5 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
                                  off_t end, const fbl::Vector<size_t>& extent_lengths);
 }  // namespace blobfs
+
+#endif  // BLOBFS_HOST_H_

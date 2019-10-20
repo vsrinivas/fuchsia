@@ -7,12 +7,12 @@
 
 #include <optional>
 
-#include <blobfs/allocator.h>
 #include <block-client/cpp/block-device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
+#include "allocator/allocator.h"
 #include "transaction-manager.h"
 
 namespace blobfs {

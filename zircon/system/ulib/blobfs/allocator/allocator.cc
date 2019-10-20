@@ -2,24 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "allocator.h"
+
 #include <inttypes.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/zx/vmo.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
-#include <blobfs/allocator.h>
 #include <blobfs/common.h>
-#include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
-#include <blobfs/iterator/extent-iterator.h>
-#include <blobfs/node-reserver.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
-#include <lib/fzl/resizeable-vmo-mapper.h>
-#include <lib/zx/vmo.h>
-#include <zircon/types.h>
+
+#include "extent-reserver.h"
+#include "iterator/extent-iterator.h"
+#include "node-reserver.h"
 
 namespace blobfs {
 

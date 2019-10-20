@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_ALLOCATOR_H_
-#define BLOBFS_ALLOCATOR_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_ALLOCATOR_ALLOCATOR_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_ALLOCATOR_ALLOCATOR_H_
 
 #include <fuchsia/blobfs/c/fidl.h>
 #include <inttypes.h>
@@ -18,16 +18,17 @@
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <blobfs/common.h>
-#include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
 #include <blobfs/node-finder.h>
-#include <blobfs/node-reserver.h>
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
 #include <id_allocator/id_allocator.h>
 #include <storage/buffer/vmoid-registry.h>
+
+#include "extent-reserver.h"
+#include "node-reserver.h"
 
 namespace blobfs {
 
@@ -202,4 +203,4 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
 
 }  // namespace blobfs
 
-#endif  // BLOBFS_ALLOCATOR_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_ALLOCATOR_ALLOCATOR_H_

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_ALLOCATOR_NODE_RESERVER_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_ALLOCATOR_NODE_RESERVER_H_
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <bitmap/rle-bitmap.h>
 #include <blobfs/format.h>
-#include <zircon/types.h>
 
 namespace blobfs {
 
@@ -83,3 +84,5 @@ class ReservedNode {
 };
 
 }  // namespace blobfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_ALLOCATOR_NODE_RESERVER_H_

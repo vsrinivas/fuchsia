@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "allocator/extent-reserver.h"
+
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <bitmap/rle-bitmap.h>
-#include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
-#include <zircon/types.h>
 
 namespace blobfs {
 

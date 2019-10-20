@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_VECTOR_EXTENT_ITERATOR_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_VECTOR_EXTENT_ITERATOR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
-
-#include <blobfs/extent-reserver.h>
-#include <blobfs/format.h>
-#include <blobfs/iterator/extent-iterator.h>
-#include <fbl/vector.h>
 #include <zircon/types.h>
+
+#include <blobfs/format.h>
+#include <fbl/vector.h>
+
+#include "allocator/extent-reserver.h"
+#include "extent-iterator.h"
 
 namespace blobfs {
 
@@ -38,3 +40,5 @@ class VectorExtentIterator : public ExtentIterator {
 };
 
 }  // namespace blobfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_VECTOR_EXTENT_ITERATOR_H_

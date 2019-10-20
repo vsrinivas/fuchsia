@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_BLOCK_ITERATOR_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_BLOCK_ITERATOR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <blobfs/format.h>
-#include <blobfs/iterator/extent-iterator.h>
 #include <fbl/function.h>
 #include <fs/trace.h>
 
-#include <zircon/types.h>
+#include "extent-iterator.h"
 
 namespace blobfs {
 
@@ -50,3 +51,5 @@ using StreamFn = fbl::Function<zx_status_t(uint64_t local_off, uint64_t dev_off,
 zx_status_t StreamBlocks(BlockIterator* iterator, uint32_t block_count, StreamFn stream);
 
 }  // namespace blobfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_BLOCK_ITERATOR_H_

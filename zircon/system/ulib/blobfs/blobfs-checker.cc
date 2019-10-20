@@ -8,7 +8,6 @@
 
 #include <utility>
 
-#include <blobfs/iterator/extent-iterator.h>
 #include <fs/trace.h>
 
 #ifdef __Fuchsia__
@@ -24,6 +23,9 @@
 
 #endif
 
+#include "iterator/allocated-extent-iterator.h"
+#include "iterator/extent-iterator.h"
+
 namespace blobfs {
 
 void BlobfsChecker::TraverseInodeBitmap() {
@@ -38,7 +40,7 @@ void BlobfsChecker::TraverseInodeBitmap() {
 
       bool valid = true;
 
-      AllocatedExtentIterator extents = blobfs_->GetExtents(n);
+      AllocatedExtentIterator extents = AllocatedExtentIterator(blobfs_->GetNodeFinder(), n);
       while (!extents.Done()) {
         const Extent* extent;
         zx_status_t status = extents.Next(&extent);

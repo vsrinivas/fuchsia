@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/allocator.h>
+#include "allocator/allocator.h"
+
 #include <zxtest/zxtest.h>
 
 #include "utils.h"

@@ -23,9 +23,7 @@
 #include <limits>
 #include <utility>
 
-#include <blobfs/extent-reserver.h>
 #include <blobfs/fsck.h>
-#include <blobfs/node-reserver.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
 #include <digest/digest.h>
@@ -39,6 +37,9 @@
 #include <fs/vfs_types.h>
 #include <fvm/client.h>
 
+
+#include "allocator/extent-reserver.h"
+#include "allocator/node-reserver.h"
 #include "blob.h"
 #include "compression/compressor.h"
 

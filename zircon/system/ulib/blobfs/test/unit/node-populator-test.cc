@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/iterator/node-populator.h>
+#include "iterator/node-populator.h"
+
 #include <zxtest/zxtest.h>
 
 #include "utils.h"

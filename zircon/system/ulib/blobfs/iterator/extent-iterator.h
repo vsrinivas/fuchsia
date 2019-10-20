@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
-#define BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -32,4 +32,4 @@ class ExtentIterator {
 
 }  // namespace blobfs
 
-#endif  // BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_EXTENT_ITERATOR_H_
