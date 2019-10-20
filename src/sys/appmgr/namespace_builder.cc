@@ -13,11 +13,12 @@
 #include <unistd.h>
 #include <zircon/processargs.h>
 
+#include <src/lib/fxl/strings/concatenate.h>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/strings/concatenate.h"
 #include "src/sys/appmgr/allowlist.h"
 
 namespace component {
@@ -30,6 +31,18 @@ constexpr char kGlobalDataAllowlist[] =
 
 constexpr char kDeprecatedShellAllowlist[] =
     "/pkgfs/packages/config-data/0/data/appmgr/allowlist/deprecated_shell.txt";
+
+// Delete this when b/140175266 is fixed
+constexpr char kOpalTest[] = "opal_test.cmx";
+
+bool is_allowed_to_use_deprecated_shell(std::string ns_id) {
+  Allowlist deprecated_shell_allowlist(kDeprecatedShellAllowlist);
+  if (deprecated_shell_allowlist.IsAllowed(ns_id)) {
+    return true;
+  }
+  // Delete this when b/140175266 is fixed
+  return ns_id.compare(ns_id.size() - sizeof(kOpalTest), sizeof(kOpalTest), kOpalTest) == 0;
+}
 
 NamespaceBuilder::~NamespaceBuilder() = default;
 
@@ -141,8 +154,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
     } else if (feature == "root-ssl-certificates") {
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
     } else if (feature == "deprecated-shell") {
-      Allowlist deprecated_shell_allowlist(kDeprecatedShellAllowlist);
-      if (!deprecated_shell_allowlist.IsAllowed(ns_id)) {
+      if (!is_allowed_to_use_deprecated_shell(ns_id)) {
         FXL_LOG(WARNING) << "Component " << ns_id << " is not allowed to use deprecated-shell. "
                          << "This will be blocked in the near future. "
                          << "go/fx-hermetic-sandboxes";
