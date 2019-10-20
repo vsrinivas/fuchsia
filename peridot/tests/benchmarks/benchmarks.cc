@@ -33,7 +33,7 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   if (perfcompare_mode) {
     // Reduce the number of iterations of each perf test within each
     // process given that we are launching each process multiple times.
-    std::vector<std::string> extra_args = {"--runs", "100"};
+    std::vector<std::string> extra_args = {"--quiet", "--runs", "100"};
 
     for (int process = 0; process < 6; ++process) {
       // Performance tests implemented in the Zircon repo.
@@ -48,14 +48,17 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
           "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks", extra_args);
     }
   } else {
+    std::vector<std::string> extra_args = {"--quiet"};
+
     // Performance tests implemented in the Zircon repo.
     benchmarks_runner->AddLibPerfTestBenchmark(
-        "zircon.perf_test", "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test");
+        "zircon.perf_test", "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test", extra_args);
 
     // Performance tests implemented in the Garnet repo (the name
     // "zircon_benchmarks" is now misleading).
     benchmarks_runner->AddLibPerfTestBenchmark(
-        "zircon_benchmarks", "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
+        "zircon_benchmarks", "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
+        extra_args);
   }
 
   // Run "local" Ledger benchmarks.  These don't need external services to
