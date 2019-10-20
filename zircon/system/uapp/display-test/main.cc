@@ -570,7 +570,6 @@ int main(int argc, const char* argv[]) {
   }
 
   printf("Done rendering\n");
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(500)));
 
   zx_handle_close(dc_handle);
   zx_handle_close(device_handle);

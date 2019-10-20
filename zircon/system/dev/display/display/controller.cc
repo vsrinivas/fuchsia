@@ -438,8 +438,14 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   if (info->pending_layer_change) {
     bool done;
     if (handle_count != info->vsync_layer_count) {
-      // There's an unexpected number of layers, so wait until the next vsync.
-      done = false;
+      if (handles != nullptr && handle_count == 0) {
+        // Buggy display driver
+        zxlogf(TRACE, "Buggy display driver sent handles array with 0 count\n");
+        done = true;
+      } else {
+        // There's an unexpected number of layers, so wait until the next vsync.
+        done = false;
+      }
     } else if (list_is_empty(&info->images)) {
       // If the images list is empty, then we can't have any pending layers and
       // the change is done when there are no handles being displayed.
@@ -511,33 +517,35 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     }
   }
 
-  // Drop the vsync event if we're in the middle of switching clients, since we don't want to
-  // send garbage image ids. Switching clients is rare enough that any minor timing issues that
-  // this could cause aren't worth worrying about.
-  if (!info->switching_client) {
-    uint64_t images[handle_count];
-    image_node_t* cur;
-    list_for_every_entry (&info->images, cur, image_node_t, link) {
-      for (unsigned i = 0; i < handle_count; i++) {
-        if (handles[i] == cur->self->info().handle) {
-          // End of the flow for the image going to be presented.
-          //
-          // NOTE: If changing this flow name or ID, please also do so in the
-          // corresponding FLOW_BEGIN in display_swapchain.cc.
-          TRACE_FLOW_END("gfx", "present_image", cur->self->id);
-          images[i] = cur->self->id;
-          break;
-        }
+  uint64_t images[handle_count];
+  image_node_t* cur;
+  list_for_every_entry (&info->images, cur, image_node_t, link) {
+    for (unsigned i = 0; i < handle_count; i++) {
+      if (handles[i] == cur->self->info().handle) {
+        // End of the flow for the image going to be presented.
+        //
+        // NOTE: If changing this flow name or ID, please also do so in the
+        // corresponding FLOW_BEGIN in display_swapchain.cc.
+        TRACE_FLOW_END("gfx", "present_image", cur->self->id);
+        images[i] = cur->self->id;
+        break;
       }
     }
+  }
 
-    if (vc_applied_ && vc_client_) {
-      vc_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
-    } else if (!vc_applied_ && primary_client_) {
+  if (vc_applied_ && vc_client_) {
+    vc_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
+  } else if (!vc_applied_ && primary_client_) {
+    // A previous client applied a config and then disconnected before the vsync. Don't send garbage
+    // image IDs to the new primary client.
+    if (primary_client_->id() != applied_client_id_) {
+      zxlogf(TRACE,
+             "Dropping vsync. This was meant for client[%d], "
+             "but client[%d] is currently active.\n",
+             applied_client_id_, primary_client_->id());
+    } else {
       primary_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
     }
-  } else {
-    zxlogf(TRACE, "Dropping vsync\n");
   }
 }
 
@@ -562,7 +570,7 @@ zx_status_t Controller::DisplayControllerInterfaceGetAudioFormat(
 }
 
 void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc,
-                             uint32_t client_stamp) {
+                             uint32_t client_stamp, uint32_t client_id) {
   const display_config_t* display_configs[count];
   uint32_t display_count = 0;
   {
@@ -606,7 +614,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
         continue;
       }
 
-      display->switching_client = is_vc != vc_applied_;
+      display->switching_client = (is_vc != vc_applied_ || client_id != applied_client_id_);
       display->pending_layer_change = config->apply_layer_change() || display->switching_client;
       display->vsync_layer_count = config->vsync_layer_count();
       display->delayed_apply = false;
@@ -647,6 +655,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
 
     vc_applied_ = is_vc;
     applied_stamp_ = client_stamp;
+    applied_client_id_ = client_id;
   }
 
   dc_.ApplyConfiguration(display_configs, display_count);
@@ -681,12 +690,15 @@ void Controller::HandleClientOwnershipChanges() {
 }
 
 void Controller::OnClientDead(ClientProxy* client) {
+  zxlogf(TRACE, "Client %d dead\n", client->id());
   fbl::AutoLock lock(&mtx_);
   if (client == vc_client_) {
     vc_client_ = nullptr;
     vc_mode_ = fuchsia_hardware_display_VirtconMode_INACTIVE;
   } else if (client == primary_client_) {
     primary_client_ = nullptr;
+  } else {
+    ZX_DEBUG_ASSERT_MSG(false, "Dead client is neither vc nor primary\n");
   }
   HandleClientOwnershipChanges();
 }
@@ -770,7 +782,7 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc);
+  auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc, next_client_id_++);
   if (!ac.check()) {
     zxlogf(TRACE, "Failed to alloc client\n");
     return ZX_ERR_NO_MEMORY;
@@ -792,7 +804,7 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
 
   ClientProxy* client_ptr = client.release();
 
-  zxlogf(TRACE, "New client connected.\n");
+  zxlogf(TRACE, "New %s client [%d] connected.\n", is_vc ? "dc-vc" : "dc", client_ptr->id());
 
   if (is_vc) {
     vc_client_ = client_ptr;

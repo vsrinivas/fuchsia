@@ -7,6 +7,14 @@
 
 #if __cplusplus
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/edid/edid.h>
+#include <lib/fidl-utils/bind.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -16,13 +24,6 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/edid/edid.h>
-#include <lib/fidl-utils/bind.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/vmo.h>
 
 #include "id-map.h"
 #include "image.h"
@@ -68,8 +69,8 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   bool switching_client = false;
 };
 
-using ControllerParent = ddk::Device<Controller, ddk::UnbindableNew, ddk::Openable,
-                                     ddk::Messageable>;
+using ControllerParent =
+    ddk::Device<Controller, ddk::UnbindableNew, ddk::Openable, ddk::Messageable>;
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER> {
@@ -100,7 +101,8 @@ class Controller : public ControllerParent,
   void SetVcMode(uint8_t mode);
   void ShowActiveDisplay();
 
-  void ApplyConfig(DisplayConfig* configs[], int32_t count, bool vc_client, uint32_t apply_stamp);
+  void ApplyConfig(DisplayConfig* configs[], int32_t count, bool vc_client, uint32_t apply_stamp,
+                   uint32_t client_id);
 
   void ReleaseImage(Image* image);
 
@@ -145,7 +147,9 @@ class Controller : public ControllerParent,
   DisplayInfo::Map displays_ __TA_GUARDED(mtx_);
   bool vc_applied_;
   uint32_t applied_stamp_ = UINT32_MAX;
+  uint32_t applied_client_id_ = UINT32_MAX;
 
+  uint32_t next_client_id_ __TA_GUARDED(mtx_) = 1;
   ClientProxy* vc_client_ __TA_GUARDED(mtx_) = nullptr;
   bool vc_ready_ __TA_GUARDED(mtx_);
   ClientProxy* primary_client_ __TA_GUARDED(mtx_) = nullptr;

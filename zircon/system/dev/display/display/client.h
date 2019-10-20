@@ -126,10 +126,11 @@ class DisplayConfig : public IdMappable<fbl::unique_ptr<DisplayConfig>> {
 // on the controller's looper, so no synchronization is necessary.
 class Client : private FenceCallback {
  public:
-  Client(Controller* controller, ClientProxy* proxy, bool is_vc);
+  Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id);
 
   // This is used for testing
-  Client(Controller* controller, ClientProxy* proxy, bool is_vc, zx_handle_t server_handle);
+  Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id,
+         zx_handle_t server_handle);
 
   ~Client();
   zx_status_t Init(zx_handle_t server_handle);
@@ -148,6 +149,7 @@ class Client : private FenceCallback {
   void TearDownTest();
 
   bool IsValid() { return server_handle_ != ZX_HANDLE_INVALID; }
+  uint32_t id() const { return id_; }
 
  private:
   void HandleImportVmoImage(const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
@@ -227,6 +229,7 @@ class Client : private FenceCallback {
   ClientProxy* proxy_;
   bool is_vc_;
   uint64_t console_fb_display_id_ = -1;
+  const uint32_t id_;
 
   zx_handle_t server_handle_;
   uint64_t next_image_id_ = 1;  // Only INVALID_ID == 0 is invalid
@@ -276,10 +279,11 @@ class Client : private FenceCallback {
 using ClientParent = ddk::Device<ClientProxy, ddk::Closable>;
 class ClientProxy : public ClientParent {
  public:
-  ClientProxy(Controller* controller, bool is_vc);
+  // "client_id" is assigned by the Controller to distinguish clients.
+  ClientProxy(Controller* controller, bool is_vc, uint32_t client_id);
 
   // This is used for testing
-  ClientProxy(Controller* controller, bool is_vc, zx::channel server_channel);
+  ClientProxy(Controller* controller, bool is_vc, uint32_t client_id, zx::channel server_channel);
 
   ~ClientProxy();
   zx_status_t Init(zx::channel server_channel);
@@ -303,6 +307,8 @@ class ClientProxy : public ClientParent {
   }
   void OnClientDead();
   void Close();
+
+  uint32_t id() const { return handler_.id(); }
 
   // This is used for testing
   void CloseTest();

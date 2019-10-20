@@ -1449,7 +1449,7 @@ void Client::ApplyConfig() {
     for (auto& c : configs_) {
       dc_configs[dc_idx++] = &c;
     }
-    controller_->ApplyConfig(dc_configs, dc_idx, is_vc_, client_apply_count_);
+    controller_->ApplyConfig(dc_configs, dc_idx, is_vc_, client_apply_count_, id_);
   }
 }
 
@@ -1805,11 +1805,16 @@ zx_status_t Client::Init(zx_handle_t server_handle) {
   return ZX_OK;
 }
 
-Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc)
-    : controller_(controller), proxy_(proxy), is_vc_(is_vc) {}
+Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t client_id)
+    : controller_(controller), proxy_(proxy), is_vc_(is_vc), id_(client_id) {}
 
-Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, zx_handle_t server_handle)
-    : controller_(controller), proxy_(proxy), is_vc_(is_vc), server_handle_(server_handle) {}
+Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t client_id,
+               zx_handle_t server_handle)
+    : controller_(controller),
+      proxy_(proxy),
+      is_vc_(is_vc),
+      id_(client_id),
+      server_handle_(server_handle) {}
 
 Client::~Client() { ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID); }
 
@@ -1954,18 +1959,19 @@ zx_status_t ClientProxy::Init(zx::channel server_channel) {
   return handler_.Init(server_channel_.get());
 }
 
-ClientProxy::ClientProxy(Controller* controller, bool is_vc)
+ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id)
     : ClientParent(controller->zxdev()),
       controller_(controller),
       is_vc_(is_vc),
-      handler_(controller_, this, is_vc_) {}
+      handler_(controller_, this, is_vc_, client_id) {}
 
-ClientProxy::ClientProxy(Controller* controller, bool is_vc, zx::channel server_channel)
+ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
+                         zx::channel server_channel)
     : ClientParent(nullptr),
       controller_(controller),
       is_vc_(is_vc),
       server_channel_(std::move(server_channel)),
-      handler_(controller_, this, is_vc_, server_channel_.get()) {}
+      handler_(controller_, this, is_vc_, server_channel_.get(), client_id) {}
 
 ClientProxy::~ClientProxy() {}
 
