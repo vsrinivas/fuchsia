@@ -85,17 +85,28 @@ static_assert(offsetof(fdio_spawn_action_t, name) == 8,
 static_assert(offsetof(fdio_spawn_action_t, name.data) == 8,
               "fdio_spawn_action_t must have a stable ABI");
 
-static zx_status_t load_path(const char* path, zx::vmo* out_vmo) {
+static void report_error(char* err_msg, const char* format, ...) {
+  if (!err_msg)
+    return;
+  va_list args;
+  va_start(args, format);
+  vsnprintf(err_msg, FDIO_SPAWN_ERR_MSG_MAX_LENGTH, format, args);
+  va_end(args);
+}
+
+static zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) {
   fbl::unique_fd fd;
   zx_status_t status = fdio_open_fd(path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                                     fd.reset_and_get_address());
   if (status != ZX_OK) {
+    report_error(err_msg, "Could not open file");
     return status;
   }
 
   zx::vmo vmo;
   status = fdio_get_vmo_exec(fd.get(), vmo.reset_and_get_address());
   if (status != ZX_OK) {
+    report_error(err_msg, "Could not clone VMO for file");
     return status;
   }
 
@@ -108,6 +119,7 @@ static zx_status_t load_path(const char* path, zx::vmo* out_vmo) {
 
   status = vmo.set_property(ZX_PROP_NAME, path, strlen(path));
   if (status != ZX_OK) {
+    report_error(err_msg, "Could not associate pathname with VMO");
     return status;
   }
 
@@ -124,15 +136,6 @@ static void measure_cstring_array(const char* const* array, size_t* count_out, s
   }
   *count_out = i;
   *len_out = len;
-}
-
-static void report_error(char* err_msg, const char* format, ...) {
-  if (!err_msg)
-    return;
-  va_list args;
-  va_start(args, format);
-  vsnprintf(err_msg, FDIO_SPAWN_ERR_MSG_MAX_LENGTH, format, args);
-  va_end(args);
 }
 
 // resolve_name makes a call to the fuchsia.process.Resolver service and may return a vmo and
@@ -309,9 +312,10 @@ static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
       extra_args->emplace_front(interp_start);
 
       // Load the specified interpreter from the current namespace.
-      status = load_path(interp_start, executable);
+      char path_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+      status = load_path(interp_start, executable, path_msg);
       if (status != ZX_OK) {
-        report_error(err_msg, "failed to load script interpreter '%s'", interp_start);
+        report_error(err_msg, "failed to load script interpreter '%s': %s", interp_start, path_msg);
         return status;
       }
     }
@@ -564,10 +568,11 @@ zx_status_t fdio_spawn_etc(zx_handle_t job, uint32_t flags, const char* path,
                            zx_handle_t* process_out, char* err_msg) {
   zx::vmo executable;
 
-  zx_status_t status = load_path(path, &executable);
+  char path_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  zx_status_t status = load_path(path, &executable, path_msg);
 
   if (status != ZX_OK) {
-    report_error(err_msg, "failed to load executable from %s", path);
+    report_error(err_msg, "failed to load executable from %s: %s", path, path_msg);
     // Set |err_msg| to NULL to prevent |fdio_spawn_vmo| from generating
     // a less useful error message.
     err_msg = NULL;
