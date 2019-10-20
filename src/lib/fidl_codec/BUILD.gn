@@ -134,6 +134,7 @@ action("list_for_test") {
     "//sdk/fidl/fuchsia.factory",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.fonts",
+    "//sdk/fidl/fuchsia.hardware.goldfish",
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.math",
@@ -164,7 +165,6 @@ action("list_for_test") {
     "//sdk/fidl/fuchsia.web",
     "//sdk/fidl/fuchsia.wlan.service",
     "//zircon/system/fidl/fuchsia-cobalt",
-    "//zircon/system/fidl/fuchsia-hardware-goldfish",
     "//zircon/system/fidl/fuchsia-logger",
     "//zircon/system/fidl/fuchsia-mem",
     "//zircon/system/fidl/fuchsia-posix-socket",
@@ -203,6 +203,7 @@ action("list_for_test") {
         "/fidling/gen/sdk/fidl/fuchsia.feedback/fuchsia.feedback.fidl.json",
     rebase_path(root_build_dir) +
         "/fidling/gen/sdk/fidl/fuchsia.fonts/fuchsia.fonts.fidl.json",
+    rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.hardware.goldfish/fuchsia.hardware.goldfish.fidl.json",
     rebase_path(root_build_dir) +
         "/fidling/gen/sdk/fidl/fuchsia.hwinfo/fuchsia.hwinfo.fidl.json",
     rebase_path(root_build_dir) +
@@ -254,7 +255,6 @@ action("list_for_test") {
         "/fidling/gen/sdk/fidl/fuchsia.web/fuchsia.web.fidl.json",
     rebase_path(root_build_dir) + "/fidling/gen/sdk/fidl/fuchsia.wlan.service/fuchsia.wlan.service.fidl.json",
     rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-cobalt/fuchsia-cobalt.fidl.json",
-    rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-hardware-goldfish/fuchsia-hardware-goldfish.fidl.json",
     rebase_path(root_build_dir) + "/fidling/gen/zircon/system/fidl/fuchsia-logger/fuchsia-logger.fidl.json",
     rebase_path(root_build_dir) +
         "/fidling/gen/zircon/system/fidl/fuchsia-mem/fuchsia-mem.fidl.json",

@@ -1,0 +1,15 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD_style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.hardware.goldfish") {
+  sdk_category = "partner"
+  api = "fuchsia.hardware.goldfish.api"
+  sources = [
+    "goldfish_address_space.fidl",
+    "goldfish_control.fidl",
+    "goldfish_pipe.fidl",
+  ]
+}
