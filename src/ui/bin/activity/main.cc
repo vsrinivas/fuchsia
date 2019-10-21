@@ -22,6 +22,10 @@ int main(void) {
   auto driver = std::make_unique<activity::StateMachineDriver>(loop.dispatcher());
   activity::ActivityApp app(std::move(driver), loop.dispatcher());
 
+  startup_context->outgoing()->AddPublicService<fuchsia::ui::activity::Control>(
+      [&app](fidl::InterfaceRequest<fuchsia::ui::activity::Control> request) {
+        app.AddControlBinding(std::move(request));
+      });
   startup_context->outgoing()->AddPublicService<fuchsia::ui::activity::Tracker>(
       [&app](fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request) {
         app.AddTrackerBinding(std::move(request));

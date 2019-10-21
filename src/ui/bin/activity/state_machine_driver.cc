@@ -23,6 +23,10 @@
 
 namespace activity {
 
+fuchsia::ui::activity::State StateMachineDriver::GetState() const {
+  return override_state_ ? *override_state_ : state_machine_.state();
+}
+
 zx_status_t StateMachineDriver::RegisterObserver(ObserverId id, StateChangedCallback callback) {
   observers_.emplace(id, std::move(callback));
   return ZX_OK;
@@ -85,16 +89,29 @@ zx_status_t StateMachineDriver::EndOngoingActivity(OngoingActivityId id, zx::tim
       time);
 }
 
+void StateMachineDriver::SetOverrideState(std::optional<fuchsia::ui::activity::State> state) {
+  bool should_notify =
+      (state.has_value() != override_state_.has_value())
+      || (override_state_ && (state != override_state_));
+  override_state_ = state;
+  if (should_notify) {
+    FXL_LOG(INFO) << "activity-service: entering state '" << GetState() << "'";
+    NotifyObservers(GetState(), async::Now(dispatcher_));
+  }
+}
+
 void StateMachineDriver::ProcessEvent(const Event& event, zx::time time) {
   auto state = state_machine_.state();
   state_machine_.ReceiveEvent(event);
   auto new_state = state_machine_.state();
 
   if (state != new_state) {
-    FXL_LOG(INFO) << "activity-service: '" << state << "' -> '" << new_state << "' due to '"
-                  << event << "'";
     last_transition_time_ = time;
-    NotifyObservers(new_state, time);
+    if (!override_state_) {
+      FXL_LOG(INFO) << "activity-service: '" << state << "' -> '" << new_state << "' due to '"
+                    << event << "'";
+      NotifyObservers(new_state, time);
+    }
   }
 
   timeout_task_.Cancel();

@@ -76,32 +76,32 @@ TEST_F(ActivityAppTest, Tracker_SendActivity) {
   fuchsia::ui::activity::TrackerPtr tracker;
   app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
 
-  ASSERT_EQ(driver_->state(), fuchsia::ui::activity::State::IDLE);
+  ASSERT_EQ(driver_->GetState(), fuchsia::ui::activity::State::IDLE);
   tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get());
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(ActivityAppTest, Tracker_OngoingActivity) {
   fuchsia::ui::activity::TrackerPtr tracker;
   app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
-  ASSERT_EQ(driver_->state(), fuchsia::ui::activity::State::IDLE);
+  ASSERT_EQ(driver_->GetState(), fuchsia::ui::activity::State::IDLE);
   OngoingActivityId id;
 
   tracker->StartOngoingActivity(OngoingActivity(), Now().get(),
                                 [&id](OngoingActivityId returned_id) { id = returned_id; });
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
   // No state change expected after timeout since there is an ongoing activity
-  EXPECT_EQ(driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   tracker->EndOngoingActivity(id, Now().get());
   RunLoopFor(*timeout);
-  EXPECT_EQ(driver_->state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(driver_->GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 TEST_F(ActivityAppTest, Provider_ConnectDisconnect) {
@@ -193,6 +193,84 @@ TEST_F(ActivityAppTest, Provider_MultipleProviders_AllReceiveState) {
   EXPECT_EQ(listener2.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
   EXPECT_EQ(listener2.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
   EXPECT_EQ(listener2.StateChanges()[2].state, fuchsia::ui::activity::State::IDLE);
+}
+
+TEST_F(ActivityAppTest, Control_OverrideState) {
+  fuchsia::ui::activity::ProviderPtr provider1, provider2;
+  app_->AddProviderBinding(provider1.NewRequest(dispatcher()));
+  app_->AddProviderBinding(provider2.NewRequest(dispatcher()));
+  fuchsia::ui::activity::ControlPtr control;
+  app_->AddControlBinding(control.NewRequest(dispatcher()));
+
+  testing::FakeListener listener1, listener2;
+  provider1->WatchState(listener1.NewHandle(dispatcher()));
+  provider2->WatchState(listener2.NewHandle(dispatcher()));
+  RunLoopUntilIdle();
+
+  control->SetState(fuchsia::ui::activity::State::ACTIVE);
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(listener1.StateChanges().size(), 2u);
+  EXPECT_EQ(listener1.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(listener1.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
+
+  ASSERT_EQ(listener2.StateChanges().size(), 2u);
+  EXPECT_EQ(listener2.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(listener2.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
+
+  auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
+
+  // Timeouts do not trigger notification since the override state is set
+  EXPECT_EQ(listener1.StateChanges().size(), 2u);
+  EXPECT_EQ(listener2.StateChanges().size(), 2u);
+
+  control->SetState(fuchsia::ui::activity::State::IDLE);
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(listener1.StateChanges().size(), 3u);
+  EXPECT_EQ(listener1.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(listener1.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(listener1.StateChanges()[2].state, fuchsia::ui::activity::State::IDLE);
+
+  ASSERT_EQ(listener2.StateChanges().size(), 3u);
+  EXPECT_EQ(listener2.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(listener2.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(listener2.StateChanges()[2].state, fuchsia::ui::activity::State::IDLE);
+}
+
+TEST_F(ActivityAppTest, Control_OverrideState_TrackerInputsNotSentToListeners) {
+  fuchsia::ui::activity::ProviderPtr provider;
+  app_->AddProviderBinding(provider.NewRequest(dispatcher()));
+  fuchsia::ui::activity::ControlPtr control;
+  app_->AddControlBinding(control.NewRequest(dispatcher()));
+  fuchsia::ui::activity::TrackerPtr tracker;
+  app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
+
+  testing::FakeListener listener;
+  provider->WatchState(listener.NewHandle(dispatcher()));
+  RunLoopUntilIdle();
+
+  control->SetState(fuchsia::ui::activity::State::ACTIVE);
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(listener.StateChanges().size(), 2u);
+  EXPECT_EQ(listener.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(listener.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
+
+  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get());
+  RunLoopUntilIdle();
+
+  // No additional transitions
+  EXPECT_EQ(listener.StateChanges().size(), 2u);
+
+  auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
+
+  // No additional transitions
+  EXPECT_EQ(listener.StateChanges().size(), 2u);
 }
 
 }  // namespace

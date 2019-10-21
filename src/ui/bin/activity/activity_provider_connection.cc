@@ -24,7 +24,6 @@ ActivityProviderConnection::ActivityProviderConnection(
 ActivityProviderConnection::~ActivityProviderConnection() { Stop(); }
 
 zx_status_t ActivityProviderConnection::Stop() {
-  std::lock_guard<std::mutex> lock(mutex_);
   if (observer_id_) {
     FXL_LOG(INFO) << "activity-service: Listener " << *observer_id_ << " stopping";
     state_machine_driver_->UnregisterObserver(*observer_id_);
@@ -37,7 +36,6 @@ zx_status_t ActivityProviderConnection::Stop() {
 
 void ActivityProviderConnection::WatchState(
     fidl::InterfaceHandle<fuchsia::ui::activity::Listener> listener) {
-  std::lock_guard<std::mutex> lock(mutex_);
   FXL_LOG(INFO) << "activity-service: Registering listener";
 
   // WatchState should only be called once per connection.
@@ -63,14 +61,12 @@ void ActivityProviderConnection::WatchState(
   listener_.set_error_handler([this](zx_status_t status) { Stop(); });
 
   // Publish the current state immediately
-  state_changes_.emplace(state_machine_driver_->state(), zx::clock::get_monotonic());
-  PublishStateLocked();
+  state_changes_.emplace(state_machine_driver_->GetState(), zx::clock::get_monotonic());
+  PublishState();
 }
 
 void ActivityProviderConnection::OnStateChanged(fuchsia::ui::activity::State state,
                                                 zx::time transition_time) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  FXL_LOG(INFO) << "activity-service: OnStateChanged";
   if (!state_changes_.empty() && state_changes_.front().time > transition_time) {
     // Only enqueue state changes in monotonically increasing time
     return;
@@ -86,15 +82,14 @@ void ActivityProviderConnection::OnStateChanged(fuchsia::ui::activity::State sta
 }
 
 void ActivityProviderConnection::PublishStateIfAvailable() {
-  std::lock_guard<std::mutex> lock(mutex_);
   if (!state_changes_.empty()) {
-    PublishStateLocked();
+    PublishState();
   } else {
     listener_ready_ = true;
   }
 }
 
-void ActivityProviderConnection::PublishStateLocked() {
+void ActivityProviderConnection::PublishState() {
   ZX_DEBUG_ASSERT(!state_changes_.empty());
   listener_ready_ = false;
   auto state_change = state_changes_.front();

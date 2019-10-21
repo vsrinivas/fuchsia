@@ -52,7 +52,7 @@ class ActivityTrackerConnectionTest : public ::gtest::TestLoopFixture {
 TEST_F(ActivityTrackerConnectionTest, ReportActivity) {
   client_->ReportDiscreteActivity(DiscreteActivity(), Now().get());
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(ActivityTrackerConnectionTest, ReportActivity_StaleEventIgnored) {
@@ -70,7 +70,7 @@ TEST_F(ActivityTrackerConnectionTest, ReportActivity_StaleEventIgnored) {
   client_->ReportDiscreteActivity(DiscreteActivity(), old_time.get());
   RunLoopUntilIdle();
 
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::IDLE);
   // Make sure no channel errors were received
   EXPECT_FALSE(epitaph);
 }
@@ -95,22 +95,22 @@ TEST_F(ActivityTrackerConnectionTest, StartStopOngoingActivity) {
   client_->StartOngoingActivity(OngoingActivity(), Now().get(),
                                 [&activity_id](OngoingActivityId id) { activity_id = id; });
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
   ASSERT_TRUE(activity_id);
 
   // Timeouts should not be processed
   auto timeout = driver_.state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   client_->EndOngoingActivity(*activity_id, Now().get());
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   // The activity has ended so timeouts should now be respected
   RunLoopFor(*timeout);
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_StaleEventsIgnored) {
@@ -130,7 +130,7 @@ TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_StaleEventsIgnored) {
       [](__UNUSED OngoingActivityId id) { ASSERT_FALSE("Callback was unexpectedly invoked"); });
   RunLoopUntilIdle();
 
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::IDLE);
   // Make sure no channel errors were received
   EXPECT_FALSE(epitaph);
 }
@@ -140,7 +140,7 @@ TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_OutOfOrder) {
   // Send a discrete activity to bring the state machine to ACTIVE
   client_->ReportDiscreteActivity(DiscreteActivity(), Now().get());
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   std::optional<zx_status_t> epitaph;
   client_.set_error_handler([&epitaph](zx_status_t status) { epitaph = status; });
@@ -150,7 +150,7 @@ TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_OutOfOrder) {
       OngoingActivity(), old_time.get(),
       [](__UNUSED OngoingActivityId id) { ASSERT_FALSE("Callback was unexpectedly invoked"); });
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
   ASSERT_TRUE(epitaph);
   EXPECT_EQ(*epitaph, ZX_ERR_OUT_OF_RANGE);
 
@@ -159,7 +159,7 @@ TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_OutOfOrder) {
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
 
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 TEST_F(ActivityTrackerConnectionTest, CleansUpOngoingActivitiesOnStop) {
@@ -168,7 +168,7 @@ TEST_F(ActivityTrackerConnectionTest, CleansUpOngoingActivitiesOnStop) {
       OngoingActivity(), Now().get(),
       [&callback_invoked](__UNUSED OngoingActivityId id) { callback_invoked = true; });
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
   EXPECT_TRUE(callback_invoked);
 
   conn_->Stop();
@@ -179,7 +179,7 @@ TEST_F(ActivityTrackerConnectionTest, CleansUpOngoingActivitiesOnStop) {
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
 
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 TEST_F(ActivityTrackerConnectionTest, CleansUpOngoingActivitiesOnDestruction) {
@@ -188,7 +188,7 @@ TEST_F(ActivityTrackerConnectionTest, CleansUpOngoingActivitiesOnDestruction) {
       OngoingActivity(), Now().get(),
       [&callback_invoked](__UNUSED OngoingActivityId id) { callback_invoked = true; });
   RunLoopUntilIdle();
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
   EXPECT_TRUE(callback_invoked);
 
   conn_.reset();
@@ -199,7 +199,7 @@ TEST_F(ActivityTrackerConnectionTest, CleansUpOngoingActivitiesOnDestruction) {
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
 
-  EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 }  // namespace activity

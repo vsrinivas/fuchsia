@@ -39,7 +39,7 @@ class StateMachineDriverTest : public ::gtest::TestLoopFixture {
 };
 
 TEST_F(StateMachineDriverTest, StartsInIdleState) {
-  EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 TEST_F(StateMachineDriverTest, IgnoresEventsBeforeDriverInitTime) {
@@ -82,82 +82,82 @@ TEST_F(StateMachineDriverTest, AllowsOldEventsIfAfterLastStateChange) {
 TEST_F(StateMachineDriverTest, BecomesActiveOnDiscreteActivity) {
   ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
   RunLoopUntilIdle();
-  EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(StateMachineDriverTest, BecomesActiveOnActivityStart) {
   ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, Now()), ZX_OK);
   RunLoopUntilIdle();
-  EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(StateMachineDriverTest, BecomesActiveOnSpuriousActivityEnd) {
   ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now()), ZX_OK);
   RunLoopUntilIdle();
-  EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(StateMachineDriverTest, BecomesIdleOnTimeout) {
   ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
   RunLoopUntilIdle();
-  ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   auto timeout = ActivityStateMachine::TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
-  EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 TEST_F(StateMachineDriverTest, RepeatedActivitiesResetTimer) {
   ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
   RunLoopUntilIdle();
-  ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   // Run until the timer is very close to expiring, but hasn't expired yet
   auto timeout = ActivityStateMachine::TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   ASSERT_GE(*timeout, zx::duration(zx::msec(1)));
   RunLoopFor((*timeout) - zx::duration(zx::msec(1)));
-  ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
   RunLoopUntilIdle();
-  ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   // Run the timer close to completion again. The timer should have reset, so we should not
   // trigger the timer.
   RunLoopFor((*timeout) - zx::duration(zx::msec(1)));
-  ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(StateMachineDriverTest, IgnoresTimeoutsIfActivityStarted) {
   ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, Now()), ZX_OK);
   RunLoopUntilIdle();
-  ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   auto timeout = ActivityStateMachine::TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
-  EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   // Ending the activity allows the next timeout to proceed
   ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now()), ZX_OK);
   RunLoopUntilIdle();
-  ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   RunLoopFor(*timeout);
-  EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 TEST_F(StateMachineDriverTest, HandlesTimeoutsIfActivitySpuriouslyEnded) {
   ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now()), ZX_OK);
   RunLoopUntilIdle();
-  ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   auto timeout = ActivityStateMachine::TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
-  EXPECT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
 TEST_F(StateMachineDriverTest, NotifiesSingleObserverOnStateChanges) {
@@ -231,7 +231,7 @@ TEST_F(StateMachineDriverTest, TimeoutsIgnoredIfObjectDestroyedBeforeExpiry) {
     StateMachineDriver driver(dispatcher());
     ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
     RunLoopUntilIdle();
-    ASSERT_EQ(state_machine_driver_->state(), fuchsia::ui::activity::State::ACTIVE);
+    ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
     EXPECT_EQ(driver.RegisterObserver(1u, std::move(callback)), ZX_OK);
   }
@@ -242,6 +242,104 @@ TEST_F(StateMachineDriverTest, TimeoutsIgnoredIfObjectDestroyedBeforeExpiry) {
   // The driver was destroyed, so the callback should not have been invoked across a state change
   // because the reference in the async task to the driver ought to have been invalidated.
   EXPECT_EQ(calls, 0);
+}
+
+TEST_F(StateMachineDriverTest, StateOverride_NotifiesObserversWhenSet) {
+  int calls = 0;
+  fuchsia::ui::activity::State observed_state = fuchsia::ui::activity::State::UNKNOWN;
+  StateChangedCallback callback{
+      [&calls, &observed_state](fuchsia::ui::activity::State state, __UNUSED zx::time time) {
+        calls++;
+        observed_state = state;
+      }};
+  EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback)), ZX_OK);
+
+  state_machine_driver_->SetOverrideState(fuchsia::ui::activity::State::ACTIVE);
+  RunLoopUntilIdle();
+  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(observed_state, fuchsia::ui::activity::State::ACTIVE);
+}
+
+TEST_F(StateMachineDriverTest, StateOverride_NotifiesObserversWhenChanged) {
+  int calls = 0;
+  fuchsia::ui::activity::State observed_state = fuchsia::ui::activity::State::UNKNOWN;
+  StateChangedCallback callback{
+      [&calls, &observed_state](fuchsia::ui::activity::State state, __UNUSED zx::time time) {
+        calls++;
+        observed_state = state;
+      }};
+  EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback)), ZX_OK);
+
+  state_machine_driver_->SetOverrideState(fuchsia::ui::activity::State::ACTIVE);
+  RunLoopUntilIdle();
+  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(observed_state, fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
+
+  state_machine_driver_->SetOverrideState(fuchsia::ui::activity::State::IDLE);
+  RunLoopUntilIdle();
+  EXPECT_EQ(calls, 2);
+  EXPECT_EQ(observed_state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
+}
+
+TEST_F(StateMachineDriverTest, StateOverride_NotifiesObserverOfRealStateWhenUnset) {
+  int calls = 0;
+  fuchsia::ui::activity::State observed_state = fuchsia::ui::activity::State::UNKNOWN;
+  StateChangedCallback callback{
+      [&calls, &observed_state](fuchsia::ui::activity::State state, __UNUSED zx::time time) {
+        calls++;
+        observed_state = state;
+      }};
+  EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback)), ZX_OK);
+
+  state_machine_driver_->SetOverrideState(fuchsia::ui::activity::State::ACTIVE);
+  RunLoopUntilIdle();
+  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(observed_state, fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
+
+  state_machine_driver_->SetOverrideState(std::nullopt);
+  RunLoopUntilIdle();
+  EXPECT_EQ(calls, 2);
+  EXPECT_EQ(observed_state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
+}
+
+
+TEST_F(StateMachineDriverTest, StateOverride_PreventsNotificationsForReportedActivities) {
+  int calls = 0;
+  fuchsia::ui::activity::State observed_state = fuchsia::ui::activity::State::UNKNOWN;
+  StateChangedCallback callback{
+      [&calls, &observed_state](fuchsia::ui::activity::State state, __UNUSED zx::time time) {
+        calls++;
+        observed_state = state;
+      }};
+  EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback)), ZX_OK);
+
+  state_machine_driver_->SetOverrideState(fuchsia::ui::activity::State::IDLE);
+  RunLoopUntilIdle();
+  ASSERT_EQ(calls, 1);
+  ASSERT_EQ(observed_state, fuchsia::ui::activity::State::IDLE);
+  ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
+
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  RunLoopUntilIdle();
+  // Still IDLE, and no additional calls to the observer
+  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(observed_state, fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
+  // The underlying state machine's state is ACTIVE
+  EXPECT_EQ(state_machine_driver_->state_machine().state(), fuchsia::ui::activity::State::ACTIVE);
+
+  auto timeout = ActivityStateMachine::TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
+  ASSERT_NE(timeout, std::nullopt);
+  RunLoopFor(*timeout);
+  // No additional calls to the observer on timeout
+  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(observed_state, fuchsia::ui::activity::State::IDLE);
+  // The underlying state machine's state is IDLE
+  EXPECT_EQ(state_machine_driver_->state_machine().state(), fuchsia::ui::activity::State::IDLE);
 }
 
 }  // namespace activity

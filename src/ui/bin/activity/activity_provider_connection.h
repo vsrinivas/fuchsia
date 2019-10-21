@@ -62,7 +62,7 @@ class ActivityProviderConnection : public fuchsia::ui::activity::Provider {
   //
   // Expected to be run within |dispatcher_|.
   void PublishStateIfAvailable();
-  void PublishStateLocked() __TA_REQUIRES(mutex_);
+  void PublishState();
 
   ObserverId GenerateObserverId();
 
@@ -78,9 +78,8 @@ class ActivityProviderConnection : public fuchsia::ui::activity::Provider {
 
   // FIFO of state changes which have been observed but have not yet been sent
   // to the Listener client.
-  std::queue<StateChange> state_changes_ __TA_GUARDED(mutex_);
-  bool listener_ready_ __TA_GUARDED(mutex_);
-  std::mutex mutex_;
+  std::queue<StateChange> state_changes_;
+  bool listener_ready_;
 
   async_dispatcher_t* dispatcher_;
   async::TaskClosureMethod<ActivityProviderConnection,

@@ -40,7 +40,8 @@ class StateMachineDriver {
         weak_factory_(this) {}
   ~StateMachineDriver() = default;
 
-  fuchsia::ui::activity::State state() const { return state_machine_.state(); };
+  fuchsia::ui::activity::State GetState() const;
+
   const ActivityStateMachine& state_machine() const { return state_machine_; };
 
   zx_status_t RegisterObserver(ObserverId id, StateChangedCallback callback);
@@ -57,6 +58,17 @@ class StateMachineDriver {
   zx_status_t StartOngoingActivity(OngoingActivityId id, zx::time time);
   zx_status_t EndOngoingActivity(OngoingActivityId id, zx::time time);
 
+  // Force the state machine into |state|.
+  //
+  // The state machine will continue to receive and process input, but observers will only be
+  // notified of |state| and any future states set through this method.
+  //
+  // Passing std::nullopt will disable the override, which has the following effects:
+  //  - Immediately notifies all listeners of the actual state of the state machine
+  //  - Returns the state machine to its original behavior, where observers are notified of
+  //    state transitions occuring due to received inputs.
+  void SetOverrideState(std::optional<fuchsia::ui::activity::State> state);
+
  private:
   void ProcessEvent(const Event& event, zx::time time);
   void ProcessActivityStart(OngoingActivityId id);
@@ -66,6 +78,10 @@ class StateMachineDriver {
   void HandleTimeout();
 
   void NotifyObservers(fuchsia::ui::activity::State state, zx::time time) const;
+
+  // An optional state override. When set, the state from state_machine_ continues to be updated,
+  // but changes to that state are not sent to observers. See SetOverrideState() for details.
+  std::optional<fuchsia::ui::activity::State> override_state_;
 
   // Underlying state machine.
   ActivityStateMachine state_machine_;

@@ -5,10 +5,54 @@
 #include "src/ui/bin/activity/activity_app.h"
 
 #include <lib/zx/clock.h>
+#include <zircon/status.h>
 
 #include "src/lib/fxl/logging.h"
 
 namespace activity {
+
+std::vector<const ActivityControlConnection*> ActivityApp::control_bindings() const {
+  std::vector<const ActivityControlConnection*> vec;
+  vec.reserve(control_bindings_.size());
+  for (const auto& entry : control_bindings_) {
+    vec.push_back(entry.second.get());
+  }
+  return vec;
+}
+
+std::vector<const ActivityTrackerConnection*> ActivityApp::tracker_bindings() const {
+  std::vector<const ActivityTrackerConnection*> vec;
+  vec.reserve(tracker_bindings_.size());
+  for (const auto& entry : tracker_bindings_) {
+    vec.push_back(entry.second.get());
+  }
+  return vec;
+}
+
+std::vector<const ActivityProviderConnection*> ActivityApp::provider_bindings() const {
+  std::vector<const ActivityProviderConnection*> vec;
+  vec.reserve(provider_bindings_.size());
+  for (const auto& entry : provider_bindings_) {
+    vec.push_back(entry.second.get());
+  }
+  return vec;
+}
+
+void ActivityApp::AddControlBinding(
+    fidl::InterfaceRequest<fuchsia::ui::activity::Control> request) {
+  zx::unowned_channel unowned(request.channel());
+  auto conn = std::make_unique<ActivityControlConnection>(state_machine_driver_.get(), dispatcher_,
+                                                          std::move(request));
+  conn->set_error_handler([this, unowned, cp = conn.get()](zx_status_t status) {
+    auto entry = control_bindings_.find(unowned);
+    if (entry != control_bindings_.end()) {
+      control_bindings_.erase(entry);
+    } else {
+      FXL_LOG(ERROR) << "Failed to remove binding during cleanup";
+    }
+  });
+  control_bindings_.emplace(std::move(unowned), std::move(conn));
+}
 
 void ActivityApp::AddTrackerBinding(
     fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request) {
