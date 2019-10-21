@@ -159,7 +159,7 @@ TEST_F(CommitFactoryTest, CommitStorageBytes) {
   parents.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random(),
                                                           storage_->GetObjectIdentifierFactory()));
   std::unique_ptr<const Commit> commit = storage_->GetCommitFactory()->FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      environment_.clock(), environment_.random(), root_node_identifier, std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit));
 
   // A commit with two parents.
@@ -169,7 +169,7 @@ TEST_F(CommitFactoryTest, CommitStorageBytes) {
   parents.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random(),
                                                           storage_->GetObjectIdentifierFactory()));
   std::unique_ptr<const Commit> commit2 = storage_->GetCommitFactory()->FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      environment_.clock(), environment_.random(), root_node_identifier, std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit2));
 }
 
@@ -181,7 +181,7 @@ TEST_F(CommitFactoryTest, CloneCommit) {
   parents.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random(),
                                                           storage_->GetObjectIdentifierFactory()));
   std::unique_ptr<const Commit> commit = storage_->GetCommitFactory()->FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      environment_.clock(), environment_.random(), root_node_identifier, std::move(parents));
   std::unique_ptr<const Commit> copy;
   Status status = storage_->GetCommitFactory()->FromStorageBytes(
       commit->GetId(), commit->GetStorageBytes().ToString(), &copy);
@@ -202,9 +202,50 @@ TEST_F(CommitFactoryTest, MergeCommitTimestamp) {
   EXPECT_NE(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
   auto max_timestamp = std::max(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
   std::unique_ptr<const Commit> commit = storage_->GetCommitFactory()->FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      environment_.clock(), environment_.random(), root_node_identifier, std::move(parents));
 
   EXPECT_EQ(commit->GetTimestamp(), max_timestamp);
+}
+
+// Tests that two merges with the same content and parents have the same id.
+TEST_F(CommitFactoryTest, MergesAreConsistent) {
+  ObjectIdentifier root_node_identifier =
+      RandomObjectIdentifier(environment_.random(), storage_->GetObjectIdentifierFactory());
+
+  std::unique_ptr<const Commit> parent1 = std::make_unique<CommitRandomImpl>(
+      environment_.random(), storage_->GetObjectIdentifierFactory());
+  std::unique_ptr<const Commit> parent2 = std::make_unique<CommitRandomImpl>(
+      environment_.random(), storage_->GetObjectIdentifierFactory());
+
+  auto make_commit = [&] {
+    std::vector<std::unique_ptr<const Commit>> parents;
+    parents.emplace_back(parent1->Clone());
+    parents.emplace_back(parent2->Clone());
+    return storage_->GetCommitFactory()->FromContentAndParents(
+        environment_.clock(), environment_.random(), root_node_identifier, std::move(parents));
+  };
+  auto commit1 = make_commit();
+  auto commit2 = make_commit();
+  EXPECT_EQ(commit1->GetId(), commit2->GetId());
+}
+
+// Tests that two non-merges with the same content and parents have different ids.
+TEST_F(CommitFactoryTest, ChangesAreUnique) {
+  ObjectIdentifier root_node_identifier =
+      RandomObjectIdentifier(environment_.random(), storage_->GetObjectIdentifierFactory());
+
+  std::unique_ptr<const Commit> parent = std::make_unique<CommitRandomImpl>(
+      environment_.random(), storage_->GetObjectIdentifierFactory());
+
+  auto make_commit = [&] {
+    std::vector<std::unique_ptr<const Commit>> parents;
+    parents.emplace_back(parent->Clone());
+    return storage_->GetCommitFactory()->FromContentAndParents(
+        environment_.clock(), environment_.random(), root_node_identifier, std::move(parents));
+  };
+  auto commit1 = make_commit();
+  auto commit2 = make_commit();
+  EXPECT_NE(commit1->GetId(), commit2->GetId());
 }
 
 TEST_F(CommitFactoryTest, IsAlive) {
@@ -217,7 +258,7 @@ TEST_F(CommitFactoryTest, IsAlive) {
   parents.emplace_back(std::make_unique<CommitRandomImpl>(environment_.random(),
                                                           storage_->GetObjectIdentifierFactory()));
   std::unique_ptr<const Commit> commit = storage_->GetCommitFactory()->FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      environment_.clock(), environment_.random(), root_node_identifier, std::move(parents));
   EXPECT_TRUE(commit->IsAlive());
 
   storage_.reset();

@@ -46,6 +46,7 @@ table CommitStorage {
   generation: ulong;
   root_node_id: ObjectIdentifierStorage;
   parents: [storage.IdStorage];
+  salt: [ubyte];
 }
 
 root_type CommitStorage;

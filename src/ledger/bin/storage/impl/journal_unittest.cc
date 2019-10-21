@@ -396,9 +396,7 @@ TEST_F(JournalTest, MergesConsistent) {
   }));
 }
 
-// TODO(35653): once we add salt to the commits, check that we get two different trees for deletion
-// too.
-TEST_F(JournalTest, ChangesDifferent) {
+TEST_F(JournalTest, ChangesDifferentInsertion) {
   ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
     journal_->Put("1", object_identifier_, KeyPriority::EAGER);
@@ -419,12 +417,51 @@ TEST_F(JournalTest, ChangesDifferent) {
     ASSERT_NE(nullptr, commit2);
 
     EXPECT_NE(commit1->GetRootIdentifier(), commit2->GetRootIdentifier());
+    EXPECT_NE(commit1->GetId(), commit2->GetId());
 
     std::vector<Entry> entries1 = GetCommitContents(*commit1);
     std::vector<Entry> entries2 = GetCommitContents(*commit2);
 
     EXPECT_EQ(WithoutEntryIds(entries1), WithoutEntryIds(entries2));
     EXPECT_NE(entries1, entries2);
+  }));
+}
+
+TEST_F(JournalTest, ChangesDifferentDeletion) {
+  ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Put("1", object_identifier_, KeyPriority::EAGER);
+
+    Status status;
+    std::unique_ptr<const Commit> parent;
+    std::vector<ObjectIdentifier> objects_to_sync;
+    status = journal_->Commit(handler, &parent, &objects_to_sync);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, parent);
+
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, parent->Clone()));
+    journal_->Delete("1");
+
+    std::unique_ptr<const Commit> commit1;
+    status = journal_->Commit(handler, &commit1, &objects_to_sync);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit1);
+
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, parent->Clone()));
+    journal_->Delete("1");
+
+    std::unique_ptr<const Commit> commit2;
+    status = journal_->Commit(handler, &commit2, &objects_to_sync);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit2);
+
+    EXPECT_EQ(commit1->GetRootIdentifier(), commit2->GetRootIdentifier());
+    EXPECT_NE(commit1->GetId(), commit2->GetId());
+
+    std::vector<Entry> entries1 = GetCommitContents(*commit1);
+    std::vector<Entry> entries2 = GetCommitContents(*commit2);
+
+    EXPECT_EQ(entries1, entries2);
   }));
 }
 

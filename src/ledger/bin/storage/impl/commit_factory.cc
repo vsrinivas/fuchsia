@@ -12,6 +12,7 @@
 
 #include <flatbuffers/flatbuffers.h>
 
+#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_generated.h"
 #include "src/ledger/bin/storage/impl/commit_serialization.h"
@@ -27,6 +28,9 @@
 namespace storage {
 
 namespace {
+
+// Size of the commit salt in bytes.
+constexpr size_t kCommitSaltSize = 32;
 
 // Checks whether the given |storage_bytes| are a valid serialization of a
 // commit.
@@ -45,7 +49,8 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
 
 std::string SerializeCommit(uint64_t generation, zx::time_utc timestamp,
                             const ObjectIdentifier& root_node_identifier,
-                            std::vector<std::unique_ptr<const Commit>> parent_commits) {
+                            std::vector<std::unique_ptr<const Commit>> parent_commits,
+                            std::string salt) {
   flatbuffers::FlatBufferBuilder builder;
 
   auto parents_id = builder.CreateVectorOfStructs(
@@ -55,8 +60,8 @@ std::string SerializeCommit(uint64_t generation, zx::time_utc timestamp,
                                  }));
 
   auto root_node_storage = ToObjectIdentifierStorage(&builder, root_node_identifier);
-  auto storage =
-      CreateCommitStorage(builder, timestamp.get(), generation, root_node_storage, parents_id);
+  auto storage = CreateCommitStorage(builder, timestamp.get(), generation, root_node_storage,
+                                     parents_id, convert::ToFlatBufferVector(&builder, salt));
   builder.Finish(storage);
   return convert::ToString(builder);
 }
@@ -81,7 +86,8 @@ class CommitFactory::CommitImpl : public Commit {
   // Creates a new |CommitImpl| object with the given contents.
   CommitImpl(CommitId id, zx::time_utc timestamp, uint64_t generation,
              ObjectIdentifier root_node_identifier, std::vector<CommitIdView> parent_ids,
-             fxl::RefPtr<SharedStorageBytes> storage_bytes, fxl::WeakPtr<CommitFactory> factory);
+             std::string salt, fxl::RefPtr<SharedStorageBytes> storage_bytes,
+             fxl::WeakPtr<CommitFactory> factory);
 
   ~CommitImpl() override;
 
@@ -101,13 +107,14 @@ class CommitFactory::CommitImpl : public Commit {
   const uint64_t generation_;
   const ObjectIdentifier root_node_identifier_;
   const std::vector<CommitIdView> parent_ids_;
+  const std::string salt_;
   const fxl::RefPtr<SharedStorageBytes> storage_bytes_;
   fxl::WeakPtr<CommitFactory> const factory_;
 };
 
 CommitFactory::CommitImpl::CommitImpl(CommitId id, zx::time_utc timestamp, uint64_t generation,
                                       ObjectIdentifier root_node_identifier,
-                                      std::vector<CommitIdView> parent_ids,
+                                      std::vector<CommitIdView> parent_ids, std::string salt,
                                       fxl::RefPtr<SharedStorageBytes> storage_bytes,
                                       fxl::WeakPtr<CommitFactory> factory)
     : id_(std::move(id)),
@@ -115,9 +122,12 @@ CommitFactory::CommitImpl::CommitImpl(CommitId id, zx::time_utc timestamp, uint6
       generation_(generation),
       root_node_identifier_(std::move(root_node_identifier)),
       parent_ids_(std::move(parent_ids)),
+      salt_(std::move(salt)),
       storage_bytes_(std::move(storage_bytes)),
       factory_(std::move(factory)) {
   FXL_DCHECK(id_ == kFirstPageCommitId || (!parent_ids_.empty() && parent_ids_.size() <= 2));
+  FXL_DCHECK((parent_ids_.size() == 1 && !salt_.empty()) ||
+             (parent_ids_.size() != 1 && salt_.empty()));
   FXL_DCHECK(factory_);
   factory_->RegisterCommit(this);
 }
@@ -130,7 +140,7 @@ CommitFactory::CommitImpl::~CommitImpl() {
 
 std::unique_ptr<const Commit> CommitFactory::CommitImpl::Clone() const {
   return std::make_unique<CommitImpl>(id_, timestamp_, generation_, root_node_identifier_,
-                                      parent_ids_, storage_bytes_, factory_);
+                                      parent_ids_, salt_, storage_bytes_, factory_);
 }
 
 const CommitId& CommitFactory::CommitImpl::GetId() const { return id_; }
@@ -185,15 +195,18 @@ Status CommitFactory::FromStorageBytes(CommitId id, std::string storage_bytes,
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
     parent_ids.emplace_back(ToCommitIdView(commit_storage->parents()->Get(i)));
   }
-  *commit =
-      std::make_unique<CommitImpl>(std::move(id), zx::time_utc(commit_storage->timestamp()),
-                                   commit_storage->generation(), std::move(root_node_identifier),
-                                   parent_ids, std::move(storage_ptr), weak_factory_.GetWeakPtr());
+
+  std::string salt = convert::ToString(commit_storage->salt());
+
+  *commit = std::make_unique<CommitImpl>(
+      std::move(id), zx::time_utc(commit_storage->timestamp()), commit_storage->generation(),
+      std::move(root_node_identifier), parent_ids, std::move(salt), std::move(storage_ptr),
+      weak_factory_.GetWeakPtr());
   return Status::OK;
 }
 
 std::unique_ptr<const Commit> CommitFactory::FromContentAndParents(
-    timekeeper::Clock* clock, ObjectIdentifier root_node_identifier,
+    timekeeper::Clock* clock, rng::Random* random, ObjectIdentifier root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   FXL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 
@@ -217,9 +230,15 @@ std::unique_ptr<const Commit> CommitFactory::FromContentAndParents(
     zx_status_t status = clock->Now(&timestamp);
     FXL_CHECK(status == ZX_OK);
   }
+  // Compute salt.
+  std::string salt;
+  if (parent_commits.size() == 1) {
+    salt.resize(kCommitSaltSize);
+    random->Draw(&salt);
+  }
 
   std::string storage_bytes =
-      SerializeCommit(generation, timestamp, root_node_identifier, std::move(parent_commits));
+      SerializeCommit(generation, timestamp, root_node_identifier, std::move(parent_commits), salt);
 
   CommitId id = storage::ComputeCommitId(storage_bytes);
 
@@ -245,7 +264,7 @@ void CommitFactory::Empty(PageStorage* page_storage,
 
         auto ptr = std::make_unique<CommitImpl>(
             kFirstPageCommitId.ToString(), zx::time_utc(), 0, std::move(root_identifier),
-            std::vector<CommitIdView>(), std::move(storage_ptr), std::move(weak_this));
+            std::vector<CommitIdView>(), "", std::move(storage_ptr), std::move(weak_this));
         callback(Status::OK, std::move(ptr));
       });
 }

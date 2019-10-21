@@ -187,7 +187,7 @@ TEST_F(PageDbTest, Commits) {
     CommitFactory factory(page_storage_.GetObjectIdentifierFactory());
 
     std::unique_ptr<const Commit> commit = factory.FromContentAndParents(
-        environment_.clock(), RandomObjectIdentifier(), std::move(parents));
+        environment_.clock(), environment_.random(), RandomObjectIdentifier(), std::move(parents));
 
     std::string storage_bytes;
     EXPECT_EQ(page_db_.GetCommitStorageBytes(handler, commit->GetId(), &storage_bytes),

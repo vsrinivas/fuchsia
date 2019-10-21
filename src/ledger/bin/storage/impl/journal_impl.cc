@@ -153,7 +153,7 @@ Status JournalImpl::CreateCommitFromChanges(
 
   std::unique_ptr<const storage::Commit> new_commit =
       page_storage_->GetCommitFactory()->FromContentAndParents(
-          environment_->clock(), object_identifier, std::move(parents));
+          environment_->clock(), environment_->random(), object_identifier, std::move(parents));
 
   Status status;
   if (coroutine::SyncCall(
