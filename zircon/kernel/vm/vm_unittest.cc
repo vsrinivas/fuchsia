@@ -1625,19 +1625,76 @@ static bool arch_noncontiguous_map() {
   END_TEST;
 }
 
+namespace {
+bool AddPage(VmPageList* pl, vm_page_t* page, uint64_t offset) {
+  if (!pl) {
+    return false;
+  }
+  VmPageOrMarker* slot = pl->LookupOrAllocate(offset);
+  if (!slot) {
+    return false;
+  }
+  if (!slot->IsEmpty()) {
+    return false;
+  }
+  *slot = VmPageOrMarker::Page(page);
+  return true;
+}
+
+bool AddMarker(VmPageList* pl, uint64_t offset) {
+  if (!pl) {
+    return false;
+  }
+  VmPageOrMarker* slot = pl->LookupOrAllocate(offset);
+  if (!slot) {
+    return false;
+  }
+  if (!slot->IsEmpty()) {
+    return false;
+  }
+  *slot = VmPageOrMarker::Marker();
+  return true;
+}
+}  // namespace
+
 // Basic test that checks adding/removing a page
 static bool vmpl_add_remove_page_test() {
   BEGIN_TEST;
 
   VmPageList pl;
   vm_page_t test_page{};
-  pl.AddPage(&test_page, 0);
 
-  EXPECT_EQ(&test_page, pl.GetPage(0), "unexpected page\n");
+  EXPECT_TRUE(AddPage(&pl, &test_page, 0));
 
-  vm_page* remove_page;
-  EXPECT_TRUE(pl.RemovePage(0, &remove_page), "remove failure\n");
+  EXPECT_EQ(&test_page, pl.Lookup(0)->Page(), "unexpected page\n");
+  EXPECT_FALSE(pl.IsEmpty());
+  EXPECT_FALSE(pl.HasNoPages());
+
+  vm_page* remove_page = pl.RemovePage(0).ReleasePage();
   EXPECT_EQ(&test_page, remove_page, "unexpected page\n");
+  EXPECT_TRUE(pl.RemovePage(0).IsEmpty(), "unexpected page\n");
+
+  EXPECT_TRUE(pl.IsEmpty());
+  EXPECT_TRUE(pl.HasNoPages());
+
+  END_TEST;
+}
+
+// Basic test of setting and getting markers.
+static bool vmpl_basic_marker_test() {
+  BEGIN_TEST;
+
+  VmPageList pl;
+
+  EXPECT_TRUE(pl.IsEmpty());
+  EXPECT_TRUE(pl.HasNoPages());
+
+  EXPECT_TRUE(AddMarker(&pl, 0));
+
+  EXPECT_TRUE(pl.Lookup(0)->IsMarker());
+
+  EXPECT_FALSE(pl.IsEmpty());
+  EXPECT_TRUE(pl.HasNoPages());
 
   END_TEST;
 }
@@ -1650,28 +1707,29 @@ static bool vmpl_free_pages_test() {
   constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
   vm_page_t test_pages[kCount] = {};
 
+  // Install alternating pages and markers.
   for (uint32_t i = 0; i < kCount; i++) {
-    pl.AddPage(test_pages + i, i * PAGE_SIZE);
+    EXPECT_TRUE(AddPage(&pl, test_pages + i, i * 2 * PAGE_SIZE));
+    EXPECT_TRUE(AddMarker(&pl, (i * 2 + 1) * PAGE_SIZE));
   }
 
   list_node_t list;
   list_initialize(&list);
-  pl.RemovePages(PAGE_SIZE, (kCount - 1) * PAGE_SIZE, &list);
+  pl.RemovePages(PAGE_SIZE * 2, (kCount - 1) * 2 * PAGE_SIZE, &list);
   for (unsigned i = 1; i < kCount - 2; i++) {
     EXPECT_TRUE(list_in_list(&test_pages[i].queue_node), "Not in free list");
   }
 
   for (uint32_t i = 0; i < kCount; i++) {
-    vm_page* remove_page;
-    bool res = pl.RemovePage(i * PAGE_SIZE, &remove_page);
-    if (i == 0) {
-      EXPECT_TRUE(res, "missing page\n");
-      EXPECT_EQ(test_pages, remove_page, "unexpected page\n");
-    } else if (i == kCount - 1) {
-      EXPECT_TRUE(res, "missing page\n");
-      EXPECT_EQ(test_pages + kCount - 1, remove_page, "unexpected page\n");
+    VmPageOrMarker remove_page = pl.RemovePage(i * 2 * PAGE_SIZE);
+    VmPageOrMarker remove_marker = pl.RemovePage((i * 2 + 1) * PAGE_SIZE);
+    if (i == 0 || i == kCount - 1) {
+      EXPECT_TRUE(remove_page.IsPage(), "missing page\n");
+      EXPECT_TRUE(remove_marker.IsMarker(), "missing marker\n");
+      EXPECT_EQ(test_pages + i, remove_page.ReleasePage(), "unexpected page\n");
     } else {
-      EXPECT_FALSE(res, "extra page\n");
+      EXPECT_TRUE(remove_page.IsEmpty(), "extra page\n");
+      EXPECT_TRUE(remove_marker.IsEmpty(), "extra marker\n");
     }
   }
 
@@ -1685,9 +1743,9 @@ static bool vmpl_free_pages_last_page_test() {
   vm_page_t page{};
 
   VmPageList pl;
-  pl.AddPage(&page, 0);
+  EXPECT_TRUE(AddPage(&pl, &page, 0));
 
-  EXPECT_EQ(&page, pl.GetPage(0), "unexpected page\n");
+  EXPECT_EQ(&page, pl.Lookup(0)->Page(), "unexpected page\n");
 
   list_node_t list;
   list_initialize(&list);
@@ -1708,9 +1766,9 @@ static bool vmpl_near_last_offset_free() {
   bool at_least_one = false;
   for (uint64_t addr = 0xfffffffffff00000; addr != 0; addr += PAGE_SIZE) {
     VmPageList pl;
-    if (pl.AddPage(&page, addr) == ZX_OK) {
+    if (AddPage(&pl, &page, addr)) {
       at_least_one = true;
-      EXPECT_EQ(&page, pl.GetPage(addr), "unexpected page\n");
+      EXPECT_EQ(&page, pl.Lookup(addr)->Page(), "unexpected page\n");
 
       list_node_t list;
       list_initialize(&list);
@@ -1723,10 +1781,8 @@ static bool vmpl_near_last_offset_free() {
   }
   EXPECT_TRUE(at_least_one, "starting address too large");
 
-  vm_page_t test_page{};
   VmPageList pl2;
-  EXPECT_EQ(pl2.AddPage(&test_page, 0xfffffffffffe0000), ZX_ERR_OUT_OF_RANGE,
-            "unexpected offset addable\n");
+  EXPECT_NULL(pl2.LookupOrAllocate(0xfffffffffffe0000), "unexpected offset addable\n");
 
   END_TEST;
 }
@@ -1738,18 +1794,16 @@ static bool vmpl_take_single_page_even_test() {
   VmPageList pl;
   vm_page_t test_page{};
   vm_page_t test_page2{};
-  pl.AddPage(&test_page, 0);
-  pl.AddPage(&test_page2, PAGE_SIZE);
+  EXPECT_TRUE(AddPage(&pl, &test_page, 0));
+  EXPECT_TRUE(AddPage(&pl, &test_page2, PAGE_SIZE));
 
   VmPageSpliceList splice = pl.TakePages(0, PAGE_SIZE);
 
-  EXPECT_EQ(&test_page, splice.Pop(), "wrong page\n");
+  EXPECT_EQ(&test_page, splice.Pop().ReleasePage(), "wrong page\n");
   EXPECT_TRUE(splice.IsDone(), "extra page\n");
-  EXPECT_NULL(pl.GetPage(0), "duplicate page\n");
+  EXPECT_TRUE(pl.Lookup(0) == nullptr || pl.Lookup(0)->IsEmpty(), "duplicate page\n");
 
-  vm_page* remove_page;
-  EXPECT_TRUE(pl.RemovePage(PAGE_SIZE, &remove_page), "remove failure\n");
-  EXPECT_EQ(&test_page2, remove_page, "unexpected page\n");
+  EXPECT_EQ(&test_page2, pl.RemovePage(PAGE_SIZE).ReleasePage(), "remove failure\n");
 
   END_TEST;
 }
@@ -1761,18 +1815,17 @@ static bool vmpl_take_single_page_odd_test() {
   VmPageList pl;
   vm_page_t test_page{};
   vm_page_t test_page2{};
-  pl.AddPage(&test_page, 0);
-  pl.AddPage(&test_page2, PAGE_SIZE);
+  EXPECT_TRUE(AddPage(&pl, &test_page, 0));
+  EXPECT_TRUE(AddPage(&pl, &test_page2, PAGE_SIZE));
 
   VmPageSpliceList splice = pl.TakePages(PAGE_SIZE, PAGE_SIZE);
 
-  EXPECT_EQ(&test_page2, splice.Pop(), "wrong page\n");
+  EXPECT_EQ(&test_page2, splice.Pop().ReleasePage(), "wrong page\n");
   EXPECT_TRUE(splice.IsDone(), "extra page\n");
-  EXPECT_NULL(pl.GetPage(PAGE_SIZE), "duplicate page\n");
+  EXPECT_TRUE(pl.Lookup(PAGE_SIZE) == nullptr || pl.Lookup(PAGE_SIZE)->IsEmpty(),
+              "duplicate page\n");
 
-  vm_page* remove_page;
-  EXPECT_TRUE(pl.RemovePage(0, &remove_page), "remove failure\n");
-  EXPECT_EQ(&test_page, remove_page, "unexpected page\n");
+  EXPECT_EQ(&test_page, pl.RemovePage(0).ReleasePage(), "remove failure\n");
 
   END_TEST;
 }
@@ -1785,14 +1838,16 @@ static bool vmpl_take_all_pages_test() {
   constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
   vm_page_t test_pages[kCount] = {};
   for (uint32_t i = 0; i < kCount; i++) {
-    pl.AddPage(test_pages + i, i * PAGE_SIZE);
+    EXPECT_TRUE(AddPage(&pl, test_pages + i, i * 2 * PAGE_SIZE));
+    EXPECT_TRUE(AddMarker(&pl, (i * 2 + 1) * PAGE_SIZE));
   }
 
-  VmPageSpliceList splice = pl.TakePages(0, kCount * PAGE_SIZE);
+  VmPageSpliceList splice = pl.TakePages(0, kCount * 2 * PAGE_SIZE);
   EXPECT_TRUE(pl.IsEmpty(), "non-empty list\n");
 
   for (uint32_t i = 0; i < kCount; i++) {
-    EXPECT_EQ(test_pages + i, splice.Pop(), "wrong page\n");
+    EXPECT_EQ(test_pages + i, splice.Pop().ReleasePage(), "wrong page\n");
+    EXPECT_TRUE(splice.Pop().IsMarker(), "expected marker\n");
   }
   EXPECT_TRUE(splice.IsDone(), "extra pages\n");
 
@@ -1807,7 +1862,7 @@ static bool vmpl_take_middle_pages_test() {
   constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
   vm_page_t test_pages[kCount] = {};
   for (uint32_t i = 0; i < kCount; i++) {
-    pl.AddPage(test_pages + i, i * PAGE_SIZE);
+    EXPECT_TRUE(AddPage(&pl, test_pages + i, i * PAGE_SIZE));
   }
 
   constexpr uint32_t kTakeOffset = VmPageListNode::kPageFanOut - 1;
@@ -1817,11 +1872,9 @@ static bool vmpl_take_middle_pages_test() {
 
   for (uint32_t i = 0; i < kCount; i++) {
     if (kTakeOffset <= i && i < kTakeOffset + kTakeCount) {
-      EXPECT_EQ(test_pages + i, splice.Pop(), "wrong page\n");
+      EXPECT_EQ(test_pages + i, splice.Pop().ReleasePage(), "wrong page\n");
     } else {
-      vm_page* remove_page;
-      EXPECT_TRUE(pl.RemovePage(i * PAGE_SIZE, &remove_page), "remove failure\n");
-      EXPECT_EQ(test_pages + i, remove_page, "wrong page\n");
+      EXPECT_EQ(test_pages + i, pl.RemovePage(i * PAGE_SIZE).ReleasePage(), "remove failure\n");
     }
   }
   EXPECT_TRUE(splice.IsDone(), "extra pages\n");
@@ -1839,24 +1892,23 @@ static bool vmpl_take_gap_test() {
   vm_page_t test_pages[kCount] = {};
   for (uint32_t i = 0; i < kCount; i++) {
     uint64_t offset = (i * (kGapSize + 1)) * PAGE_SIZE;
-    pl.AddPage(test_pages + i, offset);
+    EXPECT_TRUE(AddPage(&pl, test_pages + i, offset));
   }
 
   constexpr uint32_t kListStart = PAGE_SIZE;
   constexpr uint32_t kListLen = (kCount * (kGapSize + 1) - 2) * PAGE_SIZE;
   VmPageSpliceList splice = pl.TakePages(kListStart, kListLen);
 
-  vm_page* page;
-  EXPECT_TRUE(pl.RemovePage(0, &page), "wrong page\n");
-  EXPECT_EQ(test_pages, page, "wrong page\n");
-  EXPECT_FALSE(pl.RemovePage(kListLen, &page), "wrong page\n");
+  EXPECT_EQ(test_pages, pl.RemovePage(0).ReleasePage(), "wrong page\n");
+  EXPECT_TRUE(pl.Lookup(kListLen) == nullptr || pl.Lookup(kListLen)->IsEmpty(), "wrong page\n");
 
   for (uint64_t offset = kListStart; offset < kListStart + kListLen; offset += PAGE_SIZE) {
     auto page_idx = offset / PAGE_SIZE;
     if (page_idx % (kGapSize + 1) == 0) {
-      EXPECT_EQ(test_pages + (page_idx / (kGapSize + 1)), splice.Pop(), "wrong page\n");
+      EXPECT_EQ(test_pages + (page_idx / (kGapSize + 1)), splice.Pop().ReleasePage(),
+                "wrong page\n");
     } else {
-      EXPECT_NULL(splice.Pop(), "wrong page\n");
+      EXPECT_TRUE(splice.Pop().IsEmpty(), "wrong page\n");
     }
   }
   EXPECT_TRUE(splice.IsDone(), "extra pages\n");
@@ -1880,7 +1932,7 @@ static bool vmpl_take_cleanup_test() {
   page->object.pin_count = 0;
 
   VmPageList pl;
-  pl.AddPage(page, 0);
+  EXPECT_TRUE(AddPage(&pl, page, 0));
 
   VmPageSpliceList splice = pl.TakePages(0, PAGE_SIZE);
   EXPECT_TRUE(!splice.IsDone(), "missing page\n");
@@ -1896,14 +1948,14 @@ static bool vmpl_page_gap_iter_test_body(vm_page_t** pages, uint32_t count, uint
   VmPageList list;
   for (uint32_t i = 0; i < count; i++) {
     if (pages[i]) {
-      ASSERT_EQ(list.AddPage(pages[i], i * PAGE_SIZE), ZX_OK);
+      EXPECT_TRUE(AddPage(&list, pages[i], i * PAGE_SIZE));
     }
   }
 
   uint32_t idx = 0;
   zx_status_t s = list.ForEveryPageAndGapInRange(
-      [pages, stop_idx, &idx](const vm_page_t* p, auto off) {
-        if (off != idx * PAGE_SIZE || pages[idx] != p) {
+      [pages, stop_idx, &idx](const VmPageOrMarker& p, auto off) {
+        if (off != idx * PAGE_SIZE || !p.IsPage() || pages[idx] != p.Page()) {
           return ZX_ERR_INTERNAL;
         }
         if (idx == stop_idx) {
@@ -1977,7 +2029,7 @@ static bool vmpl_merge_offset_test_helper(uint64_t list1_offset, uint64_t list2_
   };
 
   for (unsigned i = 0; i < 6; i++) {
-    list.AddPage(test_pages + i, offsets[i]);
+    EXPECT_TRUE(AddPage(&list, test_pages + i, offsets[i]));
   }
 
   VmPageList list2;
@@ -2002,20 +2054,15 @@ static bool vmpl_merge_offset_test_helper(uint64_t list1_offset, uint64_t list2_
 
   EXPECT_EQ(list_length(&free_list), 2ul);
 
-  vm_page_t* page;
-  EXPECT_TRUE(list2.RemovePage(0, &page));
-  EXPECT_EQ(page, test_pages + 1);
+  EXPECT_EQ(list2.RemovePage(0).ReleasePage(), test_pages + 1);
+  EXPECT_EQ(list2.RemovePage(2 * VmPageListNode::kPageFanOut * PAGE_SIZE - PAGE_SIZE).ReleasePage(),
+            test_pages + 2);
+  EXPECT_EQ(list2.RemovePage(2 * VmPageListNode::kPageFanOut * PAGE_SIZE).ReleasePage(),
+            test_pages + 3);
+  EXPECT_EQ(list2.RemovePage(4 * VmPageListNode::kPageFanOut * PAGE_SIZE - PAGE_SIZE).ReleasePage(),
+            test_pages + 4);
 
-  EXPECT_TRUE(list2.RemovePage(2 * VmPageListNode::kPageFanOut * PAGE_SIZE - PAGE_SIZE, &page));
-  EXPECT_EQ(page, test_pages + 2);
-
-  EXPECT_TRUE(list2.RemovePage(2 * VmPageListNode::kPageFanOut * PAGE_SIZE, &page));
-  EXPECT_EQ(page, test_pages + 3);
-
-  EXPECT_TRUE(list2.RemovePage(4 * VmPageListNode::kPageFanOut * PAGE_SIZE - PAGE_SIZE, &page));
-  EXPECT_EQ(page, test_pages + 4);
-
-  EXPECT_TRUE(list2.IsEmpty());
+  EXPECT_TRUE(list2.HasNoPages());
 
   END_TEST;
 }
@@ -2038,14 +2085,14 @@ static bool vmpl_merge_overlap_test_helper(uint64_t list1_offset, uint64_t list2
   list.InitializeSkew(0, list1_offset);
   vm_page_t test_pages[4] = {};
 
-  list.AddPage(test_pages, list2_offset);
-  list.AddPage(test_pages + 1, list2_offset + 2 * PAGE_SIZE);
+  EXPECT_TRUE(AddPage(&list, test_pages, list2_offset));
+  EXPECT_TRUE(AddPage(&list, test_pages + 1, list2_offset + 2 * PAGE_SIZE));
 
   VmPageList list2;
   list2.InitializeSkew(list1_offset, list2_offset);
 
-  list2.AddPage(test_pages + 2, 0);
-  list2.AddPage(test_pages + 3, PAGE_SIZE);
+  EXPECT_TRUE(AddPage(&list2, test_pages + 2, 0));
+  EXPECT_TRUE(AddPage(&list2, test_pages + 3, PAGE_SIZE));
 
   list_node_t free_list;
   list_initialize(&free_list);
@@ -2064,15 +2111,9 @@ static bool vmpl_merge_overlap_test_helper(uint64_t list1_offset, uint64_t list2
 
   EXPECT_EQ(list_length(&free_list), 1ul);
 
-  vm_page_t* page;
-  EXPECT_TRUE(list2.RemovePage(0, &page));
-  EXPECT_EQ(page, test_pages + 2);
-
-  EXPECT_TRUE(list2.RemovePage(PAGE_SIZE, &page));
-  EXPECT_EQ(page, test_pages + 3);
-
-  EXPECT_TRUE(list2.RemovePage(2 * PAGE_SIZE, &page));
-  EXPECT_EQ(page, test_pages + 1);
+  EXPECT_EQ(list2.RemovePage(0).ReleasePage(), test_pages + 2);
+  EXPECT_EQ(list2.RemovePage(PAGE_SIZE).ReleasePage(), test_pages + 3);
+  EXPECT_EQ(list2.RemovePage(2 * PAGE_SIZE).ReleasePage(), test_pages + 1);
 
   EXPECT_TRUE(list2.IsEmpty());
 
@@ -2106,13 +2147,23 @@ static bool vmpl_for_every_page_test() {
   };
 
   for (unsigned i = 0; i < fbl::count_of(test_pages); i++) {
-    list.AddPage(test_pages + i, offsets[i]);
+    if (i % 2) {
+      EXPECT_TRUE(AddPage(&list, test_pages + i, offsets[i]));
+    } else {
+      EXPECT_TRUE(AddMarker(&list, offsets[i]));
+    }
   }
 
   uint32_t idx = 0;
-  auto iter_fn = [&](const auto p, uint64_t off) -> zx_status_t {
-    EXPECT_EQ(p, test_pages + idx);
+  auto iter_fn = [&](const auto& p, uint64_t off) -> zx_status_t {
     EXPECT_EQ(off, offsets[idx]);
+
+    if (idx % 2) {
+      EXPECT_TRUE(p.IsPage());
+      EXPECT_EQ(p.Page(), test_pages + idx);
+    } else {
+      EXPECT_TRUE(p.IsMarker());
+    }
 
     idx++;
 
@@ -2120,11 +2171,11 @@ static bool vmpl_for_every_page_test() {
   };
 
   list.ForEveryPage(iter_fn);
-  ASSERT_EQ(idx, fbl::count_of(test_pages));
+  ASSERT_EQ(idx, fbl::count_of(offsets));
 
   idx = 1;
   list.ForEveryPageInRange(iter_fn, offsets[1], offsets[fbl::count_of(test_pages) - 1]);
-  ASSERT_EQ(idx, fbl::count_of(test_pages) - 1);
+  ASSERT_EQ(idx, fbl::count_of(offsets) - 1);
 
   list_node_t free_list;
   list_initialize(&free_list);
@@ -2141,10 +2192,12 @@ static bool vmpl_merge_onto_test() {
   list2.InitializeSkew(0, 0);
   vm_page_t test_pages[4] = {};
 
-  list1.AddPage(test_pages + 0, 0);
-  list1.AddPage(test_pages + 1, VmPageListNode::kPageFanOut * PAGE_SIZE + 2 * PAGE_SIZE);
-  list2.AddPage(test_pages + 2, 0);
-  list2.AddPage(test_pages + 3, 2 * VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE);
+  EXPECT_TRUE(AddPage(&list1, test_pages + 0, 0));
+  EXPECT_TRUE(
+      AddPage(&list1, test_pages + 1, VmPageListNode::kPageFanOut * PAGE_SIZE + 2 * PAGE_SIZE));
+  EXPECT_TRUE(AddPage(&list2, test_pages + 2, 0));
+  EXPECT_TRUE(
+      AddPage(&list2, test_pages + 3, 2 * VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE));
 
   list_node_t free_list;
   list_initialize(&free_list);
@@ -2155,9 +2208,11 @@ static bool vmpl_merge_onto_test() {
   EXPECT_EQ(1ul, list_length(&free_list));
   EXPECT_EQ(test_pages + 2, list_remove_head_type(&free_list, vm_page, queue_node));
 
-  EXPECT_EQ(test_pages + 0, list2.GetPage(0));
-  EXPECT_EQ(test_pages + 1, list2.GetPage(VmPageListNode::kPageFanOut * PAGE_SIZE + 2 * PAGE_SIZE));
-  EXPECT_EQ(test_pages + 3, list2.GetPage(2 * VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE));
+  EXPECT_EQ(test_pages + 0, list2.Lookup(0)->Page());
+  EXPECT_EQ(test_pages + 1,
+            list2.Lookup(VmPageListNode::kPageFanOut * PAGE_SIZE + 2 * PAGE_SIZE)->Page());
+  EXPECT_EQ(test_pages + 3,
+            list2.Lookup(2 * VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE)->Page());
 
   list2.RemoveAllPages(&free_list);
   EXPECT_EQ(3ul, list_length(&free_list));
@@ -2222,6 +2277,7 @@ UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests");
 
 UNITTEST_START_TESTCASE(vm_page_list_tests)
 VM_UNITTEST(vmpl_add_remove_page_test)
+VM_UNITTEST(vmpl_basic_marker_test)
 VM_UNITTEST(vmpl_free_pages_test)
 VM_UNITTEST(vmpl_free_pages_last_page_test)
 VM_UNITTEST(vmpl_near_last_offset_free)

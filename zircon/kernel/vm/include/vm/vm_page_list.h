@@ -15,9 +15,77 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <ktl/unique_ptr.h>
+#include <vm/page.h>
 #include <vm/vm.h>
 
-struct vm_page;
+// RAII helper for representing owned pages in a page list node. This supports being in one of
+// three states
+//  * Empty - Contains nothing
+//  * Page p - Contains a vm_page 'p'. This 'p' is considered owned by this wrapper and
+//             `ReleasePage` must be called to give up ownership.
+//  * Marker - Indicates that whilst not a page, it is also not empty. Markers can be used to
+//             separate the distinction between "there's no page because we've deduped to the zero
+//             page" and "there's no page because our parent contains the content".
+class VmPageOrMarker {
+ public:
+  VmPageOrMarker() : page_(nullptr) {}
+  ~VmPageOrMarker() { DEBUG_ASSERT(!IsPage()); }
+  VmPageOrMarker(VmPageOrMarker&& other) : page_(other.Release()) {}
+  VmPageOrMarker(const VmPageOrMarker&) = delete;
+  VmPageOrMarker& operator=(const VmPageOrMarker&) = delete;
+
+  // Returns a reference to the underlying vm_page*. Is only valid to call if `IsPage` is true.
+  vm_page* Page() const {
+    DEBUG_ASSERT(IsPage());
+    return page_;
+  }
+
+  // If this is a page, moves the underlying vm_page* out and returns it. After this IsPage will
+  // be false and IsEmpty will be true.
+  vm_page* ReleasePage() {
+    DEBUG_ASSERT(IsPage());
+    return Release();
+  }
+
+  bool IsPage() const { return !IsMarker() && !IsEmpty(); }
+
+  bool IsMarker() const { return page_ == RawMarker(); }
+
+  bool IsEmpty() const { return page_ == nullptr; }
+
+  VmPageOrMarker& operator=(VmPageOrMarker&& other) {
+    // Forbid overriding a page, as that would leak it.
+    DEBUG_ASSERT(!IsPage());
+    page_ = other.Release();
+    return *this;
+  }
+
+  bool operator==(const VmPageOrMarker& other) const { return page_ == other.page_; }
+
+  bool operator!=(const VmPageOrMarker& other) const { return page_ != other.page_; }
+
+  static VmPageOrMarker Empty() { return {nullptr}; }
+
+  static VmPageOrMarker Marker() { return {RawMarker()}; }
+
+  static VmPageOrMarker Page(vm_page* p) {
+    DEBUG_ASSERT(p);
+    return {p};
+  }
+
+ private:
+  VmPageOrMarker(vm_page* p) : page_(p) {}
+
+  static vm_page* RawMarker() { return reinterpret_cast<vm_page*>(1); }
+
+  vm_page* Release() {
+    vm_page* p = page_;
+    page_ = nullptr;
+    return p;
+  }
+
+  vm_page* page_;
+};
 
 class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmPageListNode>> {
  public:
@@ -37,26 +105,45 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
     obj_offset_ = offset;
   }
 
-  // for every valid page in the node call the passed in function
+  // for every page or marker in the node call the passed in function.
   template <typename F>
   zx_status_t ForEveryPage(F func, uint64_t start_offset, uint64_t end_offset, uint64_t skew) {
     return ForEveryPage(this, func, start_offset, end_offset, skew);
   }
 
-  // for every valid page in the node call the passed in function
+  // for every page or marker in the node call the passed in function.
   template <typename F>
   zx_status_t ForEveryPage(F func, uint64_t start_offset, uint64_t end_offset,
                            uint64_t skew) const {
     return ForEveryPage(this, func, start_offset, end_offset, skew);
   }
 
-  vm_page* GetPage(size_t index) const;
-  vm_page* RemovePage(size_t index);
-  zx_status_t AddPage(vm_page* p, size_t index);
+  const VmPageOrMarker& Lookup(size_t index) const {
+    canary_.Assert();
+    DEBUG_ASSERT(index < kPageFanOut);
+    return pages_[index];
+  }
 
+  VmPageOrMarker& Lookup(size_t index) {
+    canary_.Assert();
+    DEBUG_ASSERT(index < kPageFanOut);
+    return pages_[index];
+  }
+
+  // A node is empty if it contains no pages or markers.
   bool IsEmpty() const {
-    for (const auto p : pages_) {
-      if (p) {
+    for (const auto& p : pages_) {
+      if (!p.IsEmpty()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Returns true if there are still allocated vm_page_t's owned by this node.
+  bool HasNoPages() const {
+    for (const auto& p : pages_) {
+      if (p.IsPage()) {
         return false;
       }
     }
@@ -80,7 +167,7 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
       end = (end_offset - self->obj_offset_) / PAGE_SIZE;
     }
     for (size_t i = start; i < end; i++) {
-      if (self->pages_[i]) {
+      if (!self->pages_[i].IsEmpty()) {
         zx_status_t status = func(self->pages_[i], self->obj_offset_ + i * PAGE_SIZE - skew);
         if (unlikely(status != ZX_ERR_NEXT)) {
           return status;
@@ -93,13 +180,13 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
   fbl::Canary<fbl::magic("PLST")> canary_;
 
   uint64_t obj_offset_ = 0;
-  vm_page* pages_[kPageFanOut] = {};
+  VmPageOrMarker pages_[kPageFanOut];
 };
 
 class VmPageList;
 
 // Class which holds the list of vm_page structs removed from a VmPageList
-// by TakePages. The list include information about uncommitted pages.
+// by TakePages. The list include information about uncommitted pages and markers.
 class VmPageSpliceList final {
  public:
   VmPageSpliceList();
@@ -107,9 +194,8 @@ class VmPageSpliceList final {
   VmPageSpliceList& operator=(VmPageSpliceList&& other_tree);
   ~VmPageSpliceList();
 
-  // Pops the next page off of the splice. If the next page was
-  // not committed, returns null.
-  vm_page* Pop();
+  // Pops the next page off of the splice.
+  VmPageOrMarker Pop();
 
   // Returns true after the whole collection has been processed by Pop.
   bool IsDone() const { return pos_ >= length_; }
@@ -151,58 +237,69 @@ class VmPageList final {
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VmPageList);
 
-  // walk the page tree, calling the passed in function on every tree node
+  // walk the page tree, calling the passed in function on every tree node.
   template <typename F>
   zx_status_t ForEveryPage(F per_page_func) {
     return ForEveryPage(this, per_page_func);
   }
 
-  // walk the page tree, calling the passed in function on every tree node
+  // walk the page tree, calling the passed in function on every tree node.
   template <typename F>
   zx_status_t ForEveryPage(F per_page_func) const {
     return ForEveryPage(this, per_page_func);
   }
 
-  // walk the page tree, calling the passed in function on every tree node
+  // walk the page tree, calling the passed in function on every tree node.
   template <typename F>
   zx_status_t ForEveryPageInRange(F per_page_func, uint64_t start_offset, uint64_t end_offset) {
     return ForEveryPageInRange(this, per_page_func, start_offset, end_offset);
   }
 
-  // walk the page tree, calling the passed in function on every tree node
+  // walk the page tree, calling the passed in function on every tree node.
   template <typename F>
   zx_status_t ForEveryPageInRange(F per_page_func, uint64_t start_offset,
                                   uint64_t end_offset) const {
     return ForEveryPageInRange(this, per_page_func, start_offset, end_offset);
   }
 
-  // walk the page tree, calling |per_page_func| on every page and |per_gap_func| on every gap
+  // walk the page tree, calling |per_page_func| on every page/marker and |per_gap_func| on every
+  // gap.
   template <typename PAGE_FUNC, typename GAP_FUNC>
   zx_status_t ForEveryPageAndGapInRange(PAGE_FUNC per_page_func, GAP_FUNC per_gap_func,
                                         uint64_t start_offset, uint64_t end_offset) {
     return ForEveryPageAndGapInRange(this, per_page_func, per_gap_func, start_offset, end_offset);
   }
 
-  // walk the page tree, calling |per_page_func| on every page and |per_gap_func| on every gap
+  // walk the page tree, calling |per_page_func| on every page/marker and |per_gap_func| on every
+  // gap.
   template <typename PAGE_FUNC, typename GAP_FUNC>
   zx_status_t ForEveryPageAndGapInRange(PAGE_FUNC per_page_func, GAP_FUNC per_gap_func,
                                         uint64_t start_offset, uint64_t end_offset) const {
     return ForEveryPageAndGapInRange(this, per_page_func, per_gap_func, start_offset, end_offset);
   }
 
-  zx_status_t AddPage(vm_page*, uint64_t offset);
-  vm_page* GetPage(uint64_t offset) const;
-  // Removes the page at |offset| from the list. Returns true if a page was present,
-  // false otherwise. If a page was removed, returns it in |page|. The caller now owns
-  // the pages.
-  bool RemovePage(uint64_t offset, vm_page** page);
+  // Attempts to return a reference to the VmPageOrMarker at the specified offset. The returned
+  // pointer is valid until the VmPageList is destroyed or any of the Remove*/Take/Merge etc
+  // functions are called.
+  //
+  // Lookup may return 'nullptr' if there is no slot allocated for the given offset. If non-null
+  // is returned it may still be the case that IsEmpty() on the returned PageOrMarker is true.
+  const VmPageOrMarker* Lookup(uint64_t offset) const;
+  VmPageOrMarker* Lookup(uint64_t offset);
+
+  // Similar to `Lookup` but only returns `nullptr` if a slot cannot be allocated either due to out
+  // of memory or due to offset being invalid.
+  VmPageOrMarker* LookupOrAllocate(uint64_t offset);
+
+  // Removes any page at |offset| from the list and returns it, or VmPageOrMarker::Empty() if none.
+  VmPageOrMarker RemovePage(uint64_t offset);
   // Removes all pages from this list and puts them on |removed_pages|. The caller
-  // now owns the pages.
+  // now owns the pages. Any markers are cleared.
   size_t RemoveAllPages(list_node_t* removed_pages);
   // Removes all pages in the range [start_offset, end_offset) and puts them
-  // on |removed_pages|. The caller now owns the pages.
+  // on |removed_pages|. The caller now owns the pages. Any markers are cleared.
   void RemovePages(uint64_t start_offset, uint64_t end_offset, list_node_t* remove_page);
-  // Invokes T on each page in [start_offset, end_offset) and for any pages for
+  // Invokes T on each page or marker in [start_offset, end_offset) and for any pages for
   // which it returns true, puts them on |removed_pages|. The caller now owns
   // the pages.
   template <typename T>
@@ -225,10 +322,14 @@ class VmPageList final {
 
     // Visitor function which moves the pages from the VmPageListNode
     // to the accumulation list.
-    auto per_page_func = [per_page_fn, &removed_pages](auto*& p, uint64_t offset) {
-      if (per_page_fn(p, offset)) {
-        list_add_tail(removed_pages, &p->queue_node);
-        p = nullptr;
+    auto per_page_func = [per_page_fn, &removed_pages](VmPageOrMarker& p, uint64_t offset) {
+      // Ensure per_page_fn views `p` behind a const reference so we know that we still own any
+      // page.
+      if (per_page_fn(static_cast<const VmPageOrMarker&>(p), offset)) {
+        if (p.IsPage()) {
+          list_add_tail(removed_pages, &p.ReleasePage()->queue_node);
+        }
+        p = VmPageOrMarker::Empty();
       }
       return ZX_ERR_NEXT;
     };
@@ -243,12 +344,17 @@ class VmPageList final {
       }
     }
   }
-  bool IsEmpty();
+
+  // Returns true if there are no pages or markers in the page list.
+  bool IsEmpty() const;
+
+  // Returns true if the page list does not own any vm_page.
+  bool HasNoPages() const;
 
   // Merges the pages in |other| in the range [|offset|, |end_offset|) into |this|
   // page list, starting at offset 0 in this list.
   //
-  // For every page in |other| in the given range, if there is no corresponding page
+  // For every page in |other| in the given range, if there is no corresponding page or marker
   // in |this|, then they will be passed to |migrate_fn|. If |migrate_fn| returns true,
   // they will be migrated into |this|; otherwise they will be added to |free_list|. For
   // any pages in |other| outside the given range or which conflict with a page in |this|,
@@ -264,14 +370,14 @@ class VmPageList final {
 
   // Merges this pages in |this| onto |other|.
   //
-  // For every page in |this|, checks the same offset in |other|. If there is no
-  // page, then it inserts the page into |other|. If there is a page, it adds the
+  // For every page (or marker) in |this|, checks the same offset in |other|. If there is no
+  // page or marker, then it inserts the page into |other|. Otherwise, it adds the
   // page onto |free_list|.
   //
   // **NOTE** unlike MergeFrom, |this| will be empty at the end of this method.
   void MergeOnto(VmPageList& other, list_node_t* free_list);
 
-  // Takes the pages in the range [offset, length) out of this page list.
+  // Takes the pages and markers in the range [offset, length) out of this page list.
   VmPageSpliceList TakePages(uint64_t offset, uint64_t length);
 
   // Allow the implementation to use a one-past-the-end for VmPageListNode offsets,
@@ -327,8 +433,8 @@ class VmPageList final {
                                                GAP_FUNC per_gap_func, uint64_t start_offset,
                                                uint64_t end_offset) {
     uint64_t expected_next_off = start_offset;
-    auto per_page_wrapper_fn = [&expected_next_off, end_offset, per_page_func, per_gap_func](
-                                   const auto p, uint64_t off) {
+    auto per_page_wrapper_fn = [&expected_next_off, end_offset, per_page_func, &per_gap_func](
+                                   auto& p, uint64_t off) {
       zx_status_t status = ZX_ERR_NEXT;
       if (expected_next_off != off) {
         status = per_gap_func(expected_next_off, off);

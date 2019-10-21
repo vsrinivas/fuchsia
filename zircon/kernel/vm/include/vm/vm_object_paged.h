@@ -194,7 +194,8 @@ class VmObjectPaged final : public VmObject {
   // offset from any existing mappings.
   zx_status_t AddPage(vm_page_t* p, uint64_t offset);
   // If |do_range_update| is false, this function will skip updating mappings.
-  zx_status_t AddPageLocked(vm_page_t* p, uint64_t offset, bool do_range_update = true)
+  // On success the page to add is moved out of `*p`, otherwise it is left there.
+  zx_status_t AddPageLocked(VmPageOrMarker* p, uint64_t offset, bool do_range_update = true)
       TA_REQ(lock_);
 
   // internal page list routine
