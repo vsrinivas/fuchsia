@@ -135,6 +135,8 @@ group("all_bins") {
     ":passing-test-example",
     ":run-closes-channel-example",
     ":run-hangs-example",
+    "rust:echo_test_client",
+    "//examples/components/routing/echo_server",
   ]
 }
 
@@ -172,6 +174,12 @@ package("example-tests") {
     },
     {
       name = "invalid-test-example"
+    },
+    {
+      name = "echo_test_client"
+    },
+    {
+      name = "echo_server"
     },
   ]
 
@@ -215,6 +223,18 @@ package("example-tests") {
     {
       path = "meta/invalid-test-example.cmx"
       dest = "invalid-test-example.cmx"
+    },
+    {
+      path = "meta/echo_test_realm.cml"
+      dest = "echo_test_realm.cm"
+    },
+    {
+      path = "meta/echo_test_client.cml"
+      dest = "echo_test_client.cm"
+    },
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      dest = "echo_server.cm"
     },
   ]
 }
