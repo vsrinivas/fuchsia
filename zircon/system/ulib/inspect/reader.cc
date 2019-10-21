@@ -186,7 +186,10 @@ fit::result<Hierarchy> Reader::Read() {
 
     // Get the parent node, which was created during block scanning.
     auto it = parsed_nodes_.find(obj.second);
-    ZX_ASSERT(it != parsed_nodes_.end());
+    if (it == parsed_nodes_.end()) {
+      // Parent node did not exist, ignore this node.
+      continue;
+    }
     auto* parent = &it->second;
     parent->hierarchy.add_child(std::move(obj.first));
     if (parent->is_complete()) {
@@ -287,11 +290,12 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
     return;
   }
 
-  size_t remaining_length = PropertyBlockPayload::TotalLength::Get<size_t>(block->payload.u64);
-  const size_t total_length = remaining_length;
-
+  // Do not allow reading more bytes than exist in the buffer for any property. This safeguards
+  // against cycles and excessive memory usage.
+  size_t remaining_length = std::min(
+      snapshot_.size(), PropertyBlockPayload::TotalLength::Get<size_t>(block->payload.u64));
   size_t current_offset = 0;
-  std::vector<uint8_t> buf(total_length);
+  std::vector<uint8_t> buf;
 
   BlockIndex cur_extent = PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(block->payload.u64);
   auto* extent = internal::GetBlock(&snapshot_, cur_extent);
@@ -300,11 +304,13 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
       break;
     }
     size_t len = std::min(remaining_length, PayloadCapacity(GetOrder(extent)));
-    memcpy(&buf[current_offset], extent->payload.data, len);
+    buf.insert(buf.end(), extent->payload.data, extent->payload.data + len);
     remaining_length -= len;
     current_offset += len;
-    extent = internal::GetBlock(
-        &snapshot_, ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header));
+
+    BlockIndex next_extent = ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header);
+
+    extent = internal::GetBlock(&snapshot_, next_extent);
   }
 
   auto* parent_node = parent->hierarchy.node_ptr();

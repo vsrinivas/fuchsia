@@ -14,9 +14,12 @@ using inspect::Inspector;
 using inspect::Node;
 using inspect::internal::Block;
 using inspect::internal::BlockType;
+using inspect::internal::ExtentBlockFields;
 using inspect::internal::HeaderBlockFields;
 using inspect::internal::kMagicNumber;
 using inspect::internal::kMinOrderSize;
+using inspect::internal::NameBlockFields;
+using inspect::internal::PropertyBlockPayload;
 using inspect::internal::ValueBlockFields;
 
 namespace {
@@ -69,6 +72,40 @@ TEST(Reader, InvalidNameParsing) {
 
   auto result = inspect::ReadFromBuffer(std::move(buf));
   EXPECT_TRUE(result.is_ok());
+}
+
+TEST(Reader, LargeExtentsWithCycle) {
+  std::vector<uint8_t> buf;
+  buf.resize(4096);
+
+  Block* header = reinterpret_cast<Block*>(buf.data());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+
+  // Manually create a property.
+  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize);
+  value->header = ValueBlockFields::Order::Make(0) |
+                  ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+                  ValueBlockFields::NameIndex::Make(2);
+  value->payload.u64 = PropertyBlockPayload::TotalLength::Make(0xFFFFFFFF) |
+                       PropertyBlockPayload::ExtentIndex::Make(3);
+
+  Block* name = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
+  name->header = NameBlockFields::Order::Make(0) | NameBlockFields::Type::Make(BlockType::kName) |
+                 NameBlockFields::Length::Make(1);
+  memcpy(name->payload.data, "a", 2);
+
+  Block* extent = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 3);
+  extent->header = ExtentBlockFields::Order::Make(0) |
+                   ExtentBlockFields::Type::Make(BlockType::kExtent) |
+                   ExtentBlockFields::NextExtentIndex::Make(3);
+
+  auto result = inspect::ReadFromBuffer(std::move(buf));
+  EXPECT_TRUE(result.is_ok());
+  EXPECT_EQ(1u, result.value().node().properties().size());
 }
 
 }  // namespace
