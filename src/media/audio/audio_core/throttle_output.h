@@ -21,14 +21,14 @@ static constexpr fxl::TimeDelta TRIM_PERIOD = fxl::TimeDelta::FromMilliseconds(1
 class ThrottleOutput : public AudioOutput {
  public:
   static fbl::RefPtr<AudioOutput> Create(ThreadingModel* threading_model,
-                                         ObjectRegistry* registry) {
+                                         DeviceRegistry* registry) {
     return fbl::AdoptRef<AudioOutput>(new ThrottleOutput(threading_model, registry));
   }
 
   ~ThrottleOutput() override = default;
 
  protected:
-  ThrottleOutput(ThreadingModel* threading_model, ObjectRegistry* registry)
+  ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
       : AudioOutput(threading_model, registry) {}
 
   // AudioOutput Implementation

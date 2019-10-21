@@ -28,7 +28,7 @@ class AudioOutput : public AudioDevice {
   zx::duration min_clock_lead_time() const override { return min_clock_lead_time_; }
 
  protected:
-  AudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry);
+  AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry);
 
   struct MixJob {
     // Job state set up once by an output implementation, used by all renderers.

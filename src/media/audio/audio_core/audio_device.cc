@@ -31,9 +31,9 @@ std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
 }  // namespace
 
 AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model,
-                         ObjectRegistry* registry)
+                         DeviceRegistry* registry)
     : AudioObject(type),
-      object_registry_(*registry),
+      device_registry_(*registry),
       threading_model_(*threading_model),
       mix_domain_(threading_model->AcquireMixDomain()),
       driver_(new AudioDriver(this)) {
@@ -141,7 +141,7 @@ void AudioDevice::ActivateSelf() {
 
     // Now poke our manager.
     threading_model().FidlDomain().PostTask(
-        [self = fbl::RefPtr(this)]() { self->object_registry().ActivateDevice(std::move(self)); });
+        [self = fbl::RefPtr(this)]() { self->device_registry().ActivateDevice(std::move(self)); });
   }
 }
 
@@ -155,7 +155,7 @@ void AudioDevice::ShutdownSelf() {
     PreventNewLinks();
 
     threading_model().FidlDomain().PostTask(
-        [self = fbl::RefPtr(this)]() { self->object_registry().RemoveDevice(self); });
+        [self = fbl::RefPtr(this)]() { self->device_registry().RemoveDevice(self); });
   }
 }
 

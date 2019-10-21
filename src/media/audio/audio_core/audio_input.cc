@@ -17,12 +17,12 @@ constexpr zx::duration kMaxFenceDistance = kMinFenceDistance + zx::msec(20);
 
 // static
 fbl::RefPtr<AudioInput> AudioInput::Create(zx::channel channel, ThreadingModel* threading_model,
-                                           ObjectRegistry* registry) {
+                                           DeviceRegistry* registry) {
   return fbl::AdoptRef(new AudioInput(std::move(channel), threading_model, registry));
 }
 
 AudioInput::AudioInput(zx::channel channel, ThreadingModel* threading_model,
-                       ObjectRegistry* registry)
+                       DeviceRegistry* registry)
     : AudioDevice(Type::Input, threading_model, registry),
       initial_stream_channel_(std::move(channel)) {}
 
@@ -126,7 +126,7 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx::time plug_time) {
   // Reflect this message to the AudioDeviceManager so it can deal with the
   // routing consequences of the plug state change.
   threading_model().FidlDomain().PostTask([output = fbl::RefPtr(this), plugged, plug_time]() {
-    output->object_registry().OnPlugStateChanged(std::move(output), plugged, plug_time);
+    output->device_registry().OnPlugStateChanged(std::move(output), plugged, plug_time);
   });
 }
 

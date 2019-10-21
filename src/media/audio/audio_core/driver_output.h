@@ -24,7 +24,7 @@ class DriverOutput : public AudioOutput {
   static constexpr zx::duration kDefaultHighWaterNsec = zx::msec(60);
 
   static fbl::RefPtr<AudioOutput> Create(zx::channel channel, ThreadingModel* threading_model,
-                                         ObjectRegistry* registry);
+                                         DeviceRegistry* registry);
   ~DriverOutput();
 
  protected:
@@ -49,7 +49,7 @@ class DriverOutput : public AudioOutput {
     Shutdown,
   };
 
-  DriverOutput(ThreadingModel* threading_model, ObjectRegistry* registry,
+  DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                zx::channel initial_stream_channel);
   void ScheduleNextLowWaterWakeup();
 

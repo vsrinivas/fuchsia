@@ -9,8 +9,8 @@
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
-#include "src/media/audio/audio_core/testing/fake_object_registry.h"
 #include "src/media/audio/audio_core/testing/fake_routing.h"
+#include "src/media/audio/audio_core/testing/stub_stream_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/usage_gain_adjustment.h"
 
@@ -44,7 +44,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
     testing::ThreadingModelFixture::SetUp();
 
     renderer_ =
-        AudioRendererImpl::Create(fidl_renderer_.NewRequest(), dispatcher(), &object_registry_,
+        AudioRendererImpl::Create(fidl_renderer_.NewRequest(), dispatcher(), &stream_registry_,
                                   &fake_routing_, &admin_, vmar_, &volume_manager_);
     EXPECT_NE(renderer_.get(), nullptr);
   }
@@ -73,7 +73,8 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   fbl::RefPtr<AudioRendererImpl> renderer_;
   testing::FakeRouting fake_routing_;
 
-  testing::FakeObjectRegistry object_registry_;
+  testing::StubDeviceRegistry device_registry_;
+  testing::StubStreamRegistry stream_registry_;
   fuchsia::media::AudioRendererPtr fidl_renderer_;
 
   StubUsageGainAdjustment gain_adjustment_;
@@ -89,7 +90,7 @@ constexpr int64_t kInvalidLeadTimeNs = -1;
 
 // Validate that MinLeadTime is provided to AudioRenderer clients accurately
 TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
-  auto fake_output = testing::FakeAudioOutput::Create(&threading_model(), &object_registry_);
+  auto fake_output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
 
   // We must set our output's lead time, before linking it, before calling SetPcmStreamType().
   fake_output->SetMinClockLeadTime(kMinLeadTime);

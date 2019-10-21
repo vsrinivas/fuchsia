@@ -8,13 +8,13 @@
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
-#include "src/media/audio/audio_core/testing/fake_object_registry.h"
+#include "src/media/audio/audio_core/testing/stub_device_registry.h"
 
 namespace media::audio::testing {
 
 class FakeAudioDevice : public AudioDevice {
  public:
-  FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, ObjectRegistry* registry)
+  FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry)
       : AudioDevice(type, threading_model, registry) {}
 
   bool driver_info_fetched() { return driver_info_fetched_; }
@@ -47,22 +47,22 @@ class FakeAudioDevice : public AudioDevice {
 class FakeAudioInput : public FakeAudioDevice {
  public:
   static fbl::RefPtr<FakeAudioInput> Create(ThreadingModel* threading_model,
-                                            ObjectRegistry* registry) {
+                                            DeviceRegistry* registry) {
     return fbl::AdoptRef(new FakeAudioInput(threading_model, registry));
   }
 
-  FakeAudioInput(ThreadingModel* threading_model, ObjectRegistry* registry)
+  FakeAudioInput(ThreadingModel* threading_model, DeviceRegistry* registry)
       : FakeAudioDevice(Type::Input, threading_model, registry) {}
 };
 
 class FakeAudioOutput : public FakeAudioDevice {
  public:
   static fbl::RefPtr<FakeAudioOutput> Create(ThreadingModel* threading_model,
-                                             ObjectRegistry* registry) {
+                                             DeviceRegistry* registry) {
     return fbl::AdoptRef(new FakeAudioOutput(threading_model, registry));
   }
 
-  FakeAudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry)
+  FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
       : FakeAudioDevice(Type::Output, threading_model, registry) {}
 
   // Required, to allocate and set the mixer+bookkeeping

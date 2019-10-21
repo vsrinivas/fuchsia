@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_OBJECT_REGISTRY_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_OBJECT_REGISTRY_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_DEVICE_REGISTRY_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_DEVICE_REGISTRY_H_
 
 #include <lib/zx/time.h>
 
@@ -11,18 +11,11 @@
 
 namespace media::audio {
 
-class AudioCapturerImpl;
-class AudioRendererImpl;
 class AudioDevice;
 
-class ObjectRegistry {
+class DeviceRegistry {
  public:
-  virtual ~ObjectRegistry() = default;
-
-  virtual void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) = 0;
-  virtual void RemoveAudioRenderer(AudioRendererImpl* audio_renderer) = 0;
-  virtual void AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer) = 0;
-  virtual void RemoveAudioCapturer(AudioCapturerImpl* audio_capturer) = 0;
+  virtual ~DeviceRegistry() = default;
 
   // Begin initializing a device and add it to the set of devices waiting to be initialized.
   //
@@ -42,4 +35,4 @@ class ObjectRegistry {
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_OBJECT_REGISTRY_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_DEVICE_REGISTRY_H_

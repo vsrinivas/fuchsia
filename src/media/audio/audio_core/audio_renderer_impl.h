@@ -30,7 +30,7 @@ constexpr bool kEnableRendererWavWriters = false;
 
 class AudioAdmin;
 class AudioCoreImpl;
-class ObjectRegistry;
+class StreamRegistry;
 
 class AudioRendererImpl : public AudioObject,
                           public fbl::DoublyLinkedListable<fbl::RefPtr<AudioRendererImpl>>,
@@ -40,7 +40,7 @@ class AudioRendererImpl : public AudioObject,
  public:
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-      async_dispatcher_t* dispatcher, ObjectRegistry* object_registry, Routing* routing,
+      async_dispatcher_t* dispatcher, StreamRegistry* stream_registry, Routing* routing,
       AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
   static fbl::RefPtr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -130,7 +130,7 @@ class AudioRendererImpl : public AudioObject,
   friend class GainControlBinding;
 
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-                    async_dispatcher_t* dispatcher, ObjectRegistry* object_registry,
+                    async_dispatcher_t* dispatcher, StreamRegistry* stream_registry,
                     Routing* routing, AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar,
                     StreamVolumeManager* volume_manager);
 
@@ -159,7 +159,7 @@ class AudioRendererImpl : public AudioObject,
   void RealizeVolume(VolumeCommand volume_command) final;
 
   async_dispatcher_t* dispatcher_;
-  ObjectRegistry& object_registry_;
+  StreamRegistry& stream_registry_;
   Routing& routing_;
   AudioAdmin& admin_;
   fbl::RefPtr<fzl::VmarManager> vmar_;

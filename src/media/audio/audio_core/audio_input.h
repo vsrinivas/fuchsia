@@ -20,7 +20,7 @@ class AudioDeviceManager;
 class AudioInput : public AudioDevice {
  public:
   static fbl::RefPtr<AudioInput> Create(zx::channel channel, ThreadingModel* threading_model,
-                                        ObjectRegistry* registry);
+                                        DeviceRegistry* registry);
 
  protected:
   zx_status_t Init() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
@@ -51,7 +51,7 @@ class AudioInput : public AudioDevice {
 
   friend class fbl::RefPtr<AudioInput>;
 
-  AudioInput(zx::channel channel, ThreadingModel* threading_model, ObjectRegistry* registry);
+  AudioInput(zx::channel channel, ThreadingModel* threading_model, DeviceRegistry* registry);
   ~AudioInput() override{};
 
   void UpdateDriverGainState() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());

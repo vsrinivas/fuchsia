@@ -20,7 +20,7 @@ namespace media::audio {
 
 static constexpr fxl::TimeDelta kMaxTrimPeriod = fxl::TimeDelta::FromMilliseconds(10);
 
-AudioOutput::AudioOutput(ThreadingModel* threading_model, ObjectRegistry* registry)
+AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
     : AudioDevice(Type::Output, threading_model, registry) {
   next_sched_time_ = fxl::TimePoint::FromEpochDelta(
       fxl::TimeDelta::FromNanoseconds(async::Now(mix_domain().dispatcher()).get()));

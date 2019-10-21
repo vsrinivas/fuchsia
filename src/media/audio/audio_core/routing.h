@@ -7,9 +7,10 @@
 #include <fuchsia/media/cpp/fidl.h>
 
 #include "src/media/audio/audio_core/audio_output.h"
-#include "src/media/audio/audio_core/audio_renderer_impl.h"
 
 namespace media::audio {
+
+class AudioRendererImpl;
 
 class Routing {
  public:

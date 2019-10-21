@@ -38,10 +38,10 @@ static constexpr uint16_t kRenderUnderflowErrorInterval = 100;
 
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    async_dispatcher_t* dispatcher, ObjectRegistry* object_registry, Routing* routing,
+    async_dispatcher_t* dispatcher, StreamRegistry* stream_registry, Routing* routing,
     AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager) {
   return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request), dispatcher,
-                                             object_registry, routing, admin, vmar,
+                                             stream_registry, routing, admin, vmar,
                                              volume_manager));
 }
 
@@ -56,12 +56,12 @@ fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
 
 AudioRendererImpl::AudioRendererImpl(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    async_dispatcher_t* dispatcher, ObjectRegistry* object_registry, Routing* routing,
+    async_dispatcher_t* dispatcher, StreamRegistry* stream_registry, Routing* routing,
     AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager)
     : AudioObject(Type::AudioRenderer),
       usage_(fuchsia::media::AudioRenderUsage::MEDIA),
       dispatcher_(dispatcher),
-      object_registry_(*object_registry),
+      stream_registry_(*stream_registry),
       routing_(*routing),
       admin_(*admin),
       vmar_(std::move(vmar)),
@@ -73,7 +73,7 @@ AudioRendererImpl::AudioRendererImpl(
       partial_underflow_count_(0u) {
   TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
   FXL_DCHECK(admin);
-  FXL_DCHECK(object_registry);
+  FXL_DCHECK(stream_registry);
   FXL_DCHECK(routing);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
@@ -141,7 +141,7 @@ void AudioRendererImpl::Shutdown() {
 
   // Make sure we have left the set of active AudioRenderers.
   if (InContainer()) {
-    object_registry_.RemoveAudioRenderer(this);
+    stream_registry_.RemoveAudioRenderer(this);
   }
 }
 

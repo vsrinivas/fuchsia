@@ -20,7 +20,8 @@
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
-#include "src/media/audio/audio_core/object_registry.h"
+#include "src/media/audio/audio_core/device_registry.h"
+#include "src/media/audio/audio_core/stream_registry.h"
 #include "src/media/audio/audio_core/routing.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
@@ -31,7 +32,8 @@ class AudioCapturerImpl;
 class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
-                           public ObjectRegistry,
+                           public StreamRegistry,
+                           public DeviceRegistry,
                            public Routing {
  public:
   AudioDeviceManager(ThreadingModel* threading_model, EffectsLoader* effects_loader,
@@ -73,11 +75,13 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
   void LinkOutputToAudioRenderer(AudioOutput* output, AudioRendererImpl* audio_renderer) override;
   void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) override;
 
-  // |media::audio::ObjectRegistry|
+  // |media::audio::StreamRegistry|
   void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) override;
   void RemoveAudioRenderer(AudioRendererImpl* audio_renderer) override;
   void AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer) override;
   void RemoveAudioCapturer(AudioCapturerImpl* audio_capturer) override;
+
+  // |media::audio::DeviceRegistry|
   void AddDevice(const fbl::RefPtr<AudioDevice>& device) override;
   void ActivateDevice(const fbl::RefPtr<AudioDevice>& device) override;
   void RemoveDevice(const fbl::RefPtr<AudioDevice>& device) override;

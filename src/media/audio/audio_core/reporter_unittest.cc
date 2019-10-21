@@ -7,7 +7,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
-#include "src/media/audio/audio_core/testing/fake_object_registry.h"
+#include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/test/null_audio_capturer.h"
 #include "src/media/audio/lib/test/null_audio_renderer.h"
@@ -47,7 +47,7 @@ class ReporterTest : public testing::ThreadingModelFixture {
   }
 
   Reporter under_test_;
-  testing::FakeObjectRegistry object_registry_;
+  testing::StubDeviceRegistry device_registry_;
 };
 
 // Tests reporter initial state.
@@ -89,7 +89,7 @@ TEST_F(ReporterTest, RootMetrics) {
   under_test_.FailedToObtainStreamChannel("", false, 0);
   under_test_.FailedToObtainStreamChannel("", false, 0);
   under_test_.FailedToObtainStreamChannel("", false, 0);
-  testing::FakeAudioInput device(&threading_model(), &object_registry_);
+  testing::FakeAudioInput device(&threading_model(), &device_registry_);
   under_test_.DeviceStartupFailed(device);
   under_test_.DeviceStartupFailed(device);
   under_test_.DeviceStartupFailed(device);
@@ -107,10 +107,10 @@ TEST_F(ReporterTest, RootMetrics) {
 
 // Tests methods that add and remove devices.
 TEST_F(ReporterTest, AddRemoveDevices) {
-  testing::FakeAudioOutput output_device_a(&threading_model(), &object_registry_);
-  testing::FakeAudioOutput output_device_b(&threading_model(), &object_registry_);
-  testing::FakeAudioInput input_device_a(&threading_model(), &object_registry_);
-  testing::FakeAudioInput input_device_b(&threading_model(), &object_registry_);
+  testing::FakeAudioOutput output_device_a(&threading_model(), &device_registry_);
+  testing::FakeAudioOutput output_device_b(&threading_model(), &device_registry_);
+  testing::FakeAudioInput input_device_a(&threading_model(), &device_registry_);
+  testing::FakeAudioInput input_device_b(&threading_model(), &device_registry_);
 
   under_test_.AddingDevice("output_device_a", output_device_a);
   under_test_.AddingDevice("output_device_b", output_device_b);
@@ -168,8 +168,8 @@ TEST_F(ReporterTest, AddRemoveDevices) {
 
 // Tests the initial state of added devices.
 TEST_F(ReporterTest, DeviceInitialState) {
-  testing::FakeAudioOutput output_device(&threading_model(), &object_registry_);
-  testing::FakeAudioInput input_device(&threading_model(), &object_registry_);
+  testing::FakeAudioOutput output_device(&threading_model(), &device_registry_);
+  testing::FakeAudioInput input_device(&threading_model(), &device_registry_);
 
   under_test_.AddingDevice("output_device", output_device);
   under_test_.AddingDevice("input_device", input_device);
@@ -194,8 +194,8 @@ TEST_F(ReporterTest, DeviceInitialState) {
 
 // Tests method SettingDeviceGainInfo.
 TEST_F(ReporterTest, SettingDeviceGainInfo) {
-  testing::FakeAudioOutput output_device(&threading_model(), &object_registry_);
-  testing::FakeAudioInput input_device(&threading_model(), &object_registry_);
+  testing::FakeAudioOutput output_device(&threading_model(), &device_registry_);
+  testing::FakeAudioInput input_device(&threading_model(), &device_registry_);
 
   under_test_.AddingDevice("output_device", output_device);
 

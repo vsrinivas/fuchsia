@@ -14,7 +14,7 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
-#include "src/media/audio/audio_core/testing/fake_object_registry.h"
+#include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
 using testing::Each;
@@ -39,7 +39,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     ASSERT_NE(driver_, nullptr);
     driver_->Start();
 
-    output_ = DriverOutput::Create(std::move(c2), &threading_model(), &object_registry_);
+    output_ = DriverOutput::Create(std::move(c2), &threading_model(), &device_registry_);
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(kRingBufferSizeBytes);
@@ -77,7 +77,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     }});
   }
 
-  testing::FakeObjectRegistry object_registry_;
+  testing::StubDeviceRegistry device_registry_;
   std::unique_ptr<testing::FakeAudioDriver> driver_;
   fbl::RefPtr<AudioOutput> output_;
   fzl::VmoMapper ring_buffer_mapper_;

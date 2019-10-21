@@ -14,7 +14,6 @@
 #include <cstring>
 #include <optional>
 
-#include "src/media/audio/audio_core/object_registry.h"
 #include "src/media/audio/lib/test/message_transceiver.h"
 
 namespace media::audio::testing {
