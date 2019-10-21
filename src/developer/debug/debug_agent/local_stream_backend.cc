@@ -12,9 +12,9 @@
 
 namespace debug_agent {
 
-LocalStreamBackend::LocalStreamBackend() {
-  stream_.set_writer(this);
-}
+LocalStreamBackend::LocalStreamBackend() { stream_.set_writer(this); }
+
+LocalStreamBackend::~LocalStreamBackend() = default;
 
 size_t LocalStreamBackend::ConsumeStreamBufferData(const char* data, size_t len) {
   // We assume we always get a header.

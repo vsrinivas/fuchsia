@@ -26,6 +26,7 @@ namespace debug_agent {
 class LocalStreamBackend : public debug_ipc::StreamBuffer::Writer {
  public:
   LocalStreamBackend();
+  virtual ~LocalStreamBackend();
 
   // Message dispatcher interface.
   // This should be overriden by every test interested in a particular set of

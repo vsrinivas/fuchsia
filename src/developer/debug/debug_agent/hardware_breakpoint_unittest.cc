@@ -78,7 +78,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   auto arch_provider = std::make_shared<MockArchProvider>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
-  MockProcess process(0x1, "process", arch_provider, object_provider);
+  MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
   MockThread* thread1 = process.AddThread(0x1001);
 
   MockProcessDelegate process_delegate;
@@ -256,7 +256,7 @@ TEST(HardwareBreakpoint, StepSimple) {
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(process_koid, process_name, arch_provider, object_provider);
+  MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
 
   MockProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);
@@ -326,7 +326,7 @@ TEST(HardwareBreakpoint, MultipleSteps) {
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(process_koid, process_name, arch_provider, object_provider);
+  MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
 
   MockProcessDelegate process_delegate;
   Breakpoint main_breakpoint(&process_delegate);

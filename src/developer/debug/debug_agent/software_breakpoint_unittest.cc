@@ -60,7 +60,7 @@ class FakeMemory : public ProcessMemoryAccessor {
 class BreakpointFakeMemory {
  public:
   // Make a fake memory buffer with enough room to hold a break instruction.
-  static constexpr uintptr_t kAddress = 0x123456780;
+  static constexpr uintptr_t kAddress = 0x1234;
   static constexpr size_t kDataSize = 4;
   static_assert(kDataSize >= sizeof(arch::BreakInstructionType),
                 "Make data bigger for this platform.");
@@ -180,7 +180,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 
   zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(process_koid, process_name, arch_provider, object_provider);
+  MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
 
   SoftwareBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
                         BreakpointFakeMemory::kAddress);
@@ -220,7 +220,7 @@ TEST(ProcessBreakpoint, StepSingle) {
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(process_koid, process_name, arch_provider, object_provider);
+  MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
 
   // The step over strategy is as follows:
   // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
@@ -451,7 +451,7 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
-  MockProcess process(process_koid, process_name, arch_provider, object_provider);
+  MockProcess process(nullptr, process_koid, process_name, arch_provider, object_provider);
 
   // The step over strategy is as follows:
   // 1. Thread 1 hits breakpoint 1.
@@ -851,7 +851,7 @@ TEST(ProcessBreakpoint, HWBreakpointForAllThreads) {
   constexpr uint32_t kBreakpointId1 = 0x1;
   constexpr uint64_t kAddress = 0x80000000;
 
-  auto process = std::make_unique<MockProcess>(kProcessId, ObjectProvider::Get());
+  auto process = std::make_unique<MockProcess>(nullptr, kProcessId, ObjectProvider::Get());
   process->AddThread(kThreadId1);
   process->AddThread(kThreadId2);
   process->AddThread(kThreadId3);
@@ -897,7 +897,7 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   constexpr uint64_t kAddress = BreakpointFakeMemory::kAddress;
   constexpr uint64_t kOtherAddress = 0x8fffffff;
 
-  auto process = std::make_unique<MockProcess>(kProcessId, ObjectProvider::Get());
+  auto process = std::make_unique<MockProcess>(nullptr, kProcessId, ObjectProvider::Get());
   process->AddThread(kThreadId1);
   process->AddThread(kThreadId2);
   process->AddThread(kThreadId3);

@@ -172,6 +172,7 @@ executable("unit_tests") {
     "debug_agent_unittest.cc",
     "debugged_job_unittest.cc",
     "debugged_process_unittest.cc",
+    "debugged_thread_breakpoint_unittest.cc",
     "debugged_thread_unittest.cc",
     "hardware_breakpoint_unittest.cc",
     "limbo_provider_unittest.cc",
