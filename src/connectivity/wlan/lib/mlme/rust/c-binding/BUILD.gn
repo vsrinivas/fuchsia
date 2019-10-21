@@ -17,6 +17,7 @@ rustc_staticlib("wlan-mlme-c") {
     "//garnet/public/rust/zerocopy",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme",
+    "//src/connectivity/wlan/lib/span:wlan-span",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-traits",

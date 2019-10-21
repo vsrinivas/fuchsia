@@ -37,6 +37,10 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 using common::dBm;
 
+static inline constexpr wlan_span_t AsWlanSpan(fbl::Span<const uint8_t> span) {
+  return wlan_span_t{.data = span.data(), .size = span.size_bytes()};
+}
+
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
 #define STA(c) static_cast<Station*>(c)
@@ -190,8 +194,8 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
   const bool has_padding =
       rx_info != nullptr && rx_info->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
   bool is_controlled_port_open = controlled_port_ == eapol::PortState::kOpen;
-  client_sta_handle_data_frame(rust_client_.get(), pkt->data(), pkt->len(), has_padding,
-                               is_controlled_port_open);
+  client_sta_handle_data_frame(rust_client_.get(), AsWlanSpan({pkt->data(), pkt->len()}),
+                               has_padding, is_controlled_port_open);
 
   return ZX_OK;
 }
@@ -429,7 +433,7 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
   timer_mgr_.Cancel(auth_timeout_);
 
   auto auth_hdr = frame.body_data();
-  zx_status_t status = mlme_is_valid_open_auth_resp(auth_hdr.data(), auth_hdr.size());
+  zx_status_t status = mlme_is_valid_open_auth_resp(AsWlanSpan(auth_hdr));
   if (status == ZX_OK) {
     state_ = WlanState::kAuthenticated;
     debugjoin("authenticated to %s\n", join_ctx_->bssid().ToString().c_str());
@@ -660,10 +664,9 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
   bool needs_protection =
       join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
   auto eth_hdr = eth_frame.hdr();
-  auto payload = eth_frame.body_data();
   return client_sta_send_data_frame(rust_client_.get(), &eth_hdr->src.byte, &eth_hdr->dest.byte,
                                     needs_protection, IsQosReady(), eth_hdr->ether_type(),
-                                    payload.data(), payload.size_bytes());
+                                    AsWlanSpan(eth_frame.body_data()));
 }
 
 zx_status_t Station::HandleTimeout() {
@@ -802,7 +805,7 @@ zx_status_t Station::SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
   bool needs_protection =
       join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
   client_sta_send_eapol_frame(rust_client_.get(), &src.byte, &dst.byte, needs_protection,
-                              eapol_frame.data(), eapol_frame.size_bytes());
+                              AsWlanSpan(eapol_frame));
   return ZX_OK;
 }
 

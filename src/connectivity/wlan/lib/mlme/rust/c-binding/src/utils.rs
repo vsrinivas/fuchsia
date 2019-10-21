@@ -17,11 +17,3 @@ macro_rules! unwrap_or_bail {
         }
     };
 }
-
-pub unsafe fn as_slice<'a>(data: *const u8, len: usize) -> &'a [u8] {
-    if data.is_null() {
-        &[]
-    } else {
-        std::slice::from_raw_parts(data, len)
-    }
-}

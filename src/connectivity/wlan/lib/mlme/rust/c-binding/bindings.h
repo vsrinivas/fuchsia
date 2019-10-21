@@ -104,6 +104,14 @@ typedef struct {
   mlme_in_buf_t (*get_buffer)(uintptr_t min_len);
 } mlme_buffer_provider_ops_t;
 
+/**
+ * A convenient C-wrapper for read-only memory that is neither owned or managed by Rust
+ */
+typedef struct {
+  const uint8_t *data;
+  uintptr_t size;
+} wlan_span_t;
+
 typedef struct {
   uint64_t _0;
 } wlan_scheduler_event_id_t;
@@ -134,9 +142,8 @@ extern "C" int32_t ap_sta_send_open_auth_frame(wlan_ap_sta_t *sta, const uint8_t
 
 extern "C" void client_sta_delete(wlan_client_sta_t *sta);
 
-extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, const uint8_t *data_frame,
-                                                uintptr_t data_frame_len, bool has_padding,
-                                                bool controlled_port_open);
+extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, wlan_span_t data_frame,
+                                                bool has_padding, bool controlled_port_open);
 
 extern "C" wlan_client_sta_t *client_sta_new(mlme_device_ops_t device,
                                              mlme_buffer_provider_ops_t buf_provider,
@@ -147,13 +154,13 @@ extern "C" wlan_client_sta_t *client_sta_new(mlme_device_ops_t device,
 extern "C" int32_t client_sta_send_data_frame(wlan_client_sta_t *sta, const uint8_t (*src)[6],
                                               const uint8_t (*dest)[6], bool is_protected,
                                               bool is_qos, uint16_t ether_type,
-                                              const uint8_t *payload, uintptr_t payload_len);
+                                              wlan_span_t payload);
 
 extern "C" int32_t client_sta_send_deauth_frame(wlan_client_sta_t *sta, uint16_t reason_code);
 
 extern "C" void client_sta_send_eapol_frame(wlan_client_sta_t *sta, const uint8_t (*src)[6],
                                             const uint8_t (*dest)[6], bool is_protected,
-                                            const uint8_t *payload, uintptr_t payload_len);
+                                            wlan_span_t payload);
 
 extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta);
 
@@ -164,7 +171,7 @@ extern "C" mlme_sequence_manager_t *client_sta_seq_mgr(wlan_client_sta_t *sta);
 extern "C" void client_sta_timeout_fired(wlan_client_sta_t *sta,
                                          wlan_scheduler_event_id_t event_id);
 
-extern "C" int32_t mlme_is_valid_open_auth_resp(const uint8_t *data, uintptr_t len);
+extern "C" int32_t mlme_is_valid_open_auth_resp(wlan_span_t auth_resp);
 
 extern "C" void mlme_sequence_manager_delete(mlme_sequence_manager_t *mgr);
 
@@ -176,4 +183,4 @@ extern "C" uint32_t mlme_sequence_manager_next_sns1(mlme_sequence_manager_t *mgr
 extern "C" uint32_t mlme_sequence_manager_next_sns2(mlme_sequence_manager_t *mgr,
                                                     const uint8_t (*sta_addr)[6], uint16_t tid);
 
-#endif /* SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_ */
+#endif  // SRC_CONNECTIVITY_WLAN_LIB_MLME_RUST_C_BINDING_BINDINGS_H_

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::utils,
     fuchsia_zircon as zx,
     wlan_mlme::{
         buffer::BufferProvider,
@@ -16,6 +15,7 @@ use {
         error::ResultExt,
         timer::*,
     },
+    wlan_span::CSpan,
 };
 
 #[no_mangle]
@@ -59,13 +59,12 @@ pub extern "C" fn client_sta_send_deauth_frame(sta: &mut Client, reason_code: u1
 #[no_mangle]
 pub extern "C" fn client_sta_handle_data_frame(
     sta: &mut Client,
-    data_frame: *const u8,
-    data_frame_len: usize,
+    data_frame: CSpan,
     has_padding: bool,
     controlled_port_open: bool,
 ) -> i32 {
     // Safe here because |data_frame_slice| does not outlive |data_frame|.
-    let data_frame_slice = unsafe { utils::as_slice(data_frame, data_frame_len) };
+    let data_frame_slice: &[u8] = data_frame.into();
     sta.handle_data_frame(data_frame_slice, has_padding, controlled_port_open);
     zx::sys::ZX_OK
 }
@@ -78,11 +77,10 @@ pub unsafe extern "C" fn client_sta_send_data_frame(
     is_protected: bool,
     is_qos: bool,
     ether_type: u16,
-    payload: *const u8,
-    payload_len: usize,
+    payload: CSpan,
 ) -> i32 {
-    let payload = utils::as_slice(payload, payload_len);
-    sta.send_data_frame(*src, *dest, is_protected, is_qos, ether_type, payload).into_raw_zx_status()
+    sta.send_data_frame(*src, *dest, is_protected, is_qos, ether_type, payload.into())
+        .into_raw_zx_status()
 }
 
 #[no_mangle]
@@ -91,11 +89,9 @@ pub unsafe extern "C" fn client_sta_send_eapol_frame(
     src: &[u8; 6],
     dest: &[u8; 6],
     is_protected: bool,
-    payload: *const u8,
-    payload_len: usize,
+    payload: CSpan,
 ) {
-    let payload = utils::as_slice(payload, payload_len);
-    sta.send_eapol_frame(*src, *dest, is_protected, payload)
+    sta.send_eapol_frame(*src, *dest, is_protected, payload.into())
 }
 
 #[no_mangle]
