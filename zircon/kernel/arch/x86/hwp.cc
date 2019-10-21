@@ -12,57 +12,42 @@
 #include <zircon/compiler.h>
 
 #include <arch/x86/feature.h>
+#include <arch/x86/hwp.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/spinlock.h>
 
-static bool hwp_enabled = false;
+DECLARE_SINGLETON_MUTEX(hwp_lock);
 
-DECLARE_SINGLETON_SPINLOCK(hwp_lock);
+void x86_intel_hwp_init() {
+  if (!x86_feature_test(X86_FEATURE_HWP_PREF)) {
+    return;
+  }
 
-static void hwp_enable_sync_task(void* ctx) {
   // Enable HWP
   write_msr(X86_MSR_IA32_PM_ENABLE, 1);
 
-  // 14.4.7 set minimum/maximum to values from capabilities for
-  // common case. hint=0x80 by default
+  // Set minimum/maximum to values from capabilities for common case, set Desired_Performance to 0,
+  // leave Energy_Performance_Preference at default.
+  // Reference: Intel SDM vol 3B section 14.4.10: Recommendations for OS use of HWP controls
   uint64_t hwp_caps = read_msr(X86_MSR_IA32_HWP_CAPABILITIES);
-  uint64_t hwp_req = (0x80ull << 24) | ((hwp_caps & 0xff) << 8) | ((hwp_caps >> 24) & 0xff);
+  uint8_t max_performance = hwp_caps & 0xff;
+  uint8_t min_performance = (hwp_caps >> 24) & 0xff;
+  uint64_t hwp_req = (0x80ull << 24) | (max_performance << 8) | (min_performance);
   write_msr(X86_MSR_IA32_HWP_REQUEST, hwp_req);
-}
-
-static void hwp_enable(void) {
-  Guard<SpinLock, NoIrqSave> guard{hwp_lock::Get()};
-
-  if (hwp_enabled) {
-    return;
-  }
-
-  if (!x86_feature_test(X86_FEATURE_HWP)) {
-    printf("HWP not supported\n");
-    return;
-  }
-
-  mp_sync_exec(MP_IPI_TARGET_ALL, 0, hwp_enable_sync_task, nullptr);
-
-  hwp_enabled = true;
 }
 
 static void hwp_set_hint_sync_task(void* ctx) {
   uint8_t hint = (unsigned long)ctx & 0xff;
-  uint64_t hwp_req = read_msr(X86_MSR_IA32_HWP_REQUEST) & ~(0xff << 24);
-  hwp_req |= (hint << 24);
+  uint64_t hwp_req = read_msr(X86_MSR_IA32_HWP_REQUEST) & ~(0xff << 16);
+  hwp_req |= (hint << 16);
   hwp_req &= ~(0xffffffffull << 32);
   write_msr(X86_MSR_IA32_HWP_REQUEST, hwp_req);
 }
 
-static void hwp_set_hint(unsigned long hint) {
-  Guard<SpinLock, NoIrqSave> guard{hwp_lock::Get()};
+static void hwp_set_desired_performance(unsigned long hint) {
+  Guard<Mutex> guard{hwp_lock::Get()};
 
-  if (!hwp_enabled) {
-    printf("Enable HWP first\n");
-    return;
-  }
   if (!x86_feature_test(X86_FEATURE_HWP_PREF)) {
     printf("HWP hint not supported\n");
     return;
@@ -76,22 +61,20 @@ static int cmd_hwp(int argc, const cmd_args* argv, uint32_t flags) {
     printf("not enough arguments\n");
   usage:
     printf("usage:\n");
-    printf("%s enable\n", argv[0].str);
-    printf("%s hint <0-255>\n", argv[0].str);
+    printf("%s hint <1-255>: set clock speed hint (as a multiple of 100MHz)\n", argv[0].str);
+    printf("%s hint 0: enable autoscaling\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
 
-  if (!strcmp(argv[1].str, "enable")) {
-    hwp_enable();
-  } else if (!strcmp(argv[1].str, "hint")) {
+  if (!strcmp(argv[1].str, "hint")) {
     if (argc < 3) {
       goto notenoughargs;
     }
     if (argv[2].u > 0xff) {
-      printf("hint must be between 0 (performance) and 255 (energy efficiency)!");
+      printf("hint must be between 0 and 255\n");
       goto usage;
     }
-    hwp_set_hint(argv[2].u);
+    hwp_set_desired_performance(argv[2].u);
   } else {
     printf("unknown command\n");
     goto usage;

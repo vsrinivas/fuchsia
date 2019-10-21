@@ -10,6 +10,7 @@
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/hwp.h>
 #include <arch/x86/platform_access.h>
 #include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
@@ -200,6 +201,8 @@ void x86_intel_init_percpu(void) {
   if (x86_cpu_should_mitigate_ssb()) {
     x86_intel_cpu_set_ssbd(&cpuid, &msr);
   }
+
+  x86_intel_hwp_init();
 }
 
 extern "C" void x86_mds_flush_select(const CodePatchInfo* patch) {
