@@ -17,11 +17,13 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
     "//src/ui/lib/text",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
   ]
 }
@@ -53,6 +55,10 @@ test_package("default_hardware_ime_tests") {
     {
       path = rebase_path("assets/us.json")
       dest = "us.json"
+    },
+    {
+      path = rebase_path("assets/us-legacy.json")
+      dest = "us-legacy.json"
     },
   ]
 

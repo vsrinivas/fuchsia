@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 use failure::{bail, format_err, Error};
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_ui_input as uii;
+use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::prelude::*;
@@ -18,7 +21,11 @@ use std::fs;
 use std::sync::Arc;
 use text::text_field_state::TextFieldState;
 
-const DEFAULT_LAYOUT_PATH: &'static str = "/pkg/data/us.json";
+mod keymap;
+
+const ENABLE_TEXTFIELD: bool = false;
+const ENABLE_KEYMAP: bool = true;
+const LEGACY_LAYOUT_PATH: &'static str = "/pkg/data/us-legacy.json";
 const MAX_QUEUED_INPUTS: usize = 100;
 
 type DeadKeyMap = serde_json::map::Map<String, Value>;
@@ -30,7 +37,7 @@ const BACKSPACE: u32 = 0x2A;
 const NUM_ENTER: u32 = 0x58;
 
 struct DefaultHardwareImeState {
-    layout: Value,
+    legacy_layout: Value,
     current_field: Option<CurrentField>,
     dead_key_state: Option<DeadKeyMap>,
     unicode_input_mode: bool,
@@ -49,10 +56,11 @@ struct DefaultHardwareIme(Arc<Mutex<DefaultHardwareImeState>>);
 
 impl DefaultHardwareIme {
     fn new() -> Result<DefaultHardwareIme, Error> {
-        let data = fs::read_to_string(DEFAULT_LAYOUT_PATH)?;
-        let layout = json::from_str(&data)?;
+        let data = fs::read_to_string(LEGACY_LAYOUT_PATH)?;
+        let legacy_layout = json::from_str(&data)?;
+
         let state = DefaultHardwareImeState {
-            layout: layout,
+            legacy_layout,
             current_field: None,
             dead_key_state: None,
             unicode_input_mode: false,
@@ -203,7 +211,7 @@ impl DefaultHardwareImeState {
         }
 
         // Handle keys that do produce input (as determined by the layout).
-        match get_key_mapping(&self.layout, event) {
+        match get_key_mapping(&self.legacy_layout, event) {
             Err(e) => fx_log_err!("failed to find key mapping: {}", e),
             Ok(Keymapping::Output(mut output)) => {
                 if let Some(dead_key) = &self.dead_key_state {
@@ -253,7 +261,7 @@ fn convert_commit_result(fidl_result: Result<txt::Error, fidl::Error>) -> Result
     }
 }
 
-fn get_key_mapping(layout: &Value, event: &uii::KeyboardEvent) -> Result<Keymapping, Error> {
+fn get_key_mapping(legacy_layout: &Value, event: &uii::KeyboardEvent) -> Result<Keymapping, Error> {
     let key = &event.hid_usage.to_string();
     let mut current_modifiers = HashMap::new();
     current_modifiers.insert("caps", (event.modifiers & uii::MODIFIER_CAPS_LOCK) != 0);
@@ -261,9 +269,9 @@ fn get_key_mapping(layout: &Value, event: &uii::KeyboardEvent) -> Result<Keymapp
     current_modifiers.insert("ctrl", (event.modifiers & uii::MODIFIER_CONTROL) != 0);
     current_modifiers.insert("alt", (event.modifiers & uii::MODIFIER_ALT) != 0);
     current_modifiers.insert("super", (event.modifiers & uii::MODIFIER_SUPER) != 0);
-    let tables = match layout["tables"].as_array() {
+    let tables = match legacy_layout["tables"].as_array() {
         Some(v) => v,
-        None => bail!("expected layout.tables to be a JSON array"),
+        None => bail!("expected legacy_layout.tables to be a JSON array"),
     };
     for table in tables {
         let modifiers = match table["modifiers"].as_object() {
@@ -307,6 +315,19 @@ enum Keymapping {
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["default-hardware-ime"]).expect("syslog init should not fail");
     let ime = DefaultHardwareIme::new()?;
+    if ENABLE_TEXTFIELD {
+        fasync::spawn(
+            serve_textfield(ime.clone())
+                .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+        );
+    }
+    if ENABLE_KEYMAP {
+        serve_keymap(keymap::KeymapService::new()?)?;
+    }
+    Ok(())
+}
+
+async fn serve_textfield(ime: DefaultHardwareIme) -> Result<(), Error> {
     let text_service = connect_to_service::<txt::TextInputContextMarker>()?;
     let mut evt_stream = text_service.take_event_stream();
     while let Some(evt) = evt_stream.next().await {
@@ -335,6 +356,22 @@ async fn main() -> Result<(), Error> {
             }
         }
     }
+    Ok(())
+}
+
+fn serve_keymap(keymap_service: keymap::KeymapService) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service_at(ui_input::KeyboardLayoutStateMarker::NAME, {
+        let keymap_service = keymap_service;
+        move |stream| {
+            fuchsia_async::spawn(
+                keymap::handle_watch_keymap(stream, keymap_service.clone())
+                    .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+            );
+        }
+    });
+    fs.take_and_serve_directory_handle()?;
+
     Ok(())
 }
 
