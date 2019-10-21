@@ -24,6 +24,7 @@ source_set("stream_provider_lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",

@@ -156,8 +156,7 @@ void ArmIspDeviceTester::TestConnectStream(fuchsia_camera_test_TestReport* repor
   constexpr uint32_t kWidth = 1080;
   constexpr uint32_t kHeight = 764;
   constexpr uint32_t kNumberOfBuffers = 8;
-  fuchsia_camera_common_FrameRate rate = {.frames_per_sec_numerator = 30,
-                                          .frames_per_sec_denominator = 1};
+  fuchsia_camera_FrameRate rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1};
   FrameReadyReceiver receiver;
   output_stream_callback cb = receiver.GetCallback();
   output_stream_protocol output_stream;
@@ -194,8 +193,7 @@ void ArmIspDeviceTester::TestCallbacks(fuchsia_camera_test_TestReport* report) {
   constexpr uint32_t kHeight = 2720;
   constexpr uint32_t kFramesToSleep = 5;
   constexpr uint32_t kNumberOfBuffers = 8;
-  fuchsia_camera_common_FrameRate rate = {.frames_per_sec_numerator = 30,
-                                          .frames_per_sec_denominator = 1};
+  fuchsia_camera_FrameRate rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1};
   FrameReadyReceiver full_res_receiver;
   FrameReadyReceiver downscaled_receiver;
   output_stream_callback full_res_cb = full_res_receiver.GetCallback();
@@ -311,8 +309,7 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
     }
   }
 
-  fuchsia_camera_common_FrameRate rate = {.frames_per_sec_numerator = 30,
-                                          .frames_per_sec_denominator = 1};
+  fuchsia_camera_FrameRate rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1};
   output_stream_callback cb{};
   cb.frame_ready = [](void* ctx, uint32_t buffer_id) {
     auto tester = static_cast<ArmIspDeviceTester*>(ctx);

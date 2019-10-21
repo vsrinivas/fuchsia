@@ -8,6 +8,7 @@ executable("mali_009_test") {
     "isp.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.camera:fuchsia.camera_c",
     "//src/camera/drivers/test_utils",
     "//src/camera/test/isp_tester:fuchsia.camera.test_c",
     "//zircon/public/lib/ddk",
@@ -17,7 +18,6 @@ executable("mali_009_test") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
     "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
   ]
 }

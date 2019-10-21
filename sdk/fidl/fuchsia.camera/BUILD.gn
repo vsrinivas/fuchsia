@@ -19,7 +19,6 @@ fidl("fuchsia.camera") {
   ]
 
   public_deps = [
-    "//zircon/system/fidl/fuchsia-camera-common",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }

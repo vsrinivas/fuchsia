@@ -13,6 +13,7 @@ executable("camera_streaming_test") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.camera",
     "//src/camera/drivers/test_utils",
     "//src/camera/test/isp_tester:fuchsia.camera.test",
     "//src/lib/fxl/test:gtest_main",

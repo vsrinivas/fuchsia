@@ -82,6 +82,7 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   fuchsia::sysmem::ImageFormat_2 format;
   ASSERT_EQ(tester->CreateStream(stream.NewRequest(), &buffers, &format), ZX_OK);
+
   std::atomic_bool stream_alive = true;
   stream.set_error_handler([&](zx_status_t status) {
     ADD_FAILURE_AT(__FILE__, __LINE__) << "Stream disconnected: " << zx_status_get_string(status);
