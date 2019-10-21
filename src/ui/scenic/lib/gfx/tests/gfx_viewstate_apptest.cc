@@ -25,6 +25,18 @@
 
 namespace {
 
+// clang-format off
+const std::map<std::string, std::pair</*url*/std::string, /*args*/std::vector<std::string>>> kServices = {
+    {"fuchsia.tracing.provider.Registry", {"fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx", {}}},
+    {"fuchsia.ui.input.ImeService", {"fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx", {}}},
+    {"fuchsia.ui.policy.Presenter", {"fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx", {}}},
+    {"fuchsia.ui.scenic.Scenic", {"fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx", {"--verbose=3"}}},
+    {"fuchsia.ui.shortcut.Manager", {"fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx", {}}},
+    {"fuchsia.vulkan.loader.Loader", {"fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx", {}}},
+    {"fuchsia.sysmem.Allocator", {"fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx", {}}},
+};
+// clang-format on
+
 const int64_t kTestTimeout = 60;
 
 // Test fixture that sets up an environment suitable for Scenic pixel tests

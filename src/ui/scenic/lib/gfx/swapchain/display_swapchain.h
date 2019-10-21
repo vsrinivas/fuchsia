@@ -28,6 +28,10 @@ namespace gfx {
 class Display;
 class Sysmem;
 
+namespace test {
+class DisplaySwapchainTest;
+}
+
 // DisplaySwapchain implements the Swapchain interface by using a Vulkan
 // swapchain to present images to a physical display using the Zircon
 // display controller API.
@@ -46,7 +50,8 @@ class DisplaySwapchain : public Swapchain {
 
   // |Swapchain|
   bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings, size_t swapchain_index,
-                           const HardwareLayerAssignment& hla, DrawCallback draw_callback) override;
+                           const HardwareLayerAssignment& hla, zx::event frame_retired,
+                           DrawCallback draw_callback) override;
 
   // Register a callback to be called on each vsync.
   // Only allows a single listener at a time.
@@ -70,6 +75,8 @@ class DisplaySwapchain : public Swapchain {
   void SetUseProtectedMemory(bool use_protected_memory) override;
 
  private:
+  friend class test::DisplaySwapchainTest;
+
   struct Framebuffer {
     zx::vmo vmo;
     escher::GpuMemPtr device_memory;
@@ -78,6 +85,10 @@ class DisplaySwapchain : public Swapchain {
   };
 
   struct FrameRecord {
+    // The "pending" frame is the one that has not yet been rendered.
+    FrameTimingsPtr pending_frame_timings;
+    size_t pending_swapchain_index;
+    // This timing is for the frame that is rendered or retired.
     FrameTimingsPtr frame_timings;
     size_t swapchain_index;
 
@@ -87,16 +98,23 @@ class DisplaySwapchain : public Swapchain {
     std::unique_ptr<async::Wait> render_finished_wait;
 
     // Event is signaled when the display is done using a frame.
-    zx::event retired_event;
+    std::unique_ptr<async::Wait> frame_retired_wait;
+    uint64_t frame_retired_event_id;
+
+    // Event is signaled when the display is done using a buffer.
+    escher::SemaphorePtr retired_escher_semaphore;
     uint64_t retired_event_id;
+    zx::event retired_event;
 
     bool presented = false;
   };
-  std::unique_ptr<FrameRecord> NewFrameRecord(const FrameTimingsPtr& frame_timings,
-                                              size_t swapchain_index);
+  std::unique_ptr<FrameRecord> NewFrameRecord();
 
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,
                               bool use_protected_memory);
+  bool CreateBuffer(fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token,
+                    escher::ResourceRecycler* resource_recycler, bool use_protected_memory,
+                    Framebuffer* buffer);
 
   bool InitializeDisplayLayer();
 

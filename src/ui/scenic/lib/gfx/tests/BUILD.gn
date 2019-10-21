@@ -9,6 +9,7 @@ group("tests") {
   public_deps = [
     ":apptests",
     ":pixeltests",
+    ":swapchain_tests",
     ":unittests",
     ":viewstate_apptests",
   ]
@@ -185,6 +186,20 @@ executable("unittests") {
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:object_linker",
     "//third_party/googletest:gmock",
+  ]
+  include_dirs = [ "//src/ui/lib/escher" ]
+}
+
+executable("swapchain_tests") {
+  output_name = "gfx_swapchain_tests"
+
+  testonly = true
+  sources = [
+    "display_swapchain_test.cc",
+  ]
+  deps = [
+    ":testing_deps",
+    "//src/lib/fxl/test:gtest_main",
   ]
   include_dirs = [ "//src/ui/lib/escher" ]
 }

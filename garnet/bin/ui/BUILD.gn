@@ -56,7 +56,7 @@ test_package("scenic_tests") {
       environments = [ nuc_env ]
     },
     {
-      name = "gfx_viewstate_apptests"
+      name = "gfx_swapchain_tests"
       environments = [ nuc_env ]
     },
     {
@@ -66,6 +66,10 @@ test_package("scenic_tests") {
     {
       name = "gfx_util_unittests"
       environments = basic_envs
+    },
+    {
+      name = "gfx_viewstate_apptests"
+      environments = [ nuc_env ]
     },
     {
       name = "geometry_util_unittests"
