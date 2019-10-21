@@ -60,6 +60,11 @@ source_set("core") {
     "//zircon/public/lib/async-loop:async-loop",
     "//zircon/public/lib/sync",
   ]
+
+  # TODO(39324): This driver emits a bunch of -Wthread-safety warnings that
+  # should be addressed. The config is removed from this target in the
+  # meantime.
+  configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
 }
 
 # Contains the entire driver, separate from the driver_module for the unit
@@ -92,6 +97,11 @@ source_set("pcie") {
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.pci",
   ]
+
+  # TODO(39324): This driver emits a bunch of -Wthread-safety warnings that
+  # should be addressed. The config is removed from this target in the
+  # meantime.
+  configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
 }
 
 driver_module("iwlwifi_driver") {
