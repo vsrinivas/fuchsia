@@ -32,7 +32,7 @@ use {
     parking_lot::RwLock,
     std::{
         collections::hash_map::{self, Entry},
-        collections::HashMap,
+        collections::{HashMap, HashSet},
         convert::TryFrom,
         string::String,
         sync::Arc,
@@ -285,6 +285,9 @@ async fn discover_remote_streams(
     profile: Option<ProfileDescriptor>,
 ) {
     let mut cobalt = get_cobalt_logger();
+    // Store deduplicated set of codec event codes for logging.
+    let mut codec_event_codes = HashSet::new();
+
     let streams = peer.discover().await.expect("Discover: Failed to discover source streams");
     fx_log_info!("Discovered {} streams", streams.len());
     for info in streams {
@@ -317,17 +320,30 @@ async fn discover_remote_streams(
                             avdtp::MediaCodecType::AUDIO_SBC => {
                                 metrics::A2dpCodecAvailabilityMetricDimensionCodec::Sbc
                             }
+                            avdtp::MediaCodecType::AUDIO_MPEG12 => {
+                                metrics::A2dpCodecAvailabilityMetricDimensionCodec::Mpeg12
+                            }
+                            avdtp::MediaCodecType::AUDIO_AAC => {
+                                metrics::A2dpCodecAvailabilityMetricDimensionCodec::Aac
+                            }
+                            avdtp::MediaCodecType::AUDIO_ATRAC => {
+                                metrics::A2dpCodecAvailabilityMetricDimensionCodec::Atrac
+                            }
+                            avdtp::MediaCodecType::AUDIO_NON_A2DP => {
+                                metrics::A2dpCodecAvailabilityMetricDimensionCodec::VendorSpecific
+                            }
                             _ => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Unknown,
                         };
-                        cobalt.log_event(
-                            metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID,
-                            event_code as u32,
-                        );
+                        codec_event_codes.insert(event_code as u32);
                     }
                 }
             }
             Err(e) => fx_log_info!("Stream {} discovery failed: {:?}", info.id(), e),
         };
+    }
+
+    for event_code in codec_event_codes {
+        cobalt.log_event(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, event_code);
     }
 }
 
@@ -883,9 +899,9 @@ async fn decode_media_stream(
     let end_time = zx::Time::get(zx::ClockId::Monotonic);
     // TODO (BT-818): determine codec metric dimension from encoding instead of hard-coding to sbc
     get_cobalt_logger().log_elapsed_time(
-        metrics::A2DP_NUMBER_OF_MICROSECONDS_STREAMED_METRIC_ID,
-        metrics::A2dpNumberOfMicrosecondsStreamedMetricDimensionCodec::Sbc as u32,
-        (end_time - start_time).into_micros(),
+        metrics::A2DP_NUMBER_OF_SECONDS_STREAMED_METRIC_ID,
+        metrics::A2dpNumberOfSecondsStreamedMetricDimensionCodec::Sbc as u32,
+        (end_time - start_time).into_seconds(),
     );
 }
 
