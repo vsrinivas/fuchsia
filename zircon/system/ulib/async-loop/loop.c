@@ -37,20 +37,23 @@ static zx_status_t async_loop_set_guest_bell_trap(async_dispatcher_t* dispatcher
 static zx_status_t async_loop_bind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq);
 static zx_status_t async_loop_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq);
 
-static const async_ops_v2_t async_loop_ops = {
-    .bind_irq = async_loop_bind_irq,
-    .unbind_irq = async_loop_unbind_irq,
-    .v1 = {.version = ASYNC_OPS_V2,
-           .reserved = 0,
-           .v1 = {
-               .now = async_loop_now,
-               .begin_wait = async_loop_begin_wait,
-               .cancel_wait = async_loop_cancel_wait,
-               .post_task = async_loop_post_task,
-               .cancel_task = async_loop_cancel_task,
-               .queue_packet = async_loop_queue_packet,
-               .set_guest_bell_trap = async_loop_set_guest_bell_trap,
-           }}};
+static const async_ops_t async_loop_ops = {
+    .version = ASYNC_OPS_V2,
+    .reserved = 0,
+    .v1 =
+        {
+            .now = async_loop_now,
+            .begin_wait = async_loop_begin_wait,
+            .cancel_wait = async_loop_cancel_wait,
+            .post_task = async_loop_post_task,
+            .cancel_task = async_loop_cancel_task,
+            .queue_packet = async_loop_queue_packet,
+            .set_guest_bell_trap = async_loop_set_guest_bell_trap,
+        },
+    .v2 = {
+        .bind_irq = async_loop_bind_irq,
+        .unbind_irq = async_loop_unbind_irq,
+    }};
 
 typedef struct thread_record {
   list_node_t node;

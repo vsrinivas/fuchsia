@@ -30,6 +30,8 @@ struct DispatcherStub : public async_dispatcher_t {
   virtual zx_status_t QueuePacket(async_receiver_t* receiver, const zx_packet_user_t* data);
   virtual zx_status_t SetGuestBellTrap(async_guest_bell_trap_t* trap, const zx::guest& guest,
                                        zx_vaddr_t addr, size_t length);
+  virtual zx_status_t BindIrq(async_irq_t* irq);
+  virtual zx_status_t UnbindIrq(async_irq_t* irq);
 };
 
 }  // namespace async

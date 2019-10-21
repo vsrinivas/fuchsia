@@ -61,7 +61,6 @@ class IrqBase {
   static T* Dispatch(async_irq* irq) {
     static_assert(offsetof(IrqBase, irq_) == 0, "");
     auto self = reinterpret_cast<IrqBase*>(irq);
-    self->dispatcher_ = nullptr;
     return static_cast<T*>(self);
   }
 

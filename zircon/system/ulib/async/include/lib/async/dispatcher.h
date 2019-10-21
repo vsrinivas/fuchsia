@@ -99,13 +99,12 @@ typedef struct async_ops {
                                        async_guest_bell_trap_t* trap, zx_handle_t guest,
                                        zx_vaddr_t addr, size_t length);
   } v1;
-} async_ops_t;
 
-typedef struct async_ops_v2 {
-  async_ops_t v1;
-  zx_status_t (*bind_irq)(async_dispatcher_t* dispatcher, async_irq_t* irq);
-  zx_status_t (*unbind_irq)(async_dispatcher_t* dispatcher, async_irq_t* irq);
-} async_ops_v2_t;
+  struct v2 {
+    zx_status_t (*bind_irq)(async_dispatcher_t* dispatcher, async_irq_t* irq);
+    zx_status_t (*unbind_irq)(async_dispatcher_t* dispatcher, async_irq_t* irq);
+  } v2;
+} async_ops_t;
 
 struct async_dispatcher {
   const async_ops_t* ops;

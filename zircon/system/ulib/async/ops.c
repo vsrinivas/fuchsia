@@ -40,12 +40,12 @@ zx_status_t async_bind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
   if (dispatcher->ops->version < ASYNC_OPS_V2) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return ((async_ops_v2_t*)dispatcher->ops)->bind_irq(dispatcher, irq);
+  return dispatcher->ops->v2.bind_irq(dispatcher, irq);
 }
 
 zx_status_t async_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
   if (dispatcher->ops->version < ASYNC_OPS_V2) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return ((async_ops_v2_t*)dispatcher->ops)->unbind_irq(dispatcher, irq);
+  return dispatcher->ops->v2.unbind_irq(dispatcher, irq);
 }

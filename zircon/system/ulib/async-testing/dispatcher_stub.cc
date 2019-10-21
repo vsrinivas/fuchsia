@@ -39,20 +39,30 @@ zx_status_t stub_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_guest
       ->SetGuestBellTrap(trap, *zx::unowned_guest(guest), addr, length);
 }
 
-const async_ops_t g_stub_ops = {
-    .version = ASYNC_OPS_V1,
-    .reserved = 0,
-    .v1 =
-        {
-            .now = stub_now,
-            .begin_wait = stub_begin_wait,
-            .cancel_wait = stub_cancel_wait,
-            .post_task = stub_post_task,
-            .cancel_task = stub_cancel_task,
-            .queue_packet = stub_queue_packet,
-            .set_guest_bell_trap = stub_set_guest_bell_trap,
-        },
-};
+static zx_status_t stub_bind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
+  return static_cast<DispatcherStub*>(dispatcher)->BindIrq(irq);
+}
+
+static zx_status_t stub_unbind_irq(async_dispatcher_t* dispatcher, async_irq_t* irq) {
+  return static_cast<DispatcherStub*>(dispatcher)->UnbindIrq(irq);
+}
+
+const async_ops_t g_stub_ops = {.version = ASYNC_OPS_V2,
+                                .reserved = 0,
+                                .v1 =
+                                    {
+                                        .now = stub_now,
+                                        .begin_wait = stub_begin_wait,
+                                        .cancel_wait = stub_cancel_wait,
+                                        .post_task = stub_post_task,
+                                        .cancel_task = stub_cancel_task,
+                                        .queue_packet = stub_queue_packet,
+                                        .set_guest_bell_trap = stub_set_guest_bell_trap,
+                                    },
+                                .v2 = {
+                                    .bind_irq = stub_bind_irq,
+                                    .unbind_irq = stub_unbind_irq,
+                                }};
 
 }  // namespace
 
@@ -78,5 +88,9 @@ zx_status_t DispatcherStub::SetGuestBellTrap(async_guest_bell_trap_t* trap, cons
                                              zx_vaddr_t addr, size_t length) {
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+zx_status_t DispatcherStub::BindIrq(async_irq_t* irq) { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t DispatcherStub::UnbindIrq(async_irq_t* irq) { return ZX_ERR_NOT_SUPPORTED; }
 
 }  // namespace async
