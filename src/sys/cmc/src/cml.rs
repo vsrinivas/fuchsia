@@ -7,6 +7,7 @@ use regex::Regex;
 use serde_derive::Deserialize;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
+use std::fmt;
 
 lazy_static! {
     pub static ref RIGHT_TOKENS: HashMap<&'static str, Vec<Right>> = {
@@ -74,7 +75,6 @@ pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
-pub const FROM_SELF_TOKEN: &str = "self";
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub enum Right {
@@ -90,12 +90,76 @@ pub enum Right {
     Admin,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum Ref<'a> {
-    Named(&'a str),
+/// Name of an object, such as a collection, component, or storage.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Deserialize)]
+pub struct Name(String);
+
+impl Name {
+    pub fn new(name: &str) -> Name {
+        Name(name.to_string())
+    }
+
+    pub fn as_str<'a>(&'a self) -> &'a str {
+        self.0.as_str()
+    }
+
+    pub fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+/// Format a `Ref` as a string.
+impl fmt::Display for Name {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.as_str())
+    }
+}
+
+/// A relative reference to another object.
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub enum Ref {
+    Named(Name),
     Realm,
     Framework,
     Self_,
+}
+
+/// Format a `Ref` as a string.
+impl fmt::Display for Ref {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Ref::Named(name) => write!(f, "#{}", name.as_str()),
+            Ref::Realm => write!(f, "realm"),
+            Ref::Framework => write!(f, "framework"),
+            Ref::Self_ => write!(f, "self"),
+        }
+    }
+}
+
+/// Deserialize a string into a valid Ref.
+impl<'de> serde::de::Deserialize<'de> for Ref {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        struct RefVisitor;
+        impl<'de> serde::de::Visitor<'de> for RefVisitor {
+            type Value = Ref;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a relative object reference")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                parse_reference(value)
+                    .ok_or_else(|| E::custom(format!("invalid reference: \"{}\"", value)))
+            }
+        }
+        deserializer.deserialize_str(RefVisitor)
+    }
 }
 
 lazy_static! {
@@ -105,13 +169,13 @@ lazy_static! {
 /// Parse the given name of the form `#some-name`, returning the
 /// name of the target if it is a valid target name, or `None`
 /// otherwise.
-pub fn parse_named_reference(reference: &str) -> Option<&str> {
-    NAME_RE.captures(reference).map_or(None, |c| c.get(1)).map(|c| c.as_str())
+pub fn parse_named_reference(reference: &str) -> Option<Name> {
+    NAME_RE.captures(reference).map_or(None, |c| c.get(1)).map(|c| Name::new(c.as_str()))
 }
 
 /// Parse the given relative reference, consisting of tokens such as
 /// `realm` or `#child`. Returns None if the name could not be parsed.
-pub fn parse_reference<'a>(value: &'a str) -> Option<Ref<'a>> {
+pub fn parse_reference<'a>(value: &'a str) -> Option<Ref> {
     if value.starts_with("#") {
         return parse_named_reference(value).map(|c| Ref::Named(c));
     }
@@ -136,33 +200,33 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn all_children_names(&self) -> Vec<&str> {
+    pub fn all_children_names(&self) -> Vec<&Name> {
         if let Some(children) = self.children.as_ref() {
-            children.iter().map(|c| c.name.as_str()).collect()
+            children.iter().map(|c| &c.name).collect()
         } else {
             vec![]
         }
     }
 
-    pub fn all_collection_names(&self) -> Vec<&str> {
+    pub fn all_collection_names(&self) -> Vec<&Name> {
         if let Some(collections) = self.collections.as_ref() {
-            collections.iter().map(|c| c.name.as_str()).collect()
+            collections.iter().map(|c| &c.name).collect()
         } else {
             vec![]
         }
     }
 
-    pub fn all_storage_names(&self) -> Vec<&str> {
+    pub fn all_storage_names(&self) -> Vec<&Name> {
         if let Some(storage) = self.storage.as_ref() {
-            storage.iter().map(|s| s.name.as_str()).collect()
+            storage.iter().map(|s| &s.name).collect()
         } else {
             vec![]
         }
     }
 
-    pub fn all_storage_and_sources<'a>(&'a self) -> HashMap<&'a str, &'a str> {
+    pub fn all_storage_and_sources<'a>(&'a self) -> HashMap<&'a Name, &'a Ref> {
         if let Some(storage) = self.storage.as_ref() {
-            storage.iter().map(|s| (s.name.as_str(), s.from.as_str())).collect()
+            storage.iter().map(|s| (&s.name, &s.from)).collect()
         } else {
             HashMap::new()
         }
@@ -175,7 +239,7 @@ pub struct Use {
     pub legacy_service: Option<String>,
     pub directory: Option<String>,
     pub storage: Option<String>,
-    pub from: Option<String>,
+    pub from: Option<Ref>,
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
 }
@@ -185,9 +249,9 @@ pub struct Expose {
     pub service: Option<String>,
     pub legacy_service: Option<String>,
     pub directory: Option<String>,
-    pub from: String,
+    pub from: Ref,
     pub r#as: Option<String>,
-    pub to: Option<String>,
+    pub to: Option<Ref>,
     pub rights: Option<Vec<String>>,
 }
 
@@ -197,34 +261,34 @@ pub struct Offer {
     pub legacy_service: Option<String>,
     pub directory: Option<String>,
     pub storage: Option<String>,
-    pub from: String,
-    pub to: Vec<String>,
+    pub from: Ref,
+    pub to: Vec<Ref>,
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Child {
-    pub name: String,
+    pub name: Name,
     pub url: String,
     pub startup: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Collection {
-    pub name: String,
+    pub name: Name,
     pub durability: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Storage {
-    pub name: String,
-    pub from: String,
+    pub name: Name,
+    pub from: Ref,
     pub path: String,
 }
 
 pub trait FromClause {
-    fn from(&self) -> &str;
+    fn from(&self) -> &Ref;
 }
 
 pub trait CapabilityClause {
@@ -260,7 +324,7 @@ impl AsClause for Use {
 }
 
 impl FromClause for Expose {
-    fn from(&self) -> &str {
+    fn from(&self) -> &Ref {
         &self.from
     }
 }
@@ -287,7 +351,7 @@ impl AsClause for Expose {
 }
 
 impl FromClause for Offer {
-    fn from(&self) -> &str {
+    fn from(&self) -> &Ref {
         &self.from
     }
 }
@@ -314,7 +378,7 @@ impl AsClause for Offer {
 }
 
 impl FromClause for Storage {
-    fn from(&self) -> &str {
+    fn from(&self) -> &Ref {
         &self.from
     }
 }
@@ -322,13 +386,15 @@ impl FromClause for Storage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cm_json::{self, Error};
+    use test_util::assert_matches;
 
     #[test]
     fn test_parse_named_reference() {
-        assert_eq!(parse_named_reference("#some-child"), Some("some-child"));
-        assert_eq!(parse_named_reference("#-"), Some("-"));
-        assert_eq!(parse_named_reference("#_"), Some("_"));
-        assert_eq!(parse_named_reference("#7"), Some("7"));
+        assert_eq!(parse_named_reference("#some-child"), Some(Name::new("some-child")));
+        assert_eq!(parse_named_reference("#-"), Some(Name::new("-")));
+        assert_eq!(parse_named_reference("#_"), Some(Name::new("_")));
+        assert_eq!(parse_named_reference("#7"), Some(Name::new("7")));
 
         assert_eq!(parse_named_reference("#"), None);
         assert_eq!(parse_named_reference("some-child"), None);
@@ -339,9 +405,25 @@ mod tests {
         assert_eq!(parse_reference("realm"), Some(Ref::Realm));
         assert_eq!(parse_reference("framework"), Some(Ref::Framework));
         assert_eq!(parse_reference("self"), Some(Ref::Self_));
-        assert_eq!(parse_reference("#child"), Some(Ref::Named("child")));
+        assert_eq!(parse_reference("#child"), Some(Ref::Named(Name::new("child"))));
 
         assert_eq!(parse_reference("invalid"), None);
         assert_eq!(parse_reference("#invalid-child^"), None);
+    }
+
+    fn parse_as_ref(input: &str) -> Result<Ref, Error> {
+        serde_json::from_value::<Ref>(cm_json::from_json_str(input)?)
+            .map_err(|e| Error::parse(format!("{}", e)))
+    }
+
+    #[test]
+    fn test_deserialize_ref() -> Result<(), Error> {
+        assert_eq!(parse_as_ref("\"self\"")?, Ref::Self_);
+        assert_eq!(parse_as_ref("\"realm\"")?, Ref::Realm);
+        assert_eq!(parse_as_ref("\"#child\"")?, Ref::Named(Name::new("child")));
+
+        assert_matches!(parse_as_ref(r#""invalid""#), Err(_));
+
+        Ok(())
     }
 }

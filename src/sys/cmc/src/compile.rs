@@ -173,8 +173,8 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
 
 fn translate_offer(
     offer_in: &Vec<cml::Offer>,
-    all_children: &HashSet<&str>,
-    all_collections: &HashSet<&str>,
+    all_children: &HashSet<&cml::Name>,
+    all_collections: &HashSet<&cml::Name>,
 ) -> Result<Vec<cm::Offer>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
@@ -240,7 +240,7 @@ fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, E
             }
         };
         out_children.push(cm::Child {
-            name: cm::Name::new(child.name.clone())?,
+            name: cm::Name::new(child.name.to_string())?,
             url: cm::Url::new(child.url.clone())?,
             startup,
         });
@@ -261,7 +261,7 @@ fn translate_collections(
             }
         };
         out_collections
-            .push(cm::Collection { name: cm::Name::new(collection.name.clone())?, durability });
+            .push(cm::Collection { name: cm::Name::new(collection.name.to_string())?, durability });
     }
     Ok(out_collections)
 }
@@ -271,7 +271,7 @@ fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>,
         .iter()
         .map(|storage| {
             Ok(cm::Storage {
-                name: cm::Name::new(storage.name.clone())?,
+                name: cm::Name::new(storage.name.to_string())?,
                 source_path: cm::Path::new(storage.path.clone())?,
                 source: extract_offer_source(storage)?,
             })
@@ -281,12 +281,9 @@ fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>,
 
 fn extract_use_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
     match in_obj.from.as_ref() {
-        Some(from) => match cml::parse_reference(from) {
-            Some(cml::Ref::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
-            Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-            Some(_) => Err(Error::internal(format!("invalid \"from\" for \"use\": {}", from))),
-            None => Err(Error::internal(format!("invalid \"from\": {}", from))),
-        },
+        Some(cml::Ref::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+        Some(other) => Err(Error::internal(format!("invalid \"from\" for \"use\": {}", other))),
         None => Ok(cm::Ref::Realm(cm::RealmRef {})), // Default value.
     }
 }
@@ -295,16 +292,13 @@ fn extract_expose_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
-    match cml::parse_reference(in_obj.from()) {
-        Some(cml::Ref::Named(name)) => {
+    match in_obj.from() {
+        cml::Ref::Named(name) => {
             Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
         }
-        Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-        Some(cml::Ref::Self_) => Ok(cm::Ref::Self_(cm::SelfRef {})),
-        Some(_) => {
-            Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", in_obj.from())))
-        }
-        None => Err(Error::internal(format!("invalid \"from\": {}", in_obj.from()))),
+        cml::Ref::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+        cml::Ref::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
+        _ => Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", in_obj.from()))),
     }
 }
 
@@ -312,14 +306,13 @@ fn extract_offer_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
-    match cml::parse_reference(in_obj.from()) {
-        Some(cml::Ref::Named(name)) => {
+    match in_obj.from() {
+        cml::Ref::Named(name) => {
             Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
         }
-        Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-        Some(cml::Ref::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
-        Some(cml::Ref::Self_) => Ok(cm::Ref::Self_(cm::SelfRef {})),
-        None => Err(Error::internal(format!("invalid \"from\": {}", in_obj.from()))),
+        cml::Ref::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+        cml::Ref::Realm => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        cml::Ref::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
     }
 }
 
@@ -327,50 +320,50 @@ fn extract_offer_storage_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
-    match cml::parse_reference(in_obj.from()) {
-        Some(cml::Ref::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
-        Some(cml::Ref::Named(storage_name)) => {
+    match in_obj.from() {
+        cml::Ref::Realm => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        cml::Ref::Named(storage_name) => {
             Ok(cm::Ref::Storage(cm::StorageRef { name: cm::Name::new(storage_name.to_string())? }))
         }
-        Some(_) => {
-            Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", in_obj.from())))
+        other => Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", other))),
+    }
+}
+
+fn translate_child_reference(
+    reference: &cml::Ref,
+    all_children: &HashSet<&cml::Name>,
+    all_collections: &HashSet<&cml::Name>,
+) -> Result<cm::Ref, Error> {
+    match reference {
+        cml::Ref::Named(name) if all_children.contains(name) => {
+            Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
         }
-        None => Err(Error::internal(format!("invalid \"from\": {}", in_obj.from()))),
+        cml::Ref::Named(name) if all_collections.contains(name) => {
+            Ok(cm::Ref::Collection(cm::CollectionRef { name: cm::Name::new(name.to_string())? }))
+        }
+        cml::Ref::Named(_) => {
+            Err(Error::internal(format!("dangling reference: \"{}\"", reference)))
+        }
+        _ => Err(Error::internal(format!("invalid child reference: \"{}\"", reference))),
     }
 }
 
 fn extract_storage_targets(
     in_obj: &cml::Offer,
-    all_children: &HashSet<&str>,
-    all_collections: &HashSet<&str>,
+    all_children: &HashSet<&cml::Name>,
+    all_collections: &HashSet<&cml::Name>,
 ) -> Result<Vec<cm::Ref>, Error> {
     in_obj
         .to
         .iter()
-        .map(|to| {
-            let name = match cml::parse_named_reference(to.as_str()) {
-                Some(c) => Ok(c),
-                None => Err(Error::internal(format!("invalid \"dest\": {}", to.as_str()))),
-            }?
-            .to_string();
-
-            if all_children.contains(&name as &str) {
-                Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
-            } else if all_collections.contains(&name as &str) {
-                Ok(cm::Ref::Collection(cm::CollectionRef {
-                    name: cm::Name::new(name.to_string())?,
-                }))
-            } else {
-                Err(Error::internal(format!("dangling reference: \"{}\"", name)))
-            }
-        })
+        .map(|to| translate_child_reference(to, all_children, all_collections))
         .collect()
 }
 
 fn extract_targets(
     in_obj: &cml::Offer,
-    all_children: &HashSet<&str>,
-    all_collections: &HashSet<&str>,
+    all_children: &HashSet<&cml::Name>,
+    all_collections: &HashSet<&cml::Name>,
 ) -> Result<Vec<(cm::Ref, String)>, Error> {
     let mut out_targets = vec![];
 
@@ -379,20 +372,7 @@ fn extract_targets(
 
     // Validate the "to" references.
     for to in in_obj.to.iter() {
-        let name = match cml::parse_named_reference(to.as_str()) {
-            Some(c) => Ok(c),
-            None => Err(Error::internal(format!("invalid \"dest\": {}", to.as_str()))),
-        }?
-        .to_string();
-
-        // Obtain the target reference.
-        let target = if all_children.contains(&name as &str) {
-            cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? })
-        } else if all_collections.contains(&name as &str) {
-            cm::Ref::Collection(cm::CollectionRef { name: cm::Name::new(name.to_string())? })
-        } else {
-            return Err(Error::internal(format!("dangling reference: \"{}\"", name)));
-        };
+        let target = translate_child_reference(to, all_children, all_collections)?;
         out_targets.push((target, target_path.clone()))
     }
     Ok(out_targets)
@@ -426,16 +406,9 @@ where
 
 fn extract_expose_target(in_obj: &cml::Expose) -> Result<cm::ExposeTarget, Error> {
     match &in_obj.to {
-        Some(dest) => {
-            let dest = dest.as_str();
-            if dest == "realm" {
-                Ok(cm::ExposeTarget::Realm)
-            } else if dest == "framework" {
-                Ok(cm::ExposeTarget::Framework)
-            } else {
-                Err(Error::internal(format!("invalid exposed dest: \"{}\"", dest)))
-            }
-        }
+        Some(cml::Ref::Realm) => Ok(cm::ExposeTarget::Realm),
+        Some(cml::Ref::Framework) => Ok(cm::ExposeTarget::Framework),
+        Some(other) => Err(Error::internal(format!("invalid exposed dest: \"{}\"", other))),
         None => Ok(cm::ExposeTarget::Realm),
     }
 }

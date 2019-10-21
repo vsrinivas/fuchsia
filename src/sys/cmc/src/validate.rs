@@ -132,9 +132,9 @@ pub fn validate_json(json: &Value, schema: &JsonSchema) -> Result<(), Error> {
 
 struct ValidationContext<'a> {
     document: &'a cml::Document,
-    all_children: HashSet<&'a str>,
-    all_collections: HashSet<&'a str>,
-    all_storage_and_sources: HashMap<&'a str, &'a str>,
+    all_children: HashSet<&'a cml::Name>,
+    all_collections: HashSet<&'a cml::Name>,
+    all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::Ref>,
 }
 
 /// A name/identity of a capability exposed/offered to another component.
@@ -286,8 +286,8 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_storage(&self, storage: &cml::Storage) -> Result<(), Error> {
-        if let Some(child) = cml::parse_named_reference(&storage.from) {
-            if !self.all_children.contains(child) {
+        if let cml::Ref::Named(child) = &storage.from {
+            if !self.all_children.contains(&child) {
                 return Err(Error::validate(format!(
                     "\"{}\" is a \"storage\" source but it does not appear in \"children\"",
                     storage.from,
@@ -306,7 +306,7 @@ impl<'a> ValidationContext<'a> {
 
         // Ensure directory rights are specified if exposing from self.
         if expose.directory.is_some() {
-            if expose.from == cml::FROM_SELF_TOKEN.to_string() || expose.rights.is_some() {
+            if expose.from == cml::Ref::Self_ || expose.rights.is_some() {
                 match &expose.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => return Err(Error::validate(
@@ -332,13 +332,13 @@ impl<'a> ValidationContext<'a> {
     fn validate_offer(
         &self,
         offer: &'a cml::Offer,
-        used_ids: &mut HashMap<&'a str, HashSet<CapabilityId<'a>>>,
+        used_ids: &mut HashMap<&'a cml::Name, HashSet<CapabilityId<'a>>>,
     ) -> Result<(), Error> {
-        let from = self.validate_source("offer", offer)?;
+        self.validate_source("offer", offer)?;
 
         // Ensure directory rights are specified if offering from self.
         if offer.directory.is_some() {
-            if offer.from == cml::FROM_SELF_TOKEN.to_string() || offer.rights.is_some() {
+            if offer.from == cml::Ref::Self_ || offer.rights.is_some() {
                 match &offer.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => {
@@ -353,33 +353,36 @@ impl<'a> ValidationContext<'a> {
         // Validate every target of this offer.
         let mut seen_targets = HashSet::new();
         for to in offer.to.iter() {
-            // Parse child name, already validated by JSON schema.
-            let to_child = cml::parse_named_reference(&to).unwrap();
-
-            let target_cap_id = capability_id(offer)?;
+            // Ensure the "to" value is a child.
+            let to_target = if let cml::Ref::Named(name) = to {
+                name
+            } else {
+                return Err(Error::validate(format!("invalid \"offer\" target: \"{}\"", to)));
+            };
 
             // Ensure that there are no duplicate names in the "to" list.
-            if !seen_targets.insert(to_child as &str) {
+            let target_cap_id = capability_id(offer)?;
+            if !seen_targets.insert(to_target) {
                 return Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"offer\" target for {} \"{}\"",
-                    &to,
+                    to,
                     target_cap_id.type_str(),
                     target_cap_id.as_str()
                 )));
             }
 
             // Check that any referenced child actually exists.
-            if !self.all_children.contains(to_child) && !self.all_collections.contains(to_child) {
+            if !self.all_children.contains(to_target) && !self.all_collections.contains(to_target) {
                 return Err(Error::validate(format!(
                     "\"{}\" is an \"offer\" target but it does not appear in \"children\" \
                      or \"collections\"",
-                    &to,
+                    to
                 )));
             }
 
             // Ensure something hasn't already been offered under the same
             // name to this target.
-            let ids_for_entity = used_ids.entry(to_child).or_insert(HashSet::new());
+            let ids_for_entity = used_ids.entry(to_target).or_insert(HashSet::new());
             if !ids_for_entity.insert(target_cap_id) {
                 return Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"offer\" target {} for \"{}\"",
@@ -389,22 +392,22 @@ impl<'a> ValidationContext<'a> {
                 )));
             }
 
-            if let cml::Ref::Named(name) = from {
+            if let cml::Ref::Named(name) = &offer.from {
                 // Ensure we are not offering an object back to its source child.
-                if offer.storage.is_none() && name == to_child {
+                if offer.storage.is_none() && name == to_target {
                     return Err(Error::validate(format!(
                         "Offer target \"{}\" is same as source",
-                        &to
+                        to
                     )));
                 }
 
                 // Check that the source of this storage capability does not match the target
                 if offer.storage.is_some() {
                     match self.all_storage_and_sources.get(name) {
-                        Some(val) if *val == to => {
+                        Some(cml::Ref::Named(source)) if to_target == source => {
                             return Err(Error::validate(format!(
                                 "Storage offer target \"{}\" is same as source",
-                                &to
+                                to
                             )));
                         }
                         _ => {}
@@ -421,26 +424,20 @@ impl<'a> ValidationContext<'a> {
     ///
     /// - `keyword` is the keyword for the clause ("offer" or "expose"), used in error strings.
     /// - `source_obj` is the clause containing a "from" line that should be validated.
-    fn validate_source<T>(&self, keyword: &str, source_obj: &'a T) -> Result<cml::Ref, Error>
+    fn validate_source<T>(&self, keyword: &str, source_obj: &'a T) -> Result<(), Error>
     where
         T: cml::FromClause + cml::CapabilityClause,
     {
-        // Parse "from". If it is a child, return the value.
+        // Fetch out the child collection/component name.
         //
-        // Should have already been validated by schema.
-        let source_name = match cml::parse_reference(source_obj.from()) {
-            Some(cml::Ref::Named(name)) => name,
-            Some(other) => return Ok(other),
-            None => {
-                return Err(Error::validate(format!(
-                    "\"{}\" is not a valid \"{}\" source",
-                    source_obj.from(),
-                    keyword
-                )))
-            }
+        // We don't attempt to validate other refernce types.
+        let source_name = if let cml::Ref::Named(name) = source_obj.from() {
+            name
+        } else {
+            return Ok(());
         };
 
-        // If the object is storage "from" is a storage type. Ensure we have
+        // If the object is storage, "from" is a storage type. Ensure we have
         // a "storage" stanza defined.
         if source_obj.storage().is_some() {
             if !self.all_storage_and_sources.contains_key(source_name) {
@@ -450,7 +447,7 @@ impl<'a> ValidationContext<'a> {
                     keyword,
                 )));
             }
-            return Ok(cml::Ref::Named(source_name));
+            return Ok(());
         }
 
         // Otherwise, "source" is a child name. Ensure we have a child
@@ -463,7 +460,7 @@ impl<'a> ValidationContext<'a> {
             )));
         }
 
-        return Ok(cml::Ref::Named(source_name));
+        return Ok(());
     }
 
     /// Validates that directory rights for all route types are valid, i.e that it does not
@@ -501,7 +498,7 @@ impl<'a> ValidationContext<'a> {
 /// appear twice. `name` is used in generated error messages.
 fn ensure_no_duplicates<'a, I>(values: I) -> Result<(), Error>
 where
-    I: Iterator<Item = (&'a str, &'a str)>,
+    I: Iterator<Item = (&'a cml::Name, &'a str)>,
 {
     let mut seen_keys = HashMap::new();
     for (key, name) in values {
@@ -2747,7 +2744,7 @@ mod tests {
             legacy_service: None,
             directory: None,
             storage: None,
-            from: "".to_string(),
+            from: cml::Ref::Self_,
             to: vec![],
             r#as: None,
             rights: None,
