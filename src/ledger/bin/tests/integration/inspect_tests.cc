@@ -14,6 +14,7 @@
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
+#include "src/ledger/bin/tests/integration/test_page_watcher.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -249,7 +250,11 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   page->Put(key, value);
   // Get a snapshot of the page. This prevents all commit pruning.
   PageSnapshotPtr page_snapshot_ptr;
-  page->GetSnapshot(page_snapshot_ptr.NewRequest(), {}, nullptr);
+  // Create a watcher on the page snapshot so that visible change are monitored.
+  auto snpashot_waiter = NewWaiter();
+  PageWatcherPtr watcher_ptr;
+  TestPageWatcher watcher(watcher_ptr.NewRequest(), snpashot_waiter->GetCallback());
+  page->GetSnapshot(page_snapshot_ptr.NewRequest(), {}, std::move(watcher_ptr));
   waiter = NewWaiter();
   page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
@@ -285,14 +290,30 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   ledger::PagePtr right_page_connection;
   ledger->GetPage(std::make_unique<PageId>(page_id), left_page_connection.NewRequest());
   ledger->GetPage(std::make_unique<PageId>(page_id), right_page_connection.NewRequest());
-  left_page_connection->Put(key, left_conflicting_value);
-  right_page_connection->Put(key, right_conflicting_value);
+  // Start transactions to ensure that mutation are concurrent.
+  left_page_connection->StartTransaction();
+  right_page_connection->StartTransaction();
   waiter = NewWaiter();
   left_page_connection->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
   right_page_connection->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
+  // Both pages are now on conflicting transactions. Mutate the same key on
+  // both, commit and sync to ensure the ledger is in a cohrent, known state.
+  left_page_connection->Put(key, left_conflicting_value);
+  left_page_connection->Commit();
+
+  // Wait for the first change to be visible on the initial page.
+  ASSERT_TRUE(snpashot_waiter->RunUntilCalled());
+
+  // Commit the change on the second connection.
+  right_page_connection->Put(key, right_conflicting_value);
+  right_page_connection->Commit();
+
+  // Wait for a new change to be visible on the initial page. This will be the
+  // merged change.
+  ASSERT_TRUE(snpashot_waiter->RunUntilCalled());
 
   // Verify that an inspection still shows the single page with the expected page ID, learn from
   // the inspection the commit ID of the new, post-conflict head of the page, and then verify that
