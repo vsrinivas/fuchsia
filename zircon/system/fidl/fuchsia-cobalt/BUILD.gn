@@ -8,6 +8,9 @@ fidl_library("fuchsia-cobalt") {
   sdk = true
   fuzzers = [
     {
+      protocol = "fuchsia.cobalt.LoggerFactory"
+    },
+    {
       protocol = "fuchsia.cobalt.Logger"
     },
     {
