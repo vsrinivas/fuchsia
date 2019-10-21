@@ -21,6 +21,10 @@ zx_status_t zx_ktrace_control(zx_handle_t handle,
 
 ## DESCRIPTION
 
+To use the `zx_trace_control()` function, you must specify
+`kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+the function returns **ZX_ERR_NOT_SUPPORTED**.
+
 TODO(fxbug.dev/32938)
 
 ## RIGHTS

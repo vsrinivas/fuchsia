@@ -38,6 +38,10 @@ zero and less than or equal to 64MB.
 than requested may be returned if *vaddr*+*buffer_size* extends beyond the
 memory mapped in the process.
 
+To use the `zx_process_write_memory()` function, you must specify
+`kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+the function returns **ZX_ERR_NOT_SUPPORTED**.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
@@ -61,11 +65,14 @@ the address range to write falls into a protected area like the vDSO.
 the process is being terminated),
 or the requested memory is not cacheable.
 
-**ZX_ERR_INVALID_ARGS** *buffer* is an invalid pointer or NULL,
+**ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or NULL,
 or *buffer_size* is zero or greater than 64MB.
 
-**ZX_ERR_NO_MEMORY** the process does not have any memory at the
+**ZX_ERR_NO_MEMORY**  the process does not have any memory at the
 requested address.
+
+**ZX_ERR_NOT_SUPPORTED**  `kernel.enable-debugging-syscalls` is not set to `true`
+on the kernel command line.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a process handle.
 

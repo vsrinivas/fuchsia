@@ -20,6 +20,10 @@ zx_status_t zx_debug_send_command(zx_handle_t resource,
 
 ## DESCRIPTION
 
+To use the `zx_debug_send_command()` function, you must specify
+`kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+the function returns **ZX_ERR_NOT_SUPPORTED**.
+
 TODO(fxbug.dev/32938)
 
 ## RIGHTS
