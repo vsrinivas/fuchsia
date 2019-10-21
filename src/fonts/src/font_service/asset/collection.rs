@@ -7,7 +7,7 @@ use {
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
-    fidl_fuchsia_pkg::FontResolverMarker,
+    fidl_fuchsia_pkg::{FontResolverMarker, UpdatePolicy},
     fuchsia_component::client::connect_to_service,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon as zx,
@@ -125,9 +125,13 @@ impl Collection {
 
                 // Get directory handle from FontResolver
                 let font_resolver = connect_to_service::<FontResolverMarker>()?;
+                let mut update_policy =
+                    UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
                 let (dir_proxy, dir_request) = create_proxy::<io::DirectoryMarker>()?;
 
-                let status = font_resolver.resolve(&url.to_string(), dir_request).await?;
+                let status = font_resolver
+                    .resolve(&url.to_string(), &mut update_policy, dir_request)
+                    .await?;
                 zx::Status::ok(status)?;
 
                 // Cache directory handle

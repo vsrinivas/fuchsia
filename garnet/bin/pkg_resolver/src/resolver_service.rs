@@ -110,7 +110,12 @@ where
     A: AmberConnect,
 {
     while let Some(event) = stream.try_next().await? {
-        let FontResolverRequest::Resolve { package_url, directory_request, responder } = event;
+        let FontResolverRequest::Resolve {
+            package_url,
+            update_policy,
+            directory_request,
+            responder,
+        } = event;
 
         let result = resolve_font(
             &font_package_manager,
@@ -118,6 +123,7 @@ where
             &repo_manager,
             &cache,
             package_url,
+            update_policy,
             directory_request,
         )
         .await;
@@ -134,6 +140,7 @@ async fn resolve_font<'a, A>(
     repo_manager: &'a Arc<RwLock<RepositoryManager<A>>>,
     cache: &'a PackageCache,
     package_url: String,
+    update_policy: UpdatePolicy,
     directory_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status>
 where
@@ -152,7 +159,7 @@ where
                     &cache,
                     package_url,
                     vec![],
-                    UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
+                    update_policy,
                     directory_request,
                 )
                 .await
@@ -327,6 +334,7 @@ mod tests {
         async fn run_resolve_font<'a>(
             &'a self,
             url: &'a str,
+            update_policy: UpdatePolicy,
             expected_res: Result<Vec<String>, Status>,
         ) {
             let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
@@ -336,6 +344,7 @@ mod tests {
                 &self.repo_manager,
                 &self.cache,
                 url.to_string(),
+                update_policy,
                 dir_server_end,
             )
             .await;
@@ -774,10 +783,25 @@ mod tests {
             ])
             .build();
 
-        test.run_resolve_font("fuchsia-pkg://fuchsia.com/font1", Ok(vec![gen_merkle_file('a')]))
-            .await;
-        test.run_resolve_font("fuchsia-pkg://fuchsia.com/font2", Ok(vec![gen_merkle_file('b')]))
-            .await;
-        test.run_resolve_font("fuchsia-pkg://fuchsia.com/squares", Err(Status::NOT_FOUND)).await;
+        let update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: true };
+
+        test.run_resolve_font(
+            "fuchsia-pkg://fuchsia.com/font1",
+            update_policy.clone(),
+            Ok(vec![gen_merkle_file('a')]),
+        )
+        .await;
+        test.run_resolve_font(
+            "fuchsia-pkg://fuchsia.com/font2",
+            update_policy.clone(),
+            Ok(vec![gen_merkle_file('b')]),
+        )
+        .await;
+        test.run_resolve_font(
+            "fuchsia-pkg://fuchsia.com/squares",
+            update_policy.clone(),
+            Err(Status::NOT_FOUND),
+        )
+        .await;
     }
 }

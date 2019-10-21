@@ -21,6 +21,8 @@ protocol FontResolver {
     /// local system.
     ///
     /// + request `package_url` The package URL of a font package.
+    /// + request `update_policy` Freshness and caching policies to be used when the
+    ///   `FontResolver` is fetching packages.
     /// + request `directory_request` Request for a directory that will be resolved when the package
     ///   has been successfully cached. The directory should contain a single file, corresponding to
     ///   the asset filename. The client should retain the directory handle for as long as needed to
@@ -34,6 +36,10 @@ protocol FontResolver {
     ///     to be a font package.
     ///   * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
     ///   * `ZX_ERR_UNAVAILABLE` if the resolver is currently unable to fetch a package blob.
-    Resolve(string package_url, request<fuchsia.io.Directory> directory_request)
+    Resolve(
+        string package_url,
+        UpdatePolicy update_policy,
+        request<fuchsia.io.Directory> directory_request
+        )
         -> (zx.status status);
 };

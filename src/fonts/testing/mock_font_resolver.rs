@@ -39,7 +39,12 @@ async fn main() -> Result<(), Error> {
 async fn run_resolver_service(mut stream: FontResolverRequestStream) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await? {
         fx_vlog!(1, "FontResolver got request {:?}", request);
-        let FontResolverRequest::Resolve { package_url, directory_request, responder } = request;
+        let FontResolverRequest::Resolve {
+            package_url,
+            update_policy: _,
+            directory_request,
+            responder,
+        } = request;
         let status = resolve(package_url, directory_request).await;
         responder.send(Status::from(status).into_raw())?;
     }
