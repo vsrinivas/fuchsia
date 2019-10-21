@@ -61,7 +61,7 @@ bool P2PProviderImpl::SendMessage(const P2PClientId& destination,
 void P2PProviderImpl::StartService() {
   fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> handle;
   service_binding_.Bind(handle.NewRequest());
-  overnet_->RegisterService(OvernetServiceName(), std::move(handle));
+  overnet_->PublishService(OvernetServiceName(), std::move(handle));
   ListenForNewDevices();
 }
 

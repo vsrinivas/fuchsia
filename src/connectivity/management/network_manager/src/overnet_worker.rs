@@ -10,7 +10,8 @@ use {
     failure::Error,
     fidl::endpoints::{create_request_stream, RequestStream, ServiceMarker},
     fidl_fuchsia_overnet::{
-        OvernetMarker, OvernetProxy, ServiceProviderMarker, ServiceProviderRequest,
+        ServiceProviderMarker, ServiceProviderRequest, ServicePublisherMarker,
+        ServicePublisherProxy,
     },
     fidl_fuchsia_router_config::{
         RouterAdminMarker, RouterAdminRequestStream, RouterStateMarker, RouterStateRequestStream,
@@ -28,7 +29,7 @@ impl OvernetWorker {
         let admin_event_ch = event_ch.clone();
         let state_event_ch = event_ch.clone();
 
-        let overnet_svc = fclient::connect_to_service::<OvernetMarker>()?;
+        let overnet_svc = fclient::connect_to_service::<ServicePublisherMarker>()?;
         Self::setup_overnet_service(&overnet_svc, &RouterAdminMarker::NAME, move |ch| {
             FidlWorker::spawn_router_admin(
                 RouterAdminRequestStream::from_channel(ch),
@@ -46,7 +47,7 @@ impl OvernetWorker {
     }
 
     fn setup_overnet_service<F: 'static>(
-        overnet: &OvernetProxy,
+        overnet: &ServicePublisherProxy,
         name: &str,
         callback: F,
     ) -> Result<(), Error>
@@ -54,7 +55,7 @@ impl OvernetWorker {
         F: Fn(fasync::Channel),
     {
         let (client, mut server) = create_request_stream::<ServiceProviderMarker>()?;
-        overnet.register_service(name, client)?;
+        overnet.publish_service(name, client)?;
         fasync::spawn_local(async move {
             while let Some(ServiceProviderRequest::ConnectToService {
                 chan: ch_req,

@@ -6,7 +6,7 @@ extern crate network_manager_cli_lib as network_manager_cli;
 
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::{Proxy, ServiceMarker};
-use fidl_fuchsia_overnet::{OvernetMarker, OvernetProxy, Peer};
+use fidl_fuchsia_overnet::{Peer, ServiceConsumerMarker, ServiceConsumerProxy};
 use fidl_fuchsia_overnet_protocol::NodeId;
 use fidl_fuchsia_router_config::{
     RouterAdminMarker, RouterAdminProxy, RouterStateMarker, RouterStateProxy,
@@ -31,7 +31,7 @@ fn connect() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
 }
 
 fn connect_overnet_node(
-    svc: &OvernetProxy,
+    svc: &ServiceConsumerProxy,
     name: &str,
     node: &mut NodeId,
 ) -> Result<fasync::Channel, Error> {
@@ -51,7 +51,7 @@ fn supports_network_manager(peer: &Peer) -> bool {
 }
 
 async fn connect_overnet() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
-    let svc = connect_to_service::<OvernetMarker>()?;
+    let svc = connect_to_service::<ServiceConsumerMarker>()?;
     syslog::fx_log_info!("looking for overnet peers...");
     loop {
         let peers = svc.list_peers().await?;

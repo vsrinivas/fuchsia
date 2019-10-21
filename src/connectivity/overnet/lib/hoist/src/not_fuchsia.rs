@@ -18,11 +18,14 @@ use {
     parking_lot::Mutex,
     std::cell::RefCell,
     std::rc::Rc,
+    std::sync::Arc,
     std::time::Duration,
     tokio::{io::AsyncRead, runtime::current_thread},
 };
 
-pub use fidl_fuchsia_overnet::OvernetProxyInterface;
+pub use fidl_fuchsia_overnet::MeshControllerProxyInterface;
+pub use fidl_fuchsia_overnet::ServiceConsumerProxyInterface;
+pub use fidl_fuchsia_overnet::ServicePublisherProxyInterface;
 
 pub const ASCENDD_CLIENT_CONNECTION_STRING: &str = "Lift me";
 pub const ASCENDD_SERVER_CONNECTION_STRING: &str = "Yessir";
@@ -403,9 +406,37 @@ fn run_overnet(rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// OvernetProxyInterface implementation
+// ProxyInterface implementations
 
-impl OvernetProxyInterface for Overnet {
+struct MeshController(Arc<Overnet>);
+
+impl MeshControllerProxyInterface for MeshController {
+    fn attach_socket_link(
+        &self,
+        socket: fidl::Socket,
+        options: fidl_fuchsia_overnet::SocketLinkOptions,
+    ) -> Result<(), fidl::Error> {
+        self.0.send(OvernetCommand::AttachSocketLink(socket, options));
+        Ok(())
+    }
+}
+
+struct ServicePublisher(Arc<Overnet>);
+
+impl ServicePublisherProxyInterface for ServicePublisher {
+    fn publish_service(
+        &self,
+        service_name: &str,
+        provider: ClientEnd<ServiceProviderMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.0.send(OvernetCommand::RegisterService(service_name.to_string(), provider));
+        Ok(())
+    }
+}
+
+struct ServiceConsumer(Arc<Overnet>);
+
+impl ServiceConsumerProxyInterface for ServiceConsumer {
     type ListPeersResponseFut = futures::future::MapErr<
         futures::channel::oneshot::Receiver<Vec<Peer>>,
         fn(futures::channel::oneshot::Canceled) -> fidl::Error,
@@ -413,19 +444,10 @@ impl OvernetProxyInterface for Overnet {
 
     fn list_peers(&self) -> Self::ListPeersResponseFut {
         let (sender, receiver) = futures::channel::oneshot::channel();
-        self.send(OvernetCommand::ListPeers(sender));
+        self.0.send(OvernetCommand::ListPeers(sender));
         // Returning an error from the receiver means that the sender disappeared without
         // sending a response, a condition we explicitly disallow.
         receiver.map_err(|_| unreachable!())
-    }
-
-    fn register_service(
-        &self,
-        service_name: &str,
-        provider: ClientEnd<ServiceProviderMarker>,
-    ) -> Result<(), fidl::Error> {
-        self.send(OvernetCommand::RegisterService(service_name.to_string(), provider));
-        Ok(())
     }
 
     fn connect_to_service(
@@ -434,23 +456,29 @@ impl OvernetProxyInterface for Overnet {
         service_name: &str,
         chan: fidl::Channel,
     ) -> Result<(), fidl::Error> {
-        self.send(OvernetCommand::ConnectToService(node.id.into(), service_name.to_string(), chan));
-        Ok(())
-    }
-
-    fn attach_socket_link(
-        &self,
-        socket: fidl::Socket,
-        options: fidl_fuchsia_overnet::SocketLinkOptions,
-    ) -> Result<(), fidl::Error> {
-        self.send(OvernetCommand::AttachSocketLink(socket, options));
+        self.0.send(OvernetCommand::ConnectToService(
+            node.id.into(),
+            service_name.to_string(),
+            chan,
+        ));
         Ok(())
     }
 }
 
-/// Normal applications should call connect() to obtain the OvernetProxyInterface
-pub fn connect() -> Result<impl OvernetProxyInterface, Error> {
-    Ok(Overnet::new())
+lazy_static::lazy_static! {
+    static ref OVERNET: Arc<Overnet> = Arc::new( Overnet::new());
+}
+
+pub fn connect_as_service_consumer() -> Result<impl ServiceConsumerProxyInterface, Error> {
+    Ok(ServiceConsumer(OVERNET.clone()))
+}
+
+pub fn connect_as_service_publisher() -> Result<impl ServicePublisherProxyInterface, Error> {
+    Ok(ServicePublisher(OVERNET.clone()))
+}
+
+pub fn connect_as_mesh_controller() -> Result<impl MeshControllerProxyInterface, Error> {
+    Ok(MeshController(OVERNET.clone()))
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

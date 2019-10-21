@@ -58,7 +58,7 @@ void FakeOvernet::ConnectToService(fuchsia::overnet::protocol::NodeId node,
   delegate_->ConnectToService(std::move(node), std::move(service_name), std::move(channel));
 }
 
-void FakeOvernet::RegisterService(
+void FakeOvernet::PublishService(
     std::string name, fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> service_provider) {
   service_providers_.emplace(name, std::move(service_provider));
   delegate_->ServiceWasRegistered();
@@ -89,10 +89,6 @@ void FakeOvernet::ListPeers(ListPeersCallback callback) {
                          *last_seen_peers_version = std::max(version, *last_seen_peers_version);
                          callback(std::move(overnet_peers));
                        });
-}
-
-void FakeOvernet::AttachSocketLink(zx::socket socket, fuchsia::overnet::SocketLinkOptions options) {
-  FXL_NOTIMPLEMENTED();
 }
 
 }  // namespace ledger

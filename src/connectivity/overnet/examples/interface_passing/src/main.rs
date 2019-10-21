@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
     fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
-        OvernetProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
+        ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
     fidl_fuchsia_overnet_examples_interfacepassing as interfacepassing,
     futures::prelude::*,
@@ -28,7 +28,8 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 ////////////////////////////////////////////////////////////////////////////////
 // Client implementation
 
-async fn exec_client(svc: impl OvernetProxyInterface, text: Option<&str>) -> Result<(), Error> {
+async fn exec_client(text: Option<&str>) -> Result<(), Error> {
+    let svc = hoist::connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
         println!("Got peers: {:?}", peers);
@@ -125,11 +126,11 @@ async fn next_request(
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
-async fn exec_server(svc: impl OvernetProxyInterface, quiet: bool) -> Result<(), Error> {
+async fn exec_server(quiet: bool) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
-    svc.register_service(interfacepassing::ExampleMarker::NAME, ClientEnd::new(p))?;
+    hoist::publish_service(interfacepassing::ExampleMarker::NAME, ClientEnd::new(p))?;
     while let Some(ServiceProviderRequest::ConnectToService {
         chan,
         info: _,
@@ -152,12 +153,10 @@ async fn exec_server(svc: impl OvernetProxyInterface, quiet: bool) -> Result<(),
 async fn async_main() -> Result<(), Error> {
     let args = app().get_matches();
 
-    let svc = hoist::connect()?;
-
     match args.subcommand() {
-        ("server", Some(_)) => exec_server(svc, args.is_present("quiet")).await,
+        ("server", Some(_)) => exec_server(args.is_present("quiet")).await,
         ("client", Some(cmd)) => {
-            let r = exec_client(svc, cmd.value_of("text")).await;
+            let r = exec_client(cmd.value_of("text")).await;
             println!("finished client");
             r
         }

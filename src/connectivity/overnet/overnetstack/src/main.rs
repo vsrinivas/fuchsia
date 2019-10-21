@@ -9,7 +9,11 @@
 mod mdns;
 
 use failure::{Error, ResultExt};
-use fidl_fuchsia_overnet::{OvernetListPeersResponder, OvernetRequest, OvernetRequestStream};
+use fidl_fuchsia_overnet::{
+    MeshControllerRequest, MeshControllerRequestStream, OvernetListPeersResponder, OvernetRequest,
+    OvernetRequestStream, ServiceConsumerListPeersResponder, ServiceConsumerRequest,
+    ServiceConsumerRequestStream, ServicePublisherRequest, ServicePublisherRequestStream,
+};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
@@ -228,46 +232,119 @@ fn register_udp(addr: SocketAddr, node_id: NodeId) -> Result<(), Error> {
     })
 }
 
-async fn run_list_peers_inner(responder: OvernetListPeersResponder) -> Result<(), Error> {
+trait ListPeersResponder {
+    fn respond(
+        self,
+        peers: &mut dyn ExactSizeIterator<Item = &mut fidl_fuchsia_overnet::Peer>,
+    ) -> Result<(), fidl::Error>;
+}
+
+impl ListPeersResponder for ServiceConsumerListPeersResponder {
+    fn respond(
+        self,
+        peers: &mut dyn ExactSizeIterator<Item = &mut fidl_fuchsia_overnet::Peer>,
+    ) -> Result<(), fidl::Error> {
+        self.send(peers)
+    }
+}
+
+impl ListPeersResponder for OvernetListPeersResponder {
+    fn respond(
+        self,
+        peers: &mut dyn ExactSizeIterator<Item = &mut fidl_fuchsia_overnet::Peer>,
+    ) -> Result<(), fidl::Error> {
+        self.send(peers)
+    }
+}
+
+async fn run_list_peers_inner(responder: impl ListPeersResponder) -> Result<(), Error> {
     let mut peers = with_app_mut(|app| app.node.clone().list_peers()).await?;
-    responder.send(&mut peers.iter_mut())?;
+    responder.respond(&mut peers.iter_mut())?;
     Ok(())
 }
 
-async fn run_list_peers(responder: OvernetListPeersResponder) {
+async fn run_list_peers(responder: impl ListPeersResponder) {
     if let Err(e) = run_list_peers_inner(responder).await {
         log::warn!("List peers gets error: {:?}", e);
     }
 }
 
-/// Service FIDL requests.
-async fn run_overnet_server(mut stream: OvernetRequestStream) -> Result<(), Error> {
-    while let Some(request) = stream.try_next().await.context("error running echo server")? {
+async fn run_service_publisher_server(
+    mut stream: ServicePublisherRequestStream,
+) -> Result<(), Error> {
+    while let Some(request) = stream.try_next().await.context("error running overnet server")? {
         let result = with_app_mut(|app| match request {
+            ServicePublisherRequest::PublishService { service_name, provider, .. } => {
+                app.node.register_service(service_name, provider)
+            }
+        });
+        if let Err(e) = result {
+            log::warn!("Error servicing request: {:?}", e)
+        }
+    }
+    Ok(())
+}
+
+async fn run_service_consumer_server(
+    mut stream: ServiceConsumerRequestStream,
+) -> Result<(), Error> {
+    while let Some(request) = stream.try_next().await.context("error running overnet server")? {
+        let result = with_app_mut(|app| match request {
+            ServiceConsumerRequest::ListPeers { responder, .. } => {
+                fasync::spawn_local(run_list_peers(responder));
+                Ok(())
+            }
+            ServiceConsumerRequest::ConnectToService { node, service_name, chan, .. } => {
+                app.node.connect_to_service(node.id.into(), &service_name, chan)
+            }
+        });
+        if let Err(e) = result {
+            log::warn!("Error servicing request: {:?}", e);
+        }
+    }
+    Ok(())
+}
+
+async fn run_mesh_controller_server(mut stream: MeshControllerRequestStream) -> Result<(), Error> {
+    while let Some(request) = stream.try_next().await.context("error running overnet server")? {
+        let result = with_app_mut(|app| match request {
+            MeshControllerRequest::AttachSocketLink { socket, options, .. } => {
+                app.node.attach_socket_link(options.connection_label, socket)
+            }
+        });
+        if let Err(e) = result {
+            log::warn!("Error servicing request: {:?}", e);
+        }
+    }
+    Ok(())
+}
+
+async fn run_legacy_overnet_server(mut stream: OvernetRequestStream) -> Result<(), Error> {
+    while let Some(request) = stream.try_next().await.context("error running overnet server")? {
+        let result = with_app_mut(|app| match request {
+            OvernetRequest::PublishService { service_name, provider, .. } => {
+                app.node.register_service(service_name, provider)
+            }
             OvernetRequest::ListPeers { responder, .. } => {
                 fasync::spawn_local(run_list_peers(responder));
                 Ok(())
             }
-            OvernetRequest::RegisterService { service_name, provider, .. } => {
-                app.node.register_service(service_name, provider)
-            }
             OvernetRequest::ConnectToService { node, service_name, chan, .. } => {
                 app.node.connect_to_service(node.id.into(), &service_name, chan)
             }
-            OvernetRequest::AttachSocketLink { socket, options, .. } => {
-                app.node.attach_socket_link(options.connection_label, socket)
-            }
         });
-        match result {
-            Ok(()) => (),
-            Err(e) => log::warn!("Error servicing request: {:?}", e),
+        if let Err(e) = result {
+            log::warn!("Error servicing request: {:?}", e);
         }
     }
     Ok(())
 }
 
 enum IncomingService {
-    Overnet(OvernetRequestStream),
+    ServiceConsumer(ServiceConsumerRequestStream),
+    ServicePublisher(ServicePublisherRequestStream),
+    MeshController(MeshControllerRequestStream),
+    LegacyOvernet(OvernetRequestStream),
     // ... more services here
 }
 
@@ -276,7 +353,11 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["overnet"]).context("initialize logging")?;
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("svc").add_fidl_service(IncomingService::Overnet);
+    let mut svc_dir = fs.dir("svc");
+    svc_dir.add_fidl_service(IncomingService::ServiceConsumer);
+    svc_dir.add_fidl_service(IncomingService::ServicePublisher);
+    svc_dir.add_fidl_service(IncomingService::MeshController);
+    svc_dir.add_fidl_service(IncomingService::LegacyOvernet);
 
     fs.take_and_serve_directory_handle()?;
 
@@ -289,8 +370,19 @@ async fn main() -> Result<(), Error> {
     .context("Initializing UDP & MDNS")?;
 
     const MAX_CONCURRENT: usize = 10_000;
-    fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Overnet(stream)| {
-        run_overnet_server(stream).unwrap_or_else(|e| log::trace!("{:?}", e))
+    fs.for_each_concurrent(MAX_CONCURRENT, |svcreq| match svcreq {
+        IncomingService::MeshController(stream) => {
+            run_mesh_controller_server(stream).unwrap_or_else(|e| log::trace!("{:?}", e)).boxed()
+        }
+        IncomingService::ServicePublisher(stream) => {
+            run_service_publisher_server(stream).unwrap_or_else(|e| log::trace!("{:?}", e)).boxed()
+        }
+        IncomingService::ServiceConsumer(stream) => {
+            run_service_consumer_server(stream).unwrap_or_else(|e| log::trace!("{:?}", e)).boxed()
+        }
+        IncomingService::LegacyOvernet(stream) => {
+            run_legacy_overnet_server(stream).unwrap_or_else(|e| log::trace!("{:?}", e)).boxed()
+        }
     })
     .await;
     Ok(())

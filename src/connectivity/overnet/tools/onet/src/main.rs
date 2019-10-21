@@ -5,8 +5,8 @@
 use {
     clap::{App, SubCommand},
     failure::Error,
+    fidl_fuchsia_overnet::{MeshControllerProxyInterface, ServiceConsumerProxyInterface},
     futures::{future::try_join, prelude::*},
-    hoist::OvernetProxyInterface,
     std::io::{Read, Write},
 };
 
@@ -22,8 +22,8 @@ fn app<'a, 'b>() -> App<'a, 'b> {
         ])
 }
 
-async fn ls_peers(svc: impl OvernetProxyInterface) -> Result<(), Error> {
-    for peer in svc.list_peers().await? {
+async fn ls_peers() -> Result<(), Error> {
+    for peer in hoist::connect_as_service_consumer()?.list_peers().await? {
         println!("PEER: {:?}", peer);
     }
     Ok(())
@@ -83,11 +83,12 @@ async fn copy_socket_to_stdout(
     }
 }
 
-async fn host_pipe(svc: impl OvernetProxyInterface) -> Result<(), Error> {
+async fn host_pipe() -> Result<(), Error> {
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
     let (rx_socket, tx_socket) = futures::AsyncReadExt::split(local_socket);
-    svc.attach_socket_link(remote_socket, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
+    hoist::connect_as_mesh_controller()?
+        .attach_socket_link(remote_socket, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
     try_join(copy_socket_to_stdout(rx_socket), copy_stdin_to_socket(tx_socket)).await?;
 
     Ok(())
@@ -96,11 +97,9 @@ async fn host_pipe(svc: impl OvernetProxyInterface) -> Result<(), Error> {
 async fn async_main() -> Result<(), Error> {
     let args = app().get_matches();
 
-    let svc = hoist::connect()?;
-
     match args.subcommand_name() {
-        Some("ls-peers") => ls_peers(svc).await,
-        Some("host-pipe") => host_pipe(svc).await,
+        Some("ls-peers") => ls_peers().await,
+        Some("host-pipe") => host_pipe().await,
         _ => {
             let _ = app().write_help(&mut std::io::stderr());
             eprintln!("");

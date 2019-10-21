@@ -192,7 +192,7 @@ TEST_F(OvernetFactoryTest, ServiceProvider) {
   OvernetServiceProvider service_provider(&relays_host1);
   fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> handle;
   fidl::Binding binding(&service_provider, handle.NewRequest());
-  overnet1->RegisterService("test_service", std::move(handle));
+  overnet1->PublishService("test_service", std::move(handle));
 
   RunLoopUntilIdle();
 

@@ -7,7 +7,7 @@ use crate::printer::Printer;
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::{Proxy, ServiceMarker};
 use fidl_fuchsia_net::{Ipv4Address, MacAddress};
-use fidl_fuchsia_overnet::{OvernetMarker, OvernetProxy, Peer};
+use fidl_fuchsia_overnet::{Peer, ServiceConsumerMarker, ServiceConsumerProxy};
 use fidl_fuchsia_overnet_protocol::NodeId;
 use fidl_fuchsia_router_config::{
     Credentials, FilterAction, FilterRule, FlowSelector, Id, L2tp, LanProperties, PortRange, Pppoe,
@@ -65,7 +65,7 @@ pub fn connect() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
 }
 
 fn connect_overnet_node(
-    svc: &OvernetProxy,
+    svc: &ServiceConsumerProxy,
     name: &str,
     node: &mut NodeId,
 ) -> Result<fasync::Channel, Error> {
@@ -85,7 +85,7 @@ fn supports_network_manager(peer: &Peer) -> bool {
 }
 
 pub async fn connect_overnet() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
-    let svc = connect_to_service::<OvernetMarker>()?;
+    let svc = connect_to_service::<ServiceConsumerMarker>()?;
     syslog::fx_log_info!("looking for overnet peers...");
     loop {
         for mut peer in svc.list_peers().await? {
@@ -478,11 +478,9 @@ async fn do_set<T: Write>(
                                 fidl_fuchsia_router_config::ConnectionParameters::L2tp(l2tp_config),
                             );
                         }
-                        _ => {
-                            return Err(format_err!(
+                        _ => return Err(format_err!(
                             "Please provide a valid connection type: direct, pppoe, pptp or l2tp"
-                        ))
-                        }
+                        )),
                     }
                 }
                 None => {
