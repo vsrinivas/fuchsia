@@ -359,7 +359,7 @@ RecordCommand::RecordCommand(sys::ComponentContext* context)
 void RecordCommand::Start(const fxl::CommandLine& command_line) {
   if (!options_.Setup(command_line)) {
     FXL_LOG(ERROR) << "Error parsing options from command line - aborting";
-    Done(1);
+    Done(EXIT_FAILURE);
     return;
   }
 
@@ -367,7 +367,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
       OpenOutputStream(options_.output_file_name, options_.compress);
   if (!out_stream) {
     FXL_LOG(ERROR) << "Failed to open " << options_.output_file_name << " for writing";
-    Done(1);
+    Done(EXIT_FAILURE);
     return;
   }
 
@@ -494,7 +494,7 @@ void RecordCommand::ProcessMeasurements() {
   OutputResults(out(), results);
   if (errored) {
     FXL_LOG(ERROR) << "One or more measurements had empty results. Quitting.";
-    Done(1);
+    Done(EXIT_FAILURE);
     return;
   }
 
@@ -504,7 +504,7 @@ void RecordCommand::ProcessMeasurements() {
     }
     if (!ExportResults(options_.benchmark_results_file, results)) {
       FXL_LOG(ERROR) << "Failed to write benchmark results to " << options_.benchmark_results_file;
-      Done(1);
+      Done(EXIT_FAILURE);
       return;
     }
     out() << "Benchmark results written to " << options_.benchmark_results_file << std::endl;
@@ -584,7 +584,7 @@ void RecordCommand::LaunchComponentApp() {
     if (!options_.decouple)
       // The trace might have been already stopped by the |Wait()| callback. In
       // that case, |StopTrace| below does nothing.
-      StopTrace(-1);
+      StopTrace(EXIT_FAILURE);
   });
   component_controller_.events().OnTerminated =
       [this](int64_t return_code, fuchsia::sys::TerminationReason termination_reason) {
@@ -596,7 +596,7 @@ void RecordCommand::LaunchComponentApp() {
           if (options_.return_child_result) {
             StopTrace(return_code);
           } else {
-            StopTrace(0);
+            StopTrace(EXIT_SUCCESS);
           }
         }
       };
@@ -616,7 +616,7 @@ void RecordCommand::LaunchSpawnedApp() {
   zx::process subprocess;
   zx_status_t status = Spawn(all_args, &subprocess);
   if (status != ZX_OK) {
-    StopTrace(-1);
+    StopTrace(EXIT_FAILURE);
     FXL_LOG(ERROR) << "Subprocess launch failed: \"" << status
                    << "\" Did you provide the full path to the tool?";
     return;
@@ -633,7 +633,7 @@ void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::Wait
                                      zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for spawned app: status=" << status;
-    StopTrace(-1);
+    StopTrace(EXIT_FAILURE);
     return;
   }
 
@@ -648,7 +648,7 @@ void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::Wait
       if (options_.return_child_result) {
         StopTrace(proc_info.return_code);
       } else {
-        StopTrace(0);
+        StopTrace(EXIT_SUCCESS);
       }
     }
   } else {
@@ -672,7 +672,7 @@ void RecordCommand::StartTimer() {
       dispatcher_,
       [weak = weak_ptr_factory_.GetWeakPtr()] {
         if (weak)
-          weak->StopTrace(0);
+          weak->StopTrace(EXIT_SUCCESS);
       },
       zx::nsec(options_.duration.ToNanoseconds()));
   out() << "Starting trace; will stop in " << options_.duration.ToSecondsF() << " seconds..."

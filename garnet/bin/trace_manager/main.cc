@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdlib.h>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
@@ -22,15 +24,16 @@ constexpr char kDefaultConfigFile[] = "/pkg/data/tracing.config";
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line))
-    return 1;
+  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
+    exit(EXIT_FAILURE);
+  }
 
   auto config_file = command_line.GetOptionValueWithDefault("config", kDefaultConfigFile);
 
   Config config;
   if (!config.ReadFrom(config_file)) {
     FXL_LOG(ERROR) << "Failed to read configuration from " << config_file;
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   FXL_LOG(INFO) << "Trace Manager starting with config: " << config_file;
@@ -38,5 +41,5 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   TraceManagerApp trace_manager_app(config);
   loop.Run();
-  return 0;
+  return EXIT_SUCCESS;
 }

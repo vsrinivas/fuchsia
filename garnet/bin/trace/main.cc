@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdlib.h>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -19,7 +21,7 @@ int main(int argc, const char** argv) {
   auto context = sys::ComponentContext::Create();
 
   tracing::App app(context.get());
-  int32_t return_code = 0;
+  int32_t return_code = EXIT_SUCCESS;
   async::PostTask(loop.dispatcher(), [&app, &command_line, &return_code, &loop] {
     app.Run(command_line, [&return_code, &loop](int32_t code) {
       return_code = code;

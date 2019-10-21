@@ -22,7 +22,7 @@ App::~App() {}
 void App::Start(const fxl::CommandLine& command_line) {
   if (command_line.HasOption("help")) {
     PrintHelp();
-    Done(0);
+    Done(EXIT_SUCCESS);
     return;
   }
 
@@ -31,7 +31,7 @@ void App::Start(const fxl::CommandLine& command_line) {
   if (positional_args.empty()) {
     FXL_LOG(ERROR) << "Command missing - aborting";
     PrintHelp();
-    Done(1);
+    Done(EXIT_FAILURE);
     return;
   }
 
@@ -39,7 +39,7 @@ void App::Start(const fxl::CommandLine& command_line) {
   if (it == known_commands_.end()) {
     FXL_LOG(ERROR) << "Unknown command '" << positional_args.front() << "' - aborting";
     PrintHelp();
-    Done(1);
+    Done(EXIT_FAILURE);
     return;
   }
 
