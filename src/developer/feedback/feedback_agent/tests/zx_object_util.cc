@@ -35,8 +35,13 @@ std::vector<ResultObject> GetChildObjects(const zx_handle_t parent, uint32_t chi
   result.reserve(koids.size());
   for (const auto& koid : koids) {
     zx_handle_t handle;
-    FXL_CHECK(zx_object_get_child(parent, koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK);
-    result.push_back(ResultObject(handle));
+    // The child object could be already gone since we asked for the child koids so only push the
+    // children for which we can get a handle to.
+    // This actually happened in practice where "feedback_data_provider" processes are expected to
+    // be cleaned up and sometimes the clean up happens after GetChildKoids(), cf. fxb/39174.
+    if (zx_object_get_child(parent, koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK) {
+      result.push_back(ResultObject(handle));
+    }
   }
   return result;
 }
