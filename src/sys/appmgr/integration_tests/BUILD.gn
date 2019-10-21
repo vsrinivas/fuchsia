@@ -41,6 +41,7 @@ executable("realm_tests") {
     "util:data_file_reader_writer",
     "util:data_file_reader_writer_util",
     "//garnet//examples/fidl/services:echo",
+    "//garnet//examples/fidl/echo_server_cpp",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
@@ -66,6 +67,7 @@ executable("hub_tests") {
   ]
 
   deps = [
+    "//garnet/bin/glob",
     "//garnet/bin/sysmgr:lib",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
