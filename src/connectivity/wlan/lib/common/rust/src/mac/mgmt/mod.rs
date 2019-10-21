@@ -20,6 +20,8 @@ pub enum MgmtBody<B: ByteSlice> {
     AssociationReq { assoc_req_hdr: LayoutVerified<B, AssocReqHdr>, elements: B },
     AssociationResp { assoc_resp_hdr: LayoutVerified<B, AssocRespHdr>, elements: B },
     Deauthentication { deauth_hdr: LayoutVerified<B, DeauthHdr>, elements: B },
+    Disassociation { disassoc_hdr: LayoutVerified<B, DisassocHdr>, elements: B },
+    Action { no_ack: bool, action_hdr: LayoutVerified<B, ActionHdr>, elements: B },
     Unsupported { subtype: MgmtSubtype },
 }
 
@@ -45,6 +47,18 @@ impl<B: ByteSlice> MgmtBody<B> {
             MgmtSubtype::DEAUTH => {
                 let (deauth_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 Some(MgmtBody::Deauthentication { deauth_hdr, elements })
+            }
+            MgmtSubtype::DISASSOC => {
+                let (disassoc_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                Some(MgmtBody::Disassociation { disassoc_hdr, elements })
+            }
+            MgmtSubtype::ACTION => {
+                let (action_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                Some(MgmtBody::Action { no_ack: false, action_hdr, elements })
+            }
+            MgmtSubtype::ACTION_NO_ACK => {
+                let (action_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                Some(MgmtBody::Action { no_ack: true, action_hdr, elements })
             }
             subtype => Some(MgmtBody::Unsupported { subtype }),
         }

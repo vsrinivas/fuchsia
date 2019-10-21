@@ -48,7 +48,7 @@ impl State {
 // TODO(37891): Use this code.
 #[allow(dead_code)]
 pub struct RemoteClient {
-    addr: MacAddr,
+    pub addr: MacAddr,
     state: State,
 }
 
@@ -66,6 +66,16 @@ impl RemoteClient {
         Self { addr, state: State::Authenticating }
     }
 
+    /// Returns if the client is deauthenticated. The caller should use this to check if the client
+    /// needs to be forgotten from its state.
+    pub fn deauthenticated(&self) -> bool {
+        self.state == State::Deauthenticated
+    }
+
+    fn is_frame_class_permitted(&self, frame_class: FrameClass) -> bool {
+        frame_class <= self.state.max_frame_class()
+    }
+
     // MLME SAP handlers.
 
     /// Handles MLME-AUTHENTICATE.response (IEEE Std 802.11-2016, 6.3.5.5) from the SME.
@@ -73,7 +83,7 @@ impl RemoteClient {
     /// If result_code is Success, the SME will have authenticated this client.
     ///
     /// Otherwise, the MLME should forget about this client.
-    fn handle_mlme_auth_resp(
+    pub fn handle_mlme_auth_resp(
         &mut self,
         ctx: &mut Context,
         result_code: fidl_mlme::AuthenticateResultCodes,
@@ -116,7 +126,7 @@ impl RemoteClient {
     /// The SME has already deauthenticated this client.
     ///
     /// After this function is called, the MLME must forget about this client.
-    fn handle_mlme_deauth_req(
+    pub fn handle_mlme_deauth_req(
         &mut self,
         ctx: &mut Context,
         reason_code: fidl_mlme::ReasonCode,
@@ -138,7 +148,7 @@ impl RemoteClient {
     ///
     /// Otherwise, the SME has not associated this client. However, the SME has not forgotten about
     /// the client either until MLME-DEAUTHENTICATE.request is received.
-    fn handle_mlme_assoc_resp(
+    pub fn handle_mlme_assoc_resp(
         &mut self,
         ctx: &mut Context,
         is_rsn: bool,
@@ -201,7 +211,7 @@ impl RemoteClient {
     ///
     /// The MLME doesn't have to do anything other than change its state to acknowledge the
     /// disassociation.
-    fn handle_mlme_disassoc_req(
+    pub fn handle_mlme_disassoc_req(
         &mut self,
         ctx: &mut Context,
         reason_code: u16,
@@ -239,7 +249,11 @@ impl RemoteClient {
     /// Handles MLME-EAPOL.request (IEEE Std 802.11-2016, 6.3.22.1) from the SME.
     ///
     /// The MLME should forward these frames to the PHY layer.
-    fn handle_mlme_eapol_req(&self, ctx: &mut Context, data: &[u8]) -> Result<(), failure::Error> {
+    pub fn handle_mlme_eapol_req(
+        &self,
+        ctx: &mut Context,
+        data: &[u8],
+    ) -> Result<(), failure::Error> {
         // IEEE Std 802.11-2016, 6.3.22.2.3 states that we should send MLME-EAPOL.confirm to the
         // SME on success. Our SME employs a timeout for EAPoL negotiation, so MLME-EAPOL.confirm is
         // redundant.
@@ -251,7 +265,7 @@ impl RemoteClient {
     /// Handles MLME-SETKEYS.request (IEEE Std 802.11-2016, 6.3.19.1) from the SME.
     ///
     /// The MLME should set the keys on the PHY.
-    fn handle_mlme_setkeys_request(
+    pub fn handle_mlme_setkeys_request(
         &mut self,
         _ctx: &mut Context,
         _keylist: &[fidl_mlme::SetKeyDescriptor],
@@ -262,16 +276,16 @@ impl RemoteClient {
 
     // WLAN frame handlers.
 
-    /// Handles disassociation request frames (IEEE Std 802.11-2016, 9.3.3.5) from the PHY.
+    /// Handles disassociation frames (IEEE Std 802.11-2016, 9.3.3.5) from the PHY.
     ///
     /// self is mutable here as receiving a disassociation immediately disassociates us.
-    fn handle_disassoc_req_frame(
+    fn handle_disassoc_frame(
         &mut self,
         ctx: &mut Context,
-        reason_code: u16,
+        reason_code: ReasonCode,
     ) -> Result<(), failure::Error> {
         self.state = State::Authenticated;
-        ctx.send_mlme_disassoc_ind(self.addr.clone(), reason_code)
+        ctx.send_mlme_disassoc_ind(self.addr.clone(), reason_code.0)
             .map_err(|e| format_err!("failed to send frame: {}", e))
     }
 
@@ -330,12 +344,12 @@ impl RemoteClient {
     fn handle_deauth_frame(
         &mut self,
         ctx: &mut Context,
-        reason_code: u16,
+        reason_code: ReasonCode,
     ) -> Result<(), failure::Error> {
         self.state = State::Deauthenticated;
         ctx.send_mlme_deauth_ind(
             self.addr.clone(),
-            fidl_mlme::ReasonCode::from_primitive(reason_code)
+            fidl_mlme::ReasonCode::from_primitive(reason_code.0)
                 .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason),
         )
         .map_err(|e| format_err!("failed to send frame: {}", e))
@@ -351,47 +365,6 @@ impl RemoteClient {
     fn handle_ps_poll(&self, _ctx: &mut Context) -> Result<(), failure::Error> {
         // TODO(37891): Implement me!
         unimplemented!()
-    }
-
-    /// Handles data frames (IEEE Std 802.11-2016, 9.3.2) from the PHY.
-    ///
-    /// These data frames may be in A-MSDU format (IEEE Std 802.11-2016, 9.3.2.2). However, the
-    /// individual frames will be passed to |handle_msdu| and we don't need to care what format
-    /// they're in.
-    fn handle_data_frame<B: ByteSlice>(
-        &self,
-        ctx: &mut Context,
-        body: B,
-    ) -> Result<(), failure::Error> {
-        if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(body, false) {
-            for msdu in msdus {
-                let mac::Msdu { dst_addr, src_addr, llc_frame } = &msdu;
-                match llc_frame.hdr.protocol_id.to_native() {
-                    mac::ETHER_TYPE_EAPOL => {
-                        self.handle_eapol_llc_frame(ctx, *dst_addr, *src_addr, &llc_frame.body)?;
-                    }
-                    _ if match self.state {
-                        State::Associated {
-                            eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
-                            ..
-                        } => false,
-                        _ => true,
-                    } =>
-                    {
-                        self.handle_llc_frame(
-                            ctx,
-                            *dst_addr,
-                            *src_addr,
-                            llc_frame.hdr.protocol_id.to_native(),
-                            &llc_frame.body,
-                        )?;
-                    }
-                    // Drop all non-EAPoL MSDUs if the controlled port is closed.
-                    _ => (),
-                }
-            }
-        }
-        Ok(())
     }
 
     /// Handles EAPoL requests (IEEE Std 802.1X-2010, 11.3) from PHY data frames.
@@ -419,8 +392,95 @@ impl RemoteClient {
             .map_err(|e| format_err!("failed to send frame: {}", e))
     }
 
+    // Public handler functions.
+
+    /// Handles management frames (IEEE Std 802.11-2016, 9.3.3) from the PHY.
+    pub fn handle_mgmt_frame<B: ByteSlice>(
+        &mut self,
+        ctx: &mut Context,
+        ssid: Option<Vec<u8>>,
+        mgmt_hdr: mac::MgmtHdr,
+        body: B,
+    ) -> Result<(), failure::Error> {
+        let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
+
+        if !self.is_frame_class_permitted(mac::frame_class(&{ mgmt_hdr.frame_ctrl })) {
+            bail!("unpermitted management frame for subtype: {:?}", mgmt_subtype);
+        }
+
+        match mac::MgmtBody::parse(mgmt_subtype, body)
+            .ok_or(format_err!("failed to parse management frame"))?
+        {
+            mac::MgmtBody::Authentication { auth_hdr, .. } => {
+                self.handle_auth_frame(ctx, auth_hdr.auth_alg_num)
+            }
+            mac::MgmtBody::AssociationReq { assoc_req_hdr, .. } => {
+                // TODO(tonyy): Support RSN from elements here.
+                self.handle_assoc_req_frame(ctx, ssid, assoc_req_hdr.listen_interval, None)
+            }
+            mac::MgmtBody::Deauthentication { deauth_hdr, .. } => {
+                self.handle_deauth_frame(ctx, deauth_hdr.reason_code)
+            }
+            mac::MgmtBody::Disassociation { disassoc_hdr, .. } => {
+                self.handle_disassoc_frame(ctx, disassoc_hdr.reason_code)
+            }
+            mac::MgmtBody::Action { action_hdr: _, .. } => self.handle_action_frame(ctx),
+            _ => bail!("unknown management frame: {:?}", mgmt_subtype),
+        }
+    }
+
+    /// Handles data frames (IEEE Std 802.11-2016, 9.3.2) from the PHY.
+    ///
+    /// These data frames may be in A-MSDU format (IEEE Std 802.11-2016, 9.3.2.2). However, the
+    /// individual frames will be passed to |handle_msdu| and we don't need to care what format
+    /// they're in.
+    pub fn handle_data_frame<B: ByteSlice>(
+        &self,
+        ctx: &mut Context,
+        fixed_data_fields: mac::FixedDataHdrFields,
+        addr4: Option<mac::Addr4>,
+        qos_ctrl: Option<mac::QosControl>,
+        body: B,
+    ) -> Result<(), failure::Error> {
+        if !self.is_frame_class_permitted(mac::frame_class(&{ fixed_data_fields.frame_ctrl })) {
+            bail!("unpermitted data frame");
+        }
+
+        for msdu in
+            mac::MsduIterator::from_data_frame_parts(fixed_data_fields, addr4, qos_ctrl, body)
+        {
+            let mac::Msdu { dst_addr, src_addr, llc_frame } = &msdu;
+            match llc_frame.hdr.protocol_id.to_native() {
+                mac::ETHER_TYPE_EAPOL => {
+                    self.handle_eapol_llc_frame(ctx, *dst_addr, *src_addr, &llc_frame.body)?;
+                }
+                // Disallow handling LLC frames if the controlled port is closed. If there is no
+                // controlled port, sending frames is OK.
+                _ if match self.state {
+                    State::Associated {
+                        eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
+                        ..
+                    } => false,
+                    _ => true,
+                } =>
+                {
+                    self.handle_llc_frame(
+                        ctx,
+                        *dst_addr,
+                        *src_addr,
+                        llc_frame.hdr.protocol_id.to_native(),
+                        &llc_frame.body,
+                    )?
+                }
+                // Drop all non-EAPoL MSDUs if the controlled port is closed.
+                _ => (),
+            }
+        }
+        Ok(())
+    }
+
     /// Handles Ethernet II frames from the netstack.
-    fn handle_eth_frame(
+    pub fn handle_eth_frame(
         &self,
         ctx: &mut Context,
         dst_addr: MacAddr,
@@ -754,14 +814,14 @@ mod tests {
     }
 
     #[test]
-    fn handle_disassoc_req_frame() {
+    fn handle_disassoc_frame() {
         let mut fake_device = FakeDevice::new();
         let mut r_sta = make_remote_client();
         let mut ctx = make_context(fake_device.as_device());
         r_sta
-            .handle_disassoc_req_frame(
+            .handle_disassoc_frame(
                 &mut ctx,
-                fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                ReasonCode(fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16),
             )
             .expect("expected OK");
 
@@ -852,7 +912,10 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device());
 
         r_sta
-            .handle_deauth_frame(&mut ctx, fidl_mlme::ReasonCode::LeavingNetworkDeauth as u16)
+            .handle_deauth_frame(
+                &mut ctx,
+                ReasonCode(fidl_mlme::ReasonCode::LeavingNetworkDeauth as u16),
+            )
             .expect("expected OK");
         let msg = fake_device
             .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
@@ -878,46 +941,12 @@ mod tests {
     }
 
     #[test]
-    fn handle_data_frame_null() {
-        let mut fake_device = FakeDevice::new();
-        let r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
-
-        r_sta.handle_data_frame(&mut ctx, &make_null_data_frame()[..]).expect("expected OK");
-
-        assert_eq!(fake_device.eth_queue.len(), 0);
-    }
-
-    #[test]
-    fn handle_data_frame_single_llc() {
-        let mut fake_device = FakeDevice::new();
-        let r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
-
-        r_sta
-            .handle_data_frame(&mut ctx, &make_data_frame_single_llc(None, None)[..])
-            .expect("expected OK");
-
-        assert_eq!(fake_device.eth_queue.len(), 1);
-    }
-
-    #[test]
-    fn handle_data_frame_amsdu() {
-        let mut fake_device = FakeDevice::new();
-        let r_sta = make_remote_client();
-        let mut ctx = make_context(fake_device.as_device());
-
-        r_sta.handle_data_frame(&mut ctx, &make_data_frame_amsdu()[..]).expect("expected OK");
-
-        assert_eq!(fake_device.eth_queue.len(), 2);
-    }
-
-    #[test]
     fn handle_eapol_llc_frame() {
         let mut fake_device = FakeDevice::new();
-        let r_sta = make_remote_client();
+        let mut r_sta = make_remote_client();
         let mut ctx = make_context(fake_device.as_device());
 
+        r_sta.state = State::Associated { eapol_controlled_port: None };
         r_sta
             .handle_eapol_llc_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
@@ -937,9 +966,10 @@ mod tests {
     #[test]
     fn handle_llc_frame() {
         let mut fake_device = FakeDevice::new();
-        let r_sta = make_remote_client();
+        let mut r_sta = make_remote_client();
         let mut ctx = make_context(fake_device.as_device());
 
+        r_sta.state = State::Associated { eapol_controlled_port: None };
         r_sta
             .handle_llc_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
@@ -1035,5 +1065,198 @@ mod tests {
             // Data
             1, 2, 3, 4, 5,
         ][..]);
+    }
+
+    #[test]
+    fn handle_data_frame_not_permitted() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = State::Authenticating;
+        let mut ctx = make_context(fake_device.as_device());
+
+        r_sta
+            .handle_data_frame(
+                &mut ctx,
+                mac::FixedDataHdrFields {
+                    frame_ctrl: mac::FrameControl(0),
+                    duration: 0,
+                    addr1: CLIENT_ADDR,
+                    addr2: AP_ADDR.0.clone(),
+                    addr3: CLIENT_ADDR2,
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                None,
+                None,
+                &[
+                    7, 7, 7, // DSAP, SSAP & control
+                    8, 8, 8, // OUI
+                    9, 10, // eth type
+                    // Trailing bytes
+                    11, 11, 11,
+                ][..],
+            )
+            .expect_err("expected err");
+    }
+
+    #[test]
+    fn handle_data_frame_single_llc() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = State::Associated { eapol_controlled_port: None };
+        let mut ctx = make_context(fake_device.as_device());
+
+        r_sta
+            .handle_data_frame(
+                &mut ctx,
+                mac::FixedDataHdrFields {
+                    frame_ctrl: mac::FrameControl(0),
+                    duration: 0,
+                    addr1: CLIENT_ADDR,
+                    addr2: AP_ADDR.0.clone(),
+                    addr3: CLIENT_ADDR2,
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                None,
+                None,
+                &[
+                    7, 7, 7, // DSAP, SSAP & control
+                    8, 8, 8, // OUI
+                    9, 10, // eth type
+                    // Trailing bytes
+                    11, 11, 11,
+                ][..],
+            )
+            .expect("expected OK");
+
+        assert_eq!(fake_device.eth_queue.len(), 1);
+    }
+
+    #[test]
+    fn handle_data_frame_amsdu() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = State::Associated { eapol_controlled_port: None };
+        let mut ctx = make_context(fake_device.as_device());
+
+        let mut amsdu_data_frame_body = vec![];
+        amsdu_data_frame_body.extend(&[
+            // A-MSDU Subframe #1
+            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, // dst_addr
+            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, // src_addr
+            0x00, 0x74, // MSDU length
+        ]);
+        amsdu_data_frame_body.extend(MSDU_1_LLC_HDR);
+        amsdu_data_frame_body.extend(MSDU_1_PAYLOAD);
+        amsdu_data_frame_body.extend(&[
+            // Padding
+            0x00, 0x00, // A-MSDU Subframe #2
+            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x04, // dst_addr
+            0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xac, // src_addr
+            0x00, 0x66, // MSDU length
+        ]);
+        amsdu_data_frame_body.extend(MSDU_2_LLC_HDR);
+        amsdu_data_frame_body.extend(MSDU_2_PAYLOAD);
+
+        r_sta
+            .handle_data_frame(
+                &mut ctx,
+                mac::FixedDataHdrFields {
+                    frame_ctrl: mac::FrameControl(0),
+                    duration: 0,
+                    addr1: CLIENT_ADDR,
+                    addr2: AP_ADDR.0.clone(),
+                    addr3: CLIENT_ADDR2,
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                None,
+                Some(mac::QosControl(0).with_amsdu_present(true)),
+                &amsdu_data_frame_body[..],
+            )
+            .expect("expected OK");
+
+        assert_eq!(fake_device.eth_queue.len(), 2);
+    }
+
+    #[test]
+    fn handle_mgmt_frame() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = State::Authenticating;
+        let mut ctx = make_context(fake_device.as_device());
+
+        r_sta
+            .handle_mgmt_frame(
+                &mut ctx,
+                None,
+                mac::MgmtHdr {
+                    frame_ctrl: mac::FrameControl(0b00000000_10110000), // Auth frame
+                    duration: 0,
+                    addr1: [1; 6],
+                    addr2: [2; 6],
+                    addr3: [3; 6],
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                &[
+                    0, 0, // Auth algorithm number
+                    1, 0, // Auth txn seq number
+                    0, 0, // Status code
+                ][..],
+            )
+            .expect("expected OK");
+    }
+
+    #[test]
+    fn handle_mgmt_frame_not_permitted() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = State::Authenticating;
+        let mut ctx = make_context(fake_device.as_device());
+
+        r_sta
+            .handle_mgmt_frame(
+                &mut ctx,
+                None,
+                mac::MgmtHdr {
+                    frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
+                    duration: 0,
+                    addr1: [1; 6],
+                    addr2: [2; 6],
+                    addr3: [3; 6],
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                &[
+                    0, 0, // Capability info
+                    10, 0, // Listen interval
+                ][..],
+            )
+            .expect_err("expected error");
+    }
+
+    #[test]
+    fn handle_mgmt_frame_not_handled() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = State::Authenticating;
+        let mut ctx = make_context(fake_device.as_device());
+
+        r_sta
+            .handle_mgmt_frame(
+                &mut ctx,
+                None,
+                mac::MgmtHdr {
+                    frame_ctrl: mac::FrameControl(0b00000000_00010000), // Assoc resp frame
+                    duration: 0,
+                    addr1: [1; 6],
+                    addr2: [2; 6],
+                    addr3: [3; 6],
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                &[
+                    0, 0, // Capability info
+                    0, 0, // Status code
+                    1, 0, // AID
+                ][..],
+            )
+            .expect_err("expected error");
     }
 }
