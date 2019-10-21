@@ -201,7 +201,13 @@ class TA_CAP("mutex") BrwLock {
                                   static_cast<unsigned __int128>(reinterpret_cast<uintptr_t>(ct))
                                       << 64;
 
-      success = arch_cas_16_acquire(raw_state, &expected, desired);
+      // TODO(maniscalco): Ideally, we'd use a ktl::atomic/std::atomic here, but that's not easy to
+      // do. Once we have std::atomic_ref, raw_state can become a struct and we can stop using the
+      // compiler builtin without triggering UB.
+      success = __atomic_compare_exchange_n(raw_state, &expected, desired, /*weak=*/false,
+                                            /*success_memmodel=*/__ATOMIC_ACQUIRE,
+                                            /*failure_memmodel=*/__ATOMIC_RELAXED);
+
     } else {
       success = state_.state_.compare_exchange_strong(expected_state_bits, kBrwLockWriter,
                                                       ktl::memory_order_acquire,
