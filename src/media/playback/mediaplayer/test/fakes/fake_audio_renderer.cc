@@ -30,8 +30,6 @@ void FakeAudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   format_ = format;
 }
 
-void FakeAudioRenderer::SetStreamType(fuchsia::media::StreamType format) { FXL_NOTIMPLEMENTED(); }
-
 void FakeAudioRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   FXL_DCHECK(id == 0) << "Only ID 0 is currently supported.";
   vmo_mapper_.Map(std::move(payload_buffer), 0, 0, ZX_VM_PERM_READ);

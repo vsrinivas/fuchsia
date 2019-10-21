@@ -20,7 +20,6 @@ class NullAudioRenderer : public fuchsia::media::AudioRenderer {
   void DiscardAllPackets(DiscardAllPacketsCallback callback) override {}
   void DiscardAllPacketsNoReply() override {}
   void SetPcmStreamType(fuchsia::media::AudioStreamType type) override {}
-  void SetStreamType(fuchsia::media::StreamType type) override {}
   void SetPtsUnits(uint32_t tick_per_second_numerator,
                    uint32_t tick_per_second_denominator) override {}
   void SetPtsContinuityThreshold(float threshold_seconds) override {}

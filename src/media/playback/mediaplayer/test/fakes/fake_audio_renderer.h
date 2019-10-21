@@ -73,8 +73,6 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   // AudioRenderer implementation.
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) override;
 
-  void SetStreamType(fuchsia::media::StreamType format) override;
-
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) override;
 
   void RemovePayloadBuffer(uint32_t id) override;

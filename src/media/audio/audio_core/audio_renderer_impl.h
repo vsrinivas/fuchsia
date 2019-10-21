@@ -58,7 +58,6 @@ class AudioRendererImpl : public AudioObject,
 
   // |fuchsia::media::AudioRenderer|
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
-  void SetStreamType(fuchsia::media::StreamType format) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) final;
   void RemovePayloadBuffer(uint32_t id) final;
   void SetPtsUnits(uint32_t tick_per_second_numerator, uint32_t tick_per_second_denominator) final;

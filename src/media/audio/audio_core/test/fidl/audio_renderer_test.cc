@@ -266,7 +266,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnec
 
 // It is invalid to SendPacket before the stream type has been configured
 // (SetPcmStreamType).
-TEST_F(AudioRendererTest, SendPacketBeforeSetStreamTypeCausesDisconnect) {
+TEST_F(AudioRendererTest, SendPacketBeforeSetPcmStreamTypeCausesDisconnect) {
   // Add a payload buffer but no stream type.
   CreateAndAddPayloadBuffer(0);
 
@@ -544,25 +544,6 @@ TEST_F(AudioRendererTest, BindGainControl) {
   // its parent audio_renderer_'s.
   EXPECT_FALSE(gc_error_occurred);
   EXPECT_TRUE(audio_renderer_.is_bound());
-}
-
-//
-// SetStreamType is not yet implemented. We expect the AudioRenderer binding to
-// disconnect, and our AudioRenderer interface ptr to be reset.
-TEST_F(AudioRendererTest, SetStreamType) {
-  fuchsia::media::AudioStreamType stream_format;
-  stream_format.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
-  stream_format.channels = 1;
-  stream_format.frames_per_second = 8000;
-
-  fuchsia::media::StreamType stream_type;
-  stream_type.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
-  stream_type.medium_specific.set_audio(stream_format);
-
-  audio_renderer_->SetStreamType(std::move(stream_type));
-
-  // Binding should Disconnect (EXPECT loop to NOT timeout)
-  ExpectDisconnect();
 }
 
 // Before setting format, Play should not succeed.

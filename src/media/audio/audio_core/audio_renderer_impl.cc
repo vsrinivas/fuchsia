@@ -445,16 +445,6 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   volume_manager_.NotifyStreamChanged(this);
 }
 
-void AudioRendererImpl::SetStreamType(fuchsia::media::StreamType stream_type) {
-  TRACE_DURATION("audio", "AudioRendererImpl::SetStreamType");
-  AUD_VLOG_OBJ(TRACE, this);
-
-  FXL_LOG(ERROR) << "SetStreamType is not currently supported.";
-  Shutdown();
-
-  // Note: once supported, this should be restricted to "operating" mode only.
-}
-
 void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   TRACE_DURATION("audio", "AudioRendererImpl::AddPayloadBuffer");
   auto cleanup = fit::defer([this]() { Shutdown(); });
