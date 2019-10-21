@@ -7,6 +7,8 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 
+#include <optional>
+
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 #include "src/ledger/bin/cloud_sync/impl/status.h"
@@ -454,35 +456,33 @@ void PageDownload::ReadDiffEntry(
           }));
 }
 
-// TODO(35364): The cloud now sends us remote commit identifiers. We need some way to map them to
-// local commit identifiers for this to work.
 void PageDownload::DecodeAndParseDiff(
     const cloud_provider::DiffPack& diff_pack,
     fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
         callback) {
   cloud_provider::Diff diff;
-  storage::CommitId base_commit;
+  std::optional<std::string> base_remote_commit_id;
   std::vector<storage::EntryChange> changes;
   if (!cloud_provider::DecodeFromBuffer(diff_pack.buffer, &diff)) {
-    callback(ledger::Status::INVALID_ARGUMENT, std::move(base_commit), std::move(changes));
+    callback(ledger::Status::INVALID_ARGUMENT, {}, {});
     return;
   }
 
   if (!diff.has_base_state()) {
-    callback(ledger::Status::INVALID_ARGUMENT, std::move(base_commit), std::move(changes));
+    callback(ledger::Status::INVALID_ARGUMENT, {}, {});
     return;
   }
   if (diff.base_state().is_empty_page()) {
-    base_commit = storage::kFirstPageCommitId.ToString();
+    base_remote_commit_id = std::nullopt;
   } else if (diff.base_state().is_at_commit()) {
-    base_commit = convert::ToString(diff.base_state().at_commit());
+    base_remote_commit_id = convert::ToString(diff.base_state().at_commit());
   } else {
-    callback(ledger::Status::INVALID_ARGUMENT, std::move(base_commit), std::move(changes));
+    callback(ledger::Status::INVALID_ARGUMENT, {}, {});
     return;
   }
 
   if (!diff.has_changes()) {
-    callback(ledger::Status::INVALID_ARGUMENT, std::move(base_commit), std::move(changes));
+    callback(ledger::Status::INVALID_ARGUMENT, {}, {});
     return;
   }
 
@@ -492,10 +492,21 @@ void PageDownload::DecodeAndParseDiff(
     ReadDiffEntry(cloud_change, waiter->NewCallback());
   }
 
-  waiter->Finalize([base_commit = std::move(base_commit), callback = std::move(callback)](
-                       ledger::Status status, std::vector<storage::EntryChange> changes) {
-    callback(status, std::move(base_commit), std::move(changes));
-  });
+  waiter->Finalize(task_runner_->MakeScoped(
+      [this, base_remote_commit_id = std::move(base_remote_commit_id),
+       callback = std::move(callback)](ledger::Status status,
+                                       std::vector<storage::EntryChange> changes) mutable {
+        if (!base_remote_commit_id) {
+          callback(status, storage::kFirstPageCommitId.ToString(), std::move(changes));
+        } else {
+          storage_->GetCommitIdFromRemoteId(
+              *base_remote_commit_id,
+              [callback = std::move(callback), changes = std::move(changes)](
+                  ledger::Status status, storage::CommitId base_commit_id) mutable {
+                callback(status, std::move(base_commit_id), std::move(changes));
+              });
+        }
+      }));
 }
 
 void PageDownload::GetDiff(
@@ -505,15 +516,16 @@ void PageDownload::GetDiff(
   current_get_calls_++;
   UpdateDownloadState();
 
+  std::string remote_commit_id = encryption_service_->EncodeCommitId(commit_id);
   std::vector<std::vector<uint8_t>> bases_as_bytes;
   bases_as_bytes.reserve(possible_bases.size());
   for (auto& base : possible_bases) {
-    bases_as_bytes.push_back(convert::ToArray(base));
+    bases_as_bytes.push_back(convert::ToArray(encryption_service_->EncodeCommitId(base)));
   }
 
   (*page_cloud_)
       ->GetDiff(
-          convert::ToArray(commit_id), std::move(bases_as_bytes),
+          convert::ToArray(remote_commit_id), std::move(bases_as_bytes),
           [this, callback = std::move(callback), commit_id = std::move(commit_id),
            possible_bases = std::move(possible_bases)](
               cloud_provider::Status status,

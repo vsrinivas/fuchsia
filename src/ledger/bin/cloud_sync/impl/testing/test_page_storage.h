@@ -66,6 +66,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       const storage::Commit& commit,
       fit::function<void(ledger::Status, storage::CommitIdView, std::vector<storage::EntryChange>)>
           callback) override;
+  void GetCommitIdFromRemoteId(
+      fxl::StringView remote_commit_id,
+      fit::function<void(ledger::Status, storage::CommitId)> callback) override;
 
   storage::PageId page_id_to_return;
   // Commits to be returned from GetUnsyncedCommits calls.
@@ -76,6 +79,8 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   // Objects to be returned from GetUnsyncedPieces/GetObject calls.
   std::map<storage::ObjectIdentifier, std::unique_ptr<const storage::fake::FakePiece>>
       unsynced_objects_to_return;
+  // Mapping from remote commit ids to local ids.
+  std::map<std::string, storage::CommitId, std::less<>> remote_id_to_commit_id;
   size_t head_count = 1;
   bool should_fail_get_unsynced_commits = false;
   bool should_fail_get_unsynced_pieces = false;

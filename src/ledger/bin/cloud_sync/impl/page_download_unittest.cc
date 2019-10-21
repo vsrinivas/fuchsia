@@ -529,7 +529,7 @@ class BasePageDownloadDiffTest
     cloud_provider::Diff diff;
     std::vector<storage::EntryChange> changes;
 
-    diff.mutable_base_state()->set_at_commit(convert::ToArray("base1"));
+    diff.mutable_base_state()->set_at_commit(ToRemoteId("base1"));
 
     // The deletion will appear before the insertion after normalization.
     changes.push_back(
@@ -545,6 +545,10 @@ class BasePageDownloadDiffTest
 
     return {std::move(diff), std::move(changes)};
   }
+
+  std::vector<uint8_t> ToRemoteId(const storage::CommitId& id) {
+    return convert::ToArray(this->encryption_service_.EncodeCommitId(id));
+  }
 };
 
 using PageDownloadDiffTest = BasePageDownloadDiffTest<encryption::FakeEncryptionService>;
@@ -552,6 +556,7 @@ using PageDownloadDiffTest = BasePageDownloadDiffTest<encryption::FakeEncryption
 TEST_F(PageDownloadDiffTest, GetDiff) {
   std::vector<storage::EntryChange> expected_changes;
   std::tie(page_cloud_.diff_to_return, expected_changes) = MakeTestDiff();
+  storage_.remote_id_to_commit_id[encryption_service_.EncodeCommitId("base1")] = "base1";
 
   bool called;
   ledger::Status status;
@@ -562,10 +567,10 @@ TEST_F(PageDownloadDiffTest, GetDiff) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(base_commit, "base1");
@@ -588,10 +593,10 @@ TEST_F(PageDownloadDiffTest, GetDiffFromEmpty) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
@@ -612,10 +617,10 @@ TEST_F(PageDownloadDiffTest, GetDiffFallback) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(base_commit, "commit");
@@ -627,6 +632,7 @@ TEST_F(PageDownloadDiffTest, GetDiffFallback) {
 TEST_F(PageDownloadDiffTest, GetDiffRetryOnNetworkError) {
   std::vector<storage::EntryChange> expected_changes;
   std::tie(page_cloud_.diff_to_return, expected_changes) = MakeTestDiff();
+  storage_.remote_id_to_commit_id[encryption_service_.EncodeCommitId("base1")] = "base1";
 
   page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
   SetOnNewStateCallback([this] {
@@ -650,9 +656,8 @@ TEST_F(PageDownloadDiffTest, GetDiffRetryOnNetworkError) {
 
   EXPECT_THAT(page_cloud_.get_diff_calls, SizeIs(6));
   EXPECT_THAT(page_cloud_.get_diff_calls,
-              Each(Pair(convert::ToArray("commit"),
-                        std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                          convert::ToArray("base2")})));
+              Each(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                  ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(base_commit, "base1");
@@ -671,10 +676,10 @@ TEST_F(PageDownloadDiffTest, GetDiffNotFound) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::IO_ERROR);
   EXPECT_EQ(base_commit, "");
@@ -682,6 +687,32 @@ TEST_F(PageDownloadDiffTest, GetDiffNotFound) {
 
   ASSERT_FALSE(states_.empty());
   EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
+}
+
+// Tests that diffs from a base whose remote id to local id association is not locally present are
+// rejected.
+TEST_F(PageDownloadDiffTest, GetDiffUnknownBase) {
+  std::vector<storage::EntryChange> expected_changes;
+  std::tie(page_cloud_.diff_to_return, expected_changes) = MakeTestDiff();
+  // We do not add the mapping from the remote commit id of base1 to base1.
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::IO_ERROR);
+  EXPECT_EQ(base_commit, "");
+  EXPECT_THAT(changes, IsEmpty());
 }
 
 class PageCloudReturningNoDiffPack : public TestPageCloud {
@@ -707,10 +738,10 @@ TEST_F(PageDownloadDiffTest, GetDiffNoPack) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::IO_ERROR);
   EXPECT_EQ(base_commit, "");
@@ -735,10 +766,10 @@ TEST_P(PageDownloadDiffTest, AlteredDiffTest) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::IO_ERROR);
   EXPECT_EQ(base_commit, "");
@@ -780,10 +811,10 @@ TEST_F(PageDownloadDiffTest, NormalizationSortByKey) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
@@ -831,10 +862,10 @@ TEST_F(PageDownloadDiffTest, NormalizationRemoveDuplicates) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
@@ -862,10 +893,10 @@ TEST_F(PageDownloadDiffTest, NormalizationDuplicateKeys) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   // The diff is accepted by PageDownload.
   EXPECT_EQ(status, ledger::Status::OK);
@@ -894,10 +925,10 @@ TEST_F(PageDownloadDiffTest, NormalizationFailsMultipleInsertions) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::IO_ERROR);
 }
@@ -918,10 +949,10 @@ TEST_F(PageDownloadDiffTest, NormalizationFailsMultipleDeletions) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
-  EXPECT_THAT(page_cloud_.get_diff_calls,
-              ElementsAre(Pair(convert::ToArray("commit"),
-                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
-                                                                 convert::ToArray("base2")})));
+  EXPECT_THAT(
+      page_cloud_.get_diff_calls,
+      ElementsAre(Pair(ToRemoteId("commit"), std::vector<std::vector<uint8_t>>{
+                                                 ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::IO_ERROR);
 }

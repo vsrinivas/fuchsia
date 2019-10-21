@@ -217,6 +217,17 @@ void TestPageStorage::GetDiffForCloud(
   });
 }
 
+void TestPageStorage::GetCommitIdFromRemoteId(
+    fxl::StringView remote_commit_id,
+    fit::function<void(ledger::Status, storage::CommitId)> callback) {
+  auto it = remote_id_to_commit_id.find(remote_commit_id);
+  if (it == remote_id_to_commit_id.end()) {
+    callback(ledger::Status::INTERNAL_NOT_FOUND, {});
+  } else {
+    callback(ledger::Status::OK, it->second);
+  }
+}
+
 bool TestPageStorage::ReceivedCommitsContains(convert::ExtendedStringView content) {
   storage::CommitId id = storage::ComputeCommitId(content);
   return received_commits[id] == content;
