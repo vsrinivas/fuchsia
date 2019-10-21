@@ -308,7 +308,7 @@ Command::Info RecordCommand::Describe() {
        {"output-file=[/tmp/trace.json]",
         "Trace data is stored in this file. "
         "If the output file is \"tcp:TCP-ADDRESS\" then the output is streamed "
-        "to that address. This option is generally only used by traceutil."},
+        "to that address. TCP support is generally only used by traceutil."},
        {"binary=[false]",
         "Output the binary trace rather than converting to JSON. "
         "If this is set, then the default output location will be "
