@@ -12,6 +12,12 @@
 
 using inspect::Inspector;
 using inspect::Node;
+using inspect::internal::Block;
+using inspect::internal::BlockType;
+using inspect::internal::HeaderBlockFields;
+using inspect::internal::kMagicNumber;
+using inspect::internal::kMinOrderSize;
+using inspect::internal::ValueBlockFields;
 
 namespace {
 
@@ -42,6 +48,27 @@ TEST(Reader, BucketComparison) {
   EXPECT_TRUE(b != c);
   EXPECT_TRUE(a != d);
   EXPECT_TRUE(a != e);
+}
+
+TEST(Reader, InvalidNameParsing) {
+  std::vector<uint8_t> buf;
+  buf.resize(4096);
+
+  Block* header = reinterpret_cast<Block*>(buf.data());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+
+  // Manually create a value with an invalid name field.
+  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize);
+  value->header = ValueBlockFields::Order::Make(0) |
+                  ValueBlockFields::Type::Make(BlockType::kNodeValue) |
+                  ValueBlockFields::NameIndex::Make(2000);
+
+  auto result = inspect::ReadFromBuffer(std::move(buf));
+  EXPECT_TRUE(result.is_ok());
 }
 
 }  // namespace

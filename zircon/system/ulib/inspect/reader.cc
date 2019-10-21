@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/optional.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/scanner.h>
@@ -80,7 +81,7 @@ class Reader {
 
   // Helper to interpret the given block as a NAME block and return a
   // copy of the name contents.
-  std::string GetAndValidateName(BlockIndex index);
+  fit::optional<std::string> GetAndValidateName(BlockIndex index);
 
   // Contents of the read VMO.
   Snapshot snapshot_;
@@ -89,15 +90,15 @@ class Reader {
   std::unordered_map<BlockIndex, ParsedNode> parsed_nodes_;
 };
 
-std::string Reader::GetAndValidateName(BlockIndex index) {
+fit::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
   const Block* block = internal::GetBlock(&snapshot_, index);
   if (!block) {
-    return nullptr;
+    return {};
   }
   size_t size = OrderToSize(GetOrder(block));
   auto len = NameBlockFields::Length::Get<size_t>(block->header);
   if (len > size) {
-    return nullptr;
+    return {};
   }
   return std::string(block->payload.data, len);
 }
@@ -223,7 +224,7 @@ ArrayDisplayFormat ArrayBlockFormatToDisplay(ArrayBlockFormat format) {
 
 void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
   auto name = GetAndValidateName(ValueBlockFields::NameIndex::Get<size_t>(block->header));
-  if (name.empty()) {
+  if (!name.has_value()) {
     return;
   }
 
@@ -233,15 +234,15 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
   switch (type) {
     case BlockType::kIntValue:
       parent_node->add_property(
-          PropertyValue(std::move(name), IntPropertyValue(block->payload.i64)));
+          PropertyValue(std::move(name.value()), IntPropertyValue(block->payload.i64)));
       return;
     case BlockType::kUintValue:
       parent_node->add_property(
-          PropertyValue(std::move(name), UintPropertyValue(block->payload.u64)));
+          PropertyValue(std::move(name.value()), UintPropertyValue(block->payload.u64)));
       return;
     case BlockType::kDoubleValue:
       parent_node->add_property(
-          PropertyValue(std::move(name), DoublePropertyValue(block->payload.f64)));
+          PropertyValue(std::move(name.value()), DoublePropertyValue(block->payload.f64)));
       return;
     case BlockType::kArrayValue: {
       auto entry_type = ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64);
@@ -259,19 +260,19 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
         std::copy(GetArraySlot<const int64_t>(block, 0), GetArraySlot<const int64_t>(block, count),
                   std::back_inserter(values));
         parent_node->add_property(
-            PropertyValue(std::move(name), IntArrayValue(std::move(values), array_format)));
+            PropertyValue(std::move(name.value()), IntArrayValue(std::move(values), array_format)));
       } else if (entry_type == BlockType::kUintValue) {
         std::vector<uint64_t> values;
         std::copy(GetArraySlot<const uint64_t>(block, 0),
                   GetArraySlot<const uint64_t>(block, count), std::back_inserter(values));
-        parent_node->add_property(
-            PropertyValue(std::move(name), UintArrayValue(std::move(values), array_format)));
+        parent_node->add_property(PropertyValue(std::move(name.value()),
+                                                UintArrayValue(std::move(values), array_format)));
       } else if (entry_type == BlockType::kDoubleValue) {
         std::vector<double> values;
         std::copy(GetArraySlot<const double>(block, 0), GetArraySlot<const double>(block, count),
                   std::back_inserter(values));
-        parent_node->add_property(
-            PropertyValue(std::move(name), DoubleArrayValue(std::move(values), array_format)));
+        parent_node->add_property(PropertyValue(std::move(name.value()),
+                                                DoubleArrayValue(std::move(values), array_format)));
       }
       return;
     }
@@ -282,7 +283,7 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
 
 void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   auto name = GetAndValidateName(ValueBlockFields::NameIndex::Get<size_t>(block->header));
-  if (name.empty()) {
+  if (!name.has_value()) {
     return;
   }
 
@@ -310,21 +311,22 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   if (PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64) &
       static_cast<uint8_t>(PropertyBlockFormat::kBinary)) {
     parent_node->add_property(
-        inspect::PropertyValue(std::move(name), inspect::ByteVectorPropertyValue(buf)));
+        inspect::PropertyValue(std::move(name.value()), inspect::ByteVectorPropertyValue(buf)));
   } else {
-    parent_node->add_property(inspect::PropertyValue(
-        std::move(name), inspect::StringPropertyValue(std::string(buf.begin(), buf.end()))));
+    parent_node->add_property(
+        inspect::PropertyValue(std::move(name.value()),
+                               inspect::StringPropertyValue(std::string(buf.begin(), buf.end()))));
   }
 }
 
 void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
   auto name = GetAndValidateName(ValueBlockFields::NameIndex::Get<BlockIndex>(block->header));
-  if (name.empty()) {
+  if (!name.has_value()) {
     return;
   }
   auto* parsed_node = GetOrCreate(index);
   auto parent_index = ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
-  parsed_node->InitializeNode(std::move(name), parent_index);
+  parsed_node->InitializeNode(std::move(name.value()), parent_index);
   if (parent_index != index) {
     // Only link to a parent if the parent can be valid (not index 0).
     auto* parent = GetOrCreate(parent_index);
