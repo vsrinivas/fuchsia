@@ -4,11 +4,11 @@
 
 use {
     crate::{
-        clonable_error::ClonableError,
         constants::PKG_PATH,
         model::{Runner, RunnerError},
         startup::{Arguments, BuiltinRootServices},
     },
+    clonable_error::ClonableError,
     cm_rust::data::DictionaryExt,
     failure::{err_msg, format_err, Error, Fail, ResultExt},
     fdio::fdio_sys,

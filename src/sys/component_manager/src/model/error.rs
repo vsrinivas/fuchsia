@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::clonable_error::ClonableError,
     crate::model::*,
+    clonable_error::ClonableError,
     failure::{Error, Fail},
 };
 

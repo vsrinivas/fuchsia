@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/clonable_error_lib_test"
+    }
+}

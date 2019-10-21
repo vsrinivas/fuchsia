@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::clonable_error::ClonableError,
+    clonable_error::ClonableError,
     failure::{Error, Fail},
     fidl_fuchsia_sys2 as fsys,
     futures::future::BoxFuture,

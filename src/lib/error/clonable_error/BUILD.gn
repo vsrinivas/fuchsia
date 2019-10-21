@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("clonable_error") {
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+test_package("clonable_error_tests") {
+  deps = [
+    ":clonable_error_test",
+  ]
+
+  tests = [
+    {
+      name = "clonable_error_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":clonable_error_tests",
+  ]
+}

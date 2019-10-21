@@ -4,8 +4,7 @@
 
 use {
     failure::{self, AsFail, Error, Fail},
-    std::fmt,
-    std::sync::Arc,
+    std::{fmt, sync::Arc},
 };
 
 /// A wrapper for `Error` that implements `Clone`.
