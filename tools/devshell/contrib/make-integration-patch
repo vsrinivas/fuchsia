@@ -90,12 +90,16 @@ function read-patches-from-stdin {
     project=$(echo "$url" | cut -d / -f 4-)
     ref=$(echo "$line" | cut -d " " -f 4)
 
-    if [[ ${seen_projects[$project]} ]]; then
+    if [ -z "$url" ]; then
+      continue
+    fi
+
+    if [[ ${seen_projects["$project"]} ]]; then
       fx-error "You are limited to one patch per project. Project '${project}' saw two patches."
       fx-error "Please collapse all changes in one project into a single change."
       return 1
     fi
-    seen_projects[$project]=1
+    seen_projects["$project"]=1
 
     # The patches.json requires host-review.googlesource.com, while Gerrit's download
     # commands vend host.googlesource.com or just host. For example, some
