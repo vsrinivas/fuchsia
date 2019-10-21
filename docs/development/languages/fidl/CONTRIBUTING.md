@@ -370,6 +370,7 @@ fx shell /tmp/run_fidl_compatibility_test_topaz.sh
 | fidlgen syzkaller        | fx run-host-tests fidlgen_syzkaller_test            | garnet/go/src/fidl/compiler/backend/syzkaller                           |
 | fidlgen syzkaller ir     | fx run-host-tests fidlgen_syzkaller_ir_test         | garnet/go/src/fidl/compiler/backend/syzkaller/ir                        |
 | fidlgen type definitions | fx run-host-tests fidlgen_types_test                | garnet/go/src/fidl/compiler/backend/types                               |
+| c++ host unittests       | fx run-host-tests fidl_cpp_host_unittests           | sdk/lib/fidl                                                            |
 | c++ bindings tests       | fx run-test fidl_tests                              | sdk/lib/fidl                                                            |
 | llcpp bindings tests     | fx run-test fidl_llcpp_types_test                   | garnet/go/src/fidl/compiler/llcpp_backend                        |
 | go bindings tests        | fx run-test go_fidl_tests                           | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
