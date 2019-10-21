@@ -116,17 +116,26 @@ static zx_handle_t root_resource;
 // environment. Instead, we should make the test environment hermetic and
 // remove the dependencies on these services.
 static constexpr const char* deprecated_services[] = {
-    "fuchsia.amber.Control", "fuchsia.cobalt.LoggerFactory",
-    "fuchsia.devicesettings.DeviceSettingsManager", "fuchsia.logger.Log", "fuchsia.logger.LogSink",
+    // clang-format off
+    "fuchsia.amber.Control",
+    "fuchsia.cobalt.LoggerFactory",
+    "fuchsia.devicesettings.DeviceSettingsManager",
+    "fuchsia.logger.Log",
+    "fuchsia.logger.LogSink",
     // Interface to resolve shell commands.
-    "fuchsia.process.Resolver", ::llcpp::fuchsia::net::NameLookup::Name,
+    "fuchsia.process.Resolver",
+    ::llcpp::fuchsia::net::NameLookup::Name,
     ::llcpp::fuchsia::posix::socket::Provider::Name,
-    // Legacy interface for netstack, defined in //sdk/fidl/
+    // Legacy interface for netstack, defined in //sdk/fidl/.
     "fuchsia.netstack.Netstack",
+    // Routing control.
+    "fuchsia.net.routing.Routing",
     // New interface for netstack, defined in //zircon/system/fidl/
     "fuchsia.net.stack.Stack",
     // Network troubleshooting is needed from serial console.
-    "fuchsia.net.stack.Log", "fuchsia.sys.Environment", "fuchsia.sys.Launcher",
+    "fuchsia.net.stack.Log",
+    "fuchsia.sys.Environment",
+    "fuchsia.sys.Launcher",
     "fuchsia.wlan.service.Wlan",
     // We should host the tracing.provider service ourselves instead of
     // routing the request to appmgr.
@@ -134,8 +143,11 @@ static constexpr const char* deprecated_services[] = {
     // TODO(PT-88): This entry is temporary, until PT-88 is resolved.
     "fuchsia.tracing.controller.Controller",
     // For amberctl over serial shell.
-    "fuchsia.pkg.PackageResolver", "fuchsia.pkg.RepositoryManager", "fuchsia.pkg.rewrite.Engine",
+    "fuchsia.pkg.PackageResolver",
+    "fuchsia.pkg.RepositoryManager",
+    "fuchsia.pkg.rewrite.Engine",
     nullptr,
+    // clang-format on
     // DO NOT ADD MORE ENTRIES TO THIS LIST.
     // Tests should not be accessing services from the environment. Instead,
     // they should run in containers that have their own service instances.
@@ -159,6 +171,7 @@ static constexpr const char* miscsvc_services[] = {
 // TODO: When svchost becomes a standalone v2 component, these will be provided through its own
 // namespace instead.
 static constexpr const char* devcoordinator_services[] = {
+    // clang-format off
     fuchsia_boot_FactoryItems_Name,
     fuchsia_boot_Arguments_Name,
     fuchsia_boot_Items_Name,
@@ -171,6 +184,7 @@ static constexpr const char* devcoordinator_services[] = {
     fuchsia_process_Launcher_Name,
     fuchsia_hardware_pty_Device_Name,
     nullptr,
+    // clang-format on
 };
 
 // List of services which are re-routed to devmgr.
