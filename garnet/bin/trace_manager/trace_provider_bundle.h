@@ -26,6 +26,8 @@ struct TraceProviderBundle {
   TraceProviderBundle(const TraceProviderBundle&& value) = delete;
   TraceProviderBundle& operator=(const TraceProviderBundle&&) = delete;
 
+  std::string ToString() const;
+
   fuchsia::tracing::provider::ProviderPtr provider;
 
   uint32_t id;
