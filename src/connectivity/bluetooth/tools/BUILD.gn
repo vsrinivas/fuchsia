@@ -10,6 +10,7 @@ package("bluetooth-tools") {
   name = "bluetooth_tools"
 
   deps = [
+    "bt-avdtp-tool",
     "bt-avrcp-controller",
     "bt-cli",
     "bt-hci-emulator",
@@ -22,6 +23,11 @@ package("bluetooth-tools") {
   ]
 
   binaries = [
+    {
+      name = "bt_avdtp_tool"
+      dest = "bt-avdtp-tool"
+      shell = true
+    },
     {
       name = "bt_avrcp_controller"
       dest = "bt-avrcp-controller"
