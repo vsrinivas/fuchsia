@@ -188,13 +188,11 @@ class DescriptorList {
    public:
     friend class DescriptorList;
 
-    iterator_impl(const usb_desc_iter_t& iter, const usb_descriptor_header_t& header)
+    iterator_impl(const usb_desc_iter_t& iter, const usb_descriptor_header_t* header)
         : iter_(iter), header_(header) {}
 
     bool operator==(const iterator_impl& other) const {
-      const usb_descriptor_header_t* a = &header_;
-      const usb_descriptor_header_t* b = &other.header_;
-      return (a->bDescriptorType == b->bDescriptorType && a->bLength == b->bLength);
+      return (other.header_ == header_);
     }
     bool operator!=(const iterator_impl& other) const { return !(*this == other); }
 
@@ -205,21 +203,20 @@ class DescriptorList {
     }
 
     iterator_impl& operator++() {
-      header_ = {};
       ReadHeader(&iter_, &header_);
       return *this;
     }
 
-    const usb_descriptor_header_t* header() const { return &header_; }
-    const usb_descriptor_header_t& operator*() const { return header_; }
-    const usb_descriptor_header_t* operator->() const { return &header_; }
+    const usb_descriptor_header_t* header() const { return header_; }
+    const usb_descriptor_header_t& operator*() const { return *header_; }
+    const usb_descriptor_header_t* operator->() const { return header_; }
 
    private:
     // Using the given iter, read the next endpoint descriptor(s).
-    static void ReadHeader(usb_desc_iter_t* iter, usb_descriptor_header_t* out);
+    static void ReadHeader(usb_desc_iter_t* iter, const usb_descriptor_header_t** out);
 
     usb_desc_iter_t iter_;
-    usb_descriptor_header_t header_;
+    const usb_descriptor_header_t* header_;
   };
 
   usb_desc_iter_t iter_;
@@ -343,6 +340,10 @@ class InterfaceList {
 
   static zx_status_t Create(const ddk::UsbProtocolClient& client, bool skip_alt,
                             std::optional<InterfaceList>* out);
+
+  size_t size() {
+    return reinterpret_cast<size_t>(iter_.desc_end) - reinterpret_cast<size_t>(iter_.desc);
+  }
 
   iterator begin() const;
   const_iterator cbegin() const;

@@ -69,6 +69,7 @@ test("usb-wrapper-test") {
   ]
   deps = [
     ":usb",
+    "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.composite",
     "$zx/system/dev/lib/fake-bti",

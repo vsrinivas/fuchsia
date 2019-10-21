@@ -98,7 +98,7 @@ DescriptorList::iterator DescriptorList::begin() const {
     return end();
   }
   usb_desc_iter_t iter = iter_;
-  usb_descriptor_header_t header{};
+  const usb_descriptor_header_t* header;
   DescriptorList::iterator::ReadHeader(&iter, &header);
   return iterator(iter, header);
 }
@@ -109,17 +109,20 @@ DescriptorList::const_iterator DescriptorList::cbegin() const {
 
 DescriptorList::iterator DescriptorList::end() const {
   usb_desc_iter_t init = {};
-  return iterator(init, usb_descriptor_header_t{});
+  return iterator(init, nullptr);
 }
 
 DescriptorList::const_iterator DescriptorList::cend() const {
   return static_cast<DescriptorList::const_iterator>(end());
 }
 
-void DescriptorList::iterator::ReadHeader(usb_desc_iter_t* iter, usb_descriptor_header_t* out) {
-  usb_descriptor_header_t* ptr = usb_desc_iter_next(iter);
+void DescriptorList::iterator::ReadHeader(usb_desc_iter_t* iter,
+                                          const usb_descriptor_header_t** out) {
+  const usb_descriptor_header_t* ptr = usb_desc_iter_next(iter);
   if (ptr && ptr->bDescriptorType != USB_DT_INTERFACE) {
-    *out = *ptr;
+    *out = ptr;
+  } else {
+    *out = nullptr;
   }
 }
 

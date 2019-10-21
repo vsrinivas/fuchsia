@@ -4,6 +4,7 @@
 
 #include <zircon/hw/usb/hid.h>
 
+#include <ddk/protocol/hidbus.h>
 #include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
@@ -39,6 +40,10 @@ typedef struct {
     usb_interface_descriptor_t  alt_interface;
   // clang-format on
 } alt_ss_config;
+
+// The binary form of a usb keyboard descriptor. Contains an interface, hid descriptor, and endpoint descriptor.
+constexpr uint8_t descriptor_binary_array[] = {9, 4, 1,  0,   1, 3, 0, 0,   0, 9, 33, 16, 1,
+                                               0, 1, 34, 106, 0, 7, 5, 130, 3, 8, 0,  48};
 
 constexpr alt_hs_config kTestHSInterface = {
     .interface =
@@ -534,6 +539,62 @@ TEST_F(SuperSpeedWrapperTest, TestEndpointConstIteration) {
       EXPECT_TRUE(ep_itr->has_companion);
     } while (++ep_itr != interface.GetEndpointList().end());
   }
+}
+
+// HighSpeedWrapperTest tests an InterfaceList's ability to process interface descriptors
+// corresponding to a HighSpeed device structure (i.e. no SS-COMPANION descriptors).
+class BinaryHidDescriptorTest : public zxtest::Test {
+ protected:
+  void SetUp() {
+    usb_protocol_t proto{&ops_, this};
+    ops_.get_descriptors_length = UsbGetDescriptorsLength;
+    ops_.get_descriptors = UsbGetDescriptors;
+    usb_ = ddk::UsbProtocolClient(&proto);
+  }
+
+  static void UsbGetDescriptors(void* ctx, void* out_descs_buffer, size_t descs_size,
+                                size_t* out_descs_actual) {
+    memcpy(out_descs_buffer, &descriptor_binary_array, descs_size);
+    *out_descs_actual = descs_size;
+  }
+
+  static size_t UsbGetDescriptorsLength(void* ctx) { return sizeof(descriptor_binary_array); }
+
+  usb_protocol_ops_t ops_{};
+  ddk::UsbProtocolClient usb_;
+};
+
+TEST_F(BinaryHidDescriptorTest, TestBinaryHidDescriptor) {
+  // This tests that for(x : y) syntax produces the correct descriptors.
+  std::optional<InterfaceList> ilist;
+  ASSERT_OK(InterfaceList::Create(usb_, true, &ilist));
+
+  usb_hid_descriptor_t* hid_desc = nullptr;
+  usb_endpoint_descriptor_t* endpt = nullptr;
+  int iface_count = 0;
+  for (auto interface : *ilist) {
+    if (iface_count) {
+      break;
+    }
+    for (auto& descriptor : interface.GetDescriptorList()) {
+      if (descriptor.bDescriptorType == USB_DT_HID) {
+        hid_desc = (usb_hid_descriptor_t*)&descriptor;
+        if (endpt) {
+          break;
+        }
+      } else if (descriptor.bDescriptorType == USB_DT_ENDPOINT) {
+        if (usb_ep_direction((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_IN &&
+            usb_ep_type((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_INTERRUPT) {
+          endpt = (usb_endpoint_descriptor_t*)&descriptor;
+          if (hid_desc) {
+            break;
+          }
+        }
+      }
+    }
+  }
+  ASSERT_TRUE(hid_desc);
+  ASSERT_TRUE(endpt);
 }
 
 }  // namespace usb
