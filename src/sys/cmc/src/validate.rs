@@ -137,7 +137,71 @@ struct ValidationContext<'a> {
     all_storage_and_sources: HashMap<&'a str, &'a str>,
 }
 
-type PathMap<'a> = HashMap<String, HashSet<&'a str>>;
+/// A name/identity of a capability exposed/offered to another component.
+///
+/// Exposed or offered capabilities have an identifier whose format
+/// depends on the capability type. For directories and services this is
+/// a path, while for storage this is a storage name. Paths and storage
+/// names, however, are in different conceptual namespaces, and can't
+/// collide with each other.
+///
+/// This enum allows such names to be specified disambuating what
+/// namespace they are in.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+enum CapabilityId<'a> {
+    Path(&'a str),
+    StorageType(&'a str),
+}
+
+/// Given an offer/expose struct, return the identifier of the
+/// exposed/offered target.
+///
+/// The target identifier is specified by the "as" keyword. If not
+/// present, we default to using the same name as the source.
+fn capability_id<'a, T>(clause: &'a T) -> Result<CapabilityId<'a>, Error>
+where
+    T: cml::CapabilityClause + cml::AsClause,
+{
+    // For storage types, return the path, using the "as" clause to
+    // rename if neccessary.
+    let alias = clause.r#as();
+    if let Some(p) = clause.service().as_ref() {
+        return Ok(CapabilityId::Path(alias.unwrap_or(p)));
+    } else if let Some(p) = clause.legacy_service().as_ref() {
+        return Ok(CapabilityId::Path(alias.unwrap_or(p)));
+    } else if let Some(p) = clause.directory().as_ref() {
+        return Ok(CapabilityId::Path(alias.unwrap_or(p)));
+    }
+
+    // Storage does not support "as" aliases. Return an error if it is
+    // used.
+    if let Some(p) = clause.storage().as_ref() {
+        if alias.is_some() {
+            return Err(Error::validate("\"as\" field cannot be used for storage offer targets"));
+        }
+        return Ok(CapabilityId::StorageType(p));
+    }
+
+    // Unknown capability type.
+    Err(Error::internal("unknown capability type"))
+}
+
+impl<'a> CapabilityId<'a> {
+    pub fn as_str(&self) -> &'a str {
+        match self {
+            CapabilityId::Path(p) => p,
+            CapabilityId::StorageType(s) => s,
+        }
+    }
+
+    /// Human readable description of this capability type.
+    pub fn type_str(&self) -> &'static str {
+        match self {
+            CapabilityId::Path(_) => "path",
+            CapabilityId::StorageType(_) => "storage type",
+        }
+    }
+}
 
 impl<'a> ValidationContext<'a> {
     fn validate(&mut self) -> Result<(), Error> {
@@ -171,18 +235,17 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "expose".
         if let Some(exposes) = self.document.expose.as_ref() {
-            let mut target_paths = HashMap::new();
+            let mut used_ids = HashSet::new();
             for expose in exposes.iter() {
-                self.validate_expose(&expose, &mut target_paths)?;
+                self.validate_expose(&expose, &mut used_ids)?;
             }
         }
 
         // Validate "offer".
         if let Some(offers) = self.document.offer.as_ref() {
-            let mut target_paths = HashMap::new();
-            let mut prev_storage_types = HashMap::new();
+            let mut used_ids = HashMap::new();
             for offer in offers.iter() {
-                self.validate_offer(&offer, &mut target_paths, &mut prev_storage_types)?;
+                self.validate_offer(&offer, &mut used_ids)?;
             }
         }
 
@@ -210,13 +273,15 @@ impl<'a> ValidationContext<'a> {
             }
             _ => Ok(()),
         }?;
-        // All directory use expressions must have directory rights.
+
+        // All directory "use" expressions must have directory rights.
         if use_.directory.is_some() {
             match &use_.rights {
                 Some(rights) => self.validate_directory_rights(&rights)?,
                 None => return Err(Error::validate("Rights required for this use statement.")),
             };
         }
+
         Ok(())
     }
 
@@ -235,10 +300,11 @@ impl<'a> ValidationContext<'a> {
     fn validate_expose(
         &self,
         expose: &'a cml::Expose,
-        prev_target_paths: &mut PathMap<'a>,
+        used_ids: &mut HashSet<CapabilityId<'a>>,
     ) -> Result<(), Error> {
         self.validate_source("expose", expose)?;
-        let as_clause = expose as &dyn cml::AsClause;
+
+        // Ensure directory rights are specified if exposing from self.
         if expose.directory.is_some() {
             if expose.from == cml::FROM_SELF_TOKEN.to_string() || expose.rights.is_some() {
                 match &expose.rights {
@@ -249,228 +315,155 @@ impl<'a> ValidationContext<'a> {
                 };
             }
         }
-        self.validate_target(
-            "expose",
-            expose,
-            as_clause.r#as(),
-            None,
-            &mut HashSet::new(),
-            prev_target_paths,
-            &mut HashMap::new(),
-        )
+
+        // Ensure we haven't already exposed an entity of the same name.
+        let capability_id = capability_id(expose)?;
+        if !used_ids.insert(capability_id) {
+            return Err(Error::validate(format!(
+                "\"{}\" is a duplicate \"expose\" target {}",
+                capability_id.as_str(),
+                capability_id.type_str()
+            )));
+        }
+
+        Ok(())
     }
 
     fn validate_offer(
         &self,
         offer: &'a cml::Offer,
-        prev_target_paths: &mut PathMap<'a>,
-        prev_storage_types: &mut PathMap<'a>,
+        used_ids: &mut HashMap<&'a str, HashSet<CapabilityId<'a>>>,
     ) -> Result<(), Error> {
-        self.validate_source("offer", offer)?;
-        let from_child = cml::parse_named_reference(&offer.from);
-        let mut prev_targets = HashSet::new();
+        let from = self.validate_source("offer", offer)?;
+
+        // Ensure directory rights are specified if offering from self.
+        if offer.directory.is_some() {
+            if offer.from == cml::FROM_SELF_TOKEN.to_string() || offer.rights.is_some() {
+                match &offer.rights {
+                    Some(rights) => self.validate_directory_rights(&rights)?,
+                    None => {
+                        return Err(Error::validate(
+                            "Rights required for this offer as it is offering from self.",
+                        ))
+                    }
+                };
+            }
+        }
+
+        // Validate every target of this offer.
+        let mut seen_targets = HashSet::new();
         for to in offer.to.iter() {
-            // Check that any referenced child in the target name is valid.
-            let to_child = cml::parse_named_reference(&to);
-            if let Some(to_child) = to_child {
-                if !self.all_children.contains(to_child) && !self.all_collections.contains(to_child)
-                {
+            // Parse child name, already validated by JSON schema.
+            let to_child = cml::parse_named_reference(&to).unwrap();
+
+            let target_cap_id = capability_id(offer)?;
+
+            // Ensure that there are no duplicate names in the "to" list.
+            if !seen_targets.insert(to_child as &str) {
+                return Err(Error::validate(format!(
+                    "\"{}\" is a duplicate \"offer\" target for {} \"{}\"",
+                    &to,
+                    target_cap_id.type_str(),
+                    target_cap_id.as_str()
+                )));
+            }
+
+            // Check that any referenced child actually exists.
+            if !self.all_children.contains(to_child) && !self.all_collections.contains(to_child) {
+                return Err(Error::validate(format!(
+                    "\"{}\" is an \"offer\" target but it does not appear in \"children\" \
+                     or \"collections\"",
+                    &to,
+                )));
+            }
+
+            // Ensure something hasn't already been offered under the same
+            // name to this target.
+            let ids_for_entity = used_ids.entry(to_child).or_insert(HashSet::new());
+            if !ids_for_entity.insert(target_cap_id) {
+                return Err(Error::validate(format!(
+                    "\"{}\" is a duplicate \"offer\" target {} for \"{}\"",
+                    target_cap_id.as_str(),
+                    target_cap_id.type_str(),
+                    to
+                )));
+            }
+
+            if let cml::Ref::Named(name) = from {
+                // Ensure we are not offering an object back to its source child.
+                if offer.storage.is_none() && name == to_child {
                     return Err(Error::validate(format!(
-                        "\"{}\" is an \"offer\" target but it does not appear in \"children\" \
-                         or \"collections\"",
-                        &to,
+                        "Offer target \"{}\" is same as source",
+                        &to
                     )));
                 }
-            }
 
-            // Check that the capability is not being re-offered to a target that exposed it.
-            if from_child.is_some() && from_child == to_child {
-                return Err(Error::validate(
-                    format!("Offer target \"{}\" is same as source", &to,),
-                ));
-            }
-
-            // Perform common target validation.
-            let as_clause = offer as &dyn cml::AsClause;
-            if offer.directory.is_some() {
-                if offer.from == cml::FROM_SELF_TOKEN.to_string() || offer.rights.is_some() {
-                    match &offer.rights {
-                        Some(rights) => self.validate_directory_rights(&rights)?,
-                        None => {
-                            return Err(Error::validate(
-                                "Rights required for this offer as it is offering from self.",
-                            ))
+                // Check that the source of this storage capability does not match the target
+                if offer.storage.is_some() {
+                    match self.all_storage_and_sources.get(name) {
+                        Some(val) if *val == to => {
+                            return Err(Error::validate(format!(
+                                "Storage offer target \"{}\" is same as source",
+                                &to
+                            )));
                         }
-                    };
+                        _ => {}
+                    }
                 }
             }
-            self.validate_target(
-                "offer",
-                offer,
-                as_clause.r#as(),
-                Some(&to),
-                &mut prev_targets,
-                prev_target_paths,
-                prev_storage_types,
-            )?;
         }
+
         Ok(())
     }
 
     /// Validates that a source capability is valid, i.e. that any referenced child or storage is
     /// valid.
-    /// - `keyword` is the keyword for the clause ("offer" or "expose").
-    fn validate_source<T>(&self, keyword: &str, source_obj: &'a T) -> Result<(), Error>
+    ///
+    /// - `keyword` is the keyword for the clause ("offer" or "expose"), used in error strings.
+    /// - `source_obj` is the clause containing a "from" line that should be validated.
+    fn validate_source<T>(&self, keyword: &str, source_obj: &'a T) -> Result<cml::Ref, Error>
     where
         T: cml::FromClause + cml::CapabilityClause,
     {
-        if let Some(source_child) = cml::parse_named_reference(source_obj.from()) {
-            if source_obj.storage().is_none() {
-                if !self.all_children.contains(source_child) {
-                    return Err(Error::validate(format!(
-                        "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
-                        source_obj.from(),
-                        keyword,
-                    )));
-                }
-            } else {
-                if !self.all_storage_and_sources.contains_key(source_child) {
-                    return Err(Error::validate(format!(
-                        "\"{}\" is an \"{}\" source but it does not appear in \"storage\"",
-                        source_obj.from(),
-                        keyword,
-                    )));
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Validates that a target is valid, i.e. that it does not duplicate the path of any capability
-    /// and any referenced child is valid.
-    /// - `keyword` is the keyword for the clause ("offer" or "expose").
-    /// - `source_obj` is the object containing the source capability info. This is needed for the
-    ///   default path.
-    /// - `as_entry` is the field containing the target path.
-    /// - `to_entry` is the field containing the destination (target) of the capability.
-    /// - `prev_targets` holds target names collected for this source capability so far.
-    /// - `prev_target_paths` holds target paths collected so far.
-    fn validate_target<T>(
-        &self,
-        keyword: &str,
-        source_obj: &'a T,
-        as_entry: Option<&'a String>,
-        to_entry: Option<&'a String>,
-        prev_targets: &mut HashSet<&'a str>,
-        prev_target_paths: &mut PathMap<'a>,
-        prev_storage_types: &mut PathMap<'a>,
-    ) -> Result<(), Error>
-    where
-        T: cml::CapabilityClause + cml::FromClause,
-    {
-        // Get the source capability's path.
-        let source_path = if let Some(p) = source_obj.service().as_ref() {
-            p
-        } else if let Some(p) = source_obj.legacy_service().as_ref() {
-            p
-        } else if let Some(p) = source_obj.directory().as_ref() {
-            p
-        } else if source_obj.storage().is_some() {
-            return self.validate_storage_target(
-                source_obj,
-                as_entry,
-                to_entry,
-                prev_storage_types,
-            );
-        } else {
-            return Err(Error::internal(format!("no capability path")));
-        };
-
-        // Get the target capability's path (defaults to the source path).
-        let target_path: &str = match &as_entry {
-            Some(a) => a,
-            None => source_path,
-        };
-
-        // Check that target path is not a duplicate of another capability.
-        let target_name = to_entry.map_or("", |t| t.as_str());
-
-        let paths_for_target =
-            prev_target_paths.entry(target_name.to_string()).or_insert(HashSet::new());
-        if !paths_for_target.insert(target_path) {
-            return match target_name {
-                "" => Err(Error::validate(format!(
-                    "\"{}\" is a duplicate \"{}\" target path",
-                    target_path, keyword
-                ))),
-                _ => Err(Error::validate(format!(
-                    "\"{}\" is a duplicate \"{}\" target path for \"{}\"",
-                    target_path, keyword, target_name
-                ))),
-            };
-        }
-
-        // Check that the target is not a duplicate of a previous target (for this source).
-        if let Some(target_name) = to_entry {
-            if !prev_targets.insert(target_name) {
+        // Parse "from". If it is a child, return the value.
+        //
+        // Should have already been validated by schema.
+        let source_name = match cml::parse_reference(source_obj.from()) {
+            Some(cml::Ref::Named(name)) => name,
+            Some(other) => return Ok(other),
+            None => {
                 return Err(Error::validate(format!(
-                    "\"{}\" is a duplicate \"{}\" target for \"{}\"",
-                    target_name, keyword, source_path
+                    "\"{}\" is not a valid \"{}\" source",
+                    source_obj.from(),
+                    keyword
+                )))
+            }
+        };
+
+        // If the object is storage "from" is a storage type. Ensure we have
+        // a "storage" stanza defined.
+        if source_obj.storage().is_some() {
+            if !self.all_storage_and_sources.contains_key(source_name) {
+                return Err(Error::validate(format!(
+                    "\"{}\" is an \"{}\" source but it does not appear in \"storage\"",
+                    source_obj.from(),
+                    keyword,
                 )));
             }
+            return Ok(cml::Ref::Named(source_name));
         }
 
-        Ok(())
-    }
-
-    /// Validates that a target for a storage capability offer is valid, i.e. that it does not
-    /// duplicate offers of any storage type to a single target and any referenced child is valid.
-    /// - `source_obj` is the object containing the source capability info. This is needed for the
-    ///   default path.
-    /// - `as_entry` is the field containing the target capability info.
-    /// - `to_entry` is the object containing the destination (target) of the capability.
-    /// - `prev_storage_types` holds storage types collected so far.
-    fn validate_storage_target<T>(
-        &self,
-        source_obj: &'a T,
-        as_entry: Option<&'a String>,
-        to_entry: Option<&'a String>,
-        prev_storage_types: &mut PathMap<'a>,
-    ) -> Result<(), Error>
-    where
-        T: cml::CapabilityClause + cml::FromClause,
-    {
-        let storage_type = match source_obj.storage().as_ref() {
-            Some(s) => s,
-            None => return Err(Error::internal("no storage type")),
-        };
-
-        if as_entry.is_some() {
-            return Err(Error::validate("\"as\" field cannot be used for storage offer targets"));
-        }
-
-        let target_name = to_entry.map_or("", |t| t.as_str());
-
-        // Check that the source of this storage capability does not match the target
-        if let Some(f) = cml::parse_named_reference(source_obj.from()) {
-            if self.all_storage_and_sources.get(f) == Some(&target_name) {
-                return Err(Error::validate(format!(
-                    "Storage offer target \"{}\" is same as source",
-                    target_name
-                )));
-            }
-        }
-
-        // Check that target path is not a duplicate offer for this storage type
-        let types_for_target =
-            prev_storage_types.entry(target_name.to_string()).or_insert(HashSet::new());
-        if !types_for_target.insert(storage_type) {
+        // Otherwise, "source" is a child name. Ensure we have a child
+        // defined by that name.
+        if !self.all_children.contains(source_name) {
             return Err(Error::validate(format!(
-                "\"{}\" storage is offered to \"{}\" multiple times",
-                storage_type, target_name
+                "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
+                source_obj.from(),
+                keyword,
             )));
         }
-        Ok(())
+
+        return Ok(cml::Ref::Named(source_name));
     }
 
     /// Validates that directory rights for all route types are valid, i.e that it does not
@@ -529,6 +522,7 @@ mod tests {
     use serde_json::json;
     use std::io::Write;
     use tempfile::TempDir;
+    use test_util::assert_matches;
 
     macro_rules! test_validate_cm {
         (
@@ -2018,7 +2012,7 @@ mod tests {
                     "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
                 } ]
             }),
-            result = Err(Error::validate("\"cache\" storage is offered to \"#echo_server\" multiple times")),
+            result = Err(Error::validate("\"cache\" is a duplicate \"offer\" target storage type for \"#echo_server\"")),
         },
 
         // children
@@ -2745,5 +2739,54 @@ mod tests {
                 "Not condition is not met at /dev\nExtra error",
             )),
         )
+    }
+
+    fn empty_offer() -> cml::Offer {
+        cml::Offer {
+            service: None,
+            legacy_service: None,
+            directory: None,
+            storage: None,
+            from: "".to_string(),
+            to: vec![],
+            r#as: None,
+            rights: None,
+        }
+    }
+
+    #[test]
+    fn test_capability_id() -> Result<(), Error> {
+        // Simple tests.
+        assert_eq!(
+            capability_id(&cml::Offer { service: Some("/a".to_string()), ..empty_offer() })?,
+            CapabilityId::Path("/a")
+        );
+        assert_eq!(
+            capability_id(&cml::Offer { legacy_service: Some("/a".to_string()), ..empty_offer() })?,
+            CapabilityId::Path("/a")
+        );
+        assert_eq!(
+            capability_id(&cml::Offer { directory: Some("/a".to_string()), ..empty_offer() })?,
+            CapabilityId::Path("/a")
+        );
+        assert_eq!(
+            capability_id(&cml::Offer { storage: Some("a".to_string()), ..empty_offer() })?,
+            CapabilityId::StorageType("a")
+        );
+
+        // "as" aliasing.
+        assert_eq!(
+            capability_id(&cml::Offer {
+                service: Some("/a".to_string()),
+                r#as: Some("/b".to_string()),
+                ..empty_offer()
+            })?,
+            CapabilityId::Path("/b")
+        );
+
+        // Error case.
+        assert_matches!(capability_id(&empty_offer()), Err(_));
+
+        Ok(())
     }
 }

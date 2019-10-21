@@ -33,6 +33,8 @@ rustc_binary("cmc") {
     ":cmc_test_schemas",
     "//garnet/lib/rust/cm_json:cm_schema_json",
   ]
+
+  test_deps = [ "//src/lib/test_util" ]
 }
 
 source_set("cmc_test_schemas") {

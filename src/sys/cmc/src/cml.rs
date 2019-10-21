@@ -99,7 +99,7 @@ pub enum Ref<'a> {
 }
 
 lazy_static! {
-    static ref NAME_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
+    static ref NAME_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_.]+)$").unwrap();
 }
 
 /// Parse the given name of the form `#some-name`, returning the
