@@ -24,7 +24,7 @@ Tracer::Tracer(controller::Controller* controller)
 
 Tracer::~Tracer() { CloseSocket(); }
 
-void Tracer::Start(controller::TraceOptions options, bool binary, BytesConsumer bytes_consumer,
+void Tracer::Start(TraceConfig config, bool binary, BytesConsumer bytes_consumer,
                    RecordConsumer record_consumer, ErrorHandler error_handler,
                    fit::closure start_callback, fit::closure done_callback) {
   FXL_DCHECK(state_ == State::kStopped);
@@ -41,7 +41,7 @@ void Tracer::Start(controller::TraceOptions options, bool binary, BytesConsumer 
     return;
   }
 
-  controller_->StartTracing(std::move(options), std::move(outgoing_socket),
+  controller_->StartTracing(std::move(config), std::move(outgoing_socket),
                             [this]() { start_callback_(); });
 
   binary_ = binary;

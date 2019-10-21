@@ -23,6 +23,9 @@ namespace tracing {
 namespace controller = ::fuchsia::tracing::controller;
 namespace provider = ::fuchsia::tracing::provider;
 
+// TODO(dje): Temporary alias to ease renaming of TraceOptions to TraceConfig.
+using TraceConfig = controller::TraceOptions;
+
 class TraceManager : public controller::Controller, public provider::Registry {
  public:
   TraceManager(sys::ComponentContext* context, const Config& config);
@@ -30,7 +33,7 @@ class TraceManager : public controller::Controller, public provider::Registry {
 
  private:
   // |Controller| implementation.
-  void StartTracing(controller::TraceOptions options, zx::socket output,
+  void StartTracing(TraceConfig config, zx::socket output,
                     StartTracingCallback cb) override;
   void StopTracing() override;
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;

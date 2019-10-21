@@ -415,15 +415,15 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
 
   tracing_ = true;
 
-  controller::TraceOptions trace_options;
-  trace_options.set_categories(options_.categories);
-  trace_options.set_buffer_size_megabytes_hint(options_.buffer_size_megabytes);
+  TraceConfig trace_config;
+  trace_config.set_categories(options_.categories);
+  trace_config.set_buffer_size_megabytes_hint(options_.buffer_size_megabytes);
   // TODO(dje): start_timeout_milliseconds
-  trace_options.set_buffering_mode(options_.buffering_mode);
-  trace_options.set_provider_specs(TranslateProviderSpecs(options_.provider_specs));
+  trace_config.set_buffering_mode(options_.buffering_mode);
+  trace_config.set_provider_specs(TranslateProviderSpecs(options_.provider_specs));
 
   tracer_->Start(
-      std::move(trace_options), options_.binary, std::move(bytes_consumer),
+      std::move(trace_config), options_.binary, std::move(bytes_consumer),
       std::move(record_consumer), std::move(error_handler),
       [this] {
         if (!options_.app.empty())

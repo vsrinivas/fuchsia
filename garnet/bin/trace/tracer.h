@@ -19,6 +19,9 @@ namespace tracing {
 
 namespace controller = ::fuchsia::tracing::controller;
 
+// TODO(dje): Temporary alias to ease renaming of TraceOptions to TraceConfig.
+using TraceConfig = controller::TraceOptions;
+
 // Runs traces.
 class Tracer {
  public:
@@ -33,7 +36,7 @@ class Tracer {
   // Streams records |record_consumer| and errors to |error_handler|.
   // Invokes |done_callback| when tracing stops.
   // TODO(PT-113): Remove |binary,record_consumer,error_handler|
-  void Start(controller::TraceOptions options, bool binary, BytesConsumer bytes_consumer,
+  void Start(TraceConfig config, bool binary, BytesConsumer bytes_consumer,
              RecordConsumer record_consumer, ErrorHandler error_handler,
              fit::closure start_callback, fit::closure done_callback);
 

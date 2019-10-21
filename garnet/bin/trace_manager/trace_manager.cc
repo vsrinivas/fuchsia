@@ -43,7 +43,7 @@ TraceManager::TraceManager(sys::ComponentContext* context, const Config& config)
 
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(controller::TraceOptions options, zx::socket output,
+void TraceManager::StartTracing(TraceConfig config, zx::socket output,
                                 StartTracingCallback start_callback) {
   if (session_) {
     FXL_LOG(ERROR) << "Trace already in progress";
@@ -51,21 +51,21 @@ void TraceManager::StartTracing(controller::TraceOptions options, zx::socket out
   }
 
   uint32_t default_buffer_size_megabytes = kDefaultBufferSizeMegabytesHint;
-  if (options.has_buffer_size_megabytes_hint()) {
-    const uint32_t buffer_size_mb_hint = options.buffer_size_megabytes_hint();
+  if (config.has_buffer_size_megabytes_hint()) {
+    const uint32_t buffer_size_mb_hint = config.buffer_size_megabytes_hint();
     default_buffer_size_megabytes = ConstrainBufferSize(buffer_size_mb_hint);
   }
 
   TraceProviderSpecMap provider_specs;
-  if (options.has_provider_specs()) {
-    for (const auto& it : options.provider_specs()) {
+  if (config.has_provider_specs()) {
+    for (const auto& it : config.provider_specs()) {
       provider_specs[it.name()] = TraceProviderSpec{it.buffer_size_megabytes_hint()};
     }
   }
 
   controller::BufferingMode tracing_buffering_mode = kDefaultBufferingMode;
-  if (options.has_buffering_mode()) {
-    tracing_buffering_mode = options.buffering_mode();
+  if (config.has_buffering_mode()) {
+    tracing_buffering_mode = config.buffering_mode();
   }
   provider::BufferingMode provider_buffering_mode;
   const char* mode_name;
@@ -97,8 +97,8 @@ void TraceManager::StartTracing(controller::TraceOptions options, zx::socket out
   }
 
   std::vector<::std::string> categories;
-  if (options.has_categories()) {
-    categories = std::move(options.categories());
+  if (config.has_categories()) {
+    categories = std::move(config.categories());
   }
   session_ = fxl::MakeRefCounted<TraceSession>(
       std::move(output), std::move(categories), default_buffer_size_megabytes,
@@ -116,8 +116,8 @@ void TraceManager::StartTracing(controller::TraceOptions options, zx::socket out
   trace_running_ = true;
 
   uint64_t start_timeout_milliseconds = kDefaultStartTimeoutMilliseconds;
-  if (options.has_start_timeout_milliseconds()) {
-    start_timeout_milliseconds = options.start_timeout_milliseconds();
+  if (config.has_start_timeout_milliseconds()) {
+    start_timeout_milliseconds = config.start_timeout_milliseconds();
   }
   session_->WaitForProvidersToStart(std::move(start_callback),
                                     zx::msec(start_timeout_milliseconds));
