@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_ARRAY_VIEW_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_ARRAY_VIEW_H_
+#ifndef SRC_LIB_CONTAINERS_CPP_ARRAY_VIEW_H_
+#define SRC_LIB_CONTAINERS_CPP_ARRAY_VIEW_H_
 
 #include <cstddef>
 #include <iterator>
 #include <vector>
 
-namespace zxdb {
+namespace containers {
 
 // This is like a std::string_view but for array data. It attempts to have the same API as
 // std::vector without owning the underlying buffer.
@@ -84,6 +84,6 @@ class array_view {
   const T* end_ = nullptr;
 };
 
-}  // namespace zxdb
+}  // namespace containers
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_COMMON_ARRAY_VIEW_H_
+#endif  // SRC_LIB_CONTAINERS_CPP_ARRAY_VIEW_H_

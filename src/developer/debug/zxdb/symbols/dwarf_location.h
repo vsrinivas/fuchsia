@@ -5,9 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_LOCATION_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_LOCATION_H_
 
-#include "src/developer/debug/zxdb/common/array_view.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/variable_location.h"
+#include "src/lib/containers/cpp/array_view.h"
 
 namespace llvm {
 class DWARFUnit;
@@ -28,7 +28,8 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
 // cover (normally the end of the .debug_loc section).
 //
 // On error this will return an empty VariableLocation.
-VariableLocation DecodeLocationList(TargetPointer unit_base_addr, array_view<uint8_t> data);
+VariableLocation DecodeLocationList(TargetPointer unit_base_addr,
+                                    containers::array_view<uint8_t> data);
 
 }  // namespace zxdb
 

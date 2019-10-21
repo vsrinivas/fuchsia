@@ -12,7 +12,7 @@
 
 namespace zxdb {
 
-std::string GetLittleEndianHexOutput(array_view<uint8_t> data) {
+std::string GetLittleEndianHexOutput(containers::array_view<uint8_t> data) {
   if (data.empty())
     return std::string();
 
@@ -49,7 +49,7 @@ std::string GetLittleEndianHexOutput(array_view<uint8_t> data) {
   return result;
 }
 
-std::string GetFPString(array_view<uint8_t> value, int precision) {
+std::string GetFPString(containers::array_view<uint8_t> value, int precision) {
   switch (value.size()) {
     case 4:
       precision = precision != 0 ? precision : FLT_DIG;

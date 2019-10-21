@@ -67,17 +67,16 @@ TEST(DwarfLocation, NewBaseAddress) {
   EXPECT_EQ(expected_expr, result.locations()[1].expression);
 
   // Now test a truncated list.
-  result = DecodeLocationList(0, array_view<uint8_t>(&data[0], data.size() - 4));
+  result = DecodeLocationList(0, containers::array_view<uint8_t>(&data[0], data.size() - 4));
   EXPECT_TRUE(result.is_null());
 }
 
 TEST(DwarfLocation, BadExpr) {
   // This expression has a byte length that's too long for the data.
-  std::vector<uint8_t> data{
-      0x4a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Begin of range.
-      0xf6, 0x0d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // End of range.
-      0x00, 0x80,                                      // Expression byte length.
-      0x7f, 0xd8, 0x75};                               // Expression (shorter than byte length).
+  std::vector<uint8_t> data{0x4a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Begin of range.
+                            0xf6, 0x0d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // End of range.
+                            0x00, 0x80,         // Expression byte length.
+                            0x7f, 0xd8, 0x75};  // Expression (shorter than byte length).
 
   VariableLocation result = DecodeLocationList(0, data);
   EXPECT_TRUE(result.is_null());

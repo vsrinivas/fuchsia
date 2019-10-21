@@ -43,15 +43,17 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
   if (offset >= debug_loc_section.Data.size())
     return VariableLocation();  // Off the end.
 
-  array_view<uint8_t> section_data(reinterpret_cast<const uint8_t*>(debug_loc_section.Data.data()),
-                                   debug_loc_section.Data.size());
+  containers::array_view<uint8_t> section_data(
+      reinterpret_cast<const uint8_t*>(debug_loc_section.Data.data()),
+      debug_loc_section.Data.size());
 
   // Interpret the resulting list.
   auto base_address = const_cast<llvm::DWARFUnit*>(unit)->getBaseAddress();
   return DecodeLocationList(base_address ? base_address->Address : 0, section_data.subview(offset));
 }
 
-VariableLocation DecodeLocationList(TargetPointer unit_base_addr, array_view<uint8_t> data) {
+VariableLocation DecodeLocationList(TargetPointer unit_base_addr,
+                                    containers::array_view<uint8_t> data) {
   DataExtractor ext(data);
   std::vector<VariableLocation::Entry> entries;
 

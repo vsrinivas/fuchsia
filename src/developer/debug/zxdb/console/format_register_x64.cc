@@ -35,7 +35,7 @@ void PushName(const Register& reg, TextForegroundColor color, std::vector<Output
 // A nonzero length will case that number of bytes to be printed.
 void PushHex(const Register& reg, TextForegroundColor color, int length,
              std::vector<OutputBuffer>* row) {
-  array_view<uint8_t> view = reg.data;
+  containers::array_view<uint8_t> view = reg.data;
   if (length > 0)
     view = view.subview(0, length);
   row->emplace_back(GetLittleEndianHexOutput(view), color);

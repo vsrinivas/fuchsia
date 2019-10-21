@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/common/array_view.h"
+#include "src/lib/containers/cpp/array_view.h"
 
 #include "gtest/gtest.h"
 
-namespace zxdb {
+namespace containers {
 
 TEST(ArrayView, Basic) {
   const int kValues[6] = {1, 2, 3, 4, 5, 6};
@@ -114,4 +114,4 @@ TEST(ArrayView, SubView) {
   EXPECT_EQ(true, source_past_sub.empty());
 }
 
-}  // namespace zxdb
+}  // namespace containers
