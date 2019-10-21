@@ -24,6 +24,11 @@ ClosureQueueTest::ClosureQueueTest()
   // nothing else to do here
 }
 
+TEST_F(ClosureQueueTest, ThrdTDefaultZero) {
+  // The ClosureQueue implementation relies on this currently, so check here.
+  EXPECT_FALSE(thrd_t{});
+}
+
 TEST_F(ClosureQueueTest, StopAndClearDoesNotRunMoreTasks) {
   bool closure_ran = false;
   queue_.Enqueue([&closure_ran] { closure_ran = true; });
@@ -70,6 +75,18 @@ TEST_F(ClosureQueueTest, StopAndClearDuringTask) {
   EXPECT_TRUE(task_1_deleted);
   EXPECT_FALSE(task_2_ran);
   EXPECT_TRUE(task_2_deleted);
+}
+
+TEST_F(ClosureQueueTest, DispatcherThread) {
+  // Constructed with a dispatcher already.
+  EXPECT_TRUE(queue_.dispatcher_thread());
+  EXPECT_EQ(queue_.dispatcher_thread(), thrd_current());
+
+  // Default constructed then SetDispatcher().
+  ClosureQueue queue;
+  queue.SetDispatcher(loop_.dispatcher(), thrd_current());
+  EXPECT_TRUE(queue.dispatcher_thread());
+  EXPECT_EQ(queue.dispatcher_thread(), thrd_current());
 }
 
 }  // namespace

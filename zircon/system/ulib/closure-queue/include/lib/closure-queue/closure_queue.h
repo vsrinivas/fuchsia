@@ -69,6 +69,8 @@ class ClosureQueue {
   // removing this method.
   void RunOneHere();
 
+  thrd_t dispatcher_thread();
+
  private:
   class Impl {
    public:
@@ -78,6 +80,8 @@ class ClosureQueue {
     void StopAndClear();
     bool is_stopped();
     void RunOneHere();
+
+    thrd_t dispatcher_thread();
 
    private:
     Impl(async_dispatcher_t* dispatcher, thrd_t dispatcher_thread);
@@ -93,6 +97,11 @@ class ClosureQueue {
     // TODO(dustingreen): __TA_GUARDED(lock_), when I can figure out why it doesn't seem to work.
     // __TA_GUARDED(lock_)
     std::queue<fit::closure> pending_;
+
+    // Only touched on dispatcher_thread_.  This is a member so that StopAndClear() will really
+    // clear synchronously.
+    std::queue<fit::closure> pending_on_dispatcher_thread_;
+
     std::condition_variable pending_not_empty_condition_;
   };
 

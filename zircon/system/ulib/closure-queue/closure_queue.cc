@@ -54,6 +54,11 @@ void ClosureQueue::RunOneHere() {
   impl_->RunOneHere();
 }
 
+thrd_t ClosureQueue::dispatcher_thread() {
+  ZX_DEBUG_ASSERT(impl_);
+  return impl_->dispatcher_thread();
+}
+
 std::shared_ptr<ClosureQueue::Impl> ClosureQueue::Impl::Create(async_dispatcher_t* dispatcher,
                                                                thrd_t dispatcher_thread) {
   return std::shared_ptr<ClosureQueue::Impl>(new ClosureQueue::Impl(dispatcher, dispatcher_thread));
@@ -62,6 +67,7 @@ std::shared_ptr<ClosureQueue::Impl> ClosureQueue::Impl::Create(async_dispatcher_
 ClosureQueue::Impl::Impl(async_dispatcher_t* dispatcher, thrd_t dispatcher_thread)
     : dispatcher_(dispatcher), dispatcher_thread_(dispatcher_thread) {
   ZX_DEBUG_ASSERT(dispatcher_);
+  ZX_DEBUG_ASSERT(dispatcher_thread);
 }
 
 ClosureQueue::Impl::~Impl() {
@@ -103,7 +109,8 @@ void ClosureQueue::Impl::Enqueue(std::shared_ptr<Impl> self_shared, fit::closure
 }
 
 void ClosureQueue::Impl::StopAndClear() {
-  std::queue<fit::closure> local_queue;
+  std::queue<fit::closure> local_pending;
+  std::queue<fit::closure> local_pending_on_dispatcher_thread;
   std::lock_guard<std::mutex> lock(lock_);
   if (!dispatcher_) {
     // Idempotent; already stopped and cleared.
@@ -114,13 +121,15 @@ void ClosureQueue::Impl::StopAndClear() {
   // thread as long as we've previously run StopAndClear() on
   // dispatcher_thread_.
   ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
-  local_queue.swap(pending_);
+  local_pending.swap(pending_);
+  local_pending_on_dispatcher_thread.swap(pending_on_dispatcher_thread_);
   dispatcher_ = nullptr;
   // The order of these destructors is intentional, as we don't want to be
   // holding the lock while calling or deleting to_run(s):
   //
   // ~lock
-  // ~local_queue
+  // ~local_pending_on_dispatcher_thread
+  // ~local_pending
 }
 
 bool ClosureQueue::Impl::is_stopped() {
@@ -134,7 +143,6 @@ bool ClosureQueue::Impl::is_stopped() {
 // run.
 void ClosureQueue::Impl::TryRunAll() {
   ZX_DEBUG_ASSERT(thrd_current() == dispatcher_thread_);
-  std::queue<fit::closure> local_pending;
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     // StopAndClear() can only be called on the dispatcher_thread_, so we're
@@ -145,16 +153,20 @@ void ClosureQueue::Impl::TryRunAll() {
       return;
     }
     ZX_DEBUG_ASSERT(dispatcher_);
-    local_pending.swap(pending_);
+    ZX_DEBUG_ASSERT(pending_on_dispatcher_thread_.empty());
+    pending_on_dispatcher_thread_.swap(pending_);
     // local_pending can be empty at this point, but only if RunOneHere() was
     // used.
   }  // ~lock
-  while (!local_pending.empty()) {
-    fit::closure local_to_run = std::move(local_pending.front());
-    local_pending.pop();
+  while (!pending_on_dispatcher_thread_.empty()) {
+    fit::closure local_to_run =
+        std::move(pending_on_dispatcher_thread_.front());
+    pending_on_dispatcher_thread_.pop();
     local_to_run();
     // local_to_run() may have run StopAndClear().
     if (is_stopped()) {
+      // StopAndClear() clears both pending_ and pending_on_dispatcher_thread_.
+      ZX_DEBUG_ASSERT(pending_on_dispatcher_thread_.empty());
       break;
     }
   }
@@ -173,4 +185,9 @@ void ClosureQueue::Impl::RunOneHere() {
     pending_.pop();
   }  // ~lock
   local_to_run();
+}
+
+thrd_t ClosureQueue::Impl::dispatcher_thread() {
+  ZX_DEBUG_ASSERT(dispatcher_thread_);
+  return dispatcher_thread_;
 }
