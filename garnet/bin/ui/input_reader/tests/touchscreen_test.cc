@@ -171,7 +171,8 @@ TEST(TouchscreenTest, WaveShare) {
   EXPECT_EQ(true, success);
 
   EXPECT_EQ(1UL, report.contact_count);
-  EXPECT_EQ(0xd4f4U, report.scan_time);
+  // Scan time converts from 10^-4 seconds to 10^-6 seconds.
+  EXPECT_EQ(0xd4f4U * 100, report.scan_time);
 
   EXPECT_EQ(0U, report.contacts[0].id);
   // Test that X and Y have been converted to micrometers

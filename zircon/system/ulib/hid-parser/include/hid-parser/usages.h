@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HID_PARSER_USAGES_H_
+#define HID_PARSER_USAGES_H_
 
 #include <stdint.h>
 
@@ -404,9 +405,37 @@ enum class Sensor : uint32_t {
   kGyrometer3D = 0x76,
   kMagnetometer = 0xC2,
 
+  kSensorState = 0x201,
+  kSensorStateUndefined = 0x801,
+  kSensorStateReady = 0x802,
+  kSensorStateNotAvailable = 0x803,
+  kSensorStateNoData = 0x804,
+  kSensorStateInitializing = 0x805,
+  kSensorStateAccessDenied = 0x806,
+  kSensorStateError = 0x807,
+
+  kSensorEvent = 0x202,
+  kSensorEventUnknown = 0x810,
+  kSensorEventStateChanged = 0x811,
+  kSensorEventPropertyChanged = 0x812,
+  kSensorEventDataUpdated = 0x813,
+  kSensorEventPollResponse = 0x814,
+  kSensorEventChangeSensitivity = 0x815,
+  kSensorEventRangeMaxReached = 0x816,
+  kSensorEventRangeMinReached = 0x817,
+  kSensorEventHighThresholdCrossUpward = 0x818,
+  kSensorEventHighThresholdCrossDownward = 0x819,
+  kSensorEventLowThresholdCrossUpward = 0x81A,
+  kSensorEventLowThresholdCrossDownward = 0x81B,
+  kSensorEventZeroThresholdCrossUpward = 0x81C,
+  kSensorEventZeroThresholdCrossDownward = 0x81D,
+
   kAccelerationAxisX = 0x453,
   kAccelerationAxisY = 0x454,
   kAccelerationAxisZ = 0x455,
+  kAngularVelocityX = 0x457,
+  kAngularVelocityY = 0x458,
+  kAngularVelocityZ = 0x459,
   kDistanceAxisX = 0x47A,
   kDistanceAxisY = 0x47B,
   kDistanceAxisZ = 0x47C,
@@ -471,3 +500,6 @@ inline bool operator==(hid::usage::Consumer gd, uint32_t e) {
 }
 
 inline bool operator==(uint32_t e, hid::usage::Sensor s) { return (static_cast<uint32_t>(s) == e); }
+inline bool operator==(hid::usage::Sensor s, uint32_t e) { return (static_cast<uint32_t>(s) == e); }
+
+#endif  // HID_PARSER_USAGES_H_

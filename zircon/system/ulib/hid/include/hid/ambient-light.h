@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HID_AMBIENT_LIGHT_H_
+#define HID_AMBIENT_LIGHT_H_
 
 #include <zircon/types.h>
 
@@ -19,8 +20,8 @@ typedef struct ambient_light_input_rpt {
   uint8_t event;
   uint16_t illuminance;
   uint16_t red;
-  uint16_t green;
   uint16_t blue;
+  uint16_t green;
 } __PACKED ambient_light_input_rpt_t;
 
 typedef struct ambient_light_feature_rpt {
@@ -34,3 +35,5 @@ typedef struct ambient_light_feature_rpt {
 size_t get_ambient_light_report_desc(const uint8_t** buf);
 
 __END_CDECLS
+
+#endif  // HID_AMBIENT_LIGHT_H_

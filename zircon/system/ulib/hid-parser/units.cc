@@ -18,10 +18,10 @@ constexpr uint32_t system_mask = 0xF;
 constexpr int system_shift = 0;
 constexpr int length_shift = 4;
 constexpr int mass_shift = 8;
-constexpr int time_shift = 16;
-constexpr int temperature_shift = 20;
-constexpr int current_shift = 24;
-constexpr int luminous_shift = 28;
+constexpr int time_shift = 12;
+constexpr int temperature_shift = 16;
+constexpr int current_shift = 20;
+constexpr int luminous_shift = 24;
 
 constexpr int8_t SignExtendFromNibble(int8_t nibble) {
   // Expression taken and simplified from:
@@ -338,9 +338,19 @@ static UnitConversion defined_units[] = {
             {
                 .type = (static_cast<uint8_t>(System::si_linear) << system_shift) |
                         (1 << luminous_shift),
-                .exp = 1,
+                .exp = 0,
             },
         .unit_type = UnitType::Light,
+    },
+    {
+        .unit =
+            {
+                .type = (static_cast<uint8_t>(System::si_linear) << system_shift) |
+                        (1 << luminous_shift) | (static_cast<uint8_t>(-2 & 0xF) << length_shift),
+                // This exponent is affected by length being 10^-2 m (cm).
+                .exp = -2,
+            },
+        .unit_type = UnitType::Lux,
     },
 
     {

@@ -37,6 +37,8 @@ enum class UnitType : uint32_t {
   Light,
   // A measurement of pressure is 10^-3 Pascal (kg/(m*s^2))
   Pressure,
+  // A measurement of lux is 10^-6 Candela/(m^2)
+  Lux,
 };
 
 // Get the exact unit from the UnitType.
