@@ -28,17 +28,16 @@ use {
 #[cfg(target_os = "fuchsia")]
 use fuchsia_zircon::AsHandleRef;
 
-/// Decode a new value of a decodable type from a transaction.
 fn decode_transaction_body<D: Decodable>(mut buf: MessageBuf) -> Result<D, Error> {
     let (bytes, handles) = buf.split_mut();
-    let header_len = <TransactionHeader as Decodable>::inline_size();
-    if bytes.len() < header_len {
-        return Err(Error::OutOfRange);
-    }
-    let (_header_bytes, body_bytes) = bytes.split_at(header_len);
-
     let mut output = D::new_empty();
-    Decoder::decode_into(body_bytes, handles, &mut output)?;
+    // Even though we only return the body, it's important to decode the entire
+    // message because flags in the header can affect decoding of the body.
+    Decoder::decode_into(
+        bytes,
+        handles,
+        &mut TransactionMessage { header: TransactionHeader::new_empty(), body: &mut output },
+    )?;
     Ok(output)
 }
 
@@ -810,6 +809,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn client_with_response() {
+        #[rustfmt::skip]
         const EXPECTED: &[u8] = &[
             1, 0, 0, 0, // 32 bit tx_id
             0, 0, 0, // flags

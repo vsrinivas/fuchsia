@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Encoding2 contains functions and traits for FIDL2 encoding and decoding.
+//! Encoding contains functions and traits for FIDL2 encoding and decoding.
 
 use {
     crate::handle::{Handle, HandleBased, MessageBuf},
@@ -31,7 +31,7 @@ pub fn with_tls_coding_bufs<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) ->
 ///
 /// This function may not be called recursively.
 pub fn with_tls_encoded<T, E: From<Error>>(
-    val: &mut (impl Encodable + ?Sized),
+    val: &mut (impl Encodable),
     f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> std::result::Result<T, E>,
 ) -> std::result::Result<T, E> {
     with_tls_coding_bufs(|bytes, handles| {
@@ -117,6 +117,15 @@ pub const EPITAPH_ORDINAL: u64 = 0xffffffffffffffffu64;
 /// The current wire format magic number
 pub const MAGIC_NUMBER_INITIAL: u8 = 1;
 
+/// Context for encoding and decoding.
+// TODO(mkember): Store a flag here to represent whether unions are encoded
+// as xunions on the wire.
+#[derive(Debug)]
+pub struct Context {}
+
+/// Context to use by default.
+const DEFAULT_CONTEXT: Context = Context {};
+
 /// Encoding state
 #[derive(Debug)]
 pub struct Encoder<'a> {
@@ -135,6 +144,9 @@ pub struct Encoder<'a> {
 
     /// Buffer to write output handles into.
     handles: &'a mut Vec<Handle>,
+
+    /// Encoding context.
+    context: Context,
 }
 
 /// Decoding state
@@ -154,12 +166,15 @@ pub struct Decoder<'a> {
     out_of_line_buf: &'a [u8],
 
     /// Original length of the out_of_line_buf slice. Used to report error messages. A difference
-    /// between this value and out_of_line_buf.len() is the current decoding position for th
+    /// between this value and out_of_line_buf.len() is the current decoding position for the
     /// out-of-line part of the message.
     initial_out_of_line_buf_len: usize,
 
     /// Buffer from which to read handles.
     handles: &'a mut [Handle],
+
+    /// Decoding context.
+    context: Context,
 }
 
 impl<'a> Encoder<'a> {
@@ -173,15 +188,17 @@ impl<'a> Encoder<'a> {
             buf: &'a mut Vec<u8>,
             handles: &'a mut Vec<Handle>,
             ty_inline_size: usize,
+            context: Context,
         ) -> Encoder<'a> {
             let inline_size = round_up_to_align(ty_inline_size, 8);
             buf.truncate(0);
             buf.resize(inline_size, 0);
             handles.truncate(0);
-            Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles }
+            Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles, context }
         }
 
-        let mut encoder = prepare_for_encoding(buf, handles, x.inline_size());
+        let context = DEFAULT_CONTEXT;
+        let mut encoder = prepare_for_encoding(buf, handles, x.inline_size(&context), context);
         x.encode(&mut encoder)
     }
 
@@ -218,14 +235,22 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
-    /// Adds as many zero bytes as padding as necessary to make sure that the `target` object size
-    /// is equal to `inline_size()`. `start_pos` is the position in the `encoder` buffer of where
-    /// the encoding started.  See `Encoder::offset`.
-    pub fn tail_padding<Target>(&mut self, target: &Target, start_pos: usize) -> Result<()>
-    where
-        Target: Encodable,
-    {
-        self.tail_padding_inner(target.inline_size(), start_pos)
+    /// Returns the inline alignment of an object of type `Target` for this decoder.
+    pub fn inline_align_of<Target: Encodable>(&self) -> usize {
+        <Target as Layout>::inline_align(&self.context)
+    }
+
+    /// Returns the inline size of the given object for this encoder.
+    pub fn inline_size_of<Target: Encodable>(&self) -> usize {
+        <Target as Layout>::inline_size(&self.context)
+    }
+
+    /// Adds as many zero bytes as padding as necessary to make sure that the
+    /// `target` object size is equal to `inline_size_of::<Target>()`.
+    /// `start_pos` is the position in the `encoder` buffer of where the
+    /// encoding started. See `Encoder::offset`.
+    pub fn tail_padding<Target: Encodable>(&mut self, start_pos: usize) -> Result<()> {
+        self.tail_padding_inner(self.inline_size_of::<Target>(), start_pos)
     }
 
     fn tail_padding_inner(&mut self, target_inline_size: usize, start_pos: usize) -> Result<()> {
@@ -278,7 +303,8 @@ impl<'a> Decoder<'a> {
         handles: &'a mut [Handle],
         value: &mut T,
     ) -> Result<()> {
-        let out_of_line_offset = round_up_to_align(T::inline_size(), 8);
+        let context = DEFAULT_CONTEXT;
+        let out_of_line_offset = round_up_to_align(T::inline_size(&context), 8);
         if buf.len() < out_of_line_offset {
             return Err(Error::OutOfRange);
         }
@@ -292,6 +318,7 @@ impl<'a> Decoder<'a> {
             out_of_line_buf,
             initial_out_of_line_buf_len: out_of_line_buf.len(),
             handles,
+            context,
         };
         value.decode(&mut decoder)?;
         if decoder.out_of_line_buf.len() != 0 {
@@ -435,59 +462,132 @@ impl<'a> Decoder<'a> {
         Ok(())
     }
 
-    /// Skips padding at the end of the object, by decoding as many bytes as necessary to decode
-    /// `inline_size()` bytes starting at the `start_pos`. Uses `Decoder::skip_padding`, so will
-    /// check that all the skipped bytes are indeed zeroes.
-    pub fn skip_tail_padding<Target>(&mut self, _target: &Target, start_pos: usize) -> Result<()>
-    where
-        Target: Decodable + Sized,
-    {
+    /// Returns the inline alignment of an object of type `Target` for this decoder.
+    pub fn inline_align_of<Target: Decodable>(&self) -> usize {
+        Target::inline_align(&self.context)
+    }
+
+    /// Returns the inline size of an object of type `Target` for this decoder.
+    pub fn inline_size_of<Target: Decodable>(&self) -> usize {
+        Target::inline_size(&self.context)
+    }
+
+    /// Skips padding at the end of the object, by decoding as many bytes as
+    /// necessary to decode `inline_size_of::<Target>()` bytes starting at the
+    /// `start_pos`. Uses `Decoder::skip_padding`, so will check that all the
+    /// skipped bytes are indeed zeroes.
+    pub fn skip_tail_padding<Target: Decodable>(&mut self, start_pos: usize) -> Result<()> {
         debug_assert!(start_pos <= self.inline_pos());
-        self.skip_padding(Target::inline_size() - (self.inline_pos() - start_pos))
+        self.skip_padding(self.inline_size_of::<Target>() - (self.inline_pos() - start_pos))
+    }
+}
+
+/// A trait for specifying the inline layout of an encoded object.
+pub trait Layout {
+    /// Returns the minimum required alignment of the inline portion of the
+    /// encoded object.
+    fn inline_align(context: &Context) -> usize
+    where
+        Self: Sized;
+
+    /// Returns the size of the inline portion of the encoded object, including
+    /// padding for the type's minimum alignment.
+    fn inline_size(context: &Context) -> usize
+    where
+        Self: Sized;
+}
+
+/// An object-safe extension of the `Layout` trait.
+///
+/// This trait should not be implemented directly. Instead, types should
+/// implement `Layout` and rely on the automatic implementation of this one.
+///
+/// The purpose of this trait is to provide access to inline size and alignment
+/// values through `dyn Encodable` trait objects, including generic contexts
+/// where they are allowed such as `T: Encodable + ?Sized`.
+pub trait LayoutObject: Layout {
+    /// See `Layout::inline_align`.
+    fn inline_align(&self, context: &Context) -> usize;
+
+    /// See `Layout::inline_size`.
+    fn inline_size(&self, context: &Context) -> usize;
+}
+
+impl<T: Layout> LayoutObject for T {
+    fn inline_align(&self, context: &Context) -> usize {
+        <T as Layout>::inline_align(context)
+    }
+
+    fn inline_size(&self, context: &Context) -> usize {
+        <T as Layout>::inline_size(context)
     }
 }
 
 /// A type which can be FIDL2-encoded into a buffer.
-pub trait Encodable {
-    /// Returns the minimum required alignment of the inline portion of the encoded object.
-    fn inline_align(&self) -> usize;
-
-    /// Returns the size of the inline portion of the encoded object.
-    fn inline_size(&self) -> usize;
-
+///
+/// Often an `Encodable` type should also be `Decodable`, but this is not always
+/// the case. For example, both `String` and `&str` are encodable, but `&str` is
+/// not decodable since it does not own any memory to store the string.
+///
+/// This trait is object-safe, meaning it is possible to create `dyn Encodable`
+/// trait objects. Using them instead of generic `T: Encodable` types can help
+/// reduce binary bloat. However, they can only be encoded directly: there are
+/// no implementations of `Encodable` for enclosing types such as
+/// `Vec<&dyn Encodable>`, and similarly for references, arrays, tuples, etc.
+pub trait Encodable: LayoutObject {
     /// Encode the object into the buffer.
     /// Any handles stored in the object are swapped for `Handle::INVALID`.
-    /// Calls to this function should ensure that `encoder.offset` is a multiple of `inline_size`.
-    /// Successful calls to this function should increase `encoder.offset` by `inline_size`.
+    /// Calls to this function should ensure that `encoder.offset` is a multiple of `Layout::inline_size`.
+    /// Successful calls to this function should increase `encoder.offset` by `Layout::inline_size`.
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()>;
 }
 
 /// A type which can be FIDL2-decoded from a buffer.
-pub trait Decodable {
-    /// Returns the minimum required alignment of the inline portion of the encoded object.
-    fn inline_align() -> usize
-    where
-        Self: Sized;
-
-    /// Returns the size of the inline portion of the encoded object.
-    fn inline_size() -> usize
-    where
-        Self: Sized;
-
+///
+/// This trait is not object-safe, since `new_empty` returns `Self`. This is not
+/// really a problem: there are not many use cases for `dyn Decodable`.
+pub trait Decodable: Layout {
     /// Creates a new value of this type with an "empty" representation.
-    fn new_empty() -> Self
-    where
-        Self: Sized;
+    fn new_empty() -> Self;
 
     /// Decodes an object of this type from the provided buffer and list of handles.
     /// On success, returns `Self`, as well as the yet-unused tails of the data and handle buffers.
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()>;
 }
 
+macro_rules! impl_layout {
+    ($ty:ty, align: $align:expr, size: $size:expr) => {
+        impl Layout for $ty {
+            fn inline_size(_context: &Context) -> usize {
+                $size
+            }
+            fn inline_align(_context: &Context) -> usize {
+                $align
+            }
+        }
+    };
+}
+
+macro_rules! impl_layout_forall_T {
+    ($ty:ty, align: $align:expr, size: $size:expr) => {
+        impl<T: Layout> Layout for $ty {
+            fn inline_size(_context: &Context) -> usize {
+                $size
+            }
+            fn inline_align(_context: &Context) -> usize {
+                $align
+            }
+        }
+    };
+}
+
 macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,)*) => { $(
+    impl Layout for $prim_ty {
+        fn inline_size(_context: &Context) -> usize { mem::size_of::<$prim_ty>() }
+        fn inline_align(_context: &Context) -> usize { mem::size_of::<$prim_ty>() }
+    }
+
     impl Encodable for $prim_ty {
-        fn inline_align(&self) -> usize { mem::size_of::<$prim_ty>() }
-        fn inline_size(&self) -> usize { mem::size_of::<$prim_ty>() }
         fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
             let slot = encoder.next_slice(mem::size_of::<Self>())?;
             LittleEndian::$writer(slot, *self);
@@ -497,8 +597,6 @@ macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,
 
     impl Decodable for $prim_ty {
         fn new_empty() -> Self { 0 as $prim_ty }
-        fn inline_size() -> usize { mem::size_of::<$prim_ty>() }
-        fn inline_align() -> usize { mem::size_of::<$prim_ty>() }
         fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
             let end = mem::size_of::<Self>();
             let range = split_off_front(&mut decoder.buf, end)?;
@@ -519,13 +617,9 @@ impl_codable_num!(
     f64 => read_f64 + write_f64,
 );
 
+impl_layout!(bool, align: 1, size: 1);
+
 impl Encodable for bool {
-    fn inline_align(&self) -> usize {
-        1
-    }
-    fn inline_size(&self) -> usize {
-        1
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = if *self { 1 } else { 0 };
@@ -536,12 +630,6 @@ impl Encodable for bool {
 impl Decodable for bool {
     fn new_empty() -> Self {
         false
-    }
-    fn inline_align() -> usize {
-        1
-    }
-    fn inline_size() -> usize {
-        1
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let num = *split_off_first(&mut decoder.buf)?;
@@ -554,13 +642,9 @@ impl Decodable for bool {
     }
 }
 
+impl_layout!(u8, align: 1, size: 1);
+
 impl Encodable for u8 {
-    fn inline_align(&self) -> usize {
-        1
-    }
-    fn inline_size(&self) -> usize {
-        1
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = *self;
@@ -572,25 +656,15 @@ impl Decodable for u8 {
     fn new_empty() -> Self {
         0
     }
-    fn inline_align() -> usize {
-        1
-    }
-    fn inline_size() -> usize {
-        1
-    }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         *self = *split_off_first(&mut decoder.buf)?;
         Ok(())
     }
 }
 
+impl_layout!(i8, align: 1, size: 1);
+
 impl Encodable for i8 {
-    fn inline_align(&self) -> usize {
-        1
-    }
-    fn inline_size(&self) -> usize {
-        1
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = *self as u8;
@@ -601,12 +675,6 @@ impl Encodable for i8 {
 impl Decodable for i8 {
     fn new_empty() -> Self {
         0
-    }
-    fn inline_align() -> usize {
-        1
-    }
-    fn inline_size() -> usize {
-        1
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         *self = *split_off_first(&mut decoder.buf)? as i8;
@@ -633,15 +701,12 @@ fn decode_array<T: Decodable>(decoder: &mut Decoder, slice: &mut [T]) -> Result<
 }
 
 macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
+    impl<T: Layout> Layout for [T; $len] {
+        fn inline_align(context: &Context) -> usize { T::inline_align(context) }
+        fn inline_size(context: &Context) -> usize { T::inline_size(context) * $len }
+    }
+
     impl<T: Encodable> Encodable for [T; $len] {
-        fn inline_align(&self) -> usize {
-            self.get(0).map(Encodable::inline_align).unwrap_or(0)
-        }
-
-        fn inline_size(&self) -> usize {
-            self.get(0).map(Encodable::inline_size).unwrap_or(0) * $len
-        }
-
         fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
             encode_array(encoder, self)
         }
@@ -659,9 +724,6 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
             }
         }
 
-        fn inline_align() -> usize { T::inline_align() }
-        fn inline_size() -> usize { T::inline_size() * $len }
-
         fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
             decode_array(decoder, self)
         }
@@ -678,7 +740,7 @@ impl_codable_for_fixed_array!( 0,  1,  2,  3,  4,  5,  6,  7,
                               16, 17, 18, 19, 20, 21, 22, 23,
                               24, 25, 26, 27, 28, 29, 30, 31,
                               32,);
-// HAck for FIDL library fuchsia.sysmem
+// Hack for FIDL library fuchsia.sysmem
 impl_codable_for_fixed_array!(64,);
 // Hack for FIDL library fuchsia.net
 impl_codable_for_fixed_array!(256,);
@@ -713,15 +775,16 @@ where
 {
     match iter_opt {
         None => encode_absent_vector(encoder),
-        Some(mut iter) => {
+        Some(iter) => {
             // Two u64: (len, present)
             (iter.len() as u64).encode(encoder)?;
             ALLOC_PRESENT_U64.encode(encoder)?;
-            let mut first = if let Some(first) = iter.next() { first } else { return Ok(()) };
-            let bytes_len = (iter.len() + 1) * first.inline_size();
+            if iter.len() == 0 {
+                return Ok(());
+            }
+            let bytes_len = iter.len() * encoder.inline_size_of::<T>();
             encoder.write_out_of_line(bytes_len, |encoder| {
                 encoder.recurse(|encoder| {
-                    first.encode(encoder)?;
                     for mut item in iter {
                         item.encode(encoder)?;
                     }
@@ -770,7 +833,7 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<b
     }
 
     let len = len as usize;
-    let bytes_len = len * T::inline_size();
+    let bytes_len = len * decoder.inline_size_of::<T>();
     decoder.read_out_of_line(bytes_len, |decoder| {
         decoder.recurse(|decoder| {
             vec.truncate(0);
@@ -784,29 +847,17 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<b
     })
 }
 
-impl<'a> Encodable for &'a str {
-    fn inline_align(&self) -> usize {
-        8
-    }
+impl_layout!(&str, align: 8, size: 16);
 
-    fn inline_size(&self) -> usize {
-        16
-    }
-
+impl Encodable for &str {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_byte_slice(encoder, Some(self.as_bytes()))
     }
 }
 
+impl_layout!(String, align: 8, size: 16);
+
 impl Encodable for String {
-    fn inline_align(&self) -> usize {
-        8
-    }
-
-    fn inline_size(&self) -> usize {
-        16
-    }
-
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_byte_slice(encoder, Some(self.as_bytes()))
     }
@@ -815,14 +866,6 @@ impl Encodable for String {
 impl Decodable for String {
     fn new_empty() -> Self {
         String::new()
-    }
-
-    fn inline_align() -> usize {
-        8
-    }
-
-    fn inline_size() -> usize {
-        16
     }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
@@ -834,29 +877,17 @@ impl Decodable for String {
     }
 }
 
-impl<'a> Encodable for Option<&'a str> {
-    fn inline_align(&self) -> usize {
-        8
-    }
+impl_layout!(Option<&str>, align: 8, size: 16);
 
-    fn inline_size(&self) -> usize {
-        16
-    }
-
+impl Encodable for Option<&str> {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
     }
 }
 
+impl_layout!(Option<String>, align: 8, size: 16);
+
 impl Encodable for Option<String> {
-    fn inline_align(&self) -> usize {
-        8
-    }
-
-    fn inline_size(&self) -> usize {
-        16
-    }
-
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
     }
@@ -865,14 +896,6 @@ impl Encodable for Option<String> {
 impl Decodable for Option<String> {
     fn new_empty() -> Self {
         None
-    }
-
-    fn inline_align() -> usize {
-        8
-    }
-
-    fn inline_size() -> usize {
-        16
     }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
@@ -888,43 +911,25 @@ impl Decodable for Option<String> {
     }
 }
 
-impl<'a, 'b: 'a, T: Encodable> Encodable for &'a mut dyn ExactSizeIterator<Item = T> {
-    fn inline_align(&self) -> usize {
-        8
-    }
+impl_layout_forall_T!(&mut dyn ExactSizeIterator<Item = T>, align: 8, size: 16);
 
-    fn inline_size(&self) -> usize {
-        16
-    }
-
+impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, Some(self))
     }
 }
 
-impl<'a, T: Encodable> Encodable for &'a mut [T] {
-    fn inline_align(&self) -> usize {
-        8
-    }
+impl_layout_forall_T!(&mut [T], align: 8, size: 16);
 
-    fn inline_size(&self) -> usize {
-        16
-    }
-
+impl<T: Encodable> Encodable for &mut [T] {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, Some(self.iter_mut()))
     }
 }
 
+impl_layout_forall_T!(Vec<T>, align: 8, size: 16);
+
 impl<T: Encodable> Encodable for Vec<T> {
-    fn inline_align(&self) -> usize {
-        8
-    }
-
-    fn inline_size(&self) -> usize {
-        16
-    }
-
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, Some(self.iter_mut()))
     }
@@ -933,14 +938,6 @@ impl<T: Encodable> Encodable for Vec<T> {
 impl<T: Decodable> Decodable for Vec<T> {
     fn new_empty() -> Self {
         Vec::new()
-    }
-
-    fn inline_align() -> usize {
-        8
-    }
-
-    fn inline_size() -> usize {
-        16
     }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
@@ -952,43 +949,25 @@ impl<T: Decodable> Decodable for Vec<T> {
     }
 }
 
-impl<'a, 'b: 'a, T: Encodable> Encodable for Option<&'a mut dyn ExactSizeIterator<Item = T>> {
-    fn inline_align(&self) -> usize {
-        8
-    }
+impl_layout_forall_T!(Option<&mut dyn ExactSizeIterator<Item = T>>, align: 8, size: 16);
 
-    fn inline_size(&self) -> usize {
-        16
-    }
-
+impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| &mut **x))
     }
 }
 
-impl<'a, T: Encodable> Encodable for Option<&'a mut [T]> {
-    fn inline_align(&self) -> usize {
-        8
-    }
+impl_layout_forall_T!(Option<&mut [T]>, align: 8, size: 16);
 
-    fn inline_size(&self) -> usize {
-        16
-    }
-
+impl<T: Encodable> Encodable for Option<&mut [T]> {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
     }
 }
 
+impl_layout_forall_T!(Option<Vec<T>>, align: 8, size: 16);
+
 impl<T: Encodable> Encodable for Option<Vec<T>> {
-    fn inline_align(&self) -> usize {
-        8
-    }
-
-    fn inline_size(&self) -> usize {
-        16
-    }
-
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
     }
@@ -997,14 +976,6 @@ impl<T: Encodable> Encodable for Option<Vec<T>> {
 impl<T: Decodable> Decodable for Option<Vec<T>> {
     fn new_empty() -> Self {
         None
-    }
-
-    fn inline_align() -> usize {
-        8
-    }
-
-    fn inline_size() -> usize {
-        16
     }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
@@ -1018,24 +989,6 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
         }
         Ok(())
     }
-}
-
-/// A shorthand macro for calling `Decodable::inline_size()` on a type
-/// without importing the `Decodable` trait.
-#[macro_export]
-macro_rules! fidl_inline_size {
-    ($type:ty) => {
-        <$type as $crate::encoding::Decodable>::inline_size()
-    };
-}
-
-/// A shorthand macro for calling `Decodable::inline_align()` on a type
-/// without importing the `Decodable` trait.
-#[macro_export]
-macro_rules! fidl_inline_align {
-    ($type:ty) => {
-        <$type as $crate::encoding::Decodable>::inline_align()
-    };
 }
 
 /// A shorthand macro for calling `Encodable::encode()` on a type
@@ -1095,15 +1048,17 @@ macro_rules! fidl_bits {
             }
         }
 
+        impl $crate::encoding::Layout for $name {
+            fn inline_align(context: &$crate::encoding::Context) -> usize {
+                <$prim_ty as $crate::encoding::Layout>::inline_align(context)
+            }
+
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                <$prim_ty as $crate::encoding::Layout>::inline_size(context)
+            }
+        }
+
         impl $crate::encoding::Encodable for $name {
-            fn inline_align(&self) -> usize {
-                $crate::fidl_inline_align!($prim_ty)
-            }
-
-            fn inline_size(&self) -> usize {
-                $crate::fidl_inline_size!($prim_ty)
-            }
-
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
                 -> ::std::result::Result<(), $crate::Error>
             {
@@ -1114,14 +1069,6 @@ macro_rules! fidl_bits {
         impl $crate::encoding::Decodable for $name {
             fn new_empty() -> Self {
                 Self::empty()
-            }
-
-            fn inline_align() -> usize {
-                $crate::fidl_inline_align!($prim_ty)
-            }
-
-            fn inline_size() -> usize {
-                $crate::fidl_inline_size!($prim_ty)
             }
 
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder)
@@ -1186,15 +1133,17 @@ macro_rules! fidl_enum {
             }
         }
 
+        impl $crate::encoding::Layout for $name {
+            fn inline_align(context: &$crate::encoding::Context) -> usize {
+                <$prim_ty as $crate::encoding::Layout>::inline_align(context)
+            }
+
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                <$prim_ty as $crate::encoding::Layout>::inline_size(context)
+            }
+        }
+
         impl $crate::encoding::Encodable for $name {
-            fn inline_align(&self) -> usize {
-                $crate::fidl_inline_align!($prim_ty)
-            }
-
-            fn inline_size(&self) -> usize {
-                $crate::fidl_inline_size!($prim_ty)
-            }
-
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
                 -> ::std::result::Result<(), $crate::Error>
             {
@@ -1212,14 +1161,6 @@ macro_rules! fidl_enum {
                 panic!("new_empty called on enum with no variants")
             }
 
-            fn inline_align() -> usize {
-                $crate::fidl_inline_align!($prim_ty)
-            }
-
-            fn inline_size() -> usize {
-                $crate::fidl_inline_size!($prim_ty)
-            }
-
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder)
                 -> ::std::result::Result<(), $crate::Error>
             {
@@ -1232,13 +1173,9 @@ macro_rules! fidl_enum {
     }
 }
 
+impl_layout!(Handle, align: 4, size: 4);
+
 impl Encodable for Handle {
-    fn inline_align(&self) -> usize {
-        4
-    }
-    fn inline_size(&self) -> usize {
-        4
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         ALLOC_PRESENT_U32.encode(encoder)?;
         let handle = take_handle(self);
@@ -1250,12 +1187,6 @@ impl Encodable for Handle {
 impl Decodable for Handle {
     fn new_empty() -> Self {
         Handle::invalid()
-    }
-    fn inline_align() -> usize {
-        4
-    }
-    fn inline_size() -> usize {
-        4
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let mut present: u32 = 0;
@@ -1270,13 +1201,9 @@ impl Decodable for Handle {
     }
 }
 
+impl_layout!(Option<Handle>, align: 4, size: 4);
+
 impl Encodable for Option<Handle> {
-    fn inline_align(&self) -> usize {
-        4
-    }
-    fn inline_size(&self) -> usize {
-        4
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         match self {
             Some(handle) => handle.encode(encoder),
@@ -1288,12 +1215,6 @@ impl Encodable for Option<Handle> {
 impl Decodable for Option<Handle> {
     fn new_empty() -> Self {
         None
-    }
-    fn inline_align() -> usize {
-        4
-    }
-    fn inline_size() -> usize {
-        4
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let mut present: u32 = 0;
@@ -1318,9 +1239,12 @@ impl Decodable for Option<Handle> {
 #[macro_export]
 macro_rules! handle_based_codable {
     ($($ty:ident$(:- <$($generic:ident,)*>)*, )*) => { $(
+        impl<$($($generic,)*)*> $crate::encoding::Layout for $ty<$($($generic,)*)*> {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize { 4 }
+            fn inline_size(_context: &$crate::encoding::Context) -> usize { 4 }
+        }
+
         impl<$($($generic,)*)*> $crate::encoding::Encodable for $ty<$($($generic,)*)*> {
-            fn inline_align(&self) -> usize { 4 }
-            fn inline_size(&self) -> usize { 4 }
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
                 -> $crate::Result<()>
             {
@@ -1333,8 +1257,6 @@ macro_rules! handle_based_codable {
             fn new_empty() -> Self {
                 <$ty<$($($generic,)*)*> as $crate::handle::HandleBased>::from_handle($crate::handle::Handle::invalid())
             }
-            fn inline_align() -> usize { 4 }
-            fn inline_size() -> usize { 4 }
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder)
                 -> $crate::Result<()>
             {
@@ -1345,9 +1267,12 @@ macro_rules! handle_based_codable {
             }
         }
 
+        impl<$($($generic,)*)*> $crate::encoding::Layout for Option<$ty<$($($generic,)*)*>> {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize { 4 }
+            fn inline_size(_context: &$crate::encoding::Context) -> usize { 4 }
+        }
+
         impl<$($($generic,)*)*> $crate::encoding::Encodable for Option<$ty<$($($generic,)*)*>> {
-            fn inline_align(&self) -> usize { 4 }
-            fn inline_size(&self) -> usize { 4 }
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
                 -> $crate::Result<()>
             {
@@ -1360,8 +1285,6 @@ macro_rules! handle_based_codable {
 
         impl<$($($generic,)*)*> $crate::encoding::Decodable for Option<$ty<$($($generic,)*)*>> {
             fn new_empty() -> Self { None }
-            fn inline_align() -> usize { 4 }
-            fn inline_size() -> usize { 4 }
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 let mut handle: Option<$crate::handle::Handle> = None;
                 $crate::fidl_decode!(&mut handle, decoder)?;
@@ -1372,13 +1295,16 @@ macro_rules! handle_based_codable {
     )* }
 }
 
+impl Layout for zx_status::Status {
+    fn inline_size(_context: &Context) -> usize {
+        mem::size_of::<zx_status::zx_status_t>()
+    }
+    fn inline_align(_context: &Context) -> usize {
+        mem::size_of::<zx_status::zx_status_t>()
+    }
+}
+
 impl Encodable for zx_status::Status {
-    fn inline_align(&self) -> usize {
-        mem::size_of::<zx_status::zx_status_t>()
-    }
-    fn inline_size(&self) -> usize {
-        mem::size_of::<zx_status::zx_status_t>()
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let slot = encoder.next_slice(mem::size_of::<zx_status::zx_status_t>())?;
         LittleEndian::write_i32(slot, self.into_raw());
@@ -1389,12 +1315,6 @@ impl Encodable for zx_status::Status {
 impl Decodable for zx_status::Status {
     fn new_empty() -> Self {
         Self::from_raw(0)
-    }
-    fn inline_size() -> usize {
-        mem::size_of::<zx_status::zx_status_t>()
-    }
-    fn inline_align() -> usize {
-        mem::size_of::<zx_status::zx_status_t>()
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let end = mem::size_of::<zx_status::zx_status_t>();
@@ -1411,13 +1331,16 @@ pub struct EpitaphBody {
     pub error: zx_status::Status,
 }
 
+impl Layout for EpitaphBody {
+    fn inline_align(context: &Context) -> usize {
+        <zx_status::Status as Layout>::inline_align(context)
+    }
+    fn inline_size(context: &Context) -> usize {
+        <zx_status::Status as Layout>::inline_size(context)
+    }
+}
+
 impl Encodable for EpitaphBody {
-    fn inline_size(&self) -> usize {
-        self.error.inline_size()
-    }
-    fn inline_align(&self) -> usize {
-        self.error.inline_align()
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         self.error.encode(encoder)
     }
@@ -1426,12 +1349,6 @@ impl Encodable for EpitaphBody {
 impl Decodable for EpitaphBody {
     fn new_empty() -> Self {
         Self { error: zx_status::Status::new_empty() }
-    }
-    fn inline_size() -> usize {
-        <zx_status::Status as Decodable>::inline_size()
-    }
-    fn inline_align() -> usize {
-        <zx_status::Status as Decodable>::inline_align()
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         self.error.decode(decoder)
@@ -1504,17 +1421,11 @@ pub use fidl_handle_encoding::*;
 /// Types that implement this trait will automatically receive
 /// `Encodable` and `Decodable` implementations for `Option<Self>`
 /// (rather than `Option<Box<Self>>` or `Option<OutOfLine<Self>>`).
-pub trait AutonullContainer {
-    // FIXME(cramertj) dedup size and align in this file into an
-    // object-safe size and align trait and a non-object-safe size and align
-    // trait that can be reused, with a default impl of the former for implementors
-    // of the latter.
-
-    /// The inline size of the object.
-    fn inline_align() -> usize;
-    /// The out-of-line size of the object.
-    fn inline_size() -> usize;
-}
+///
+/// If `Self` only implements one of `Encodable` or `Decodable`, then only that
+/// one will be automatically implemented for `Option<Self>`. This is why the
+/// trait extends `Layout` rather than `Encodable + Decodable`.
+pub trait AutonullContainer: Layout {}
 
 /// A trait that provides automatic `Encodable` and `Decodable`
 /// implementations for `Option<Box<Self>>` and `Option<OutOfLine<Self>>`.
@@ -1524,13 +1435,16 @@ pub trait Autonull: Encodable + Decodable {}
 /// or decoded from the out-of-line buffer rather than inline.
 pub struct OutOfLine<'a, T: 'a>(pub &'a mut T);
 
+impl<T: AutonullContainer> Layout for Option<T> {
+    fn inline_align(context: &Context) -> usize {
+        <T as Layout>::inline_align(context)
+    }
+    fn inline_size(context: &Context) -> usize {
+        <T as Layout>::inline_size(context)
+    }
+}
+
 impl<T: AutonullContainer + Encodable> Encodable for Option<T> {
-    fn inline_align(&self) -> usize {
-        <T as AutonullContainer>::inline_align()
-    }
-    fn inline_size(&self) -> usize {
-        <T as AutonullContainer>::inline_size()
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         match self {
             Some(x) => x.encode(encoder),
@@ -1538,7 +1452,7 @@ impl<T: AutonullContainer + Encodable> Encodable for Option<T> {
                 // `None` always corresponds to a full bout of inline zeros,
                 // aka `ALLOC_ABSENT_u64`, with an additional zero-length for
                 // out-of-line vectors and tables.
-                for byte in encoder.next_slice(<T as AutonullContainer>::inline_size())? {
+                for byte in encoder.next_slice(encoder.inline_size_of::<T>())? {
                     *byte = 0;
                 }
                 Ok(())
@@ -1554,17 +1468,11 @@ fn check_for_presence(decoder: &mut Decoder<'_>, inline_size: usize) -> Result<b
 }
 
 impl<T: AutonullContainer + Decodable> Decodable for Option<T> {
-    fn inline_align() -> usize {
-        <T as Decodable>::inline_align()
-    }
-    fn inline_size() -> usize {
-        <T as Decodable>::inline_size()
-    }
     fn new_empty() -> Self {
         None
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
-        let inline_size = <T as Decodable>::inline_size();
+        let inline_size = decoder.inline_size_of::<T>();
         let present = check_for_presence(decoder, inline_size)?;
         if present {
             self.get_or_insert_with(|| T::new_empty()).decode(decoder)?;
@@ -1580,57 +1488,45 @@ impl<T: AutonullContainer + Decodable> Decodable for Option<T> {
     }
 }
 
-impl<'a, T: Autonull> AutonullContainer for OutOfLine<'a, T> {
-    fn inline_align() -> usize {
-        fidl_inline_align!(u64)
+impl<T: Autonull> AutonullContainer for OutOfLine<'_, T> {}
+
+impl<T: Autonull> Layout for OutOfLine<'_, T> {
+    fn inline_align(_context: &Context) -> usize {
+        8
     }
-    fn inline_size() -> usize {
-        fidl_inline_size!(u64)
+    fn inline_size(_context: &Context) -> usize {
+        8
     }
 }
 
-impl<'a, T: Autonull> Encodable for OutOfLine<'a, T> {
-    fn inline_align(&self) -> usize {
-        fidl_inline_align!(u64)
-    }
-    fn inline_size(&self) -> usize {
-        fidl_inline_size!(u64)
-    }
+impl<T: Autonull> Encodable for OutOfLine<'_, T> {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         ALLOC_PRESENT_U64.encode(encoder)?;
-        encoder.write_out_of_line(self.0.inline_size(), |encoder| self.0.encode(encoder))
+        encoder.write_out_of_line(encoder.inline_size_of::<T>(), |encoder| self.0.encode(encoder))
     }
 }
 
-impl<T: Autonull> AutonullContainer for Box<T> {
-    fn inline_align() -> usize {
-        fidl_inline_align!(u64)
+impl<T: Autonull> AutonullContainer for Box<T> {}
+
+impl<T: Autonull> Layout for Box<T> {
+    fn inline_align(_context: &Context) -> usize {
+        8
     }
-    fn inline_size() -> usize {
-        fidl_inline_size!(u64)
+    fn inline_size(_context: &Context) -> usize {
+        8
     }
 }
 
 impl<T: Autonull> Encodable for Box<T> {
-    fn inline_align(&self) -> usize {
-        fidl_inline_align!(u64)
-    }
-    fn inline_size(&self) -> usize {
-        fidl_inline_size!(u64)
-    }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         ALLOC_PRESENT_U64.encode(encoder)?;
-        encoder.write_out_of_line((&**self).inline_size(), |encoder| (&mut **self).encode(encoder))
+        encoder.write_out_of_line(encoder.inline_size_of::<T>(), |encoder| {
+            (&mut **self).encode(encoder)
+        })
     }
 }
 
 impl<T: Autonull> Decodable for Box<T> {
-    fn inline_align() -> usize {
-        fidl_inline_align!(u64)
-    }
-    fn inline_size() -> usize {
-        fidl_inline_size!(u64)
-    }
     fn new_empty() -> Self {
         Box::new(T::new_empty())
     }
@@ -1640,7 +1536,7 @@ impl<T: Autonull> Decodable for Box<T> {
         if present != ALLOC_PRESENT_U64 {
             return Err(Error::NotNullable);
         }
-        return decoder.read_out_of_line(<T as Decodable>::inline_size(), |decoder| {
+        return decoder.read_out_of_line(decoder.inline_size_of::<T>(), |decoder| {
             (&mut **self).decode(decoder)
         });
     }
@@ -1661,15 +1557,17 @@ macro_rules! fidl_struct {
         size: $size:expr,
         align: $align:expr,
     ) => {
-        impl $crate::encoding::Encodable for $name {
-            fn inline_align(&self) -> usize {
+        impl $crate::encoding::Layout for $name {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize {
                 $align
             }
 
-            fn inline_size(&self) -> usize {
+            fn inline_size(_context: &$crate::encoding::Context) -> usize {
                 $size
             }
+        }
 
+        impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
                 encoder.recurse(|encoder| {
                     let mut cur_offset = 0;
@@ -1678,7 +1576,7 @@ macro_rules! fidl_struct {
                         encoder.padding($member_offset - cur_offset)?;
                         cur_offset = $member_offset;
                         $crate::fidl_encode!(&mut self.$member_name, encoder)?;
-                        cur_offset += $crate::fidl_inline_size!($member_ty);
+                        cur_offset += encoder.inline_size_of::<$member_ty>();
                     )*
                     // Skip to the end of the struct's size
                     encoder.padding($size - cur_offset)?;
@@ -1688,14 +1586,6 @@ macro_rules! fidl_struct {
         }
 
         impl $crate::encoding::Decodable for $name {
-            fn inline_align() -> usize {
-                $align
-            }
-
-            fn inline_size() -> usize {
-                $size
-            }
-
             fn new_empty() -> Self {
                 Self {
                     $(
@@ -1713,7 +1603,7 @@ macro_rules! fidl_struct {
                         decoder.next_slice($member_offset - cur_offset)?;
                         cur_offset = $member_offset;
                         $crate::fidl_decode!(&mut self.$member_name, decoder)?;
-                        cur_offset += $crate::fidl_inline_size!($member_ty);
+                        cur_offset += decoder.inline_size_of::<$member_ty>();
                     )*
                     // Skip to the end of the struct's size
                     // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
@@ -1736,17 +1626,18 @@ macro_rules! fidl_empty_struct {
         #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
         pub struct $name;
 
+        impl $crate::encoding::Layout for $name {
+          fn inline_align(_context: &$crate::encoding::Context) -> usize { 1 }
+          fn inline_size(_context: &$crate::encoding::Context) -> usize { 1 }
+        }
+
         impl $crate::encoding::Encodable for $name {
-          fn inline_align(&self) -> usize { 1 }
-          fn inline_size(&self) -> usize { 1 }
           fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
               $crate::fidl_encode!(&mut 0u8, encoder)
           }
         }
 
         impl $crate::encoding::Decodable for $name {
-          fn inline_align() -> usize { 1 }
-          fn inline_size() -> usize { 1 }
           fn new_empty() -> Self { $name }
           fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
             let mut x = 0u8;
@@ -1784,7 +1675,7 @@ pub fn encode_in_envelope(
             ALLOC_PRESENT_U64.encode(encoder)?;
             let bytes_before = encoder.buf.len();
             let handles_before = encoder.handles.len();
-            encoder.write_out_of_line(x.inline_size(), |e| x.encode(e))?;
+            encoder.write_out_of_line(x.inline_size(&encoder.context), |e| x.encode(e))?;
             let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
             let mut handles_written = (encoder.handles.len() - handles_before) as u32;
             // Back up and overwrite the `0s` for num_bytes and num_handles
@@ -1823,10 +1714,12 @@ macro_rules! fidl_table {
             }
         }
 
-        impl $crate::encoding::Encodable for $name {
-            fn inline_align(&self) -> usize { 8 }
-            fn inline_size(&self) -> usize { 16 }
+        impl $crate::encoding::Layout for $name {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
+            fn inline_size(_context: &$crate::encoding::Context) -> usize { 16 }
+        }
 
+        impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
                 let members: &mut [(u64, Option<&mut dyn $crate::encoding::Encodable>)] = &mut [$(
                     ($ordinal, self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable)),
@@ -1869,8 +1762,6 @@ macro_rules! fidl_table {
         }
 
         impl $crate::encoding::Decodable for $name {
-            fn inline_align() -> usize { 8 }
-            fn inline_size() -> usize { 16 }
             fn new_empty() -> Self {
                 Self::empty()
             }
@@ -1909,7 +1800,7 @@ macro_rules! fidl_table {
                             match present {
                                 $crate::encoding::ALLOC_PRESENT_U64 => {
                                     decoder.read_out_of_line(
-                                        $crate::fidl_inline_size!($member_ty),
+                                        decoder.inline_size_of::<$member_ty>(),
                                         |d| {
                                             let val_ref =
                                                self.$member_name.get_or_insert_with(
@@ -1962,33 +1853,40 @@ macro_rules! fidl_table {
             }
         }
 
-        impl $crate::encoding::AutonullContainer for $name {
-            fn inline_align() -> usize { 8 }
-            fn inline_size() -> usize { 16 }
-        }
+        impl $crate::encoding::AutonullContainer for $name {}
     }
 }
 
 // Alignment factor of union is defined by the maximal alignment factor of the tag field and any of its options.
 // tag field will always be same size as E in the case of results
-fn result_align<O: Decodable>() -> usize {
-    std::cmp::max(O::inline_align(), <u32 as Decodable>::inline_align())
+fn result_align<O: Layout>(context: &Context) -> usize {
+    std::cmp::max(O::inline_align(context), <u32 as Layout>::inline_align(context))
 }
 
-fn result_field_offset<O: Decodable>() -> usize {
-    round_up_to_align(<u32 as Decodable>::inline_size(), result_align::<O>())
+fn result_field_offset<O: Layout>(context: &Context) -> usize {
+    round_up_to_align(<u32 as Layout>::inline_size(context), result_align::<O>(context))
 }
 
-fn result_field_padding<O: Decodable>() -> usize {
-    result_field_offset::<O>() - <u32 as Decodable>::inline_size()
+fn result_field_padding<O: Layout>(context: &Context) -> usize {
+    result_field_offset::<O>(context) - <u32 as Layout>::inline_size(context)
 }
 
-// Size of union is the size of the tag field plus the size of the largest option including padding necessary
-// to satisfy its alignment requirements.
-fn result_inline_size<O: Decodable>() -> usize {
-    <u32 as Decodable>::inline_size()
-        + result_field_padding::<O>()
-        + std::cmp::max(O::inline_size(), <u32 as Decodable>::inline_size())
+impl<O, E> Layout for std::result::Result<O, E>
+where
+    O: Layout,
+    E: Layout,
+{
+    fn inline_align(context: &Context) -> usize {
+        result_align::<O>(context)
+    }
+
+    fn inline_size(context: &Context) -> usize {
+        // Size of union is the size of the tag field plus the size of the largest
+        // option including padding necessary to satisfy its alignment requirements.
+        <u32 as Layout>::inline_size(context)
+            + result_field_padding::<O>(context)
+            + std::cmp::max(O::inline_size(context), <u32 as Layout>::inline_size(context))
+    }
 }
 
 impl<O, E> Encodable for std::result::Result<O, E>
@@ -1996,14 +1894,6 @@ where
     O: Decodable + Encodable,
     E: Decodable + Encodable,
 {
-    fn inline_align(&self) -> usize {
-        result_align::<O>()
-    }
-
-    fn inline_size(&self) -> usize {
-        result_inline_size::<O>()
-    }
-
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         let start_pos = encoder.offset;
 
@@ -2013,28 +1903,28 @@ where
                 0u32.encode(encoder)?;
 
                 // Padding
-                encoder.next_slice(result_field_padding::<O>())?;
+                encoder.next_slice(result_field_padding::<O>(&encoder.context))?;
 
                 // Encode success value
                 val.encode(encoder)?;
 
                 // Ok() and Err() branches may be of a different size. We need to make sure we
                 // always encode inline_size() bytes.
-                encoder.tail_padding(self, start_pos)?;
+                encoder.tail_padding::<Self>(start_pos)?;
             }
             Err(val) => {
                 // Encode Error tag
                 1u32.encode(encoder)?;
 
                 // Padding
-                encoder.next_slice(result_field_padding::<O>())?;
+                encoder.next_slice(result_field_padding::<O>(&encoder.context))?;
 
                 // Encode Error value
                 val.encode(encoder)?;
 
                 // Ok() and Err() branches may be of a different size. We need to make sure we
                 // always encode inline_size() bytes.
-                encoder.tail_padding(self, start_pos)?;
+                encoder.tail_padding::<Self>(start_pos)?;
             }
         }
         Ok(())
@@ -2050,21 +1940,13 @@ where
         Ok(<O as Decodable>::new_empty())
     }
 
-    fn inline_align() -> usize {
-        result_align::<O>()
-    }
-
-    fn inline_size() -> usize {
-        result_inline_size::<O>()
-    }
-
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         let start_pos = decoder.inline_pos();
 
         let mut tag: u32 = 0;
         fidl_decode!(&mut tag, decoder)?;
         // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-        decoder.next_slice(result_field_padding::<O>())?;
+        decoder.next_slice(result_field_padding::<O>(&decoder.context))?;
 
         match tag {
             0 => {
@@ -2072,7 +1954,7 @@ where
                     match self {
                         Ok(val) => {
                             fidl_decode!(val, decoder)?;
-                            decoder.skip_tail_padding(self, start_pos)?;
+                            decoder.skip_tail_padding::<Self>(start_pos)?;
                             break;
                         }
                         Err(_) => {
@@ -2090,7 +1972,7 @@ where
                     match self {
                         Err(val) => {
                             fidl_decode!(val, decoder)?;
-                            decoder.skip_tail_padding(self, start_pos)?;
+                            decoder.skip_tail_padding::<Self>(start_pos)?;
                             break;
                         }
                         Ok(_) => {
@@ -2145,15 +2027,12 @@ macro_rules! fidl_union {
             }
         }
 
+        impl $crate::encoding::Layout for $name {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize { $align }
+            fn inline_size(_context: &$crate::encoding::Context) -> usize { $size }
+        }
+
         impl $crate::encoding::Encodable for $name {
-            fn inline_align(&self) -> usize {
-                $align
-            }
-
-            fn inline_size(&self) -> usize {
-                $size
-            }
-
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
                 let mut member_index = self.member_index();
                 // Encode tag
@@ -2168,7 +2047,7 @@ macro_rules! fidl_union {
                             $crate::fidl_encode!(val, encoder)?;
                             // Skip to the end of the union's size
                             encoder.padding($size - (
-                                $crate::fidl_inline_size!($member_ty) + $member_offset
+                                encoder.inline_size_of::<$member_ty>() + $member_offset
                             ))?;
                             Ok(())
                         }
@@ -2178,14 +2057,6 @@ macro_rules! fidl_union {
         }
 
         impl $crate::encoding::Decodable for $name {
-            fn inline_align() -> usize {
-                $align
-            }
-
-            fn inline_size() -> usize {
-                $size
-            }
-
             fn new_empty() -> Self {
                 #![allow(unreachable_code)]
                 $(
@@ -2219,7 +2090,7 @@ macro_rules! fidl_union {
                             }
                             // Skip to the end of the union's size
                             // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                            decoder.next_slice($size - ($crate::fidl_inline_size!($member_ty) + $member_offset))?;
+                            decoder.next_slice($size - (decoder.inline_size_of::<$member_ty>() + $member_offset))?;
                             return Ok(());
                         }
                         index += 1;
@@ -2279,10 +2150,12 @@ macro_rules! fidl_xunion {
             }
         }
 
-        impl $crate::encoding::Encodable for $name {
-            fn inline_align(&self) -> usize { 8 }
-            fn inline_size(&self) -> usize { 24 }
+        impl $crate::encoding::Layout for $name {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
+            fn inline_size(_context: &$crate::encoding::Context) -> usize { 24 }
+        }
 
+        impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
                 let mut ordinal = self.ordinal();
                 // Encode tag
@@ -2315,9 +2188,6 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Decodable for $name {
-            fn inline_align() -> usize { 8 }
-            fn inline_size() -> usize { 24 }
-
             fn new_empty() -> Self {
                 #![allow(unreachable_code)]
                 $(
@@ -2351,7 +2221,7 @@ macro_rules! fidl_xunion {
 
                 let member_inline_size = match ordinal {
                     $(
-                        $member_ordinal => $crate::fidl_inline_size!($member_ty),
+                        $member_ordinal => decoder.inline_size_of::<$member_ty>(),
                     )*
                     $(
                         _ => {
@@ -2408,22 +2278,25 @@ macro_rules! fidl_xunion {
             }
         }
 
-        impl $crate::encoding::AutonullContainer for Box<$name> {
-            fn inline_align() -> usize { 8 }
-            fn inline_size() -> usize { 24 }
+        impl $crate::encoding::AutonullContainer for Box<$name> {}
+
+        impl $crate::encoding::Layout for Box<$name> {
+            fn inline_align(context: &$crate::encoding::Context) -> usize {
+                <$name as $crate::encoding::Layout>::inline_align(context)
+            }
+
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                <$name as $crate::encoding::Layout>::inline_size(context)
+            }
         }
 
         impl $crate::encoding::Encodable for Box<$name> {
-            fn inline_align(&self) -> usize { 8 }
-            fn inline_size(&self) -> usize { 24 }
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
                 (**self).encode(encoder)
             }
         }
 
         impl $crate::encoding::Decodable for Box<$name> {
-            fn inline_align() -> usize { 8 }
-            fn inline_size() -> usize { 24 }
             fn new_empty() -> Self { Box::new($name::new_empty()) }
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 (**self).decode(decoder)
@@ -2478,13 +2351,16 @@ pub struct TransactionMessage<'a, T: 'a> {
     pub body: &'a mut T,
 }
 
-impl<'a, T: Encodable> Encodable for TransactionMessage<'a, T> {
-    fn inline_align(&self) -> usize {
+impl<T: Layout> Layout for TransactionMessage<'_, T> {
+    fn inline_align(_context: &Context) -> usize {
         0
     }
-    fn inline_size(&self) -> usize {
-        self.header.inline_size() + self.body.inline_size()
+    fn inline_size(context: &Context) -> usize {
+        <TransactionHeader as Layout>::inline_size(context) + T::inline_size(context)
     }
+}
+
+impl<T: Encodable> Encodable for TransactionMessage<'_, T> {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         self.header.encode(encoder)?;
         (*self.body).encode(encoder)?;
@@ -2492,15 +2368,9 @@ impl<'a, T: Encodable> Encodable for TransactionMessage<'a, T> {
     }
 }
 
-impl<'a, T: Decodable> Decodable for TransactionMessage<'a, T> {
+impl<T: Decodable> Decodable for TransactionMessage<'_, T> {
     fn new_empty() -> Self {
         panic!("cannot create an empty transaction message")
-    }
-    fn inline_align() -> usize {
-        0
-    }
-    fn inline_size() -> usize {
-        <TransactionHeader as Decodable>::inline_size() + T::inline_size()
     }
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
         self.header.decode(decoder)?;
@@ -2513,7 +2383,7 @@ impl<'a, T: Decodable> Decodable for TransactionMessage<'a, T> {
 /// Returns the header and a reference to the tail of the message.
 pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u8])> {
     let mut header = TransactionHeader::new_empty();
-    let header_len = <TransactionHeader as Decodable>::inline_size();
+    let header_len = <TransactionHeader as Layout>::inline_size(&DEFAULT_CONTEXT);
     if bytes.len() < header_len {
         return Err(Error::OutOfRange);
     }
@@ -2547,49 +2417,54 @@ macro_rules! tuple_impls {
 
     // Finally expand into the implementation
     ([($idx:tt, $typ:ident); $( ($nidx:tt, $ntyp:ident); )*]) => {
-        impl<$typ, $( $ntyp ,)*>
-            Encodable for ($typ, $( $ntyp ,)*)
-            where $typ: Encodable,
-                  $( $ntyp: Encodable,)*
+        impl<$typ, $( $ntyp ),*> Layout for ($typ, $( $ntyp, )*)
+            where $typ: Layout,
+                  $( $ntyp: Layout, )*
         {
-            fn inline_align(&self) -> usize {
+            fn inline_align(context: &Context) -> usize {
                 let mut max = 0;
-                if max < self.$idx.inline_align() {
-                    max = self.$idx.inline_align();
+                if max < $typ::inline_align(context) {
+                    max = $typ::inline_align(context);
                 }
                 $(
-                    if max < self.$nidx.inline_align() {
-                        max = self.$nidx.inline_align();
+                    if max < $ntyp::inline_align(context) {
+                        max = $ntyp::inline_align(context);
                     }
                 )*
                 max
             }
 
-            fn inline_size(&self) -> usize {
+            fn inline_size(context: &Context) -> usize {
                 let mut offset = 0;
-                offset += self.$idx.inline_size();
+                offset += $typ::inline_size(context);
                 $(
-                    offset = round_up_to_align(offset, self.$nidx.inline_align());
-                    offset += self.$nidx.inline_size();
+                    offset = round_up_to_align(offset, $ntyp::inline_align(context));
+                    offset += $ntyp::inline_size(context);
                 )*
                 offset
             }
+        }
 
+        impl<$typ, $( $ntyp ,)*> Encodable for ($typ, $( $ntyp ,)*)
+            where $typ: Encodable,
+                  $( $ntyp: Encodable,)*
+        {
             fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
                 encoder.recurse(|encoder| {
                     let mut cur_offset = 0;
                     self.$idx.encode(encoder)?;
-                    cur_offset += self.$idx.inline_size();
+                    cur_offset += encoder.inline_size_of::<$typ>();
                     $(
                         // Skip to the start of the next field
-                        let member_offset = round_up_to_align(cur_offset, self.$nidx.inline_align());
+                        let member_offset =
+                            round_up_to_align(cur_offset, encoder.inline_align_of::<$ntyp>());
                         encoder.padding(member_offset - cur_offset)?;
                         cur_offset = member_offset;
                         self.$nidx.encode(encoder)?;
-                        cur_offset += self.$nidx.inline_size();
+                        cur_offset += encoder.inline_size_of::<$ntyp>();
                     )*
                     // Skip to the end of the struct's size
-                    encoder.padding(self.inline_size() - cur_offset)?;
+                    encoder.padding(encoder.inline_size_of::<Self>() - cur_offset)?;
                     Ok(())
                 })
             }
@@ -2599,29 +2474,6 @@ macro_rules! tuple_impls {
             where $typ: Decodable,
                   $( $ntyp: Decodable, )*
         {
-            fn inline_align() -> usize {
-                let mut max = 0;
-                if max < $typ::inline_align() {
-                    max = $typ::inline_align();
-                }
-                $(
-                    if max < $ntyp::inline_align() {
-                        max = $ntyp::inline_align();
-                    }
-                )*
-                max
-            }
-
-            fn inline_size() -> usize {
-                let mut offset = 0;
-                offset += $typ::inline_size();
-                $(
-                    offset = round_up_to_align(offset, $ntyp::inline_align());
-                    offset += $ntyp::inline_size();
-                )*
-                offset
-            }
-
             fn new_empty() -> Self {
                 (
                     $typ::new_empty(),
@@ -2635,19 +2487,20 @@ macro_rules! tuple_impls {
                 decoder.recurse(|decoder| {
                     let mut cur_offset = 0;
                     self.$idx.decode(decoder)?;
-                    cur_offset += $typ::inline_size();
+                    cur_offset += decoder.inline_size_of::<$typ>();
                     $(
                         // Skip to the start of the next field
-                        let member_offset = round_up_to_align(cur_offset, $ntyp::inline_align());
+                        let member_offset =
+                            round_up_to_align(cur_offset, decoder.inline_align_of::<$ntyp>());
                         // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
                         decoder.next_slice(member_offset - cur_offset)?;
                         cur_offset = member_offset;
                         self.$nidx.decode(decoder)?;
-                        cur_offset += $ntyp::inline_size();
+                        cur_offset += decoder.inline_size_of::<$ntyp>();
                     )*
                     // Skip to the end of the struct's size
                     // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                    decoder.next_slice(Self::inline_size() - cur_offset)?;
+                    decoder.next_slice(decoder.inline_size_of::<Self>() - cur_offset)?;
                     Ok(())
                 })
             }
@@ -2669,13 +2522,9 @@ tuple_impls!(
     (0 => A),
 );
 
+impl_layout!((), align: 0, size: 0);
+
 impl Encodable for () {
-    fn inline_align(&self) -> usize {
-        0
-    }
-    fn inline_size(&self) -> usize {
-        0
-    }
     fn encode(&mut self, _: &mut Encoder) -> Result<()> {
         Ok(())
     }
@@ -2685,27 +2534,21 @@ impl Decodable for () {
     fn new_empty() -> Self {
         ()
     }
-    fn inline_size() -> usize {
-        0
-    }
-    fn inline_align() -> usize {
-        0
-    }
     fn decode(&mut self, _: &mut Decoder) -> Result<()> {
         Ok(())
     }
 }
 
-impl<'a, T> Encodable for &'a mut T
-where
-    T: Encodable,
-{
-    fn inline_align(&self) -> usize {
-        (**self).inline_align()
+impl<T: Layout> Layout for &mut T {
+    fn inline_align(context: &Context) -> usize {
+        T::inline_align(context)
     }
-    fn inline_size(&self) -> usize {
-        (**self).inline_size()
+    fn inline_size(context: &Context) -> usize {
+        T::inline_size(context)
     }
+}
+
+impl<T: Encodable> Encodable for &mut T {
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
         (&mut **self).encode(encoder)
     }
@@ -2715,6 +2558,18 @@ where
 mod test {
     use super::*;
     use std::{f32, f64, fmt, i64, u64};
+
+    macro_rules! inline_size {
+        ($type:ty) => {
+            <$type as Layout>::inline_size(&DEFAULT_CONTEXT)
+        };
+    }
+
+    macro_rules! inline_align {
+        ($type:ty) => {
+            <$type as Layout>::inline_align(&DEFAULT_CONTEXT)
+        };
+    }
 
     pub fn encode_decode<T: Encodable + Decodable>(start: &mut T) -> T {
         let buf = &mut Vec::new();
@@ -2975,7 +2830,7 @@ mod test {
         Encoder::encode(buf, handle_buf, &mut v).expect("Encoding failed");
 
         // Try to corrupt the second byte of padding after the Err() value content.
-        let break_pos = fidl_inline_align!(Result<String, u32>) + fidl_inline_size!(u32) + 1;
+        let break_pos = inline_align!(Result<String, u32>) + inline_size!(u32) + 1;
         buf[break_pos] = 10;
 
         let res =
@@ -2985,10 +2840,7 @@ mod test {
                 // This check is fragile, as it is trying to mimic what array encoders/decoders do.
                 // If this fails after you update the array encoding, please update the check as
                 // well.
-                assert_eq!(
-                    padding_start,
-                    fidl_inline_align!(Result<String, u32>) + fidl_inline_size!(u32)
-                );
+                assert_eq!(padding_start, inline_align!(Result<String, u32>) + inline_size!(u32));
                 assert_eq!(non_zero_pos, break_pos);
             }
             _ => panic!("decode_into failed with: {}", res),
@@ -3009,9 +2861,9 @@ mod test {
 
         // Try to corrupt the second byte of padding after the Err() value content. The object
         // itself is in the out_of_line area, which follows the inlnie size of the vector.
-        let break_pos = <Vec<Result<String, u32>> as Decodable>::inline_size()
-            + fidl_inline_align!(Result<String, u32>)
-            + fidl_inline_size!(u32)
+        let break_pos = inline_size!(Vec<Result<String, u32>>)
+            + inline_align!(Result<String, u32>)
+            + inline_size!(u32)
             + 1;
         buf[break_pos] = 10;
 
@@ -3024,9 +2876,9 @@ mod test {
                 // well.
                 assert_eq!(
                     padding_start,
-                    <Vec<Result<String, u32>> as Decodable>::inline_size()
-                        + fidl_inline_align!(Result<String, u32>)
-                        + fidl_inline_size!(u32)
+                    inline_size!(Vec<Result<String, u32>>)
+                        + inline_align!(Result<String, u32>)
+                        + inline_size!(u32)
                 );
                 assert_eq!(non_zero_pos, break_pos);
             }
