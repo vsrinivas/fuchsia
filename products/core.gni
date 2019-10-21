@@ -4,6 +4,8 @@
 
 import("//products/bringup.gni")
 
+product_name = "core"
+
 bootfs_only = false
 
 kernel_cmdline_args -= [ "kernel.oom.behavior=jobkill" ]

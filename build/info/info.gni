@@ -3,12 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
+import("//build/product.gni")
 
 declare_args() {
-  # Product configuration of the current build
-  build_info_product = ""
+  # Product configuration of the current build.
+  # TODO: Remove this arg in favor of using product_name directly.
+  build_info_product = product_name
 
-  # Board configuration of the current build
+  # Board configuration of the current build.
+  # TODO: Remove this arg in favor of using board_name directly.
   build_info_board = board_name
 
   # Logical version of the current build. If not set, defaults to the timestamp
