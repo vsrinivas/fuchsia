@@ -10,6 +10,7 @@
 #include <string>
 
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/summary.h"
 #include "src/developer/memory/metrics/watcher.h"
 #include "src/lib/fxl/macros.h"
@@ -23,13 +24,18 @@ class HighWater {
   ~HighWater() = default;
 
   void RecordHighWater(const memory::Capture& capture);
+  void RecordHighWaterDigest(const memory::Capture& capture);
   std::string GetHighWater() const;
   std::string GetPreviousHighWater() const;
+  std::string GetHighWaterDigest() const;
+  std::string GetPreviousHighWaterDigest() const;
 
  private:
+  std::string GetFile(const char* filename) const;
   const std::string dir_;
   memory::Watcher watcher_;
   memory::Namer namer_;
+  memory::Digester digester_;
   FXL_DISALLOW_COPY_AND_ASSIGN(HighWater);
 };
 

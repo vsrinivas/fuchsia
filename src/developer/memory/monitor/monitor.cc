@@ -200,18 +200,17 @@ void Monitor::PrintHelp() {
 zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
   inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 1024 * 1024});
   auto& root = inspector.GetRoot();
-  Capture c;
-  Capture::GetCapture(&c, capture_state_, VMO);
-  Summary s(c, Summary::kNameMatches);
-  std::ostringstream oss;
-  Printer p(oss);
-  p.PrintSummary(s, VMO, SORTED);
+  Capture capture;
+  Capture::GetCapture(&capture, capture_state_, VMO);
 
-  auto current_string = oss.str();
+  Summary summary(capture, Summary::kNameMatches);
+  std::ostringstream summary_stream;
+  Printer summary_printer(summary_stream);
+  summary_printer.PrintSummary(summary, VMO, SORTED);
+  auto current_string = summary_stream.str();
   auto high_water_string = high_water_.GetHighWater();
   auto previous_high_water_string = high_water_.GetPreviousHighWater();
   inspect::StringProperty current, high_water, previous_high_water;
-
   if (!current_string.empty()) {
     current = root.CreateString("current", current_string);
   }
@@ -220,6 +219,26 @@ zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
   }
   if (!previous_high_water_string.empty()) {
     previous_high_water = root.CreateString("high_water_previous_boot", previous_high_water_string);
+  }
+
+  Digester digester;
+  Digest digest(capture, &digester);
+  std::ostringstream digest_stream;
+  Printer digest_printer(digest_stream);
+  digest_printer.PrintDigest(digest);
+  auto current_digest_string = digest_stream.str();
+  auto high_water_digest_string = high_water_.GetHighWaterDigest();
+  auto previous_high_water_digest_string = high_water_.GetPreviousHighWaterDigest();
+  inspect::StringProperty current_digest, high_water_digest, previous_high_water_digest;
+  if (!current_digest_string.empty()) {
+    current_digest = root.CreateString("current_digest", current_digest_string);
+  }
+  if (!high_water_digest_string.empty()) {
+    high_water_digest = root.CreateString("high_water_digest", high_water_digest_string);
+  }
+  if (!previous_high_water_digest_string.empty()) {
+    previous_high_water_digest =
+        root.CreateString("high_water_digest_previous_boot", previous_high_water_digest_string);
   }
 
   *output = inspector.CopyBytes();

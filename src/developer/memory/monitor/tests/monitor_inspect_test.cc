@@ -125,11 +125,13 @@ TEST_F(InspectTest, FirstLaunch) {
   auto result = GetInspectHierarchy();
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
-  EXPECT_THAT(
-      hierarchy,
-      AllOf(NodeMatches(AllOf(NameMatches("root"), PropertyList(UnorderedElementsAre(
-                                                       StringIs("current", Not(IsEmpty())),
-                                                       StringIs("high_water", Not(IsEmpty()))))))));
+  EXPECT_THAT(hierarchy,
+              AllOf(NodeMatches(AllOf(NameMatches("root"),
+                                      PropertyList(UnorderedElementsAre(
+                                          StringIs("current", Not(IsEmpty())),
+                                          StringIs("current_digest", Not(IsEmpty())),
+                                          StringIs("high_water", Not(IsEmpty())),
+                                          StringIs("high_water_digest", Not(IsEmpty()))))))));
 }
 
 TEST_F(InspectTest, SecondLaunch) {
@@ -137,22 +139,28 @@ TEST_F(InspectTest, SecondLaunch) {
   auto result = GetInspectHierarchy();
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
-  EXPECT_THAT(
-      hierarchy,
-      AllOf(NodeMatches(AllOf(NameMatches("root"), PropertyList(UnorderedElementsAre(
-                                                       StringIs("current", Not(IsEmpty())),
-                                                       StringIs("high_water", Not(IsEmpty()))))))));
+  EXPECT_THAT(hierarchy,
+              AllOf(NodeMatches(AllOf(NameMatches("root"),
+                                      PropertyList(UnorderedElementsAre(
+                                          StringIs("current", Not(IsEmpty())),
+                                          StringIs("current_digest", Not(IsEmpty())),
+                                          StringIs("high_water", Not(IsEmpty())),
+                                          StringIs("high_water_digest", Not(IsEmpty()))))))));
   CheckShutdown();
   Connect();
   result = GetInspectHierarchy();
   ASSERT_TRUE(result.is_ok());
   hierarchy = result.take_value();
-  EXPECT_THAT(hierarchy,
-              AllOf(NodeMatches(AllOf(NameMatches("root"),
-                                      PropertyList(UnorderedElementsAre(
-                                          StringIs("current", Not(IsEmpty())),
-                                          StringIs("high_water_previous_boot", Not(IsEmpty())),
-                                          StringIs("high_water", Not(IsEmpty()))))))));
+  EXPECT_THAT(
+      hierarchy,
+      AllOf(NodeMatches(
+          AllOf(NameMatches("root"),
+                PropertyList(UnorderedElementsAre(
+                    StringIs("current", Not(IsEmpty())), StringIs("current_digest", Not(IsEmpty())),
+                    StringIs("high_water_previous_boot", Not(IsEmpty())),
+                    StringIs("high_water_digest_previous_boot", Not(IsEmpty())),
+                    StringIs("high_water", Not(IsEmpty())),
+                    StringIs("high_water_digest", Not(IsEmpty()))))))));
 }
 
 }  // namespace

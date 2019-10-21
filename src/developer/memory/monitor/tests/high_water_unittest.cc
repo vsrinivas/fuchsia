@@ -4,6 +4,7 @@
 
 #include "src/developer/memory/monitor/high_water.h"
 
+#include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
@@ -12,10 +13,11 @@
 
 #include <gtest/gtest.h>
 #include <src/lib/files/file.h>
+#include <src/lib/files/path.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
-#include "src/lib/fxl/logging.h"
 
 using namespace memory;
 
@@ -72,6 +74,9 @@ class ScopedMemfs {
 };
 
 class HighWaterUnitTest : public gtest::RealLoopFixture {
+ protected:
+  int memfs_dir_;
+
  private:
   void SetUp() override {
     RealLoopFixture::SetUp();
@@ -79,11 +84,14 @@ class HighWaterUnitTest : public gtest::RealLoopFixture {
     // when doing blocking file operations on our test loop.
     FXL_CHECK(ScopedMemfs::InstallAt(kMemfsDir, memfs_loop_.dispatcher(), &data_) == ZX_OK);
     memfs_loop_.StartThread();
+    memfs_dir_ = open(kMemfsDir, O_RDONLY | O_DIRECTORY);
+    ASSERT_LT(0, memfs_dir_);
   }
 
   void TearDown() override {
     RealLoopFixture::TearDown();
     data_.reset();
+    close(memfs_dir_);
     memfs_loop_.Shutdown();
   }
 
@@ -104,19 +112,25 @@ TEST_F(HighWaterUnitTest, Basic) {
                        .processes = {
                            {.koid = 2, .name = "p1", .vmos = {1}},
                        }}});
-  ASSERT_FALSE(files::IsFile(std::string(kMemfsDir) + "/latest.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "latest.txt"));
   HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(),
                [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
-  ASSERT_FALSE(files::IsFile(std::string(kMemfsDir) + "/latest.txt"));
-  ASSERT_FALSE(files::IsFile(std::string(kMemfsDir) + "/previous.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "latest.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "previous.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "latest_digest.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "previous_digest.txt"));
   RunLoopUntil([&cs] { return cs.empty(); });
-  EXPECT_TRUE(files::IsFile(std::string(kMemfsDir) + "/latest.txt"));
+  EXPECT_TRUE(files::IsFileAt(memfs_dir_, "latest.txt"));
+  EXPECT_TRUE(files::IsFileAt(memfs_dir_, "latest_digest.txt"));
   EXPECT_FALSE(hw.GetHighWater().empty());
+  EXPECT_FALSE(hw.GetHighWaterDigest().empty());
 }
 
 TEST_F(HighWaterUnitTest, RunTwice) {
-  ASSERT_FALSE(files::IsFile(std::string(kMemfsDir) + "/previous.txt"));
-  ASSERT_FALSE(files::IsFile(std::string(kMemfsDir) + "/latest.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "previous.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "latest.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "previous_digest.txt"));
+  ASSERT_FALSE(files::IsFileAt(memfs_dir_, "latest_digest.txt"));
   {
     CaptureSupplier cs({{
                             .kmem = {.free_bytes = 100},
@@ -134,8 +148,10 @@ TEST_F(HighWaterUnitTest, RunTwice) {
     RunLoopUntil([&cs] { return cs.empty(); });
     EXPECT_FALSE(hw.GetHighWater().empty());
   }
-  EXPECT_TRUE(files::IsFile(std::string(kMemfsDir) + "/latest.txt"));
-  EXPECT_FALSE(files::IsFile(std::string(kMemfsDir) + "/previous.txt"));
+  EXPECT_TRUE(files::IsFileAt(memfs_dir_, "latest.txt"));
+  EXPECT_TRUE(files::IsFileAt(memfs_dir_, "latest_digest.txt"));
+  EXPECT_FALSE(files::IsFileAt(memfs_dir_, "previous.txt"));
+  EXPECT_FALSE(files::IsFileAt(memfs_dir_, "previous_digest.txt"));
   {
     CaptureSupplier cs({{
                             .kmem = {.free_bytes = 100},
@@ -153,9 +169,13 @@ TEST_F(HighWaterUnitTest, RunTwice) {
     RunLoopUntil([&cs] { return cs.empty(); });
     EXPECT_FALSE(hw.GetHighWater().empty());
     EXPECT_FALSE(hw.GetPreviousHighWater().empty());
+    EXPECT_FALSE(hw.GetHighWaterDigest().empty());
+    EXPECT_FALSE(hw.GetPreviousHighWaterDigest().empty());
   }
-  EXPECT_TRUE(files::IsFile(std::string(kMemfsDir) + "/latest.txt"));
-  EXPECT_TRUE(files::IsFile(std::string(kMemfsDir) + "/previous.txt"));
+  EXPECT_TRUE(files::IsFileAt(memfs_dir_, "latest.txt"));
+  EXPECT_TRUE(files::IsFileAt(memfs_dir_, "latest_digest.txt"));
+  EXPECT_TRUE(files::IsFileAt(memfs_dir_, "previous.txt"));
+  EXPECT_TRUE(files::IsFileAt(memfs_dir_, "previous_digest.txt"));
 }
 
 }  // namespace
