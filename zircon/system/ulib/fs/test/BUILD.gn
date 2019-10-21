@@ -1,12 +1,13 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
+import("$zx/public/gn/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
     ":fs-connection",
     ":fs-vnode",
+    ":vmo_file-fuzzer",
   ]
 }
 
@@ -65,5 +66,14 @@ test("fs-connection") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+fuzzer("vmo_file-fuzzer") {
+  sources = [
+    "vmo_file-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fs",
   ]
 }
