@@ -111,6 +111,7 @@ test("netstack_bsdsocket_c_api_test") {
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
   ]
 }
 

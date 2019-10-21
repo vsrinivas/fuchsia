@@ -16,32 +16,28 @@
 #include <future>
 #include <thread>
 
+#include <fbl/unique_fd.h>
+
 #include "gtest/gtest.h"
 #include "util.h"
 
 namespace {
 
-TEST(LocalhostTest, MsgWaitAll) {
-  int recvfd;
-  ASSERT_GE(recvfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
-
-  auto socket_deleter = [](int *fd) {
-    ASSERT_EQ(close(*fd), 0) << strerror(errno);
-    delete fd;
-  };
-  std::unique_ptr<int, decltype(socket_deleter)> deleter(new int(recvfd), socket_deleter);
+TEST(LocalhostTest, DatagramSocketIgnoresMsgWaitAll) {
+  fbl::unique_fd recvfd;
+  ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
 
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-  ASSERT_EQ(bind(recvfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+  ASSERT_EQ(bind(recvfd.get(), (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
-  int status = fcntl(recvfd, F_GETFL, 0);
-  ASSERT_EQ(0, fcntl(recvfd, F_SETFL, status | O_NONBLOCK));
+  ASSERT_EQ(recvfrom(recvfd.get(), nullptr, 0, MSG_WAITALL, nullptr, nullptr), -1);
+  ASSERT_EQ(errno, EAGAIN) << strerror(errno);
 
-  ASSERT_EQ(recvfrom(recvfd, nullptr, 0, MSG_WAITALL, nullptr, nullptr), -1);
-  EXPECT_EQ(errno, EAGAIN);
+  ASSERT_EQ(close(recvfd.release()), 0) << strerror(errno);
 }
 
 // Raw sockets are typically used for implementing custom protocols. We intend to support custom

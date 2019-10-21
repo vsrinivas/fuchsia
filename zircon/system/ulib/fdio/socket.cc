@@ -53,7 +53,10 @@ static zx_status_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags
     struct msghdr padded_msg = *msg;
     padded_msg.msg_iov = iov;
     padded_msg.msg_iovlen = iovlen;
-    flags &= ~MSG_WAITALL;  // This flag has no effect for datagram sockets.
+    // According to `man 2 recvfrom`:
+    //
+    // This flag has no effect for datagram sockets.
+    flags &= ~MSG_WAITALL;
     zx_status_t status = fdio_zxio_recvmsg(io, &padded_msg, flags, &actual);
     if (status != ZX_OK) {
       return status;
