@@ -246,7 +246,7 @@ impl DeviceState {
     pub async fn update_lif_properties(
         &mut self,
         lif_id: UUID,
-        properties: LifProperties,
+        properties: &LifProperties,
     ) -> error::Result<()> {
         let l = self.lif_manager.lif_mut(&lif_id);
         let lif = match l {
@@ -391,6 +391,10 @@ impl DeviceState {
                         info!("setting gateway {:?}", gw);
                         //  TODO(dpradilla): implement. - verify gw is in local network
                     }
+                };
+                if let Some(enable) = &p.enable {
+                    info!("enable {:?}", enable);
+                    lp.enabled = *enable
                 };
                 self.hal.apply_properties(lif.pid(), &old, &lp).await?;
                 lif.set_properties(self.version, lp)?;

@@ -205,12 +205,10 @@ impl EventLoop {
                 })
             }
             RouterAdminRequest::SetWanProperties { wan_id, properties, responder } => {
+                let properties = fidl_fuchsia_router_config::LifProperties::Wan(properties);
                 if self
                     .device
-                    .update_lif_properties(
-                        u128::from_ne_bytes(wan_id.uuid),
-                        fidl_fuchsia_router_config::LifProperties::Wan(properties),
-                    )
+                    .update_lif_properties(u128::from_ne_bytes(wan_id.uuid), &properties)
                     .await
                     .is_err()
                 {
@@ -222,12 +220,10 @@ impl EventLoop {
                 }
             }
             RouterAdminRequest::SetLanProperties { lan_id, properties, responder } => {
+                let properties = fidl_fuchsia_router_config::LifProperties::Lan(properties);
                 if self
                     .device
-                    .update_lif_properties(
-                        u128::from_ne_bytes(lan_id.uuid),
-                        fidl_fuchsia_router_config::LifProperties::Lan(properties),
-                    )
+                    .update_lif_properties(u128::from_ne_bytes(lan_id.uuid), &properties)
                     .await
                     .is_err()
                 {
