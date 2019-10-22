@@ -17,7 +17,7 @@ namespace netemul {
 VirtualDevices::VirtualDevices()
     : vdev_vfs_(async_get_default_dispatcher()), dir_(fbl::AdoptRef(new fs::PseudoDir())) {}
 
-void VirtualDevices::AddEntry(const std::string& path, fidl::InterfacePtr<DevProxy> dev) {
+void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev) {
   auto components = fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
                                      fxl::SplitResult::kSplitWantNonEmpty);
   if (components.empty()) {
@@ -42,14 +42,20 @@ void VirtualDevices::AddEntry(const std::string& path, fidl::InterfacePtr<DevPro
     }
   }
 
-  dev.set_error_handler([this, path](zx_status_t status) {
+  dev.set_error_handler([this, path](zx_status_t status) mutable {
     // when we get an error to the device server channel, we
-    // must remove it from vfs:
-    RemoveEntry(path);
+    // must remove it from vfs.
+    // NOTE(brunodalbo) When we call RemoveEntry, this lambda will get destroyed because `dev` is
+    // owned by the `fs::Service` that will get deallocated as a result of RemoveEntry. That means
+    // that `path` will also get deallocated, which can cause a use after free bug in RemoveEntry (a
+    // previous version of Remove Entry received `const string&` as opposed to string). Moving
+    // `path` into `RemoveEntry`, transfers ownership and avoids the use after free without having
+    // to copy `path`.
+    RemoveEntry(std::move(path));
   });
 
-  auto status =
-      dir->AddEntry(*last, fbl::AdoptRef(new fs::Service([dev = std::move(dev)](zx::channel chann) {
+  auto status = dir->AddEntry(
+      *last, fbl::AdoptRef(new fs::Service([dev = std::move(dev), path](zx::channel chann) {
         if (!dev.is_bound()) {
           return ZX_ERR_PEER_CLOSED;
         }
@@ -61,7 +67,7 @@ void VirtualDevices::AddEntry(const std::string& path, fidl::InterfacePtr<DevPro
   }
 }
 
-void VirtualDevices::RemoveEntry(const std::string& path) {
+void VirtualDevices::RemoveEntry(std::string path) {
   auto components = fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
                                      fxl::SplitResult::kSplitWantNonEmpty);
   if (components.empty()) {

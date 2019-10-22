@@ -4,6 +4,7 @@
 
 use {
     failure::{format_err, Error},
+    fdio::{watch_directory, WatchEvent},
     fidl_fuchsia_netemul_environment::{ManagedEnvironmentMarker, VirtualDevice},
     fidl_fuchsia_netemul_network::{
         DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker, EndpointProxy,
@@ -11,35 +12,53 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::client,
+    fuchsia_zircon as zx,
+    std::fs::File,
     std::path::Path,
 };
 
-// some of the device changes may take a short while to show up
-// this helper function will sleep for a bit in case |test| returns an error.
-// Mostly here to prevent flakiness on tests due to ordering of operations on different channels.
-fn try_with_failure_tolerance<T>(test: T) -> Result<(), Error>
-where
-    T: Fn() -> Result<(), Error>,
-{
-    let mut tries = 3;
-    loop {
-        let res = test();
-        match res {
-            Ok(_) => break Ok(()),
-            Err(err) => {
-                tries -= 1;
-                if tries == 0 {
-                    break Err(err);
+const ETHERNET_VDEV_PATH: &'static str = "/vdev/class/ethernet";
+
+fn wait_for_device_present(name: &str) -> Result<(), Error> {
+    let status = watch_directory(
+        &File::open(Path::new(ETHERNET_VDEV_PATH))?,
+        zx::sys::ZX_TIME_INFINITE,
+        |e, p| match e {
+            WatchEvent::AddFile if p == Path::new(name) => Err(zx::Status::STOP),
+            _ => Ok(()),
+        },
+    );
+    if status == zx::Status::STOP {
+        Ok(())
+    } else {
+        Err(format_err!("Failed watching for device present {}: {:?}", name, status))
+    }
+}
+
+fn wait_for_device_absent(name: &str) -> Result<(), Error> {
+    let status = watch_directory(
+        &File::open(Path::new(ETHERNET_VDEV_PATH))?,
+        zx::sys::ZX_TIME_INFINITE,
+        |e, _| match e {
+            WatchEvent::Idle | WatchEvent::RemoveFile => {
+                if device_present(name) {
+                    Ok(())
                 } else {
-                    std::thread::sleep(std::time::Duration::from_millis(20))
+                    Err(zx::Status::STOP)
                 }
             }
-        }
+            _ => Ok(()),
+        },
+    );
+    if status == zx::Status::STOP {
+        Ok(())
+    } else {
+        Err(format_err!("Failed watching for device absent {}: {:?}", name, status))
     }
 }
 
 fn device_present(path: &str) -> bool {
-    Path::new(&format!("/vdev/class/ethernet/{}", path)).exists()
+    Path::new(&format!("{}/{}", ETHERNET_VDEV_PATH, path)).exists()
 }
 
 fn check_device_absent(path: &str) -> Result<(), Error> {
@@ -60,7 +79,7 @@ fn check_device_present(path: &str) -> Result<(), Error> {
 
 fn remove_device(ep_name: &str) -> Result<(), Error> {
     let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
-    env.remove_device(&format!("/class/ethernet/{}", ep_name))?;
+    env.remove_device(&format!("class/ethernet/{}", ep_name))?;
     Ok(())
 }
 
@@ -116,30 +135,30 @@ async fn main() -> Result<(), Error> {
     let () = check_device_absent("ep3")?;
     // attach cmx-created endpoint ep2 and check that it shows up
     let () = attach_device("ep2").await?;
-    let () = try_with_failure_tolerance(|| check_device_present("ep2"))?;
+    let () = wait_for_device_present("ep2")?;
     // attach cmx-created endpoint ep3 and check that it shows up
     let () = attach_device("ep3").await?;
-    let () = try_with_failure_tolerance(|| check_device_present("ep3"))?;
+    let () = wait_for_device_present("ep3")?;
 
     // create a new endpoint and attach:
     let ep4 = create_endpoint("ep4").await?;
     let () = attach_device("ep4").await?;
-    let () = try_with_failure_tolerance(|| check_device_present("ep4"))?;
+    let () = wait_for_device_present("ep4")?;
 
     // remove ep2:
     let () = remove_device("ep2")?;
-    let () = try_with_failure_tolerance(|| check_device_absent("ep2"))?;
+    let () = wait_for_device_absent("ep2")?;
     // other ep1 and ep3 should still be there:
     let () = check_device_present("ep1")?;
     let () = check_device_present("ep3")?;
 
     // if we drop ep4, ep4 should disappear from the folder as well:
     std::mem::drop(ep4);
-    let () = try_with_failure_tolerance(|| check_device_absent("ep4"))?;
+    let () = wait_for_device_absent("ep4")?;
 
     // ensure we're allowed to remove ep1, which was added by the .cmx file:
     let () = remove_device("ep1")?;
-    let () = try_with_failure_tolerance(|| check_device_absent("ep1"))?;
+    let () = wait_for_device_absent("ep1")?;
 
     Ok(())
 }

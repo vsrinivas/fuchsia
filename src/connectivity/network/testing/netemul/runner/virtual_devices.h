@@ -5,14 +5,15 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_VIRTUAL_DEVICES_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_VIRTUAL_DEVICES_H_
 
-#include <fbl/ref_ptr.h>
-#include <fs/pseudo_dir.h>
-#include <fs/synchronous_vfs.h>
-#include <fs/vnode.h>
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 
 #include <string>
+
+#include <fbl/ref_ptr.h>
+#include <fs/pseudo_dir.h>
+#include <fs/synchronous_vfs.h>
+#include <fs/vnode.h>
 
 namespace netemul {
 
@@ -21,8 +22,8 @@ class VirtualDevices {
   using DevProxy = fuchsia::netemul::network::DeviceProxy;
   VirtualDevices();
 
-  void AddEntry(const std::string& path, fidl::InterfacePtr<DevProxy> dev);
-  void RemoveEntry(const std::string& path);
+  void AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev);
+  void RemoveEntry(std::string path);
 
   zx::channel OpenAsDirectory();
 

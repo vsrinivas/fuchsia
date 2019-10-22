@@ -10,6 +10,7 @@ rustc_binary("dynamic_devices") {
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
