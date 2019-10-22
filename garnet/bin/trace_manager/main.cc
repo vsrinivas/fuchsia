@@ -14,8 +14,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
-using namespace tracing;
-
 namespace {
 
 constexpr char kDefaultConfigFile[] = "/pkg/data/tracing.config";
@@ -30,7 +28,7 @@ int main(int argc, char** argv) {
 
   auto config_file = command_line.GetOptionValueWithDefault("config", kDefaultConfigFile);
 
-  Config config;
+  tracing::Config config;
   if (!config.ReadFrom(config_file)) {
     FXL_LOG(ERROR) << "Failed to read configuration from " << config_file;
     exit(EXIT_FAILURE);
@@ -39,7 +37,7 @@ int main(int argc, char** argv) {
   FXL_LOG(INFO) << "Trace Manager starting with config: " << config_file;
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  TraceManagerApp trace_manager_app(config);
+  tracing::TraceManagerApp trace_manager_app(config);
   loop.Run();
   return EXIT_SUCCESS;
 }
