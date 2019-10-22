@@ -52,14 +52,23 @@ TEST(AsyncBindTestCase, SyncReply) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(fidl::AsyncBind(loop.dispatcher(), std::move(remote), std::move(server)));
+
+  sync_completion_t closed;
+  fidl::OnChannelCloseFn<SyncServer> on_closing = [](SyncServer* server) {};
+  fidl::OnChannelCloseFn<SyncServer> on_closed = [&closed](SyncServer* server) {
+    sync_completion_signal(&closed);
+  };
+  ASSERT_OK(fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get(),
+                            std::move(on_closing), std::move(on_closed)));
+
   // Sync client call.
   auto result =
       ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
   ASSERT_OK(result.status());
   ASSERT_EQ(result->reply, kExpectedReply);
-  local.reset();
-  loop.RunUntilIdle();
+
+  local.reset();  // To trigger binding destruction before loop's destruction.
+  ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
 TEST(AsyncBindTestCase, AsyncReply) {
@@ -82,16 +91,26 @@ TEST(AsyncBindTestCase, AsyncReply) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), std::move(server)));
+
+  sync_completion_t closed;
+  fidl::OnChannelCloseFn<AsyncServer> on_closing = [](AsyncServer* server) {};
+  fidl::OnChannelCloseFn<AsyncServer> on_closed = [&closed](AsyncServer* server) {
+    sync_completion_signal(&closed);
+  };
+  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(),
+                            std::move(on_closing), std::move(on_closed)));
 
   // Sync client call.
   auto result =
       ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
   ASSERT_OK(result.status());
   ASSERT_EQ(result->reply, kExpectedReply);
+
+  local.reset();  // To trigger binding destruction before main's destruction.
+  ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
-TEST(BindTestCase, MultipleAsyncReplies) {
+TEST(AsyncBindTestCase, MultipleAsyncReplies) {
   struct AsyncDelayedServer : ::llcpp::fidl::test::simple::Simple::Interface {
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
@@ -121,7 +140,14 @@ TEST(BindTestCase, MultipleAsyncReplies) {
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), std::move(server)));
+
+  sync_completion_t closed;
+  fidl::OnChannelCloseFn<AsyncDelayedServer> on_closing = [](AsyncDelayedServer* server) {};
+  fidl::OnChannelCloseFn<AsyncDelayedServer> on_closed = [&closed](AsyncDelayedServer* server) {
+    sync_completion_signal(&closed);
+  };
+  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(),
+                            std::move(on_closing), std::move(on_closed)));
 
   // Sync client calls.
   sync_completion_t done;
@@ -141,9 +167,12 @@ TEST(BindTestCase, MultipleAsyncReplies) {
     clients.push_back(std::move(client));
   }
   sync_completion_wait(&done, ZX_TIME_INFINITE);
+
+  local.reset();  // To trigger binding destruction before main's destruction.
+  ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
-TEST(BindTestCase, MultipleAsyncRepliesOnePeerClose) {
+TEST(AsyncBindTestCase, MultipleAsyncRepliesOnePeerClose) {
   struct AsyncDelayedServer : ::llcpp::fidl::test::simple::Simple::Interface {
     AsyncDelayedServer(std::vector<std::unique_ptr<async::Loop>>* loops) : loops_(loops) {}
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
@@ -179,9 +208,17 @@ TEST(BindTestCase, MultipleAsyncRepliesOnePeerClose) {
   auto server = std::make_unique<AsyncDelayedServer>(&loops);
   async::Loop main(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(main.StartThread());
+
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), std::move(server)));
+
+  sync_completion_t closed;
+  fidl::OnChannelCloseFn<AsyncDelayedServer> on_closing = [](AsyncDelayedServer* server) {};
+  fidl::OnChannelCloseFn<AsyncDelayedServer> on_closed = [&closed](AsyncDelayedServer* server) {
+    sync_completion_signal(&closed);
+  };
+  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(),
+                            std::move(on_closing), std::move(on_closed)));
 
   // Sync client calls.
   std::atomic<int> peer_closed_count = 0;
@@ -206,6 +243,7 @@ TEST(BindTestCase, MultipleAsyncRepliesOnePeerClose) {
     i->JoinThreads();
   }
   ASSERT_EQ(peer_closed_count.load(), 1);
+  ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
 TEST(AsyncBindTestCase, UniquePtrDestroyOnClientClose) {
@@ -376,7 +414,14 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  ASSERT_OK(fidl::AsyncBind<WorkingServer>(loop.dispatcher(), std::move(remote), server.get()));
+  sync_completion_t closed;
+  fidl::OnChannelCloseFn<WorkingServer> on_closing = [](WorkingServer* server) {};
+  fidl::OnChannelCloseFn<WorkingServer> on_closed = [&closed](WorkingServer* server) {
+    sync_completion_signal(&closed);
+  };
+
+  ASSERT_OK(fidl::AsyncBind<WorkingServer>(loop.dispatcher(), std::move(remote), server.get(),
+                                           std::move(on_closing), std::move(on_closed)));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
@@ -421,6 +466,9 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   // Give some extra time to the server thread to run after destroyed, it should not though.
   // This sleep is not needed to pass the test, it just allows the server to potentially fail.
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
+
+  // Wait for the closed callback to be called.
+  ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
 TEST(AsyncBindTestCase, CallbacksClosingAndClosedServerTriggered) {
