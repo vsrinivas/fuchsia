@@ -28,15 +28,14 @@ zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, 
   return ZX_OK;
 }
 
-zx_status_t FakeDevMgr::DeviceRemove(zx_device_t* device) {
+void FakeDevMgr::DeviceAsyncRemove(zx_device_t* device) {
   auto iter = devices_.find(DeviceId::FromDevice(device));
   if (iter == devices_.end()) {
     DBG_PRT("%s device %p does not exist\n", __func__, device);
-    return ZX_ERR_NOT_FOUND;
+    return;
   }
   devices_.erase(iter);
   DBG_PRT("%s: Removed SIM device %p. # devices: %lu\n", __func__, device, devices_.size());
-  return ZX_OK;
 }
 
 std::optional<wlan_sim_dev_info_t> FakeDevMgr::FindFirst(const Predicate& pred) {

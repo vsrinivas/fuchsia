@@ -87,22 +87,19 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   return ZX_OK;
 }
 
-void SdioDevice::DdkUnbindNew(::ddk::UnbindTxn txn) { txn.Reply(); }
-
 void SdioDevice::DdkRelease() { delete this; }
 
 zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
   return device_add(zxdev(), args, out_device);
 }
 
-zx_status_t SdioDevice::DeviceRemove(zx_device_t* dev) { return device_remove_deprecated(dev); }
+void SdioDevice::DeviceAsyncRemove(zx_device_t* dev) { device_async_remove(dev); }
 
 zx_status_t SdioDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) {
   return load_firmware(zxdev(), path, fw, size);
 }
 
-SdioDevice::SdioDevice(zx_device_t* parent)
-    : ::ddk::Device<SdioDevice, ::ddk::UnbindableNew>(parent) {}
+SdioDevice::SdioDevice(zx_device_t* parent) : ::ddk::Device<SdioDevice>(parent) {}
 
 SdioDevice::~SdioDevice() {
   DisableDispatcher();

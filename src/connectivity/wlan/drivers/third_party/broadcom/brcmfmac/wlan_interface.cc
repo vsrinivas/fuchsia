@@ -29,7 +29,6 @@ namespace {
 
 constexpr zx_protocol_device_t kWlanInterfaceDeviceOps = {
     .version = DEVICE_OPS_VERSION,
-    .unbind = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->DdkUnbind(); },
     .release = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->DdkRelease(); },
 };
 
@@ -125,7 +124,7 @@ zx_status_t WlanInterface::Create(Device* device, const char* name, wireless_dev
                                   WlanInterface** out_interface) {
   zx_status_t status = ZX_OK;
 
-  const auto ddk_remover = [](WlanInterface* interface) { interface->DdkRemove(); };
+  const auto ddk_remover = [](WlanInterface* interface) { interface->DdkAsyncRemove(); };
   std::unique_ptr<WlanInterface, decltype(ddk_remover)> interface(new WlanInterface(), ddk_remover);
   device_add_args device_args = {
       .version = DEVICE_ADD_ARGS_VERSION,
@@ -158,15 +157,13 @@ wireless_dev* WlanInterface::wdev() { return wdev_; }
 
 const wireless_dev* WlanInterface::wdev() const { return wdev_; }
 
-void WlanInterface::DdkUnbind() { DdkRemove(); }
-
-zx_status_t WlanInterface::DdkRemove() {
+void WlanInterface::DdkAsyncRemove() {
   zx_device_t* const device = zx_device_;
   if (device == nullptr) {
-    return ZX_ERR_BAD_STATE;
+    return;
   }
   zx_device_ = nullptr;
-  return (device_->DeviceRemove(device));
+  device_->DeviceAsyncRemove(device);
 }
 
 void WlanInterface::DdkRelease() { delete this; }

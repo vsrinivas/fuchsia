@@ -137,7 +137,7 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
                   zx_status_get_string(status));
         return status;
       }
-      client_interface_->DdkRemove();
+      client_interface_->DdkAsyncRemove();
       client_interface_ = nullptr;
       break;
     }
@@ -150,7 +150,7 @@ zx_status_t Device::WlanphyImplDestroyIface(uint16_t iface_id) {
                   zx_status_get_string(status));
         return status;
       }
-      ap_interface_->DdkRemove();
+      ap_interface_->DdkAsyncRemove();
       ap_interface_ = nullptr;
       break;
     }

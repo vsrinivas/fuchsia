@@ -42,8 +42,7 @@ class WlanInterface {
   const wireless_dev* wdev() const;
 
   // Device operations.
-  void DdkUnbind();
-  zx_status_t DdkRemove();
+  void DdkAsyncRemove();
   void DdkRelease();
 
   static zx_status_t Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info);

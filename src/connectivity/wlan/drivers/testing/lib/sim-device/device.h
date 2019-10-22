@@ -74,7 +74,7 @@ class FakeDevMgr {
   const_iterator cend() const { return devices_.cend(); }
 
   zx_status_t DeviceAdd(zx_device_t* parent, device_add_args_t* args, zx_device_t** out);
-  zx_status_t DeviceRemove(zx_device_t* device);
+  void DeviceAsyncRemove(zx_device_t* device);
   std::optional<wlan_sim_dev_info_t> FindFirst(const Predicate& pred);
   std::optional<wlan_sim_dev_info_t> FindFirstByProtocolId(uint32_t proto_id);
   std::optional<wlan_sim_dev_info_t> GetDevice(zx_device_t* device);

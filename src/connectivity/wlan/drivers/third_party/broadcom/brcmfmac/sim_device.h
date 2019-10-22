@@ -40,7 +40,7 @@ class SimDevice : public Device {
 
   // Trampolines for DDK functions, for platforms that support them.
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
-  zx_status_t DeviceRemove(zx_device_t* dev) override;
+  void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
 
  private:

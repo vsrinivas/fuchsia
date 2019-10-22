@@ -25,7 +25,7 @@
 namespace wlan::brcmfmac {
 
 // This class uses the DDKTL classes to manage the lifetime of a brcmfmac driver instance.
-class SdioDevice : public Device, public ::ddk::Device<SdioDevice, ::ddk::UnbindableNew> {
+class SdioDevice : public Device, public ::ddk::Device<SdioDevice> {
  public:
   // Static factory function for SdioDevice instances. This factory does not return an owned
   // instance, as on successful invocation the instance will have its lifecycle maanged by the
@@ -36,12 +36,11 @@ class SdioDevice : public Device, public ::ddk::Device<SdioDevice, ::ddk::Unbind
   SdioDevice& operator=(const SdioDevice& other) = delete;
 
   // DDK interface implementation.
-  void DdkUnbindNew(::ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Trampolines for DDK functions, for platforms that support them
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
-  zx_status_t DeviceRemove(zx_device_t* dev) override;
+  void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
 
  private:

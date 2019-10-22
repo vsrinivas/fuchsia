@@ -48,13 +48,10 @@ TEST(TestDeviceOps, AddRemoveDevs) {
   }
 
   printf("Remove the devs\n");
+
   // Remove the devices (deliberately not in the add order)
-
-  last_sts = dev_mgr.DeviceRemove(ctx[1]);
-  EXPECT_EQ(last_sts, ZX_OK);
-
-  last_sts = dev_mgr.DeviceRemove(ctx[0]);
-  EXPECT_EQ(last_sts, ZX_OK);
+  dev_mgr.DeviceAsyncRemove(ctx[1]);
+  dev_mgr.DeviceAsyncRemove(ctx[0]);
 
   printf("Check if # devs is 0\n");
   // Check if num devices in the list is zero
@@ -62,8 +59,7 @@ TEST(TestDeviceOps, AddRemoveDevs) {
 
   printf("Remove a non-existent dev\n");
   // Negative test...attempt to remove from empty list
-  last_sts = dev_mgr.DeviceRemove(ctx[0]);
-  EXPECT_NE(last_sts, ZX_OK);
+  dev_mgr.DeviceAsyncRemove(ctx[0]);
 }
 
 TEST(TestDeviceOps, RetrieveDevice) {
