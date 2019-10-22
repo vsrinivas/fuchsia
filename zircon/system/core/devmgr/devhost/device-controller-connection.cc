@@ -34,10 +34,9 @@ zx_status_t BindReply(const fbl::RefPtr<zx_device_t>& dev,
   completer.Reply(status, std::move(test_output));
 
   fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
-  if (dev->PopBindConn(&conn)) {
+  if (dev->get_bind_conn_and_clear(&conn)) {
     bind_status = fuchsia_device_ControllerBind_reply(conn.Txn(), status);
   }
-
   return bind_status;
 }
 

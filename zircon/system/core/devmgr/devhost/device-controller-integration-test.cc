@@ -82,6 +82,57 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
   ASSERT_OK(status);
 }
 
+// Test binding second time
+TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
+  IsolatedDevmgr devmgr;
+  auto args = IsolatedDevmgr::DefaultArgs();
+
+  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
+  ASSERT_OK(status);
+
+  zx::channel dev_channel;
+  CreateTestDevice(devmgr, kPassDriverName, &dev_channel);
+
+  char libpath[PATH_MAX];
+  int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
+  zx_status_t call_status;
+  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
+  ASSERT_OK(status);
+  ASSERT_OK(call_status);
+
+  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
+  ASSERT_OK(status);
+  ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
+
+  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+}
+
+// Test binding again, but with different driver
+TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
+  IsolatedDevmgr devmgr;
+  auto args = IsolatedDevmgr::DefaultArgs();
+
+  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
+  ASSERT_OK(status);
+
+  zx::channel dev_channel;
+  CreateTestDevice(devmgr, kPassDriverName, &dev_channel);
+
+  char libpath[PATH_MAX];
+  int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
+  zx_status_t call_status;
+  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
+  ASSERT_OK(status);
+  ASSERT_OK(call_status);
+
+  len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
+  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
+  ASSERT_OK(status);
+  ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
+
+  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+}
+
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();

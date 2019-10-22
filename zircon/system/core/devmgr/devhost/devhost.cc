@@ -74,9 +74,7 @@ DevhostContext& DevhostCtx() {
 }
 
 // Access the devhost's async event loop
-async::Loop* DevhostAsyncLoop() {
-  return &DevhostCtx().loop();
-}
+async::Loop* DevhostAsyncLoop() { return &DevhostCtx().loop(); }
 
 static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
   auto conn = std::make_unique<DevhostControllerConnection>();
@@ -649,7 +647,8 @@ static void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
   log(RPC_OUT, "devhost[%s] %s'\n", path, opname);
 }
 
-static void log_rpc_result(const char* opname, zx_status_t status, zx_status_t call_status = ZX_OK) {
+static void log_rpc_result(const char* opname, zx_status_t status,
+                           zx_status_t call_status = ZX_OK) {
   if (status != ZX_OK) {
     log(ERROR, "devhost: rpc:%s sending failed: %d\n", opname, status);
   } else if (call_status != ZX_OK) {
@@ -700,8 +699,8 @@ zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) {
   // TODO(teisenbe): Handle failures here...
 
   log_rpc(dev, "remove-done");
-  auto resp = fuchsia::device::manager::Coordinator::Call::RemoveDone(
-      zx::unowned_channel(rpc.get()));
+  auto resp =
+      fuchsia::device::manager::Coordinator::Call::RemoveDone(zx::unowned_channel(rpc.get()));
   zx_status_t call_status = ZX_OK;
   if (resp.status() == ZX_OK && resp->result.is_err()) {
     call_status = resp->result.err();
@@ -729,8 +728,8 @@ zx_status_t devhost_send_unbind_done(const fbl::RefPtr<zx_device_t>& dev) {
   const zx::channel& rpc = *dev->rpc;
   ZX_ASSERT(rpc.is_valid());
   log_rpc(dev, "unbind-done");
-  auto resp = fuchsia::device::manager::Coordinator::Call::UnbindDone(
-      zx::unowned_channel(rpc.get()));
+  auto resp =
+      fuchsia::device::manager::Coordinator::Call::UnbindDone(zx::unowned_channel(rpc.get()));
   zx_status_t call_status = ZX_OK;
   if (resp.status() == ZX_OK && resp->result.is_err()) {
     call_status = resp->result.err();

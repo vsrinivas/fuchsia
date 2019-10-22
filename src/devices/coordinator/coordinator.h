@@ -181,8 +181,10 @@ class Coordinator {
       fit::function<zx_status_t(const Driver* drv, const fbl::RefPtr<Device>& dev)>;
 
   // Attempts to bind the given driver to the given device.  Returns ZX_OK on
-  // success, ZX_ERR_NEXT if the driver is not capable of binding to the device,
-  // and a different error if the driver was capable of binding but failed to bind.
+  // success, ZX_ERR_ALREADY_BOUND if there is a driver bound to the device
+  // and the device is not allowed to be bound multiple times, ZX_ERR_NEXT if
+  // the driver is not capable of binding to the device, and a different error
+  // if the driver was capable of binding but failed to bind.
   zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv, bool autobind) {
     return BindDriverToDevice(dev, drv, autobind,
                               fit::bind_member(this, &Coordinator::AttemptBind));
@@ -207,6 +209,8 @@ class Coordinator {
   void ScheduleDevhostRequestedUnbindChildren(const fbl::RefPtr<Device>& parent);
   zx_status_t RemoveDevice(const fbl::RefPtr<Device>& dev, bool forced);
   zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
+  // Try binding a driver to the device. Returns ZX_ERR_ALREADY_BOUND if there
+  // is a driver bound to the device and the device is not allowed to be bound multiple times.
   zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece drvlibname,
                          bool new_device);
   zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out, size_t max) const;

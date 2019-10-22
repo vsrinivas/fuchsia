@@ -79,8 +79,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
 
     if (!args->power_states) {
-      //TODO(fxb/34081): Remove when all drivers declare power states
-      //Temporarily allocate working and non-working power states
+      // TODO(fxb/34081): Remove when all drivers declare power states
+      // Temporarily allocate working and non-working power states
       device_power_state_info_t power_states[2];
       power_states[0].state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0;
       power_states[1].state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD;
@@ -92,10 +92,10 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       return r;
     }
 
-    //Set default system to device power state mapping. This can be later
-    //updated by the system power manager.
-    std::array<fuchsia_device_SystemPowerStateInfo,
-        fuchsia_device_manager_MAX_SYSTEM_POWER_STATES> states_mapping{};
+    // Set default system to device power state mapping. This can be later
+    // updated by the system power manager.
+    std::array<fuchsia_device_SystemPowerStateInfo, fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>
+        states_mapping{};
     for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
       states_mapping[i].dev_state = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD;
       states_mapping[i].wakeup_enable = false;
@@ -161,9 +161,7 @@ __EXPORT zx_status_t device_remove_deprecated(zx_device_t* dev) {
   return devhost_device_remove_deprecated(dev_ref);
 }
 
-__EXPORT zx_status_t device_remove(zx_device_t* dev) {
-  return device_remove_deprecated(dev);
-}
+__EXPORT zx_status_t device_remove(zx_device_t* dev) { return device_remove_deprecated(dev); }
 
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
   ApiAutoLock lock;

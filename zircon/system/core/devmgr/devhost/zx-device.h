@@ -5,8 +5,18 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
 
-#include <ddk/device.h>
+#include <fuchsia/device/manager/c/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
+#include <zircon/compiler.h>
+
+#include <array>
+#include <atomic>
+#include <optional>
+
 #include <ddk/device-power-states.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -16,14 +26,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <fs/handler.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/eventpair.h>
-#include <zircon/compiler.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <fuchsia/device/manager/c/fidl.h>
-
-#include <atomic>
-#include <array>
 
 namespace devmgr {
 
@@ -85,9 +87,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
     return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
   }
-
-  void PushBindConn(const fs::FidlConnection& conn);
-  bool PopBindConn(fs::FidlConnection* conn);
+  void set_bind_conn(const fs::FidlConnection& conn);
+  bool get_bind_conn_and_clear(fs::FidlConnection* conn);
 
   void PushTestCompatibilityConn(const fs::FidlConnection& conn);
   bool PopTestCompatibilityConn(fs::FidlConnection* conn);
@@ -167,15 +168,17 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   bool has_composite();
   void set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite);
   fbl::RefPtr<devmgr::CompositeDevice> take_composite();
-  const std::array<fuchsia_device_DevicePowerStateInfo,
-             fuchsia_device_MAX_DEVICE_POWER_STATES>& GetPowerStates() const;
-  zx_status_t SetPowerStates(const device_power_state_info_t* power_states,
-                             uint8_t count);
-  zx_status_t SetSystemPowerStateMapping(const std::array<fuchsia_device_SystemPowerStateInfo,
-             fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping);
+  const std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>&
+  GetPowerStates() const;
+  zx_status_t SetPowerStates(const device_power_state_info_t* power_states, uint8_t count);
+  zx_status_t SetSystemPowerStateMapping(
+      const std::array<fuchsia_device_SystemPowerStateInfo,
+                       fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping);
   const std::array<fuchsia_device_SystemPowerStateInfo,
-             fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& GetSystemPowerStateMapping() const;
+                   fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>&
+  GetSystemPowerStateMapping() const;
   fuchsia_device_DevicePowerState GetCurrentDevicePowerState() { return current_power_state_; }
+
  private:
   zx_device() = default;
 
@@ -208,7 +211,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   uint64_t local_id_ = 0;
 
   fbl::Mutex bind_conn_lock_;
-  fbl::Vector<fs::FidlConnection> bind_conn_ TA_GUARDED(bind_conn_lock_);
+  std::optional<fs::FidlConnection> bind_conn_ TA_GUARDED(bind_conn_lock_);
 
   // The connection associated with fuchsia.device.Controller/RunCompatibilityTests
   fbl::Mutex test_compatibility_conn_lock_;
@@ -216,9 +219,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
       TA_GUARDED(test_compatibility_conn_lock_);
 
   std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>
-                                                                        power_states_;
-  std::array<fuchsia_device_SystemPowerStateInfo,
-      fuchsia_device_manager_MAX_SYSTEM_POWER_STATES> system_power_states_mapping_;
+      power_states_;
+  std::array<fuchsia_device_SystemPowerStateInfo, fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>
+      system_power_states_mapping_;
   fuchsia_device_DevicePowerState current_power_state_;
 };
 
@@ -243,6 +246,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 #define DEV_FLAG_ALLOW_MULTI_COMPOSITE 0x00001000 // can be part of multiple composite devices
 // clang-format on
 
+// Request to bind a driver with drv_libname to device. If device is already bound to a driver,
+// ZX_ERR_ALREADY_BOUND is returned
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname);
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev);
 zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self);

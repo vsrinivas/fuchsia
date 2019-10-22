@@ -18,18 +18,18 @@ zx_status_t zx_device::Create(fbl::RefPtr<zx_device>* out_dev) {
   return ZX_OK;
 }
 
-void zx_device::PushBindConn(const fs::FidlConnection& conn) {
+void zx_device::set_bind_conn(const fs::FidlConnection& conn) {
   fbl::AutoLock<fbl::Mutex> lock(&bind_conn_lock_);
-  bind_conn_.push_back(conn);
+  bind_conn_ = conn;
 }
 
-bool zx_device::PopBindConn(fs::FidlConnection* conn) {
+bool zx_device::get_bind_conn_and_clear(fs::FidlConnection* conn) {
   fbl::AutoLock<fbl::Mutex> lock(&bind_conn_lock_);
-  if (bind_conn_.is_empty()) {
+  if (!bind_conn_.has_value()) {
     return false;
   }
-  *conn = bind_conn_[0];
-  bind_conn_.erase(0);
+  *conn = bind_conn_.value();
+  bind_conn_.reset();
   return true;
 }
 
@@ -48,18 +48,19 @@ bool zx_device::PopTestCompatibilityConn(fs::FidlConnection* conn) {
   return true;
 }
 
-const std::array<fuchsia_device_DevicePowerStateInfo,
-    fuchsia_device_MAX_DEVICE_POWER_STATES>& zx_device::GetPowerStates() const {
+const std::array<fuchsia_device_DevicePowerStateInfo, fuchsia_device_MAX_DEVICE_POWER_STATES>&
+zx_device::GetPowerStates() const {
   return power_states_;
 }
 
 const std::array<fuchsia_device_SystemPowerStateInfo,
-    fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& zx_device::GetSystemPowerStateMapping() const {
+                 fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>&
+zx_device::GetSystemPowerStateMapping() const {
   return system_power_states_mapping_;
 }
 
 zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_states,
-                               uint8_t count) {
+                                      uint8_t count) {
   if (count < fuchsia_device_MIN_DEVICE_POWER_STATES ||
       count > fuchsia_device_MAX_DEVICE_POWER_STATES) {
     return ZX_ERR_INVALID_ARGS;
@@ -88,8 +89,9 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
   return ZX_OK;
 }
 
-zx_status_t zx_device::SetSystemPowerStateMapping(const std::array<fuchsia_device_SystemPowerStateInfo,
-             fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping) {
+zx_status_t zx_device::SetSystemPowerStateMapping(
+    const std::array<fuchsia_device_SystemPowerStateInfo,
+                     fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping) {
   for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
     const fuchsia_device_SystemPowerStateInfo* info = &mapping[i];
     if (!(power_states_[info->dev_state].is_supported)) {

@@ -520,17 +520,13 @@ static zx_status_t fidl_DeviceControllerBind(void* ctx, const char* driver_data,
   memcpy(drv_libname, driver_data, driver_count);
   drv_libname[driver_count] = 0;
 
-  if (!strcmp(drv_libname, "/boot/driver/fvm.so")) {
-    // TODO(ZX-4198): Workaround for flaky tests involving FVM.
-    zx_status_t status = fuchsia_device_ControllerBind_reply(txn, ZX_OK);
-    if (status != ZX_OK) {
-      return status;
-    }
+  zx_status_t status = device_bind(conn->dev, drv_libname);
+  if (status != ZX_OK) {
+    fuchsia_device_ControllerBind_reply(txn, status);
   } else {
-    conn->dev->PushBindConn(fs::FidlConnection::CopyTxn(txn));
+    conn->dev->set_bind_conn(fs::FidlConnection::CopyTxn(txn));
   }
-
-  return device_bind(conn->dev, drv_libname);
+  return ZX_OK;
 }
 
 static zx_status_t fidl_DeviceControllerRunCompatibilityTests(void* ctx, int64_t hook_wait_time,

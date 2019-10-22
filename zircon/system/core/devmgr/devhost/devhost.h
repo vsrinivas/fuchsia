@@ -5,6 +5,18 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVHOST_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_DEVHOST_H_
 
+#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+#include <stdint.h>
+#include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/fidl.h>
+#include <zircon/types.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -14,17 +26,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/zx/channel.h>
-#include <stdint.h>
-#include <threads.h>
-#include <zircon/compiler.h>
-#include <zircon/fidl.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "devhost-context.h"
@@ -161,11 +162,12 @@ zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) R
 zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags) REQ_DM_LOCK;
 zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device_t>& dev,
                                        fuchsia_device_DevicePowerState requested_state,
-                                       fuchsia_device_DevicePowerState *out_state);
-zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device_t>& dev, uint32_t target_system_state) REQ_DM_LOCK;
+                                       fuchsia_device_DevicePowerState* out_state);
+zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device_t>& dev,
+                                  uint32_t target_system_state) REQ_DM_LOCK;
 zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device_t>& dev,
-                                       fuchsia_device_DevicePowerState requested_state,
-                                       fuchsia_device_DevicePowerState *out_state);
+                                      fuchsia_device_DevicePowerState requested_state,
+                                      fuchsia_device_DevicePowerState* out_state);
 void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK;
 
 zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,

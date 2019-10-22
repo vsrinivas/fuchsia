@@ -74,8 +74,8 @@ void vfs_exit(const zx::event& fshost_event) {
   }
   // We used to wait here with a 60 seconds timeout but the storage stack might
   // need more time to flush all the writeback buffers. See bug 38103 for details.
-  if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time::infinite(),
-                                      nullptr)) != ZX_OK) {
+  if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time::infinite(), nullptr)) !=
+      ZX_OK) {
     printf("devcoordinator: Failed to wait for VFS exit completion\n");
     return;
   }
@@ -1394,6 +1394,11 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
 
 zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
                                             bool autobind, const AttemptBindFunc& attempt_bind) {
+  if ((dev->flags & DEV_CTX_BOUND) && !(dev->flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
+      !(dev->flags & DEV_CTX_MULTI_BIND)) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
   if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
     return ZX_ERR_NEXT;
   }
@@ -1439,7 +1444,7 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
   for (auto& dev : devices_) {
     zx_status_t status =
         BindDriverToDevice(fbl::RefPtr(&dev), drv, true /* autobind */, attempt_bind);
-    if (status == ZX_ERR_NEXT) {
+    if (status == ZX_ERR_NEXT || status == ZX_ERR_ALREADY_BOUND) {
       continue;
     }
     if (status != ZX_OK) {
@@ -1488,6 +1493,9 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
     }
 
     zx_status_t status = BindDriverToDevice(dev, &drv, autobind);
+    if (status == ZX_ERR_ALREADY_BOUND) {
+      return status;
+    }
     if (status == ZX_ERR_NEXT) {
       continue;
     }
