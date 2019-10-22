@@ -17,6 +17,7 @@
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -300,6 +301,22 @@ TEST_F(InspectManagerTest, ExposeSettings_TrackUploadPolicyChanges) {
       ChildrenMatch(Contains(NodeMatches(AllOf(
           NameMatches(kInspectSettingsName),
           PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsEnabled)))))))));
+}
+
+TEST_F(InspectManagerTest, Check_CanAccessMultipleReportsForTheSameProgram) {
+  // A use-after-free bug was occurring when there were multiple reports for the same crashing
+  // program and we would try to mark one of them as uploaded.
+  // Add enough reports to force the underlying vector to resize.
+  const size_t kNumReports = 150u;
+  for (size_t i = 0; i < kNumReports; ++i) {
+    EXPECT_TRUE(
+        inspect_manager_->AddReport("program", fxl::StringPrintf("local_report_id_%zu", i)));
+  }
+
+  for (size_t i = 0; i < kNumReports; ++i) {
+    EXPECT_TRUE(inspect_manager_->MarkReportAsUploaded(fxl::StringPrintf("local_report_id_%zu", i),
+                                                       "server_report_id"));
+  }
 }
 
 }  // namespace

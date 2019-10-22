@@ -100,7 +100,8 @@ class InspectManager {
   // Inspect node containing a list of reports for a given program.
   struct ReportList {
     inspect::Node node;
-    std::vector<Report> reports;
+    // Allocate all reports on the heap so we can use pointers to them in |Reports|.
+    std::vector<std::unique_ptr<Report>> reports;
   };
 
   // Inspect node pointing to the list of reports.

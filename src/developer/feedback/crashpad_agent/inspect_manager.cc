@@ -59,8 +59,9 @@ bool InspectManager::AddReport(const std::string& program_name,
   }
 
   // Create a new Report object and index it.
-  report_list->reports.push_back(Report(&report_list->node, local_report_id, CurrentTime()));
-  reports_.local_report_id_to_report[local_report_id] = &report_list->reports.back();
+  report_list->reports.push_back(
+      std::make_unique<Report>(&report_list->node, local_report_id, CurrentTime()));
+  reports_.local_report_id_to_report[local_report_id] = report_list->reports.back().get();
   return true;
 }
 
