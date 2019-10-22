@@ -135,13 +135,13 @@ class AudioResult {
   // ratios are sometimes integral (e.g. 1:1, 2:1 or 1:2); others entail much larger numerators and
   // denominators(below referred to as "fractional" in nature). We use the following ratios:
   // - 1:1 (referred to in these variables and constants as Unity)
-  // - 191999:48000, representing significant fractional downsampling (referred to as Down0)
-  // - 2:1, which equates to 96k -> 48k (referred to as Down1)
+  // - 191999:48000, significant but not perfectly integral down-sampling (referred to as Down0)
+  // - 2:1, which equates to 96k -> 48k (Down1)
   // - 294:160, which equates to 88.2k -> 48k (Down2)
+  // - 48001:48000, representing small adjustment for multi-device sync (Micro)
   // - 147:160, which equates to 44.1k -> 48k (Up1)
   // - 1:2, which equates to 24k -> 48k, or 48k -> 96k (Up2)
-  // - 12001:48000, representing significant fractional upsampling (Up3)
-  // - 47999:48000, representing small adjustment, as for multi-device sync (Micro)
+  // - 12001:48000, significant but not perfectly integral up-sampling (Up3)
   //
   // For most audio fidelity tests, we test resamplers at each of these resampling ratios with a
   // broad range of "in-band" frequencies (from DC up to the Nyquist rate; as many as 40 freqs). For
@@ -164,42 +164,42 @@ class AudioResult {
   // represent various ways that the system uses them. A more exhaustive set is available for
   // in-depth testing outside of CQ (if the "--full" switch is specified). Otherwise (in standard
   // mode), we test PointSampler at 1:1 (no SRC), 2:1 (96k-to-48k) and 1:2 (24k-to-48k), and
-  // both LinearSampler and SincSampler at 294:160 (88.2k-to-48k), 147:160 (44.1k-to-48k) and
-  // 47999:48000 ("micro-SRC"). Our entire set of ratios is represented in the arrays listed below,
+  // both LinearSampler and SincSampler at 294:160 (88.2k-to-48k), 48001:48000 ("micro-SRC") and
+  // 147:160 (44.1k-to-48k). Our entire set of ratios is represented in the arrays listed below,
   // referred to by these labels: Unity (1:1), Down0 (191999:48000), Down1 (2:1), Down2 (294:160),
-  // Up1 (147:160), Up2 (1:2), Up3 (12001:48000) and Micro (47999:48000).
+  // Micro (48001:48000), Up1 (147:160), Up2 (1:2) and Up3 (12001:48000).
 
   // For the specified resampler, and for specified rate conversion, these are currently-measured
   // results (in dBFS) for level response at a set of reference frequencies. The input sinusoid is
   // sent at 0 dBFS: thus, output results closer to 0 are better.
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointUnity;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointDown0;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointDown1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointDown2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointUp1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointUp2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointUp3;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointUnity;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointDown0;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointDown1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointDown2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointUp1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointUp2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointUp3;
 
   // Same as the above section, but for LinearSampler
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearUnity;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearDown0;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearDown1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearDown2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearUp1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearUp2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearUp3;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearUnity;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearDown0;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearDown1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearDown2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearUp1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearUp2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearUp3;
 
   // Same as the above section, but for Windowed Sinc
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincUnity;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincDown0;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincDown1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincDown2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincUp1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincUp2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincUp3;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespSincMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincUnity;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincDown0;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincDown1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincDown2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincUp1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincUp2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincUp3;
 
   //
   // Val-being-checked (in dBFS) must equal or exceed this value. It also must not exceed 0.0dB by
@@ -211,38 +211,38 @@ class AudioResult {
   //
   // These are previous-cached results for frequency response, for this sampler and rate ratio. If
   // any result magnitude is LESS than this value, the test case fails. Ideal results: 0.0 for all.
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespPointUnity;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespPointDown0;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespPointDown1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespPointDown2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespPointUp1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespPointUp2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespPointUp3;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespPointMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointUnity;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointDown0;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointDown1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointDown2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointUp1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointUp2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointUp3;
 
   // Same as the above section, but for LinearSampler
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearUnity;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearDown0;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearDown1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearDown2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearUp1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearUp2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearUp3;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespLinearMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearUnity;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearDown0;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearDown1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearDown2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearUp1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearUp2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearUp3;
 
   // Same as the above section, but for Windows Sinc
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincUnity;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincDown0;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincDown1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincDown2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincUp1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincUp2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincUp3;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevFreqRespSincMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincUnity;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincDown0;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincDown1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincDown2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincUp1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincUp2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincUp3;
 
   // Frequency Response results measured for a few frequencies during the NxN tests.
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespPointNxN;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> FreqRespLinearNxN;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointNxN;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearNxN;
 
   // Signal-to-Noise-And-Distortion (SINAD)
   //
@@ -263,30 +263,30 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown0;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointMicro;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp3;
-  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointMicro;
 
   // Same as the above section, but for LinearSampler
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUnity;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown0;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearMicro;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp3;
-  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearMicro;
 
   // Same as the above section, but for Windowed Sinc
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUnity;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincDown0;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincMicro;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUp2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUp3;
-  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincMicro;
 
   // Previous-cached SINAD results for this sampler and rate conversion ratio, in dBr. If current
   // result is LESS than this value, the test case fails.
@@ -294,30 +294,30 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointDown0;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointMicro;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUp2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUp3;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointMicro;
 
   // Same as the above section, but for LinearSampler
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearDown0;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearMicro;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUp2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUp3;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearMicro;
 
   // Same as the above section, but for Windowed Sinc
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown0;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincMicro;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUp2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUp3;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincMicro;
 
   // SINAD results measured for a few frequencies during the NxN tests.
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointNxN;
@@ -336,64 +336,64 @@ class AudioResult {
   // "wraparound" in mind, we allow a certain phase tolerance when comparing to previous values.
   static constexpr double kPhaseTolerance = 5e-06;
 
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointUnity;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointDown0;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointDown1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointDown2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointUp1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointUp2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointUp3;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointUnity;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointDown0;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointDown1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointDown2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointUp1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointUp2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointUp3;
 
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUnity;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearDown0;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearDown1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearDown2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUp1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUp2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearUp3;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearUnity;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearDown0;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearDown1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearDown2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearUp1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearUp2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearUp3;
 
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincUnity;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincDown0;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincDown1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincDown2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincUp1;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincUp2;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincUp3;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseSincMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincUnity;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincDown0;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincDown1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincDown2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincMicro;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincUp1;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincUp2;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincUp3;
 
   // For Phase, measured value must exceed or equal the below cached value.
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUnity;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointDown0;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointDown1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointDown2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUp1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUp2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointUp3;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhasePointMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointUnity;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointDown0;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointDown1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointDown2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointUp1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointUp2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointUp3;
 
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUnity;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearDown0;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearDown1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearDown2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUp1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUp2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearUp3;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseLinearMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearUnity;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearDown0;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearDown1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearDown2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearUp1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearUp2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearUp3;
 
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincUnity;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincDown0;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincDown1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincDown2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincUp1;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincUp2;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincUp3;
-  static const std::array<double, FrequencySet::kNumInBandReferenceFreqs> kPrevPhaseSincMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincUnity;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincDown0;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincDown1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincDown2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincMicro;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincUp1;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincUp2;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincUp3;
 
   // Phase results measured for a few frequencies during the NxN tests.
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhasePointNxN;
-  static std::array<double, FrequencySet::kNumInBandReferenceFreqs> PhaseLinearNxN;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointNxN;
+  static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearNxN;
 
   //
   //
