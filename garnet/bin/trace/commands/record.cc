@@ -446,6 +446,8 @@ void RecordCommand::StopTrace(int32_t return_code) {
 }
 
 void RecordCommand::ProcessMeasurements() {
+  FXL_DCHECK(!tracing_);
+
   if (!events_.empty()) {
     std::sort(std::begin(events_), std::end(events_),
               [](const trace::Record& e1, const trace::Record& e2) {
@@ -514,6 +516,8 @@ void RecordCommand::ProcessMeasurements() {
 }
 
 void RecordCommand::DoneTrace() {
+  FXL_DCHECK(!tracing_);
+
   tracer_.reset();
   exporter_.reset();
 
