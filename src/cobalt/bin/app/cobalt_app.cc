@@ -44,6 +44,8 @@ constexpr char kLocalAggregateProtoStorePath[] = "/data/local_aggregate_store";
 constexpr char kObsHistoryProtoStorePath[] = "/data/obs_history_store";
 constexpr char kSystemDataCachePrefix[] = "/data/system_data_";
 
+const size_t kClearcutMaxRetries = 5;
+
 namespace {
 std::unique_ptr<ObservationStore> NewObservationStore(
     size_t max_bytes_per_event, size_t max_bytes_per_envelope, size_t max_bytes_total,
@@ -104,7 +106,8 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                                  observation_store_.get(),
                                  std::make_unique<clearcut::ClearcutUploader>(
                                      kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(
-                                                            &network_wrapper_, dispatcher))),
+                                                            &network_wrapper_, dispatcher)),
+                                 nullptr, kClearcutMaxRetries, ReadApiKeyOrDefault()),
       timer_manager_(dispatcher),
       local_aggregate_proto_store_(kLocalAggregateProtoStorePath,
                                    std::make_unique<PosixFileSystem>()),
