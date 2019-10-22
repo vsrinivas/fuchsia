@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs-management/mount.h>
+#include <fs-management/fvm.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -10,8 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-management/fvm.h>
@@ -36,6 +36,10 @@
 #include <utility>
 
 namespace {
+
+constexpr char kBlockDevPath[] = "/dev/class/block/";
+constexpr char kBlockDevRelativePath[] = "class/block/";
+
 // Checks that |fd| is a partition which matches |uniqueGUID| and |typeGUID|.
 // If either is null, it doesn't compare |fd| with that guid.
 // At least one of the GUIDs must be non-null.
@@ -63,8 +67,54 @@ bool IsPartition(const fbl::unique_fd& fd, const uint8_t* uniqueGUID, const uint
   return true;
 }
 
-constexpr char kBlockDevPath[] = "/dev/class/block/";
-constexpr char kBlockDevRelativePath[] = "class/block/";
+// Overwrites the FVM and waits for it to disappear from devfs.
+//
+// devfs_root_fd: (OPTIONAL) A connection to devfs. If supplied, |path| is relative to this root.
+// parent_fd: An fd to the parent of the FVM device.
+// path: The path to the FVM device. Relative to |devfs_root_fd| if supplied.
+zx_status_t DestroyFVMAndWait(int devfs_root_fd, fbl::unique_fd parent_fd, fbl::unique_fd driver_fd,
+                              const char* path) {
+  fuchsia_hardware_block_volume_VolumeInfo volume_info;
+  zx_status_t status = fvm_query(driver_fd.get(), &volume_info);
+  if (status != ZX_OK) {
+    return ZX_ERR_WRONG_TYPE;
+  }
+
+  struct fvm_destroyer {
+    int devfs_root_fd;
+    uint64_t slice_size;
+    const char* path;
+    bool destroyed;
+  } destroyer;
+  destroyer.devfs_root_fd = devfs_root_fd;
+  destroyer.slice_size = volume_info.slice_size;
+  destroyer.path = path;
+  destroyer.destroyed = false;
+
+  auto cb = [](int dirfd, int event, const char* fn, void* cookie) {
+    auto destroyer = static_cast<fvm_destroyer*>(cookie);
+    if (event == WATCH_EVENT_WAITING) {
+      zx_status_t status = ZX_ERR_INTERNAL;
+      if (destroyer->devfs_root_fd != -1) {
+        status = fvm_overwrite_with_devfs(destroyer->devfs_root_fd, destroyer->path,
+                                          destroyer->slice_size);
+      } else {
+        status = fvm_overwrite(destroyer->path, destroyer->slice_size);
+      }
+      destroyer->destroyed = true;
+      return status;
+    }
+    if ((event == WATCH_EVENT_REMOVE_FILE) && !strcmp(fn, "fvm")) {
+      return ZX_ERR_STOP;
+    }
+    return ZX_OK;
+  };
+  status = fdio_watch_directory(parent_fd.get(), cb, zx::time::infinite().get(), &destroyer);
+  if (status != ZX_ERR_STOP) {
+    return status;
+  }
+  return ZX_OK;
+}
 
 }  // namespace
 
@@ -225,52 +275,32 @@ zx_status_t fvm_overwrite_with_devfs(int devfs_root_fd, const char* relative_pat
 // Helper function to destroy FVM
 __EXPORT
 zx_status_t fvm_destroy(const char* path) {
-  char driver_path[PATH_MAX];
-  if (strlcpy(driver_path, path, sizeof(driver_path)) >= sizeof(driver_path)) {
-    return ZX_ERR_BAD_PATH;
-  }
-  if (strlcat(driver_path, "/fvm", sizeof(driver_path)) >= sizeof(driver_path)) {
-    return ZX_ERR_BAD_PATH;
-  }
-  fbl::unique_fd driver_fd(open(driver_path, O_RDWR));
+  fbl::String driver_path = fbl::StringPrintf("%s/fvm", path);
 
-  if (!driver_fd) {
-    fprintf(stderr, "fvm_destroy: Failed to open fvm driver: %s\n", driver_path);
-    return -1;
+  fbl::unique_fd parent_fd(open(path, O_RDWR));
+  if (!parent_fd) {
+    return ZX_ERR_NOT_FOUND;
   }
-
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
-  zx_status_t status = fvm_query(driver_fd.get(), &volume_info);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fvm_destroy: Failed to query fvm: %d\n", status);
-    return -1;
+  fbl::unique_fd fvm_fd(open(driver_path.c_str(), O_RDWR));
+  if (!fvm_fd) {
+    return ZX_ERR_NOT_FOUND;
   }
-  return fvm_overwrite(path, volume_info.slice_size);
+  return DestroyFVMAndWait(-1, std::move(parent_fd), std::move(fvm_fd), path);
 }
 
 __EXPORT
 zx_status_t fvm_destroy_with_devfs(int devfs_root_fd, const char* relative_path) {
-  char driver_path[PATH_MAX];
-  if (strlcpy(driver_path, relative_path, sizeof(driver_path)) >= sizeof(driver_path)) {
-    return ZX_ERR_BAD_PATH;
-  }
-  if (strlcat(driver_path, "/fvm", sizeof(driver_path)) >= sizeof(driver_path)) {
-    return ZX_ERR_BAD_PATH;
-  }
-  fbl::unique_fd driver_fd(openat(devfs_root_fd, driver_path, O_RDWR));
+  fbl::String driver_path = fbl::StringPrintf("%s/fvm", relative_path);
 
-  if (!driver_fd) {
-    fprintf(stderr, "fvm_destroy_with_devfs: Failed to open fvm driver: %s\n", driver_path);
-    return -1;
+  fbl::unique_fd parent_fd(openat(devfs_root_fd, relative_path, O_RDWR));
+  if (!parent_fd) {
+    return ZX_ERR_NOT_FOUND;
   }
-
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
-  zx_status_t status = fvm_query(driver_fd.get(), &volume_info);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fvm_destroy_with_devfs: Failed to query fvm: %d\n", status);
-    return -1;
+  fbl::unique_fd fvm_fd(openat(devfs_root_fd, driver_path.c_str(), O_RDWR));
+  if (!fvm_fd) {
+    return ZX_ERR_NOT_FOUND;
   }
-  return fvm_overwrite_with_devfs(devfs_root_fd, relative_path, volume_info.slice_size);
+  return DestroyFVMAndWait(devfs_root_fd, std::move(parent_fd), std::move(fvm_fd), relative_path);
 }
 
 int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
