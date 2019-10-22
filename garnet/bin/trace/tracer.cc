@@ -26,18 +26,20 @@ Tracer::~Tracer() { CloseSocket(); }
 
 void Tracer::Start(TraceConfig config, bool binary, BytesConsumer bytes_consumer,
                    RecordConsumer record_consumer, ErrorHandler error_handler,
-                   fit::closure start_callback, fit::closure done_callback) {
+                   StartCallback start_callback, FailCallback fail_callback,
+                   DoneCallback done_callback) {
   FXL_DCHECK(state_ == State::kStopped);
 
   state_ = State::kStarted;
-  done_callback_ = std::move(done_callback);
   start_callback_ = std::move(start_callback);
+  fail_callback_ = std::move(fail_callback);
+  done_callback_ = std::move(done_callback);
 
   zx::socket outgoing_socket;
   zx_status_t status = zx::socket::create(0u, &socket_, &outgoing_socket);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create socket: status=" << status;
-    Done();
+    Fail();
     return;
   }
 
@@ -94,10 +96,12 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
     }
 
     if (status || actual == 0) {
-      if (status != ZX_ERR_PEER_CLOSED) {
+      if (status == ZX_ERR_PEER_CLOSED) {
+        Done();
+      } else {
         FXL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
+        Fail();
       }
-      Done();
       return;
     }
 
@@ -114,7 +118,7 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
                          trace::BytesToWords(bytes_available));
       if (!reader_->ReadRecords(chunk)) {
         FXL_LOG(ERROR) << "Trace stream is corrupted";
-        Done();
+        Fail();
         return;
       }
       bytes_consumed = bytes_available - trace::WordsToBytes(chunk.remaining_words());
@@ -128,7 +132,7 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
 
 void Tracer::OnHandleError(zx_status_t status) {
   FXL_LOG(ERROR) << "Failed to wait on socket: status=" << status;
-  Done();
+  Fail();
 }
 
 void Tracer::CloseSocket() {
@@ -140,6 +144,10 @@ void Tracer::CloseSocket() {
   }
 }
 
+void Tracer::Fail() {
+  fail_callback_();
+}
+
 void Tracer::Done() {
   FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
@@ -147,6 +155,8 @@ void Tracer::Done() {
   reader_.reset();
 
   CloseSocket();
+
+  // TODO(dje): Watch for errors finishing writing of the trace file.
 
   if (done_callback_) {
     async::PostTask(async_get_default_dispatcher(), std::move(done_callback_));

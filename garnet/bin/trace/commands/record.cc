@@ -430,6 +430,7 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
           options_.spawn ? LaunchSpawnedApp() : LaunchComponentApp();
         StartTimer();
       },
+      [this] { DoneTrace(); },  // TODO(37435): For now preserve existing behaviour.
       [this] { DoneTrace(); });
 }
 

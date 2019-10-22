@@ -25,9 +25,19 @@ using TraceConfig = controller::TraceOptions;
 // Runs traces.
 class Tracer {
  public:
+  // These functions are for processing trace records.
   using BytesConsumer = fbl::Function<void(const unsigned char*, size_t)>;
   using RecordConsumer = trace::TraceReader::RecordConsumer;
   using ErrorHandler = trace::TraceReader::ErrorHandler;
+
+  // Called when tracing has completed starting.
+  using StartCallback = fit::closure;
+
+  // This is called when there's a failure and trace processing must stop.
+  using FailCallback = fit::closure;
+
+  // This is called on successfully writing trace results.
+  using DoneCallback = fit::closure;
 
   explicit Tracer(controller::Controller* controller);
   ~Tracer();
@@ -38,7 +48,7 @@ class Tracer {
   // TODO(PT-113): Remove |binary,record_consumer,error_handler|
   void Start(TraceConfig config, bool binary, BytesConsumer bytes_consumer,
              RecordConsumer record_consumer, ErrorHandler error_handler,
-             fit::closure start_callback, fit::closure done_callback);
+             StartCallback start_callback, FailCallback fail_callback, DoneCallback done_callback);
 
   // Stops the trace.
   // Does nothing if not started or if already stopping.
@@ -54,6 +64,7 @@ class Tracer {
 
   void DrainSocket(async_dispatcher_t* dispatcher);
   void CloseSocket();
+  void Fail();
   void Done();
 
   controller::Controller* const controller_;
@@ -61,14 +72,18 @@ class Tracer {
   enum class State { kStopped, kStarted, kStopping };
 
   State state_ = State::kStopped;
-  fit::closure start_callback_;
-  fit::closure done_callback_;
+  StartCallback start_callback_;
+  FailCallback fail_callback_;
+  DoneCallback done_callback_;
+
   zx::socket socket_;
   async_dispatcher_t* dispatcher_;
   async::WaitMethod<Tracer, &Tracer::OnHandleReady> wait_;
+
   bool binary_;
   BytesConsumer bytes_consumer_;
   std::unique_ptr<trace::TraceReader> reader_;
+
   // We don't use a vector here to avoid the housekeeping necessary to keep
   // checkers happy (e.g., asan). We use this buffer in an atypical way.
   std::array<uint8_t, kReadBufferSize> buffer_;
