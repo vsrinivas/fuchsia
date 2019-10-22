@@ -626,7 +626,7 @@ impl ElementId {
     pub fn new(v: Version) -> Self {
         ElementId { uuid: generate_uuid(), version: v }
     }
-    pub fn update(mut self, version: Version) {
+    pub fn update(&mut self, version: Version) {
         self.version = version;
     }
     pub fn uuid(&self) -> UUID {
@@ -634,6 +634,9 @@ impl ElementId {
     }
     pub fn version(&self) -> u64 {
         self.version
+    }
+    pub fn to_fidl(&self) -> fidl_fuchsia_router_config::Id {
+        fidl_fuchsia_router_config::Id { uuid: self.uuid.to_ne_bytes(), version: self.version }
     }
 }
 
@@ -643,6 +646,26 @@ mod tests {
     use fidl_fuchsia_net as net;
     use fuchsia_async as fasync;
     use std::net::IpAddr;
+
+    #[test]
+    fn test_elementid() {
+        let uuid = generate_uuid();
+        let version = 4;
+        let new_version = 34;
+
+        let mut e = ElementId { uuid, version };
+
+        assert_eq!(e.uuid(), uuid);
+        assert_eq!(e.version(), version);
+
+        e.update(new_version);
+        assert_eq!(e.version(), new_version);
+
+        assert_eq!(
+            e.to_fidl(),
+            fidl_fuchsia_router_config::Id { uuid: uuid.to_ne_bytes(), version: new_version },
+        );
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_new_device_state() {

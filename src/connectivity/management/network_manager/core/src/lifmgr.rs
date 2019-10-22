@@ -173,10 +173,7 @@ impl LIF {
             }
         };
         fidl_fuchsia_router_config::Lif {
-            element: Some(fidl_fuchsia_router_config::Id {
-                uuid: self.id.uuid.to_ne_bytes(),
-                version: self.id.version,
-            }),
+            element: Some(self.id.to_fidl()),
             type_: Some(lt),
             name: Some(self.name.clone()),
             port_ids: Some(ps),
