@@ -4,6 +4,8 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
   name = "regulatory_region"
@@ -18,7 +20,32 @@ rustc_binary("bin") {
   ]
 }
 
+rustc_library("lib") {
+  name = "regulatory_region_lib"
+  edition = "2018"
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust_crates:futures-test-preview",
+  ]
+  with_unit_tests = true
+}
+
 group("tests") {
+  testonly = true
+  deps = [
+    ":integration_tests",
+    ":unit_tests",
+  ]
+}
+
+group("unit_tests") {
+  testonly = true
+  deps = [
+    ":regulatory_region_tests",
+  ]
+}
+
+group("integration_tests") {
   testonly = true
   deps = [
     "tests:tests",
@@ -40,6 +67,18 @@ package("regulatory_region") {
     {
       path = rebase_path("meta/regulatory_region.cmx")
       dest = "regulatory_region.cmx"
+    },
+  ]
+}
+
+unittest_package("regulatory_region_tests") {
+  deps = [
+    ":lib_test",
+  ]
+
+  tests = [
+    {
+      name = "regulatory_region_lib_lib_test"
     },
   ]
 }
