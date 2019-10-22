@@ -135,9 +135,9 @@ void SyscallDecoder::DoDecode() {
     const zxdb::Frame* caller = stack[i];
     caller_locations_.push_back(caller->GetLocation());
   }
-  static std::vector<debug_ipc::RegisterCategory> types = {debug_ipc::RegisterCategory::kGeneral};
-  const std::vector<debug_ipc::Register>& general_registers =
-      thread_->GetStack()[0]->GetGeneralRegisters();
+  const std::vector<debug_ipc::Register>* general_registers =
+      thread_->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+  FXL_DCHECK(general_registers);  // General registers should always be available synchronously.
 
   // The order of parameters in the System V AMD64 ABI we use, according to
   // Wikipedia:
@@ -157,11 +157,11 @@ void SyscallDecoder::DoDecode() {
   const std::vector<debug_ipc::RegisterID>* abi;
   if (arch_ == debug_ipc::Arch::kX64) {
     abi = &amd64_abi;
-    entry_sp_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kX64_rsp);
+    entry_sp_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kX64_rsp);
   } else if (arch_ == debug_ipc::Arch::kArm64) {
     abi = &aarch64_abi;
-    entry_sp_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_sp);
-    return_address_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_lr);
+    entry_sp_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kARMv8_sp);
+    return_address_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kARMv8_lr);
   } else {
     Error(DecoderError::Type::kUnknownArchitecture) << "Unknown architecture";
     use_->SyscallDecodingError(error_, this);
@@ -172,7 +172,7 @@ void SyscallDecoder::DoDecode() {
   decoded_arguments_.reserve(argument_count);
   size_t register_count = std::min(argument_count, abi->size());
   for (size_t i = 0; i < register_count; i++) {
-    decoded_arguments_.emplace_back(GetRegisterValue(general_registers, (*abi)[i]));
+    decoded_arguments_.emplace_back(GetRegisterValue(*general_registers, (*abi)[i]));
   }
 
   LoadStack();
@@ -257,13 +257,14 @@ void SyscallDecoder::StepToReturnAddress() {
 }
 
 void SyscallDecoder::LoadSyscallReturnValue() {
-  const std::vector<debug_ipc::Register>& general_registers =
-      thread_->GetStack()[0]->GetGeneralRegisters();
+  const std::vector<debug_ipc::Register>* general_registers =
+      thread_->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+  FXL_DCHECK(general_registers);  // General registers should always be available synchronously.
 
   debug_ipc::RegisterID result_register = (arch_ == debug_ipc::Arch::kX64)
                                               ? debug_ipc::RegisterID::kX64_rax
                                               : debug_ipc::RegisterID::kARMv8_x0;
-  syscall_return_value_ = GetRegisterValue(general_registers, result_register);
+  syscall_return_value_ = GetRegisterValue(*general_registers, result_register);
 
   LoadOutputs();
 }

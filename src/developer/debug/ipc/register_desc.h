@@ -444,12 +444,13 @@ enum class RegisterID : uint32_t {
 // Categories --------------------------------------------------------------------------------------
 
 enum class RegisterCategory : uint32_t {
+  kNone = 0,
   kGeneral,
   kFloatingPoint,
   kVector,
   kDebug,
 
-  kNone,
+  kLast,  // Not an element, for marking the max size.
 };
 
 const char* RegisterCategoryToString(RegisterCategory);

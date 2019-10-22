@@ -7,6 +7,8 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
+#include "src/developer/debug/zxdb/client/remote_api.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
@@ -23,10 +25,9 @@ FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame, L
       thread_(thread),
       sp_(stack_frame.sp),
       cfa_(stack_frame.cfa),
-      location_(std::move(location)) {
-  registers_.reserve(stack_frame.regs.size());
-  for (const auto& r : stack_frame.regs)
-    registers_.emplace_back(r);
+      location_(std::move(location)),
+      weak_factory_(this) {
+  registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kGeneral)] = stack_frame.regs;
 }
 
 FrameImpl::~FrameImpl() {
@@ -47,8 +48,54 @@ const Location& FrameImpl::GetLocation() const {
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
-const std::vector<debug_ipc::Register>& FrameImpl::GetGeneralRegisters() const {
-  return registers_;
+const std::vector<debug_ipc::Register>* FrameImpl::GetRegisterCategorySync(
+    debug_ipc::RegisterCategory category) const {
+  FXL_DCHECK(category <= debug_ipc::RegisterCategory::kLast);
+
+  size_t category_index = static_cast<size_t>(category);
+  FXL_DCHECK(category_index < static_cast<size_t>(debug_ipc::RegisterCategory::kLast));
+
+  if (registers_[category_index])
+    return &*registers_[category_index];
+  return nullptr;
+}
+
+void FrameImpl::GetRegisterCategoryAsync(
+    debug_ipc::RegisterCategory category,
+    fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) {
+  FXL_DCHECK(category < debug_ipc::RegisterCategory::kLast &&
+             category != debug_ipc::RegisterCategory::kNone);
+
+  size_t category_index = static_cast<size_t>(category);
+  FXL_DCHECK(category_index < static_cast<size_t>(debug_ipc::RegisterCategory::kLast));
+
+  if (registers_[category_index]) {
+    // Registers known already, asynchronously return the result.
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb), weak_frame = weak_factory_.GetWeakPtr(), category_index]() {
+          if (weak_frame)
+            cb(Err(), *weak_frame->registers_[category_index]);
+          else
+            cb(Err("Frame destroyed before registers could be retrieved."), {});
+        });
+    return;
+  }
+
+  debug_ipc::ReadRegistersRequest request;
+  request.process_koid = thread_->GetProcess()->GetKoid();
+  request.thread_koid = thread_->GetKoid();
+  request.categories.push_back(category);
+
+  session()->remote_api()->ReadRegisters(
+      request, [weak_frame = weak_factory_.GetWeakPtr(), category, cb = std::move(cb)](
+                   const Err& err, debug_ipc::ReadRegistersReply reply) mutable {
+        if (!weak_frame)
+          return cb(Err("Frame destroyed before registers could be retrieved."), {});
+
+        weak_frame->registers_[static_cast<size_t>(category)] = reply.registers;
+        cb(Err(), std::move(reply.registers));
+      });
+  return;
 }
 
 std::optional<uint64_t> FrameImpl::GetBasePointer() const {

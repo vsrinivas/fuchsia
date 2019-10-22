@@ -36,8 +36,6 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   void StepInstruction() override;
   const Stack& GetStack() const override;
   Stack& GetStack() override;
-  void ReadRegisters(std::vector<debug_ipc::RegisterCategory> cats_to_get,
-                     fit::callback<void(const Err&, std::vector<debug_ipc::Register>)>) override;
 
   // Updates the thread metadata with new state from the agent. Does not issue
   // any notifications. When an exception is hit for example, everything needs

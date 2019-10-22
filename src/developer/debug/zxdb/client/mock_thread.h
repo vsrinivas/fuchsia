@@ -17,8 +17,6 @@ class MockThread : public Thread, public Stack::Delegate {
   explicit MockThread(Process* process)
       : Thread(process->session()), process_(process), stack_(this) {}
 
-  std::vector<debug_ipc::Register>& register_contents() { return register_contents_; }
-
   // Thread implementation:
   Process* GetProcess() const override { return process_; }
   uint64_t GetKoid() const override { return 1234; }
@@ -41,13 +39,6 @@ class MockThread : public Thread, public Stack::Delegate {
   void StepInstruction() override {}
   const Stack& GetStack() const override { return stack_; }
   Stack& GetStack() override { return stack_; }
-  void ReadRegisters(
-      std::vector<debug_ipc::RegisterCategory> cats_to_get,
-      fit::callback<void(const Err&, std::vector<debug_ipc::Register>)> cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE,
-        [registers = register_contents_, cb = std::move(cb)]() mutable { cb(Err(), registers); });
-  }
 
  private:
   // Stack::Delegate implementation.
@@ -67,8 +58,6 @@ class MockThread : public Thread, public Stack::Delegate {
   Process* process_;
 
   Stack stack_;
-
-  std::vector<debug_ipc::Register> register_contents_;
 };
 
 }  // namespace zxdb

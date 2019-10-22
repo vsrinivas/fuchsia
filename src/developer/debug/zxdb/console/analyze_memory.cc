@@ -119,7 +119,11 @@ void MemoryAnalysis::SetStack(const Stack& stack) {
     // immediately above it.
     if (i + 1 < stack.size() && stack[i + 1]->IsInline())
       continue;
-    AddRegisters(i, stack[i]->GetGeneralRegisters());
+
+    const std::vector<debug_ipc::Register>* regs =
+        stack[i]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+    FXL_DCHECK(regs);  // Always expect general registers to be available.
+    AddRegisters(i, *regs);
 
     // TODO(brettw) make this work when the frame base is asynchronous.
     if (auto bp = stack[i]->GetBasePointer())

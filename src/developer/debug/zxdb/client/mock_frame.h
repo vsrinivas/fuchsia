@@ -51,7 +51,11 @@ class MockFrame : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  const std::vector<debug_ipc::Register>& GetGeneralRegisters() const override;
+  const std::vector<debug_ipc::Register>* GetRegisterCategorySync(
+      debug_ipc::RegisterCategory category) const override;
+  void GetRegisterCategoryAsync(
+      debug_ipc::RegisterCategory category,
+      fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -65,7 +69,7 @@ class MockFrame : public Frame {
 
   uint64_t sp_;
   uint64_t cfa_;
-  std::vector<debug_ipc::Register> registers_;
+  std::vector<debug_ipc::Register> general_registers_;
   uint64_t frame_base_;
   const Frame* physical_frame_;  // Null if non-inlined.
   Location location_;

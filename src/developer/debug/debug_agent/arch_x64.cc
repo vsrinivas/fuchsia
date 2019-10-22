@@ -234,7 +234,8 @@ zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,
     case debug_ipc::RegisterCategory::kDebug:
       return ReadDebugRegs(thread, out);
     case debug_ipc::RegisterCategory::kNone:
-      FXL_LOG(ERROR) << "Asking to get none category";
+    case debug_ipc::RegisterCategory::kLast:
+      FXL_LOG(ERROR) << "Asking to get none/last category";
       return ZX_ERR_INVALID_ARGS;
   }
 }
@@ -261,6 +262,7 @@ zx_status_t ArchProvider::WriteRegisters(const debug_ipc::RegisterCategory& cate
     case debug_ipc::RegisterCategory::kDebug:
       return ZX_ERR_NOT_SUPPORTED;
     case debug_ipc::RegisterCategory::kNone:
+    case debug_ipc::RegisterCategory::kLast:
       break;
   }
   FXL_NOTREACHED();

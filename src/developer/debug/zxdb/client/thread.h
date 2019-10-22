@@ -106,14 +106,6 @@ class Thread : public ClientObject {
   virtual const Stack& GetStack() const = 0;
   virtual Stack& GetStack() = 0;
 
-  // Obtains the state of the registers for a particular thread.
-  // The thread must be stopped in order to get the values.
-  //
-  // The returned structures are architecture independent, but the contents
-  // will be dependent on the architecture the target is running on.
-  virtual void ReadRegisters(std::vector<debug_ipc::RegisterCategory> cats_to_get,
-                             fit::callback<void(const Err&, std::vector<debug_ipc::Register>)>) = 0;
-
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();
 

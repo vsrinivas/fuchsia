@@ -1094,16 +1094,25 @@ constexpr int kRegsCategoriesSwitch = 1;
 constexpr int kRegsExtendedSwitch = 2;
 
 void OnRegsComplete(const Err& cmd_err, const std::vector<debug_ipc::Register>& registers,
-                    const FormatRegisterOptions& options, bool show_non_topmost_warning) {
+                    const FormatRegisterOptions& options, bool top_stack_frame) {
   Console* console = Console::get();
   if (cmd_err.has_error()) {
     console->Output(cmd_err);
     return;
   }
 
+  if (registers.empty()) {
+    if (top_stack_frame) {
+      console->Output("No matching registers.");
+    } else {
+      console->Output("No matching registers saved with this non-topmost stack frame.");
+    }
+    return;
+  }
+
   // Always output warning first if needed. If the filtering fails it could be because the register
   // wasn't saved.
-  if (show_non_topmost_warning) {
+  if (!top_stack_frame) {
     OutputBuffer warning_out;
     warning_out.Append(Syntax::kWarning, GetExclamation());
     warning_out.Append(" Stack frame is not topmost. Only saved registers will be available.\n");
@@ -1112,6 +1121,18 @@ void OnRegsComplete(const Err& cmd_err, const std::vector<debug_ipc::Register>& 
 
   console->Output(FormatRegisters(options, FilterRegisters(options, registers)));
 }
+
+// When we request more than one category of registers, this collects all of them and keeps track
+// of how many callbacks are remaining.
+struct RegisterCollector {
+  Err err;  // Most recent error from all callbacks, if any.
+  std::vector<debug_ipc::Register> registers;
+  int remaining_callbacks = 0;
+
+  // Parameters to OnRegsComplete().
+  FormatRegisterOptions options;
+  bool top_stack_frame;
+};
 
 Err DoRegs(ConsoleContext* context, const Command& cmd) {
   Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "regs");
@@ -1161,18 +1182,38 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
   options.extended = cmd.HasSwitch(kRegsExtendedSwitch);
   options.categories = categories;  // Make a copy, original used below.
 
-  if (top_stack_frame) {
-    // Always request the current registers even if we're only printing the general ones (which will
-    // be cached on the top stack frame). The thread state could have changed out from under us.
-    cmd.thread()->ReadRegisters(
-        categories,
-        [options = std::move(options)](const Err& err, std::vector<debug_ipc::Register> registers) {
-          OnRegsComplete(err, registers, std::move(options), false);
-        });
+  if (categories.size() == 1 && categories[0] == RegisterCategory::kGeneral) {
+    // Any available general registers should be available synchronously.
+    auto* regs = cmd.frame()->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+    FXL_DCHECK(regs);
+    OnRegsComplete(Err(), *regs, options, top_stack_frame);
   } else {
-    // Non-topmost, read the available registers directly off the stack frame.
-    OnRegsComplete(Err(), cmd.frame()->GetGeneralRegisters(), options, true);
+    auto collector = std::make_shared<RegisterCollector>();
+    collector->remaining_callbacks = static_cast<int>(categories.size());
+    collector->options = std::move(options);
+    collector->top_stack_frame = top_stack_frame;
+
+    for (auto category : categories) {
+      cmd.frame()->GetRegisterCategoryAsync(
+          category, [collector](const Err& err, const std::vector<debug_ipc::Register>& new_regs) {
+            // Save the new registers.
+            collector->registers.insert(collector->registers.end(), new_regs.begin(),
+                                        new_regs.end());
+
+            // Save the error. Just keep the most recent error if there are multiple.
+            if (err.has_error())
+              collector->err = err;
+
+            FXL_DCHECK(collector->remaining_callbacks > 0);
+            collector->remaining_callbacks--;
+            if (collector->remaining_callbacks == 0) {
+              OnRegsComplete(collector->err, collector->registers, collector->options,
+                             collector->top_stack_frame);
+            }
+          });
+    }
   }
+
   return Err();
 }
 

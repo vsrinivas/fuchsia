@@ -39,8 +39,14 @@ class InlineFrame final : public Frame {
   const Frame* GetPhysicalFrame() const override { return physical_frame_; }
   const Location& GetLocation() const override { return location_; }
   uint64_t GetAddress() const override { return location_.address(); }
-  const std::vector<debug_ipc::Register>& GetGeneralRegisters() const override {
-    return physical_frame_->GetGeneralRegisters();
+  const std::vector<debug_ipc::Register>* GetRegisterCategorySync(
+      debug_ipc::RegisterCategory category) const override {
+    return physical_frame_->GetRegisterCategorySync(category);
+  }
+  void GetRegisterCategoryAsync(
+      debug_ipc::RegisterCategory category,
+      fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override {
+    return physical_frame_->GetRegisterCategoryAsync(category, std::move(cb));
   }
   std::optional<uint64_t> GetBasePointer() const override {
     return physical_frame_->GetBasePointer();

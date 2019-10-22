@@ -52,18 +52,30 @@ class Frame : public ClientObject {
   // GetLocation().address() since it doesn't need to be symbolized.
   virtual uint64_t GetAddress() const = 0;
 
-  // Returns the general registers that were saved with this stack frame. The
-  // order is not guaranteed. The top stack frame should contain all general
-  // registers which should be the current state of the CPU.
+  // Retrieves the registers of the given category that were saved with this stack frame. Only
+  // the general registers are always available synchronously and on every stack frame.
   //
-  // Lower stack frames should at least contain the IP and probably SP, and if
-  // any registers were found saved on the stack they will be here too.
-  // Non-general registers are not saved per-frame and must be requested from
-  // the thread separately.
+  // Non-general registers can be retrieved for the top stack frame by querying asynchronously. Once
+  // queried, they will be available synchronously from this function. If unfetched or the top stack
+  // frame is non-topmost, this will return nullptr.
   //
-  // Inline frames will report the registers from the physical frame they're
-  // associated with.
-  virtual const std::vector<debug_ipc::Register>& GetGeneralRegisters() const = 0;
+  // The general registers for non-topmost stack frames will be reconstructed by the unwinder.
+  // Normally only a subset of them are avilable in that case (IP and SP, and some
+  // architecture-dependant ones). The top stack frame will have all of them.
+  //
+  // Inline frames will report the registers from the physical frame they're associated with.
+  virtual const std::vector<debug_ipc::Register>* GetRegisterCategorySync(
+      debug_ipc::RegisterCategory category) const = 0;
+
+  // Asynchronous version of GetRegisterCategorySync(). For topmost stack frames, things like vector
+  // and floating-point registers can be queried from the agent with this function. The results will
+  // be cached so will be available synchronously in the future via GetRegisterCategorySync().
+  //
+  // The callback will always be issued. If the frame is destroyed before the registers are
+  // retrieved, the error will be set and it will be called with an empty vector.
+  virtual void GetRegisterCategoryAsync(
+      debug_ipc::RegisterCategory category,
+      fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) = 0;
 
   // The frame base pointer.
   //

@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -32,7 +33,11 @@ class FrameImpl final : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  const std::vector<debug_ipc::Register>& GetGeneralRegisters() const override;
+  const std::vector<debug_ipc::Register>* GetRegisterCategorySync(
+      debug_ipc::RegisterCategory category) const override;
+  void GetRegisterCategoryAsync(
+      debug_ipc::RegisterCategory category,
+      fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -55,7 +60,10 @@ class FrameImpl final : public Frame {
 
   uint64_t sp_;
   uint64_t cfa_;
-  std::vector<debug_ipc::Register> registers_;
+
+  // Currently cached registers, indexed by register category.
+  std::optional<std::vector<debug_ipc::Register>>
+      registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kLast)];
 
   mutable Location location_;                                          // Lazily symbolized.
   mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.
@@ -71,6 +79,8 @@ class FrameImpl final : public Frame {
   // When an async base pointer request is pending, this maintains all
   // pending callbacks.
   std::vector<fit::callback<void(uint64_t)>> base_pointer_requests_;
+
+  fxl::WeakPtrFactory<FrameImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameImpl);
 };

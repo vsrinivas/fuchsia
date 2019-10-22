@@ -20,10 +20,29 @@ namespace zxdb {
 
 namespace {
 
+using debug_ipc::Register;
+using debug_ipc::RegisterCategory;
+using debug_ipc::RegisterID;
+
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
 Err RegisterUnavailableErr(debug_ipc::RegisterID id) {
   return Err(fxl::StringPrintf("Register %s unavailable.", debug_ipc::RegisterIDToString(id)));
+}
+
+std::optional<uint128_t> FindRegister(const std::vector<Register>& regs, RegisterID id) {
+  for (const auto& r : regs) {
+    // TODO(brettw) handle non-canonical registers which are a subset of data from one of the
+    // canonical ones in the |regs| vector.
+    if (r.id == id) {
+      // Currently we expect all general registers to be <= 128 bits.
+      if (r.data.size() > 0 && r.data.size() <= sizeof(uint128_t))
+        return r.GetValue();
+      return std::nullopt;
+    }
+  }
+
+  return std::nullopt;
 }
 
 }  // namespace
@@ -38,66 +57,48 @@ void FrameSymbolDataProvider::Disown() {
   frame_ = nullptr;
 }
 
-bool FrameSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
-                                          std::optional<uint128_t>* value) {
-  FXL_DCHECK(id != debug_ipc::RegisterID::kUnknown);
+bool FrameSymbolDataProvider::GetRegister(RegisterID id, std::optional<uint128_t>* value) {
+  FXL_DCHECK(id != RegisterID::kUnknown);
 
   *value = std::nullopt;
   if (!frame_)
     return true;  // Synchronously know we don't have the value.
 
-  if (!debug_ipc::IsGeneralRegister(id))
-    return false;  // Don't have non-general register synchronously.
+  RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
+  FXL_DCHECK(category != RegisterCategory::kNone);
 
-  for (const auto& r : frame_->GetGeneralRegisters()) {
-    if (r.id == id) {
-      // Currently we expect all general registers to be <= 128 bits.
-      if (r.data.size() > 0 && r.data.size() <= sizeof(uint128_t))
-        *value = r.GetValue();
-      return true;
-    }
+  const std::vector<Register>* regs = frame_->GetRegisterCategorySync(category);
+  if (regs) {
+    // Have this register synchronously (or know we can't have it).
+    *value = FindRegister(*regs, id);
+    return true;  // Result known synchronously.
   }
 
-  // Getting here means a general register we don't have was requsted and this
-  // can never be provided. Return "synchronously complete" (true) and leave
-  // *value as nullopt to indicate this state.
-  return true;
+  return false;
 }
 
-void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
-                                               GetRegisterCallback callback) {
+void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallback cb) {
   if (!frame_) {
     // Frame deleted out from under us.
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [id, cb = std::move(callback)]() mutable { cb(RegisterUnavailableErr(id), 0); });
+        FROM_HERE, [id, cb = std::move(cb)]() mutable { cb(RegisterUnavailableErr(id), 0); });
     return;
   }
 
-  // General registers are stored on the frame and are synchronously available.
-  // Return them (or error if not available) if somebody requests them
-  // asynchronously.
-  if (debug_ipc::IsGeneralRegister(id)) {
-    std::optional<uint128_t> value;
-    GetRegister(id, &value);
+  RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
+  FXL_DCHECK(category != RegisterCategory::kNone);
 
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                [id, value, cb = std::move(callback)]() mutable {
-                                                  if (value)
-                                                    cb(Err(), *value);
-                                                  else
-                                                    cb(RegisterUnavailableErr(id), 0);
-                                                });
-    return;
-  }
+  frame_->GetRegisterCategoryAsync(
+      category,
+      [id, cb = std::move(cb)](const Err& err, const std::vector<Register>& regs) mutable {
+        if (err.has_error())
+          return cb(err, 0);
 
-  // if (IsInTopPhysicalFrame()) {
-  //  TODO Support for dynamically fetching other registers like floating point
-  //  and vector registers here.
-  //}
-
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(callback)]() mutable {
-    cb(Err(fxl::StringPrintf("Register %s unavailable.", debug_ipc::RegisterIDToString(id))), 0);
-  });
+        if (std::optional<uint128_t> value = FindRegister(regs, id))
+          cb(Err(), *value);
+        else
+          cb(RegisterUnavailableErr(id), 0);
+      });
 }
 
 std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {

@@ -17,7 +17,7 @@ MockFrame::MockFrame(Session* session, Thread* thread, const Location& location,
       thread_(thread),
       sp_(sp),
       cfa_(cfa),
-      registers_(std::move(regs)),
+      general_registers_(std::move(regs)),
       frame_base_(frame_base),
       physical_frame_(physical_frame),
       location_(location),
@@ -47,15 +47,37 @@ const Frame* MockFrame::GetPhysicalFrame() const {
 
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return location_.address(); }
-const std::vector<debug_ipc::Register>& MockFrame::GetGeneralRegisters() const {
-  return registers_;
+
+const std::vector<debug_ipc::Register>* MockFrame::GetRegisterCategorySync(
+    debug_ipc::RegisterCategory category) const {
+  if (category == debug_ipc::RegisterCategory::kGeneral)
+    return &general_registers_;
+  return nullptr;
 }
+
+void MockFrame::GetRegisterCategoryAsync(
+    debug_ipc::RegisterCategory category,
+    fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) {
+  Err err;
+  std::vector<debug_ipc::Register> regs;
+  if (category == debug_ipc::RegisterCategory::kGeneral)
+    regs = general_registers_;
+  else
+    err = Err("Register category unavailable from mock.");
+
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [err, regs, cb = std::move(cb)]() mutable { cb(err, regs); });
+}
+
 std::optional<uint64_t> MockFrame::GetBasePointer() const { return frame_base_; }
+
 void MockFrame::GetBasePointerAsync(fit::callback<void(uint64_t)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE, [bp = frame_base_, cb = std::move(cb)]() mutable { cb(bp); });
 }
+
 uint64_t MockFrame::GetStackPointer() const { return sp_; }
+
 uint64_t MockFrame::GetCanonicalFrameAddress() const { return cfa_; }
 
 fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {

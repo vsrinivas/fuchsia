@@ -565,6 +565,7 @@ const char* RegisterCategoryToString(RegisterCategory cat) {
     case RegisterCategory::kDebug:
       return "Debug";
     case RegisterCategory::kNone:
+    case RegisterCategory::kLast:
       break;
   }
   FXL_NOTREACHED();
