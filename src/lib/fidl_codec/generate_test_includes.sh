@@ -24,17 +24,33 @@ class ${2} {
     map_ = {
 EOF
 
-shift 2
-
-for i in "$@"; do
-  if [ ! -f "${i}" ]; then
-     echo "file ${i} not found"
-     exit 1
-  fi;
-  cat >> "${FILENAME}" <<EOF
-    {"${i}", R"FIDL($(cat "${i}"))FIDL"},
+add_entry() {
+    if [ ! -f "$1" ]; then
+       echo "file $1 not found"
+       exit 1
+    fi;
+    cat >> "${FILENAME}" <<EOF
+      {"$1", R"FIDL($(cat "$1"))FIDL"},
 EOF
-done
+}
+
+if [ ${3} = "-content" ]; then
+  if [ ! -f "${4}" ]; then
+   echo "file ${4} not found"
+   exit 1
+  fi;
+
+  while IFS= read -r line
+  do
+    add_entry $line
+  done < "${4}";
+else
+  shift 2
+
+  for i in "$@"; do
+    add_entry ${i}
+  done
+fi;
 
 cat >> "${FILENAME}" << EOF
     };
