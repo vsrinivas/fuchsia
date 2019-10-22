@@ -7,7 +7,7 @@ if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/env.sh
 fi
 
-mfv=$FUCHSIA_BUILD_DIR/tools/make-fuchsia-vol
+mfv=$FUCHSIA_BUILD_DIR/host-tools/make-fuchsia-vol
 
 if [[ ! -x $mfv ]]; then
 	echo "You need to build the 'make-fuchsia-vol' package" >&2
