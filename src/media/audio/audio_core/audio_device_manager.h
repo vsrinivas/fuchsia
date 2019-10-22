@@ -21,8 +21,8 @@
 #include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/device_registry.h"
-#include "src/media/audio/audio_core/stream_registry.h"
 #include "src/media/audio/audio_core/routing.h"
+#include "src/media/audio/audio_core/stream_registry.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 
