@@ -36,6 +36,7 @@ var (
 	quiet         = fs.Bool("q", false, "Don't print out information about requests")
 	encryptionKey = fs.String("e", "", "Path to a symmetric blob encryption key *UNSAFE*")
 	publishList   = fs.String("p", "", "path to a package list file to be auto-published")
+	portFile      = fs.String("f", "", "path to a file to write the HTTP listen port")
 	config        = &repo.Config{}
 	initOnce      sync.Once
 )
@@ -203,6 +204,21 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 	if addrChan != nil {
 		addrChan <- addr
 	}
+
+	if *portFile != "" {
+		_, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return fmt.Errorf("error splitting addr into host and port %s: %s", addr, err)
+		}
+		portFileTmp := fmt.Sprintf("%s.tmp", *portFile)
+		if err := ioutil.WriteFile(portFileTmp, []byte(port), 0644); err != nil {
+			return fmt.Errorf("error creating tmp port file %s: %s", portFileTmp, err)
+		}
+		if err := os.Rename(portFileTmp, *portFile); err != nil {
+			return fmt.Errorf("error renaming port file from %s to %s:  %s", portFileTmp, *portFile, err)
+		}
+	}
+
 	if !*quiet {
 		fmt.Printf("%s [pm serve] serving %s at http://%s\n",
 			time.Now().Format("2006-01-02 15:04:05"), config.RepoDir, addr)

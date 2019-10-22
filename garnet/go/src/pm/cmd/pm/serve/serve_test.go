@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -58,6 +59,13 @@ func TestServer(t *testing.T) {
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	build.BuildTestPackage(cfg)
 
+	portFileDir, err := ioutil.TempDir("", "pm-serve-test-port-file-dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(portFileDir)
+	portFile := fmt.Sprintf("%s/%s", portFileDir, "port-file")
+
 	repoDir, err := ioutil.TempDir("", "pm-serve-test-repo")
 	if err != nil {
 		t.Fatal(err)
@@ -91,12 +99,12 @@ func TestServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	baseURLchan := make(chan string)
+	addrChan := make(chan string)
 	var w sync.WaitGroup
 	w.Add(1)
 	go func() {
 		defer w.Done()
-		err := Run(cfg, []string{"-l", "127.0.0.1:0", "-repo", repoDir, "-p", manifestListPath}, baseURLchan)
+		err := Run(cfg, []string{"-l", "127.0.0.1:0", "-repo", repoDir, "-p", manifestListPath, "-f", portFile}, addrChan)
 		if err != nil && err != http.ErrServerClosed {
 			t.Fatal(err)
 		}
@@ -105,7 +113,8 @@ func TestServer(t *testing.T) {
 		server.Close()
 		w.Wait()
 	}()
-	baseURL := fmt.Sprintf("http://%s", <-baseURLchan)
+	addr := <-addrChan
+	baseURL := fmt.Sprintf("http://%s", addr)
 
 	t.Run("serves static index", func(t *testing.T) {
 		res, err := http.Get(baseURL + "/")
@@ -282,6 +291,20 @@ func TestServer(t *testing.T) {
 
 		if !hasTarget(baseURL, "testpackage/1") {
 			t.Fatal("missing target package")
+		}
+	})
+
+	t.Run("writes port file", func(t *testing.T) {
+		_, want, err := net.SplitHostPort(addr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := ioutil.ReadFile(portFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want != string(got) {
+			t.Errorf("got %s, want %s", got, want)
 		}
 	})
 }
