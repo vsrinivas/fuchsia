@@ -97,6 +97,12 @@ SettingsSection _update(DeviceSettingsModel model, double scale) {
     scale: scale,
   );
 
+  final resetChannelButton = SettingsButton(
+    text: 'Reset stored channel',
+    onTap: () => model.selectChannel(''),
+    scale: scale,
+  );
+
   return SettingsSection(
       title: 'Update',
       scale: scale,
@@ -107,6 +113,7 @@ SettingsSection _update(DeviceSettingsModel model, double scale) {
           currentChannelText,
           targetChannelText,
           changeChannelButton,
+          resetChannelButton,
           factoryResetButton
         ],
       ),
