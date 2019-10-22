@@ -2,7 +2,7 @@
 
 This component implements the Advanced Audio Distribution Profile (A2DP) as
 specified by the Bluetooth SIG in the [official specification](https://www.bluetooth.org/docman/handlers/downloaddoc.ashx?doc_id=457083).  This means that you can use your Fuchsia device with
-audio support as an bluetooth speaker or (very not-portable) headphones.
+audio support as a bluetooth speaker or (very not-portable) headphones.
 
 This profile currently only supports the mandatory SBC audio decoder.
 
@@ -10,18 +10,18 @@ This profile currently only supports the mandatory SBC audio decoder.
 
 The `bt-a2dp-sink` component requires some services to be reachable when it is
 run to be useful.  For audio playback, a provider of the `fuchsia.media.playback.Player`
-service must be available. In current Fuchsia the the `mediaplayer` package located
-at `//src/media/playback/player:mediaplayer` is one provider.
+service must be available. In current Fuchsia the `mediaplayer` package located
+at `//src/media/playback/mediaplayer` is one provider.
 
 The Player must in turn be able to decode SBC audio and play it. Currently SBC decoding
 is provided internally if you are using the `mediaplayer` package.  For most players to
 play audio, the `fuchsia.media.Audio` and `fuchsia.media.AudioCore` services will be used.
 
-Without too many extra dependencies, adding the `media_audio` package group and `mediaplayer` package
+Without too many extra dependencies, adding the `audio` package group and `mediaplayer` package
 to the available packages will provide all the required services so adding the following to your
 Fuchsia set configuration should build them all and make them available:
 
-`--with //src/connectivity/bluetooth/profiles/bt-a2dp-sink --with //garnet/packages/prod:media_audio --with //garnet/packages/prod:mediaplayer`
+`--with //src/connectivity/bluetooth/profiles/bt-a2dp-sink --with //src/media/audio/bundles:audio --with //src/media/playback/mediaplayer`
 
 The profile makes an effort to determine if playing media will fail, and crash with a log message
 on startup.
