@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
 #include <lib/mtd/nand-interface.h>
 #include <zircon/types.h>
+
+#include <cstdint>
+#include <vector>
 
 namespace nand_rs {
 
@@ -31,8 +31,11 @@ class NandRedundantStorageInterface {
   //
   // |num_copies_written| returns the number of copies successfully written.
   //
+  // |skip_recovery_header| skips writing the recovery header.
+  //
   // Each copy of the buffer will be stored on one erase block of the NAND
-  // device with an included 12 byte recovery header.
+  // device with an included 12 byte recovery header. The header is not
+  // written if |skip_recovery_header| is true.
   //
   // Return Values:
   // --------------
@@ -45,16 +48,37 @@ class NandRedundantStorageInterface {
   //                    copies. This would be if there are absolutely no good
   //                    blocks on the NAND interface.
   virtual zx_status_t WriteBuffer(const std::vector<uint8_t>& buffer, uint32_t num_copies,
-                                  uint32_t* num_copies_written) = 0;
+                                  uint32_t* num_copies_written,
+                                  bool skip_recovery_header = false) = 0;
 
   // Attempts to read from a NAND interface previously written to with
   // WriteBuffer.
   //
-  // If this is not possible ZX_ERR_IO will be returned.
+  // |out_buffer| out pointer where the contents stored in the NAND interface
+  // sans 12-byte header is written.
   //
-  // On success, out_buffer will be written to with the contents stored in the
-  // NAND interface sans 12-byte header.
-  virtual zx_status_t ReadToBuffer(std::vector<uint8_t>* out_buffer) = 0;
+  // |skip_recovery_header| Reads the NAND interface assuming there is not a
+  // recovery header. If true then |file_size| must be set.
+  //
+  // |file_size| Total byte count of the contents. Required to read contents
+  // when a recovery header is not available.
+  //
+  // Return Values:
+  // --------------
+  //
+  // ZX_OK -- NAND interface was successfully read, and |out_buffer| has
+  //          the content sans 12-byte header written .
+  //
+  // ZX_INVALID_ARGS -- |skip_recovery_header| is true, but file_size was not
+  //                    set.
+  //
+  // ZX_ERR_IO -- It is not possible to write the contents into |out_buffer|.
+  //
+  // *WARNING* if |skip_recovery_header| is true no data integrity checks can
+  // be ran against the read data. Integrity checks should be performed by the
+  // consumer of this library.
+  virtual zx_status_t ReadToBuffer(std::vector<uint8_t>* out_buffer,
+                                   bool skip_recovery_header = false, size_t file_size = 0) = 0;
 };
 
 }  // namespace nand_rs

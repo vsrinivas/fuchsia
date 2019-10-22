@@ -16,11 +16,13 @@
 
 #include <fbl/unique_fd.h>
 
-constexpr const char kOptString[] = "i:n:o:h";
+constexpr const char kOptString[] = "i:n:o:s:xh";
 constexpr const option kLongOpts[] = {
     {"input", required_argument, nullptr, 'i'},
     {"output", required_argument, nullptr, 'o'},
     {"num-copies", required_argument, nullptr, 'n'},
+    {"file-size", required_argument, nullptr, 's'},
+    {"no-header", no_argument, nullptr, 'x'},
     {"help", no_argument, nullptr, 'h'},
     {nullptr, no_argument, nullptr, 0},
 };
@@ -35,6 +37,10 @@ Options:
     --num-copies, -n  <N>       the number of copies to be written to MTD
                                 (required if writing).
     --output, -o <out-path>     the output file. Overrides -n and -i.
+    --no-header, -x             Writes the input file without the header
+                                this file cannot be read back by this tool
+    --file-size, -s  <N>        Size of the file to be read from MTD
+                                (required if reading with -x set).
 
 Examples:
     Write three copies of foo.zip to /dev/mtd0
@@ -76,14 +82,14 @@ bool IsMtd(const char* path) {
   return true;
 }
 
-int ReadMtd(const char* output, const char* mtd) {
+int ReadMtd(const char* output, const char* mtd, bool skip_header, size_t file_size) {
   auto mtd_iface = nand_rs::NandRedundantStorage::Create(mtd::MtdInterface::Create(mtd));
   if (!mtd_iface) {
     fprintf(stderr, "Unable to open MTD interface %s: %s\n", mtd, strerror(errno));
     return 1;
   }
   std::vector<uint8_t> buffer;
-  if (mtd_iface->ReadToBuffer(&buffer) != ZX_OK) {
+  if (mtd_iface->ReadToBuffer(&buffer, skip_header, file_size) != ZX_OK) {
     return 1;
   }
   fbl::unique_fd output_fd(open(output, O_CREAT | O_TRUNC | O_RDWR, 0666));
@@ -105,7 +111,7 @@ int ReadMtd(const char* output, const char* mtd) {
   return 0;
 }
 
-int WriteMtd(const char* input, const char* mtd, uint32_t num_copies) {
+int WriteMtd(const char* input, const char* mtd, uint32_t num_copies, bool skip_header) {
   fbl::unique_fd input_fd(open(input, O_RDONLY));
   if (!input_fd) {
     fprintf(stderr, "Unable to open input file %s: %s\n", input, strerror(errno));
@@ -125,7 +131,8 @@ int WriteMtd(const char* input, const char* mtd, uint32_t num_copies) {
     return 1;
   }
   uint32_t num_copies_written;
-  zx_status_t status = mtd_iface->WriteBuffer(file_buffer, num_copies, &num_copies_written);
+  zx_status_t status =
+      mtd_iface->WriteBuffer(file_buffer, num_copies, &num_copies_written, skip_header);
   if (status == ZX_OK) {
     fprintf(stdout, "SUCCESS: Wrote %d copies of %s to %s\n", num_copies_written, input, mtd);
   }
@@ -136,6 +143,8 @@ int main(int argc, char** argv) {
   const char* input_file = nullptr;
   const char* output_file = nullptr;
   uint32_t num_copies = 0;
+  bool skip_header = false;
+  size_t file_size = 0;
   int opt;
   while ((opt = getopt_long(argc, argv, kOptString, kLongOpts, nullptr)) != -1) {
     switch (opt) {
@@ -159,6 +168,18 @@ int main(int argc, char** argv) {
       case 'o':
         output_file = optarg;
         continue;
+      case 'x':
+        skip_header = true;
+        continue;
+      case 's': {
+        auto optarg_end = optarg + strlen(optarg);
+        file_size = strtoul(optarg, &optarg_end, 10);
+        if (errno == EINVAL || file_size == 0) {
+          fprintf(stderr, "-s value is invalid\n");
+          return 1;
+        }
+        continue;
+      }
       case 'h':
       default:
         Usage(argv[0]);
@@ -184,11 +205,15 @@ int main(int argc, char** argv) {
     fprintf(stderr, "ERROR: neither -i nor -o can be used as an MTD.\n");
     return 1;
   }
+  if (skip_header && input_is_mtd && file_size == 0) {
+    fprintf(stderr, "ERROR: -s required to read from an MTD without a header.\n");
+    return 1;
+  }
   if (input_is_mtd) {
-    return ReadMtd(output_file, input_file);
+    return ReadMtd(output_file, input_file, skip_header, file_size);
   }
   if (output_is_mtd && num_copies > 0) {
-    return WriteMtd(input_file, output_file, num_copies);
+    return WriteMtd(input_file, output_file, num_copies, skip_header);
   }
   if (num_copies == 0) {
     fprintf(stderr, "ERROR: -n missing.\n");

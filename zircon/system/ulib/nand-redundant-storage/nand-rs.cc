@@ -3,18 +3,17 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/cksum.h>
+#include <lib/log/log.h>
+#include <lib/mtd/nand-interface.h>
+#include <lib/nand-redundant-storage/nand-redundant-storage.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <memory>
-
-#include <lib/cksum.h>
-#include <lib/log/log.h>
-#include <lib/mtd/nand-interface.h>
-#include <lib/nand-redundant-storage/nand-redundant-storage.h>
-#include <zircon/assert.h>
 
 namespace nand_rs {
 
@@ -43,13 +42,9 @@ std::unique_ptr<NandRsHeader> MakeNandRsHeader(const std::vector<uint8_t>& buf) 
   return header;
 }
 
-// Helper for ReadMtdToBuffer that attempts to read a file from a block.
-//
-// Returns the file size if a file could be read and verified, or a negative
-// number otherwise.
-int ReadToBufferHelper(const std::unique_ptr<mtd::NandInterface>& nand,
-                       std::vector<uint8_t>* block_buffer, uint32_t mtd_offset) {
-  // Reads in the whole block for simplification.
+// Reads the entire block into block_buffer starting at mtd_offset.
+int ReadWholeBlock(const std::unique_ptr<mtd::NandInterface>& nand,
+                   std::vector<uint8_t>* block_buffer, uint32_t mtd_offset) {
   for (uint32_t block_offset = 0; block_offset < nand->BlockSize();
        block_offset += nand->PageSize()) {
     uint32_t actual_bytes_read = 0;
@@ -60,6 +55,15 @@ int ReadToBufferHelper(const std::unique_ptr<mtd::NandInterface>& nand,
       return -1;
     }
   }
+  return 0;
+}
+
+// Helper for ReadMtdToBuffer that attempts to read a file from a block.
+//
+// Returns the file size if a file could be read and verified, or a negative
+// number otherwise.
+int ReadToBufferHelper(const std::unique_ptr<mtd::NandInterface>& nand,
+                       std::vector<uint8_t>* block_buffer, uint32_t mtd_offset) {
   NandRsHeader* header = reinterpret_cast<NandRsHeader*>(block_buffer->data());
   if (strncmp(header->magic, kNandRsMagic, kNandRsMagicSize) != 0) {
     return -1;
@@ -95,12 +99,15 @@ NandRedundantStorage::NandRedundantStorage(std::unique_ptr<mtd::NandInterface> i
     : iface_(std::move(iface)) {}
 
 zx_status_t NandRedundantStorage::WriteBuffer(const std::vector<uint8_t>& buffer,
-                                              uint32_t num_copies, uint32_t* num_copies_written) {
+                                              uint32_t num_copies, uint32_t* num_copies_written,
+                                              bool skip_recovery_header) {
   ZX_DEBUG_ASSERT(iface_);
   ZX_ASSERT(num_copies_written);
   ZX_ASSERT(num_copies != 0);
   ZX_ASSERT(!buffer.empty());
-  ZX_ASSERT_MSG(buffer.size() <= iface_->BlockSize() - kNandRsHeaderSize, "File size too large");
+  ZX_ASSERT_MSG(
+      buffer.size() <= iface_->BlockSize() - (skip_recovery_header ? 0 : kNandRsHeaderSize),
+      "File size too large");
   ZX_ASSERT_MSG(num_copies * iface_->BlockSize() <= iface_->Size(),
                 "Not enough space for %d copies", num_copies);
 
@@ -110,11 +117,16 @@ zx_status_t NandRedundantStorage::WriteBuffer(const std::vector<uint8_t>& buffer
   // crosses a page boundary, this will allow for padding of zeroes without
   // additional logic.
   std::vector<uint8_t> block_buffer(iface_->BlockSize(), 0);
-  auto header = MakeNandRsHeader(buffer);
-  memcpy(block_buffer.data(), header.get(), sizeof(*header.get()));
+
+  size_t offset = 0;
+  if (!skip_recovery_header) {
+    auto header = MakeNandRsHeader(buffer);
+    memcpy(block_buffer.data(), header.get(), sizeof(*header.get()));
+    offset = sizeof(*header.get());
+  }
 
   // Writes the file.
-  memcpy(block_buffer.data() + sizeof(*header.get()), buffer.data(), buffer.size());
+  memcpy(block_buffer.data() + offset, buffer.data(), buffer.size());
 
   for (uint32_t i = 0; i < num_copies; ++i) {
     uint32_t byte_offset = i * iface_->BlockSize();
@@ -164,9 +176,15 @@ zx_status_t NandRedundantStorage::WriteBuffer(const std::vector<uint8_t>& buffer
   return ZX_OK;
 }
 
-zx_status_t NandRedundantStorage::ReadToBuffer(std::vector<uint8_t>* out_buffer) {
+zx_status_t NandRedundantStorage::ReadToBuffer(std::vector<uint8_t>* out_buffer,
+                                               bool skip_recovery_header, size_t file_size) {
   ZX_DEBUG_ASSERT(iface_);
   ZX_ASSERT(out_buffer);
+
+  if (skip_recovery_header && file_size <= 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   std::vector<uint8_t> block_buffer(iface_->BlockSize(), 0);
   for (uint32_t offset = 0; offset < iface_->Size(); offset += iface_->BlockSize()) {
     bool is_bad_block;
@@ -179,12 +197,24 @@ zx_status_t NandRedundantStorage::ReadToBuffer(std::vector<uint8_t>* out_buffer)
       continue;
     }
 
-    int file_size = ReadToBufferHelper(iface_, &block_buffer, offset);
-    if (file_size < 0) {
+    int status = ReadWholeBlock(iface_, &block_buffer, offset);
+    if (status < 0) {
       continue;
     }
+
+    uint32_t copy_offset = 0;
+
+    if (!skip_recovery_header) {
+      copy_offset = kNandRsHeaderSize;
+      int read_size = ReadToBufferHelper(iface_, &block_buffer, offset);
+      if (read_size < 0) {
+        continue;
+      }
+      file_size = read_size;
+    }
+
     out_buffer->resize(file_size, 0);
-    memcpy(out_buffer->data(), block_buffer.data() + kNandRsHeaderSize, file_size);
+    memcpy(out_buffer->data(), block_buffer.data() + copy_offset, file_size);
     return ZX_OK;
   }
 

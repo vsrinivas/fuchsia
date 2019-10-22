@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include <lib/mtd/nand-interface.h>
+#include <lib/nand-redundant-storage/nand-redundant-storage-interface.h>
+
 #include <memory>
 
 #include <fbl/macros.h>
-#include <lib/mtd/nand-interface.h>
-#include <lib/nand-redundant-storage/nand-redundant-storage-interface.h>
 
 namespace nand_rs {
 
@@ -20,8 +21,9 @@ class NandRedundantStorage : public NandRedundantStorageInterface {
 
   // NandRedundantStorageInterface interface:
   zx_status_t WriteBuffer(const std::vector<uint8_t>& buffer, uint32_t num_copies,
-                          uint32_t* num_copies_written) override;
-  zx_status_t ReadToBuffer(std::vector<uint8_t>* out_buffer) override;
+                          uint32_t* num_copies_written, bool skip_recovery_header = false) override;
+  zx_status_t ReadToBuffer(std::vector<uint8_t>* out_buffer, bool skip_recovery_header = false,
+                           size_t file_size = 0) override;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NandRedundantStorage);
 

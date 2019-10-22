@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-#include <vector>
-
 #include <lib/mtd/mtd-interface.h>
 #include <lib/nand-redundant-storage/nand-redundant-storage.h>
+#include <stdint.h>
+
+#include <vector>
+
 #include <zxtest/zxtest.h>
 
 // This NAND interface test relies on an MTD device file located at /dev/mtd0/
@@ -85,13 +86,33 @@ TEST_F(MtdRsTest, ReadWriteTest) {
   ASSERT_OK(nand_->WriteBuffer(nonsense_buffer, 10, &num_copies_written_));
   ASSERT_EQ(10, num_copies_written_);
   ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
-  ASSERT_EQ(out_buffer_, nonsense_buffer);
+  ASSERT_BYTES_EQ(out_buffer_.data(), nonsense_buffer.data(), nonsense_buffer.size());
 
   std::vector<uint8_t> page_crossing_buffer(mtd_ptr_->PageSize() * 2 + 13, 0xF5);
   ASSERT_OK(nand_->WriteBuffer(page_crossing_buffer, 10, &num_copies_written_));
   ASSERT_EQ(10, num_copies_written_);
   ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
-  ASSERT_EQ(out_buffer_, page_crossing_buffer);
+  ASSERT_BYTES_EQ(out_buffer_.data(), page_crossing_buffer.data(), page_crossing_buffer.size());
+}
+
+TEST_F(MtdRsTest, WriteNoHeaderTest) {
+  std::vector<uint8_t> nonsense_buffer = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+  size_t buffer_size = nonsense_buffer.size();
+
+  ASSERT_OK(nand_->WriteBuffer(nonsense_buffer, 10, &num_copies_written_, true));
+  ASSERT_EQ(10, num_copies_written_);
+  ASSERT_OK(nand_->ReadToBuffer(&out_buffer_, true, buffer_size));
+
+  ASSERT_BYTES_EQ(out_buffer_.data(), nonsense_buffer.data(), nonsense_buffer.size());
+}
+
+TEST_F(MtdRsTest, WriteNoHeaderWithoutFileSizeTest) {
+  std::vector<uint8_t> nonsense_buffer = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+
+  ASSERT_OK(nand_->WriteBuffer(nonsense_buffer, 10, &num_copies_written_, true));
+  ASSERT_EQ(10, num_copies_written_);
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, nand_->ReadToBuffer(&out_buffer_, true));
 }
 
 TEST_F(MtdRsTest, ReadWriteTestWithErasedBlock) {
@@ -104,7 +125,7 @@ TEST_F(MtdRsTest, ReadWriteTestWithErasedBlock) {
   EraseBlockAtIndex(2);
   EraseBlockAtIndex(3);
   ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
-  ASSERT_EQ(out_buffer_, page_crossing_buffer);
+  ASSERT_BYTES_EQ(out_buffer_.data(), page_crossing_buffer.data(), page_crossing_buffer.size());
 }
 
 TEST_F(MtdRsTest, ReadWriteTestWithCorruptedBlockValidHeader) {
@@ -118,9 +139,9 @@ TEST_F(MtdRsTest, ReadWriteTestWithCorruptedBlockValidHeader) {
   EraseBlockAtIndex(3);
   uint32_t block_three_start = mtd_ptr_->BlockSize() * 2;
   std::vector<uint8_t> page_of_nonsense = MakeFakePage(0x40, 0x40404040, 0x40404040);
-  ASSERT_EQ(ZX_OK, mtd_ptr_->WritePage(block_three_start, page_of_nonsense.data(), nullptr));
+  ASSERT_OK(mtd_ptr_->WritePage(block_three_start, page_of_nonsense.data(), nullptr));
   ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
-  ASSERT_EQ(out_buffer_, page_crossing_buffer);
+  ASSERT_BYTES_EQ(out_buffer_.data(), page_crossing_buffer.data(), page_crossing_buffer.size());
 }
 
 TEST_F(MtdRsTest, ReadWiteTestWithCorruptedBlockWrongCrc) {
@@ -135,9 +156,9 @@ TEST_F(MtdRsTest, ReadWiteTestWithCorruptedBlockWrongCrc) {
   // Nonsense block, but with valid looking CRC and file size.
   uint32_t block_three_start = mtd_ptr_->BlockSize() * 2;
   std::vector<uint8_t> page_of_nonsense = MakeFakePage(0x40, 1, 34);
-  ASSERT_EQ(ZX_OK, mtd_ptr_->WritePage(block_three_start, page_of_nonsense.data(), nullptr));
+  ASSERT_OK(mtd_ptr_->WritePage(block_three_start, page_of_nonsense.data(), nullptr));
   ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
-  ASSERT_EQ(out_buffer_, page_crossing_buffer);
+  ASSERT_BYTES_EQ(out_buffer_.data(), page_crossing_buffer.data(), page_crossing_buffer.size());
 }
 
 TEST_F(MtdRsTest, ReadWriteTestWithCorruptedBlockWrongHeader) {
@@ -153,9 +174,9 @@ TEST_F(MtdRsTest, ReadWriteTestWithCorruptedBlockWrongHeader) {
   uint32_t block_three_start = mtd_ptr_->BlockSize() * 2;
   std::vector<uint8_t> page_of_nonsense = MakeFakePage(0x40, 1, 34);
   page_of_nonsense[0] = 'z';
-  ASSERT_EQ(ZX_OK, mtd_ptr_->WritePage(block_three_start, page_of_nonsense.data(), nullptr));
+  ASSERT_OK(mtd_ptr_->WritePage(block_three_start, page_of_nonsense.data(), nullptr));
   ASSERT_OK(nand_->ReadToBuffer(&out_buffer_));
-  ASSERT_EQ(out_buffer_, page_crossing_buffer);
+  ASSERT_BYTES_EQ(out_buffer_.data(), page_crossing_buffer.data(), page_crossing_buffer.size());
 }
 
 TEST_F(MtdRsTest, ReadEmptyMtd) { ASSERT_EQ(ZX_ERR_IO, nand_->ReadToBuffer(&out_buffer_)); }
