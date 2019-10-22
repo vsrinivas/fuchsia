@@ -23,6 +23,7 @@
 #define KDRV_MSM_POWER 1347244877          // 'MSMP'
 #define KDRV_DW8250_UART 0x44573855        // 'DW8U'
 #define KDRV_AS370_POWER 0x50303733        // '370P'
+#define KDRV_AMLOGIC_RNG 0x484C4D52        // 'AMLR'
 
 // kernel driver struct that can be used for simple drivers
 // used by KDRV_PL011_UART, KDRV_AMLOGIC_UART and KDRV_NXP_IMX_UART
@@ -96,5 +97,12 @@ typedef struct {
   uint64_t hiu_phys;
   uint64_t hdmitx_phys;
 } dcfg_amlogic_hdcp_driver_t;
+
+// for KDRV_AMLOGIC_RNG
+typedef struct {
+  uint64_t rng_data_phys;
+  uint64_t rng_status_phys;
+  uint64_t rng_refresh_interval_usec;
+} dcfg_amlogic_rng_driver_t;
 
 #endif  // SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_

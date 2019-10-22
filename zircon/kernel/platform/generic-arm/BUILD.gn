@@ -11,6 +11,7 @@ source_set("generic-arm") {
   deps = [
     "$zx/kernel/dev/hdcp/amlogic_s912",
     "$zx/kernel/dev/hw_rng",
+    "$zx/kernel/dev/hw_rng/amlogic_rng",
     "$zx/kernel/dev/interrupt/arm_gic/common",
     "$zx/kernel/dev/interrupt/arm_gic/v2",
     "$zx/kernel/dev/interrupt/arm_gic/v3",

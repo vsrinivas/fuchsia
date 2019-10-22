@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("hw_rng") {
-  kernel = true
+source_set("amlogic_rng") {
   sources = [
-    "debug.cc",
-    "hw_rng.cc",
+    "amlogic-rng.cc",
   ]
   deps = [
-    "$zx/kernel/lib/console",
+    "$zx/kernel/dev/hw_rng",
+    "$zx/kernel/dev/pdev",
+    "$zx/system/ulib/explicit-memory",
   ]
 }

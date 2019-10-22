@@ -13,6 +13,7 @@
 #include <arch/x86/x86intrin.h>
 #include <dev/hw_rng.h>
 #include <fbl/algorithm.h>
+#include <lk/init.h>
 
 enum entropy_instr {
   ENTROPY_INSTR_RDSEED,
@@ -101,7 +102,7 @@ static ssize_t get_entropy_from_rdrand(void* buf, size_t len, bool block) {
   return get_entropy_from_instruction(buf, len, block, ENTROPY_INSTR_RDRAND);
 }
 
-size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
+static size_t intel_hw_rng_get_entropy(void* buf, size_t len, bool block) {
   if (!len) {
     return 0;
   }
@@ -112,3 +113,13 @@ size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
   }
   return (size_t)res;
 }
+
+static struct hw_rng_ops ops = {
+    .hw_rng_get_entropy = intel_hw_rng_get_entropy,
+};
+
+static void intel_rng_init(uint level) {
+  hw_rng_register(&ops);
+}
+
+LK_INIT_HOOK(intel_rng_init, intel_rng_init, LK_INIT_LEVEL_TARGET_EARLY)

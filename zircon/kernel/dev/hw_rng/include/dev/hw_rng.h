@@ -16,7 +16,19 @@
 
 __BEGIN_CDECLS
 
+// Hardware RNG interface.
+struct hw_rng_ops {
+  size_t (*hw_rng_get_entropy)(void* buf, size_t len, bool block);
+};
+
+// Draw entropy from hardware RNG.
 size_t hw_rng_get_entropy(void* buf, size_t len, bool block);
+
+// Register the ops of hardware RNG with HW RNG driver.
+void hw_rng_register(const struct hw_rng_ops* ops);
+
+// Return whether there is a functioning hardware RNG.
+bool hw_rng_is_registered();
 
 __END_CDECLS
 

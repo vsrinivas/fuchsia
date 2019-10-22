@@ -100,8 +100,7 @@ static bool SeedFrom(entropy::Collector* collector) {
           remaining);
       return false;
     }
-    // TODO(ZX-1007): don't assume that every byte of entropy that's added
-    // has a full 8 bits worth of entropy
+
     kGlobalPrng->AddEntropy(buf, result);
     mandatory_memset(buf, 0, sizeof(buf));
     remaining -= result;
@@ -127,8 +126,6 @@ static void EarlyBootSeed(uint level) {
   // additionally want to remap where this is later.
   alignas(alignof(PRNG)) static uint8_t prng_space[sizeof(PRNG)];
   kGlobalPrng = new (&prng_space) PRNG(nullptr, 0, PRNG::NonThreadSafeTag());
-
-  // TODO(security): Have the PRNG reseed based on usage
 
   unsigned int successful = 0;  // number of successful entropy sources
   entropy::Collector* collector = nullptr;
@@ -176,7 +173,6 @@ static int ReseedPRNG(void* arg) {
     if (entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
       successful++;
     }
-
     if (successful == 0) {
       kGlobalPrng->SelfReseed();
       LTRACEF("Reseed PRNG with no new entropy source\n");
@@ -197,7 +193,7 @@ static void StartReseedThread(uint level) {
 
 }  // namespace crypto
 
-LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_TARGET_EARLY)
+LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_TARGET_EARLY + 1)
 
 LK_INIT_HOOK(global_prng_thread_safe, crypto::GlobalPRNG::BecomeThreadSafe,
              LK_INIT_LEVEL_THREADING - 1)

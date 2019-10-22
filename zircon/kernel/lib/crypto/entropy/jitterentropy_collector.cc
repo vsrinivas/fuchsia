@@ -19,6 +19,9 @@ namespace crypto {
 namespace entropy {
 
 zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
+  if (ptr == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   static JitterentropyCollector* instance = nullptr;
   static ktl::atomic<bool> initialized = {false};
 

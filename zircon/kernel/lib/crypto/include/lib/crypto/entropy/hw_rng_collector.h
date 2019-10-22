@@ -38,9 +38,9 @@ class HwRngCollector : public Collector {
   // contract for Collector::DrawEntropy, obeyed by all implementations).
   size_t DrawEntropy(uint8_t* buf, size_t len) override;
 
- private:
   HwRngCollector();
 
+ private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(HwRngCollector);
 
   DECLARE_MUTEX(HwRngCollector) lock_;

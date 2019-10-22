@@ -4,7 +4,7 @@
 
 group("pc") {
   deps = [
-    "$zx/kernel/dev/intel_rng",
+    "$zx/kernel/dev/hw_rng/intel_rng",
     "$zx/kernel/platform/pc",
   ]
 

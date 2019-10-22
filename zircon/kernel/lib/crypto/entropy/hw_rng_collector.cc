@@ -13,15 +13,19 @@ namespace crypto {
 
 namespace entropy {
 
+static HwRngCollector instance;
+
 zx_status_t HwRngCollector::GetInstance(Collector** ptr) {
-#if ARCH_X86
-  static HwRngCollector instance;
-  *ptr = &instance;
-  return ZX_OK;
-#else
-  *ptr = nullptr;
-  return ZX_ERR_NOT_SUPPORTED;
-#endif
+  if (ptr == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (hw_rng_is_registered()) {
+    *ptr = &instance;
+    return ZX_OK;
+  } else {
+    *ptr = nullptr;
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 }
 
 HwRngCollector::HwRngCollector() : Collector("hw_rng", /* entropy_per_1000_bytes */ 8000) {}
