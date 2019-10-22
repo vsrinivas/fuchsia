@@ -24,47 +24,12 @@ constexpr uint64_t kSymbolPoison = 0xb0bab0ba;
 constexpr uint64_t kNoteGnuBuildId = 3;
 constexpr uint64_t kMeaninglessNoteType = 42;
 
-std::string GetSelfPath() {
-  std::string result;
-#if defined(__APPLE__)
-  // Executable path can have relative references ("..") depending on how the
-  // app was launched.
-  uint32_t length = 0;
-  _NSGetExecutablePath(nullptr, &length);
-  result.resize(length);
-  _NSGetExecutablePath(&result[0], &length);
-  result.resize(length - 1);  // Length included terminator.
-#elif defined(__linux__)
-  // The realpath() call below will resolve the symbolic link.
-  result.assign("/proc/self/exe");
-#else
-#error Write this for your platform.
-#endif
-
-  char fullpath[PATH_MAX];
-  return std::string(realpath(result.c_str(), fullpath));
-}
-
-inline std::string GetTestFilePath(const std::string& rel_path) {
-  std::string path = GetSelfPath();
-  size_t last_slash = path.rfind('/');
-  if (last_slash == std::string::npos) {
-    path = "./";  // Just hope the current directory works.
-  } else {
-    path.resize(last_slash + 1);
-  }
-  return path + rel_path;
-}
-
 // The test files will be copied over to this specific location at build time.
-constexpr char kRelativeTestDataPath[] = "test_data/elflib/";
 constexpr char kStrippedExampleFile[] = "stripped_example.elf";
 constexpr char kUnstrippedExampleFileBase[] = "unstripped_example";
 constexpr char kUnstrippedExampleFileStrippedBase[] = "unstripped_example_stripped";
 
-inline std::string GetTestBinaryPath(const std::string& bin) {
-  return GetTestFilePath(kRelativeTestDataPath) + bin;
-}
+inline std::string GetTestBinaryPath(const std::string& bin) { return "/pkg/data/" + bin; }
 
 class TestData {
  public:
