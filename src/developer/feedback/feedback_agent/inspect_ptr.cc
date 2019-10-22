@@ -10,6 +10,7 @@
 #include <lib/fit/promise.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <string>
@@ -29,7 +30,7 @@ namespace feedback {
 
 fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispatcher,
                                                       zx::duration timeout) {
-  using Locations = std::vector<::inspect_deprecated::Location>;
+  using Locations = std::vector<inspect_deprecated::Location>;
   // First, we discover all the Inspect entrypoints under the realm of the calling component.
 
   // We use a fit::bridge to create a fit::promise that will be completed when the discovery is
@@ -52,12 +53,12 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
           discovery_done->completer.complete_error();
         }
       });
-  const zx_status_t post_status = async::PostDelayedTask(
-      dispatcher, [cb = discovery_done_after_timeout->callback()] { cb(); }, timeout);
-  if (post_status != ZX_OK) {
-    FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
-    FX_LOGS(ERROR) << "Skipping Inspect data collection as Inspect discovery "
-                      "is not safe without a timeout";
+  if (const zx_status_t status = async::PostDelayedTask(
+          dispatcher, [cb = discovery_done_after_timeout->callback()] { cb(); }, timeout);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to post delayed task";
+    FX_LOGS(ERROR)
+        << "Skipping Inspect data collection as Inspect discovery is not safe without a timeout";
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
 
@@ -70,7 +71,7 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
   // process that exits when the connection with the client is closed.
   std::thread([discovery_done,
                discovery_done_after_timeout = std::move(discovery_done_after_timeout)]() mutable {
-    Locations locations = ::inspect_deprecated::SyncFindPaths("/hub");
+    Locations locations = inspect_deprecated::SyncFindPaths("/hub");
 
     discovery_done_after_timeout->Cancel();
     if (locations.empty()) {
@@ -87,10 +88,10 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
 
   // Then, we connect to each entrypoint and read asynchronously its Inspect data.
   return discovery_done->consumer.promise_or(fit::error()).and_then([](Locations& locations) {
-    std::vector<fit::promise<::inspect_deprecated::Source, std::string>> sources;
+    std::vector<fit::promise<inspect_deprecated::Source, std::string>> sources;
     for (auto location : locations) {
       if (location.directory_path.find("system_objects") == std::string::npos) {
-        sources.push_back(::inspect_deprecated::ReadLocation(std::move(location)));
+        sources.push_back(inspect_deprecated::ReadLocation(std::move(location)));
       }
     }
 
@@ -114,9 +115,9 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
           }
 
           fsl::SizedVmo vmo;
-          if (!fsl::VmoFromString(::inspect_deprecated::JsonFormatter(
-                                      ::inspect_deprecated::JsonFormatter::Options{},
-                                      ::inspect_deprecated::Formatter::PathFormat::ABSOLUTE)
+          if (!fsl::VmoFromString(inspect_deprecated::JsonFormatter(
+                                      inspect_deprecated::JsonFormatter::Options{},
+                                      inspect_deprecated::Formatter::PathFormat::ABSOLUTE)
                                       .FormatSourcesRecursive(ok_sources),
                                   &vmo)) {
             FX_LOGS(ERROR) << "Failed to convert Inspect data JSON string to vmo";
