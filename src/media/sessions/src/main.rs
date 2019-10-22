@@ -13,7 +13,6 @@ use failure::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::{channel::mpsc, prelude::*};
-use mpmc;
 
 type Result<T> = std::result::Result<T, Error>;
 

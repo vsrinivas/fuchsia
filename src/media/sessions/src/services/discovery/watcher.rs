@@ -6,11 +6,11 @@ use super::{
     filter::*,
     player_event::{PlayerEvent, SessionsWatcherEvent},
 };
-use crate::{mpmc, Result, MAX_EVENTS_SENT_WITHOUT_ACK};
+use crate::{Result, MAX_EVENTS_SENT_WITHOUT_ACK};
 use failure::ResultExt;
 use fidl::endpoints::*;
 use fidl_fuchsia_media_sessions2::*;
-use futures::{self, prelude::*};
+use futures::{self, channel::mpsc, prelude::*};
 use std::collections::{HashSet, VecDeque};
 
 /// Implements `fuchsia.media.sessions2.SessionsWatcher`.
@@ -23,13 +23,13 @@ use std::collections::{HashSet, VecDeque};
 /// at different rates; each one needs a individual queue.
 pub struct Watcher {
     filter: Filter,
-    event_stream: mpmc::Receiver<FilterApplicant<(u64, PlayerEvent)>>,
+    event_stream: mpsc::Receiver<FilterApplicant<(u64, PlayerEvent)>>,
 }
 
 impl Watcher {
     pub fn new(
         filter: Filter,
-        event_stream: mpmc::Receiver<FilterApplicant<(u64, PlayerEvent)>>,
+        event_stream: mpsc::Receiver<FilterApplicant<(u64, PlayerEvent)>>,
     ) -> Self {
         Self { filter, event_stream }
     }
