@@ -213,16 +213,64 @@ mod test {
     }
 
     #[test]
-    fn render_enum_declarations_test() {
-        let source = include_str!("testdata/enum_declarations.md");
-        let testdata = include_str!("testdata/enum_declarations.json");
-        let declarations: Value =
-            serde_json::from_str(testdata).expect("Unable to parse enum_declarations.json");
+    fn render_declarations_test() {
+        for &(source, testdata, template_name) in &[
+            (
+                include_str!("testdata/bits_declarations.md"),
+                include_str!("testdata/bits_declarations.json"),
+                "bits",
+            ),
+            (
+                include_str!("testdata/constants_declarations.md"),
+                include_str!("testdata/constants_declarations.json"),
+                "constants",
+            ),
+            (
+                include_str!("testdata/enum_declarations.md"),
+                include_str!("testdata/enum_declarations.json"),
+                "enums",
+            ),
+            (
+                include_str!("testdata/protocols_declarations.md"),
+                include_str!("testdata/protocols_declarations.json"),
+                "protocols",
+            ),
+            (
+                include_str!("testdata/structs_declarations.md"),
+                include_str!("testdata/structs_declarations.json"),
+                "structs",
+            ),
+            (
+                include_str!("testdata/tables_declarations.md"),
+                include_str!("testdata/tables_declarations.json"),
+                "tables",
+            ),
+            (
+                include_str!("testdata/unions_declarations.md"),
+                include_str!("testdata/unions_declarations.json"),
+                "unions",
+            ),
+            (
+                include_str!("testdata/xunions_declarations.md"),
+                include_str!("testdata/xunions_declarations.json"),
+                "xunions",
+            ),
+        ] {
+            let declarations: Value = serde_json::from_str(testdata)
+                .with_context(|e| format!("Unable to parse testdata for {}: {}", template_name, e))
+                .unwrap();
 
-        let template = MarkdownTemplate::new(&PathBuf::new());
+            let template = MarkdownTemplate::new(&PathBuf::new());
 
-        let result = render_template(&template.handlebars, "enums".to_string(), &declarations)
-            .expect("Unable to render enums template");
-        assert_eq!(result, source);
+            let result =
+                render_template(&template.handlebars, template_name.to_string(), &declarations)
+                    .with_context(|e| format!("Unable to render {} template: {}", template_name, e))
+                    .unwrap();
+            assert_eq!(
+                result, source,
+                "Generated output for template {} doesn't match goldenset",
+                template_name
+            );
+        }
     }
 }
