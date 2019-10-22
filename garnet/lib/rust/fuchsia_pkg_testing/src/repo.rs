@@ -17,7 +17,7 @@ use {
     fuchsia_component::client::{launcher, AppBuilder, Output, Stdio},
     fuchsia_merkle::Hash,
     fuchsia_url::pkg_url::RepoUrl,
-    fuchsia_zircon::{self as zx, DurationNum},
+    fuchsia_zircon::DurationNum,
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
         future::BoxFuture,
@@ -329,21 +329,14 @@ impl Repository {
         launcher: &'_ LauncherProxy,
     ) -> Result<ServedRepository<'a>, Error> {
         let indir = tempfile::tempdir().context("create /in")?;
-        let port = {
-            // "pm serve" can choose a port to listen on, but then this test has no way to discover
-            // what port it chose. This approach of choosing a port and then launching "pm serve"
-            // using that port can race with something else on the system binding to that port.
-            // This issue will no longer exist when the Rust implementation of "pm serve" exists.
-            let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
-            listener.local_addr()?.port()
-        };
-        println!("'pm serve' will use port {}", port);
-
+        let port_file_dir = tempfile::tempdir().unwrap();
         let mut pm = AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
             .stdout(Stdio::MakePipe)
             .stderr(Stdio::MakePipe)
             .arg("serve")
-            .arg(format!("-l=127.0.0.1:{}", port))
+            .arg("-l=127.0.0.1:0")
+            .arg("-f=/port-file-dir/port-file")
+            .add_dir_to_namespace("/port-file-dir".to_owned(), File::open(port_file_dir.path())?)?
             .arg("-repo=/repo")
             .add_dir_to_namespace(
                 "/repo".to_owned(),
@@ -358,14 +351,10 @@ impl Repository {
             )?;
         }
 
-        println!(
-            "fxb/38441 timing: pm.spawn {}ms",
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
-        );
         let pm = pm.spawn(launcher)?;
         let pm_controller = pm.controller().clone();
 
-        // Wait for "pm serve" to either respond to HTTP requests (giving up after a 20 seconds) or
+        // Wait for "pm serve" to either create the port file (giving up after a 20 seconds) or
         // exit, whichever happens first.
 
         let wait_pm_down = pm.wait_with_output();
@@ -377,54 +366,43 @@ impl Repository {
             .chain(std::iter::repeat(Duration::from_millis(500)).take(4))
             .chain(std::iter::repeat(Duration::from_millis(1000)));
 
-        let mut attempt = 0u32;
-        let wait_pm_up = fuchsia_backoff::retry_or_first_error(backoff, || {
-            attempt += 1;
+        let port_file_dir_path = port_file_dir.path();
+        let wait_pm_up = fuchsia_backoff::retry_or_last_error(backoff, || {
             async move {
-                let fut = get(format!("http://127.0.0.1:{}/config.json", port));
-                match fut.await {
-                    Ok(_) => {
-                        println!("'pm serve' up on attempt {}", attempt);
-                        return Ok(());
+                match fs::read_to_string(port_file_dir_path.join("port-file")) {
+                    Ok(port) => {
+                        return Ok(port.parse::<u16>().unwrap_or_else(|e| {
+                            panic!("invalid port string {:?}: {:?}", port, e)
+                        }));
                     }
                     Err(e) => {
-                        println!("'pm serve' not yet responding, attempt {} {:?}", attempt, e);
-                        return Err(e);
+                        return Err(e.into());
                     }
                 }
             }
         })
         .on_timeout(20.seconds().after_now(), || {
-            bail!("timed out waiting for 'pm serve' to respond to http requests")
+            bail!("timed out waiting for 'pm serve' to create port file")
         })
         .boxed();
 
-        println!(
-            "fxb/38441 timing: waiting for pm to respond {}ms",
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
-        );
-        let wait_pm_down = match future::select(wait_pm_up, wait_pm_down).await {
-            future::Either::Left((res, wait_pm_down)) => {
-                if let Err(e) = res {
+        let (wait_pm_down, port) = match future::select(wait_pm_up, wait_pm_down).await {
+            future::Either::Left((res, wait_pm_down)) => match res {
+                Err(e) => {
                     pm_controller.kill().unwrap();
                     let output = wait_pm_down.await.unwrap().ok();
-                    println!(
-                        "fxb/38441 timing: pm timed out {}ms",
-                        zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
-                    );
                     panic!(
-                        "'pm serve' took too long to respond to http requests {:?}\n{:?}",
+                        "'pm serve' took too long to create the port file {:?}\n{:?}",
                         e, output
                     );
                 }
-                wait_pm_down
-            }
+                Ok(port) => (wait_pm_down.boxed(), port),
+            },
             future::Either::Right((output, _)) => {
                 let output = output.unwrap().ok();
                 panic!("'pm serve' exited too soon {:?}", output,);
             }
-        }
-        .boxed();
+        };
 
         Ok(ServedRepository { repo: self, port, _indir: indir, pm: pm_controller, wait_pm_down })
     }
@@ -476,20 +454,12 @@ impl<'a> ServedRepository<'a> {
 pub(crate) async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
     let request = Request::get(url.as_ref()).body(Body::empty()).map_err(|e| Error::from(e))?;
     let client = fuchsia_hyper::new_client();
-    println!(
-        "fxb/38441 timing: making hyper request to pm {}ms",
-        zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
-    );
     let response = client.request(request).compat().await?;
 
     if response.status() != StatusCode::OK {
         bail!("unexpected status code: {:?}", response.status());
     }
 
-    println!(
-        "fxb/38441 timing: hyper downloading pm response body {}ms",
-        zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000
-    );
     let body = response.into_body().compat().try_concat().await?.collect();
 
     Ok(body)
