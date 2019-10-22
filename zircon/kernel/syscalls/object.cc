@@ -84,25 +84,33 @@ class SimpleJobEnumerator final : public JobEnumerator {
   size_t avail_ = 0;
 };
 
-zx_status_t single_record_result(user_out_ptr<void> _buffer, size_t buffer_size,
-                                 user_out_ptr<size_t> _actual, user_out_ptr<size_t> _avail,
-                                 void* record_data, size_t record_size) {
+// Copies a single record, |src_record|, into the user buffer |dst_buffer| of size
+// |dst_buffer_size|.
+//
+// If the copy succeeds, the value 1 is copied into |user_avail| and |user_actual| (if non-null).
+//
+// If the copy fails because the buffer it too small, |user_avail| and |user_actual| will receive
+// the values 1 and 0 respectively (if non-null).
+template <typename T>
+zx_status_t single_record_result(user_out_ptr<void> dst_buffer, size_t dst_buffer_size,
+                                 user_out_ptr<size_t> user_actual, user_out_ptr<size_t> user_avail,
+                                 const T& src_record) {
   size_t avail = 1;
   size_t actual;
-  if (buffer_size >= record_size) {
-    if (_buffer.copy_array_to_user(record_data, record_size) != ZX_OK)
+  if (dst_buffer_size >= sizeof(T)) {
+    if (dst_buffer.reinterpret<T>().copy_to_user(src_record) != ZX_OK)
       return ZX_ERR_INVALID_ARGS;
     actual = 1;
   } else {
     actual = 0;
   }
-  if (_actual) {
-    zx_status_t status = _actual.copy_to_user(actual);
+  if (user_actual) {
+    zx_status_t status = user_actual.copy_to_user(actual);
     if (status != ZX_OK)
       return status;
   }
-  if (_avail) {
-    zx_status_t status = _avail.copy_to_user(avail);
+  if (user_avail) {
+    zx_status_t status = user_avail.copy_to_user(avail);
     if (status != ZX_OK)
       return status;
   }
@@ -152,7 +160,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
           .props = dispatcher->is_waitable() ? ZX_OBJ_PROP_WAITABLE : ZX_OBJ_PROP_NONE,
       };
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_PROCESS: {
       // TODO(ZX-458): Handle forward/backward compatibility issues
@@ -171,7 +179,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       if (err != ZX_OK)
         return err;
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_PROCESS_THREADS: {
       // grab a reference to the dispatcher
@@ -258,7 +266,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       if (err != ZX_OK)
         return err;
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_THREAD_EXCEPTION_REPORT: {
       // TODO(ZX-458): Handle forward/backward compatibility issues
@@ -277,7 +285,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       if (err != ZX_OK)
         return err;
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &report, sizeof(report));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, report);
     }
     case ZX_INFO_THREAD_STATS: {
       // TODO(ZX-458): Handle forward/backward compatibility issues
@@ -296,7 +304,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       if (err != ZX_OK)
         return err;
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_TASK_STATS: {
       // TODO(ZX-458): Handle forward/backward compatibility issues
@@ -316,7 +324,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       if (err != ZX_OK)
         return err;
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_PROCESS_MAPS: {
       fbl::RefPtr<ProcessDispatcher> process;
@@ -405,7 +413,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
           .len = real_vmar->size(),
       };
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_CPU_STATS: {
       auto status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
@@ -535,7 +543,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         stats.other_bytes = 0;
       }
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &stats, sizeof(stats));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, stats);
     }
     case ZX_INFO_RESOURCE: {
       // grab a reference to the dispatcher
@@ -553,7 +561,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       info.flags = resource->get_flags();
       resource->get_name(info.name);
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_HANDLE_COUNT: {
       fbl::RefPtr<Dispatcher> dispatcher;
@@ -563,7 +571,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       zx_info_handle_count_t info = {.handle_count = Handle::Count(ktl::move(dispatcher))};
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_BTI: {
       fbl::RefPtr<BusTransactionInitiatorDispatcher> dispatcher;
@@ -576,7 +584,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
           .aspace_size = dispatcher->aspace_size(),
       };
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_PROCESS_HANDLE_STATS: {
       fbl::RefPtr<ProcessDispatcher> process;
@@ -594,7 +602,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
             return ZX_OK;
           });
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
 
     case ZX_INFO_SOCKET: {
@@ -606,7 +614,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       zx_info_socket_t info = {};
       socket->GetInfo(&info);
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
 
     case ZX_INFO_JOB: {
@@ -618,7 +626,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       zx_info_job info = {};
       job->GetInfo(&info);
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
 
     case ZX_INFO_TIMER: {
@@ -630,7 +638,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       zx_info_timer info = {};
       timer->GetInfo(&info);
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
 
     default:
