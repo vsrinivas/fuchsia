@@ -4,6 +4,18 @@
 
 library fuchsia.tracing.controller;
 
+/// The maximum number of providers supported.
+const uint32 MAX_NUM_PROVIDERS = 100;
+
+/// The maximum length of a provider's name.
+const uint32 MAX_PROVIDER_NAME_LENGTH = 100;
+
+/// The maximum number of categories supported.
+const uint32 MAX_NUM_CATEGORIES = 100;
+
+/// The maximum length of a category name.
+const uint32 MAX_CATEGORY_NAME_LENGTH = 100;
+
 // The controller interface used by the trace tool to start/stop tracing.
 [Discoverable]
 protocol Controller {
@@ -38,7 +50,7 @@ protocol Controller {
 };
 
 struct KnownCategory {
-    string:100 name;
+    string:MAX_CATEGORY_NAME_LENGTH name;
     string description;
 };
 
@@ -51,14 +63,14 @@ enum BufferingMode : uint8 {
 
 // Individual providers can be tuned with this.
 table ProviderSpec {
-    1: string:100 name;
+    1: string:MAX_PROVIDER_NAME_LENGTH name;
     2: uint32 buffer_size_megabytes_hint;
 };
 
 /// Provides options for the trace.
 table TraceOptions {
     /// The trace categories to record, or an empty array for all.
-    1: vector<string:100>:100 categories;
+    1: vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES categories;
 
     /// Suggested size of trace buffer which each provider should receive.
     // TODO(FIDL-609): Default to 4.
@@ -72,5 +84,5 @@ table TraceOptions {
     4: BufferingMode buffering_mode;
 
     /// Overrides for particular providers.
-    5: vector<ProviderSpec>:100 provider_specs;
+    5: vector<ProviderSpec>:MAX_NUM_PROVIDERS provider_specs;
 };
