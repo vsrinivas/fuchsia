@@ -51,6 +51,9 @@ class VolumeCurve {
   // clamped before sampling.
   float VolumeToDb(float volume) const;
 
+  // Returns the set of underlying mappings for this curve.
+  const std::vector<VolumeMapping>& mappings() const { return mappings_; }
+
  private:
   explicit VolumeCurve(std::vector<VolumeMapping> mappings);
 
