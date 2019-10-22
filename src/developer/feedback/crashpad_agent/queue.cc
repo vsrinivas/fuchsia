@@ -12,6 +12,7 @@ namespace feedback {
 
 using crashpad::FileReader;
 using crashpad::UUID;
+using UploadPolicy = feedback::Settings::UploadPolicy;
 
 std::unique_ptr<Queue> Queue::TryCreate(CrashpadDatabaseConfig database_config,
                                         CrashServer* crash_server,
@@ -22,6 +23,11 @@ std::unique_ptr<Queue> Queue::TryCreate(CrashpadDatabaseConfig database_config,
   }
 
   return std::unique_ptr<Queue>(new Queue(std::move(database), crash_server, inspect_manager));
+}
+
+void Queue::WatchSettings(feedback::Settings* settings) {
+  settings->RegisterUploadPolicyWatcher(
+      [this](const UploadPolicy& upload_policy) { OnUploadPolicyChange(upload_policy); });
 }
 
 Queue::Queue(std::unique_ptr<Database> database, CrashServer* crash_server,
@@ -109,4 +115,26 @@ void Queue::ArchiveAll() {
 
   pending_reports_.clear();
 }
+
+// The queue is inheritly conservative with uploading crash reports meaning that a report that is
+// forbidden from being uploaded will never be uploaded while crash reports that are permitted to be
+// uploaded may later be considered to be forbidden. This is due to the fact that when uploads are
+// disabled all reports are immediately archived after having been added to the queue, thus we never
+// have to worry that a report that shouldn't be uploaded ends up being uploaded when the upload
+// policy changes.
+void Queue::OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy) {
+  switch (upload_policy) {
+    case UploadPolicy::DISABLED:
+      state_ = State::Archive;
+      break;
+    case UploadPolicy::ENABLED:
+      state_ = State::Upload;
+      break;
+    case UploadPolicy::LIMBO:
+      state_ = State::LeaveAsPending;
+      break;
+  }
+  ProcessAll();
+}
+
 }  // namespace feedback

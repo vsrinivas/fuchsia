@@ -12,6 +12,7 @@
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/database.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
@@ -23,6 +24,9 @@ class Queue {
   static std::unique_ptr<Queue> TryCreate(CrashpadDatabaseConfig database_config,
                                           CrashServer* crash_server,
                                           InspectManager* inspect_manager);
+
+  // Allow the queue's functionality to change based on the upload policy.
+  void WatchSettings(feedback::Settings* settings);
 
   // Add a report to the queue.
   bool Add(const std::string& program_name,
@@ -37,10 +41,6 @@ class Queue {
   bool IsEmpty() const { return pending_reports_.empty(); }
   bool Contains(const crashpad::UUID& uuid) const;
   const crashpad::UUID& LatestReport() { return pending_reports_.back(); }
-
-  void SetStateToArchive() { state_ = State::Archive; }
-  void SetStateToUpload() { state_ = State::Upload; }
-  void SetStateToLeaveAsPending() { state_ = State::LeaveAsPending; }
 
  private:
   Queue(std::unique_ptr<Database> database, CrashServer* crash_server,
@@ -64,6 +64,9 @@ class Queue {
   //
   // Returns false if the report needs to be processed again.
   bool Upload(const crashpad::UUID& local_report_id);
+
+  // Callback to update |state_| on upload policy changes.
+  void OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy);
 
   std::unique_ptr<Database> database_;
   CrashServer* crash_server_;
