@@ -77,7 +77,7 @@ There are a number of FIDL protocols used by input methods and text input on Fuc
     - `InputMethodEditor and InputMethodEditorClient`: These are legacy APIs that simply encode a text field's entire state as a single FIDL struct. The input method and text field then just pass these FIDL structs back and forth to update each other. This is a pair of interfaces instead of a single interface since it was created before FIDL had events. As detailed in the next section, this API has race conditions. However, it is currently the only way for text fields to request input on Fuchsia.
 - New input method APIs
     - `TextInputContext`: This is a discoverable service for input methods; any input method can connect to this and send edit commands. At some point in the future, this needs to be restricted, so that only trusted input method processes are allowed to send edits.
-    - `TextField`: This is the API exposed to input methods through the `TextInputContext` service. A new one is sent for every newly focused text field. At some point in the future, a newly focused text field should be able to send a `TextField` interface to the `ImeService` instead of an `InputMethodEditorClient`. `ImeService` is able to translate an input method's edits sent with the `TextField` interface through to legacy text fields that use `InputMethodEditorClient`. 
+    - `TextField`: This is the API exposed to input methods through the `TextInputContext` service. A new one is sent for every newly focused text field. At some point in the future, a newly focused text field should be able to send a `TextField` interface to the `ImeService` instead of an `InputMethodEditorClient`. `ImeService` is able to translate an input method's edits sent with the `TextField` interface through to legacy text fields that use `InputMethodEditorClient`.
     - `TextFieldTestSuite`: If input methods and text fields each implement the `TextField` protocol slightly differently, a new participant in the protocol must test their implementation against many others to make sure it works properly. There is a standard `TestField` test suite to avoid the n^2 manual tests that result from this. `TextFieldTestSuite` has two methods: one lists tests, and another runs a specified test on a given `TextField`. `TextField` implementations should implement tests that run `TestFieldTestSuite` against themselves.
 
 ## Fuchsia's various text services and projects
@@ -86,7 +86,7 @@ There are a number of FIDL protocols used by input methods and text input on Fuc
     - The IME Service is the central organizer of text input on Fuchsia. It vends the discoverable `ImeService`, `ImeVisibilityService`, and `TextInputContext` interfaces. It also contains a legacy IME module that serves the `TextField` and `InputMethodEditor` interfaces. When a text field is focused through `ImeService.GetInputMethodEditor()`, the InputMethodEditor/InputMethodEditorClient pair is passed to a new instance of the legacy IME using `bind_ime()`. The legacy IME is then able to send state updates to the client either in response to key events with `inject_input()` (using an internal default input method) or in response to edits from a connected v2-style input method, which connects to `TextInputContext` and makes changes through the `TextField` interface.
 - `garnet/bin/ui/text/test_suite`
     - The component that serves the `TextFieldTestSuite` interface.
-- `garnet/bin/ui/text/default_hardware_ime`
+- `src/ui/bin/default_hardware_ime`
     - An input method that inserts QWERTY, latin characters. It also has systems for inserting special characters with dead keys. It is not actually spun up by default, but if it is, input will flow through this instead of through `legacy_ime`'s `inject_input()` method.
 - `topaz/app/latin-ime`
     - An onscreen keyboard. Currently just passes events through `InjectInput()` on `ImeService`, but should be upgraded to a proper `TextField`-powered input method in the future, like `default_hardware_ime`.
@@ -95,7 +95,7 @@ There are a number of FIDL protocols used by input methods and text input on Fuc
 - `sdk/fidl/fuchsia.ui.text.testing`
     - Holds the `TextFieldTestSuite` protocol and related structs.
 - `src/ui/scenic/lib/text/common`
-    - Helper functions and structs used across the various text projects. 
+    - Helper functions and structs used across the various text projects.
 - `topaz/bin/xi`
     - Binaries for the Xi editor.
 - `topaz/lib/xi`
