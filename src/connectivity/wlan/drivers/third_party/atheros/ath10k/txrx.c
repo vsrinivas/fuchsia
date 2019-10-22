@@ -55,28 +55,28 @@ out:
 #endif  // NEEDS PORTING
 
 zx_status_t ath10k_txrx_tx_unref(struct ath10k_htt* htt, const struct htt_tx_done* tx_done) {
-    struct ath10k* ar = htt->ar;
-    struct ath10k_msg_buf* msdu;
+  struct ath10k* ar = htt->ar;
+  struct ath10k_msg_buf* msdu;
 
-    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx completion msdu_id %u status %d\n", tx_done->msdu_id,
-               tx_done->status);
+  ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx completion msdu_id %u status %d\n", tx_done->msdu_id,
+             tx_done->status);
 
-    if (tx_done->msdu_id >= htt->max_num_pending_tx) {
-        ath10k_warn("warning: msdu_id %d too big, ignoring\n", tx_done->msdu_id);
-        return ZX_ERR_INVALID_ARGS;
-    }
+  if (tx_done->msdu_id >= htt->max_num_pending_tx) {
+    ath10k_warn("warning: msdu_id %d too big, ignoring\n", tx_done->msdu_id);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    mtx_lock(&htt->tx_lock);
-    msdu = sa_get(htt->pending_tx, tx_done->msdu_id);
-    if (msdu == NULL) {
-        ath10k_warn("received tx completion for invalid msdu_id: %d\n", tx_done->msdu_id);
-        mtx_unlock(&htt->tx_lock);
-        return ZX_ERR_IO;
-    }
-
-    ath10k_htt_tx_free_msdu_id(htt, tx_done->msdu_id);
-    ath10k_htt_tx_dec_pending(htt);
+  mtx_lock(&htt->tx_lock);
+  msdu = sa_get(htt->pending_tx, tx_done->msdu_id);
+  if (msdu == NULL) {
+    ath10k_warn("received tx completion for invalid msdu_id: %d\n", tx_done->msdu_id);
     mtx_unlock(&htt->tx_lock);
+    return ZX_ERR_IO;
+  }
+
+  ath10k_htt_tx_free_msdu_id(htt, tx_done->msdu_id);
+  ath10k_htt_tx_dec_pending(htt);
+  mtx_unlock(&htt->tx_lock);
 
 #if 0   // NEEDS PORTING
     dma_unmap_single(dev, skb_cb->paddr, msdu->len, DMA_TO_DEVICE);
@@ -105,137 +105,134 @@ zx_status_t ath10k_txrx_tx_unref(struct ath10k_htt* htt, const struct htt_tx_don
     }
 #endif  // NEEDS PORTING
 
-    ath10k_msg_buf_free(msdu);
-    return ZX_OK;
+  ath10k_msg_buf_free(msdu);
+  return ZX_OK;
 }
 
 struct ath10k_peer* ath10k_peer_find(struct ath10k* ar, uint32_t vdev_id, const uint8_t* addr) {
-    ASSERT_MTX_HELD(&ar->data_lock);
+  ASSERT_MTX_HELD(&ar->data_lock);
 
-    struct ath10k_peer* peer;
-    list_for_every_entry(&ar->peers, peer, struct ath10k_peer, listnode) {
-        if (peer->vdev_id != vdev_id) {
-            continue;
-        }
-        if (memcmp(peer->addr, addr, ETH_ALEN)) {
-            continue;
-        }
-        return peer;
+  struct ath10k_peer* peer;
+  list_for_every_entry (&ar->peers, peer, struct ath10k_peer, listnode) {
+    if (peer->vdev_id != vdev_id) {
+      continue;
     }
-    return NULL;
+    if (memcmp(peer->addr, addr, ETH_ALEN)) {
+      continue;
+    }
+    return peer;
+  }
+  return NULL;
 }
 
 struct ath10k_peer* ath10k_peer_find_by_id(struct ath10k* ar, int peer_id) {
-    ASSERT_MTX_HELD(&ar->data_lock);
+  ASSERT_MTX_HELD(&ar->data_lock);
 
-    struct ath10k_peer* peer;
-    list_for_every_entry(&ar->peers, peer, struct ath10k_peer, listnode) {
-        if (BITARR_TEST(peer->peer_ids, peer_id)) {
-            return peer;
-        }
+  struct ath10k_peer* peer;
+  list_for_every_entry (&ar->peers, peer, struct ath10k_peer, listnode) {
+    if (BITARR_TEST(peer->peer_ids, peer_id)) {
+      return peer;
     }
-    return NULL;
+  }
+  return NULL;
 }
 
-static int ath10k_wait_for_peer_common(struct ath10k* ar, uint32_t vdev_id,
-                                       const uint8_t* addr, bool expect_mapped) {
-    struct timespec deadline;
-    clock_gettime(CLOCK_REALTIME, &deadline); // would be nice if we could use the monotonic clock
-    deadline.tv_sec += 3;
+static int ath10k_wait_for_peer_common(struct ath10k* ar, uint32_t vdev_id, const uint8_t* addr,
+                                       bool expect_mapped) {
+  struct timespec deadline;
+  clock_gettime(CLOCK_REALTIME, &deadline);  // would be nice if we could use the monotonic clock
+  deadline.tv_sec += 3;
 
-    zx_status_t ret;
-    mtx_lock(&ar->data_lock);
-    for (;;) {
-        bool mapped = ath10k_peer_find(ar, vdev_id, addr) != NULL;
+  zx_status_t ret;
+  mtx_lock(&ar->data_lock);
+  for (;;) {
+    bool mapped = ath10k_peer_find(ar, vdev_id, addr) != NULL;
 
-        if (mapped == expect_mapped) {
-            ret = ZX_OK;
-            break;
-        }
-
-        if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH)) {
-            ret = ZX_ERR_INTERNAL;
-            break;
-        }
-
-        if (thrd_timedout == cnd_timedwait(&ar->peer_mapping_cnd, &ar->data_lock, &deadline)) {
-            ret = ZX_ERR_TIMED_OUT;
-            break;
-        }
+    if (mapped == expect_mapped) {
+      ret = ZX_OK;
+      break;
     }
-    mtx_unlock(&ar->data_lock);
-    return ret;
+
+    if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH)) {
+      ret = ZX_ERR_INTERNAL;
+      break;
+    }
+
+    if (thrd_timedout == cnd_timedwait(&ar->peer_mapping_cnd, &ar->data_lock, &deadline)) {
+      ret = ZX_ERR_TIMED_OUT;
+      break;
+    }
+  }
+  mtx_unlock(&ar->data_lock);
+  return ret;
 }
 
 int ath10k_wait_for_peer_created(struct ath10k* ar, uint32_t vdev_id, const uint8_t* addr) {
-    return ath10k_wait_for_peer_common(ar, vdev_id, addr, true);
+  return ath10k_wait_for_peer_common(ar, vdev_id, addr, true);
 }
 
 int ath10k_wait_for_peer_deleted(struct ath10k* ar, uint32_t vdev_id, const uint8_t* addr) {
-    return ath10k_wait_for_peer_common(ar, vdev_id, addr, false);
+  return ath10k_wait_for_peer_common(ar, vdev_id, addr, false);
 }
 
 void ath10k_peer_map_event(struct ath10k_htt* htt, struct htt_peer_map_event* ev) {
-    if (ev->peer_id >= ATH10K_MAX_NUM_PEER_IDS) {
-        ath10k_warn("received htt peer map event with idx out of bounds: %hu\n",
-                    ev->peer_id);
-        return;
-    }
+  if (ev->peer_id >= ATH10K_MAX_NUM_PEER_IDS) {
+    ath10k_warn("received htt peer map event with idx out of bounds: %hu\n", ev->peer_id);
+    return;
+  }
 
-    struct ath10k* ar = htt->ar;
-    mtx_lock(&ar->data_lock);
-    struct ath10k_peer* peer = ath10k_peer_find(ar, ev->vdev_id, ev->addr);
+  struct ath10k* ar = htt->ar;
+  mtx_lock(&ar->data_lock);
+  struct ath10k_peer* peer = ath10k_peer_find(ar, ev->vdev_id, ev->addr);
+  if (!peer) {
+    peer = calloc(1, sizeof(*peer));
     if (!peer) {
-        peer = calloc(1, sizeof(*peer));
-        if (!peer) {
-            goto exit;
-        }
-
-        peer->vdev_id = ev->vdev_id;
-        memcpy(peer->addr, ev->addr, ETH_ALEN);
-        list_add_tail(&ar->peers, &peer->listnode);
-
-        cnd_broadcast(&ar->peer_mapping_cnd);
+      goto exit;
     }
 
-    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt peer map vdev %d peer %pM id %d\n",
-               ev->vdev_id, ev->addr, ev->peer_id);
+    peer->vdev_id = ev->vdev_id;
+    memcpy(peer->addr, ev->addr, ETH_ALEN);
+    list_add_tail(&ar->peers, &peer->listnode);
 
-    COND_WARN(ar->peer_map[ev->peer_id] && (ar->peer_map[ev->peer_id] != peer));
-    ar->peer_map[ev->peer_id] = peer;
-    BITARR_SET(peer->peer_ids, ev->peer_id);
+    cnd_broadcast(&ar->peer_mapping_cnd);
+  }
+
+  ath10k_dbg(ar, ATH10K_DBG_HTT, "htt peer map vdev %d peer %pM id %d\n", ev->vdev_id, ev->addr,
+             ev->peer_id);
+
+  COND_WARN(ar->peer_map[ev->peer_id] && (ar->peer_map[ev->peer_id] != peer));
+  ar->peer_map[ev->peer_id] = peer;
+  BITARR_SET(peer->peer_ids, ev->peer_id);
 exit:
-    mtx_unlock(&ar->data_lock);
+  mtx_unlock(&ar->data_lock);
 }
 
 void ath10k_peer_unmap_event(struct ath10k_htt* htt, struct htt_peer_unmap_event* ev) {
-    if (ev->peer_id >= ATH10K_MAX_NUM_PEER_IDS) {
-        ath10k_warn("received htt peer unmap event with idx out of bounds: %hu\n",
-                    ev->peer_id);
-        return;
-    }
+  if (ev->peer_id >= ATH10K_MAX_NUM_PEER_IDS) {
+    ath10k_warn("received htt peer unmap event with idx out of bounds: %hu\n", ev->peer_id);
+    return;
+  }
 
-    struct ath10k* ar = htt->ar;
-    mtx_lock(&ar->data_lock);
-    struct ath10k_peer* peer = ath10k_peer_find_by_id(ar, ev->peer_id);
-    if (!peer) {
-        ath10k_warn("peer-unmap-event: unknown peer id %d\n",
-                    ev->peer_id);
-        goto exit;
-    }
+  struct ath10k* ar = htt->ar;
+  mtx_lock(&ar->data_lock);
+  struct ath10k_peer* peer = ath10k_peer_find_by_id(ar, ev->peer_id);
+  if (!peer) {
+    ath10k_warn("peer-unmap-event: unknown peer id %d\n", ev->peer_id);
+    goto exit;
+  }
 
-    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt peer unmap vdev %d peer %pM id %d\n",
-               peer->vdev_id, peer->addr, ev->peer_id);
+  ath10k_dbg(ar, ATH10K_DBG_HTT, "htt peer unmap vdev %d peer %pM id %d\n", peer->vdev_id,
+             peer->addr, ev->peer_id);
 
-    ar->peer_map[ev->peer_id] = NULL;
-    BITARR_CLEAR(peer->peer_ids, ev->peer_id);
+  ar->peer_map[ev->peer_id] = NULL;
+  BITARR_CLEAR(peer->peer_ids, ev->peer_id);
 
-    if (bitarr_empty(peer->peer_ids, ATH10K_MAX_NUM_PEER_IDS)) {
-        list_delete(&peer->listnode);
-        free(peer);
-        cnd_broadcast(&ar->peer_mapping_cnd);
-    }
+  if (bitarr_empty(peer->peer_ids, ATH10K_MAX_NUM_PEER_IDS)) {
+    list_delete(&peer->listnode);
+    free(peer);
+    cnd_broadcast(&ar->peer_mapping_cnd);
+  }
 
 exit:
-    mtx_unlock(&ar->data_lock);
+  mtx_unlock(&ar->data_lock);
 }

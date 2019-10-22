@@ -15,14 +15,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "txrx.h"
-
 #include <assert.h>
+#include <lib/zircon-internal/fnv1hash.h>
 #include <string.h>
 
 #include <ddk/driver.h>
 #include <hw/arch_ops.h>
-#include <lib/zircon-internal/fnv1hash.h>
 
 #include "core.h"
 #include "debug.h"
@@ -31,6 +29,7 @@
 #include "htt.h"
 #include "mac.h"
 #include "macros.h"
+#include "txrx.h"
 
 #define HTT_RX_RING_SIZE HTT_RX_RING_SIZE_MAX
 #define HTT_RX_RING_FILL_LEVEL (((HTT_RX_RING_SIZE) / 2) - 1)
@@ -47,268 +46,277 @@ static int ath10k_htt_rx_get_csum_state(struct sk_buff* skb);
 static_assert(IS_POW2(HTT_RX_BUF_HTABLE_SZ), "Invalid hash table size, must be power of 2");
 
 static struct ath10k_msg_buf* ath10k_htt_rx_find_msg_buf_paddr(struct ath10k* ar, uint32_t paddr) {
-    uint32_t hash = fnv1a_tiny(paddr, ROUNDUP_LOG2(HTT_RX_BUF_HTABLE_SZ));
-    ZX_DEBUG_ASSERT(hash < HTT_RX_BUF_HTABLE_SZ);
-    list_node_t* candidate_list = &ar->htt.rx_ring.buf_hash[hash];
-    struct ath10k_msg_buf* entry;
-    struct ath10k_msg_buf* temp_entry;
-    list_for_every_entry_safe(candidate_list, entry, temp_entry, struct ath10k_msg_buf, listnode) {
-        if (entry->paddr == paddr) { return entry; }
+  uint32_t hash = fnv1a_tiny(paddr, ROUNDUP_LOG2(HTT_RX_BUF_HTABLE_SZ));
+  ZX_DEBUG_ASSERT(hash < HTT_RX_BUF_HTABLE_SZ);
+  list_node_t* candidate_list = &ar->htt.rx_ring.buf_hash[hash];
+  struct ath10k_msg_buf* entry;
+  struct ath10k_msg_buf* temp_entry;
+  list_for_every_entry_safe (candidate_list, entry, temp_entry, struct ath10k_msg_buf, listnode) {
+    if (entry->paddr == paddr) {
+      return entry;
     }
+  }
 
-    ath10k_warn("Unable to find buffer corresponding to phys addr %x\n", paddr);
-    return NULL;
+  ath10k_warn("Unable to find buffer corresponding to phys addr %x\n", paddr);
+  return NULL;
 }
 
 static void ath10k_htt_rx_ring_free(struct ath10k_htt* htt) {
-    struct ath10k_msg_buf* buf;
-    int i;
+  struct ath10k_msg_buf* buf;
+  int i;
 
-    if (htt->rx_ring.in_ord_rx == ATH10K_HTT_IN_ORD_RX_YES) {
-        for (i = 0; i < HTT_RX_BUF_HTABLE_SZ; i++) {
-            list_node_t* list = &htt->rx_ring.buf_hash[i];
-            while ((buf = list_remove_head_type(list, struct ath10k_msg_buf, listnode)) != NULL) {
-                ath10k_msg_buf_free(buf);
-            }
-        }
-    } else {
-        for (i = 0; i < htt->rx_ring.size; i++) {
-            buf = htt->rx_ring.netbufs_ring[i];
-            if (buf == NULL) { continue; }
-            ath10k_msg_buf_free(buf);
-        }
+  if (htt->rx_ring.in_ord_rx == ATH10K_HTT_IN_ORD_RX_YES) {
+    for (i = 0; i < HTT_RX_BUF_HTABLE_SZ; i++) {
+      list_node_t* list = &htt->rx_ring.buf_hash[i];
+      while ((buf = list_remove_head_type(list, struct ath10k_msg_buf, listnode)) != NULL) {
+        ath10k_msg_buf_free(buf);
+      }
     }
+  } else {
+    for (i = 0; i < htt->rx_ring.size; i++) {
+      buf = htt->rx_ring.netbufs_ring[i];
+      if (buf == NULL) {
+        continue;
+      }
+      ath10k_msg_buf_free(buf);
+    }
+  }
 
-    htt->rx_ring.fill_cnt = 0;
-    memset(htt->rx_ring.netbufs_ring, 0, htt->rx_ring.size * sizeof(htt->rx_ring.netbufs_ring[0]));
+  htt->rx_ring.fill_cnt = 0;
+  memset(htt->rx_ring.netbufs_ring, 0, htt->rx_ring.size * sizeof(htt->rx_ring.netbufs_ring[0]));
 }
 
 static zx_status_t __ath10k_htt_rx_ring_fill_n(struct ath10k_htt* htt, int num) {
-    struct htt_rx_desc* rx_desc;
-    struct ath10k_msg_buf* buf;
-    zx_status_t ret = ZX_OK;
-    int idx;
+  struct htt_rx_desc* rx_desc;
+  struct ath10k_msg_buf* buf;
+  zx_status_t ret = ZX_OK;
+  int idx;
 
-    /* The Full Rx Reorder firmware has no way of telling the host
-     * implicitly when it copied HTT Rx Ring buffers to MAC Rx Ring.
-     * To keep things simple make sure ring is always half empty. This
-     * guarantees there'll be no replenishment overruns possible.
-     */
-    static_assert(HTT_RX_RING_FILL_LEVEL < HTT_RX_RING_SIZE / 2,
-                  "Ring fill must be less than half the total ring size");
+  /* The Full Rx Reorder firmware has no way of telling the host
+   * implicitly when it copied HTT Rx Ring buffers to MAC Rx Ring.
+   * To keep things simple make sure ring is always half empty. This
+   * guarantees there'll be no replenishment overruns possible.
+   */
+  static_assert(HTT_RX_RING_FILL_LEVEL < HTT_RX_RING_SIZE / 2,
+                "Ring fill must be less than half the total ring size");
 
-    idx = *htt->rx_ring.alloc_idx.vaddr;
-    while (num > 0) {
-        ret = ath10k_msg_buf_alloc(htt->ar, &buf, ATH10K_MSG_TYPE_BASE, HTT_RX_BUF_SIZE);
-        if (ret != ZX_OK) { goto fail; }
-
-        ZX_DEBUG_ASSERT(IS_ALIGNED(buf->vaddr, HTT_RX_DESC_ALIGN));
-        ZX_DEBUG_ASSERT((uintptr_t)buf->paddr + HTT_RX_BUF_SIZE <= 0x100000000);
-
-        /* Clear rx_desc attention word before posting to Rx ring */
-        rx_desc = buf->vaddr;
-        rx_desc->attention.flags = 0;
-
-        htt->rx_ring.netbufs_ring[idx] = buf;
-        htt->rx_ring.paddrs_ring[idx] = buf->paddr;
-        htt->rx_ring.fill_cnt++;
-
-        if (htt->rx_ring.in_ord_rx == ATH10K_HTT_IN_ORD_RX_YES) {
-            uint32_t hash = fnv1a_tiny(buf->paddr, ROUNDUP_LOG2(HTT_RX_BUF_HTABLE_SZ));
-            ZX_DEBUG_ASSERT(hash < HTT_RX_BUF_HTABLE_SZ);
-            list_node_t* bucket = &htt->rx_ring.buf_hash[hash];
-            list_add_tail(bucket, &buf->listnode);
-        }
-
-        num--;
-        idx++;
-        idx &= htt->rx_ring.size_mask;
+  idx = *htt->rx_ring.alloc_idx.vaddr;
+  while (num > 0) {
+    ret = ath10k_msg_buf_alloc(htt->ar, &buf, ATH10K_MSG_TYPE_BASE, HTT_RX_BUF_SIZE);
+    if (ret != ZX_OK) {
+      goto fail;
     }
 
+    ZX_DEBUG_ASSERT(IS_ALIGNED(buf->vaddr, HTT_RX_DESC_ALIGN));
+    ZX_DEBUG_ASSERT((uintptr_t)buf->paddr + HTT_RX_BUF_SIZE <= 0x100000000);
+
+    /* Clear rx_desc attention word before posting to Rx ring */
+    rx_desc = buf->vaddr;
+    rx_desc->attention.flags = 0;
+
+    htt->rx_ring.netbufs_ring[idx] = buf;
+    htt->rx_ring.paddrs_ring[idx] = buf->paddr;
+    htt->rx_ring.fill_cnt++;
+
+    if (htt->rx_ring.in_ord_rx == ATH10K_HTT_IN_ORD_RX_YES) {
+      uint32_t hash = fnv1a_tiny(buf->paddr, ROUNDUP_LOG2(HTT_RX_BUF_HTABLE_SZ));
+      ZX_DEBUG_ASSERT(hash < HTT_RX_BUF_HTABLE_SZ);
+      list_node_t* bucket = &htt->rx_ring.buf_hash[hash];
+      list_add_tail(bucket, &buf->listnode);
+    }
+
+    num--;
+    idx++;
+    idx &= htt->rx_ring.size_mask;
+  }
+
 fail:
-    /*
-     * Make sure the rx buffer is updated before available buffer
-     * index to avoid any potential rx ring corruption.
-     */
-    hw_mb();
-    *htt->rx_ring.alloc_idx.vaddr = idx;
-    return ret;
+  /*
+   * Make sure the rx buffer is updated before available buffer
+   * index to avoid any potential rx ring corruption.
+   */
+  hw_mb();
+  *htt->rx_ring.alloc_idx.vaddr = idx;
+  return ret;
 }
 
 static zx_status_t ath10k_htt_rx_ring_fill_n(struct ath10k_htt* htt, int num) {
-    ASSERT_MTX_HELD(&htt->rx_ring.lock);
-    return __ath10k_htt_rx_ring_fill_n(htt, num);
+  ASSERT_MTX_HELD(&htt->rx_ring.lock);
+  return __ath10k_htt_rx_ring_fill_n(htt, num);
 }
 
 static void ath10k_htt_rx_msdu_buff_replenish(struct ath10k_htt* htt) {
-    int num_deficit;
+  int num_deficit;
 
-    /* Refilling the whole RX ring buffer proves to be a bad idea. The
-     * reason is RX may take up significant amount of CPU cycles and starve
-     * other tasks, e.g. TX on an ethernet device while acting as a bridge
-     * with ath10k wlan interface. This ended up with very poor performance
-     * once CPU the host system was overwhelmed with RX on ath10k.
-     *
-     * By limiting the number of refills the replenishing occurs
-     * progressively. This in turns makes use of the fact tasklets are
-     * processed in FIFO order. This means actual RX processing can starve
-     * out refilling. If there's not enough buffers on RX ring FW will not
-     * report RX until it is refilled with enough buffers. This
-     * automatically balances load wrt to CPU power.
-     *
-     * This probably comes at a cost of lower maximum throughput but
-     * improves the average and stability.
-     */
-    mtx_lock(&htt->rx_ring.lock);
-    num_deficit = htt->rx_ring.fill_level - htt->rx_ring.fill_cnt;
-    ath10k_htt_rx_ring_fill_n(htt, num_deficit);
-    mtx_unlock(&htt->rx_ring.lock);
+  /* Refilling the whole RX ring buffer proves to be a bad idea. The
+   * reason is RX may take up significant amount of CPU cycles and starve
+   * other tasks, e.g. TX on an ethernet device while acting as a bridge
+   * with ath10k wlan interface. This ended up with very poor performance
+   * once CPU the host system was overwhelmed with RX on ath10k.
+   *
+   * By limiting the number of refills the replenishing occurs
+   * progressively. This in turns makes use of the fact tasklets are
+   * processed in FIFO order. This means actual RX processing can starve
+   * out refilling. If there's not enough buffers on RX ring FW will not
+   * report RX until it is refilled with enough buffers. This
+   * automatically balances load wrt to CPU power.
+   *
+   * This probably comes at a cost of lower maximum throughput but
+   * improves the average and stability.
+   */
+  mtx_lock(&htt->rx_ring.lock);
+  num_deficit = htt->rx_ring.fill_level - htt->rx_ring.fill_cnt;
+  ath10k_htt_rx_ring_fill_n(htt, num_deficit);
+  mtx_unlock(&htt->rx_ring.lock);
 }
 
 zx_status_t ath10k_htt_rx_ring_refill(struct ath10k* ar) {
-    struct ath10k_htt* htt = &ar->htt;
-    zx_status_t ret;
+  struct ath10k_htt* htt = &ar->htt;
+  zx_status_t ret;
 
-    mtx_lock(&htt->rx_ring.lock);
-    ret = ath10k_htt_rx_ring_fill_n(htt, (htt->rx_ring.fill_level - htt->rx_ring.fill_cnt));
-    mtx_unlock(&htt->rx_ring.lock);
+  mtx_lock(&htt->rx_ring.lock);
+  ret = ath10k_htt_rx_ring_fill_n(htt, (htt->rx_ring.fill_level - htt->rx_ring.fill_cnt));
+  mtx_unlock(&htt->rx_ring.lock);
 
-    if (ret != ZX_OK) { ath10k_htt_rx_ring_free(htt); }
+  if (ret != ZX_OK) {
+    ath10k_htt_rx_ring_free(htt);
+  }
 
-    return ret;
+  return ret;
 }
 
 void ath10k_htt_rx_free(struct ath10k_htt* htt) {
-    ath10k_htt_rx_ring_free(htt);
-    io_buffer_release(&htt->rx_ring.io_buf);
-    io_buffer_release(&htt->rx_ring.alloc_idx.io_buf);
-    free(htt->rx_ring.netbufs_ring);
+  ath10k_htt_rx_ring_free(htt);
+  io_buffer_release(&htt->rx_ring.io_buf);
+  io_buffer_release(&htt->rx_ring.alloc_idx.io_buf);
+  free(htt->rx_ring.netbufs_ring);
 }
 
 static inline struct ath10k_msg_buf* ath10k_htt_rx_netbuf_pop(struct ath10k_htt* htt) {
-    struct ath10k* ar = htt->ar;
-    int idx;
-    struct ath10k_msg_buf* msdu;
+  struct ath10k* ar = htt->ar;
+  int idx;
+  struct ath10k_msg_buf* msdu;
 
-    ASSERT_MTX_HELD(&htt->rx_ring.lock);
+  ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
-    if (htt->rx_ring.fill_cnt == 0) {
-        ath10k_warn("tried to pop msg_buf from an empty rx ring\n");
-        return NULL;
-    }
+  if (htt->rx_ring.fill_cnt == 0) {
+    ath10k_warn("tried to pop msg_buf from an empty rx ring\n");
+    return NULL;
+  }
 
-    idx = htt->rx_ring.sw_rd_idx.msdu_payld;
-    msdu = htt->rx_ring.netbufs_ring[idx];
-    htt->rx_ring.netbufs_ring[idx] = NULL;
-    htt->rx_ring.paddrs_ring[idx] = 0;
+  idx = htt->rx_ring.sw_rd_idx.msdu_payld;
+  msdu = htt->rx_ring.netbufs_ring[idx];
+  htt->rx_ring.netbufs_ring[idx] = NULL;
+  htt->rx_ring.paddrs_ring[idx] = 0;
 
-    idx++;
-    idx &= htt->rx_ring.size_mask;
-    htt->rx_ring.sw_rd_idx.msdu_payld = idx;
-    htt->rx_ring.fill_cnt--;
+  idx++;
+  idx &= htt->rx_ring.size_mask;
+  htt->rx_ring.sw_rd_idx.msdu_payld = idx;
+  htt->rx_ring.fill_cnt--;
 
-    ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx netbuf pop: ",
-                    msdu->vaddr, msdu->capacity);
+  ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx netbuf pop: ", msdu->vaddr,
+                  msdu->capacity);
 
-    return msdu;
+  return msdu;
 }
 
 static zx_status_t ath10k_htt_rx_amsdu_pop_chained(struct ath10k_htt* htt,
                                                    struct ath10k_msg_buf* msdu_head,
-                                                   size_t chained_len,
-                                                   list_node_t* amsdu) {
-    struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu_head, ATH10K_MSG_TYPE_HTT_RX);
-    int num_chained = rx_desc->frag_info.ring2_more_count;
+                                                   size_t chained_len, list_node_t* amsdu) {
+  struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu_head, ATH10K_MSG_TYPE_HTT_RX);
+  int num_chained = rx_desc->frag_info.ring2_more_count;
 
-    while (num_chained--) {
-        struct ath10k_msg_buf* chained_part = ath10k_htt_rx_netbuf_pop(htt);
-        if (!chained_part) {
-            return ZX_ERR_NOT_FOUND;
-        }
-
-        size_t part_len = MIN(chained_len, HTT_RX_BUF_SIZE);
-        chained_part->used = part_len;
-        chained_len -= part_len;
-        list_add_tail(amsdu, &chained_part->listnode);
+  while (num_chained--) {
+    struct ath10k_msg_buf* chained_part = ath10k_htt_rx_netbuf_pop(htt);
+    if (!chained_part) {
+      return ZX_ERR_NOT_FOUND;
     }
-    return ZX_OK;
+
+    size_t part_len = MIN(chained_len, HTT_RX_BUF_SIZE);
+    chained_part->used = part_len;
+    chained_len -= part_len;
+    list_add_tail(amsdu, &chained_part->listnode);
+  }
+  return ZX_OK;
 }
 
 static zx_status_t ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt, list_node_t* amsdu) {
-    ASSERT_MTX_HELD(&htt->rx_ring.lock);
+  ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
-    for (;;) {
-        struct ath10k_msg_buf* msdu = ath10k_htt_rx_netbuf_pop(htt);
-        if (!msdu) {
-            return ZX_ERR_NOT_FOUND;
-        }
-
-        msdu->type = ATH10K_MSG_TYPE_HTT_RX;
-        struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
-
-        /*
-         * Sanity check - confirm the HW is finished filling in the
-         * rx data.
-         * If the HW and SW are working correctly, then it's guaranteed
-         * that the HW's MAC DMA is done before this point in the SW.
-         * To prevent the case that we handle a stale Rx descriptor,
-         * just assert for now until we have a way to recover.
-         */
-        if (!(rx_desc->attention.flags & RX_ATTENTION_FLAGS_MSDU_DONE)) {
-            return ZX_ERR_IO;
-        }
-
-        bool msdu_len_invalid = rx_desc->attention.flags
-                  & (RX_ATTENTION_FLAGS_MPDU_LENGTH_ERR | RX_ATTENTION_FLAGS_MSDU_LENGTH_ERR);
-        int msdu_len = MS(rx_desc->msdu_start.common.info0, RX_MSDU_START_INFO0_MSDU_LENGTH);
-        bool last_msdu = rx_desc->msdu_end.common.info0 & RX_MSDU_END_INFO0_LAST_MSDU;
-
-        if (msdu_len_invalid) {
-            msdu_len = 0;
-        }
-
-        size_t first_part_len = MIN(msdu_len, HTT_RX_MSDU_SIZE);
-        msdu->used = sizeof(struct htt_rx_desc) + first_part_len;
-        ZX_DEBUG_ASSERT(msdu->used <= msdu->capacity);
-        list_add_tail(amsdu, &msdu->listnode);
-
-        zx_status_t status = ath10k_htt_rx_amsdu_pop_chained(
-                htt, msdu, msdu_len - first_part_len, amsdu);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        if (last_msdu) {
-            break;
-        }
+  for (;;) {
+    struct ath10k_msg_buf* msdu = ath10k_htt_rx_netbuf_pop(htt);
+    if (!msdu) {
+      return ZX_ERR_NOT_FOUND;
     }
 
+    msdu->type = ATH10K_MSG_TYPE_HTT_RX;
+    struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
+
     /*
-     * Don't refill the ring yet.
-     *
-     * First, the elements popped here are still in use - it is not
-     * safe to overwrite them until the matching call to
-     * mpdu_desc_list_next. Second, for efficiency it is preferable to
-     * refill the rx ring with 1 PPDU's worth of rx buffers (something
-     * like 32 x 3 buffers), rather than one MPDU's worth of rx buffers
-     * (something like 3 buffers). Consequently, we'll rely on the txrx
-     * SW to tell us when it is done pulling all the PPDU's rx buffers
-     * out of the rx ring, and then refill it just once.
+     * Sanity check - confirm the HW is finished filling in the
+     * rx data.
+     * If the HW and SW are working correctly, then it's guaranteed
+     * that the HW's MAC DMA is done before this point in the SW.
+     * To prevent the case that we handle a stale Rx descriptor,
+     * just assert for now until we have a way to recover.
      */
-    return ZX_OK;
+    if (!(rx_desc->attention.flags & RX_ATTENTION_FLAGS_MSDU_DONE)) {
+      return ZX_ERR_IO;
+    }
+
+    bool msdu_len_invalid = rx_desc->attention.flags & (RX_ATTENTION_FLAGS_MPDU_LENGTH_ERR |
+                                                        RX_ATTENTION_FLAGS_MSDU_LENGTH_ERR);
+    int msdu_len = MS(rx_desc->msdu_start.common.info0, RX_MSDU_START_INFO0_MSDU_LENGTH);
+    bool last_msdu = rx_desc->msdu_end.common.info0 & RX_MSDU_END_INFO0_LAST_MSDU;
+
+    if (msdu_len_invalid) {
+      msdu_len = 0;
+    }
+
+    size_t first_part_len = MIN(msdu_len, HTT_RX_MSDU_SIZE);
+    msdu->used = sizeof(struct htt_rx_desc) + first_part_len;
+    ZX_DEBUG_ASSERT(msdu->used <= msdu->capacity);
+    list_add_tail(amsdu, &msdu->listnode);
+
+    zx_status_t status =
+        ath10k_htt_rx_amsdu_pop_chained(htt, msdu, msdu_len - first_part_len, amsdu);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    if (last_msdu) {
+      break;
+    }
+  }
+
+  /*
+   * Don't refill the ring yet.
+   *
+   * First, the elements popped here are still in use - it is not
+   * safe to overwrite them until the matching call to
+   * mpdu_desc_list_next. Second, for efficiency it is preferable to
+   * refill the rx ring with 1 PPDU's worth of rx buffers (something
+   * like 32 x 3 buffers), rather than one MPDU's worth of rx buffers
+   * (something like 3 buffers). Consequently, we'll rely on the txrx
+   * SW to tell us when it is done pulling all the PPDU's rx buffers
+   * out of the rx ring, and then refill it just once.
+   */
+  return ZX_OK;
 }
 
 static struct ath10k_msg_buf* ath10k_htt_rx_pop_paddr(struct ath10k_htt* htt, uint32_t paddr) {
-    struct ath10k* ar = htt->ar;
-    struct ath10k_msg_buf* msdu;
+  struct ath10k* ar = htt->ar;
+  struct ath10k_msg_buf* msdu;
 
-    ASSERT_MTX_HELD(&htt->rx_ring.lock);
+  ASSERT_MTX_HELD(&htt->rx_ring.lock);
 
-    msdu = ath10k_htt_rx_find_msg_buf_paddr(ar, paddr);
-    if (!msdu) { return NULL; }
+  msdu = ath10k_htt_rx_find_msg_buf_paddr(ar, paddr);
+  if (!msdu) {
+    return NULL;
+  }
 
-    list_delete(&msdu->listnode);
-    htt->rx_ring.fill_cnt--;
+  list_delete(&msdu->listnode);
+  htt->rx_ring.fill_cnt--;
 
 #if 0   // NEEDS PORTING
     dma_unmap_single(htt->ar->dev, rxcb->paddr,
@@ -316,9 +324,9 @@ static struct ath10k_msg_buf* ath10k_htt_rx_pop_paddr(struct ath10k_htt* htt, ui
                      DMA_FROM_DEVICE);
 #endif  // NEEDS PORTING
 
-    ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx netbuf pop: ", msdu->vaddr, msdu->used);
+  ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx netbuf pop: ", msdu->vaddr, msdu->used);
 
-    return msdu;
+  return msdu;
 }
 
 #if 0   // NEEDS PORTING
@@ -371,122 +379,130 @@ static zx_status_t ath10k_htt_rx_pop_paddr_list(struct ath10k_htt* htt,
 #endif  // NEEDS PORTING
 
 zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
-    struct ath10k* ar = htt->ar;
-    zx_status_t ret;
+  struct ath10k* ar = htt->ar;
+  zx_status_t ret;
 
-    htt->rx_confused = false;
+  htt->rx_confused = false;
 
-    /* XXX: The fill level could be changed during runtime in response to
-     * the host processing latency. Is this really worth it?
-     */
-    htt->rx_ring.size = HTT_RX_RING_SIZE;
-    htt->rx_ring.size_mask = htt->rx_ring.size - 1;
-    htt->rx_ring.fill_level = HTT_RX_RING_FILL_LEVEL;
+  /* XXX: The fill level could be changed during runtime in response to
+   * the host processing latency. Is this really worth it?
+   */
+  htt->rx_ring.size = HTT_RX_RING_SIZE;
+  htt->rx_ring.size_mask = htt->rx_ring.size - 1;
+  htt->rx_ring.fill_level = HTT_RX_RING_FILL_LEVEL;
 
-    if (!IS_POW2(htt->rx_ring.size)) {
-        ath10k_warn("htt rx ring size (%d) is not power of 2\n", htt->rx_ring.size);
-        return ZX_ERR_INVALID_ARGS;
-    }
+  if (!IS_POW2(htt->rx_ring.size)) {
+    ath10k_warn("htt rx ring size (%d) is not power of 2\n", htt->rx_ring.size);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    htt->rx_ring.netbufs_ring = calloc(1, htt->rx_ring.size * sizeof(struct ath10k_msg_buf*));
-    if (htt->rx_ring.netbufs_ring == NULL) { goto err_netbuf; }
+  htt->rx_ring.netbufs_ring = calloc(1, htt->rx_ring.size * sizeof(struct ath10k_msg_buf*));
+  if (htt->rx_ring.netbufs_ring == NULL) {
+    goto err_netbuf;
+  }
 
-    size_t ring_size = htt->rx_ring.size * sizeof(htt->rx_ring.paddrs_ring);
+  size_t ring_size = htt->rx_ring.size * sizeof(htt->rx_ring.paddrs_ring);
 
-    zx_handle_t bti_handle;
-    ret = ath10k_hif_get_bti_handle(ar, &bti_handle);
-    if (ret != ZX_OK) { goto err_dma_ring; }
+  zx_handle_t bti_handle;
+  ret = ath10k_hif_get_bti_handle(ar, &bti_handle);
+  if (ret != ZX_OK) {
+    goto err_dma_ring;
+  }
 
-    // Can this be a IO_BUFFER_RO?
-    ret = io_buffer_init(&htt->rx_ring.io_buf, bti_handle, ring_size,
-                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (ret != ZX_OK) { goto err_dma_ring; }
-    htt->rx_ring.paddrs_ring = io_buffer_virt(&htt->rx_ring.io_buf);
-    htt->rx_ring.base_paddr = io_buffer_phys(&htt->rx_ring.io_buf);
-    if (htt->rx_ring.base_paddr + ring_size > 0x100000000ULL) {
-        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
-        goto err_dma_idx;
-    }
+  // Can this be a IO_BUFFER_RO?
+  ret =
+      io_buffer_init(&htt->rx_ring.io_buf, bti_handle, ring_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (ret != ZX_OK) {
+    goto err_dma_ring;
+  }
+  htt->rx_ring.paddrs_ring = io_buffer_virt(&htt->rx_ring.io_buf);
+  htt->rx_ring.base_paddr = io_buffer_phys(&htt->rx_ring.io_buf);
+  if (htt->rx_ring.base_paddr + ring_size > 0x100000000ULL) {
+    ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+    goto err_dma_idx;
+  }
 
-    size_t idx_size = sizeof(*htt->rx_ring.alloc_idx.vaddr);
-    ret = io_buffer_init(&htt->rx_ring.alloc_idx.io_buf, bti_handle, idx_size,
-                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (ret != ZX_OK) { goto err_dma_idx; }
-    htt->rx_ring.alloc_idx.vaddr = io_buffer_virt(&htt->rx_ring.alloc_idx.io_buf);
-    htt->rx_ring.alloc_idx.paddr = io_buffer_phys(&htt->rx_ring.alloc_idx.io_buf);
-    if (htt->rx_ring.alloc_idx.paddr + idx_size > 0x100000000ULL) {
-        ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
-        goto err_dma_idx_map;
-    }
+  size_t idx_size = sizeof(*htt->rx_ring.alloc_idx.vaddr);
+  ret = io_buffer_init(&htt->rx_ring.alloc_idx.io_buf, bti_handle, idx_size,
+                       IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (ret != ZX_OK) {
+    goto err_dma_idx;
+  }
+  htt->rx_ring.alloc_idx.vaddr = io_buffer_virt(&htt->rx_ring.alloc_idx.io_buf);
+  htt->rx_ring.alloc_idx.paddr = io_buffer_phys(&htt->rx_ring.alloc_idx.io_buf);
+  if (htt->rx_ring.alloc_idx.paddr + idx_size > 0x100000000ULL) {
+    ath10k_err("io buffer allocated with address above 32b range (see ZX-1073)\n");
+    goto err_dma_idx_map;
+  }
 
-    htt->rx_ring.sw_rd_idx.msdu_payld = htt->rx_ring.size_mask;
-    *htt->rx_ring.alloc_idx.vaddr = 0;
+  htt->rx_ring.sw_rd_idx.msdu_payld = htt->rx_ring.size_mask;
+  *htt->rx_ring.alloc_idx.vaddr = 0;
 
-    mtx_init(&htt->rx_ring.lock, mtx_plain);
+  mtx_init(&htt->rx_ring.lock, mtx_plain);
 
-    htt->rx_ring.fill_cnt = 0;
-    htt->rx_ring.sw_rd_idx.msdu_payld = 0;
+  htt->rx_ring.fill_cnt = 0;
+  htt->rx_ring.sw_rd_idx.msdu_payld = 0;
 
-    for (unsigned ndx = 0; ndx < HTT_RX_BUF_HTABLE_SZ; ndx++) {
-        list_initialize(&htt->rx_ring.buf_hash[ndx]);
-    }
+  for (unsigned ndx = 0; ndx < HTT_RX_BUF_HTABLE_SZ; ndx++) {
+    list_initialize(&htt->rx_ring.buf_hash[ndx]);
+  }
 
-    ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt rx ring size %d fill_level %d\n", htt->rx_ring.size,
-               htt->rx_ring.fill_level);
-    return ZX_OK;
+  ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt rx ring size %d fill_level %d\n", htt->rx_ring.size,
+             htt->rx_ring.fill_level);
+  return ZX_OK;
 
 err_dma_idx_map:
-    io_buffer_release(&htt->rx_ring.alloc_idx.io_buf);
+  io_buffer_release(&htt->rx_ring.alloc_idx.io_buf);
 err_dma_idx:
-    io_buffer_release(&htt->rx_ring.io_buf);
+  io_buffer_release(&htt->rx_ring.io_buf);
 err_dma_ring:
-    free(htt->rx_ring.netbufs_ring);
+  free(htt->rx_ring.netbufs_ring);
 err_netbuf:
-    return ZX_ERR_NO_MEMORY;
+  return ZX_ERR_NO_MEMORY;
 }
 
 static int ath10k_htt_rx_crypto_param_len(struct ath10k* ar, enum htt_rx_mpdu_encrypt_type type) {
-    switch (type) {
+  switch (type) {
     case HTT_RX_MPDU_ENCRYPT_NONE:
-        return 0;
+      return 0;
     case HTT_RX_MPDU_ENCRYPT_WEP40:
     case HTT_RX_MPDU_ENCRYPT_WEP104:
-        return IEEE80211_WEP_IV_LEN;
+      return IEEE80211_WEP_IV_LEN;
     case HTT_RX_MPDU_ENCRYPT_TKIP_WITHOUT_MIC:
     case HTT_RX_MPDU_ENCRYPT_TKIP_WPA:
-        return IEEE80211_TKIP_IV_LEN;
+      return IEEE80211_TKIP_IV_LEN;
     case HTT_RX_MPDU_ENCRYPT_AES_CCM_WPA2:
-        return IEEE80211_CCMP_HDR_LEN;
+      return IEEE80211_CCMP_HDR_LEN;
     case HTT_RX_MPDU_ENCRYPT_WEP128:
     case HTT_RX_MPDU_ENCRYPT_WAPI:
-        break;
-    }
+      break;
+  }
 
-    ath10k_warn("unsupported encryption type %d\n", type);
-    return 0;
+  ath10k_warn("unsupported encryption type %d\n", type);
+  return 0;
 }
 
 #define MICHAEL_MIC_LEN 8
 
 static int ath10k_htt_rx_crypto_tail_len(struct ath10k* ar, enum htt_rx_mpdu_encrypt_type type) {
-    switch (type) {
+  switch (type) {
     case HTT_RX_MPDU_ENCRYPT_NONE:
-        return 0;
+      return 0;
     case HTT_RX_MPDU_ENCRYPT_WEP40:
     case HTT_RX_MPDU_ENCRYPT_WEP104:
-        return IEEE80211_WEP_ICV_LEN;
+      return IEEE80211_WEP_ICV_LEN;
     case HTT_RX_MPDU_ENCRYPT_TKIP_WITHOUT_MIC:
     case HTT_RX_MPDU_ENCRYPT_TKIP_WPA:
-        return IEEE80211_TKIP_ICV_LEN;
+      return IEEE80211_TKIP_ICV_LEN;
     case HTT_RX_MPDU_ENCRYPT_AES_CCM_WPA2:
-        return IEEE80211_CCMP_128_MIC_LEN;
+      return IEEE80211_CCMP_128_MIC_LEN;
     case HTT_RX_MPDU_ENCRYPT_WEP128:
     case HTT_RX_MPDU_ENCRYPT_WAPI:
-        break;
-    }
+      break;
+  }
 
-    ath10k_warn("unsupported encryption type %d\n", type);
-    return 0;
+  ath10k_warn("unsupported encryption type %d\n", type);
+  return 0;
 }
 
 #if 0  // NEEDS PORTING
@@ -891,150 +907,146 @@ static void ath10k_process_rx(struct ath10k* ar,
 #endif  // NEEDS PORTING
 
 static size_t ath10k_htt_rx_nwifi_hdrlen(struct ath10k* ar, struct ieee80211_frame_header* hdr) {
-    size_t len = ieee80211_hdrlen(hdr);
+  size_t len = ieee80211_hdrlen(hdr);
 
-    if (!BITARR_TEST(ar->running_fw->fw_file.fw_features,
-                     ATH10K_FW_FEATURE_NO_NWIFI_DECAP_4ADDR_PADDING)) {
-        len = ROUNDUP(len, 4);
-    }
+  if (!BITARR_TEST(ar->running_fw->fw_file.fw_features,
+                   ATH10K_FW_FEATURE_NO_NWIFI_DECAP_4ADDR_PADDING)) {
+    len = ROUNDUP(len, 4);
+  }
 
-    return len;
+  return len;
 }
 
-static void ath10k_htt_rx_h_undecap_raw(struct ath10k* ar,
-                                        struct ath10k_msg_buf* msdu,
-                                        enum htt_rx_mpdu_encrypt_type enctype,
-                                        bool is_decrypted) {
-    struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
-    bool is_first = !!(rxd->msdu_end.common.info0 & RX_MSDU_END_INFO0_FIRST_MSDU);
-    bool is_last = !!(rxd->msdu_end.common.info0 & RX_MSDU_END_INFO0_LAST_MSDU);
+static void ath10k_htt_rx_h_undecap_raw(struct ath10k* ar, struct ath10k_msg_buf* msdu,
+                                        enum htt_rx_mpdu_encrypt_type enctype, bool is_decrypted) {
+  struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
+  bool is_first = !!(rxd->msdu_end.common.info0 & RX_MSDU_END_INFO0_FIRST_MSDU);
+  bool is_last = !!(rxd->msdu_end.common.info0 & RX_MSDU_END_INFO0_LAST_MSDU);
 
-    /* Delivered decapped frame:
-     * [802.11 header]
-     * [crypto param] <-- can be trimmed if !fcs_err &&
-     *                    !decrypt_err && !peer_idx_invalid
-     * [amsdu header] <-- only if A-MSDU
-     * [rfc1042/llc]
-     * [payload]
-     * [FCS] <-- at end, needs to be trimmed
-     */
+  /* Delivered decapped frame:
+   * [802.11 header]
+   * [crypto param] <-- can be trimmed if !fcs_err &&
+   *                    !decrypt_err && !peer_idx_invalid
+   * [amsdu header] <-- only if A-MSDU
+   * [rfc1042/llc]
+   * [payload]
+   * [FCS] <-- at end, needs to be trimmed
+   */
 
-    /* This probably shouldn't happen but warn just in case */
-    if (unlikely(COND_WARN_ONCE(!is_first))) {
-        return;
+  /* This probably shouldn't happen but warn just in case */
+  if (unlikely(COND_WARN_ONCE(!is_first))) {
+    return;
+  }
+
+  /* This probably shouldn't happen but warn just in case */
+  if (unlikely(COND_WARN_ONCE(!(is_first && is_last)))) {
+    return;
+  }
+
+  if (msdu->rx.frame_size < IEEE80211_FCS_LEN) {
+    return;
+  }
+  msdu->rx.frame_size -= IEEE80211_FCS_LEN;
+
+  /* In most cases this will be true for sniffed frames. It makes sense
+   * to deliver them as-is without stripping the crypto param. This is
+   * necessary for software based decryption.
+   *
+   * If there's no error then the frame is decrypted. At least that is
+   * the case for frames that come in via fragmented rx indication.
+   */
+  if (!is_decrypted) {
+    return;
+  }
+
+  /* The payload is decrypted so strip crypto params. Start from tail
+   * since hdr is used to compute some stuff.
+   */
+
+  void* frame = ath10k_msg_buf_get_payload(msdu);
+  struct ieee80211_frame_header* hdr = frame;
+
+  size_t to_remove_from_tail = 0;
+
+  /* Tail */
+  if (msdu->rx.mpdu_flags & ATH10K_RX_MPDU_IV_STRIPPED) {
+    to_remove_from_tail += ath10k_htt_rx_crypto_tail_len(ar, enctype);
+  }
+
+  /* MMIC */
+  if ((msdu->rx.mpdu_flags & ATH10K_RX_MPDU_MMIC_STRIPPED) &&
+      !(hdr->frame_ctrl & IEEE80211_FRAME_CTRL_MORE_FRAGMENTS_MASK) &&
+      enctype == HTT_RX_MPDU_ENCRYPT_TKIP_WPA) {
+    to_remove_from_tail += 8;
+  }
+
+  if (msdu->rx.frame_size < to_remove_from_tail) {
+    return;
+  }
+  msdu->rx.frame_size -= to_remove_from_tail;
+
+  /* Head */
+  if (msdu->rx.mpdu_flags & ATH10K_RX_MPDU_IV_STRIPPED) {
+    size_t hdr_len = ieee80211_hdrlen(hdr);
+    size_t crypto_len = ath10k_htt_rx_crypto_param_len(ar, enctype);
+    if (msdu->rx.frame_size < hdr_len + crypto_len) {
+      return;
     }
 
-    /* This probably shouldn't happen but warn just in case */
-    if (unlikely(COND_WARN_ONCE(!(is_first && is_last)))) {
-        return;
-    }
-
-    if (msdu->rx.frame_size < IEEE80211_FCS_LEN) {
-        return;
-    }
-    msdu->rx.frame_size -= IEEE80211_FCS_LEN;
-
-    /* In most cases this will be true for sniffed frames. It makes sense
-     * to deliver them as-is without stripping the crypto param. This is
-     * necessary for software based decryption.
-     *
-     * If there's no error then the frame is decrypted. At least that is
-     * the case for frames that come in via fragmented rx indication.
-     */
-    if (!is_decrypted) {
-        return;
-    }
-
-    /* The payload is decrypted so strip crypto params. Start from tail
-     * since hdr is used to compute some stuff.
-     */
-
-    void* frame = ath10k_msg_buf_get_payload(msdu);
-    struct ieee80211_frame_header* hdr = frame;
-
-    size_t to_remove_from_tail = 0;
-
-    /* Tail */
-    if (msdu->rx.mpdu_flags & ATH10K_RX_MPDU_IV_STRIPPED) {
-        to_remove_from_tail += ath10k_htt_rx_crypto_tail_len(ar, enctype);
-    }
-
-    /* MMIC */
-    if ((msdu->rx.mpdu_flags & ATH10K_RX_MPDU_MMIC_STRIPPED) &&
-            !(hdr->frame_ctrl & IEEE80211_FRAME_CTRL_MORE_FRAGMENTS_MASK) &&
-            enctype == HTT_RX_MPDU_ENCRYPT_TKIP_WPA) {
-        to_remove_from_tail += 8;
-    }
-
-    if (msdu->rx.frame_size < to_remove_from_tail) {
-        return;
-    }
-    msdu->rx.frame_size -= to_remove_from_tail;
-
-    /* Head */
-    if (msdu->rx.mpdu_flags & ATH10K_RX_MPDU_IV_STRIPPED) {
-        size_t hdr_len = ieee80211_hdrlen(hdr);
-        size_t crypto_len = ath10k_htt_rx_crypto_param_len(ar, enctype);
-        if (msdu->rx.frame_size < hdr_len + crypto_len) {
-            return;
-        }
-
-        memmove(frame + crypto_len, frame, hdr_len);
-        msdu->rx.frame_offset += crypto_len;
-        msdu->rx.frame_size -= crypto_len;
-    }
+    memmove(frame + crypto_len, frame, hdr_len);
+    msdu->rx.frame_offset += crypto_len;
+    msdu->rx.frame_size -= crypto_len;
+  }
 }
 
-static void ath10k_htt_rx_h_undecap_nwifi(struct ath10k* ar,
-                                          struct ath10k_msg_buf* msdu,
-                                          const uint8_t* original_hdr,
-                                          size_t original_hdr_len) {
-    /* Delivered decapped frame:
-     * [nwifi 802.11 header] <-- replaced with 802.11 hdr
-     * [rfc1042/llc]
-     *
-     * Note: The nwifi header doesn't have QoS Control and is
-     * (always?) a 3addr frame.
-     *
-     * Note2: There's no A-MSDU subframe header. Even if it's part
-     * of an A-MSDU.
-     */
+static void ath10k_htt_rx_h_undecap_nwifi(struct ath10k* ar, struct ath10k_msg_buf* msdu,
+                                          const uint8_t* original_hdr, size_t original_hdr_len) {
+  /* Delivered decapped frame:
+   * [nwifi 802.11 header] <-- replaced with 802.11 hdr
+   * [rfc1042/llc]
+   *
+   * Note: The nwifi header doesn't have QoS Control and is
+   * (always?) a 3addr frame.
+   *
+   * Note2: There's no A-MSDU subframe header. Even if it's part
+   * of an A-MSDU.
+   */
 
-    /* pull decapped header and copy SA & DA */
-    struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
+  /* pull decapped header and copy SA & DA */
+  struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
 
-    int l3_pad_bytes = ath10k_rx_desc_get_l3_pad_bytes(&ar->hw_params, rxd);
-    msdu->used += l3_pad_bytes;
-    ZX_ASSERT(msdu->used <= msdu->capacity);
+  int l3_pad_bytes = ath10k_rx_desc_get_l3_pad_bytes(&ar->hw_params, rxd);
+  msdu->used += l3_pad_bytes;
+  ZX_ASSERT(msdu->used <= msdu->capacity);
 
-    // Note that handling of l3_pad_bytes is different from the logic in the original source code,
-    // which *seemed* to contain a mistake. This should only make a difference on a QCA99x0,
-    // which we don't currently support. If you are working on the QCA99x0 support and are getting
-    // broken frames, you might want to investigate this.
-    void* frame = ath10k_msg_buf_get_payload(msdu) + l3_pad_bytes;
-    struct ieee80211_frame_header* hdr = frame;
+  // Note that handling of l3_pad_bytes is different from the logic in the original source code,
+  // which *seemed* to contain a mistake. This should only make a difference on a QCA99x0,
+  // which we don't currently support. If you are working on the QCA99x0 support and are getting
+  // broken frames, you might want to investigate this.
+  void* frame = ath10k_msg_buf_get_payload(msdu) + l3_pad_bytes;
+  struct ieee80211_frame_header* hdr = frame;
 
-    size_t nwifi_hdr_len = ath10k_htt_rx_nwifi_hdrlen(ar, hdr);
-    uint8_t da[ETH_ALEN];
-    uint8_t sa[ETH_ALEN];
-    memcpy(da, ieee80211_get_dest_addr(hdr), ETH_ALEN);
-    memcpy(sa, ieee80211_get_src_addr(hdr), ETH_ALEN);
+  size_t nwifi_hdr_len = ath10k_htt_rx_nwifi_hdrlen(ar, hdr);
+  uint8_t da[ETH_ALEN];
+  uint8_t sa[ETH_ALEN];
+  memcpy(da, ieee80211_get_dest_addr(hdr), ETH_ALEN);
+  memcpy(sa, ieee80211_get_src_addr(hdr), ETH_ALEN);
 
-    /* push original 802.11 header */
-    void* new_frame = frame + nwifi_hdr_len - original_hdr_len;
-    // There should be enough headroom in the buffer because we are overwriting the RX description
-    ZX_ASSERT(new_frame >= msdu->vaddr);
-    memcpy(new_frame, original_hdr, original_hdr_len);
+  /* push original 802.11 header */
+  void* new_frame = frame + nwifi_hdr_len - original_hdr_len;
+  // There should be enough headroom in the buffer because we are overwriting the RX description
+  ZX_ASSERT(new_frame >= msdu->vaddr);
+  memcpy(new_frame, original_hdr, original_hdr_len);
 
-    /* original 802.11 header has a different DA and in
-     * case of 4addr it may also have different SA
-     */
-    hdr = (struct ieee80211_frame_header*) new_frame;
-    memcpy(ieee80211_get_dest_addr(hdr), da, ETH_ALEN);
-    memcpy(ieee80211_get_src_addr(hdr), sa, ETH_ALEN);
+  /* original 802.11 header has a different DA and in
+   * case of 4addr it may also have different SA
+   */
+  hdr = (struct ieee80211_frame_header*)new_frame;
+  memcpy(ieee80211_get_dest_addr(hdr), da, ETH_ALEN);
+  memcpy(ieee80211_get_src_addr(hdr), sa, ETH_ALEN);
 
-    msdu->rx.frame_offset = new_frame - msdu->vaddr;
-    msdu->rx.frame_size = msdu->used - msdu->rx.frame_offset;
+  msdu->rx.frame_offset = new_frame - msdu->vaddr;
+  msdu->rx.frame_size = msdu->used - msdu->rx.frame_offset;
 }
 
 #if 0   // NEEDS PORTING
@@ -1153,48 +1165,45 @@ static void ath10k_htt_rx_h_undecap_snap(struct ath10k* ar,
 }
 #endif  // NEEDS PORTING
 
-static void ath10k_htt_rx_h_undecap(struct ath10k* ar,
-                                    struct ath10k_msg_buf* msdu,
-                                    const uint8_t* original_hdr,
-                                    size_t original_hdr_len,
-                                    enum htt_rx_mpdu_encrypt_type enctype,
-                                    bool is_decrypted) {
-    enum rx_msdu_decap_format decap;
+static void ath10k_htt_rx_h_undecap(struct ath10k* ar, struct ath10k_msg_buf* msdu,
+                                    const uint8_t* original_hdr, size_t original_hdr_len,
+                                    enum htt_rx_mpdu_encrypt_type enctype, bool is_decrypted) {
+  enum rx_msdu_decap_format decap;
 
-    /* First msdu's decapped header:
-     * [802.11 header] <-- padded to 4 bytes long
-     * [crypto param] <-- padded to 4 bytes long
-     * [amsdu header] <-- only if A-MSDU
-     * [rfc1042/llc]
-     *
-     * Other (2nd, 3rd, ..) msdu's decapped header:
-     * [amsdu header] <-- only if A-MSDU
-     * [rfc1042/llc]
-     */
+  /* First msdu's decapped header:
+   * [802.11 header] <-- padded to 4 bytes long
+   * [crypto param] <-- padded to 4 bytes long
+   * [amsdu header] <-- only if A-MSDU
+   * [rfc1042/llc]
+   *
+   * Other (2nd, 3rd, ..) msdu's decapped header:
+   * [amsdu header] <-- only if A-MSDU
+   * [rfc1042/llc]
+   */
 
-    struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
-    decap = MS(rxd->msdu_start.common.info1, RX_MSDU_START_INFO1_DECAP_FORMAT);
+  struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
+  decap = MS(rxd->msdu_start.common.info1, RX_MSDU_START_INFO1_DECAP_FORMAT);
 
-    switch (decap) {
+  switch (decap) {
     case RX_MSDU_DECAP_RAW:
-        ath10k_htt_rx_h_undecap_raw(ar, msdu, enctype, is_decrypted);
-        break;
+      ath10k_htt_rx_h_undecap_raw(ar, msdu, enctype, is_decrypted);
+      break;
     case RX_MSDU_DECAP_NATIVE_WIFI:
-        ath10k_htt_rx_h_undecap_nwifi(ar, msdu, original_hdr, original_hdr_len);
-        break;
+      ath10k_htt_rx_h_undecap_nwifi(ar, msdu, original_hdr, original_hdr_len);
+      break;
     case RX_MSDU_DECAP_ETHERNET2_DIX:
-        ath10k_warn("ath10k_htt_rx_h_undecap_eth unimplemented\n");
+      ath10k_warn("ath10k_htt_rx_h_undecap_eth unimplemented\n");
 #if 0   // NEEDS PORTING
         ath10k_htt_rx_h_undecap_eth(ar, msdu, status, first_hdr, enctype);
 #endif  // NEEDS PORTING
-        break;
+      break;
     case RX_MSDU_DECAP_8023_SNAP_LLC:
-        ath10k_warn("ath10k_htt_rx_h_undecap_snap unimplemented\n");
+      ath10k_warn("ath10k_htt_rx_h_undecap_snap unimplemented\n");
 #if 0   // NEEDS PORTING
         ath10k_htt_rx_h_undecap_snap(ar, msdu, status, first_hdr);
 #endif  // NEEDS PORTING
-        break;
-    }
+      break;
+  }
 }
 
 #if 0   // NEEDS PORTING
@@ -1235,115 +1244,112 @@ static int ath10k_htt_rx_get_csum_state(struct sk_buff* skb) {
 static void ath10k_htt_rx_h_csum_offload(struct sk_buff* msdu) {
     msdu->ip_summed = ath10k_htt_rx_get_csum_state(msdu);
 }
-#endif // NEEDS PORTING
+#endif  // NEEDS PORTING
 
 static void ath10k_htt_rx_h_mpdu(struct ath10k* ar, list_node_t* amsdu) {
-    struct ath10k_msg_buf* first = list_peek_head_type(amsdu, struct ath10k_msg_buf, listnode);
-    if (first == NULL) {
-        return;
+  struct ath10k_msg_buf* first = list_peek_head_type(amsdu, struct ath10k_msg_buf, listnode);
+  if (first == NULL) {
+    return;
+  }
+
+  struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(first, ATH10K_MSG_TYPE_HTT_RX);
+
+  bool is_mgmt = !!(rxd->attention.flags & RX_ATTENTION_FLAGS_MGMT_TYPE);
+  enum htt_rx_mpdu_encrypt_type enctype =
+      MS(rxd->mpdu_start.info0, RX_MPDU_START_INFO0_ENCRYPT_TYPE);
+
+  /* First MSDU's Rx descriptor in an A-MSDU contains full 802.11
+   * decapped header. It'll be used for undecapping of each MSDU.
+   */
+  struct ieee80211_frame_header* hdr = (void*)rxd->rx_hdr_status;
+  size_t original_hdr_len = ieee80211_hdrlen(hdr);
+  uint8_t original_hdr[64];
+  ZX_ASSERT(original_hdr_len <= sizeof(original_hdr));
+  memcpy(original_hdr, hdr, original_hdr_len);
+
+  /* Each A-MSDU subframe will use the original header as the base and be
+   * reported as a separate MSDU so strip the A-MSDU bit from QoS Ctl.
+   */
+  hdr = (void*)original_hdr;
+  original_hdr[ieee80211_get_qos_ctrl_offset(hdr)] &= ~IEEE80211_QOS_CTRL_A_MSDU_PRESENT;
+
+  /* Some attention flags are valid only in the last MSDU. */
+  struct ath10k_msg_buf* last = list_peek_tail_type(amsdu, struct ath10k_msg_buf, listnode);
+  rxd = ath10k_msg_buf_get_header(last, ATH10K_MSG_TYPE_HTT_RX);
+  uint32_t attention = rxd->attention.flags;
+
+  bool has_fcs_err = !!(attention & RX_ATTENTION_FLAGS_FCS_ERR);
+  bool has_crypto_err = !!(attention & RX_ATTENTION_FLAGS_DECRYPT_ERR);
+  bool has_tkip_err = !!(attention & RX_ATTENTION_FLAGS_TKIP_MIC_ERR);
+  bool has_peer_idx_invalid = !!(attention & RX_ATTENTION_FLAGS_PEER_IDX_INVALID);
+
+  /* Note: If hardware captures an encrypted frame that it can't decrypt,
+   * e.g. due to fcs error, missing peer or invalid key data it will
+   * report the frame as raw.
+   */
+  bool is_decrypted = (enctype != HTT_RX_MPDU_ENCRYPT_NONE && !has_fcs_err && !has_crypto_err &&
+                       !has_peer_idx_invalid);
+
+  uint8_t mpdu_flags = 0;
+
+  if (has_fcs_err) {
+    mpdu_flags |= ATH10K_RX_MPDU_FAILED_FCS_CRC;
+  }
+
+  if (has_tkip_err) {
+    mpdu_flags |= ATH10K_RX_MPDU_MMIC_ERROR;
+  }
+
+  if (is_decrypted) {
+    mpdu_flags |= ATH10K_RX_MPDU_DECRYPTED;
+
+    if (likely(!is_mgmt)) {
+      mpdu_flags |= ATH10K_RX_MPDU_IV_STRIPPED | ATH10K_RX_MPDU_MMIC_STRIPPED;
     }
+  }
 
-    struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(first, ATH10K_MSG_TYPE_HTT_RX);
+  struct ath10k_msg_buf* msdu;
+  list_for_every_entry (amsdu, msdu, struct ath10k_msg_buf, listnode) {
+    msdu->rx.frame_offset = ath10k_msg_buf_get_payload_offset(msdu->type);
+    msdu->rx.frame_size = msdu->used - msdu->rx.frame_offset;
+    msdu->rx.mpdu_flags = mpdu_flags;
 
-    bool is_mgmt = !!(rxd->attention.flags & RX_ATTENTION_FLAGS_MGMT_TYPE);
-    enum htt_rx_mpdu_encrypt_type enctype = MS(rxd->mpdu_start.info0,
-                                               RX_MPDU_START_INFO0_ENCRYPT_TYPE);
-
-    /* First MSDU's Rx descriptor in an A-MSDU contains full 802.11
-     * decapped header. It'll be used for undecapping of each MSDU.
-     */
-    struct ieee80211_frame_header* hdr = (void*)rxd->rx_hdr_status;
-    size_t original_hdr_len = ieee80211_hdrlen(hdr);
-    uint8_t original_hdr[64];
-    ZX_ASSERT(original_hdr_len <= sizeof(original_hdr));
-    memcpy(original_hdr, hdr, original_hdr_len);
-
-    /* Each A-MSDU subframe will use the original header as the base and be
-     * reported as a separate MSDU so strip the A-MSDU bit from QoS Ctl.
-     */
-    hdr = (void*) original_hdr;
-    original_hdr[ieee80211_get_qos_ctrl_offset(hdr)] &= ~IEEE80211_QOS_CTRL_A_MSDU_PRESENT;
-
-    /* Some attention flags are valid only in the last MSDU. */
-    struct ath10k_msg_buf* last = list_peek_tail_type(amsdu, struct ath10k_msg_buf, listnode);
-    rxd = ath10k_msg_buf_get_header(last, ATH10K_MSG_TYPE_HTT_RX);
-    uint32_t attention = rxd->attention.flags;
-
-    bool has_fcs_err = !!(attention & RX_ATTENTION_FLAGS_FCS_ERR);
-    bool has_crypto_err = !!(attention & RX_ATTENTION_FLAGS_DECRYPT_ERR);
-    bool has_tkip_err = !!(attention & RX_ATTENTION_FLAGS_TKIP_MIC_ERR);
-    bool has_peer_idx_invalid = !!(attention & RX_ATTENTION_FLAGS_PEER_IDX_INVALID);
-
-    /* Note: If hardware captures an encrypted frame that it can't decrypt,
-     * e.g. due to fcs error, missing peer or invalid key data it will
-     * report the frame as raw.
-     */
-    bool is_decrypted = (enctype != HTT_RX_MPDU_ENCRYPT_NONE &&
-                        !has_fcs_err &&
-                        !has_crypto_err &&
-                        !has_peer_idx_invalid);
-
-    uint8_t mpdu_flags = 0;
-
-    if (has_fcs_err) {
-        mpdu_flags |= ATH10K_RX_MPDU_FAILED_FCS_CRC;
-    }
-
-    if (has_tkip_err) {
-        mpdu_flags |= ATH10K_RX_MPDU_MMIC_ERROR;
-    }
-
-    if (is_decrypted) {
-        mpdu_flags |= ATH10K_RX_MPDU_DECRYPTED;
-
-        if (likely(!is_mgmt)) {
-            mpdu_flags |= ATH10K_RX_MPDU_IV_STRIPPED | ATH10K_RX_MPDU_MMIC_STRIPPED;
-        }
-    }
-
-    struct ath10k_msg_buf* msdu;
-    list_for_every_entry(amsdu, msdu, struct ath10k_msg_buf, listnode) {
-        msdu->rx.frame_offset = ath10k_msg_buf_get_payload_offset(msdu->type);
-        msdu->rx.frame_size = msdu->used - msdu->rx.frame_offset;
-        msdu->rx.mpdu_flags = mpdu_flags;
-
-
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
         ath10k_htt_rx_h_csum_offload(msdu);
 #endif  // NEEDS PORTING
-        ath10k_htt_rx_h_undecap(ar, msdu, original_hdr, original_hdr_len, enctype, is_decrypted);
+    ath10k_htt_rx_h_undecap(ar, msdu, original_hdr, original_hdr_len, enctype, is_decrypted);
 
-        /* Undecapping involves copying the original 802.11 header back
-         * to msg_buf. If frame is protected and hardware has decrypted
-         * it then remove the protected bit.
-         */
-        if (!is_decrypted) {
-            continue;
-        }
-        if (is_mgmt) {
-            continue;
-        }
-
-        hdr = ath10k_msg_buf_get_payload(msdu);
-        hdr->frame_ctrl &= ~IEEE80211_FRAME_PROTECTED_MASK;
+    /* Undecapping involves copying the original 802.11 header back
+     * to msg_buf. If frame is protected and hardware has decrypted
+     * it then remove the protected bit.
+     */
+    if (!is_decrypted) {
+      continue;
     }
+    if (is_mgmt) {
+      continue;
+    }
+
+    hdr = ath10k_msg_buf_get_payload(msdu);
+    hdr->frame_ctrl &= ~IEEE80211_FRAME_PROTECTED_MASK;
+  }
 }
 
 static void ath10k_htt_rx_h_deliver(struct ath10k* ar, list_node_t* amsdu) {
-    struct ath10k_msg_buf* msdu;
-    while ((msdu = list_remove_head_type(amsdu, struct ath10k_msg_buf, listnode)) != NULL) {
-        wlan_rx_info_t rx_info = {};
-        // TODO(gbonik): fill in channel correctly
-        memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
-        // TODO(gbonik): fill in rx_info from rx_desc
+  struct ath10k_msg_buf* msdu;
+  while ((msdu = list_remove_head_type(amsdu, struct ath10k_msg_buf, listnode)) != NULL) {
+    wlan_rx_info_t rx_info = {};
+    // TODO(gbonik): fill in channel correctly
+    memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
+    // TODO(gbonik): fill in rx_info from rx_desc
 
-        ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0, msdu->vaddr + msdu->rx.frame_offset,
-                              msdu->rx.frame_size, &rx_info);
-        ath10k_msg_buf_free(msdu);
-    }
+    ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0, msdu->vaddr + msdu->rx.frame_offset,
+                          msdu->rx.frame_size, &rx_info);
+    ath10k_msg_buf_free(msdu);
+  }
 }
 
-#if 0 // NEEDS PORTING
+#if 0   // NEEDS PORTING
 static bool ath10k_htt_rx_amsdu_allowed(struct ath10k* ar,
                                         struct sk_buff_head* amsdu,
                                         struct ieee80211_rx_status* rx_status) {
@@ -1382,177 +1388,171 @@ static void ath10k_htt_rx_h_filter(struct ath10k* ar,
 // Pop the chained buffers from `amsdu` and append their contents into `msdu_head`
 static zx_status_t ath10k_htt_rx_unchain_msdu(list_node_t* amsdu,
                                               struct ath10k_msg_buf* msdu_head) {
-    struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu_head, ATH10K_MSG_TYPE_HTT_RX);
-    int num_chained = rx_desc->frag_info.ring2_more_count;
+  struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu_head, ATH10K_MSG_TYPE_HTT_RX);
+  int num_chained = rx_desc->frag_info.ring2_more_count;
 
-    while (num_chained--) {
-        struct ath10k_msg_buf* chained_part = list_remove_head_type(
-                amsdu, struct ath10k_msg_buf, listnode);
-        if (!chained_part) {
-            return ZX_ERR_NOT_FOUND;
-        }
-
-        size_t available = msdu_head->capacity - msdu_head->used;
-        if (chained_part->used > available) {
-            // If the first msdu buffer doesn't have any available room left, drop the frame:
-            // pop the remaining messages, free them and return.
-            ath10k_msg_buf_free(chained_part);
-            ath10k_msg_buf_pop_and_free_n(amsdu, num_chained);
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        /* Note: Chained buffers do not contain rx descriptor */
-        memcpy(msdu_head->vaddr + msdu_head->used, chained_part->vaddr, chained_part->used);
-        msdu_head->used += chained_part->used;
-        ath10k_msg_buf_free(chained_part);
+  while (num_chained--) {
+    struct ath10k_msg_buf* chained_part =
+        list_remove_head_type(amsdu, struct ath10k_msg_buf, listnode);
+    if (!chained_part) {
+      return ZX_ERR_NOT_FOUND;
     }
-    return ZX_OK;
+
+    size_t available = msdu_head->capacity - msdu_head->used;
+    if (chained_part->used > available) {
+      // If the first msdu buffer doesn't have any available room left, drop the frame:
+      // pop the remaining messages, free them and return.
+      ath10k_msg_buf_free(chained_part);
+      ath10k_msg_buf_pop_and_free_n(amsdu, num_chained);
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    /* Note: Chained buffers do not contain rx descriptor */
+    memcpy(msdu_head->vaddr + msdu_head->used, chained_part->vaddr, chained_part->used);
+    msdu_head->used += chained_part->used;
+    ath10k_msg_buf_free(chained_part);
+  }
+  return ZX_OK;
 }
 
 // Unchain all chained msdus in `amsdu`
 static void ath10k_htt_rx_unchain_amsdu(list_node_t* amsdu) {
-    list_node_t unchained_amsdu;
-    list_initialize(&unchained_amsdu);
-    for (;;) {
-        struct ath10k_msg_buf* msdu_head = list_remove_head_type(
-                amsdu, struct ath10k_msg_buf, listnode);
-        if (!msdu_head) {
-            break;
-        }
-        if (ath10k_htt_rx_unchain_msdu(amsdu, msdu_head) == ZX_OK) {
-            list_add_tail(&unchained_amsdu, &msdu_head->listnode);
-        } else {
-            ath10k_msg_buf_free(msdu_head);
-        }
+  list_node_t unchained_amsdu;
+  list_initialize(&unchained_amsdu);
+  for (;;) {
+    struct ath10k_msg_buf* msdu_head =
+        list_remove_head_type(amsdu, struct ath10k_msg_buf, listnode);
+    if (!msdu_head) {
+      break;
     }
-    list_move(&unchained_amsdu, amsdu);
+    if (ath10k_htt_rx_unchain_msdu(amsdu, msdu_head) == ZX_OK) {
+      list_add_tail(&unchained_amsdu, &msdu_head->listnode);
+    } else {
+      ath10k_msg_buf_free(msdu_head);
+    }
+  }
+  list_move(&unchained_amsdu, amsdu);
 }
-
 
 /* Firmware reports all necessary management frames via WMI already,
  * so we need to filter them out from the regular RX path. */
 static void ath10k_htt_rx_filter_mgmt(list_node_t* amsdu) {
-    struct ath10k_msg_buf* head = list_peek_head_type(amsdu, struct ath10k_msg_buf, listnode);
-    if (head == NULL) {
-        return;
-    }
+  struct ath10k_msg_buf* head = list_peek_head_type(amsdu, struct ath10k_msg_buf, listnode);
+  if (head == NULL) {
+    return;
+  }
 
-    struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(head, ATH10K_MSG_TYPE_HTT_RX);
-    if (rx_desc->attention.flags & RX_ATTENTION_FLAGS_MGMT_TYPE) {
-        ath10k_msg_buf_purge(amsdu);
-    }
+  struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(head, ATH10K_MSG_TYPE_HTT_RX);
+  if (rx_desc->attention.flags & RX_ATTENTION_FLAGS_MGMT_TYPE) {
+    ath10k_msg_buf_purge(amsdu);
+  }
 }
 
 static zx_status_t ath10k_htt_rx_handle_amsdu(struct ath10k_htt* htt) {
-    struct ath10k* ar = htt->ar;
+  struct ath10k* ar = htt->ar;
 
-    mtx_lock(&htt->rx_ring.lock);
-    if (htt->rx_confused) {
-        mtx_unlock(&htt->rx_ring.lock);
-        return ZX_ERR_IO;
-    }
-
-    list_node_t amsdu;
-    list_initialize(&amsdu);
-    zx_status_t ret = ath10k_htt_rx_amsdu_pop(htt, &amsdu);
+  mtx_lock(&htt->rx_ring.lock);
+  if (htt->rx_confused) {
     mtx_unlock(&htt->rx_ring.lock);
+    return ZX_ERR_IO;
+  }
 
-    if (ret != ZX_OK) {
-        ath10k_err("rx ring became corrupted: %d\n", ret);
-        /* FIXME: It's probably a good idea to reboot the
-         * device instead of leaving it inoperable.
-         */
-        htt->rx_confused = true;
-        goto fail;
-    }
+  list_node_t amsdu;
+  list_initialize(&amsdu);
+  zx_status_t ret = ath10k_htt_rx_amsdu_pop(htt, &amsdu);
+  mtx_unlock(&htt->rx_ring.lock);
 
-    // TODO(gbonik): store RSSI etc. from ppdu
-    // ath10k_htt_rx_h_ppdu(ar, &amsdu, rx_status, 0xffff);
+  if (ret != ZX_OK) {
+    ath10k_err("rx ring became corrupted: %d\n", ret);
+    /* FIXME: It's probably a good idea to reboot the
+     * device instead of leaving it inoperable.
+     */
+    htt->rx_confused = true;
+    goto fail;
+  }
 
-    ath10k_htt_rx_unchain_amsdu(&amsdu);
+  // TODO(gbonik): store RSSI etc. from ppdu
+  // ath10k_htt_rx_h_ppdu(ar, &amsdu, rx_status, 0xffff);
 
-#if 0 // NEEDS PORTING
+  ath10k_htt_rx_unchain_amsdu(&amsdu);
+
+#if 0   // NEEDS PORTING
     ath10k_htt_rx_h_filter(ar, &amsdu, rx_status);
-#endif // NEEDS PORTING
-    ath10k_htt_rx_filter_mgmt(&amsdu);
-    ath10k_htt_rx_h_mpdu(ar, &amsdu);
+#endif  // NEEDS PORTING
+  ath10k_htt_rx_filter_mgmt(&amsdu);
+  ath10k_htt_rx_h_mpdu(ar, &amsdu);
 
-    ath10k_htt_rx_h_deliver(ar, &amsdu);
-    return ZX_OK;
+  ath10k_htt_rx_h_deliver(ar, &amsdu);
+  return ZX_OK;
 
-fail:
-    {
-        struct ath10k_msg_buf* buf;
-        while ((buf = list_remove_head_type(&amsdu, struct ath10k_msg_buf, listnode)) != NULL) {
-            ath10k_msg_buf_free(buf);
-        }
-    }
-    return ret;
+fail : {
+  struct ath10k_msg_buf* buf;
+  while ((buf = list_remove_head_type(&amsdu, struct ath10k_msg_buf, listnode)) != NULL) {
+    ath10k_msg_buf_free(buf);
+  }
+}
+  return ret;
 }
 
-static void ath10k_htt_rx_proc_rx_ind(struct ath10k_htt* htt,
-                                      struct htt_rx_indication* rx) {
-    struct ath10k* ar = htt->ar;
-    struct htt_rx_indication_mpdu_range* mpdu_ranges;
-    int num_mpdu_ranges;
-    int i, mpdu_count = 0;
+static void ath10k_htt_rx_proc_rx_ind(struct ath10k_htt* htt, struct htt_rx_indication* rx) {
+  struct ath10k* ar = htt->ar;
+  struct htt_rx_indication_mpdu_range* mpdu_ranges;
+  int num_mpdu_ranges;
+  int i, mpdu_count = 0;
 
-    num_mpdu_ranges = MS(rx->hdr.info1,
-                         HTT_RX_INDICATION_INFO1_NUM_MPDU_RANGES);
-    mpdu_ranges = htt_rx_ind_get_mpdu_ranges(rx);
+  num_mpdu_ranges = MS(rx->hdr.info1, HTT_RX_INDICATION_INFO1_NUM_MPDU_RANGES);
+  mpdu_ranges = htt_rx_ind_get_mpdu_ranges(rx);
 
-    ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx ind: ",
-                    rx, sizeof(*rx) +
-                    (sizeof(struct htt_rx_indication_mpdu_range) *
-                     num_mpdu_ranges));
+  ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt rx ind: ", rx,
+                  sizeof(*rx) + (sizeof(struct htt_rx_indication_mpdu_range) * num_mpdu_ranges));
 
-    for (i = 0; i < num_mpdu_ranges; i++) {
-        mpdu_count += mpdu_ranges[i].mpdu_count;
+  for (i = 0; i < num_mpdu_ranges; i++) {
+    mpdu_count += mpdu_ranges[i].mpdu_count;
+  }
+
+  while (mpdu_count--) {
+    zx_status_t status = ath10k_htt_rx_handle_amsdu(htt);
+    if (status != ZX_OK) {
+      ath10k_err("Could not handle an AMSDU RX: %s\n", zx_status_get_string(status));
+      break;
     }
-
-    while (mpdu_count--) {
-        zx_status_t status = ath10k_htt_rx_handle_amsdu(htt);
-        if (status != ZX_OK) {
-            ath10k_err("Could not handle an AMSDU RX: %s\n", zx_status_get_string(status));
-            break;
-        }
-    }
+  }
 }
 
 static void ath10k_htt_rx_tx_compl_ind(struct ath10k* ar, struct ath10k_msg_buf* buf) {
-    struct ath10k_htt* htt = &ar->htt;
-    struct htt_resp* resp = ath10k_msg_buf_get_header(buf, ATH10K_MSG_TYPE_HTT_RESP);
-    struct htt_tx_done tx_done = {};
-    int status = MS(resp->data_tx_completion.flags, HTT_DATA_TX_STATUS);
-    uint16_t msdu_id;
-    int i;
+  struct ath10k_htt* htt = &ar->htt;
+  struct htt_resp* resp = ath10k_msg_buf_get_header(buf, ATH10K_MSG_TYPE_HTT_RESP);
+  struct htt_tx_done tx_done = {};
+  int status = MS(resp->data_tx_completion.flags, HTT_DATA_TX_STATUS);
+  uint16_t msdu_id;
+  int i;
 
-    switch (status) {
+  switch (status) {
     case HTT_DATA_TX_STATUS_NO_ACK:
-        tx_done.status = HTT_TX_COMPL_STATE_NOACK;
-        break;
+      tx_done.status = HTT_TX_COMPL_STATE_NOACK;
+      break;
     case HTT_DATA_TX_STATUS_OK:
-        tx_done.status = HTT_TX_COMPL_STATE_ACK;
-        break;
+      tx_done.status = HTT_TX_COMPL_STATE_ACK;
+      break;
     case HTT_DATA_TX_STATUS_DISCARD:
     case HTT_DATA_TX_STATUS_POSTPONE:
     case HTT_DATA_TX_STATUS_DOWNLOAD_FAIL:
-        tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
-        break;
+      tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
+      break;
     default:
-        ath10k_warn("unhandled tx completion status %d\n", status);
-        tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
-        break;
-    }
+      ath10k_warn("unhandled tx completion status %d\n", status);
+      tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
+      break;
+  }
 
-    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx completion num_msdus %d\n",
-               resp->data_tx_completion.num_msdus);
+  ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx completion num_msdus %d\n",
+             resp->data_tx_completion.num_msdus);
 
-    for (i = 0; i < resp->data_tx_completion.num_msdus; i++) {
-        msdu_id = resp->data_tx_completion.msdus[i];
-        tx_done.msdu_id = msdu_id;
-        ath10k_txrx_tx_unref(htt, &tx_done);
-    }
+  for (i = 0; i < resp->data_tx_completion.num_msdus; i++) {
+    msdu_id = resp->data_tx_completion.msdus[i];
+    tx_done.msdu_id = msdu_id;
+    ath10k_txrx_tx_unref(htt, &tx_done);
+  }
 }
 
 #if 0   // NEEDS PORTING
@@ -1741,27 +1741,27 @@ static int ath10k_htt_rx_h_rx_offload(struct ath10k* ar,
 #endif  // NEEDS PORTING
 
 static zx_status_t ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct ath10k_msg_buf* buf) {
-    struct ath10k_htt* htt = &ar->htt;
-    struct htt_resp* resp = ath10k_msg_buf_get_header(buf, ATH10K_MSG_TYPE_HTT_RESP);
+  struct ath10k_htt* htt = &ar->htt;
+  struct htt_resp* resp = ath10k_msg_buf_get_header(buf, ATH10K_MSG_TYPE_HTT_RESP);
 
-    for (unsigned msdu_ndx = 0; msdu_ndx < resp->rx_in_ord_ind.msdu_count; msdu_ndx++) {
-        struct htt_rx_in_ord_msdu_desc* desc = &resp->rx_in_ord_ind.msdu_descs[msdu_ndx];
-        uint32_t paddr = desc->msdu_paddr;
+  for (unsigned msdu_ndx = 0; msdu_ndx < resp->rx_in_ord_ind.msdu_count; msdu_ndx++) {
+    struct htt_rx_in_ord_msdu_desc* desc = &resp->rx_in_ord_ind.msdu_descs[msdu_ndx];
+    uint32_t paddr = desc->msdu_paddr;
 
-        struct ath10k_msg_buf* msdu = ath10k_htt_rx_pop_paddr(htt, paddr);
-        size_t msdu_len = desc->msdu_len;
-        msdu->type = ATH10K_MSG_TYPE_HTT_RX;
-        msdu->used = sizeof(struct htt_rx_desc) + msdu_len;
+    struct ath10k_msg_buf* msdu = ath10k_htt_rx_pop_paddr(htt, paddr);
+    size_t msdu_len = desc->msdu_len;
+    msdu->type = ATH10K_MSG_TYPE_HTT_RX;
+    msdu->used = sizeof(struct htt_rx_desc) + msdu_len;
 
-        struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
-        wlan_rx_info_t rx_info = {};
-        memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
-        // TODO: fill in rx_info from rx_desc
-        ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0, rx_desc->msdu_payload, msdu_len, &rx_info);
-        ath10k_msg_buf_free(msdu);
-    }
+    struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
+    wlan_rx_info_t rx_info = {};
+    memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
+    // TODO: fill in rx_info from rx_desc
+    ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0, rx_desc->msdu_payload, msdu_len, &rx_info);
+    ath10k_msg_buf_free(msdu);
+  }
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
 #if 0   // NEEDS PORTING
@@ -2131,12 +2131,14 @@ static void ath10k_htt_rx_tx_mode_switch_ind(struct ath10k* ar,
 #endif  // NEEDS PORTING
 
 void ath10k_htt_htc_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
-    bool release;
+  bool release;
 
-    release = ath10k_htt_t2h_msg_handler(ar, msg_buf);
+  release = ath10k_htt_t2h_msg_handler(ar, msg_buf);
 
-    /* Free the indication buffer */
-    if (release) { ath10k_msg_buf_free(msg_buf); }
+  /* Free the indication buffer */
+  if (release) {
+    ath10k_msg_buf_free(msg_buf);
+  }
 }
 
 #if 0   // NEEDS PORTING
@@ -2273,148 +2275,149 @@ out:
 #endif  // NEEDS PORTING
 
 bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
-    struct ath10k_htt* htt = &ar->htt;
-    struct htt_resp* resp = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTT_RESP);
-    zx_status_t status;
+  struct ath10k_htt* htt = &ar->htt;
+  struct htt_resp* resp = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTT_RESP);
+  zx_status_t status;
 
-    /* confirm alignment */
-    if (!IS_ALIGNED((unsigned long)msg_buf->vaddr, 4)) {
-        ath10k_warn("unaligned htt message, expect trouble\n");
-    }
+  /* confirm alignment */
+  if (!IS_ALIGNED((unsigned long)msg_buf->vaddr, 4)) {
+    ath10k_warn("unaligned htt message, expect trouble\n");
+  }
 
-    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx, msg_type: 0x%0X\n", resp->hdr.msg_type);
+  ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx, msg_type: 0x%0X\n", resp->hdr.msg_type);
 
-    if (resp->hdr.msg_type >= ar->htt.t2h_msg_types_max) {
-        ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx, unsupported msg_type: 0x%0X\n max: 0x%0X",
-                   resp->hdr.msg_type, ar->htt.t2h_msg_types_max);
-        return true;
-    }
-    enum htt_t2h_msg_type type = ar->htt.t2h_msg_types[resp->hdr.msg_type];
+  if (resp->hdr.msg_type >= ar->htt.t2h_msg_types_max) {
+    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx, unsupported msg_type: 0x%0X\n max: 0x%0X",
+               resp->hdr.msg_type, ar->htt.t2h_msg_types_max);
+    return true;
+  }
+  enum htt_t2h_msg_type type = ar->htt.t2h_msg_types[resp->hdr.msg_type];
 
-    switch (type) {
+  switch (type) {
     case HTT_T2H_MSG_TYPE_VERSION_CONF: {
-        htt->target_version_major = resp->ver_resp.major;
-        htt->target_version_minor = resp->ver_resp.minor;
-        sync_completion_signal(&htt->target_version_received);
-        break;
+      htt->target_version_major = resp->ver_resp.major;
+      htt->target_version_minor = resp->ver_resp.minor;
+      sync_completion_signal(&htt->target_version_received);
+      break;
     }
     case HTT_T2H_MSG_TYPE_RX_IND:
-        ath10k_htt_rx_proc_rx_ind(htt, &resp->rx_ind);
-        ath10k_htt_rx_msdu_buff_replenish(htt);
-        break;
+      ath10k_htt_rx_proc_rx_ind(htt, &resp->rx_ind);
+      ath10k_htt_rx_msdu_buff_replenish(htt);
+      break;
     case HTT_T2H_MSG_TYPE_PEER_MAP: {
-        struct htt_peer_map_event ev = {
-            .vdev_id = resp->peer_map.vdev_id,
-            .peer_id = resp->peer_map.peer_id,
-        };
-        memcpy(ev.addr, resp->peer_map.addr, sizeof(ev.addr));
-        ath10k_peer_map_event(htt, &ev);
-        break;
+      struct htt_peer_map_event ev = {
+          .vdev_id = resp->peer_map.vdev_id,
+          .peer_id = resp->peer_map.peer_id,
+      };
+      memcpy(ev.addr, resp->peer_map.addr, sizeof(ev.addr));
+      ath10k_peer_map_event(htt, &ev);
+      break;
     }
     case HTT_T2H_MSG_TYPE_PEER_UNMAP: {
-        struct htt_peer_unmap_event ev = {
-            .peer_id = resp->peer_unmap.peer_id,
-        };
-        ath10k_peer_unmap_event(htt, &ev);
-        break;
+      struct htt_peer_unmap_event ev = {
+          .peer_id = resp->peer_unmap.peer_id,
+      };
+      ath10k_peer_unmap_event(htt, &ev);
+      break;
     }
     case HTT_T2H_MSG_TYPE_MGMT_TX_COMPLETION: {
-        struct htt_tx_done tx_done = {};
-        int compl_status = resp->mgmt_tx_completion.status;
+      struct htt_tx_done tx_done = {};
+      int compl_status = resp->mgmt_tx_completion.status;
 
-        tx_done.msdu_id = resp->mgmt_tx_completion.desc_id;
+      tx_done.msdu_id = resp->mgmt_tx_completion.desc_id;
 
-        switch (compl_status) {
+      switch (compl_status) {
         case HTT_MGMT_TX_STATUS_OK:
-            tx_done.status = HTT_TX_COMPL_STATE_ACK;
-            break;
+          tx_done.status = HTT_TX_COMPL_STATE_ACK;
+          break;
         case HTT_MGMT_TX_STATUS_RETRY:
-            tx_done.status = HTT_TX_COMPL_STATE_NOACK;
-            break;
+          tx_done.status = HTT_TX_COMPL_STATE_NOACK;
+          break;
         case HTT_MGMT_TX_STATUS_DROP:
-            tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
-            break;
-        }
+          tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
+          break;
+      }
 
-        if (ath10k_txrx_tx_unref(htt, &tx_done) == ZX_OK) {
-            mtx_lock(&htt->tx_lock);
-            ath10k_htt_tx_mgmt_dec_pending(htt);
-            mtx_unlock(&htt->tx_lock);
-        }
-        break;
+      if (ath10k_txrx_tx_unref(htt, &tx_done) == ZX_OK) {
+        mtx_lock(&htt->tx_lock);
+        ath10k_htt_tx_mgmt_dec_pending(htt);
+        mtx_unlock(&htt->tx_lock);
+      }
+      break;
     }
     case HTT_T2H_MSG_TYPE_TX_COMPL_IND:
-        ath10k_htt_rx_tx_compl_ind(htt->ar, msg_buf);
-        break;
+      ath10k_htt_rx_tx_compl_ind(htt->ar, msg_buf);
+      break;
     case HTT_T2H_MSG_TYPE_SEC_IND: {
-        struct ath10k* ar = htt->ar;
-        struct htt_security_indication* ev = &resp->security_indication;
+      struct ath10k* ar = htt->ar;
+      struct htt_security_indication* ev = &resp->security_indication;
 
-        ath10k_dbg(ar, ATH10K_DBG_HTT, "sec ind peer_id %d unicast %d type %d\n", ev->peer_id,
-                   !!(ev->flags & HTT_SECURITY_IS_UNICAST), MS(ev->flags, HTT_SECURITY_TYPE));
-        sync_completion_signal(&ar->install_key_done);
-        break;
+      ath10k_dbg(ar, ATH10K_DBG_HTT, "sec ind peer_id %d unicast %d type %d\n", ev->peer_id,
+                 !!(ev->flags & HTT_SECURITY_IS_UNICAST), MS(ev->flags, HTT_SECURITY_TYPE));
+      sync_completion_signal(&ar->install_key_done);
+      break;
     }
     case HTT_T2H_MSG_TYPE_RX_FRAG_IND: {
-        ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ", msg_buf->vaddr,
-                        msg_buf->used);
-        ath10k_htt_rx_handle_amsdu(htt);
-        ath10k_htt_rx_msdu_buff_replenish(htt);
-        break;
+      ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ", msg_buf->vaddr, msg_buf->used);
+      ath10k_htt_rx_handle_amsdu(htt);
+      ath10k_htt_rx_msdu_buff_replenish(htt);
+      break;
     }
     case HTT_T2H_MSG_TYPE_TEST:
-        break;
+      break;
     case HTT_T2H_MSG_TYPE_STATS_CONF:
-        ath10k_err("HTT_T2H_MSG_TYPE_STATS_CONF unimplemented\n");
-        break;
+      ath10k_err("HTT_T2H_MSG_TYPE_STATS_CONF unimplemented\n");
+      break;
     case HTT_T2H_MSG_TYPE_TX_INSPECT_IND:
-        /* Firmware can return tx frames if it's unable to fully
-         * process them and suspects host may be able to fix it. ath10k
-         * sends all tx frames as already inspected so this shouldn't
-         * happen unless fw has a bug.
-         */
-        ath10k_warn("received an unexpected htt tx inspect event\n");
-        break;
+      /* Firmware can return tx frames if it's unable to fully
+       * process them and suspects host may be able to fix it. ath10k
+       * sends all tx frames as already inspected so this shouldn't
+       * happen unless fw has a bug.
+       */
+      ath10k_warn("received an unexpected htt tx inspect event\n");
+      break;
     case HTT_T2H_MSG_TYPE_RX_ADDBA:
-        ath10k_err("HTT_T2H_MSG_TYPE_RX_ADDBA unimplemented\n");
+      ath10k_err("HTT_T2H_MSG_TYPE_RX_ADDBA unimplemented\n");
 #if 0   // NEEDS PORTING
         ath10k_htt_rx_addba(ar, resp);
 #endif  // NEEDS PORTING
-        break;
+      break;
     case HTT_T2H_MSG_TYPE_RX_DELBA:
-        ath10k_err("HTT_T2H_MSG_TYPE_RX_DELBA unimplemented\n");
+      ath10k_err("HTT_T2H_MSG_TYPE_RX_DELBA unimplemented\n");
 #if 0   // NEEDS PORTING
         ath10k_htt_rx_delba(ar, resp);
 #endif  // NEEDS PORTING
-        break;
+      break;
     case HTT_T2H_MSG_TYPE_PKTLOG: {
-        ath10k_err("HTT_T2H_MSG_TYPE_PKTLOG unimplemented\n");
+      ath10k_err("HTT_T2H_MSG_TYPE_PKTLOG unimplemented\n");
 #if 0   // NEEDS PORTING
         trace_ath10k_htt_pktlog(ar, resp->pktlog_msg.payload,
                                 skb->len -
                                 offsetof(struct htt_resp,
                                          pktlog_msg.payload));
 #endif  // NEEDS PORTING
-        break;
+      break;
     }
     case HTT_T2H_MSG_TYPE_RX_FLUSH: {
-        /* TODO: Verify that we can ignore this event because mac takes care of Rx
-         * aggregation reordering
-         */
-        break;
+      /* TODO: Verify that we can ignore this event because mac takes care of Rx
+       * aggregation reordering
+       */
+      break;
     }
     case HTT_T2H_MSG_TYPE_RX_IN_ORD_PADDR_IND: {
-        mtx_lock(&htt->rx_ring.lock);
-        status = ath10k_htt_rx_in_ord_ind(ar, msg_buf);
-        mtx_unlock(&htt->rx_ring.lock);
-        ath10k_htt_rx_msdu_buff_replenish(htt);
-        if (status != ZX_OK) { return false; }
-        break;
+      mtx_lock(&htt->rx_ring.lock);
+      status = ath10k_htt_rx_in_ord_ind(ar, msg_buf);
+      mtx_unlock(&htt->rx_ring.lock);
+      ath10k_htt_rx_msdu_buff_replenish(htt);
+      if (status != ZX_OK) {
+        return false;
+      }
+      break;
     }
     case HTT_T2H_MSG_TYPE_TX_CREDIT_UPDATE_IND:
-        break;
+      break;
     case HTT_T2H_MSG_TYPE_CHAN_CHANGE: {
-        ath10k_err("HTT_T2H_MSG_TYPE_CHAN_CHANGE unimplemented\n");
+      ath10k_err("HTT_T2H_MSG_TYPE_CHAN_CHANGE unimplemented\n");
 #if 0   // NEEDS PORTING
         uint32_t phymode = resp->chan_change.phymode;
         uint32_t freq = resp->chan_change.freq;
@@ -2424,42 +2427,41 @@ bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_bu
                    "htt chan change freq %u phymode %s\n",
                    freq, ath10k_wmi_phymode_str(phymode));
 #endif  // NEEDS PORTING
-        break;
+      break;
     }
     case HTT_T2H_MSG_TYPE_AGGR_CONF:
-        break;
+      break;
     case HTT_T2H_MSG_TYPE_TX_FETCH_IND: {
-        ath10k_err("HTT_T2H_MSG_TYPE_TX_FETCH_IND unimplemented\n");
-        break;
+      ath10k_err("HTT_T2H_MSG_TYPE_TX_FETCH_IND unimplemented\n");
+      break;
     }
     case HTT_T2H_MSG_TYPE_TX_FETCH_CONFIRM:
-        ath10k_err("HTT_T2H_MSG_TYPE_TX_FETCH_CONFIRM unimplemented\n");
+      ath10k_err("HTT_T2H_MSG_TYPE_TX_FETCH_CONFIRM unimplemented\n");
 #if 0   // NEEDS PORTING
         ath10k_htt_rx_tx_fetch_confirm(ar, skb);
 #endif  // NEEDS PORTING
-        break;
+      break;
     case HTT_T2H_MSG_TYPE_TX_MODE_SWITCH_IND:
-        ath10k_err("HTT_T2H_MSG_TYPE_TX_MODE_SWITCH_IND unimplemented\n");
+      ath10k_err("HTT_T2H_MSG_TYPE_TX_MODE_SWITCH_IND unimplemented\n");
 #if 0   // NEEDS PORTING
         ath10k_htt_rx_tx_mode_switch_ind(ar, skb);
 #endif  // NEEDS PORTING
-        break;
+      break;
     case HTT_T2H_MSG_TYPE_PEER_STATS:
-        ath10k_err("HTT_T2H_MSG_TYPE_PEER_STATS unimplemented\n");
+      ath10k_err("HTT_T2H_MSG_TYPE_PEER_STATS unimplemented\n");
 #if 0   // NEEDS PORTING
         ath10k_htt_fetch_peer_stats(ar, skb);
 #endif  // NEEDS PORTING
-        break;
+      break;
     case HTT_T2H_MSG_TYPE_EN_STATS:
     default:
-        ath10k_warn("htt event (%d) not handled\n", resp->hdr.msg_type);
-        ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ", msg_buf->vaddr,
-                        msg_buf->used);
-        break;
-    }
-    return true;
+      ath10k_warn("htt event (%d) not handled\n", resp->hdr.msg_type);
+      ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt event: ", msg_buf->vaddr, msg_buf->used);
+      break;
+  }
+  return true;
 }
 
 void ath10k_htt_rx_pktlog_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* buf) {
-    ath10k_msg_buf_free(buf);
+  ath10k_msg_buf_free(buf);
 }

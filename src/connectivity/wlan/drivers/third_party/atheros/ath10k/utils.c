@@ -21,19 +21,19 @@
 #include "hw.h"
 
 void ethaddr_sprintf(char* str, const uint8_t* addr) {
-    bool first = true;
-    for (unsigned ndx = 0; ndx < ETH_ALEN; ndx++) {
-        str += sprintf(str, "%s%02X", first ? "" : ":", *addr);
-        addr++;
-        first = false;
-    }
+  bool first = true;
+  for (unsigned ndx = 0; ndx < ETH_ALEN; ndx++) {
+    str += sprintf(str, "%s%02X", first ? "" : ":", *addr);
+    addr++;
+    first = false;
+  }
 }
 
 bool is_zero_ether_addr(const uint8_t* addr) {
-    for (size_t i = 0; i < ETH_ALEN; ++i) {
-        if (addr[i] != 0) {
-            return false;
-        }
+  for (size_t i = 0; i < ETH_ALEN; ++i) {
+    if (addr[i] != 0) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }

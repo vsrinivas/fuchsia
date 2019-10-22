@@ -71,9 +71,6 @@ driver_module("ath10k_driver") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
-    "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
-    "//zircon/system/banjo/ddk.protocol.pci",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-pci",
@@ -81,6 +78,9 @@ driver_module("ath10k_driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
+    "//zircon/system/banjo/ddk.protocol.pci",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

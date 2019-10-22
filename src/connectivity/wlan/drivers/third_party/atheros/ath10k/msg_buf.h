@@ -23,7 +23,6 @@
                      // defined before other project header files are included. Otherwise any
                      // other header file may include threads.h without defining this.
 #include <threads.h>
-
 #include <zircon/listnode.h>
 #include <zircon/status.h>
 

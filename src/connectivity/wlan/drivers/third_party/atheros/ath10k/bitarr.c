@@ -17,38 +17,38 @@
 #include "bitarr.h"
 
 size_t find_first_bit(const BITARR_TYPE* bitarr, size_t num_bits) {
-    size_t n = BITARR_SIZE(num_bits);
-    for (size_t i = 0; i < n; ++i) {
-        if (bitarr[i] != 0) {
-            int bit = __builtin_ffsll(bitarr[i]) - 1;
-            return MIN(i * BITARR_TYPE_NUM_BITS + bit, num_bits);
-        }
+  size_t n = BITARR_SIZE(num_bits);
+  for (size_t i = 0; i < n; ++i) {
+    if (bitarr[i] != 0) {
+      int bit = __builtin_ffsll(bitarr[i]) - 1;
+      return MIN(i * BITARR_TYPE_NUM_BITS + bit, num_bits);
     }
-    return num_bits;
+  }
+  return num_bits;
 }
 
 size_t find_next_bit(const BITARR_TYPE* bitarr, size_t num_bits, size_t bit_offset) {
-    if (bit_offset >= num_bits) {
-        return num_bits;
-    }
+  if (bit_offset >= num_bits) {
+    return num_bits;
+  }
 
-    size_t word_offset = bit_offset / BITARR_TYPE_NUM_BITS;
-    size_t offset_within_word = bit_offset % BITARR_TYPE_NUM_BITS;
+  size_t word_offset = bit_offset / BITARR_TYPE_NUM_BITS;
+  size_t offset_within_word = bit_offset % BITARR_TYPE_NUM_BITS;
 
-    size_t rest = bitarr[word_offset] & (~0ULL << offset_within_word);
-    if (rest != 0) {
-        int bit = __builtin_ffsll(rest) - 1;
-        return MIN(word_offset * BITARR_TYPE_NUM_BITS + bit, num_bits);
-    }
+  size_t rest = bitarr[word_offset] & (~0ULL << offset_within_word);
+  if (rest != 0) {
+    int bit = __builtin_ffsll(rest) - 1;
+    return MIN(word_offset * BITARR_TYPE_NUM_BITS + bit, num_bits);
+  }
 
-    size_t skipped_bits = (word_offset + 1) * BITARR_TYPE_NUM_BITS;
-    if (skipped_bits >= num_bits) {
-        return num_bits;
-    }
+  size_t skipped_bits = (word_offset + 1) * BITARR_TYPE_NUM_BITS;
+  if (skipped_bits >= num_bits) {
+    return num_bits;
+  }
 
-    return skipped_bits + find_first_bit(bitarr + word_offset + 1, num_bits - skipped_bits);
+  return skipped_bits + find_first_bit(bitarr + word_offset + 1, num_bits - skipped_bits);
 }
 
 bool bitarr_empty(const BITARR_TYPE* bitarr, size_t num_bits) {
-    return find_first_bit(bitarr, num_bits) == num_bits;
+  return find_first_bit(bitarr, num_bits) == num_bits;
 }

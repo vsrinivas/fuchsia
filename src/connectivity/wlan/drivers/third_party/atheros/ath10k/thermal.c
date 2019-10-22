@@ -26,36 +26,36 @@
 
 static int ath10k_thermal_get_max_throttle_state(struct thermal_cooling_device* cdev,
                                                  unsigned long* state) {
-    *state = ATH10K_THERMAL_THROTTLE_MAX;
+  *state = ATH10K_THERMAL_THROTTLE_MAX;
 
-    return 0;
+  return 0;
 }
 
 static int ath10k_thermal_get_cur_throttle_state(struct thermal_cooling_device* cdev,
                                                  unsigned long* state) {
-    struct ath10k* ar = cdev->devdata;
+  struct ath10k* ar = cdev->devdata;
 
-    mtx_lock(&ar->conf_mutex);
-    *state = ar->thermal.throttle_state;
-    mtx_unlock(&ar->conf_mutex);
+  mtx_lock(&ar->conf_mutex);
+  *state = ar->thermal.throttle_state;
+  mtx_unlock(&ar->conf_mutex);
 
-    return 0;
+  return 0;
 }
 
 static int ath10k_thermal_set_cur_throttle_state(struct thermal_cooling_device* cdev,
                                                  unsigned long throttle_state) {
-    struct ath10k* ar = cdev->devdata;
+  struct ath10k* ar = cdev->devdata;
 
-    if (throttle_state > ATH10K_THERMAL_THROTTLE_MAX) {
-        ath10k_warn("throttle state %ld is exceeding the limit %d\n", throttle_state,
-                    ATH10K_THERMAL_THROTTLE_MAX);
-        return -EINVAL;
-    }
-    mtx_lock(&ar->conf_mutex);
-    ar->thermal.throttle_state = throttle_state;
-    ath10k_thermal_set_throttling(ar);
-    mtx_unlock(&ar->conf_mutex);
-    return 0;
+  if (throttle_state > ATH10K_THERMAL_THROTTLE_MAX) {
+    ath10k_warn("throttle state %ld is exceeding the limit %d\n", throttle_state,
+                ATH10K_THERMAL_THROTTLE_MAX);
+    return -EINVAL;
+  }
+  mtx_lock(&ar->conf_mutex);
+  ar->thermal.throttle_state = throttle_state;
+  ath10k_thermal_set_throttling(ar);
+  mtx_unlock(&ar->conf_mutex);
+  return 0;
 }
 
 static const struct thermal_cooling_device_ops ath10k_thermal_ops = {
@@ -66,52 +66,52 @@ static const struct thermal_cooling_device_ops ath10k_thermal_ops = {
 
 static ssize_t ath10k_thermal_show_temp(struct device* dev, struct device_attribute* attr,
                                         char* buf) {
-    struct ath10k* ar = dev_get_drvdata(dev);
-    int ret, temperature;
+  struct ath10k* ar = dev_get_drvdata(dev);
+  int ret, temperature;
 
-    mtx_lock(&ar->conf_mutex);
+  mtx_lock(&ar->conf_mutex);
 
-    /* Can't get temperature when the card is off */
-    if (ar->state != ATH10K_STATE_ON) {
-        ret = -ENETDOWN;
-        goto out;
-    }
+  /* Can't get temperature when the card is off */
+  if (ar->state != ATH10K_STATE_ON) {
+    ret = -ENETDOWN;
+    goto out;
+  }
 
-    sync_completion_reset(&ar->thermal.wmi_sync);
-    ret = ath10k_wmi_pdev_get_temperature(ar);
-    if (ret) {
-        ath10k_warn("failed to read temperature %d\n", ret);
-        goto out;
-    }
+  sync_completion_reset(&ar->thermal.wmi_sync);
+  ret = ath10k_wmi_pdev_get_temperature(ar);
+  if (ret) {
+    ath10k_warn("failed to read temperature %d\n", ret);
+    goto out;
+  }
 
-    if (BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH)) {
-        ret = -ESHUTDOWN;
-        goto out;
-    }
+  if (BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH)) {
+    ret = -ESHUTDOWN;
+    goto out;
+  }
 
-    if (sync_completion_wait(&ar->thermal.wmi_sync, ATH10K_THERMAL_SYNC_TIMEOUT) ==
-        ZX_ERR_TIMED_OUT) {
-        ath10k_warn("failed to synchronize thermal read\n");
-        ret = -ETIMEDOUT;
-        goto out;
-    }
+  if (sync_completion_wait(&ar->thermal.wmi_sync, ATH10K_THERMAL_SYNC_TIMEOUT) ==
+      ZX_ERR_TIMED_OUT) {
+    ath10k_warn("failed to synchronize thermal read\n");
+    ret = -ETIMEDOUT;
+    goto out;
+  }
 
-    mtx_lock(&ar->data_lock);
-    temperature = ar->thermal.temperature;
-    mtx_unlock(&ar->data_lock);
+  mtx_lock(&ar->data_lock);
+  temperature = ar->thermal.temperature;
+  mtx_unlock(&ar->data_lock);
 
-    /* display in millidegree celcius */
-    ret = snprintf(buf, PAGE_SIZE, "%d\n", temperature * 1000);
+  /* display in millidegree celcius */
+  ret = snprintf(buf, PAGE_SIZE, "%d\n", temperature * 1000);
 out:
-    mtx_unlock(&ar->conf_mutex);
-    return ret;
+  mtx_unlock(&ar->conf_mutex);
+  return ret;
 }
 
 void ath10k_thermal_event_temperature(struct ath10k* ar, int temperature) {
-    mtx_lock(&ar->data_lock);
-    ar->thermal.temperature = temperature;
-    mtx_unlock(&ar->data_lock);
-    sync_completion_signal(&ar->thermal.wmi_sync);
+  mtx_lock(&ar->data_lock);
+  ar->thermal.temperature = temperature;
+  mtx_unlock(&ar->data_lock);
+  sync_completion_signal(&ar->thermal.wmi_sync);
 }
 
 static SENSOR_DEVICE_ATTR(temp1_input, 0444, ath10k_thermal_show_temp, NULL, 0);
@@ -123,74 +123,82 @@ static struct attribute* ath10k_hwmon_attrs[] = {
 ATTRIBUTE_GROUPS(ath10k_hwmon);
 
 void ath10k_thermal_set_throttling(struct ath10k* ar) {
-    uint32_t period, duration, enabled;
-    int ret;
+  uint32_t period, duration, enabled;
+  int ret;
 
-    ASSERT_MTX_HELD(&ar->conf_mutex);
+  ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    if (!ar->wmi.ops->gen_pdev_set_quiet_mode) { return; }
+  if (!ar->wmi.ops->gen_pdev_set_quiet_mode) {
+    return;
+  }
 
-    if (ar->state != ATH10K_STATE_ON) { return; }
+  if (ar->state != ATH10K_STATE_ON) {
+    return;
+  }
 
-    period = ar->thermal.quiet_period;
-    duration = (period * ar->thermal.throttle_state) / 100;
-    enabled = duration ? 1 : 0;
+  period = ar->thermal.quiet_period;
+  duration = (period * ar->thermal.throttle_state) / 100;
+  enabled = duration ? 1 : 0;
 
-    ret = ath10k_wmi_pdev_set_quiet_mode(ar, period, duration, ATH10K_QUIET_START_OFFSET, enabled);
-    if (ret) {
-        ath10k_warn("failed to set quiet mode period %u duarion %u enabled %u ret %d\n", period,
-                    duration, enabled, ret);
-    }
+  ret = ath10k_wmi_pdev_set_quiet_mode(ar, period, duration, ATH10K_QUIET_START_OFFSET, enabled);
+  if (ret) {
+    ath10k_warn("failed to set quiet mode period %u duarion %u enabled %u ret %d\n", period,
+                duration, enabled, ret);
+  }
 }
 
 int ath10k_thermal_register(struct ath10k* ar) {
-    struct thermal_cooling_device* cdev;
-    struct device* hwmon_dev;
-    int ret;
+  struct thermal_cooling_device* cdev;
+  struct device* hwmon_dev;
+  int ret;
 
-    cdev = thermal_cooling_device_register("ath10k_thermal", ar, &ath10k_thermal_ops);
+  cdev = thermal_cooling_device_register("ath10k_thermal", ar, &ath10k_thermal_ops);
 
-    if (IS_ERR(cdev)) {
-        ath10k_err("failed to setup thermal device result: %ld\n", PTR_ERR(cdev));
-        return -EINVAL;
-    }
+  if (IS_ERR(cdev)) {
+    ath10k_err("failed to setup thermal device result: %ld\n", PTR_ERR(cdev));
+    return -EINVAL;
+  }
 
-    ret = sysfs_create_link(&ar->dev->kobj, &cdev->device.kobj, "cooling_device");
-    if (ret) {
-        ath10k_err("failed to create cooling device symlink\n");
-        goto err_cooling_destroy;
-    }
+  ret = sysfs_create_link(&ar->dev->kobj, &cdev->device.kobj, "cooling_device");
+  if (ret) {
+    ath10k_err("failed to create cooling device symlink\n");
+    goto err_cooling_destroy;
+  }
 
-    ar->thermal.cdev = cdev;
-    ar->thermal.quiet_period = ATH10K_QUIET_PERIOD_DEFAULT;
+  ar->thermal.cdev = cdev;
+  ar->thermal.quiet_period = ATH10K_QUIET_PERIOD_DEFAULT;
 
-    /* Do not register hwmon device when temperature reading is not
-     * supported by firmware
-     */
-    if (!(ar->wmi.ops->gen_pdev_get_temperature)) { return 0; }
-
-    /* Avoid linking error on devm_hwmon_device_register_with_groups, I
-     * guess linux/hwmon.h is missing proper stubs.
-     */
-    if (!IS_REACHABLE(CONFIG_HWMON)) { return 0; }
-
-    hwmon_dev =
-        devm_hwmon_device_register_with_groups(ar->dev, "ath10k_hwmon", ar, ath10k_hwmon_groups);
-    if (IS_ERR(hwmon_dev)) {
-        ath10k_err("failed to register hwmon device: %ld\n", PTR_ERR(hwmon_dev));
-        ret = -EINVAL;
-        goto err_remove_link;
-    }
+  /* Do not register hwmon device when temperature reading is not
+   * supported by firmware
+   */
+  if (!(ar->wmi.ops->gen_pdev_get_temperature)) {
     return 0;
+  }
+
+  /* Avoid linking error on devm_hwmon_device_register_with_groups, I
+   * guess linux/hwmon.h is missing proper stubs.
+   */
+  if (!IS_REACHABLE(CONFIG_HWMON)) {
+    return 0;
+  }
+
+  hwmon_dev =
+      devm_hwmon_device_register_with_groups(ar->dev, "ath10k_hwmon", ar, ath10k_hwmon_groups);
+  if (IS_ERR(hwmon_dev)) {
+    ath10k_err("failed to register hwmon device: %ld\n", PTR_ERR(hwmon_dev));
+    ret = -EINVAL;
+    goto err_remove_link;
+  }
+  return 0;
 
 err_remove_link:
-    sysfs_remove_link(&ar->dev->kobj, "cooling_device");
+  sysfs_remove_link(&ar->dev->kobj, "cooling_device");
 err_cooling_destroy:
-    thermal_cooling_device_unregister(cdev);
-    return ret;
+  thermal_cooling_device_unregister(cdev);
+  return ret;
 }
 
 void ath10k_thermal_unregister(struct ath10k* ar) {
-    sysfs_remove_link(&ar->dev->kobj, "cooling_device");
-    thermal_cooling_device_unregister(ar->thermal.cdev);
+  sysfs_remove_link(&ar->dev->kobj, "cooling_device");
+  thermal_cooling_device_unregister(ar->thermal.cdev);
 }

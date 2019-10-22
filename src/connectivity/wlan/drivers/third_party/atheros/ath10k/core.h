@@ -21,10 +21,10 @@
 #include <stdatomic.h>
 #include <stdint.h>
 #define _ALL_SOURCE  // Define to get thrd_create_with_name from threads.h
+#include <lib/sync/completion.h>
 #include <threads.h>
 
 #include <ddk/device.h>
-#include <lib/sync/completion.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 

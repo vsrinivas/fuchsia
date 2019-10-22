@@ -18,10 +18,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_HTC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_HTC_H_
 
-#include <ddk/io-buffer.h>
 #include <lib/sync/completion.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
+
+#include <ddk/io-buffer.h>
 
 #include "macros.h"
 

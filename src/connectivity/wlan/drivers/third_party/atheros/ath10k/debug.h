@@ -22,6 +22,8 @@
 
 #include <ddk/debug.h>
 
+#include "core.h"
+
 enum ath10k_debug_mask {
   // clang-format off
     ATH10K_DBG_PCI          = 0x00000001,

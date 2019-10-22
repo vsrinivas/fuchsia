@@ -6,6 +6,7 @@
 #define GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_
 
 #include <net/ethernet.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
