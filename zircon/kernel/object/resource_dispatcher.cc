@@ -251,25 +251,31 @@ void ResourceDispatcher::Dump() {
     switch (r.get_kind()) {
       case ZX_RSRC_KIND_ROOT:
         printf("%.*s", kTypeLen, "root");
+        printf("\t%8lu", r.get_koid());
         pad_field(kFlagLen);  // Root has no flags
         printf("\t%.*s", kNameLen, name);
         printf("\n");
         break;
       case ZX_RSRC_KIND_HYPERVISOR:
         printf("%.*s", kTypeLen, "hypervisor");
+        printf("\t%8lu", r.get_koid());
         printf("\t%.*s", kFlagLen, flag_str);
         printf("\t%.*s", kNameLen, name);
         printf("\n");
         break;
       case ZX_RSRC_KIND_IRQ:
         printf("%.*s", kTypeLen, "irq");
+        printf("\t%8lu", r.get_koid());
         printf("\t%.*s", kFlagLen, flag_str);
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
+        printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
+        printf("\t%.*zu", kPrettyLen, r.get_size());
         printf("\n");
         break;
       case ZX_RSRC_KIND_IOPORT:
         printf("%.*s", kTypeLen, "io");
+        printf("\t%8lu", r.get_koid());
         printf("\t%.*s", kFlagLen, flag_str);
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
@@ -279,6 +285,7 @@ void ResourceDispatcher::Dump() {
         break;
       case ZX_RSRC_KIND_MMIO:
         printf("%.*s", kTypeLen, "mmio");
+        printf("\t%8lu", r.get_koid());
         printf("\t%.*s", kFlagLen, flag_str);
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
@@ -288,6 +295,7 @@ void ResourceDispatcher::Dump() {
         break;
       case ZX_RSRC_KIND_SMC:
         printf("%.*s", kTypeLen, "smc");
+        printf("\t%8lu", r.get_koid());
         printf("\t%.*s", kFlagLen, flag_str);
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
@@ -300,7 +308,8 @@ void ResourceDispatcher::Dump() {
     return ZX_OK;
   };
 
-  printf("%10s\t%4s\t%31s\t%16s\t%16s\t%8s\n\n", "type", "flags", "name", "start", "end", "size");
+  printf("%10s\t%8s\t%4s\t%31s\t%16s\t%16s\t%8s\n\n", "type", "koid", "flags", "name", "start",
+         "end", "size");
   for (kind = 0; kind < ZX_RSRC_KIND_COUNT; kind++) {
     ResourceDispatcher::ForEachResource(callback);
   }
