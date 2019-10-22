@@ -20,7 +20,8 @@ struct CodingTraits;
 
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
-  static constexpr size_t encoded_size = sizeof(T);
+  static constexpr size_t inline_size_old = sizeof(T);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(T);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset) {
     *encoder->template GetPtr<T>(offset) = *value;
@@ -33,7 +34,8 @@ struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
 
 template <>
 struct CodingTraits<bool> {
-  static constexpr size_t encoded_size = sizeof(bool);
+  static constexpr size_t inline_size_old = sizeof(bool);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(bool);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, bool* value, size_t offset) {
     *encoder->template GetPtr<bool>(offset) = *value;
@@ -55,7 +57,8 @@ struct CodingTraits<bool> {
 #ifdef __Fuchsia__
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type> {
-  static constexpr size_t encoded_size = sizeof(zx_handle_t);
+  static constexpr size_t inline_size_old = sizeof(zx_handle_t);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(zx_handle_t);
   static void Encode(Encoder* encoder, zx::object_base* value, size_t offset) {
     encoder->EncodeHandle(value, offset);
   }
@@ -67,12 +70,18 @@ struct CodingTraits<T, typename std::enable_if<std::is_base_of<zx::object_base, 
 
 template <typename T>
 struct CodingTraits<std::unique_ptr<T>> {
-  static constexpr size_t encoded_size = sizeof(uintptr_t);
+  static constexpr size_t inline_size_old = sizeof(uintptr_t);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(uintptr_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, std::unique_ptr<T>* value, size_t offset) {
     if (value->get()) {
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_PRESENT;
-      size_t size = CodingTraits<T>::encoded_size;
+      size_t size;
+      if (encoder->ShouldEncodeUnionAsXUnion()) {
+        size = CodingTraits<T>::inline_size_v1_no_ee;
+      } else {
+        size = CodingTraits<T>::inline_size_old;
+      }
       CodingTraits<T>::Encode(encoder, value->get(), encoder->Alloc(size));
     } else {
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_ABSENT;
@@ -104,7 +113,8 @@ void EncodeVectorPointer(EncoderImpl* encoder, size_t count, size_t offset) {
 
 template <typename T>
 struct CodingTraits<VectorPtr<T>> {
-  static constexpr size_t encoded_size = sizeof(fidl_vector_t);
+  static constexpr size_t inline_size_old = sizeof(fidl_vector_t);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, VectorPtr<T>* value, size_t offset) {
     if (!value->has_value())
@@ -127,12 +137,18 @@ struct CodingTraits<VectorPtr<T>> {
 
 template <typename T>
 struct CodingTraits<::std::vector<T>> {
-  static constexpr size_t encoded_size = sizeof(fidl_vector_t);
+  static constexpr size_t inline_size_old = sizeof(fidl_vector_t);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, ::std::vector<T>* value, size_t offset) {
     size_t count = value->size();
     EncodeVectorPointer(encoder, count, offset);
-    size_t stride = CodingTraits<T>::encoded_size;
+    size_t stride;
+    if (encoder->ShouldEncodeUnionAsXUnion()) {
+      stride = CodingTraits<T>::inline_size_v1_no_ee;
+    } else {
+      stride = CodingTraits<T>::inline_size_old;
+    }
     size_t base = encoder->Alloc(count * stride);
     for (size_t i = 0; i < count; ++i)
       CodingTraits<T>::Encode(encoder, &value->at(i), base + i * stride);
@@ -141,7 +157,12 @@ struct CodingTraits<::std::vector<T>> {
   static void Decode(DecoderImpl* decoder, ::std::vector<T>* value, size_t offset) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
     value->resize(encoded->count);
-    size_t stride = CodingTraits<T>::encoded_size;
+    size_t stride;
+    if (decoder->ShouldDecodeUnionFromXUnion()) {
+      stride = CodingTraits<T>::inline_size_v1_no_ee;
+    } else {
+      stride = CodingTraits<T>::inline_size_old;
+    }
     size_t base = decoder->GetOffset(encoded->data);
     size_t count = encoded->count;
     for (size_t i = 0; i < count; ++i)
@@ -151,24 +172,36 @@ struct CodingTraits<::std::vector<T>> {
 
 template <typename T, size_t N>
 struct CodingTraits<::std::array<T, N>> {
-  static constexpr size_t encoded_size = CodingTraits<T>::encoded_size * N;
+  static constexpr size_t inline_size_old = CodingTraits<T>::inline_size_old * N;
+  static constexpr size_t inline_size_v1_no_ee = CodingTraits<T>::inline_size_v1_no_ee * N;
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, std::array<T, N>* value, size_t offset) {
-    size_t stride = CodingTraits<T>::encoded_size;
+    size_t stride;
+    if (encoder->ShouldEncodeUnionAsXUnion()) {
+      stride = CodingTraits<T>::inline_size_v1_no_ee;
+    } else {
+      stride = CodingTraits<T>::inline_size_old;
+    }
     for (size_t i = 0; i < N; ++i)
       CodingTraits<T>::Encode(encoder, &value->at(i), offset + i * stride);
   }
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, std::array<T, N>* value, size_t offset) {
-    size_t stride = CodingTraits<T>::encoded_size;
+    size_t stride;
+    if (decoder->ShouldDecodeUnionFromXUnion()) {
+      stride = CodingTraits<T>::inline_size_v1_no_ee;
+    } else {
+      stride = CodingTraits<T>::inline_size_old;
+    }
     for (size_t i = 0; i < N; ++i)
       CodingTraits<T>::Decode(decoder, &value->at(i), offset + i * stride);
   }
 };
 
-template <typename T, size_t EncodedSize>
+template <typename T, size_t InlineSizeOld, size_t InlineSizeV1NoEE>
 struct EncodableCodingTraits {
-  static constexpr size_t encoded_size = EncodedSize;
+  static constexpr size_t inline_size_old = InlineSizeOld;
+  static constexpr size_t inline_size_v1_no_ee = InlineSizeV1NoEE;
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset) {
     value->Encode(encoder, offset);
@@ -178,6 +211,22 @@ struct EncodableCodingTraits {
     T::Decode(decoder, value, offset);
   }
 };
+
+template <typename T, class EncoderImpl = Encoder>
+size_t EncodingInlineSize(EncoderImpl* encoder) {
+  if (encoder->ShouldEncodeUnionAsXUnion()) {
+    return CodingTraits<T>::inline_size_v1_no_ee;
+  }
+  return CodingTraits<T>::inline_size_old;
+}
+
+template <typename T, class DecoderImpl = Decoder>
+size_t DecodingInlineSize(DecoderImpl* decoder) {
+  if (decoder->ShouldDecodeUnionFromXUnion()) {
+    return CodingTraits<T>::inline_size_v1_no_ee;
+  }
+  return CodingTraits<T>::inline_size_old;
+}
 
 template <typename T, class EncoderImpl>
 void Encode(EncoderImpl* encoder, T* value, size_t offset) {

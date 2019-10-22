@@ -26,9 +26,16 @@ class Union final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kPrimitive = 910042901,  // 0x363e2715
+    kStringNeedsConstructor = 891204917,  // 0x351eb535
+    kVectorStringAlsoNeedsConstructor = 1452916587,  // 0x5699bf6b
+  };
+
   static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
   static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
   zx_status_t Clone(Union* result) const;
@@ -81,6 +88,14 @@ class Union final {
   }
 
  private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kPrimitive: return XUnionTag::kPrimitive;
+    case Tag::kStringNeedsConstructor: return XUnionTag::kStringNeedsConstructor;
+    case Tag::kVectorStringAlsoNeedsConstructor: return XUnionTag::kVectorStringAlsoNeedsConstructor;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
 
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t, ::std::string, ::std::vector<::std::string>>;
   Variant value_;
@@ -106,9 +121,14 @@ class FieldCollision final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kFieldCollisionTag = 1574011787,  // 0x5dd1838b
+  };
+
   static inline ::std::unique_ptr<FieldCollision> New() { return ::std::make_unique<FieldCollision>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset);
   static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset);
   zx_status_t Clone(FieldCollision* result) const;
@@ -137,6 +157,12 @@ class FieldCollision final {
   }
 
  private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kFieldCollisionTag: return XUnionTag::kFieldCollisionTag;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
 
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t>;
   Variant value_;
@@ -154,7 +180,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::Union>
-    : public EncodableCodingTraits<::test::name::Union, 24> {};
+    : public EncodableCodingTraits<::test::name::Union, 24, 24> {};
 
 inline zx_status_t Clone(const ::test::name::Union& value,
                          ::test::name::Union* result) {
@@ -183,7 +209,7 @@ struct Equality<::test::name::Union> {
 };
 template <>
 struct CodingTraits<::test::name::FieldCollision>
-    : public EncodableCodingTraits<::test::name::FieldCollision, 8> {};
+    : public EncodableCodingTraits<::test::name::FieldCollision, 8, 24> {};
 
 inline zx_status_t Clone(const ::test::name::FieldCollision& value,
                          ::test::name::FieldCollision* result) {

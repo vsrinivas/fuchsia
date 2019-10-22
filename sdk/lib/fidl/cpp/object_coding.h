@@ -10,7 +10,7 @@ namespace fidl {
 template <class T>
 zx_status_t EncodeObject(T* object, std::vector<uint8_t>* output, const char** error_msg_out) {
   Encoder encoder(Encoder::NO_HEADER);
-  object->Encode(&encoder, encoder.Alloc(CodingTraits<T>::encoded_size));
+  object->Encode(&encoder, encoder.Alloc(EncodingInlineSize<T, fidl::Encoder>(&encoder)));
   if (encoder.CurrentHandleCount() != 0) {
     if (error_msg_out != nullptr) {
       *error_msg_out = "Cannot encode handles with object encoding";

@@ -65,7 +65,8 @@ constexpr inline {{ .Namespace }}::{{ .Name }} operator~({{ .Namespace }}::{{ .N
 {{- define "BitsTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
-  static constexpr size_t encoded_size = sizeof({{ .Namespace }}::{{ .Name }});
+  static constexpr size_t inline_size_old = sizeof({{ .Namespace }}::{{ .Name }});
+  static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Namespace }}::{{ .Name }});
   static void Encode(Encoder* encoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
     {{ .Type }} underlying = static_cast<{{ .Type }}>(*value);
     ::fidl::Encode(encoder, &underlying, offset);

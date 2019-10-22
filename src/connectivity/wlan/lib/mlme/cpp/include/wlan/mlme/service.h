@@ -5,17 +5,18 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_SERVICE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_SERVICE_H_
 
-#include <fbl/span.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
+#include <zircon/fidl.h>
+
+#include <fbl/span.h>
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <zircon/fidl.h>
 
 namespace wlan {
 
@@ -24,7 +25,7 @@ zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg, zx_txid_t txid = 0) 
   // Encode our message of type T. The encoder will take care of extending the
   // buffer to accommodate out-of-line data (e.g., vectors, strings, and
   // nullable data).
-  enc->Alloc(fidl::CodingTraits<T>::encoded_size);
+  enc->Alloc(fidl::EncodingInlineSize<T>(enc));
   msg->Encode(enc, sizeof(fidl_message_header_t));
 
   // The coding tables for fidl structs do not include offsets for the message

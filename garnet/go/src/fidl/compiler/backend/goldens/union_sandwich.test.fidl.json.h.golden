@@ -32,9 +32,14 @@ class UnionSize8Alignment4 final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kVariant = 551421578,  // 0x20de068a
+  };
+
   static inline ::std::unique_ptr<UnionSize8Alignment4> New() { return ::std::make_unique<UnionSize8Alignment4>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, UnionSize8Alignment4* _value, size_t _offset);
   static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize8Alignment4* _value, size_t _offset);
   zx_status_t Clone(UnionSize8Alignment4* result) const;
@@ -63,6 +68,12 @@ class UnionSize8Alignment4 final {
   }
 
  private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kVariant: return XUnionTag::kVariant;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
 
   using Variant = fit::internal::variant<fit::internal::monostate, uint32_t>;
   Variant value_;
@@ -112,9 +123,14 @@ class UnionSize36Alignment4 final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kVariant = 1000405696,  // 0x3ba0fac0
+  };
+
   static inline ::std::unique_ptr<UnionSize36Alignment4> New() { return ::std::make_unique<UnionSize36Alignment4>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, UnionSize36Alignment4* _value, size_t _offset);
   static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize36Alignment4* _value, size_t _offset);
   zx_status_t Clone(UnionSize36Alignment4* result) const;
@@ -143,6 +159,12 @@ class UnionSize36Alignment4 final {
   }
 
  private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kVariant: return XUnionTag::kVariant;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
 
   using Variant = fit::internal::variant<fit::internal::monostate, ::std::array<uint8_t, 32>>;
   Variant value_;
@@ -192,9 +214,14 @@ class UnionSize12Alignment4 final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kVariant = 1305904317,  // 0x4dd684bd
+  };
+
   static inline ::std::unique_ptr<UnionSize12Alignment4> New() { return ::std::make_unique<UnionSize12Alignment4>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, UnionSize12Alignment4* _value, size_t _offset);
   static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize12Alignment4* _value, size_t _offset);
   zx_status_t Clone(UnionSize12Alignment4* result) const;
@@ -223,6 +250,12 @@ class UnionSize12Alignment4 final {
   }
 
  private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kVariant: return XUnionTag::kVariant;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
 
   using Variant = fit::internal::variant<fit::internal::monostate, ::std::array<uint8_t, 6>>;
   Variant value_;
@@ -294,9 +327,14 @@ class UnionSize24Alignment8 final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kVariant = 711125680,  // 0x2a62eab0
+  };
+
   static inline ::std::unique_ptr<UnionSize24Alignment8> New() { return ::std::make_unique<UnionSize24Alignment8>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, UnionSize24Alignment8* _value, size_t _offset);
   static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize24Alignment8* _value, size_t _offset);
   zx_status_t Clone(UnionSize24Alignment8* result) const;
@@ -325,6 +363,12 @@ class UnionSize24Alignment8 final {
   }
 
  private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kVariant: return XUnionTag::kVariant;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
 
   using Variant = fit::internal::variant<fit::internal::monostate, StructSize16Alignment8>;
   Variant value_;
@@ -367,7 +411,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::UnionSize8Alignment4>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize8Alignment4, 8> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize8Alignment4, 8, 24> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::UnionSize8Alignment4& value,
                          ::test::fidl::unionsandwich::UnionSize8Alignment4* result) {
@@ -392,7 +436,7 @@ struct Equality<::test::fidl::unionsandwich::UnionSize8Alignment4> {
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::SandwichUnionSize8Alignment4>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::SandwichUnionSize8Alignment4, 16> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::SandwichUnionSize8Alignment4, 16, 40> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::SandwichUnionSize8Alignment4& value,
                          ::test::fidl::unionsandwich::SandwichUnionSize8Alignment4* result) {
@@ -416,7 +460,7 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize8Alignment4> {
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::UnionSize36Alignment4>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize36Alignment4, 36> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize36Alignment4, 36, 24> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::UnionSize36Alignment4& value,
                          ::test::fidl::unionsandwich::UnionSize36Alignment4* result) {
@@ -441,7 +485,7 @@ struct Equality<::test::fidl::unionsandwich::UnionSize36Alignment4> {
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::SandwichUnionSize36Alignment4>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::SandwichUnionSize36Alignment4, 44> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::SandwichUnionSize36Alignment4, 44, 40> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::SandwichUnionSize36Alignment4& value,
                          ::test::fidl::unionsandwich::SandwichUnionSize36Alignment4* result) {
@@ -465,7 +509,7 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize36Alignment4> {
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::UnionSize12Alignment4>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize12Alignment4, 12> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize12Alignment4, 12, 24> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::UnionSize12Alignment4& value,
                          ::test::fidl::unionsandwich::UnionSize12Alignment4* result) {
@@ -490,7 +534,7 @@ struct Equality<::test::fidl::unionsandwich::UnionSize12Alignment4> {
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::SandwichUnionSize12Alignment4>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::SandwichUnionSize12Alignment4, 20> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::SandwichUnionSize12Alignment4, 20, 40> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::SandwichUnionSize12Alignment4& value,
                          ::test::fidl::unionsandwich::SandwichUnionSize12Alignment4* result) {
@@ -514,7 +558,7 @@ struct Equality<::test::fidl::unionsandwich::SandwichUnionSize12Alignment4> {
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::StructSize16Alignment8>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::StructSize16Alignment8, 16> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::StructSize16Alignment8, 16, 16> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::StructSize16Alignment8& value,
                          ::test::fidl::unionsandwich::StructSize16Alignment8* result) {
@@ -535,7 +579,7 @@ struct Equality<::test::fidl::unionsandwich::StructSize16Alignment8> {
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::UnionSize24Alignment8>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize24Alignment8, 24> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::UnionSize24Alignment8, 24, 24> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::UnionSize24Alignment8& value,
                          ::test::fidl::unionsandwich::UnionSize24Alignment8* result) {
@@ -560,7 +604,7 @@ struct Equality<::test::fidl::unionsandwich::UnionSize24Alignment8> {
 };
 template <>
 struct CodingTraits<::test::fidl::unionsandwich::SandwichUnionSize24Alignment8>
-    : public EncodableCodingTraits<::test::fidl::unionsandwich::SandwichUnionSize24Alignment8, 40> {};
+    : public EncodableCodingTraits<::test::fidl::unionsandwich::SandwichUnionSize24Alignment8, 40, 40> {};
 
 inline zx_status_t Clone(const ::test::fidl::unionsandwich::SandwichUnionSize24Alignment8& value,
                          ::test::fidl::unionsandwich::SandwichUnionSize24Alignment8* result) {

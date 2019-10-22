@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+
 #include <gtest/gtest.h>
 #include <src/connectivity/wlan/drivers/wlanif/convert.h>
 
@@ -13,7 +14,7 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 template <typename T>
 zx_status_t ValidateMessage(T* msg) {
   fidl::Encoder enc(0);
-  enc.Alloc(fidl::CodingTraits<T>::encoded_size);
+  enc.Alloc(fidl::EncodingInlineSize<T>(&enc));
   msg->Encode(&enc, sizeof(fidl_message_header_t));
 
   auto encoded = enc.GetMessage();

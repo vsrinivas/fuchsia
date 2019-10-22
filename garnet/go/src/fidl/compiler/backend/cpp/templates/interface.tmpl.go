@@ -110,7 +110,11 @@ class {{ .RequestEncoderName }} {
   {{- range .Methods }}
     {{- if .HasRequest }}
   static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
-    _encoder->Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
+    if (_encoder->ShouldEncodeUnionAsXUnion()) {
+      _encoder->Alloc({{ .RequestSizeV1NoEE }} - sizeof(fidl_message_header_t));
+    } else {
+      _encoder->Alloc({{ .RequestSizeOld }} - sizeof(fidl_message_header_t));
+    }
     {{- range .Request }}
     ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
     {{- end }}
@@ -179,7 +183,11 @@ class {{ .ResponseEncoderName }} {
   {{- range .Methods }}
     {{- if .HasResponse }}
   static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
-    _encoder->Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
+    if (_encoder->ShouldEncodeUnionAsXUnion()) {
+      _encoder->Alloc({{ .ResponseSizeV1NoEE }} - sizeof(fidl_message_header_t));
+    } else {
+      _encoder->Alloc({{ .ResponseSizeOld }} - sizeof(fidl_message_header_t));
+    }
       {{- range .Response }}
     ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
       {{- end }}

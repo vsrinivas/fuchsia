@@ -410,7 +410,7 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear,
 
   if (!direct) {
     fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-    encoder.Alloc(fidl::CodingTraits<fuchsia::sysmem::SingleBufferSettings>::encoded_size);
+    encoder.Alloc(fidl::EncodingInlineSize<fuchsia::sysmem::SingleBufferSettings>(&encoder));
     buffer_collection_info.settings.Encode(&encoder, 0);
     std::vector<uint8_t> encoded_data = encoder.TakeBytes();
 

@@ -169,7 +169,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &{{ .FieldDataName }}.value,
-        _encoder->Alloc(::fidl::CodingTraits<{{ .Type.Decl }}>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.Decl }}, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + ({{ .Ordinal }} - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -235,7 +235,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- define "TableTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeOld }}, {{ .InlineSizeV1NoEE }}> {};
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
                          {{ .Namespace }}::{{ .Name }}* result) {

@@ -99,7 +99,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
 {{- define "StructTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeOld }}, {{ .InlineSizeV1NoEE }}> {};
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {

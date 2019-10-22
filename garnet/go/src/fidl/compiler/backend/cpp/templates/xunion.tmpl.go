@@ -222,7 +222,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   switch (tag_) {
     {{- range .Members }}
     case Tag::{{ .TagName }}: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<{{ .Type.Identifier }}>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.Identifier }}, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &{{ .StorageName }}, envelope_offset);
       break;
     }
@@ -358,11 +358,12 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 {{- define "XUnionTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeOld }}, {{ .InlineSizeV1NoEE }}> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<{{ .Namespace }}::{{ .Name }}>> {
-  static constexpr size_t encoded_size = {{ .Size }};
+  static constexpr size_t inline_size_old = {{ .InlineSizeOld }};
+  static constexpr size_t inline_size_v1_no_ee = {{ .InlineSizeV1NoEE }};
 
   static void Encode(Encoder* encoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset) {
     {{/* TODO(FIDL-481): Disallow empty xunions (but permit nullable/optional

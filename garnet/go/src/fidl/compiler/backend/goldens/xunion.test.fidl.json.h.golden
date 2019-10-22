@@ -345,11 +345,19 @@ class TestProtocol {
 class TestProtocol_RequestEncoder {
  public:
   static ::fidl::Message StrictXUnionHenceResponseMayBeStackAllocated(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    if (_encoder->ShouldEncodeUnionAsXUnion()) {
+      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    } else {
+      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    }
     return _encoder->GetMessage();
   }
   static ::fidl::Message FlexibleXUnionHenceResponseMustBeHeapAllocated(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    if (_encoder->ShouldEncodeUnionAsXUnion()) {
+      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    } else {
+      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    }
     return _encoder->GetMessage();
   }
 };
@@ -399,12 +407,20 @@ class TestProtocol_RequestDecoder {
 class TestProtocol_ResponseEncoder {
  public:
   static ::fidl::Message StrictXUnionHenceResponseMayBeStackAllocated(::fidl::Encoder* _encoder, StrictBoundedXUnion* xu) {
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    if (_encoder->ShouldEncodeUnionAsXUnion()) {
+      _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    } else {
+      _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    }
     ::fidl::Encode(_encoder, xu, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message FlexibleXUnionHenceResponseMustBeHeapAllocated(::fidl::Encoder* _encoder, OlderSimpleUnion* xu) {
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    if (_encoder->ShouldEncodeUnionAsXUnion()) {
+      _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    } else {
+      _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    }
     ::fidl::Encode(_encoder, xu, 16);
     return _encoder->GetMessage();
   }
@@ -730,7 +746,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::StructWithNullableXUnion>
-    : public EncodableCodingTraits<::test::name::StructWithNullableXUnion, 24> {};
+    : public EncodableCodingTraits<::test::name::StructWithNullableXUnion, 24, 24> {};
 
 inline zx_status_t Clone(const ::test::name::StructWithNullableXUnion& value,
                          ::test::name::StructWithNullableXUnion* result) {
@@ -748,11 +764,12 @@ struct Equality<::test::name::StructWithNullableXUnion> {
 };
 template <>
 struct CodingTraits<::test::name::StrictSimpleXUnion>
-    : public EncodableCodingTraits<::test::name::StrictSimpleXUnion, 24> {};
+    : public EncodableCodingTraits<::test::name::StrictSimpleXUnion, 24, 24> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::name::StrictSimpleXUnion>> {
-  static constexpr size_t encoded_size = 24;
+  static constexpr size_t inline_size_old = 24;
+  static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(Encoder* encoder, std::unique_ptr<::test::name::StrictSimpleXUnion>* value, size_t offset) {
     auto&& p_xunion = *value;
@@ -803,11 +820,12 @@ struct Equality<::test::name::StrictSimpleXUnion> {
 };
 template <>
 struct CodingTraits<::test::name::StrictBoundedXUnion>
-    : public EncodableCodingTraits<::test::name::StrictBoundedXUnion, 24> {};
+    : public EncodableCodingTraits<::test::name::StrictBoundedXUnion, 24, 24> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::name::StrictBoundedXUnion>> {
-  static constexpr size_t encoded_size = 24;
+  static constexpr size_t inline_size_old = 24;
+  static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(Encoder* encoder, std::unique_ptr<::test::name::StrictBoundedXUnion>* value, size_t offset) {
     auto&& p_xunion = *value;
@@ -854,11 +872,12 @@ struct Equality<::test::name::StrictBoundedXUnion> {
 };
 template <>
 struct CodingTraits<::test::name::OlderSimpleUnion>
-    : public EncodableCodingTraits<::test::name::OlderSimpleUnion, 24> {};
+    : public EncodableCodingTraits<::test::name::OlderSimpleUnion, 24, 24> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::name::OlderSimpleUnion>> {
-  static constexpr size_t encoded_size = 24;
+  static constexpr size_t inline_size_old = 24;
+  static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(Encoder* encoder, std::unique_ptr<::test::name::OlderSimpleUnion>* value, size_t offset) {
     auto&& p_xunion = *value;
@@ -906,11 +925,12 @@ struct Equality<::test::name::OlderSimpleUnion> {
 };
 template <>
 struct CodingTraits<::test::name::NewerSimpleUnion>
-    : public EncodableCodingTraits<::test::name::NewerSimpleUnion, 24> {};
+    : public EncodableCodingTraits<::test::name::NewerSimpleUnion, 24, 24> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::name::NewerSimpleUnion>> {
-  static constexpr size_t encoded_size = 24;
+  static constexpr size_t inline_size_old = 24;
+  static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(Encoder* encoder, std::unique_ptr<::test::name::NewerSimpleUnion>* value, size_t offset) {
     auto&& p_xunion = *value;
@@ -960,7 +980,7 @@ struct Equality<::test::name::NewerSimpleUnion> {
 };
 template <>
 struct CodingTraits<::test::name::Empty>
-    : public EncodableCodingTraits<::test::name::Empty, 1> {};
+    : public EncodableCodingTraits<::test::name::Empty, 1, 1> {};
 
 inline zx_status_t Clone(const ::test::name::Empty& value,
                          ::test::name::Empty* result) {
@@ -978,11 +998,12 @@ struct Equality<::test::name::Empty> {
 };
 template <>
 struct CodingTraits<::test::name::XUnionContainingEmptyStruct>
-    : public EncodableCodingTraits<::test::name::XUnionContainingEmptyStruct, 24> {};
+    : public EncodableCodingTraits<::test::name::XUnionContainingEmptyStruct, 24, 24> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::name::XUnionContainingEmptyStruct>> {
-  static constexpr size_t encoded_size = 24;
+  static constexpr size_t inline_size_old = 24;
+  static constexpr size_t inline_size_v1_no_ee = 24;
 
   static void Encode(Encoder* encoder, std::unique_ptr<::test::name::XUnionContainingEmptyStruct>* value, size_t offset) {
     auto&& p_xunion = *value;

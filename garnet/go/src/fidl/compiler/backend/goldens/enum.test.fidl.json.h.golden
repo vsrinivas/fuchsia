@@ -36,7 +36,8 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::MyStrictEnum> {
-  static constexpr size_t encoded_size = sizeof(::test::name::MyStrictEnum);
+  static constexpr size_t inline_size_old = sizeof(::test::name::MyStrictEnum);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyStrictEnum);
   static void Encode(Encoder* encoder, ::test::name::MyStrictEnum* value, size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
@@ -62,7 +63,8 @@ struct Equality<::test::name::MyStrictEnum> {
 
 template <>
 struct CodingTraits<::test::name::MyEnum> {
-  static constexpr size_t encoded_size = sizeof(::test::name::MyEnum);
+  static constexpr size_t inline_size_old = sizeof(::test::name::MyEnum);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyEnum);
   static void Encode(Encoder* encoder, ::test::name::MyEnum* value, size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);

@@ -49,6 +49,11 @@ WithErrorSyntax_ResponseAsStruct_Result& WithErrorSyntax_ResponseAsStruct_Result
 }
 
 void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    EncodeAsXUnionBytes(_encoder, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
   ::fidl::Encode(_encoder, &_tag, _offset);
   switch (_tag) {
@@ -60,6 +65,38 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* _encoder, 
     break;
    default:
     break;
+  }
+}
+
+void WithErrorSyntax_ResponseAsStruct_Result::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
+  const size_t length_before = _encoder->CurrentLength();
+  const size_t handles_before = _encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kResponse: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<class WithErrorSyntax_ResponseAsStruct_Response, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &response(), envelope_offset);
+      break;
+    }
+    case Tag::kErr: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &err(), envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = WhichXUnionTag();
+    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -188,6 +225,11 @@ WithErrorSyntax_ErrorAsPrimitive_Result& WithErrorSyntax_ErrorAsPrimitive_Result
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    EncodeAsXUnionBytes(_encoder, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
   ::fidl::Encode(_encoder, &_tag, _offset);
   switch (_tag) {
@@ -199,6 +241,38 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* _encoder, 
     break;
    default:
     break;
+  }
+}
+
+void WithErrorSyntax_ErrorAsPrimitive_Result::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
+  const size_t length_before = _encoder->CurrentLength();
+  const size_t handles_before = _encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kResponse: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<class WithErrorSyntax_ErrorAsPrimitive_Response, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &response(), envelope_offset);
+      break;
+    }
+    case Tag::kErr: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &err(), envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = WhichXUnionTag();
+    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -1128,6 +1202,11 @@ WithErrorSyntax_ErrorAsEnum_Result& WithErrorSyntax_ErrorAsEnum_Result::operator
 }
 
 void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    EncodeAsXUnionBytes(_encoder, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
   ::fidl::Encode(_encoder, &_tag, _offset);
   switch (_tag) {
@@ -1139,6 +1218,38 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* _encoder, size_
     break;
    default:
     break;
+  }
+}
+
+void WithErrorSyntax_ErrorAsEnum_Result::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
+  const size_t length_before = _encoder->CurrentLength();
+  const size_t handles_before = _encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kResponse: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<class WithErrorSyntax_ErrorAsEnum_Response, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &response(), envelope_offset);
+      break;
+    }
+    case Tag::kErr: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<ErrorEnun, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &err(), envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = WhichXUnionTag();
+    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 

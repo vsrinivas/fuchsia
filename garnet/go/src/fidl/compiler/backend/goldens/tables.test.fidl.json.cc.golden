@@ -79,7 +79,7 @@ void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &x_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -93,7 +93,7 @@ void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &y_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -260,7 +260,7 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &z_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -274,7 +274,7 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &y_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (2 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -288,7 +288,7 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &x_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (3 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -434,7 +434,7 @@ void OlderSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &x_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -580,7 +580,7 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &x_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -594,7 +594,7 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &y_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
@@ -608,7 +608,7 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     ::fidl::Encode(
         _encoder,
         &z_value_.value,
-        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
     size_t envelope_base = base + (6 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |

@@ -14,14 +14,16 @@ bool cmp_payload(const uint8_t* actual, size_t actual_size, const uint8_t* expec
 
 template <class Output, class Input>
 Output RoundTrip(const Input& input) {
-  const size_t input_encoded_size = CodingTraits<Input>::encoded_size;
+  fidl::Encoder enc(0xfefefefe);
+
+  const size_t input_encoded_size = EncodingInlineSize<Input, Encoder>(&enc);
   const size_t input_padding_size = FIDL_ALIGN(input_encoded_size) - input_encoded_size;
   const ::fidl::FidlStructField fake_input_interface_fields[] = {
       ::fidl::FidlStructField(Input::FidlType, 16, input_padding_size),
   };
   const fidl_type_t fake_input_interface_struct{
       ::fidl::FidlCodedStruct(fake_input_interface_fields, 1, 16 + input_encoded_size, "Input")};
-  const size_t output_encoded_size = CodingTraits<Input>::encoded_size;
+  const size_t output_encoded_size = EncodingInlineSize<Input, Encoder>(&enc);
   const size_t output_padding_size = FIDL_ALIGN(output_encoded_size) - output_encoded_size;
   const ::fidl::FidlStructField fake_output_interface_fields[] = {
       ::fidl::FidlStructField(Output::FidlType, 16, output_padding_size),
@@ -29,7 +31,6 @@ Output RoundTrip(const Input& input) {
   const fidl_type_t fake_output_interface_struct{
       ::fidl::FidlCodedStruct(fake_output_interface_fields, 1, 16 + output_encoded_size, "Output")};
 
-  fidl::Encoder enc(0xfefefefe);
   auto ofs = enc.Alloc(input_encoded_size);
   fidl::Clone(input).Encode(&enc, ofs);
   auto msg = enc.GetMessage();
@@ -60,7 +61,7 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 template <class Input>
 bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
   fidl::Encoder enc(0xfefefefe);
-  auto offset = enc.Alloc(CodingTraits<Input>::encoded_size);
+  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
   fidl::Clone(input).Encode(&enc, offset);
   auto msg = enc.GetMessage();
   auto payload = msg.payload();
@@ -79,7 +80,7 @@ void CheckDecodeFailure(std::vector<uint8_t> input, const zx_status_t expected_f
 template <class Input>
 void CheckEncodeFailure(const Input& input, const zx_status_t expected_failure_code) {
   fidl::Encoder enc(0xfefefefe);
-  auto offset = enc.Alloc(CodingTraits<Input>::encoded_size);
+  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
   fidl::Clone(input).Encode(&enc, offset);
   auto msg = enc.GetMessage();
   const char* error = nullptr;

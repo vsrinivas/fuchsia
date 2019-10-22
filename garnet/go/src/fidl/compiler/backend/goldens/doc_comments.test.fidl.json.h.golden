@@ -45,9 +45,14 @@ class Union final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kField = 1868605377,  // 0x6f60a7c1
+  };
+
   static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
   static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
   zx_status_t Clone(Union* result) const;
@@ -82,6 +87,12 @@ class Union final {
   }
 
  private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kField: return XUnionTag::kField;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
 
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t>;
   Variant value_;
@@ -223,7 +234,11 @@ class Interface {
 class Interface_RequestEncoder {
  public:
   static ::fidl::Message Method(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    if (_encoder->ShouldEncodeUnionAsXUnion()) {
+      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    } else {
+      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    }
     return _encoder->GetMessage();
   }
 };
@@ -266,7 +281,11 @@ class Interface_RequestDecoder {
 class Interface_ResponseEncoder {
  public:
   static ::fidl::Message OnEvent(::fidl::Encoder* _encoder) {
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    if (_encoder->ShouldEncodeUnionAsXUnion()) {
+      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    } else {
+      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    }
     return _encoder->GetMessage();
   }
 };
@@ -369,7 +388,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::Union>
-    : public EncodableCodingTraits<::test::name::Union, 8> {};
+    : public EncodableCodingTraits<::test::name::Union, 8, 24> {};
 
 inline zx_status_t Clone(const ::test::name::Union& value,
                          ::test::name::Union* result) {
@@ -394,7 +413,7 @@ struct Equality<::test::name::Union> {
 };
 template <>
 struct CodingTraits<::test::name::Table>
-    : public EncodableCodingTraits<::test::name::Table, 16> {};
+    : public EncodableCodingTraits<::test::name::Table, 16, 16> {};
 
 inline zx_status_t Clone(const ::test::name::Table& _value,
                          ::test::name::Table* result) {
@@ -418,7 +437,7 @@ struct Equality<::test::name::Table> {
 };
 template <>
 struct CodingTraits<::test::name::Struct>
-    : public EncodableCodingTraits<::test::name::Struct, 4> {};
+    : public EncodableCodingTraits<::test::name::Struct, 4, 4> {};
 
 inline zx_status_t Clone(const ::test::name::Struct& value,
                          ::test::name::Struct* result) {

@@ -65,9 +65,16 @@ class {{ .Name }} final {
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+  {{- range .Members }}
+    {{ .TagName }} = {{ .XUnionOrdinal }},  // {{ .XUnionOrdinal | printf "%#x" }}
+  {{- end }}
+  };
+
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
   static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
   zx_status_t Clone({{ .Name }}* result) const;
@@ -103,6 +110,14 @@ class {{ .Name }} final {
   }
 
  private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+      {{- range .Members }}
+    case Tag::{{ .TagName }}: return XUnionTag::{{ .TagName }};
+      {{- end }}
+    case Tag::Invalid:{{/* This is not ideal but we should never hit this case. */}} return XUnionTag(0);
+    }
+  }
 
   using Variant = fit::internal::variant<fit::internal::monostate
   {{- range .Members -}}
@@ -137,6 +152,11 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 }
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    EncodeAsXUnionBytes(_encoder, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
   ::fidl::Encode(_encoder, &_tag, _offset);
   switch (_tag) {
@@ -147,6 +167,39 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   {{- end }}
    default:
     break;
+  }
+}
+
+void {{ .Name }}::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
+  const size_t length_before = _encoder->CurrentLength();
+  const size_t handles_before = _encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    {{- range .Members }}
+    case Tag::{{ .TagName }}: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.Identifier }}, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &{{ .Name }}(), envelope_offset);
+      break;
+    }
+    {{- end }}
+    default:
+       break;
+  }
+
+  {{/* Note that _encoder->GetPtr() must be called after every call to
+       _encoder->Alloc(), since _encoder.bytes_ could be re-sized and moved.
+     */ -}}
+
+  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = WhichXUnionTag();
+    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -232,7 +285,7 @@ void {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
 {{- define "UnionTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeOld }}, {{ .InlineSizeV1NoEE }}> {};
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {

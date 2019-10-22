@@ -43,7 +43,7 @@ bool EncodeToBuffer(T* data, fuchsia::mem::Buffer* buffer) {
   fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
   // We need to preallocate the size of the structure in the encoder, the rest
   // is allocated when the vector is encoded.
-  encoder.Alloc(fidl::CodingTraits<T>::encoded_size);
+  encoder.Alloc(fidl::EncodingInlineSize<T, fidl::Encoder>(&encoder));
   fidl::Encode(&encoder, data, 0);
   return fsl::VmoFromVector(encoder.TakeBytes(), buffer);
 }

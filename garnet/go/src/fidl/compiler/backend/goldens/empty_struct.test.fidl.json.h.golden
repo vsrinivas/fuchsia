@@ -35,7 +35,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::Empty>
-    : public EncodableCodingTraits<::test::name::Empty, 1> {};
+    : public EncodableCodingTraits<::test::name::Empty, 1, 1> {};
 
 inline zx_status_t Clone(const ::test::name::Empty& value,
                          ::test::name::Empty* result) {

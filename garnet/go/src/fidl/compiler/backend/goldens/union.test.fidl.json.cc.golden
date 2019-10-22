@@ -22,6 +22,11 @@ Union& Union::operator=(Union&& other) {
 }
 
 void Union::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    EncodeAsXUnionBytes(_encoder, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
   ::fidl::Encode(_encoder, &_tag, _offset);
   switch (_tag) {
@@ -36,6 +41,43 @@ void Union::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     break;
    default:
     break;
+  }
+}
+
+void Union::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
+  const size_t length_before = _encoder->CurrentLength();
+  const size_t handles_before = _encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kPrimitive: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &Primitive(), envelope_offset);
+      break;
+    }
+    case Tag::kStringNeedsConstructor: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &StringNeedsConstructor(), envelope_offset);
+      break;
+    }
+    case Tag::kVectorStringAlsoNeedsConstructor: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::std::string>, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &VectorStringAlsoNeedsConstructor(), envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = WhichXUnionTag();
+    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -173,6 +215,11 @@ FieldCollision& FieldCollision::operator=(FieldCollision&& other) {
 }
 
 void FieldCollision::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    EncodeAsXUnionBytes(_encoder, _offset);
+    return;
+  }
+
   fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
   ::fidl::Encode(_encoder, &_tag, _offset);
   switch (_tag) {
@@ -181,6 +228,33 @@ void FieldCollision::Encode(::fidl::Encoder* _encoder, size_t _offset) {
     break;
    default:
     break;
+  }
+}
+
+void FieldCollision::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
+  const size_t length_before = _encoder->CurrentLength();
+  const size_t handles_before = _encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kFieldCollisionTag: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &field_collision_tag(), envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = WhichXUnionTag();
+    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 

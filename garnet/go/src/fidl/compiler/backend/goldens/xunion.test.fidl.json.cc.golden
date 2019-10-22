@@ -96,17 +96,17 @@ void StrictSimpleXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (tag_) {
     case Tag::kI: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<int32_t>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &i_, envelope_offset);
       break;
     }
     case Tag::kF: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<float>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<float, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &f_, envelope_offset);
       break;
     }
     case Tag::kS: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<::std::string>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &s_, envelope_offset);
       break;
     }
@@ -270,7 +270,7 @@ void StrictBoundedXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (tag_) {
     case Tag::kV: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<::std::vector<uint8_t>>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<uint8_t>, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &v_, envelope_offset);
       break;
     }
@@ -425,12 +425,12 @@ void OlderSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (tag_) {
     case Tag::kI: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &i_, envelope_offset);
       break;
     }
     case Tag::kF: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<float>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<float, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &f_, envelope_offset);
       break;
     }
@@ -865,17 +865,17 @@ void NewerSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (tag_) {
     case Tag::kI: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &i_, envelope_offset);
       break;
     }
     case Tag::kS: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<::std::string>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &s_, envelope_offset);
       break;
     }
     case Tag::kV: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<::std::vector<::std::string>>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::std::string>, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &v_, envelope_offset);
       break;
     }
@@ -1079,7 +1079,7 @@ void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder, size_t offset
 
   switch (tag_) {
     case Tag::kEmpty: {
-      envelope_offset = encoder->Alloc(::fidl::CodingTraits<class Empty>::encoded_size);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<class Empty, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &empty_, envelope_offset);
       break;
     }

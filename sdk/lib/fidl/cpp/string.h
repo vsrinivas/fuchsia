@@ -281,7 +281,8 @@ inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
 
 template <>
 struct CodingTraits<::std::string> {
-  static constexpr size_t encoded_size = sizeof(fidl_string_t);
+  static constexpr size_t inline_size_old = sizeof(fidl_string_t);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, std::string* value, size_t offset) {
     fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
@@ -301,7 +302,8 @@ struct CodingTraits<::std::string> {
 
 template <>
 struct CodingTraits<StringPtr> {
-  static constexpr size_t encoded_size = sizeof(fidl_string_t);
+  static constexpr size_t inline_size_old = sizeof(fidl_string_t);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, StringPtr* value, size_t offset) {
     if (value->has_value()) {

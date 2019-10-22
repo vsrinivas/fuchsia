@@ -115,16 +115,18 @@ type EnumMember struct {
 
 type Union struct {
 	types.Attributes
-	Namespace    string
-	Name         string
-	TableType    string
-	Members      []UnionMember
-	Size         int
-	MaxHandles   int
-	MaxOutOfLine int
-	IsResult     bool
-	Result       *Result
-	Kind         unionKind
+	Namespace        string
+	Name             string
+	TableType        string
+	Members          []UnionMember
+	Size             int
+	InlineSizeOld    int
+	InlineSizeV1NoEE int
+	MaxHandles       int
+	MaxOutOfLine     int
+	IsResult         bool
+	Result           *Result
+	Kind             unionKind
 }
 
 type UnionMember struct {
@@ -143,14 +145,16 @@ func (um UnionMember) UpperCamelCaseName() string {
 
 type XUnion struct {
 	types.Attributes
-	Namespace    string
-	Name         string
-	TableType    string
-	Members      []XUnionMember
-	Size         int
-	MaxHandles   int
-	MaxOutOfLine int
-	Kind         xunionKind
+	Namespace        string
+	Name             string
+	TableType        string
+	Members          []XUnionMember
+	Size             int
+	InlineSizeOld    int
+	InlineSizeV1NoEE int
+	MaxHandles       int
+	MaxOutOfLine     int
+	Kind             xunionKind
 	types.Strictness
 }
 
@@ -170,15 +174,17 @@ func (xum XUnionMember) UpperCamelCaseName() string {
 
 type Table struct {
 	types.Attributes
-	Namespace      string
-	Name           string
-	TableType      string
-	Members        []TableMember
-	Size           int
-	BiggestOrdinal int
-	MaxHandles     int
-	MaxOutOfLine   int
-	Kind           tableKind
+	Namespace        string
+	Name             string
+	TableType        string
+	Members          []TableMember
+	Size             int
+	InlineSizeOld    int
+	InlineSizeV1NoEE int
+	BiggestOrdinal   int
+	MaxHandles       int
+	MaxOutOfLine     int
+	Kind             tableKind
 }
 
 type TableMember struct {
@@ -197,17 +203,19 @@ type TableMember struct {
 
 type Struct struct {
 	types.Attributes
-	Namespace     string
-	Name          string
-	TableType     string
-	Members       []StructMember
-	Size          int
-	MaxHandles    int
-	MaxOutOfLine  int
-	HasPadding    bool
-	IsResultValue bool
-	Result        *Result
-	Kind          structKind
+	Namespace        string
+	Name             string
+	TableType        string
+	Members          []StructMember
+	Size             int
+	InlineSizeOld    int
+	InlineSizeV1NoEE int
+	MaxHandles       int
+	MaxOutOfLine     int
+	HasPadding       bool
+	IsResultValue    bool
+	Result           *Result
+	Kind             structKind
 }
 
 type StructMember struct {
@@ -267,6 +275,8 @@ type Method struct {
 	HasRequest           bool
 	Request              []Parameter
 	RequestSize          int
+	RequestSizeOld       int
+	RequestSizeV1NoEE    int
 	RequestTypeName      string
 	RequestMaxHandles    int
 	RequestMaxOutOfLine  int
@@ -275,6 +285,8 @@ type Method struct {
 	HasResponse          bool
 	Response             []Parameter
 	ResponseSize         int
+	ResponseSizeOld      int
+	ResponseSizeV1NoEE   int
 	ResponseTypeName     string
 	ResponseMaxHandles   int
 	ResponseMaxOutOfLine int
@@ -945,6 +957,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			HasRequest:           v.HasRequest,
 			Request:              c.compileParameterArray(v.Request),
 			RequestSize:          v.RequestSize,
+			RequestSizeOld:       v.RequestTypeShapeOld.InlineSize,
+			RequestSizeV1NoEE:    v.RequestTypeShapeV1NoEE.InlineSize,
 			RequestTypeName:      fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
 			RequestMaxHandles:    c.maxHandlesFromParameterArray(v.Request),
 			RequestMaxOutOfLine:  c.maxOutOfLineFromParameterArray(v.Request),
@@ -953,6 +967,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			HasResponse:          v.HasResponse,
 			Response:             c.compileParameterArray(v.Response),
 			ResponseSize:         v.ResponseSize,
+			ResponseSizeOld:      v.ResponseTypeShapeOld.InlineSize,
+			ResponseSizeV1NoEE:   v.ResponseTypeShapeV1NoEE.InlineSize,
 			ResponseTypeName:     fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
 			ResponseMaxHandles:   c.maxHandlesFromParameterArray(v.Response),
 			ResponseMaxOutOfLine: c.maxOutOfLineFromParameterArray(v.Response),
@@ -1020,15 +1036,17 @@ func (c *compiler) compileStructMember(val types.StructMember, appendNamespace s
 func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struct {
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	r := Struct{
-		Attributes:   val.Attributes,
-		Namespace:    c.namespace,
-		Name:         name,
-		TableType:    c.compileTableType(val.Name),
-		Members:      []StructMember{},
-		Size:         val.Size,
-		MaxHandles:   val.MaxHandles,
-		MaxOutOfLine: val.MaxOutOfLine,
-		HasPadding:   val.HasPadding,
+		Attributes:       val.Attributes,
+		Namespace:        c.namespace,
+		Name:             name,
+		TableType:        c.compileTableType(val.Name),
+		Members:          []StructMember{},
+		Size:             val.Size,
+		InlineSizeOld:    val.TypeShapeOld.InlineSize,
+		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
+		MaxHandles:       val.MaxHandles,
+		MaxOutOfLine:     val.MaxOutOfLine,
+		HasPadding:       val.HasPadding,
 	}
 
 	for _, v := range val.Members {
@@ -1103,15 +1121,17 @@ func (m byOrdinal) Less(i, j int) bool {
 func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	r := Table{
-		Attributes:     val.Attributes,
-		Namespace:      c.namespace,
-		Name:           name,
-		TableType:      c.compileTableType(val.Name),
-		Members:        nil,
-		Size:           val.Size,
-		BiggestOrdinal: 0,
-		MaxHandles:     val.MaxHandles,
-		MaxOutOfLine:   val.MaxOutOfLine,
+		Attributes:       val.Attributes,
+		Namespace:        c.namespace,
+		Name:             name,
+		TableType:        c.compileTableType(val.Name),
+		Members:          nil,
+		Size:             val.Size,
+		InlineSizeOld:    val.TypeShapeOld.InlineSize,
+		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
+		BiggestOrdinal:   0,
+		MaxHandles:       val.MaxHandles,
+		MaxOutOfLine:     val.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {
@@ -1146,14 +1166,16 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 func (c *compiler) compileUnion(val types.Union) *Union {
 	name := c.compileCompoundIdentifier(val.Name, "", "", false)
 	r := Union{
-		Attributes:   val.Attributes,
-		Namespace:    c.namespace,
-		Name:         changeIfReserved(types.Identifier(name), ""),
-		TableType:    c.compileTableType(val.Name),
-		Members:      []UnionMember{},
-		Size:         val.Size,
-		MaxHandles:   val.MaxHandles,
-		MaxOutOfLine: val.MaxOutOfLine,
+		Attributes:       val.Attributes,
+		Namespace:        c.namespace,
+		Name:             changeIfReserved(types.Identifier(name), ""),
+		TableType:        c.compileTableType(val.Name),
+		Members:          []UnionMember{},
+		Size:             val.Size,
+		InlineSizeOld:    val.TypeShapeOld.InlineSize,
+		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
+		MaxHandles:       val.MaxHandles,
+		MaxOutOfLine:     val.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {
@@ -1204,14 +1226,16 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	name := c.compileCompoundIdentifier(val.Name, "", "", false)
 
 	r := XUnion{
-		Attributes:   val.Attributes,
-		Namespace:    c.namespace,
-		Name:         name,
-		TableType:    c.compileTableType(val.Name),
-		Size:         val.Size,
-		MaxHandles:   val.MaxHandles,
-		MaxOutOfLine: val.MaxOutOfLine,
-		Strictness:   val.Strictness,
+		Attributes:       val.Attributes,
+		Namespace:        c.namespace,
+		Name:             name,
+		TableType:        c.compileTableType(val.Name),
+		Size:             val.Size,
+		InlineSizeOld:    val.TypeShapeOld.InlineSize,
+		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
+		MaxHandles:       val.MaxHandles,
+		MaxOutOfLine:     val.MaxOutOfLine,
+		Strictness:       val.Strictness,
 	}
 
 	for _, v := range val.Members {

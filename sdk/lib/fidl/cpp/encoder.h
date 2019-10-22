@@ -46,9 +46,20 @@ class Encoder final {
 
   std::vector<uint8_t> TakeBytes() { return std::move(bytes_); }
 
+  // As part of the union to xunion migration, we will encode unions
+  // as xunion bytes rather than union bytes when a flag is set.
+  bool ShouldEncodeUnionAsXUnion() { return should_encode_union_as_xunion; }
+
+  // As part of the union to xunion migration, we will encode unions
+  // as xunion bytes rather than union bytes when a flag is set.
+  void SetShouldEncodeUnionAsXUnion(bool val) {
+    should_encode_union_as_xunion = val;
+  }
+
  private:
   void EncodeMessageHeader(uint64_t ordinal);
 
+  bool should_encode_union_as_xunion = false;
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_t> handles_;
 };

@@ -291,7 +291,8 @@ class TestConnection {
     buffer_settings.image_format_constraints.bytes_per_row_divisor = 256;
     buffer_settings.image_format_constraints.min_coded_height = 64;
     fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-    encoder.Alloc(fidl::CodingTraits<fuchsia::sysmem::SingleBufferSettings>::encoded_size);
+    encoder.Alloc(
+        fidl::EncodingInlineSize<fuchsia::sysmem::SingleBufferSettings, fidl::Encoder>(&encoder));
     buffer_settings.Encode(&encoder, 0);
     std::vector<uint8_t> encoded_bytes = encoder.TakeBytes();
     size_t real_size = encoded_bytes.size();

@@ -68,7 +68,8 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::MyBits> {
-  static constexpr size_t encoded_size = sizeof(::test::name::MyBits);
+  static constexpr size_t inline_size_old = sizeof(::test::name::MyBits);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyBits);
   static void Encode(Encoder* encoder, ::test::name::MyBits* value, size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
