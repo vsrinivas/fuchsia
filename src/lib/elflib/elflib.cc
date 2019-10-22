@@ -199,7 +199,13 @@ std::unique_ptr<ElfLib> ElfLib::Create(const uint8_t* mem, size_t size) {
     DataAccessor(const uint8_t* mem, size_t size) : mem_(mem), size_(size) {}
 
     const uint8_t* GetMemory(uint64_t offset, size_t size) override {
-      if (size + offset > size_) {
+      // This check and the one below are NOT redundant. This one prevents the other one from
+      // returning a false negative due to overflow.
+      if (offset > size_) {
+        return nullptr;
+      }
+
+      if (size_ - offset < size) {
         return nullptr;
       }
 
