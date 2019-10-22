@@ -1,7 +1,7 @@
 
 ## **STRUCTS**
 
-### EncodedImage {:#EncodedImage}
+### EncodedImage {#EncodedImage}
 *Defined in [fuchsia.images/encoded_image.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.images/encoded_image.fidl#7)*
 
 
@@ -28,7 +28,7 @@
         </tr>
 </table>
 
-### ImageInfo {:#ImageInfo}
+### ImageInfo {#ImageInfo}
 *Defined in [fuchsia.images/image_info.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.images/image_info.fidl#117)*
 
 
@@ -103,7 +103,7 @@
         </tr>
 </table>
 
-### PresentationInfo {:#PresentationInfo}
+### PresentationInfo {#PresentationInfo}
 *Defined in [fuchsia.images/presentation_info.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.images/presentation_info.fidl#10)*
 
 

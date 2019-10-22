@@ -1,13 +1,13 @@
 
 ## **PROTOCOLS**
 
-## Handler {:#Handler}
+## Handler {#Handler}
 *Defined in [fuchsia.exception/handler.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/fidl/fuchsia-exception/handler.fidl#12)*
 
  Protocol meant for clients interested in handling exceptions for a
  particular service.
 
-### OnException {:#OnException}
+### OnException {#OnException}
 
  This exception mirrors closely the information provided by exception
  channels. The design is to have clients of this API behave as closely as
@@ -41,14 +41,14 @@
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
-## ProcessLimbo {:#ProcessLimbo}
+## ProcessLimbo {#ProcessLimbo}
 *Defined in [fuchsia.exception/process_limbo.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/fidl/fuchsia-exception/process_limbo.fidl#17)*
 
  Protocol meant for clients interested in obtaining processes that are
  suspended waiting for an exception handler (in limbo). This is the core
  feature that enables Just In Time (JIT) debugging.
 
-### ListProcessesWaitingOnException {:#ListProcessesWaitingOnException}
+### ListProcessesWaitingOnException {#ListProcessesWaitingOnException}
 
  Returns information on all the processes currently waiting on an exception.
  The information provided is intended to correctly identify an exception
@@ -74,7 +74,7 @@
             </td>
         </tr></table>
 
-### RetrieveException {:#RetrieveException}
+### RetrieveException {#RetrieveException}
 
  Removes the process from limbo and retrieves the exception handle and
  associated metadata from an exception.

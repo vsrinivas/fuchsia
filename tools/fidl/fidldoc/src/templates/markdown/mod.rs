@@ -111,7 +111,7 @@ impl MarkdownTemplate {
 impl FidldocTemplate for MarkdownTemplate {
     fn render_main_page(&self, main_fidl_json: &Value) -> Result<(), Error> {
         // Render main page
-        let main_page_path = self.output_path.join("index.md");
+        let main_page_path = self.output_path.join("README.md");
         info!("Generating main page documentation {}", main_page_path.display());
 
         let mut main_page_file = File::create(&main_page_path)
@@ -143,7 +143,7 @@ impl FidldocTemplate for MarkdownTemplate {
         fs::create_dir(&output_dir)?;
         info!("Created output directory {}", output_dir.display());
 
-        let package_index = output_dir.join("index.md");
+        let package_index = output_dir.join("README.md");
         info!("Generating package documentation {}", package_index.display());
 
         let mut output_file = File::create(&package_index)
@@ -180,17 +180,17 @@ mod test {
     use serde_json::json;
     #[test]
     fn render_main_page_test() {
-        let source = include_str!("testdata/index.md");
+        let source = include_str!("testdata/README.md");
 
         let mut table_of_contents: Vec<crate::TableOfContentsItem> = vec![];
         table_of_contents.push(crate::TableOfContentsItem {
             name: "fuchsia.auth".to_string(),
-            link: "fuchsia.auth/index".to_string(),
+            link: "fuchsia.auth/README.md".to_string(),
             description: "Fuchsia Auth API".to_string(),
         });
         table_of_contents.push(crate::TableOfContentsItem {
             name: "fuchsia.media".to_string(),
-            link: "fuchsia.media/index".to_string(),
+            link: "fuchsia.media/README.md".to_string(),
             description: "Fuchsia Media API".to_string(),
         });
 

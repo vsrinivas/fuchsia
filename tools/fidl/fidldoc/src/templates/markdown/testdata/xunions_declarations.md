@@ -1,7 +1,7 @@
 
 ## **XUNIONS**
 
-### DisplaySettings {:#DisplaySettings}
+### DisplaySettings {#DisplaySettings}
 *Defined in [fuchsia.diagnostics.inspect/inspect.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.diagnostics.inspect/inspect.fidl#22)*
 
  Criteria for how to format
@@ -22,7 +22,7 @@
             <td></td>
         </tr></table>
 
-### ReaderSelector {:#ReaderSelector}
+### ReaderSelector {#ReaderSelector}
 *Defined in [fuchsia.diagnostics.inspect/inspect.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.diagnostics.inspect/inspect.fidl#44)*
 
  Selection criteria for data returned by the Reader service.
@@ -53,7 +53,7 @@
 </td>
         </tr></table>
 
-### PropertySelector {:#PropertySelector}
+### PropertySelector {#PropertySelector}
 *Defined in [fuchsia.diagnostics.inspect/selector.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.diagnostics.inspect/selector.fidl#36)*
 
 

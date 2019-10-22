@@ -129,7 +129,7 @@ fn pl(name: &str, base: &str) -> String {
     if package_base == base {
         format!("<a class='link' href='#{anchor}'>{anchor}</a>", anchor = package_name)
     } else {
-        format!("<a class='link' href='../{b}/index.html'>{b}</a>/<a class='link' href='../{b}/index.html#{anchor}'>{anchor}</a>", b = package_base, anchor = package_name)
+        format!("<a class='link' href='../{b}/'>{b}</a>/<a class='link' href='../{b}/#{anchor}'>{anchor}</a>", b = package_base, anchor = package_name)
     }
 }
 
@@ -273,7 +273,7 @@ mod test {
 
         let name = "fuchsia.media/Metadata";
         let base = "fuchsia.media.sessions";
-        let expected = "<a class='link' href='../fuchsia.media/index.html'>fuchsia.media</a>/<a class='link' href='../fuchsia.media/index.html#Metadata'>Metadata</a>";
+        let expected = "<a class='link' href='../fuchsia.media/'>fuchsia.media</a>/<a class='link' href='../fuchsia.media/#Metadata'>Metadata</a>";
         assert_eq!(pl(name, base), expected.to_string());
 
         let name = "Audio";
@@ -291,7 +291,7 @@ mod test {
 
         let docs = "This is [`fuchsia.media/Audio`] and this is [`fuchsia.media.sessions/Publisher`], while this is not a link to fuchsia.io/Node.";
         let base = "fuchsia.media.sessions";
-        let expected = "This is <a class='link' href='../fuchsia.media/index.html'>fuchsia.media</a>/<a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a> and this is <a class='link' href='#Publisher'>Publisher</a>, while this is not a link to fuchsia.io/Node.";
+        let expected = "This is <a class='link' href='../fuchsia.media/'>fuchsia.media</a>/<a class='link' href='../fuchsia.media/#Audio'>Audio</a> and this is <a class='link' href='#Publisher'>Publisher</a>, while this is not a link to fuchsia.io/Node.";
         assert_eq!(dl(docs, base), expected.to_string());
     }
 

@@ -1,7 +1,7 @@
 
 ## **ENUMS**
 
-### AddressType {:#AddressType}
+### AddressType {#AddressType}
 Type: <code>uint8</code>
 
 *Defined in [fuchsia.bluetooth/address.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.bluetooth/address.fidl#7)*

@@ -1,7 +1,7 @@
 
 ## **UNIONS**
 
-### StoreAccessor_Flush_Result {:#StoreAccessor_Flush_Result}
+### StoreAccessor_Flush_Result {#StoreAccessor_Flush_Result}
 *generated*
 
 
@@ -20,7 +20,7 @@
             <td></td>
         </tr></table>
 
-### Value {:#Value}
+### Value {#Value}
 *Defined in [fuchsia.stash/stash.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.stash/stash.fidl#35)*
 
  Value holds a value for a given key.
@@ -53,7 +53,7 @@
         </tr><tr>
             <td><code>bytesval</code></td>
             <td>
-                <code><a class='link' href='../fuchsia.mem/index.html'>fuchsia.mem</a>/<a class='link' href='../fuchsia.mem/index.html#Buffer'>Buffer</a></code>
+                <code><a class='link' href='../fuchsia.mem/'>fuchsia.mem</a>/<a class='link' href='../fuchsia.mem/#Buffer'>Buffer</a></code>
             </td>
             <td></td>
         </tr></table>

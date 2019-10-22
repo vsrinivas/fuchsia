@@ -1,7 +1,7 @@
 
 ## **BITS**
 
-### Notifications {:#Notifications}
+### Notifications {#Notifications}
 Type: <code>uint32</code>
 
 

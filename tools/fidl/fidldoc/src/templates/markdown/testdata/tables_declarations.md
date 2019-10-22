@@ -1,7 +1,7 @@
 
 ## **TABLES**
 
-### RegulatoryDomain {:#RegulatoryDomain}
+### RegulatoryDomain {#RegulatoryDomain}
 
 
 *Defined in [fuchsia.intl/intl.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl#8)*
@@ -22,7 +22,7 @@
 </td>
         </tr></table>
 
-### Profile {:#Profile}
+### Profile {#Profile}
 
 
 *Defined in [fuchsia.intl/intl.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl#69)*
