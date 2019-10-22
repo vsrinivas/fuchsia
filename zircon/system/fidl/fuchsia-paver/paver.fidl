@@ -52,7 +52,6 @@ union ReadResult {
 };
 
 /// Protocol for streaming the FVM payload.
-[Layout = "Simple"]
 protocol PayloadStream {
     /// Registers a VMO to stream into.
     RegisterVmo(handle<vmo> vmo) -> (zx.status status);
@@ -68,7 +67,7 @@ protocol PayloadStream {
 /// multiple, the methods will fail. For devices with dynamic partitions (i.e. GPT),
 /// |InitializePartitionTables| and |WipeVolumes| can be used to control which device is
 /// paved to.
-[Discoverable, Layout = "Simple"]
+[Discoverable]
 protocol Paver {
     /// Initializes ABR metadata. Should only be called to initialize ABR
     /// metadata for the first time (i.e. it should not be called every boot),

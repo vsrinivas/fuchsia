@@ -7,7 +7,6 @@ library fuchsia.hardware.telephony.transport;
 using zx;
 using fuchsia.telephony.snoop as qmi_snoop;
 
-[Layout = "Simple"]
 protocol Qmi {
     /// Give a channel handle that transports bi-directional QMI messages
     SetChannel(handle<channel> transport) -> () error zx.status;

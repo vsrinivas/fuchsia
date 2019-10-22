@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <utility>
 
 #include "fidl/attributes.h"
 #include "fidl/lexer.h"
@@ -137,7 +138,23 @@ std::string_view Decl::GetAttribute(std::string_view name) const {
 
 std::string Decl::GetName() const { return std::string(name.name_part()); }
 
-bool IsSimple(const Type* type, const TypeShape& typeshape) {
+const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
+    {"fidl.test.llcpp.basictypes", "SimpleUnion"},
+    {"fuchsia.device", "Controller_GetDevicePowerCaps_Result"},
+    {"fuchsia.device", "Controller_GetPowerStateMapping_Result"},
+    {"fuchsia.device", "Controller_Resume_Result"},
+    {"fuchsia.device", "Controller_UpdatePowerStateMapping_Result"},
+    {"fuchsia.hardware.cpu.insntrace", "Controller_AllocateBuffer_Result"},
+    {"fuchsia.hardware.cpu.insntrace", "Controller_AssignThreadBuffer_Result"},
+    {"fuchsia.hardware.cpu.insntrace", "Controller_Initialize_Result"},
+    {"fuchsia.hardware.cpu.insntrace", "Controller_ReleaseThreadBuffer_Result"},
+    {"fuchsia.hardware.cpu.insntrace", "Controller_Terminate_Result"},
+    {"fuchsia.io", "NodeInfo"},
+    {"fuchsia.sysmem", "SecureMem_GetPhysicalSecureHeaps_Result"},
+    {"fuchsia.sysmem", "SecureMem_SetPhysicalSecureHeaps_Result"},
+}};
+
+bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error_reporter) {
   switch (type->kind) {
     case Type::Kind::kVector: {
       auto vector_type = static_cast<const VectorType*>(type);
@@ -166,11 +183,18 @@ bool IsSimple(const Type* type, const TypeShape& typeshape) {
       return typeshape.Depth() == 0u;
     case Type::Kind::kIdentifier: {
       auto identifier_type = static_cast<const IdentifierType*>(type);
-#if defined(FIDLC_UNION_NOT_SIMPLE)
       if (identifier_type->type_decl->kind == Decl::Kind::kUnion) {
-        return false;
+        auto union_name = std::make_pair<const std::string&, const std::string_view&>(
+            LibraryName(identifier_type->name.library(), "."), identifier_type->name.name_part());
+        if (allowed_simple_unions.find(union_name) == allowed_simple_unions.end()) {
+          // Any unions not in the allow-list are treated as non-simple.
+          std::string message("union '");
+          message.append(identifier_type->name.name_part());
+          message.append("' is not allowed to be simple");
+          error_reporter->ReportError(identifier_type->name.maybe_location(), message);
+          return false;
+        }
       }
-#endif
       switch (identifier_type->nullability) {
         case types::Nullability::kNullable:
           // If the identifier is nullable, then we can handle a depth of 1
@@ -670,7 +694,7 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute&
   auto struct_decl = static_cast<const Struct*>(decl);
   bool ok = true;
   for (const auto& member : struct_decl->members) {
-    if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld))) {
+    if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld), error_reporter)) {
       std::string message("member '");
       message.append(member.name.data());
       message.append("' is not simple");

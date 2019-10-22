@@ -131,7 +131,6 @@ struct Allocation {
     uint32 buffer_size_in_pages;
 };
 
-[Layout = "Simple"]
 protocol Controller {
     /// Fetch the performance monitor properties of the system.
     GetProperties() -> (Properties properties);
