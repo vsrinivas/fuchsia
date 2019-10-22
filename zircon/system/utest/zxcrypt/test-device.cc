@@ -68,21 +68,6 @@ char* Error(const char* fmt, ...) {
   return err;
 }
 
-// Waits for the given |path| to be opened, opens it, and returns the file descriptor via |out|.
-bool WaitAndOpenAt(int dirfd, char* path, fbl::unique_fd* out) {
-  BEGIN_HELPER;
-
-  ASSERT_EQ(wait_for_device_at(dirfd, path, ZX_SEC(3)), ZX_OK,
-            Error("failed while waiting to bind %s", path));
-  fbl::unique_fd fd(openat(dirfd, path, O_RDWR));
-  ASSERT_TRUE(fd, Error("failed to open %s", path));
-  if (out) {
-    out->swap(fd);
-  }
-
-  END_HELPER;
-}
-
 }  // namespace
 
 TestDevice::TestDevice()
@@ -213,7 +198,8 @@ bool TestDevice::Rebind() {
     // itself.
     ASSERT_TRUE(BindFvmDriver());
     fbl::unique_fd dev_root = devfs_root();
-    ASSERT_TRUE(WaitAndOpenAt(dev_root.get(), fvm_part_path_, &fvm_part_));
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(dev_root, fvm_part_path_, &fvm_part_),
+              ZX_OK);
     parent_caller_.reset(fvm_part_.get());
   } else {
     parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));
@@ -393,10 +379,10 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
 
   // Wait for the FVM driver to expose a block device, then open it
   char path[PATH_MAX];
-  fbl::unique_fd fvm_fd;
   snprintf(path, sizeof(path), "%s/fvm", ramdisk_get_path(ramdisk_));
   fbl::unique_fd dev_root = devfs_root();
-  ASSERT_TRUE(WaitAndOpenAt(dev_root.get(), path, &fvm_fd));
+  fbl::unique_fd fvm_fd;
+  ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(dev_root, path, &fvm_fd), ZX_OK);
 
   // Allocate a FVM partition with the last slice unallocated.
   alloc_req_t req;
