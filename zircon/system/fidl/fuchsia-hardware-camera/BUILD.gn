@@ -8,11 +8,5 @@ fidl_library("fuchsia-hardware-camera") {
   sdk = true
   sources = [
     "camera.fidl",
-    "camera_intf.fidl",
-  ]
-
-  public_deps = [
-    "$zx/system/fidl/fuchsia-camera-common",
-    "$zx/system/fidl/fuchsia-sysmem",
   ]
 }
