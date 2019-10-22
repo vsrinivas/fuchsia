@@ -22,6 +22,7 @@ test_package("cobalt_tests") {
   deps = [
     "app:app",
     "app:cobalt_app_unittests",
+    "app/fuzzer:cobalt_fuzzers",
     "system-metrics:cobalt_system_metrics_unittests",
     "testapp:cobalt_fake_timekeeper",
     "testapp:cobalt_testapp",

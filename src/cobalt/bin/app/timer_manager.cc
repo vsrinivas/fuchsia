@@ -4,9 +4,11 @@
 
 #include "src/cobalt/bin/app/timer_manager.h"
 
-#include <thread>
-
 #include <lib/async/cpp/time.h>
+
+#include <iostream>
+#include <ostream>
+#include <thread>
 
 namespace cobalt {
 

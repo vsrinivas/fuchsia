@@ -157,6 +157,7 @@ executable("cobalt_app_unittests") {
 
   deps = [
     ":lib",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/cobalt/cpp:cobalt_event_builder",

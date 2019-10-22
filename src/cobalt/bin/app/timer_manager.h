@@ -61,6 +61,10 @@ class TimerManager {
   // schedule tasks which delete timer data once it has expired.
   TimerManager(async_dispatcher_t* dispatcher);
 
+  // In some situations (e.g. fuzzing) the currently active dispatcher may change over time. Rather
+  // than constructing a new TimerManager each time, we just update the dispatcher.
+  void UpdateDispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; };
+
   ~TimerManager();
 
   // Checks if the given TimerVal contains all the information it needs to log
@@ -116,7 +120,7 @@ class TimerManager {
   // Map from timer_id to the TimerVal values associated with it.
   std::unordered_map<std::string, std::unique_ptr<TimerVal>> timer_values_;
   // Async dispatcher used for deleting expired timer entries.
-  async_dispatcher_t* const dispatcher_;  // not owned.
+  async_dispatcher_t* dispatcher_;  // not owned.
 };
 
 }  // namespace cobalt
