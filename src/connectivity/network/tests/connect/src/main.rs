@@ -191,8 +191,30 @@ async fn main() -> Result<(), failure::Error> {
             let keepalive_timeout = verify_broken_pipe(keepalive_timeout);
             let retransmit_timeout = verify_broken_pipe(retransmit_timeout);
 
-            let ((), (), ()) =
-                futures::try_join!(connect_timeout, keepalive_timeout, retransmit_timeout)?;
+            // TODO(tamird): revert this to futures::try_join!(...) when the timeouts can be
+            // configured.
+            let interval = std::time::Duration::from_secs(5);
+            let timeout = std::time::Duration::from_secs(600);
+            let periodically_emit = fuchsia_async::Interval::new(interval.into())
+                .take(timeout.as_secs() / interval.as_secs())
+                .for_each(|()| {
+                    futures::future::ready(println!(
+                        "still waiting for TCP timeouts! don't terminate me please"
+                    ))
+                });
+
+            let timeouts =
+                futures::future::try_join3(connect_timeout, keepalive_timeout, retransmit_timeout);
+            futures::pin_mut!(timeouts);
+            match futures::future::select(timeouts, periodically_emit).await {
+                futures::future::Either::Left((timeouts, _logger)) => {
+                    let ((), (), ()) = timeouts?;
+                }
+                futures::future::Either::Right(((), _timeouts)) => {
+                    let () = Err(failure::err_msg("periodic logger completed unexpectedly"))?;
+                }
+            };
+
             Ok(())
         }
         SubCommand::Server(Server {}) => {
