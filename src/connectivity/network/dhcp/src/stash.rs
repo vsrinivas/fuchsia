@@ -147,32 +147,34 @@ mod tests {
     use failure::ResultExt;
     use std::collections::HashMap;
 
-    const TEST_ID: &str = "test_id";
-    const TEST_PREFIX: &str = "test_prefix";
-
-    fn new_stash() -> Result<Stash, Error> {
-        let stash = Stash::new(TEST_ID, TEST_PREFIX)?;
+    fn new_stash(test_prefix: &str) -> Result<(Stash, String), Error> {
+        use rand::Rng;
+        let rand_string: String =
+            rand::thread_rng().sample_iter(&rand::distributions::Alphanumeric).take(8).collect();
+        let stash = Stash::new(&rand_string, test_prefix)?;
         // Clear the Stash of data leftover from the previous test.
-        let () = stash.proxy.delete_prefix(TEST_PREFIX).context("failed to delete prefix")?;
+        let () = stash.proxy.delete_prefix(&stash.prefix).context("failed to delete prefix")?;
         let () = stash.proxy.commit().context("failed to commit transaction")?;
-        Ok(stash)
+        Ok((stash, rand_string))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn store_client_succeeds() -> Result<(), Error> {
-        let stash = new_stash()?;
+        let (stash, id) = new_stash("store_client_succeeds")?;
         let accessor_client = stash.proxy.clone();
 
         // Store value in stash.
         let client_mac = crate::server::tests::random_mac_generator();
         let client_config = CachedConfig::default();
-        let () = stash.store(&client_mac, &client_config).context("failed to store client")?;
+        let () = stash
+            .store(&client_mac, &client_config)
+            .with_context(|_| format!("failed to store client in {}", id))?;
 
         // Verify value actually stored in stash.
         let value = accessor_client
-            .get_value(&format!("{}-{}", TEST_PREFIX, client_mac))
+            .get_value(&format!("{}-{}", stash.prefix, client_mac))
             .await
-            .context("failed to get value")?;
+            .with_context(|_| format!("failed to get value from {}", id))?;
         let value = match *value.unwrap() {
             fidl_fuchsia_stash::Value::Stringval(v) => v,
             v => panic!("stored value is not a string: {:?}", v),
@@ -183,9 +185,8 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore = "Currently flaking: crbug.com/fuchsia/34762"]
     async fn load_clients_with_populated_stash_returns_cached_clients() -> Result<(), Error> {
-        let stash = new_stash()?;
+        let (stash, id) = new_stash("load_clients_with_populated_stash_returns_cached_clients")?;
         let accessor = stash.proxy.clone();
 
         let client_mac = crate::server::tests::random_mac_generator();
@@ -194,13 +195,18 @@ mod tests {
             serde_json::to_string(&client_config).expect("serialization failed");
         let () = accessor
             .set_value(
-                &format!("{}-{}", TEST_PREFIX, client_mac),
+                &format!("{}-{}", stash.prefix, client_mac),
                 &mut fidl_fuchsia_stash::Value::Stringval(serialized_client),
             )
-            .context("failed to set value")?;
-        let () = accessor.commit().context("failed to commit stash state change")?;
+            .with_context(|_| format!("failed to set value in {}", id))?;
+        let () = accessor
+            .commit()
+            .with_context(|_| format!("failed to commit stash state change in {}", id))?;
 
-        let loaded_cache = stash.load().await.context("failed to load map from stash")?;
+        let loaded_cache = stash
+            .load()
+            .await
+            .with_context(|_| format!("failed to load map from stash in {}", id))?;
 
         let mut cached_clients = HashMap::new();
         cached_clients.insert(client_mac, client_config);
@@ -210,10 +216,10 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore = "Currently flaking: crbug.com/fuchsia/34762"]
     async fn load_clients_with_stash_containing_invalid_entries_returns_empty_cache(
     ) -> Result<(), Error> {
-        let stash = new_stash()?;
+        let (stash, id) =
+            new_stash("load_clients_with_stash_containing_invalid_entries_returns_empty_cache")?;
         let accessor = stash.proxy.clone();
 
         let client_mac = crate::server::tests::random_mac_generator();
@@ -222,16 +228,21 @@ mod tests {
             serde_json::to_string(&client_config).expect("serialization failed");
         let () = accessor
             .set_value("invalid key", &mut fidl_fuchsia_stash::Value::Stringval(serialized_client))
-            .context("failed to set value")?;
+            .with_context(|_| format!("failed to set value in {}", id))?;
         let () = accessor
             .set_value(
-                &format!("{}-{}", TEST_PREFIX, client_mac),
+                &format!("{}-{}", stash.prefix, client_mac),
                 &mut fidl_fuchsia_stash::Value::Intval(42),
             )
-            .context("failed to set value")?;
-        let () = accessor.commit().context("failed to commit stash state change")?;
+            .with_context(|_| format!("failed to set value in {}", id))?;
+        let () = accessor
+            .commit()
+            .with_context(|_| format!("failed to commit stash state change in {}", id))?;
 
-        let loaded_cache = stash.load().await.context("failed to load map from stash")?;
+        let loaded_cache = stash
+            .load()
+            .await
+            .with_context(|_| format!("failed to load map from stash in {}", id))?;
 
         let empty_cache = HashMap::new();
         assert_eq!(loaded_cache, empty_cache);
@@ -241,27 +252,31 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn delete_client_succeeds() -> Result<(), Error> {
-        let stash = new_stash()?;
+        let (stash, id) = new_stash("delete_client_succeeds")?;
         let accessor = stash.proxy.clone();
 
         // Store value in stash.
         let client_mac = crate::server::tests::random_mac_generator();
         let client_config = CachedConfig::default();
-        let () = stash.store(&client_mac, &client_config).context("failed to store client")?;
+        let () = stash
+            .store(&client_mac, &client_config)
+            .with_context(|_| format!("failed to store client in {}", id))?;
 
         // Verify value actually stored in stash.
         let value = accessor
-            .get_value(&format!("{}-{}", TEST_PREFIX, client_mac))
+            .get_value(&format!("{}-{}", stash.prefix, client_mac))
             .await
-            .context("failed to get value")?;
+            .with_context(|_| format!("failed to get value from {}", id))?;
         assert!(value.is_some());
 
         // Delete value and verify its absence.
-        let () = stash.delete(&client_mac).context("failed to delete client")?;
+        let () = stash
+            .delete(&client_mac)
+            .with_context(|_| format!("failed to delete client in {}", id))?;
         let value = accessor
-            .get_value(&format!("{}-{}", TEST_PREFIX, client_mac))
+            .get_value(&format!("{}-{}", stash.prefix, client_mac))
             .await
-            .context("failed to get value")?;
+            .with_context(|_| format!("failed to get value from {}", id))?;
         assert!(value.is_none());
 
         Ok(())
@@ -269,7 +284,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn clear_with_populated_stash_clears_stash() -> Result<(), Error> {
-        let stash = new_stash()?;
+        let (stash, id) = new_stash("clear_with_populated_stash_clears_stash")?;
         let accessor = stash.proxy.clone();
 
         // Store a value in the stash.
@@ -279,21 +294,24 @@ mod tests {
             serde_json::to_string(&client_config).expect("serialization failed");
         let () = accessor
             .set_value(
-                &format!("{}-{}", TEST_PREFIX, client_mac),
+                &format!("{}-{}", stash.prefix, client_mac),
                 &mut fidl_fuchsia_stash::Value::Stringval(serialized_client),
             )
-            .context("failed to set value")?;
-        let () = accessor.commit().context("failed to commit stash state change")?;
+            .with_context(|_| format!("failed to set value in {}", id))?;
+        let () = accessor
+            .commit()
+            .with_context(|_| format!("failed to commit stash state change in {}", id))?;
 
         // Clear the stash.
-        let () = stash.clear().context("failed to clear stash")?;
+        let () = stash.clear().with_context(|_| format!("failed to clear stash in {}", id))?;
 
         // Verify that the stash is actually empty.
         let (iter, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_stash::GetIteratorMarker>()
                 .context("failed to create iterator")?;
-        let () =
-            accessor.get_prefix(TEST_PREFIX, server).context("failed to get prefix iterator")?;
+        let () = accessor
+            .get_prefix(&stash.prefix, server)
+            .with_context(|_| format!("failed to get prefix iterator from {}", id))?;
         let stash_contents = iter.get_next().await.context("failed to get next item")?;
         assert_eq!(stash_contents.len(), 0);
 
