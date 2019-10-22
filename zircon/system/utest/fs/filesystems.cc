@@ -16,7 +16,9 @@
 #include <fs-management/mount.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fvm/format.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/device/block.h>
@@ -25,10 +27,12 @@
 
 const char* kTmpfsPath = "/fs-test-tmp";
 const char* kMountPath = "/fs-test-tmp/mount";
+const char* kDevPath = "/dev";
 
 bool use_real_disk = false;
 fuchsia_hardware_block_BlockInfo test_disk_info;
 char test_disk_path[PATH_MAX];
+devmgr_integration_test::IsolatedDevmgr isolated_devmgr;
 ramdisk_client_t* test_ramdisk = nullptr;
 fs_info_t* test_info;
 
@@ -68,6 +72,43 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
   }
 
   if (!use_real_disk) {
+    // First, initialize a new isolated devmgr for the test environment.
+    devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+    args.disable_block_watcher = true;
+    args.disable_netsvc = true;
+    args.driver_search_paths.push_back("/boot/driver");
+    zx_status_t status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args),
+                                                                         &isolated_devmgr);
+    if (status != ZX_OK) {
+      fprintf(stderr, "[FAILED]: Could not created isolated devmgr\n");
+      exit(-1);
+    }
+    status = wait_for_device_at(isolated_devmgr.devfs_root().get(), "misc/ramctl",
+                                zx::duration::infinite().get());
+    if (status != ZX_OK) {
+      fprintf(stderr, "[FAILED]: Could wait for ramctl\n");
+      exit(-1);
+    }
+
+    // Modify the process namespace to refer to this isolated devmgr.
+    fdio_ns_t* name_space;
+    status = fdio_ns_get_installed(&name_space);
+    if (status != ZX_OK) {
+      fprintf(stderr, "[FAILED]: Could not acquire namespace\n");
+      exit(-1);
+    }
+    // Intentionally avoid checking the error while unbinding the prior devmgr.
+    //
+    // We unbind the "real" dev if it was provided to us, which should only happen on the
+    // first iteration of the test.
+    fdio_ns_unbind(name_space, kDevPath);
+    status = fdio_ns_bind_fd(name_space, kDevPath, isolated_devmgr.devfs_root().get());
+    if (status != ZX_OK) {
+      fprintf(stderr, "[FAILED]: Could not bind isolated devmgr into namespace: %d\n", status);
+      exit(-1);
+    }
+
+    // Create a ramdisk within the new devmgr.
     if (ramdisk_create(disk.block_size, disk.block_count, &test_ramdisk) != ZX_OK) {
       fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
       exit(-1);
@@ -181,6 +222,18 @@ void teardown_fs_test(fs_test_type_t test_class) {
   if (!use_real_disk) {
     if (ramdisk_destroy(test_ramdisk)) {
       fprintf(stderr, "[FAILED]: Error destroying ramdisk\n");
+      exit(-1);
+    }
+
+    fdio_ns_t* name_space;
+    zx_status_t status = fdio_ns_get_installed(&name_space);
+    if (status != ZX_OK) {
+      fprintf(stderr, "[FAILED]: Could not acquire namespace\n");
+      exit(-1);
+    }
+    status = fdio_ns_unbind(name_space, kDevPath);
+    if (status != ZX_OK) {
+      fprintf(stderr, "[FAILED]: Could not unbind isolated devmgr from namespace\n");
       exit(-1);
     }
   }
