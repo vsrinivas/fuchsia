@@ -187,9 +187,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
 
   zx_status_t status;
   fbl::RefPtr<VnodeMinfs> vn;
-  if ((status = VnodeMinfs::Recreate(fs_.get(), ino, &vn)) != ZX_OK) {
-    return status;
-  }
+  VnodeMinfs::Recreate(fs_.get(), ino, &vn);
 
   size_t off = 0;
   while (true) {

@@ -744,9 +744,7 @@ zx_status_t Minfs::PurgeUnlinked() {
     if ((status = BeginTransaction(0, 0, &transaction)) != ZX_OK) {
       return status;
     }
-    if ((status = VnodeMinfs::Recreate(this, next_ino, &vn)) != ZX_OK) {
-      return ZX_ERR_NO_MEMORY;
-    }
+    VnodeMinfs::Recreate(this, next_ino, &vn);
 
     ZX_DEBUG_ASSERT(vn->GetInode()->last_inode == last_ino);
     ZX_DEBUG_ASSERT(vn->GetInode()->link_count == 0);
@@ -923,10 +921,7 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
     return ZX_OK;
   }
 
-  zx_status_t status;
-  if ((status = VnodeMinfs::Recreate(this, ino, &vn)) != ZX_OK) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  VnodeMinfs::Recreate(this, ino, &vn);
 
   if (vn->IsUnlinked()) {
     // If a vnode we have recreated from disk is unlinked, something has gone wrong during the

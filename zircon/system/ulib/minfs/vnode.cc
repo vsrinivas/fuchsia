@@ -1086,7 +1086,7 @@ void VnodeMinfs::Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out
   }
 }
 
-zx_status_t VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
+void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
   Inode inode;
   fs->InodeLoad(ino, &inode);
   if (inode.magic == kMinfsMagicDir) {
@@ -1096,11 +1096,8 @@ zx_status_t VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* 
   }
   memcpy(&(*out)->inode_, &inode, sizeof(inode));
 
-  // TODO: Loading the inode should be part of the private constructor of a Vnode.
-  fs->InodeLoad(ino, &(*out)->inode_);
   (*out)->ino_ = ino;
   (*out)->SetSize((*out)->inode_.size);
-  return ZX_OK;
 }
 
 #ifdef __Fuchsia__
