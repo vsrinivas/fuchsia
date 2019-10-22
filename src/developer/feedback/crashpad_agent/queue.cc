@@ -13,6 +13,7 @@
 
 namespace feedback {
 
+using async::PostDelayedTask;
 using async::PostTask;
 using crashpad::FileReader;
 using crashpad::UUID;
@@ -45,6 +46,8 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::unique_ptr<Database> database,
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(database_);
   FXL_DCHECK(inspect_manager_);
+
+  ProcessAllEveryHour();
 }
 
 bool Queue::Contains(const UUID& uuid) const {
@@ -153,6 +156,20 @@ void Queue::OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy) {
       break;
   }
   ProcessAll();
+}
+
+void Queue::ProcessAllEveryHour() {
+  if (const auto status = PostDelayedTask(
+          dispatcher_,
+          [this] {
+            FX_LOGS(INFO) << "Hourly processing of pending crash reports queue";
+            ProcessAll();
+            ProcessAllEveryHour();
+          },
+          zx::hour(1));
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Error posting hourly process task to async loop. Won't retry.";
+  }
 }
 
 }  // namespace feedback

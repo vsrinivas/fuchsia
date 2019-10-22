@@ -414,6 +414,33 @@ TEST_F(QueueTest, Check_NotIsEmptyQueue_OnMixedUploadResults_MultiplePruned_Mult
   EXPECT_EQ(queue_->Size(), 2u);
 }
 
+TEST_F(QueueTest, Check_ProcessAll_ScheduledTwice) {
+  SetUpQueue({
+      kUploadFailed,
+      kUploadSuccessful,
+      kUploadFailed,
+      kUploadSuccessful,
+  });
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+      QueueOps::SetStateToUpload,
+  });
+  ASSERT_FALSE(queue_->IsEmpty());
+
+  RunLoopFor(zx::hour(1));
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  ApplyQueueOps({
+      QueueOps::SetStateToLeaveAsPending,
+      QueueOps::AddNewReport,
+      QueueOps::SetStateToUpload,
+  });
+  ASSERT_FALSE(queue_->IsEmpty());
+
+  RunLoopFor(zx::hour(1));
+  EXPECT_TRUE(queue_->IsEmpty());
+}
+
 TEST_F(QueueTest, Check_InspectTree) {
   SetUpQueue({
       kUploadSuccessful,

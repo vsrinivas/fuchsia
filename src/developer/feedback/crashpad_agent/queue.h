@@ -46,7 +46,7 @@ class Queue {
   const crashpad::UUID& LatestReport() { return pending_reports_.back(); }
 
  private:
-  Queue(async_dispatcher_t* dispatcher_, std::unique_ptr<Database> database,
+  Queue(async_dispatcher_t* dispatcher, std::unique_ptr<Database> database,
         CrashServer* crash_server, InspectManager* inspect_manager);
 
   // How the queue should handle processing existing pending reports and new reports.
@@ -70,6 +70,9 @@ class Queue {
 
   // Callback to update |state_| on upload policy changes.
   void OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy);
+
+  // Schedules ProcessAll() to run every hour.
+  void ProcessAllEveryHour();
 
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<Database> database_;
