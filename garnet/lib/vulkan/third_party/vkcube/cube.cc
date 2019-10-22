@@ -2568,6 +2568,10 @@ static void demo_init_vk(struct demo* demo) {
   }
   vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
+  if (demo->protected_output && demo->gpu_props.apiVersion < VK_MAKE_VERSION(1, 1, 0)) {
+    ERR_EXIT("Need vulkan physical device 1.1 for protected output.", "vkcube");
+  }
+
   /* Call with NULL data to get count */
   vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_family_count, NULL);
   assert(demo->queue_family_count >= 1);
