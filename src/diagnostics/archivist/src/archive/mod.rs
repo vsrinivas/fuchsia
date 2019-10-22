@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    crate::{collection, configs, diagnostics, inspect},
     chrono::prelude::*,
     failure::{self, format_err, Error},
+    fuchsia_async as fasync,
+    fuchsia_inspect::{component, health::Reporter},
+    fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
+    futures::{FutureExt, StreamExt},
     itertools::Itertools,
     lazy_static::lazy_static,
     regex::Regex,
@@ -15,7 +20,13 @@ use {
     std::fs,
     std::io::Write,
     std::path::{Path, PathBuf},
+    std::sync::{Arc, Mutex},
 };
+
+pub static ARCHIVE_PATH: &str = "/data/archive";
+
+// Keep only the 50 most recent events.
+static INSPECT_LOG_WINDOW_SIZE: usize = 50;
 
 /// Archive represents the top-level directory tree for the Archivist's storage.
 pub struct Archive {
@@ -533,6 +544,245 @@ impl<'a> EventBuilder<'a> {
             .expect("Failed to delete files");
         self.event_files = Err(error)
     }
+}
+
+/// ArchivistState owns the tools needed to persist data
+/// to the archive, as well as the service-specific repositories
+/// that are populated by the archivist server and exposed in the
+/// service sessions.
+pub struct ArchivistState {
+    writer: ArchiveWriter,
+    group_stats: EventFileGroupStatsMap,
+    log_node: BoundedListNode,
+    configuration: configs::Config,
+    inspect_repository: Arc<Mutex<inspect::InspectDataRepository>>,
+}
+
+impl ArchivistState {
+    pub fn new(
+        configuration: configs::Config,
+        inspect_repository: Arc<Mutex<inspect::InspectDataRepository>>,
+    ) -> Result<Self, Error> {
+        let mut writer = ArchiveWriter::open(ARCHIVE_PATH)?;
+        let mut group_stats = writer.get_archive().get_event_group_stats()?;
+
+        let log = writer.get_log();
+        diagnostics::set_current_group(log.get_log_file_path(), &log.get_stats());
+
+        // Do not include the current group in the stats.
+        group_stats.remove(&log.get_log_file_path().to_string_lossy().to_string());
+
+        diagnostics::set_group_stats(&group_stats);
+
+        for (_, group_stat) in &group_stats {
+            diagnostics::add_stats(&group_stat);
+        }
+
+        // Add the counts for the current group.
+        diagnostics::add_stats(&log.get_stats());
+
+        let mut log_node = BoundedListNode::new(
+            diagnostics::root().create_child("events"),
+            INSPECT_LOG_WINDOW_SIZE,
+        );
+
+        inspect_log!(log_node, event: "Archivist started");
+
+        Ok(ArchivistState { writer, group_stats, log_node, configuration, inspect_repository })
+    }
+
+    fn add_group_stat(&mut self, log_file_path: &Path, stat: EventFileGroupStats) {
+        self.group_stats.insert(log_file_path.to_string_lossy().to_string(), stat);
+        diagnostics::set_group_stats(&self.group_stats);
+    }
+
+    fn remove_group_stat(&mut self, log_file_path: &Path) {
+        self.group_stats.remove(&log_file_path.to_string_lossy().to_string());
+        diagnostics::set_group_stats(&self.group_stats);
+    }
+
+    fn archived_size(&self) -> u64 {
+        let mut ret = 0;
+        for (_, v) in &self.group_stats {
+            ret += v.size;
+        }
+        ret
+    }
+}
+
+fn populate_inspect_repo(
+    state: &mut Arc<Mutex<ArchivistState>>,
+    inspect_reader_data: collection::InspectReaderData,
+) -> Result<(), Error> {
+    let state = state.lock().unwrap();
+    let mut inspect_repo = state.inspect_repository.lock().unwrap();
+
+    // The InspectReaderData should always contain a directory_proxy. Its existence
+    // as an Option is only to support mock objects for equality in tests.
+    let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
+
+    inspect_repo.add(
+        inspect_reader_data.component_name,
+        inspect_reader_data.absolute_moniker,
+        inspect_reader_data.component_hierarchy_path,
+        inspect_directory_proxy,
+    )
+}
+
+async fn process_event(
+    mut state: Arc<Mutex<ArchivistState>>,
+    event: collection::ComponentEvent,
+) -> Result<(), Error> {
+    match event {
+        collection::ComponentEvent::Existing(data) => {
+            return archive_event(&mut state, "EXISTING", data).await
+        }
+        collection::ComponentEvent::Start(data) => {
+            return archive_event(&mut state, "START", data).await
+        }
+        collection::ComponentEvent::Stop(data) => {
+            return archive_event(&mut state, "STOP", data).await
+        }
+        collection::ComponentEvent::OutDirectoryAppeared(data) => {
+            return populate_inspect_repo(&mut state, data)
+        }
+    };
+}
+
+async fn archive_event(
+    state: &mut Arc<Mutex<ArchivistState>>,
+    event_name: &str,
+    event_data: collection::ComponentEventData,
+) -> Result<(), Error> {
+    let mut state = state.lock().unwrap();
+
+    let mut log = state.writer.get_log().new_event(
+        event_name,
+        event_data.component_name,
+        event_data.component_id,
+    );
+
+    if let Some(data_map) = event_data.component_data_map {
+        for (path, object) in data_map {
+            match object {
+                collection::Data::Empty => {}
+                collection::Data::Vmo(vmo) => {
+                    let mut contents = vec![0u8; vmo.get_size()? as usize];
+                    vmo.read(&mut contents[..], 0)?;
+
+                    // Truncate the bytes down to the last non-zero 4096-byte page of data.
+                    // TODO(CF-830): Handle truncation of VMOs without reading the whole thing.
+                    let mut last_nonzero = 0;
+                    for (i, v) in contents.iter().enumerate() {
+                        if *v != 0 {
+                            last_nonzero = i;
+                        }
+                    }
+                    if last_nonzero % 4096 != 0 {
+                        last_nonzero = last_nonzero + 4096 - last_nonzero % 4096;
+                    }
+                    contents.resize(last_nonzero, 0);
+
+                    log = log.add_event_file(path, &contents);
+                }
+            }
+        }
+    }
+
+    let event_stat = log.build()?;
+    let current_group_stats = state.writer.get_log().get_stats();
+    diagnostics::update_current_group(&current_group_stats);
+    diagnostics::add_stats(&event_stat);
+
+    if current_group_stats.size >= state.configuration.max_event_group_size_bytes {
+        let (path, stats) = state.writer.rotate_log()?;
+        inspect_log!(state.log_node, event:"Rotated log",
+                     new_path: path.to_string_lossy().to_string());
+        let log = state.writer.get_log();
+        diagnostics::set_current_group(log.get_log_file_path(), &log.get_stats());
+        diagnostics::add_stats(&log.get_stats());
+        state.add_group_stat(&path, stats);
+    }
+
+    let mut current_archive_size = current_group_stats.size + state.archived_size();
+    if current_archive_size > state.configuration.max_archive_size_bytes {
+        let dates = state.writer.get_archive().get_dates().unwrap_or_else(|e| {
+            eprintln!("Garbage collection failure");
+            inspect_log!(state.log_node, event: "Failed to get dates for garbage collection",
+                         reason: format!("{:?}", e));
+            vec![]
+        });
+
+        for date in dates {
+            let groups =
+                state.writer.get_archive().get_event_file_groups(&date).unwrap_or_else(|e| {
+                    eprintln!("Garbage collection failure");
+                    inspect_log!(state.log_node, event: "Failed to get event file",
+                             date: &date,
+                             reason: format!("{:?}", e));
+                    vec![]
+                });
+
+            for group in groups {
+                let path = group.log_file_path();
+                match group.delete() {
+                    Err(e) => {
+                        inspect_log!(state.log_node, event: "Failed to remove group",
+                                 path: &path,
+                                 reason: format!(
+                                     "{:?}", e));
+                        continue;
+                    }
+                    Ok(stat) => {
+                        current_archive_size -= stat.size;
+                        diagnostics::subtract_stats(&stat);
+                        state.remove_group_stat(&PathBuf::from(&path));
+                        inspect_log!(state.log_node, event: "Garbage collected group",
+                                     path: &path,
+                                     removed_files: stat.file_count as u64,
+                                     removed_bytes: stat.size as u64);
+                    }
+                };
+
+                if current_archive_size < state.configuration.max_archive_size_bytes {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error> {
+    let state = Arc::new(Mutex::new(archivist_state));
+    component::health().set_starting_up();
+
+    let mut collector = collection::HubCollector::new("/hub")?;
+    let mut events = collector.component_events().unwrap();
+
+    let collector_state = state.clone();
+    fasync::spawn(collector.start().then(|e| {
+        async move {
+            let mut state = collector_state.lock().unwrap();
+            component::health().set_unhealthy("Collection loop stopped");
+            inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
+            eprintln!("Collection ended with result {:?}", e);
+        }
+    }));
+
+    component::health().set_ok();
+
+    while let Some(event) = events.next().await {
+        let state = state.clone();
+        process_event(state.clone(), event).await.unwrap_or_else(|e| {
+            let mut state = state.lock().unwrap();
+            inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
+            eprintln!("Failed to log event: {:?}", e);
+        });
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

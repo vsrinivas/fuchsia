@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(dead_code)]
+
 //! The collection module consists of methods and structures around two
 //! different types of event streams: ComponentEvent and HubEvent.
 //!
@@ -41,7 +43,6 @@ use {
 
 /// The capacity for bounded channels used by this implementation.
 static CHANNEL_CAPACITY: usize = 1024;
-static OUT_DIRECTORY_POLL_MAX_SECONDS: i64 = 10;
 
 /// Ignore components with this name, since reading our own output data may deadlock.
 static ARCHIVIST_NAME: &str = "archivist.cmx";
