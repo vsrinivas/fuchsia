@@ -4,8 +4,6 @@
 
 import("//products/core.gni")
 
-product_name = "speaker"
-
 base_package_labels += [
   "//src/modular/bundles:framework",
   "//src/media/audio/bundles:audio",

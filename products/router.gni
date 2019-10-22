@@ -4,8 +4,6 @@
 
 import("//products/core.gni")
 
-product_name = "router"
-
 base_package_labels += [
   "//garnet/packages/config:router",
   "//garnet/packages/prod:chrealm",
