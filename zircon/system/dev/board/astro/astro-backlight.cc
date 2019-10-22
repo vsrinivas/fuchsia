@@ -41,13 +41,13 @@ constexpr device_component_t components[] = {
     {countof(i2c_component), i2c_component},
 };
 
-constexpr double max_brightness_nits = 250.0;
+constexpr double kMaxBrightnessInNits = 250.0;
 
 constexpr pbus_metadata_t backlight_metadata[] = {
     {
         .type = DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
-        .data_buffer = &max_brightness_nits,
-        .data_size = sizeof(max_brightness_nits),
+        .data_buffer = &kMaxBrightnessInNits,
+        .data_size = sizeof(kMaxBrightnessInNits),
     },
 };
 
