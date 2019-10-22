@@ -18,6 +18,8 @@ int PrintInputReport(Printer* printer, llcpp_report::InputDevice::SyncClient* cl
 void PrintMouseDesc(Printer* printer, const llcpp_report::MouseDescriptor& mouse_desc);
 void PrintMouseReport(Printer* printer, const llcpp_report::MouseReport& mouse_report);
 
+void PrintSensorDesc(Printer* printer, const llcpp_report::SensorDescriptor& sensor_desc);
+void PrintSensorReport(Printer* printer, const llcpp_report::SensorReport& sensor_report);
 }  // namespace print_input_report
 
 #endif  // SRC_UI_TOOLS_PRINT_INPUT_REPORT_DEVICES_H_

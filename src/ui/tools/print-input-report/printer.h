@@ -24,6 +24,7 @@ static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::ACCELERATI
 static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::MAGNETIC_FLUX) == 8);
 static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::LUMINOUS_FLUX) == 9);
 static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::PRESSURE) == 10);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::LUX) == 11);
 
 // These strings must be ordered based on the enums in fuchsia.input.report/units.fidl.
 const char* const kUnitStrings[] = {
@@ -38,18 +39,54 @@ const char* const kUnitStrings[] = {
     "MAGNETIC_FLUX",
     "LUMINOUS_FLUX",
     "PRESSURE",
+    "LUX",
+};
+
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::ACCELEROMETER_X) == 1);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::ACCELEROMETER_Y) == 2);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::ACCELEROMETER_Z) == 3);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::MAGNETOMETER_X) == 4);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::MAGNETOMETER_Y) == 5);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::MAGNETOMETER_Z) == 6);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::GYROSCOPE_X) == 7);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::GYROSCOPE_Y) == 8);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::GYROSCOPE_Z) == 9);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE) ==
+              10);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::LIGHT_RED) == 11);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::LIGHT_GREEN) == 12);
+static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::LIGHT_BLUE) == 13);
+
+// These strings must be ordered based on the enums in fuchsia.input.report/sensor.fidl.
+const char* const kSensorTypeStrings[] = {
+    "ERROR",          "ACCELEROMETER_X", "ACCELEROMETER_Y",   "ACCELEROMETER_Z",
+    "MAGNETOMETER_X", "MAGNETOMETER_Y",  "MAGNETOMETER_Z",    "GYROSCOPE_X",
+    "GYROSCOPE_Y",    "GYROSCOPE_Z",     "LIGHT_ILLUMINANCE", "LIGHT_RED",
+    "LIGHT_GREEN",    "LIGHT_BLUE",
 };
 
 class Printer {
  public:
   Printer() = default;
 
+  // Find the string related to the unit. If we are given a value that we do not
+  // recognize, the string "NONE" will be returned and printed.
   static const char* UnitToString(::llcpp::fuchsia::input::report::Unit unit) {
     uint32_t unit_index = static_cast<uint32_t>(unit);
     if (unit_index >= countof(kUnitStrings)) {
       return kUnitStrings[0];
     }
     return kUnitStrings[unit_index];
+  }
+
+  // Find the string related to the sensor type. If we are given a value that we do not
+  // recognize, the string "ERROR" will be returned and printed.
+  static const char* SensorTypeToString(::llcpp::fuchsia::input::report::SensorType type) {
+    uint32_t unit_index = static_cast<uint32_t>(type);
+    if (unit_index >= countof(kSensorTypeStrings)) {
+      return kSensorTypeStrings[0];
+    }
+    return kSensorTypeStrings[unit_index];
   }
 
   void PrintAxis(::llcpp::fuchsia::input::report::Axis axis) {

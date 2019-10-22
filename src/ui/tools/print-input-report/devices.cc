@@ -22,6 +22,9 @@ zx_status_t PrintInputDescriptor(Printer* printer, llcpp_report::InputDevice::Sy
   if (result->descriptor.has_mouse()) {
     PrintMouseDesc(printer, result->descriptor.mouse());
   }
+  if (result->descriptor.has_sensor()) {
+    PrintSensorDesc(printer, result->descriptor.sensor());
+  }
   return ZX_OK;
 }
 
@@ -40,6 +43,23 @@ void PrintMouseDesc(Printer* printer, const llcpp_report::MouseDescriptor& mouse
     for (uint8_t button : mouse_desc.buttons()) {
       printer->Print("Button: %d\n", button);
     }
+  }
+  printer->DecreaseIndent();
+}
+
+void PrintSensorDesc(Printer* printer, const llcpp_report::SensorDescriptor& sensor_desc) {
+  printer->Print("Sensor Descriptor:\n");
+  if (!sensor_desc.has_values()) {
+    return;
+  }
+
+  printer->IncreaseIndent();
+  for (size_t i = 0; i < sensor_desc.values().count(); i++) {
+    printer->Print("Value %02d:\n", i);
+    printer->IncreaseIndent();
+    printer->Print("SensorType: %s\n", printer->SensorTypeToString(sensor_desc.values()[i].type));
+    printer->PrintAxis(sensor_desc.values()[i].axis);
+    printer->DecreaseIndent();
   }
   printer->DecreaseIndent();
 }
@@ -80,6 +100,9 @@ int PrintInputReport(Printer* printer, llcpp_report::InputDevice::SyncClient* cl
         auto& mouse = report.mouse();
         PrintMouseReport(printer, mouse);
       }
+      if (report.has_sensor()) {
+        PrintSensorReport(printer, report.sensor());
+      }
       printer->Print("\n");
     }
   }
@@ -97,6 +120,16 @@ void PrintMouseReport(Printer* printer, const llcpp_report::MouseReport& mouse_r
     for (uint8_t button : mouse_report.pressed_buttons()) {
       printer->Print("Button %02d pressed\n", button);
     }
+  }
+}
+
+void PrintSensorReport(Printer* printer, const llcpp_report::SensorReport& sensor_report) {
+  if (!sensor_report.has_values()) {
+    return;
+  }
+
+  for (size_t i = 0; i < sensor_report.values().count(); i++) {
+    printer->Print("Sensor[%02d]: %08d\n", i, sensor_report.values()[i]);
   }
 }
 

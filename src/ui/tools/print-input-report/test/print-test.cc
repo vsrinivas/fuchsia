@@ -223,4 +223,63 @@ TEST_F(PrintInputReport, PrintMouseDescriptor) {
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
 }
 
+TEST_F(PrintInputReport, PrintSensorDescriptor) {
+  hid_input_report::SensorDescriptor sensor_desc = {};
+  sensor_desc.values[0].axis.enabled = true;
+  sensor_desc.values[0].axis.unit = hid::unit::UnitType::LinearVelocity;
+  sensor_desc.values[0].axis.range.min = 0;
+  sensor_desc.values[0].axis.range.max = 1000;
+  sensor_desc.values[0].type = hid::usage::Sensor::kAccelerationAxisX;
+
+  sensor_desc.values[1].axis.enabled = true;
+  sensor_desc.values[1].axis.unit = hid::unit::UnitType::Light;
+  sensor_desc.values[1].axis.range.min = 0;
+  sensor_desc.values[1].axis.range.max = 1000;
+  sensor_desc.values[1].type = hid::usage::Sensor::kLightIlluminance;
+  sensor_desc.num_values = 2;
+
+  hid_input_report::ReportDescriptor desc;
+  desc.descriptor = sensor_desc;
+
+  fake_device_->SetDescriptor(desc);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Sensor Descriptor:\n",
+      "  Value 00:\n",
+      "    SensorType: ACCELEROMETER_X\n",
+      "    Unit: LINEAR_VELOCITY\n",
+      "    Min:         0\n",
+      "    Max:      1000\n",
+      "  Value 01:\n",
+      "    SensorType: LIGHT_ILLUMINANCE\n",
+      "    Unit: LUMINOUS_FLUX\n",
+      "    Min:         0\n",
+      "    Max:      1000\n",
+  });
+
+  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+}
+
+TEST_F(PrintInputReport, PrintSensorReport) {
+  hid_input_report::SensorReport sensor_report = {};
+  sensor_report.values[0] = 100;
+  sensor_report.values[1] = -100;
+  sensor_report.num_values = 2;
+
+  hid_input_report::Report report;
+  report.report = sensor_report;
+
+  fake_device_->SetReport(report);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Sensor[00]: 00000100\n",
+      "Sensor[01]: -0000100\n",
+      "\n",
+  });
+
+  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+}
+
 }  // namespace test
