@@ -54,7 +54,7 @@ async fn verify_broken_pipe(
     let mut buf = [0xad; 1];
     let n = stream.read(&mut buf).await?;
     if n != 0 {
-        return Err(failure::format_err!("read {}/{} bytes", n, 0))?;
+        let () = Err(failure::format_err!("read {}/{} bytes", n, 0))?;
     }
     match stream.write(&buf).await {
         Ok(n) => Err(failure::format_err!("unexpectedly wrote {} bytes", n)),
@@ -177,7 +177,7 @@ async fn main() -> Result<(), failure::Error> {
                     )
                 } != 0
                 {
-                    return Err(std::io::Error::last_os_error().into());
+                    let () = Err(std::io::Error::last_os_error())?;
                 }
             }
 
@@ -185,7 +185,7 @@ async fn main() -> Result<(), failure::Error> {
             let payload = [0xde; 1];
             let n = retransmit_timeout.write(&payload).await?;
             if n != payload.len() {
-                return Err(failure::format_err!("wrote {}/{} bytes", n, payload.len()))?;
+                let () = Err(failure::format_err!("wrote {}/{} bytes", n, payload.len()))?;
             }
 
             let keepalive_timeout = verify_broken_pipe(keepalive_timeout);
