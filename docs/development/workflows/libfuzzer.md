@@ -20,7 +20,7 @@ engine.
   * Fuchsia: Create or extend a [`fuzzers_package`][gn fuzzers package] in an appropriate BUILD.gn.
   * Ensure there's a path from  a top-level target, e.g. `//bundles:tests`, to your fuzzers package.
 1. Configure, build, and boot (with networking), e.g.:
-  * _if a Fuchsia instance is not already running:_ `fx run -k -N`
+  * _if a Fuchsia instance is not already running:_ `fx qemu -N`
   * `fx set core.x64 --fuzz-with asan --with //bundles:tests --with //garnet/packages/products:devtools`
   * `fx build`
   * `fx serve`

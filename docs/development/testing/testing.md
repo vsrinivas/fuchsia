@@ -8,12 +8,12 @@ To build Zircon and run unit tests, run one of the following commands:
 # Build and run x64.
 fx set bringup.x64 --with-base //garnet/packages/tests:zircon
 fx build
-fx run
+fx qemu
 
 # Build and run arm64.
 fx set bringup.arm64 --with-base //garnet/packages/tests:zircon
 fx build
-fx run
+fx qemu
 ```
 
 Once the scripts finish running, you should see the Zircon shell. To run

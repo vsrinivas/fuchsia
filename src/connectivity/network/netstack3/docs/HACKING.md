@@ -29,18 +29,14 @@ it later:
 sudo ifconfig qemu-extra 192.168.4.1 netmask 255.255.255.0 up
 ```
 
-It's not necessary to set a static IPv4 address for the `qemu` interface if the
-following invocation of `fx run` is used (which runs dnsmasq and will assign an
-address of `192.168.3.1/24` to the interface):
+Start Qemu with networking support:
 
 ```
-fx run -kN -u scripts/start-dhcp-server.sh -- \
-  -netdev type=tap,ifname=qemu-extra,script=no,downscript=no,id=net1 \
-  -device e1000,netdev=net1,mac=52:54:00:63:5e:7b
+fx qemu -N
 ```
 
-At this point you should be able to `fx shell` and ping the default netstack
-with the address assigned via DHCP (probably `192.168.3.53`).
+At this point you should be able to `fx shell` and resolve the default
+netstack interface address with `fx get-device-addr`.
 
 ### (Step 2) `enclosed_runner` Setup
 

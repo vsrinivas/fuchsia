@@ -19,7 +19,7 @@ You can then start the QEMU with networking, assuming that you use QEMU as a tes
 that you have confirmed that it works:
 
 ```
-fx run -m 4096 -N
+fx emu -N
 ```
 
 Once it runs:

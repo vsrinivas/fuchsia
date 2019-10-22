@@ -123,7 +123,7 @@ for more details on the package-based workflow.
 
 If you don't have physical hardware available, you can run the tests in QEMU using the same commands as above. A couple of tips will help run the tests a little more quickly.
 
-* Run the VM with hardware virtualization support: `fx run -k`
+* Run the VM with hardware virtualization support: `fx emu`
 * Disable unnecessary logging for the tests:
 
   ```

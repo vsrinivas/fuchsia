@@ -122,53 +122,44 @@ If you don't have the supported hardware, you can run Fuchsia under emulation
 using [QEMU](/docs/development/emulator/qemu.md).
 Fuchsia includes prebuilt binaries for QEMU under `prebuilt/third_party/qemu`.
 
-The `fx run` command will launch Zircon within QEMU, using the locally built
+The `fx emu` command will launch Fuchsia within QEMU, using the locally built
 disk image:
 
 ```sh
-fx run
+fx emu
 ```
 
-There are various flags for `fx run` to control QEMU's configuration:
+There are various flags for `fx emu` to control the emulator configuration:
 
-* `-m` sets QEMU's memory size in MB.
-* `-g` enables graphics (see below).
 * `-N` enables networking (see below).
-* `-k` enables KVM acceleration on Linux.
+* `--headless` disable graphics (see below).
+* `-c` pass additional arguments to the kernel.
 
-Use `fx run -h` to see all available options.
+Use `fx emu -h` to see all available options.
 
 Note: Before you can run any commands, you will need to follow the instructions in the [Explore Fuchsia](#explore-fuchsia) section below.
 
-#### QEMU tips
-
-* `ctrl+a x` will exit QEMU in text mode.
-* `ctrl+a ?` or `ctrl+a h` prints all supported commands.
-
-#### Enabling Graphics
-
-Note: Graphics under QEMU are extremely limited due to a lack of Vulkan
-support. Only the Zircon UI renders.
-
-To enable graphics under QEMU, add the `-g` flag to `fx run`:
-
-```sh
-fx run -g
-```
-
 #### Enabling Network
 
-First, [configure](/docs/development/emulator/qemu.md#enabling_networking_under_qemu) a
-virtual interface for QEMU's use.
+In order for ephemeral software to work in the emulator, an IPv6 network must
+be configured.
 
-Once this is done you can add the `-N` and `-u` flags to `fx run`:
+On macOS: Install "http://tuntaposx.sourceforge.net/download.xhtml"
+On Linux: Run `sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up`
 
-```sh
-fx run -N -u scripts/start-dhcp-server.sh
+Now the emulator can be run with networking enabled:
+
+```
+fx emu -N
 ```
 
-The `-u` flag runs a script that sets up a local DHCP server and NAT to
-configure the IPv4 interface and routing.
+The above is sufficient for ephemeral software (that is served by `fx serve`,
+see below) to work, including many tools such as `uname` and `fortune` (if
+built).
+
+Users who also wish to reach the internet from the emulator will need to
+configure some manner of IP forwarding and IPv4 support on the emulator TAP
+interface. Details of this process are beyond the scope of this document.
 
 ## Explore Fuchsia {#explore-fuchsia}
 
@@ -192,8 +183,8 @@ fortune
 To shutdown or reboot Fuchsia, use the `dm` command:
 
 ```sh
-dm help
 dm shutdown
+dm reboot
 ```
 
 ### Change some source

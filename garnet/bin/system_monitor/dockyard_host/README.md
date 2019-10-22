@@ -18,7 +18,7 @@ Server listening on 0.0.0.0:50051
 
 In a second terminal window run
 ```
-$ killall -r qemu-; fx run -N -u $FUCHSIA_DIR/scripts/start-dhcp-server.sh
+$ killall -r qemu-; fx qemu -N
 <there will be a lot of output, after it calms down>
 $ run fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_harvester.cmx 192.168.3.53:50051
 ```

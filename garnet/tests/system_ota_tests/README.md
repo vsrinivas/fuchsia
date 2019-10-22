@@ -42,7 +42,7 @@ them all run `~/fuchsia/out/default/host_x64/system_ota_tests_upgrade -- -h`.
 
 ## Running the tests locally in QEMU
 
-At the moment, the builtin `fx run` does not bring up a QEMU image that can be
+At the moment, the builtin `fx emu` does not bring up a configuration that can be
 OTA-ed. Until this is implemented, the `bin/` directory contains some helper
 scripts that bring up an OTA-able QEMU image. Follow these instructions to use
 them.

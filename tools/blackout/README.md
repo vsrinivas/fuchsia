@@ -20,7 +20,7 @@ Set up a fuchsia environment in the standard way. for example (in separate shell
 
 ```
 # shell 1
-fx run -Nk
+fx emu -N
 ```
 ```
 # shell 2

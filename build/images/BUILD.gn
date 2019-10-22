@@ -1160,7 +1160,7 @@ if (!bootfs_only) {
 
   # fvm.blk creates an FVM partition image containing the blob partition produced
   # by blob.blk and the data partition produced by data.blk. fvm.blk is primarily
-  # invoked and used by the qemu run, via `fx run`.
+  # invoked and used by the qemu run, via `fx emu` / `fx qemu`.
   generate_fvm("fvm.blk") {
     testonly = true
 

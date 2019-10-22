@@ -41,16 +41,10 @@ The gdb binary can be found in `out/toolchain/x86_64-linux/gdb/bin/gdb`.
 
 ### If using qemu
 
-If using qemu run the following to make sure dnsmasq is running:
-
-```
-devhost$ scripts/start-dhcp-server.sh qemu
-```
-
 Make sure to pass the `-N` argument to enable networking.
 
 ```
-devhost$ fx run -N
+devhost$ fx qemu -N
 ```
 
 ### On the target machine running Fuchsia

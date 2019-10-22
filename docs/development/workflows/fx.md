@@ -429,15 +429,21 @@ $ fx cp book.txt /tmp/book.txt
 $ fx cp --to-host /tmp/poem.txt poem.txt
 ```
 
-### Start Fuchsia in QEMU {#start-fuchsia-in-qemu}
+### Start Fuchsia in an Emulator {#start-fuchsia-in-emu}
 
-`fx run` starts a Fuchsia build under QEMU, a general purpose virtual
-machine. Users on Linux host systems with KVM can execute `fx run -k` for
-significantly improved performance.
+`fx emu` starts a Fuchsia build under the Fuchsia emulator, a general purpose
+virtual machine.
 
-The QEMU environment does not support any GUI programs. It also has limiting
-network capabilities. Hardware devices are recommended for day-to-day Fuchsia
-software development whenever possible.
+In order to run ephemerally delivered programs, users will need to setup TAP
+based networking, the full details of which are beyond the scope of this
+document. A quick overview is as follows:
+
+On macOS: Install "http://tuntaposx.sourceforge.net/download.xhtml"
+On Linux: Run `sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up`
+
+Then to run the emulator using TAP networking, execute `fx emu -N`. You can
+attach a package server by running: `fx serve` as you would with a physical
+target device.
 
 ### Using multiple Fuchsia devices {#using-multiple-fuchsia-devices} 
 

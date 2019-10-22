@@ -28,7 +28,7 @@ For QEMU networking support, you need to setup your system with a TUN/TAP
 interface. Then, run:
 
 ```sh
-fx run -N
+fx emu -N
 ```
 
 In a separate console, you need to ensure your target is able to fetch updates:

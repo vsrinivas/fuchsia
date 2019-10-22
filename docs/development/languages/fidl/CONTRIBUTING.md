@@ -190,7 +190,7 @@ $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compi
 # --with-base puts all zircon tests under /boot with the bringup.x64 target, or /system when using the core.x64 target
 fx set bringup.x64 --with-base //garnet/packages/tests:zircon   # optionally append "--variant asan"
 fx build
-fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
+fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
 ```
 
 To regenerate the FIDL definitions used in unit testing, run:
@@ -248,8 +248,8 @@ fx exec topaz/bin/fidlgen_dart/regen.sh
 ```sh
 fx set bringup.x64 --with-base //garnet/packages/tests:zircon
 fx build
-fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
-fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test
+fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
+fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test
 ```
 
 When the test completes, you're running in the QEMU emulator.
@@ -260,7 +260,7 @@ the shell:
 
 ```sh
 Tab 1> fx set core.x64 --with-base //garnet/packages/tests:zircon
-Tab 1> fx build && fx run -kN
+Tab 1> fx build && fx qemu -kN
 
 Tab 2> fx shell
 Tab 2(shell)> runtests -t fidl-simple-test
@@ -274,7 +274,7 @@ You first need to have Fuchsia running in an emulator. Here are the steps:
 ```sh
 Tab 1> fx build && fx serve-updates
 
-Tab 2> fx run -kN
+Tab 2> fx qemu -kN
 
 Tab 3> fx run-test fidl_tests
 ```
@@ -291,7 +291,7 @@ You first need to have Fuchsia running in an emulator. Here are the steps:
 ```sh
 Tab 1> fx build && fx serve-updates
 
-Tab 2> fx run -kN
+Tab 2> fx qemu -kN
 
 Tab 3> fx run-test go_fidl_tests
 ```
@@ -310,7 +310,7 @@ You first need to have Fuchsia running in an emulator. Here are the steps:
 ```sh
 Tab 1> fx build && fx serve-updates
 
-Tab 2> fx run -kN
+Tab 2> fx qemu -kN
 
 Tab 3> fx run-test rust_fidl_tests
 ```
@@ -324,7 +324,7 @@ You first need to have Fuchsia running in an emulator. Here are the steps:
 ```sh
 Tab 1> fx build && fx serve-updates
 
-Tab 2> fx run -kN
+Tab 2> fx qemu -kN
 
 Tab 3> fx run-test fidl_bindings_test
 ```
@@ -344,7 +344,7 @@ fx build topaz/bin/fidl_compatibility_test/dart:fidl_compatibility_test_server_d
 To run this test, you first need to have a Fuchsia instance running in an emulator:
 
 ```sh
-fx run -N
+fx qemu -N
 ```
 
 Then, copy the script to the device, and run it:
@@ -383,10 +383,10 @@ The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:z
 | Name                      | Test Command                                                                                                 | Directories Covered     |
 |---------------------------|--------------------------------------------------------------------------------------------------------------|-------------------------|
 | fidlc host test           | $FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug | zircon/system/host/fidl |
-| fidl coding tables test   | fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test                               | zircon/system/host/fidl |
-| fidl c runtime test       | fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test                                             | zircon/system/ulib/fidl |
-| fidl c runtime test       | fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test                                      | zircon/system/ulib/fidl |
-| fidl c-llcpp interop test | fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-llcpp-interop-test                               | zircon/system/ulib/fidl |
+| fidl coding tables test   | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test                               | zircon/system/host/fidl |
+| fidl c runtime test       | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test                                             | zircon/system/ulib/fidl |
+| fidl c runtime test       | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test                                      | zircon/system/ulib/fidl |
+| fidl c-llcpp interop test | fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-llcpp-interop-test                               | zircon/system/ulib/fidl |
 
 ### All Regen Commands
 

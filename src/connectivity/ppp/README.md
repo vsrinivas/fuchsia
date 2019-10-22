@@ -1,4 +1,4 @@
-# Point-to-Point Protocol
+  # Point-to-Point Protocol
 
 Drivers, libraries, services, and tools providing Point-to-Point Protocol
 support on Fuchsia. PPP provides a direct link-layer (L2) over a serial
@@ -47,7 +47,7 @@ services, and tools. `:tests` builds all tests.
 Host commands begin with `%`. Client commands begin with `$`. QEMU monitor
 commands begin with `(qemu)`.
 - Ensure you have built with PPP support (see above).
-- `% fx run -N -- -serial mon:stdio -serial pty`.
+- `% fx qemu -N -- -serial mon:stdio -serial pty`.
     - This tells QEMU to multiplex monitor and serial port 0 (kernel serial log)
       on stdin/out.
     - Provide `kernel.serial=none` to allow PPP access to serial port 0.

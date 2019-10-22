@@ -25,7 +25,7 @@ It currently supports files up to 4 GB in size.
   ```shell
   fx set bringup.x64
   fx build
-  fx run -- -hda blk.bin
+  fx qemu -- -hda blk.bin
   ```
 
 ### Target Device (QEMU and Real Hardware)

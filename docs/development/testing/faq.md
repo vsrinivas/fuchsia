@@ -60,12 +60,12 @@ to an existing package.
 There's the easy way if your QEMU has networking, and the hard way if it
 doesn't.
 
-A (with networking): In one terminal, start your QEMU instance with `fx run -N`.
+A (with networking): In one terminal, start your QEMU instance with `fx qemu -N`.
 Next, on another terminal, type in `fx run-test scenic_tests`.
 
 This invocation runs all the test executables in the `scenic_tests` package.
 
-A (no networking): Start a QEMU instance (`fx run`), and then *manually* invoke
+A (no networking): Start a QEMU instance (`fx qemu`), and then *manually* invoke
 the `runtests` command.
 
 In the QEMU shell, type in `run-test-component scenic_tests`. The

@@ -57,9 +57,9 @@ guest launch linux_guest
 
 ## Running on QEMU
 
-Running a guest on QEMU on x64 requires kvm (i.e. pass `-k` to `fx run`):
+Running a guest on QEMU on x64 requires kvm (i.e. pass `-k` to `fx qemu`):
 ```sh
-fx run -k
+fx qemu -k
 ```
 
 You may also need to enable nested KVM on your host machine. The following
@@ -90,14 +90,14 @@ options kvm_intel nested=1
 Running an arm64 guest on QEMU requires either using GICv2 (pass `-G 2`).
 
 ```sh
-fx run -G 2
+fx qemu -G 2
 ```
 
 Or using a more recent version of QEMU (try 2.12.0). Older versions of QEMU do
 not correctly emulate GICv3 when running with multiple guest VCPUs.
 
 ```sh
-fx run -q /path/to/recent/qemu/aarch64-softmmu
+fx qemu -q /path/to/recent/qemu/aarch64-softmmu
 ...
 guest launch (linux_guest|zircon_guest)
 ```

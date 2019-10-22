@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 # Helper script for launching QEMU in a way that this can be used for local OTA
-# testing, until `fx run` is modified to support OTA.
+# testing, until `fx emu` is modified to support OTA.
 
 set -e
 

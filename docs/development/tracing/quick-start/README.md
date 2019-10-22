@@ -29,7 +29,7 @@ We will show this using the `QEMU` version of Fuchsia, hosted on a Linux box.
 First, on the Linux box, we start Fuchsia:
 
 ```shell
-linux-shell-1$ fx run -k -N
+linux-shell-1$ fx emu -N
 ```
 
 This configures and runs Fuchsia.

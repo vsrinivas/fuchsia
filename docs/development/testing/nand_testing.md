@@ -94,7 +94,7 @@ echo /nand.dmp=/tmp/saved_image_file > /tmp/manifest.txt
 zircon/build-gcc/tools/minfs /tmp/image.dsk create --manifest /tmp/manifest.txt
 fx set bringup.x64
 fx build
-fx run -k -- -hda /tmp/image.dsk
+fx qemu -k -- -hda /tmp/image.dsk
 ```
 
 Then, inside zircon:

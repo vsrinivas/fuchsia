@@ -29,7 +29,7 @@ Or:
 1. `fx set workstation.x64 --with //bundles:tests`
 2. `fx build`
 3. `fx serve`
-4. In another terminal: `fx run -k -N`
+4. In another terminal: `fx emu -N`
 5. In another terminal: `fx run-test camera_full_test`
 
 ## To run single tests:

@@ -54,8 +54,8 @@ universe_package_labels += [ "//bundles:tools" ]
 Boot the target system with networking support:
 
   * Hardware devices: use the device instructions.
-  * AEMU: `fx aemu -N`
-  * QEMU: `fx run -N`
+  * AEMU: `fx emu -N`
+  * QEMU: `fx qemu -N`
 
 (If using x64 with an emulator on a Linux host, we also recommend the "-k" flag
 which will make it run faster).

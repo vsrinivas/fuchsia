@@ -1,56 +1,20 @@
 #!/bin/bash
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### start fuchsia in qemu with a FVM disk
-## start fuchsia in qemu with a FVM disk
-##
-## This command delegates to //zircon/scripts/run-zircon. Flags are documented
-## in that script, and can be discovered by passing -h or --help.
-##
+### deprecated: use fx emu / fx qemu instead
+## deprecated: use fx emu or fx qemu instead
 
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-for arg in "$@"; do
-  if [[ "$arg" = "-h" || "$arg" = "--help" ]]; then
-    fx-command-help
-    "${FUCHSIA_DIR}/zircon/scripts/run-zircon" -h
-    exit 1
-  fi
-done
+fx-warn "fx run is deprecated - replaced by:"
+fx-warn "fx emu (fuchsia (android) emulator)"
+fx-warn "fx qemu (qemu)"
+fx-warn " running qemu in 5s..."
 
-qemu_dir="${PREBUILT_QEMU_DIR}/bin"
+sleep 5
 
-args=(
-  -a "${FUCHSIA_ARCH}"
-  -q "${qemu_dir}"
-  -t "${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}"
-  --gic=3
-)
-
-# Construction of a qcow image prevents qemu from writing back to the
-# build-produced image file, which could cause timestamp issues with that file.
-# Construction of the new ZBI adds //.ssh/authorized_keys for SSH access.
-imgdir="$(mktemp -d ${FUCHSIA_BUILD_DIR}/tmp.XXX)"
-if [[ ! -d "${imgdir}" ]]; then
-  echo >&2 "Failed to create temporary directory"
-  exit 1
-fi
-trap 'rm -rf "$imgdir"' EXIT
-
-kernelzbi="${imgdir}/fuchsia-ssh.zbi"
-args+=(-z "${kernelzbi}")
-fx-zbi -o "${kernelzbi}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
-  --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
-
-if [ -n "$IMAGE_FVM_RAW" ]; then
-  fvmimg="${imgdir}/fvm.blk"
-  fx-fvm-extend-image "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" $fvmimg
-  args+=(-d -D "${fvmimg}" --diskfmt=raw)
-fi
-
-"${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${args[@]}" "$@"
+fx-command-exec qemu "$@"

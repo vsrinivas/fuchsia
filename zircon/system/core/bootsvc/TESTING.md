@@ -12,11 +12,11 @@ fx build
 2) Boot the bootsvc-integration-tests zbi. For example:
 
 ```
-$ fx run -z out/default.zircon/bootsvc-integration-tests-x64.zbi -k
+$ fx qemu -z out/default.zircon/bootsvc-integration-tests-x64.zbi -k
 ```
 
 Note that '-k' (to enable KVM on QEMU) can only be used if the ZBI's
 architecture matches your host architecture.
 
 3) All tests should pass and QEMU should exit.  You'll need to verify that
-the tests passed by reading the terminal output from `fx run`.
+the tests passed by reading the terminal output from `fx qemu`.

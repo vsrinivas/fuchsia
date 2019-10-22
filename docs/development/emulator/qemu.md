@@ -4,18 +4,12 @@ Zircon can [run under emulation](/docs/getting_started.md#Boot-from-QEMU)
 using QEMU. QEMU can either be installed via prebuilt binaries, or built
 locally.
 
-## Install Prebuilt QEMU
+## Prebuilt QEMU
 
-QEMU is downloaded by the script that is used to download all Zircon
-prebuilts, including toolchains:
+QEMU is downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`.
 
-```
-./scripts/download-prebuilt
-```
-
-This will download QEMU to the `prebuilt/downloads/qemu` directory. You
-can either add `prebuilt/downloads/qemu/bin` to your PATH, or specify
-`prebuilt/downloads/qemu/bin` using the -q flag to `fx run` (see below).
+QEMU is fetched into `//prebuilts/third_party/qemu`. You can run it most
+conveniently using `fx qemu` (see below).
 
 ## Build QEMU
 
@@ -52,12 +46,12 @@ when invoking run-zircon-{arch}.
 # for aarch64
 fx set bringup.arm64
 fx build
-fx run
+fx qemu
 
 # for x86
 fx set bringup.x64
 fx build
-fx run
+fx qemu
 ```
 
 If QEMU is not on your path, use -q <directory> to specify its location.
@@ -95,7 +89,7 @@ run-zircon-x64 script uses /dev/tap0.
 sudo chown $USER /dev/tap0
 
 # Run zircon in QEMU, which will open /dev/tap0
-fx run -N
+fx qemu -N
 
 # (In a different window) bring up tap0 with a link local IPv6 address
 sudo ifconfig tap0 inet6 fc00::/7 up
@@ -110,19 +104,21 @@ example startup script containing the above command is located in
 scripts/qemu-ifup-macos, so QEMU can be started with:
 
 <pre>
-fx run -Nu ./scripts/qemu-ifup-macos
+fx qemu -Nu ./scripts/qemu-ifup-macos
 </pre>
 </aside>
 
 ## Using Emulated Disk under QEMU
 
-Please follow the minfs instructions on how to create a disk image
-[here][minfs-create-image].
+Using builds based on core (really any product above bringup) will
+automatically imply a disk that is provided to serve the `fvm` partition that
+includes a minfs partition for mutable storage, and a blobfs partition for
+package data storage.
 
-After creating the image, you can run zircon in QEMU with the disk image:
+You can attach additional images using flags as follows:
 
 ```
-fx run -d [-D <disk_image_path (default: "blk.bin")>]
+fx qemu -d [-D <disk_image_path (default: "blk.bin")>]
 ```
 
 
@@ -135,7 +131,7 @@ Here is a sample session to get you started.
 In the shell you're running QEMU in:
 
 ```
-shell1$ fx run -- -s -S
+shell1$ fx qemu -- -s -S
 [... some QEMU start up text ...]
 ```
 
@@ -145,7 +141,7 @@ If you want to run QEMU without GDB, but be able to attach with GDB later
 then start QEMU without "-S" in the above example:
 
 ```
-shell1$ fx run -- -s
+shell1$ fx qemu -- -s
 [... some QEMU start up text ...]
 ```
 

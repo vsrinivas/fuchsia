@@ -50,7 +50,7 @@ jiri update -gc
 # Benchmarks are not included in production packages, so use $layer/packages/kitchen_sink
 # or they will not be built.
 fx set core.<board> --with //bundles:kitchen_sink
-fx build && fx run
+fx build && fx emu
 ```
 
 Once the Fuchsia shell is loaded:

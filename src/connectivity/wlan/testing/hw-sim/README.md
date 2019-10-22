@@ -6,7 +6,7 @@ WLAN Hardware Simulator, or `hw-sim`, is a framework used to simulate a Fuchsia 
 
 The most convenient way to run this test locally is to run it in a QEMU instance.
 
-##### QEMU without network (run test from QEMU command prompt directly)
+##### Emulator without network (run test from the emulator command prompt directly)
 
 1. Make sure `src/connectivity/wlan:tests` is included in `with-base` so that the driver for the fake wlantap device is loaded in QEMU. For example:
 
@@ -14,10 +14,10 @@ The most convenient way to run this test locally is to run it in a QEMU instance
     fx set core.x64 --with-base src/connectivity/wlan:tests,bundles:tools
     ```
 
-1. Start the QEMU instance with
+1. Start the emulator instance with
 
     ```
-    fx run -k
+    fx emu
     ```
 
     Note: If QEMU is not working, troubleshoot steps can be found at https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#Boot-from-QEMU
@@ -40,16 +40,16 @@ The most convenient way to run this test locally is to run it in a QEMU instance
     dm shutdown
     ```
 
-##### QEMU with network (run test with `fx run` from host)
+##### Emulator with network (run test with `fx emu` from host)
 1. Setup QEMU network by following https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#enabling-network
 
     (*Googlers*: Search "QEMU network setup" for additional steps for your workstation)
 
 1. Same `fx set` as the previous option
-1. Start QEMU with `-N` to enable network support
+1. Start the emulator with `-N` to enable network support
 
     ```
-    fx run -kN
+    fx emu -N
     ```
 
 1. From another terminal on the **host**,
@@ -95,12 +95,12 @@ Often when debugging flakiness, it is more helpful to run the tests repeatedly. 
      ````
      fx set core.x64 --with-base bundles:tools,src/connectivity/wlan:tests,bundles:tools
      ````
-1. Start a QEMU instance
+1. Start an emulator instance
     ````
-    fx run -k
+    fx emu -N
     ````
 
-1. Run the test in QEMU command prompt (not with `fx run`)
+1. Run the test in the emulator command prompt (not with `fx emu`)
      ```
      for i in $(seq 1 1000); do run-test-component simulate_scan || break; echo success: attempt $i; done;
      ```
