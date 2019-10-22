@@ -5,14 +5,17 @@
 library("hid-input-report") {
   sdk = "static"
   sdk_headers = [
+    "hid-input-report/axis.h",
     "hid-input-report/device.h",
     "hid-input-report/descriptors.h",
     "hid-input-report/mouse.h",
     "hid-input-report/fidl.h",
   ]
   sources = [
+    "axis.cc",
     "fidl.cc",
     "mouse.cc",
+    "sensor.cc",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-input-report:llcpp",

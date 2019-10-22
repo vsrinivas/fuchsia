@@ -10,20 +10,11 @@
 
 #include <variant>
 
+#include <hid-input-report/axis.h>
 #include <hid-parser/units.h>
+#include <hid-parser/usages.h>
 
 namespace hid_input_report {
-
-struct Range {
-  int64_t min;
-  int64_t max;
-};
-
-struct Axis {
-  bool enabled = false;
-  hid::unit::UnitType unit = hid::unit::UnitType::None;
-  Range range = {};
-};
 
 // This is just a hardcoded value so we don't have to make memory allocations.
 // Feel free to increase this number in the future.
@@ -56,12 +47,35 @@ struct MouseReport {
   uint8_t buttons_pressed[kMouseMaxButtons];
 };
 
+// A |SensorAxis| has both a normal |Axis| and also the |SensorType|.
+struct SensorAxis {
+  Axis axis;
+  // The hid usage type for the sensor.
+  hid::usage::Sensor type;
+};
+
+const uint32_t kSensorMaxValues = 64;
+
+// |SensorDescriptor| describes the capabilities of a sensor device.
+struct SensorDescriptor {
+  SensorAxis values[kSensorMaxValues] = {};
+  size_t num_values;
+};
+
+// |SensorReport| describes the sensor event delivered from the event stream.
+// The values array will always be the same size as the descriptor values, and they
+// will always be in the same order.
+struct SensorReport {
+  int64_t values[kSensorMaxValues];
+  size_t num_values;
+};
+
 struct ReportDescriptor {
-  std::variant<MouseDescriptor> descriptor;
+  std::variant<MouseDescriptor, SensorDescriptor> descriptor;
 };
 
 struct Report {
-  std::variant<std::monostate, MouseReport> report;
+  std::variant<std::monostate, MouseReport, SensorReport> report;
 };
 
 }  // namespace hid_input_report

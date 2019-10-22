@@ -7,6 +7,7 @@ test("hid-input-report") {
   sources = [
     "fidl-test.cc",
     "mouse-test.cc",
+    "sensor-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

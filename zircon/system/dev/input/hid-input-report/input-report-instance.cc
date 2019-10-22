@@ -61,7 +61,7 @@ void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync _completer)
     }
   }
 
-  descriptor = descriptor_data.descriptor.view();
+  descriptor = descriptor_data.descriptor_builder.view();
   _completer.Reply(std::move(descriptor));
 }
 

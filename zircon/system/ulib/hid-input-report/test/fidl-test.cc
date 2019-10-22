@@ -40,7 +40,7 @@ TEST(FidlTest, MouseDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor.view();
+  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor_builder.view();
   ASSERT_TRUE(fidl.has_mouse());
   auto& fidl_mouse = fidl.mouse();
 
@@ -93,4 +93,64 @@ TEST(FidlTest, MouseReport) {
   for (size_t i = 0; i < mouse.num_buttons_pressed; i++) {
     ASSERT_EQ(mouse.buttons_pressed[i], buttons[i]);
   }
+}
+
+TEST(FidlTest, SensorDescriptor) {
+  hid_input_report::SensorDescriptor sensor_desc = {};
+  sensor_desc.values[0].axis.enabled = true;
+  sensor_desc.values[0].axis.unit = hid::unit::UnitType::LinearVelocity;
+  sensor_desc.values[0].axis.range.min = 0;
+  sensor_desc.values[0].axis.range.max = 1000;
+  sensor_desc.values[0].type = hid::usage::Sensor::kAccelerationAxisX;
+
+  sensor_desc.values[1].axis.enabled = true;
+  sensor_desc.values[1].axis.unit = hid::unit::UnitType::Light;
+  sensor_desc.values[1].axis.range.min = 0;
+  sensor_desc.values[1].axis.range.max = 1000;
+  sensor_desc.values[1].type = hid::usage::Sensor::kLightIlluminance;
+  sensor_desc.num_values = 2;
+
+  hid_input_report::ReportDescriptor desc;
+  desc.descriptor = sensor_desc;
+
+  hid_input_report::FidlDescriptor fidl_desc = {};
+  ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
+
+  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor_builder.view();
+  ASSERT_TRUE(fidl.has_sensor());
+  auto& fidl_sensor = fidl.sensor();
+
+  ASSERT_TRUE(fidl_sensor.has_values());
+  ASSERT_EQ(fidl_sensor.values().count(), 2);
+
+  TestAxis(sensor_desc.values[0].axis, fidl_sensor.values()[0].axis);
+  ASSERT_EQ(fidl_sensor.values()[0].type, llcpp_report::SensorType::ACCELEROMETER_X);
+
+  TestAxis(sensor_desc.values[1].axis, fidl_sensor.values()[1].axis);
+  ASSERT_EQ(fidl_sensor.values()[1].type, llcpp_report::SensorType::LIGHT_ILLUMINANCE);
+}
+
+TEST(FidlTest, SensorReport) {
+  hid_input_report::SensorReport sensor_report = {};
+  sensor_report.values[0] = 5;
+  sensor_report.values[1] = -5;
+  sensor_report.values[2] = 0xabcdef;
+  sensor_report.num_values = 3;
+
+  hid_input_report::Report report;
+  report.report = sensor_report;
+
+  hid_input_report::FidlReport fidl_report = {};
+  ASSERT_OK(SetFidlReport(report, &fidl_report));
+
+  llcpp_report::InputReport fidl = fidl_report.report_builder.view();
+  ASSERT_TRUE(fidl.has_sensor());
+  auto& fidl_sensor = fidl.sensor();
+
+  ASSERT_TRUE(fidl_sensor.has_values());
+  ASSERT_EQ(fidl_sensor.values().count(), 3);
+
+  ASSERT_EQ(fidl_sensor.values()[0], sensor_report.values[0]);
+  ASSERT_EQ(fidl_sensor.values()[1], sensor_report.values[1]);
+  ASSERT_EQ(fidl_sensor.values()[2], sensor_report.values[2]);
 }

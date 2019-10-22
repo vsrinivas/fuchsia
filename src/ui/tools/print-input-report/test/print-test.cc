@@ -103,7 +103,7 @@ class FakeDevice final : public llcpp_report::InputDevice::Interface {
     hid_input_report::FidlDescriptor fidl;
     ASSERT_EQ(hid_input_report::SetFidlDescriptor(descriptor_, &fidl), ZX_OK);
 
-    llcpp_report::DeviceDescriptor descriptor = fidl.descriptor.view();
+    llcpp_report::DeviceDescriptor descriptor = fidl.descriptor_builder.view();
     completer.Reply(std::move(descriptor));
   }
 

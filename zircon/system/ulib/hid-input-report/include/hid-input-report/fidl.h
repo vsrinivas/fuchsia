@@ -25,12 +25,24 @@ struct FidlMouseDescriptor {
   uint8_t buttons[hid_input_report::kMouseMaxButtons] = {};
 };
 
+struct FidlSensorDescriptor {
+  FidlSensorDescriptor() {}
+  ::llcpp::fuchsia::input::report::SensorDescriptor sensor_descriptor;
+  ::llcpp::fuchsia::input::report::SensorDescriptor::Builder sensor_builder =
+      ::llcpp::fuchsia::input::report::SensorDescriptor::Build();
+  std::array<::llcpp::fuchsia::input::report::SensorAxis,
+             ::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES>
+      values;
+  fidl::VectorView<::llcpp::fuchsia::input::report::SensorAxis> values_view;
+};
+
 struct FidlDescriptor {
   FidlDescriptor() {}
-  ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder descriptor =
+  ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder descriptor_builder =
       ::llcpp::fuchsia::input::report::DeviceDescriptor::Build();
 
   FidlMouseDescriptor mouse_descriptor;
+  FidlSensorDescriptor sensor_descriptor;
 };
 
 struct FidlMouseReport {
@@ -44,11 +56,22 @@ struct FidlMouseReport {
   MouseReport report_data;
 };
 
+struct FidlSensorReport {
+  FidlSensorReport() {}
+  ::llcpp::fuchsia::input::report::SensorReport sensor_report;
+  ::llcpp::fuchsia::input::report::SensorReport::Builder sensor_builder =
+      ::llcpp::fuchsia::input::report::SensorReport::Build();
+  fidl::VectorView<int64_t> values_view;
+
+  // Holds the actual data that the builders/views point to.
+  SensorReport report_data;
+};
+
 struct FidlReport {
   FidlReport() {}
   ::llcpp::fuchsia::input::report::InputReport::Builder report_builder =
       ::llcpp::fuchsia::input::report::InputReport::Build();
-  std::variant<FidlMouseReport> report;
+  std::variant<FidlMouseReport, FidlSensorReport> report;
 };
 
 // Builds the |FidlDescriptor| object from the |ReportDescriptor|.
