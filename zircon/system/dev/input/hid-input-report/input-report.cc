@@ -21,6 +21,7 @@
 #include <hid-input-report/descriptors.h>
 #include <hid-input-report/device.h>
 #include <hid-input-report/mouse.h>
+#include <hid-input-report/sensor.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
@@ -101,6 +102,8 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
   if ((collection->usage.page == ::hid::usage::Page::kGenericDesktop) &&
       (collection->usage.usage == ::hid::usage::GenericDesktop::kMouse)) {
     parse_device = std::make_unique<hid_input_report::Mouse>();
+  } else if (collection->usage.page == ::hid::usage::Page::kSensor) {
+    parse_device = std::make_unique<hid_input_report::Sensor>();
   }
 
   if (!parse_device) {
