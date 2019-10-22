@@ -10,11 +10,12 @@ use {
     failure::{format_err, Error},
     freetype_ffi::{
         FT_Add_Default_Modules, FT_Done_Face, FT_Done_Library, FT_Get_First_Char, FT_Get_Next_Char,
-        FT_Library, FT_New_Library, FT_Open_Args, FT_Open_Face, FT_MEMORY,
+        FT_Library, FT_New_Library, FT_Open_Face, FT_MEMORY,
     },
     std::{convert::TryInto, ptr},
 };
 
+pub use crate::sources::FTOpenArgs;
 pub use crate::sources::FontAssetSource;
 
 /// Contains information parsed from a font file.
@@ -78,7 +79,7 @@ impl FontInfoLoaderImpl {
         let mut codepoints: Vec<u32> = Vec::new();
 
         let source: FontAssetSource = source.try_into().map_err(|e| e.into())?;
-        let open_args: FT_Open_Args = (&source).try_into()?;
+        let open_args: FTOpenArgs = (&source).try_into()?;
 
         // Unsafe to call freetype FFI. Call FT_Open_Face() to load a typeface.
         // If it succeeds then enumerate character map with FT_Get_First_Char()
@@ -86,8 +87,12 @@ impl FontInfoLoaderImpl {
         // was initialized successfully.
         unsafe {
             let mut ft_face = ptr::null_mut();
-            let err =
-                FT_Open_Face(self.ft_library, &open_args, index as libc::c_long, &mut ft_face);
+            let err = FT_Open_Face(
+                self.ft_library,
+                open_args.as_ref(),
+                index as libc::c_long,
+                &mut ft_face,
+            );
 
             if err != 0 {
                 return Err(format_err!(
