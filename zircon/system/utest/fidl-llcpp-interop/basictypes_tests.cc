@@ -83,20 +83,8 @@ zx_status_t ConsumeSimpleStruct(void* ctx, const fidl_test_llcpp_basictypes_Simp
   return fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStruct_reply(txn, ZX_OK, arg->field);
 }
 
-zx_status_t ConsumeSimpleUnion(void* ctx, const fidl_test_llcpp_basictypes_SimpleUnion* arg,
-                               fidl_txn_t* txn) {
-  if (arg->tag == fidl_test_llcpp_basictypes_SimpleUnionTag_field_a) {
-    return fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnion_reply(txn, 0, arg->field_a);
-  } else if (arg->tag == fidl_test_llcpp_basictypes_SimpleUnionTag_field_b) {
-    return fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnion_reply(txn, 1, arg->field_b);
-  } else {
-    return fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnion_reply(txn, UINT32_MAX, -1);
-  }
-}
-
 const fidl_test_llcpp_basictypes_TestInterface_ops_t kOps = {
     .ConsumeSimpleStruct = ConsumeSimpleStruct,
-    .ConsumeSimpleUnion = ConsumeSimpleUnion,
 };
 
 zx_status_t ServerDispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg,
@@ -179,39 +167,6 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   ASSERT_OK(response.status);
   auto decode_result = fidl::Decode(std::move(response.message));
   ASSERT_EQ(decode_result.message.message()->field, 123);
-
-  TearDownAsyncCServerHelper(loop);
-}
-
-TEST(BasicTypesTest, RawChannelCallUnion) {
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
-
-  async_loop_t* loop = nullptr;
-  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
-
-  // manually call the server using generated message definitions
-  FIDL_ALIGNDECL uint8_t storage[512] = {};
-  fidl::BytePart bytes(&storage[0], sizeof(storage));
-  // trivial linearization except to set message length
-  bytes.set_actual(sizeof(basictypes::TestInterface::ConsumeSimpleUnionRequest));
-  fidl::DecodedMessage<basictypes::TestInterface::ConsumeSimpleUnionRequest> request(
-      std::move(bytes));
-  request.message()->_hdr.ordinal =
-      fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnionOrdinal;
-  request.message()->arg.mutable_field_b() = 456;
-
-  auto encode_result = fidl::Encode(std::move(request));
-  ASSERT_OK(encode_result.status);
-
-  FIDL_ALIGNDECL uint8_t response_storage[512];
-  fidl::BytePart response_bytes(&response_storage[0], sizeof(response_storage));
-  auto response = fidl::Call(client, std::move(encode_result.message), std::move(response_bytes));
-
-  ASSERT_OK(response.status);
-  auto decode_result = fidl::Decode(std::move(response.message));
-  ASSERT_EQ(decode_result.message.message()->index, 1);
-  ASSERT_EQ(decode_result.message.message()->field, 456);
 
   TearDownAsyncCServerHelper(loop);
 }
@@ -310,55 +265,6 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   TearDownAsyncCServerHelper(loop);
 }
 
-TEST(BasicTypesTest, SyncCallUnion) {
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
-
-  async_loop_t* loop = nullptr;
-  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
-
-  // generated interface API
-  basictypes::TestInterface::SyncClient test(std::move(client));
-
-  basictypes::SimpleUnion simple_union;
-  simple_union.mutable_field_b() = 456;
-
-  // perform call
-  auto result = test.ConsumeSimpleUnion(std::move(simple_union));
-  ASSERT_OK(result.status());
-  ASSERT_EQ(result.Unwrap()->index, 1);
-  ASSERT_EQ(result.Unwrap()->field, 456);
-
-  TearDownAsyncCServerHelper(loop);
-}
-
-TEST(BasicTypesTest, SyncCallerAllocateCallUnion) {
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
-
-  async_loop_t* loop = nullptr;
-  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
-
-  // generated interface API
-  basictypes::TestInterface::SyncClient test(std::move(client));
-
-  basictypes::SimpleUnion simple_union;
-  simple_union.mutable_field_b() = 456;
-
-  // perform call
-  FIDL_ALIGNDECL uint8_t request_buf[512] = {};
-  FIDL_ALIGNDECL uint8_t response_buf[512] = {};
-  auto result = test.ConsumeSimpleUnion(fidl::BytePart(request_buf, sizeof(request_buf)),
-                                        std::move(simple_union),
-                                        fidl::BytePart(response_buf, sizeof(response_buf)));
-  ASSERT_OK(result.status());
-  ASSERT_NULL(result.error(), "%s", result.error());
-  ASSERT_EQ(result.Unwrap()->index, 1);
-  ASSERT_EQ(result.Unwrap()->field, 456);
-
-  TearDownAsyncCServerHelper(loop);
-}
-
 // LLCPP sync server tests: interop between C client and LLCPP server
 namespace {
 
@@ -385,23 +291,10 @@ class Server : public gen::TestInterface::Interface {
     txn.Reply(ZX_OK, arg.field);
   }
 
-  void ConsumeSimpleUnion(gen::SimpleUnion arg, ConsumeSimpleUnionCompleter::Sync txn) override {
-    num_union_calls_.fetch_add(1);
-    if (arg.is_field_a()) {
-      txn.Reply(0, arg.field_a());
-    } else if (arg.is_field_b()) {
-      txn.Reply(1, arg.field_b());
-    } else {
-      txn.Reply(std::numeric_limits<uint32_t>::max(), -1);
-    }
-  }
-
   uint64_t num_struct_calls() const { return num_struct_calls_.load(); }
-  uint64_t num_union_calls() const { return num_union_calls_.load(); }
 
  private:
   std::atomic<uint64_t> num_struct_calls_ = 0;
-  std::atomic<uint64_t> num_union_calls_ = 0;
 };
 
 }  // namespace
@@ -412,32 +305,6 @@ void SpinUp(zx::channel server, Server* impl, std::unique_ptr<async::Loop>* out_
   ASSERT_OK(status);
   ASSERT_OK(loop->StartThread("test_llcpp_basictypes_server"));
   *out_loop = std::move(loop);
-}
-
-TEST(BasicTypesTest, ServerUnion) {
-  Server server_impl;
-  zx::channel client_chan, server_chan;
-  ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-  std::unique_ptr<async::Loop> loop;
-  ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, &loop));
-
-  constexpr uint32_t kNumIterations = 100;
-  for (uint32_t i = 0; i < kNumIterations; i++) {
-    ASSERT_EQ(server_impl.num_struct_calls(), 0);
-    ASSERT_EQ(server_impl.num_union_calls(), i);
-
-    fidl_test_llcpp_basictypes_SimpleUnion simple_union = {};
-    simple_union.tag = fidl_test_llcpp_basictypes_SimpleUnionTag_field_a;
-    simple_union.field_a = 5;
-    uint32_t index = std::numeric_limits<uint32_t>::max();
-    int32_t field;
-    ASSERT_EQ(fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnion(
-                  client_chan.get(), &simple_union, &index, &field),
-              ZX_OK);
-    ASSERT_EQ(index, 0);
-    ASSERT_EQ(field, 5);
-  }
-  ASSERT_EQ(server_impl.num_union_calls(), kNumIterations);
 }
 
 TEST(BasicTypesTest, ServerStruct) {
@@ -483,5 +350,4 @@ TEST(BasicTypesTest, ServerStruct) {
   ASSERT_OK(out_status);
   ASSERT_EQ(out_field, 123);
   ASSERT_EQ(server_impl.num_struct_calls(), 1);
-  ASSERT_EQ(server_impl.num_union_calls(), 0);
 }

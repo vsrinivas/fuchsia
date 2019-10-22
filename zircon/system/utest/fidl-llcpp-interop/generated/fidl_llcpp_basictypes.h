@@ -23,104 +23,8 @@ namespace test {
 namespace llcpp {
 namespace basictypes {
 
-struct SimpleUnion;
 struct SimpleStruct;
 class TestInterface;
-
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleUnionTable;
-
-struct SimpleUnion {
-  enum class Tag : fidl_union_tag_t {
-    kFieldA = 0,
-    kFieldB = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  SimpleUnion();
-  ~SimpleUnion();
-
-  SimpleUnion(SimpleUnion&& other) {
-    tag_ = Tag::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  SimpleUnion& operator=(SimpleUnion&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
-
-  bool is_field_a() const { return tag_ == Tag::kFieldA; }
-
-  static SimpleUnion WithFieldA(int32_t&& val) {
-    SimpleUnion result;
-    result.set_field_a(std::move(val));
-    return result;
-  }
-
-  int32_t& mutable_field_a();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_field_a(const T& v) {
-    mutable_field_a() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_field_a(T&& v) {
-    mutable_field_a() = std::move(v);
-  }
-
-  int32_t const & field_a() const { return field_a_; }
-
-  bool is_field_b() const { return tag_ == Tag::kFieldB; }
-
-  static SimpleUnion WithFieldB(int32_t&& val) {
-    SimpleUnion result;
-    result.set_field_b(std::move(val));
-    return result;
-  }
-
-  int32_t& mutable_field_b();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_field_b(const T& v) {
-    mutable_field_b() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_field_b(T&& v) {
-    mutable_field_b() = std::move(v);
-  }
-
-  int32_t const & field_b() const { return field_b_; }
-
-  Tag which() const { return tag_; }
-
-  static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_SimpleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
- private:
-  void Destroy();
-  void MoveImpl_(SimpleUnion&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
-  union {
-    int32_t field_a_;
-    int32_t field_b_;
-  };
-};
 
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleStructTable;
 
@@ -174,35 +78,6 @@ class TestInterface final {
     using ResponseType = ConsumeSimpleStructResponse;
   };
 
-  struct ConsumeSimpleUnionResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t index;
-    int32_t field;
-
-    static constexpr const fidl_type_t* Type = nullptr;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct ConsumeSimpleUnionRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg;
-
-    static constexpr const fidl_type_t* Type = nullptr;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ConsumeSimpleUnionResponse;
-  };
-
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -224,26 +99,9 @@ class TestInterface final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class ConsumeSimpleUnion_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg);
-      ~ConsumeSimpleUnion_Impl() = default;
-      ConsumeSimpleUnion_Impl(ConsumeSimpleUnion_Impl&& other) = default;
-      ConsumeSimpleUnion_Impl& operator=(ConsumeSimpleUnion_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using ConsumeSimpleStruct = ConsumeSimpleStruct_Impl<ConsumeSimpleStructResponse>;
-    using ConsumeSimpleUnion = ConsumeSimpleUnion_Impl<ConsumeSimpleUnionResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -267,26 +125,9 @@ class TestInterface final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class ConsumeSimpleUnion_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer);
-      ~ConsumeSimpleUnion_Impl() = default;
-      ConsumeSimpleUnion_Impl(ConsumeSimpleUnion_Impl&& other) = default;
-      ConsumeSimpleUnion_Impl& operator=(ConsumeSimpleUnion_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using ConsumeSimpleStruct = ConsumeSimpleStruct_Impl<ConsumeSimpleStructResponse>;
-    using ConsumeSimpleUnion = ConsumeSimpleUnion_Impl<ConsumeSimpleUnionResponse>;
   };
 
   class SyncClient final {
@@ -310,14 +151,6 @@ class TestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer);
 
-    // Loops back the field which is set, along with its index.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg);
-
-    // Loops back the field which is set, along with its index.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -337,14 +170,6 @@ class TestInterface final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer);
 
-    // Loops back the field which is set, along with its index.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg);
-
-    // Loops back the field which is set, along with its index.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ConsumeSimpleUnion ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer);
-
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -356,9 +181,6 @@ class TestInterface final {
     // Verifies that all the handles are valid channels, then returns
     // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
-
-    // Loops back the field which is set, along with its index.
-    static ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -383,20 +205,6 @@ class TestInterface final {
     using ConsumeSimpleStructCompleter = ::fidl::Completer<ConsumeSimpleStructCompleterBase>;
 
     virtual void ConsumeSimpleStruct(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ConsumeSimpleStructCompleter::Sync _completer) = 0;
-
-    class ConsumeSimpleUnionCompleterBase : public _Base {
-     public:
-      void Reply(uint32_t index, int32_t field);
-      void Reply(::fidl::BytePart _buffer, uint32_t index, int32_t field);
-      void Reply(::fidl::DecodedMessage<ConsumeSimpleUnionResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using ConsumeSimpleUnionCompleter = ::fidl::Completer<ConsumeSimpleUnionCompleterBase>;
-
-    virtual void ConsumeSimpleUnion(::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ConsumeSimpleUnionCompleter::Sync _completer) = 0;
 
   };
 
@@ -425,8 +233,6 @@ class TestInterface final {
    public:
     static void ConsumeSimpleStructRequest(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructRequest>& _msg);
     static void ConsumeSimpleStructResponse(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructResponse>& _msg);
-    static void ConsumeSimpleUnionRequest(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionRequest>& _msg);
-    static void ConsumeSimpleUnionResponse(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionResponse>& _msg);
   };
 };
 
@@ -437,10 +243,6 @@ class TestInterface final {
 }  // namespace llcpp
 
 namespace fidl {
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::SimpleUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fidl::test::llcpp::basictypes::SimpleUnion>);
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::SimpleStruct> : public std::true_type {};
@@ -466,22 +268,5 @@ static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::Cons
     == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse, status) == 16);
 static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse, field) == 20);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest)
-    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest, arg) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse)
-    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse, index) == 16);
-static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse, field) == 20);
 
 }  // namespace fidl

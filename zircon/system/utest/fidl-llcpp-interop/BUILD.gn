@@ -43,7 +43,7 @@ if (current_toolchain != default_toolchain) {
 fidl_library("fidl.test.llcpp.basictypes") {
   visibility = [ ":*" ]
   sources = [
-    "basictypes.fidl",
+    "basictypes.test.fidl",
   ]
 }
 

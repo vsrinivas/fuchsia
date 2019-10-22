@@ -139,7 +139,6 @@ std::string_view Decl::GetAttribute(std::string_view name) const {
 std::string Decl::GetName() const { return std::string(name.name_part()); }
 
 const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
-    {"fidl.test.llcpp.basictypes", "SimpleUnion"},
     {"fuchsia.device", "Controller_GetDevicePowerCaps_Result"},
     {"fuchsia.device", "Controller_GetPowerStateMapping_Result"},
     {"fuchsia.device", "Controller_Resume_Result"},

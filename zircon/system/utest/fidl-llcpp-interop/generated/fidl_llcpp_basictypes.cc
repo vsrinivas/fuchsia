@@ -10,62 +10,6 @@ namespace test {
 namespace llcpp {
 namespace basictypes {
 
-::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::SimpleUnion() {
-  tag_ = Tag::Invalid;
-}
-
-::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::~SimpleUnion() {
-  Destroy();
-}
-
-void ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::Destroy() {
-  switch (which()) {
-  default:
-    break;
-  }
-  tag_ = Tag::Invalid;
-}
-
-void ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::MoveImpl_(SimpleUnion&& other) {
-  switch (other.which()) {
-  case Tag::kFieldA:
-    mutable_field_a() = std::move(other.mutable_field_a());
-    break;
-  case Tag::kFieldB:
-    mutable_field_b() = std::move(other.mutable_field_b());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
-void ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::SimpleUnion, field_a_) == 4);
-  static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::SimpleUnion, field_b_) == 4);
-  static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::SimpleUnion) == ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::PrimarySize);
-}
-
-
-int32_t& ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::mutable_field_a() {
-  if (which() != Tag::kFieldA) {
-    Destroy();
-    new (&field_a_) int32_t;
-  }
-  tag_ = Tag::kFieldA;
-  return field_a_;
-}
-
-int32_t& ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::mutable_field_b() {
-  if (which() != Tag::kFieldB) {
-    Destroy();
-    new (&field_b_) int32_t;
-  }
-  tag_ = Tag::kFieldB;
-  return field_b_;
-}
-
-
 namespace {
 
 [[maybe_unused]]
@@ -73,10 +17,6 @@ constexpr uint64_t kTestInterface_ConsumeSimpleStruct_Ordinal = 0x2b65368b000000
 [[maybe_unused]]
 constexpr uint64_t kTestInterface_ConsumeSimpleStruct_GenOrdinal = 0x2eccc2554e6aae0elu;
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
-[[maybe_unused]]
-constexpr uint64_t kTestInterface_ConsumeSimpleUnion_Ordinal = 0x2e46f97100000000lu;
-[[maybe_unused]]
-constexpr uint64_t kTestInterface_ConsumeSimpleUnion_GenOrdinal = 0x17c0e9fc41b0e6aflu;
 
 }  // namespace
 template <>
@@ -141,68 +81,6 @@ TestInterface::UnownedResultOf::ConsumeSimpleStruct TestInterface::Call::Consume
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
-template <>
-TestInterface::ResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUnionResponse>::ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, ConsumeSimpleUnionRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<ConsumeSimpleUnionRequest*>(_write_bytes);
-  _request.arg = std::move(arg);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConsumeSimpleUnionRequest));
-  ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      TestInterface::InPlace::ConsumeSimpleUnion(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-TestInterface::ResultOf::ConsumeSimpleUnion TestInterface::SyncClient::ConsumeSimpleUnion(::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg) {
-  return ResultOf::ConsumeSimpleUnion(zx::unowned_channel(this->channel_), std::move(arg));
-}
-
-TestInterface::ResultOf::ConsumeSimpleUnion TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg) {
-  return ResultOf::ConsumeSimpleUnion(std::move(_client_end), std::move(arg));
-}
-
-template <>
-TestInterface::UnownedResultOf::ConsumeSimpleUnion_Impl<TestInterface::ConsumeSimpleUnionResponse>::ConsumeSimpleUnion_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < ConsumeSimpleUnionRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<ConsumeSimpleUnionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  memset(_request_buffer.data(), 0, ConsumeSimpleUnionRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<ConsumeSimpleUnionRequest*>(_request_buffer.data());
-  _request.arg = std::move(arg);
-  _request_buffer.set_actual(sizeof(ConsumeSimpleUnionRequest));
-  ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      TestInterface::InPlace::ConsumeSimpleUnion(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-TestInterface::UnownedResultOf::ConsumeSimpleUnion TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ConsumeSimpleUnion(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(arg), std::move(_response_buffer));
-}
-
-TestInterface::UnownedResultOf::ConsumeSimpleUnion TestInterface::Call::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion arg, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ConsumeSimpleUnion(std::move(_client_end), std::move(_request_buffer), std::move(arg), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse> TestInterface::InPlace::ConsumeSimpleUnion(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer) {
-  TestInterface::SetTransactionHeaderFor::ConsumeSimpleUnionRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<ConsumeSimpleUnionRequest, ConsumeSimpleUnionResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<TestInterface::ConsumeSimpleUnionResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
 
 bool TestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -223,19 +101,6 @@ bool TestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
       auto message = result.message.message();
       impl->ConsumeSimpleStruct(std::move(message->arg),
         Interface::ConsumeSimpleStructCompleter::Sync(txn));
-      return true;
-    }
-    case kTestInterface_ConsumeSimpleUnion_Ordinal:
-    case kTestInterface_ConsumeSimpleUnion_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<ConsumeSimpleUnionRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->ConsumeSimpleUnion(std::move(message->arg),
-        Interface::ConsumeSimpleUnionCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -292,57 +157,12 @@ void TestInterface::Interface::ConsumeSimpleStructCompleterBase::Reply(::fidl::D
 }
 
 
-void TestInterface::Interface::ConsumeSimpleUnionCompleterBase::Reply(uint32_t index, int32_t field) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ConsumeSimpleUnionResponse*>(_write_bytes);
-  TestInterface::SetTransactionHeaderFor::ConsumeSimpleUnionResponse(
-      ::fidl::DecodedMessage<ConsumeSimpleUnionResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              ConsumeSimpleUnionResponse::PrimarySize,
-              ConsumeSimpleUnionResponse::PrimarySize)));
-  _response.index = std::move(index);
-  _response.field = std::move(field);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConsumeSimpleUnionResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ConsumeSimpleUnionResponse>(std::move(_response_bytes)));
-}
-
-void TestInterface::Interface::ConsumeSimpleUnionCompleterBase::Reply(::fidl::BytePart _buffer, uint32_t index, int32_t field) {
-  if (_buffer.capacity() < ConsumeSimpleUnionResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<ConsumeSimpleUnionResponse*>(_buffer.data());
-  TestInterface::SetTransactionHeaderFor::ConsumeSimpleUnionResponse(
-      ::fidl::DecodedMessage<ConsumeSimpleUnionResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              ConsumeSimpleUnionResponse::PrimarySize,
-              ConsumeSimpleUnionResponse::PrimarySize)));
-  _response.index = std::move(index);
-  _response.field = std::move(field);
-  _buffer.set_actual(sizeof(ConsumeSimpleUnionResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ConsumeSimpleUnionResponse>(std::move(_buffer)));
-}
-
-void TestInterface::Interface::ConsumeSimpleUnionCompleterBase::Reply(::fidl::DecodedMessage<ConsumeSimpleUnionResponse> params) {
-  TestInterface::SetTransactionHeaderFor::ConsumeSimpleUnionResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
 
 void TestInterface::SetTransactionHeaderFor::ConsumeSimpleStructRequest(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestInterface_ConsumeSimpleStruct_Ordinal);
 }
 void TestInterface::SetTransactionHeaderFor::ConsumeSimpleStructResponse(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleStructResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestInterface_ConsumeSimpleStruct_Ordinal);
-}
-
-void TestInterface::SetTransactionHeaderFor::ConsumeSimpleUnionRequest(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestInterface_ConsumeSimpleUnion_Ordinal);
-}
-void TestInterface::SetTransactionHeaderFor::ConsumeSimpleUnionResponse(const ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestInterface_ConsumeSimpleUnion_Ordinal);
 }
 
 }  // namespace basictypes
