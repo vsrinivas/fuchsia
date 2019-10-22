@@ -74,7 +74,7 @@ constexpr uint8_t kFtdiSioWriteEepromRequest = 0x91;
 constexpr uint8_t kFtdiSioEraseEepromRequest = 0x92;
 
 class FtdiDevice;
-using DeviceType = ddk::Device<FtdiDevice, ddk::UnbindableDeprecated, ddk::Messageable,
+using DeviceType = ddk::Device<FtdiDevice, ddk::UnbindableNew, ddk::Messageable,
                                ddk::Writable, ddk::Readable>;
 class FtdiDevice : public DeviceType,
                    public ddk::SerialImplProtocol<FtdiDevice, ddk::base_protocol> {
@@ -84,7 +84,7 @@ class FtdiDevice : public DeviceType,
 
   zx_status_t Bind();
 
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
 
   void DdkRelease();
   zx_status_t DdkWrite(const void* buf, size_t length, zx_off_t off, size_t* actual);

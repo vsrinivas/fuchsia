@@ -68,7 +68,7 @@ using ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor;
 using ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor;
 
 class UsbPeripheral;
-using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::UnbindableDeprecated, ddk::Messageable>;
+using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::UnbindableNew, ddk::Messageable>;
 
 // This is the main class for the USB peripheral role driver.
 // It binds against the USB DCI driver device and manages a list of UsbFunction devices,
@@ -84,7 +84,7 @@ class UsbPeripheral : public UsbPeripheralType,
 
   // Device protocol implementation.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // UsbDciInterface implementation.

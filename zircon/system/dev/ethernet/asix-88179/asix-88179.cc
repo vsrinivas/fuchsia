@@ -820,10 +820,10 @@ int Asix88179Ethernet::InterruptThread() {
   return 0;
 }
 
-void Asix88179Ethernet::DdkUnbindDeprecated() {
-  cancel_thread_ = std::thread([this]() {
+void Asix88179Ethernet::DdkUnbindNew(ddk::UnbindTxn txn) {
+  cancel_thread_ = std::thread([this, unbind_txn = std::move(txn)]() mutable {
     Shutdown();
-    DdkRemoveDeprecated();
+    unbind_txn.Reply();
   });
 }
 

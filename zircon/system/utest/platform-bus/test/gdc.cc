@@ -34,7 +34,7 @@ static bool isBufferCollectionValid(const buffer_collection_info_2_t* buffer_col
 }
 
 class TestGdcDevice;
-using DeviceType = ddk::Device<TestGdcDevice, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<TestGdcDevice, ddk::UnbindableNew>;
 
 class TestGdcDevice : public DeviceType,
                       public ddk::GdcProtocol<TestGdcDevice, ddk::base_protocol> {
@@ -88,7 +88,7 @@ class TestGdcDevice : public DeviceType,
   }
 
   // Methods required by the ddk mixins
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 };
 
@@ -108,7 +108,7 @@ zx_status_t TestGdcDevice::Create(zx_device_t* parent) {
   return ZX_OK;
 }
 
-void TestGdcDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void TestGdcDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void TestGdcDevice::DdkRelease() { delete this; }
 

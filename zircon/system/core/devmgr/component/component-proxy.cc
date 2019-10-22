@@ -74,7 +74,7 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
   }
 }
 
-void ComponentProxy::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void ComponentProxy::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void ComponentProxy::DdkRelease() { delete this; }
 

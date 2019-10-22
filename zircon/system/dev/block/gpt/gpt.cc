@@ -317,7 +317,7 @@ int gpt_bind_thread(void* arg) {
   gptpart_device_t* first_dev = thread_args->first_device();
 
   auto remove_first_dev = fbl::MakeAutoCall([&first_dev]() {
-    device_remove_deprecated(first_dev->zxdev);
+    device_async_remove(first_dev->zxdev);
   });
 
   zx_device_t* parent = first_dev->parent;
@@ -474,7 +474,7 @@ zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
   thrd_t t;
   status = thrd_create_with_name(&t, gpt_bind_thread, thread_args.get(), "gpt-init");
   if (status != ZX_OK) {
-    device_remove_deprecated(device->zxdev);
+    device_async_remove(device->zxdev);
   } else {
     thread_args.release();
   }

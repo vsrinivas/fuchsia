@@ -35,7 +35,7 @@ enum {
 };
 
 FtDevice::FtDevice(zx_device_t* device) : ddk::Device<FtDevice,
-                                                      ddk::UnbindableDeprecated>(device) {}
+                                                      ddk::UnbindableNew>(device) {}
 
 void FtDevice::ParseReport(ft3x27_finger_t* rpt, uint8_t* buf) {
   rpt->x = static_cast<uint16_t>(((buf[0] & 0x0f) << 8) + buf[1]);
@@ -192,9 +192,9 @@ zx_status_t FtDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
 
 void FtDevice::DdkRelease() { delete this; }
 
-void FtDevice::DdkUnbindDeprecated() {
+void FtDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   ShutDown();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 zx_status_t FtDevice::ShutDown() {

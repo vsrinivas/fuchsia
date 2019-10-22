@@ -417,7 +417,7 @@ TEST_F(AmlThermalTest, TripPointThread) {
   ASSERT_OK(status);
   ASSERT_TRUE(FloatNear(temperature, 96.0f));
 
-  dut.DdkUnbindDeprecated();
+  dut.DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
   dut.JoinWorkerThread();
 
   fan0.VerifyAndClear();
@@ -430,7 +430,7 @@ TEST_F(AmlThermalTest, DdkLifecycle) {
   AmlThermal dut(fake_ddk::kFakeParent, {}, {}, {}, 0, zx::port());
 
   dut.DdkAdd("vim-thermal", DEVICE_ADD_INVISIBLE);
-  dut.DdkUnbindDeprecated();
+  dut.DdkAsyncRemove();
 
   EXPECT_TRUE(ddk.Ok());
 }

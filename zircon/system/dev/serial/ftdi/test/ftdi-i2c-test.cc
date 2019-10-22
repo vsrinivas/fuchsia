@@ -151,7 +151,7 @@ TEST_F(FtdiI2cTest, DdkLifetimeTest) {
 
   // Check that bind works.
   ASSERT_OK(device->Bind());
-  device->DdkUnbindDeprecated();
+  device->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
 
   // This should delete the object, which means this test should not leak.

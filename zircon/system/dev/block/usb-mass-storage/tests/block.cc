@@ -71,7 +71,7 @@ bool UmsBlockDeviceAddTest() {
               "Parameters must be set to user-provided values.");
   dev.Adopt();
   EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
-  EXPECT_EQ(ZX_OK, dev.DdkRemoveDeprecated(), "Expected DdkRemove to succeed");
+  dev.DdkAsyncRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
   END_TEST;
 }
@@ -97,7 +97,7 @@ bool UmsBlockDeviceGetSizeTest() {
   context.info.block_count = params.total_blocks;
   dev.SetBlockDeviceParameters(params);
   EXPECT_EQ(params.block_size * params.total_blocks, dev.DdkGetSize());
-  EXPECT_EQ(ZX_OK, dev.DdkRemoveDeprecated(), "Expected DdkRemove to succeed");
+  dev.DdkAsyncRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
   END_TEST;
 }
@@ -116,7 +116,7 @@ bool UmsBlockDeviceNotSupportedTest() {
   txn.op.command = BLOCK_OP_MASK;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, context.status);
-  EXPECT_EQ(ZX_OK, dev.DdkRemoveDeprecated(), "Expected DdkRemove to succeed");
+  dev.DdkAsyncRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
   END_TEST;
 }
@@ -134,7 +134,7 @@ bool UmsBlockDeviceReadTest() {
   ums::Transaction txn;
   txn.op.command = BLOCK_OP_READ;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
-  EXPECT_EQ(ZX_OK, dev.DdkRemoveDeprecated(), "Expected DdkRemove to succeed");
+  dev.DdkAsyncRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
   END_TEST;
 }
@@ -153,7 +153,7 @@ bool UmsBlockDeviceWriteTest() {
   txn.op.command = BLOCK_OP_WRITE;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(&txn, context.txn);
-  EXPECT_EQ(ZX_OK, dev.DdkRemoveDeprecated(), "Expected DdkRemove to succeed");
+  dev.DdkAsyncRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
   END_TEST;
 }
@@ -172,7 +172,7 @@ bool UmsBlockDeviceFlushTest() {
   txn.op.command = BLOCK_OP_FLUSH;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(&txn, context.txn);
-  EXPECT_EQ(ZX_OK, dev.DdkRemoveDeprecated(), "Expected DdkRemove to succeed");
+  dev.DdkAsyncRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
   END_TEST;
 }

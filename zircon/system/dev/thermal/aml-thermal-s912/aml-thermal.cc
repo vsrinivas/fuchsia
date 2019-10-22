@@ -97,7 +97,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   status = thermal->Init(components[COMPONENT_SCPI]);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not initialize thermal driver: %d\n", status);
-    thermal->DdkRemoveDeprecated();
+    thermal->DdkAsyncRemove();
     return status;
   }
 
@@ -207,9 +207,9 @@ void AmlThermal::DdkRelease() {
   delete this;
 }
 
-void AmlThermal::DdkUnbindDeprecated() {
+void AmlThermal::DdkUnbindNew(ddk::UnbindTxn txn) {
   sync_completion_signal(&quit_);
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 zx_status_t AmlThermal::Init(zx_device_t* dev) {

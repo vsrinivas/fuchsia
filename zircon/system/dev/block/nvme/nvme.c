@@ -1045,7 +1045,7 @@ irq_configured:
 
   if (nvme_init(nvme) != ZX_OK) {
     zxlogf(ERROR, "nvme: init failed\n");
-    device_remove_deprecated(nvme->zxdev);
+    device_async_remove(nvme->zxdev);
     return ZX_ERR_INTERNAL;
   }
 

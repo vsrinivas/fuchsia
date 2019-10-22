@@ -515,7 +515,7 @@ void UsbPeripheral::ClearFunctions() {
   for (size_t i = 0; i < functions_.size(); i++) {
     auto* function = functions_[i].get();
     if (function->zxdev()) {
-      function->DdkRemoveDeprecated();
+      function->DdkAsyncRemove();
     }
   }
 }
@@ -879,10 +879,10 @@ zx_status_t UsbPeripheral::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void UsbPeripheral::DdkUnbindDeprecated() {
+void UsbPeripheral::DdkUnbindNew(ddk::UnbindTxn txn) {
   zxlogf(TRACE, "%s\n", __func__);
   ClearFunctions();
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void UsbPeripheral::DdkRelease() {

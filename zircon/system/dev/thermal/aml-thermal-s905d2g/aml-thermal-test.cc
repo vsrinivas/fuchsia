@@ -16,6 +16,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
@@ -808,7 +809,7 @@ class FakeAmlThermal : public AmlThermal {
     return test;
   }
 
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   FakeAmlThermal(fbl::unique_ptr<thermal::AmlTSensor> tsensor,
@@ -940,7 +941,7 @@ class AmlThermalTest : public zxtest::Test {
     cpufreq_scaling_mock_hiu_mmio_->VerifyAll();
 
     // Tear down
-    thermal_device_->DdkUnbindDeprecated();
+    thermal_device_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
     thermal_device_ = nullptr;
   }
 

@@ -30,7 +30,7 @@
 namespace component {
 
 class ComponentProxy;
-using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::UnbindableDeprecated,
+using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::UnbindableNew,
                                        ddk::GetProtocolable>;
 
 class ComponentProxy : public ComponentProxyBase,
@@ -55,7 +55,7 @@ class ComponentProxy : public ComponentProxyBase,
                             zx_handle_t raw_rpc);
 
   zx_status_t DdkGetProtocol(uint32_t, void*);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t Rpc(const ProxyRequest* req, size_t req_length, ProxyResponse* resp,

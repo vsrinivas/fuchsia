@@ -126,7 +126,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
     return ZX_OK;
   }
 
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   SpiDevice* bus_device_;

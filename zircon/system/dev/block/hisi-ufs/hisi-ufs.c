@@ -243,8 +243,8 @@ static zx_status_t hisi_ufs_bind(void* ctx, zx_device_t* parent) {
   status = ufs_create_worker_thread(dev);
   if (status != ZX_OK) {
     UFS_ERROR("UFS worker_thread create fail! status:%d\n", status);
-    device_remove_deprecated(dev->zxdev);
-    goto fail;
+    device_async_remove(dev->zxdev);
+    return status;
   }
 
   return ZX_OK;

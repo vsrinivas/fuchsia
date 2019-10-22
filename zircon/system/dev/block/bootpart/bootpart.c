@@ -247,8 +247,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
     // add empty partition map metadata to prevent this driver from binding to its child devices
     status = device_add_metadata(device->zxdev, DEVICE_METADATA_PARTITION_MAP, NULL, 0);
     if (status != ZX_OK) {
-      device_remove_deprecated(device->zxdev);
-      free(device);
+      device_async_remove(device->zxdev);
       continue;
     }
 

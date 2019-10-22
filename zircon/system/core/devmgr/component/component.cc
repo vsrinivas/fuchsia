@@ -863,7 +863,7 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
   return status;
 }
 
-void Component::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+void Component::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Component::DdkRelease() { delete this; }
 

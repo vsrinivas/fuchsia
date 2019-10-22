@@ -19,7 +19,7 @@ using llcpp::fuchsia::hardware::thermal::PowerDomain;
 using llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo;
 
 class As370Thermal;
-using DeviceType = ddk::Device<As370Thermal, ddk::Messageable>;
+using DeviceType = ddk::Device<As370Thermal, ddk::Messageable, ddk::UnbindableNew>;
 
 class As370Thermal : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL>,
@@ -35,7 +35,7 @@ class As370Thermal : public DeviceType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);

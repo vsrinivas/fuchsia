@@ -152,9 +152,9 @@ void FtdiI2c::WriteI2CByteReadToBuf(size_t index, bool final_byte, std::vector<u
   *bytes_written = new_index - index;
 }
 
-void FtdiI2c::DdkUnbindDeprecated() {
+void FtdiI2c::DdkUnbindNew(ddk::UnbindTxn txn) {
   thrd_join(enable_thread_, NULL);
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 zx_status_t FtdiI2c::Transact(uint8_t bus_address, std::vector<uint8_t> write_data,

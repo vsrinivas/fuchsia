@@ -435,7 +435,7 @@ fail:
   zxlogf(ERROR, "bcm_hci_start_thread: device initialization failed: %s\n",
          zx_status_get_string(status));
 
-  device_remove_deprecated(hci->zxdev);
+  device_async_remove(hci->zxdev);
   return -1;
 }
 
@@ -476,8 +476,7 @@ static zx_status_t bcm_hci_bind(void* ctx, zx_device_t* device) {
   thrd_t t;
   int thrd_rc = thrd_create_with_name(&t, bcm_hci_start_thread, hci, "bcm_hci_start_thread");
   if (thrd_rc != thrd_success) {
-    device_remove_deprecated(hci->zxdev);
-    bcm_hci_release(hci);
+    device_async_remove(hci->zxdev);
     return thrd_status_to_zx_status(thrd_rc);
   }
 

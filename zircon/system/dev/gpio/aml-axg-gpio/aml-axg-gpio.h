@@ -50,7 +50,7 @@ struct AmlGpioInterrupt {
 };
 
 class AmlAxgGpio;
-using DeviceType = ddk::Device<AmlAxgGpio, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<AmlAxgGpio, ddk::UnbindableNew>;
 
 class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, ddk::base_protocol> {
  public:
@@ -66,7 +66,7 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
   zx_status_t GpioImplReleaseInterrupt(uint32_t index);
   zx_status_t GpioImplSetPolarity(uint32_t index, gpio_polarity_t polarity);
 
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  protected:
