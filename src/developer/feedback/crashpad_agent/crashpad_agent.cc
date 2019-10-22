@@ -21,7 +21,6 @@
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
-#include "src/developer/feedback/crashpad_agent/scoped_unlink.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"

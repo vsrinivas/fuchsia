@@ -90,7 +90,6 @@ source_set("src") {
     "queue.h",
     "report_util.cc",
     "report_util.h",
-    "scoped_unlink.h",
     "settings.cc",
     "settings.h",
     "upload_report.cc",
