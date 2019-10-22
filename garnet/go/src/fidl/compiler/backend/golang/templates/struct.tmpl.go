@@ -15,7 +15,7 @@ type {{ .Name }} struct {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type -}} {{ .Tags }}
+	{{ .Name }} {{ .Type -}} ` + "`" + `fidl:"{{ .FidlTag }}" fidl_offset_v1_no_ee:"{{ .OffsetV1NoEE }}"` + "`" + `
 	{{- end }}
 }
 

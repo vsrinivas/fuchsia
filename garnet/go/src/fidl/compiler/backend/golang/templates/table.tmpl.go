@@ -15,7 +15,7 @@ type {{ .Name }} struct {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .DataField }} {{ .Type }} {{ .Tags }}
+	{{ .DataField }} {{ .Type }} ` + "`" + `fidl:"{{ .FidlTag }}"` + "`" + `
 	{{ .PresenceField }} bool
 	{{- end }}
 }

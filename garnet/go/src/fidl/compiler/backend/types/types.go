@@ -558,11 +558,13 @@ func (m *Method) IsTransitional() bool {
 
 // Parameter represents a parameter to a FIDL method.
 type Parameter struct {
-	Type         Type       `json:"type"`
-	Name         Identifier `json:"name"`
-	Offset       int        `json:"offset"`
-	MaxHandles   int        `json:"max_handles"`
-	MaxOutOfLine int        `json:"max_out_of_line"`
+	Type             Type       `json:"type"`
+	Name             Identifier `json:"name"`
+	Offset           int        `json:"offset"`
+	MaxHandles       int        `json:"max_handles"`
+	MaxOutOfLine     int        `json:"max_out_of_line"`
+	FieldShapeOld    FieldShape `json:"field_shape_old"`
+	FieldShapeV1NoEE FieldShape `json:"field_shape_v1_no_ee"`
 }
 
 // Enum represents a FIDL declaration of an enum.

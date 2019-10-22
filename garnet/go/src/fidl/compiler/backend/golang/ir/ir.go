@@ -143,32 +143,6 @@ type Struct struct {
 	AlignmentV1NoEE int
 }
 
-// TODO(pascallouis): document, see `readTag` function in
-// https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/encoding_new.go#211
-type tagNew struct {
-	reverseOfBounds []int
-}
-
-func (t tagNew) String() string {
-	var (
-		elems    []string
-		allEmpty = true
-	)
-	for i := len(t.reverseOfBounds) - 1; 0 <= i; i-- {
-		bound := t.reverseOfBounds[i]
-		if bound == math.MaxInt32 {
-			elems = append(elems, "")
-		} else {
-			elems = append(elems, strconv.Itoa(bound))
-			allEmpty = false
-		}
-	}
-	if allEmpty {
-		return ""
-	}
-	return fmt.Sprintf(`fidl2:"%s"`, strings.Join(elems, ","))
-}
-
 type Tag struct {
 	reverseOfBounds []int
 }
@@ -191,32 +165,7 @@ func (t Tag) String() string {
 	if allEmpty {
 		return ""
 	}
-	return fmt.Sprintf(`fidl:"%s"`, strings.Join(elems, ","))
-}
-
-func tagsfmt(t Tag, t2 tagNew) string {
-	var tags []string
-	if t_str := t.String(); len(t_str) != 0 {
-		tags = append(tags, t_str)
-	}
-	if t2_str := t2.String(); len(t2_str) != 0 {
-		tags = append(tags, t2_str)
-	}
-	if len(tags) == 0 {
-		return ""
-	}
-	return fmt.Sprintf("`%s`", strings.Join(tags, " "))
-}
-
-func tagfmt(t Tag) string {
-	var tags []string
-	if t_str := t.String(); len(t_str) != 0 {
-		tags = append(tags, t_str)
-	}
-	if len(tags) == 0 {
-		return ""
-	}
-	return fmt.Sprintf("`%s`", strings.Join(tags, " "))
+	return fmt.Sprintf(`%s`, strings.Join(elems, ","))
 }
 
 // StructMember represents the member of a golang struct.
@@ -232,9 +181,11 @@ type StructMember struct {
 	// Type is the type of the golang struct member.
 	Type Type
 
-	// Tags are the golang struct member tag which holds additional metadata
-	// about the struct field.
-	Tags string
+	// Corresponds to fidl tag in generated go.
+	FidlTag string
+
+	// Field offset for the V1 wire format, without efficient envelopes.
+	OffsetV1NoEE int
 }
 
 // Union represents a FIDL union as a golang struct.
@@ -277,9 +228,8 @@ type UnionMember struct {
 	// Type is the golang type of the union member.
 	Type Type
 
-	// Tag are the golang struct member tag which holds additional metadata
-	// about the union member.
-	Tags string
+	// Corresponds to fidl tag in generated go.
+	FidlTag string
 }
 
 type XUnion struct {
@@ -300,7 +250,7 @@ type XUnionMember struct {
 	Name        string
 	PrivateName string
 	Type        Type
-	Tags        string
+	FidlTag     string
 }
 
 // Table represents a FIDL table as a golang struct.
@@ -350,9 +300,8 @@ type TableMember struct {
 	// Type is the golang type of the table member.
 	Type Type
 
-	// Tag are the golang struct member tag which holds additional metadata
-	// about the table member.
-	Tags string
+	// Corresponds to fidl: tag in generated go.
+	FidlTag string
 }
 
 // Interface represents a FIDL interface in terms of golang structures.
@@ -662,20 +611,17 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	return Type(t)
 }
 
-func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
+func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 	switch val.Kind {
 	case types.ArrayType:
-		e, et, et2 := c.compileType(*val.ElementType)
+		e, et := c.compileType(*val.ElementType)
 		r = Type(fmt.Sprintf("[%s]%s", strconv.Itoa(*val.ElementCount), e))
 		t = et
-		t2 = et2
 	case types.StringType:
 		if val.ElementCount == nil {
 			t.reverseOfBounds = append(t.reverseOfBounds, math.MaxInt32)
-			t2.reverseOfBounds = append(t2.reverseOfBounds, math.MaxInt32)
 		} else {
 			t.reverseOfBounds = append(t.reverseOfBounds, *val.ElementCount)
-			t2.reverseOfBounds = append(t2.reverseOfBounds, *val.ElementCount)
 		}
 		if val.Nullable {
 			r = Type("*string")
@@ -696,7 +642,6 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 			nullability = 1
 		}
 		t.reverseOfBounds = append(t.reverseOfBounds, nullability)
-		t2.reverseOfBounds = append(t2.reverseOfBounds, nullability)
 		r = Type(e)
 	case types.RequestType:
 		e := c.compileCompoundIdentifier(val.RequestSubtype, true, RequestSuffix)
@@ -705,16 +650,13 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 			nullability = 1
 		}
 		t.reverseOfBounds = append(t.reverseOfBounds, nullability)
-		t2.reverseOfBounds = append(t2.reverseOfBounds, nullability)
 		r = Type(e)
 	case types.VectorType:
-		e, et, et2 := c.compileType(*val.ElementType)
+		e, et := c.compileType(*val.ElementType)
 		if val.ElementCount == nil {
 			et.reverseOfBounds = append(et.reverseOfBounds, math.MaxInt32)
-			et2.reverseOfBounds = append(et2.reverseOfBounds, math.MaxInt32)
 		} else {
 			et.reverseOfBounds = append(et.reverseOfBounds, *val.ElementCount)
-			et2.reverseOfBounds = append(et2.reverseOfBounds, *val.ElementCount)
 		}
 		if val.Nullable {
 			r = Type(fmt.Sprintf("*[]%s", e))
@@ -722,7 +664,6 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 			r = Type(fmt.Sprintf("[]%s", e))
 		}
 		t = et
-		t2 = et2
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
@@ -768,7 +709,7 @@ func (c *compiler) compileBitsMember(val types.BitsMember) BitsMember {
 }
 
 func (c *compiler) compileBits(val types.Bits) Bits {
-	t, _, _ := c.compileType(val.Type)
+	t, _ := c.compileType(val.Type)
 	r := Bits{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
@@ -783,7 +724,7 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 func (c *compiler) compileConst(val types.Const) Const {
 	// It's OK to ignore the tag because this type is guaranteed by the frontend
 	// to be either an enum, a primitive, or a string.
-	t, _, _ := c.compileType(val.Type)
+	t, _ := c.compileType(val.Type)
 	return Const{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
@@ -813,14 +754,15 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
-	ty, tag, tag2 := c.compileType(val.Type)
-	tag.reverseOfBounds = append(tag.reverseOfBounds, val.Offset)
+	ty, tag := c.compileType(val.Type)
+	tag.reverseOfBounds = append(tag.reverseOfBounds, val.FieldShapeOld.Offset)
 	return StructMember{
-		Attributes:  val.Attributes,
-		Type:        ty,
-		Name:        c.compileIdentifier(val.Name, true, ""),
-		PrivateName: c.compileIdentifier(val.Name, false, ""),
-		Tags:        tagsfmt(tag, tag2),
+		Attributes:   val.Attributes,
+		Type:         ty,
+		Name:         c.compileIdentifier(val.Name, true, ""),
+		PrivateName:  c.compileIdentifier(val.Name, false, ""),
+		FidlTag:      tag.String(),
+		OffsetV1NoEE: val.FieldShapeV1NoEE.Offset,
 	}
 }
 
@@ -842,7 +784,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 }
 
 func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) UnionMember {
-	ty, tag, _ := c.compileType(val.Type)
+	ty, tag := c.compileType(val.Type)
 	tag.reverseOfBounds = append(tag.reverseOfBounds, val.XUnionOrdinal)
 	return UnionMember{
 		Attributes:    val.Attributes,
@@ -850,7 +792,7 @@ func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) U
 		Type:          ty,
 		Name:          c.compileIdentifier(val.Name, true, ""),
 		PrivateName:   c.compileIdentifier(val.Name, false, ""),
-		Tags:          tagfmt(tag),
+		FidlTag:       tag.String(),
 	}
 }
 
@@ -873,16 +815,15 @@ func (c *compiler) compileUnion(val types.Union) Union {
 func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	var members []XUnionMember
 	for _, member := range val.Members {
-		ty, tag, tag2 := c.compileType(member.Type)
+		ty, tag := c.compileType(member.Type)
 		tag.reverseOfBounds = append(tag.reverseOfBounds, member.Ordinal)
-		tag2.reverseOfBounds = append(tag2.reverseOfBounds, member.Ordinal)
 		members = append(members, XUnionMember{
 			Attributes:  member.Attributes,
 			Ordinal:     member.Ordinal,
 			Type:        ty,
 			Name:        c.compileIdentifier(member.Name, true, ""),
 			PrivateName: c.compileIdentifier(member.Name, false, ""),
-			Tags:        tagsfmt(tag, tag2),
+			FidlTag:     tag.String(),
 		})
 	}
 	return XUnion{
@@ -905,12 +846,11 @@ func (c *compiler) compileTable(val types.Table) Table {
 			continue
 		}
 		var (
-			ty, tag, tag2 = c.compileType(member.Type)
-			name          = c.compileIdentifier(member.Name, true, "")
-			privateName   = c.compileIdentifier(member.Name, false, "")
+			ty, tag     = c.compileType(member.Type)
+			name        = c.compileIdentifier(member.Name, true, "")
+			privateName = c.compileIdentifier(member.Name, false, "")
 		)
 		tag.reverseOfBounds = append(tag.reverseOfBounds, member.Ordinal)
-		tag2.reverseOfBounds = append(tag2.reverseOfBounds, member.Ordinal)
 		members = append(members, TableMember{
 			Attributes:        member.Attributes,
 			DataField:         name,
@@ -922,7 +862,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 			Haser:             "Has" + name,
 			Clearer:           "Clear" + name,
 			Type:              ty,
-			Tags:              tagsfmt(tag, tag2),
+			FidlTag:           tag.String(),
 		})
 	}
 	return Table{
@@ -937,14 +877,15 @@ func (c *compiler) compileTable(val types.Table) Table {
 }
 
 func (c *compiler) compileParameter(p types.Parameter) StructMember {
-	ty, tag, tag2 := c.compileType(p.Type)
+	ty, tag := c.compileType(p.Type)
 	// TODO(fxb/7704): Remove special handling of requests/responses.
-	tag.reverseOfBounds = append(tag.reverseOfBounds, p.Offset-MessageHeaderSize)
+	tag.reverseOfBounds = append(tag.reverseOfBounds, p.FieldShapeOld.Offset-MessageHeaderSize)
 	return StructMember{
-		Type:        ty,
-		Name:        c.compileIdentifier(p.Name, true, ""),
-		PrivateName: c.compileIdentifier(p.Name, false, ""),
-		Tags:        tagsfmt(tag, tag2),
+		Type:         ty,
+		Name:         c.compileIdentifier(p.Name, true, ""),
+		PrivateName:  c.compileIdentifier(p.Name, false, ""),
+		FidlTag:      tag.String(),
+		OffsetV1NoEE: p.FieldShapeV1NoEE.Offset,
 	}
 }
 

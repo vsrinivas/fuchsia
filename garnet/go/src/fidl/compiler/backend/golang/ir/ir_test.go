@@ -97,14 +97,18 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type:   PrimitiveType(types.Int8),
-					Name:   types.Identifier("Test"),
-					Offset: 0,
+					Type: PrimitiveType(types.Int8),
+					Name: types.Identifier("Test"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 0,
+					},
 				},
 				{
-					Type:   PrimitiveType(types.Float32),
-					Name:   types.Identifier("Test2"),
-					Offset: 4,
+					Type: PrimitiveType(types.Float32),
+					Name: types.Identifier("Test2"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 4,
+					},
 				},
 			},
 		},
@@ -116,13 +120,13 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "int8",
 					PrivateName: "test",
 					Name:        "Test",
-					Tags:        "`" + `fidl:"0"` + "`",
+					FidlTag:     "0",
 				},
 				{
 					Type:        "float32",
 					PrivateName: "test2",
 					Name:        "Test2",
-					Tags:        "`" + `fidl:"4"` + "`",
+					FidlTag:     "4",
 				},
 			},
 		},
@@ -133,9 +137,11 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("test"),
 			Members: []types.StructMember{
 				{
-					Type:   PrimitiveType(types.Int8),
-					Name:   types.Identifier("test"),
-					Offset: 0,
+					Type: PrimitiveType(types.Int8),
+					Name: types.Identifier("test"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 0,
+					},
 				},
 			},
 		},
@@ -147,7 +153,7 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "int8",
 					PrivateName: "test",
 					Name:        "Test",
-					Tags:        "`" + `fidl:"0"` + "`",
+					FidlTag:     "0",
 				},
 			},
 		},
@@ -158,14 +164,18 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type:   ArrayType(PrimitiveType(types.Uint8), 10),
-					Name:   types.Identifier("Flat"),
-					Offset: 0,
+					Type: ArrayType(PrimitiveType(types.Uint8), 10),
+					Name: types.Identifier("Flat"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 0,
+					},
 				},
 				{
-					Type:   ArrayType(ArrayType(PrimitiveType(types.Bool), 1), 27),
-					Name:   types.Identifier("Nested"),
-					Offset: 10,
+					Type: ArrayType(ArrayType(PrimitiveType(types.Bool), 1), 27),
+					Name: types.Identifier("Nested"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 10,
+					},
 				},
 			},
 		},
@@ -177,13 +187,13 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "[10]uint8",
 					PrivateName: "flat",
 					Name:        "Flat",
-					Tags:        "`" + `fidl:"0"` + "`",
+					FidlTag:     "0",
 				},
 				{
 					Type:        "[27][1]bool",
 					PrivateName: "nested",
 					Name:        "Nested",
-					Tags:        "`" + `fidl:"10"` + "`",
+					FidlTag:     "10",
 				},
 			},
 		},
@@ -195,29 +205,39 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type:   StringType(nil),
-					Name:   types.Identifier("Flat"),
-					Offset: 0,
+					Type: StringType(nil),
+					Name: types.Identifier("Flat"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 0,
+					},
 				},
 				{
-					Type:   Nullable(StringType(nil)),
-					Name:   types.Identifier("Nullable"),
-					Offset: 16,
+					Type: Nullable(StringType(nil)),
+					Name: types.Identifier("Nullable"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 16,
+					},
 				},
 				{
-					Type:   Nullable(StringType(&maxElems)),
-					Name:   types.Identifier("Max"),
-					Offset: 32,
+					Type: Nullable(StringType(&maxElems)),
+					Name: types.Identifier("Max"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 32,
+					},
 				},
 				{
-					Type:   ArrayType(StringType(nil), 27),
-					Name:   types.Identifier("Nested"),
-					Offset: 48,
+					Type: ArrayType(StringType(nil), 27),
+					Name: types.Identifier("Nested"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 48,
+					},
 				},
 				{
-					Type:   ArrayType(Nullable(StringType(&maxElems)), 27),
-					Name:   types.Identifier("NestedNullableMax"),
-					Offset: 480,
+					Type: ArrayType(Nullable(StringType(&maxElems)), 27),
+					Name: types.Identifier("NestedNullableMax"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 480,
+					},
 				},
 			},
 		},
@@ -229,31 +249,31 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "string",
 					PrivateName: "flat",
 					Name:        "Flat",
-					Tags:        "`" + `fidl:"0,"` + "`",
+					FidlTag:     "0,",
 				},
 				{
 					Type:        "*string",
 					PrivateName: "nullable",
 					Name:        "Nullable",
-					Tags:        "`" + `fidl:"16,"` + "`",
+					FidlTag:     "16,",
 				},
 				{
 					Type:        "*string",
 					PrivateName: "max",
 					Name:        "Max",
-					Tags:        "`" + `fidl:"32,40" fidl2:"40"` + "`",
+					FidlTag:     "32,40",
 				},
 				{
 					Type:        "[27]string",
 					PrivateName: "nested",
 					Name:        "Nested",
-					Tags:        "`" + `fidl:"48,"` + "`",
+					FidlTag:     "48,",
 				},
 				{
 					Type:        "[27]*string",
 					PrivateName: "nestedNullableMax",
 					Name:        "NestedNullableMax",
-					Tags:        "`" + `fidl:"480,40" fidl2:"40"` + "`",
+					FidlTag:     "480,40",
 				},
 			},
 		},
@@ -264,29 +284,39 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type:   VectorType(PrimitiveType(types.Uint8), nil),
-					Name:   types.Identifier("Flat"),
-					Offset: 0,
+					Type: VectorType(PrimitiveType(types.Uint8), nil),
+					Name: types.Identifier("Flat"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 0,
+					},
 				},
 				{
-					Type:   VectorType(PrimitiveType(types.Uint8), &maxElems),
-					Name:   types.Identifier("Max"),
-					Offset: 16,
+					Type: VectorType(PrimitiveType(types.Uint8), &maxElems),
+					Name: types.Identifier("Max"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 16,
+					},
 				},
 				{
-					Type:   VectorType(VectorType(PrimitiveType(types.Bool), nil), nil),
-					Name:   types.Identifier("Nested"),
-					Offset: 32,
+					Type: VectorType(VectorType(PrimitiveType(types.Bool), nil), nil),
+					Name: types.Identifier("Nested"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 32,
+					},
 				},
 				{
-					Type:   VectorType(Nullable(VectorType(PrimitiveType(types.Bool), nil)), nil),
-					Name:   types.Identifier("Nullable"),
-					Offset: 48,
+					Type: VectorType(Nullable(VectorType(PrimitiveType(types.Bool), nil)), nil),
+					Name: types.Identifier("Nullable"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 48,
+					},
 				},
 				{
-					Type:   VectorType(VectorType(VectorType(PrimitiveType(types.Uint8), &maxElems), nil), nil),
-					Name:   types.Identifier("NestedMax"),
-					Offset: 64,
+					Type: VectorType(VectorType(VectorType(PrimitiveType(types.Uint8), &maxElems), nil), nil),
+					Name: types.Identifier("NestedMax"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 64,
+					},
 				},
 			},
 		},
@@ -298,31 +328,31 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "[]uint8",
 					PrivateName: "flat",
 					Name:        "Flat",
-					Tags:        "`" + `fidl:"0,"` + "`",
+					FidlTag:     "0,",
 				},
 				{
 					Type:        "[]uint8",
 					PrivateName: "max",
 					Name:        "Max",
-					Tags:        "`" + `fidl:"16,40" fidl2:"40"` + "`",
+					FidlTag:     "16,40",
 				},
 				{
 					Type:        "[][]bool",
 					PrivateName: "nested",
 					Name:        "Nested",
-					Tags:        "`" + `fidl:"32,,"` + "`",
+					FidlTag:     "32,,",
 				},
 				{
 					Type:        "[]*[]bool",
 					PrivateName: "nullable",
 					Name:        "Nullable",
-					Tags:        "`" + `fidl:"48,,"` + "`",
+					FidlTag:     "48,,",
 				},
 				{
 					Type:        "[][][]uint8",
 					PrivateName: "nestedMax",
 					Name:        "NestedMax",
-					Tags:        "`" + `fidl:"64,,,40" fidl2:",,40"` + "`",
+					FidlTag:     "64,,,40",
 				},
 			},
 		},
@@ -333,14 +363,18 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type:   VectorType(Nullable(HandleType()), nil),
-					Name:   types.Identifier("NullableHandles"),
-					Offset: 0,
+					Type: VectorType(Nullable(HandleType()), nil),
+					Name: types.Identifier("NullableHandles"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 0,
+					},
 				},
 				{
-					Type:   VectorType(HandleType(), &maxElems),
-					Name:   types.Identifier("BoundedNonNullableHandles"),
-					Offset: 16,
+					Type: VectorType(HandleType(), &maxElems),
+					Name: types.Identifier("BoundedNonNullableHandles"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 16,
+					},
 				},
 			},
 		},
@@ -352,13 +386,13 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "[]_zx.Handle",
 					PrivateName: "nullableHandles",
 					Name:        "NullableHandles",
-					Tags:        "`" + `fidl:"0,,1" fidl2:",1"` + "`",
+					FidlTag:     "0,,1",
 				},
 				{
 					Type:        "[]_zx.Handle",
 					PrivateName: "boundedNonNullableHandles",
 					Name:        "BoundedNonNullableHandles",
-					Tags:        "`" + `fidl:"16,40,0" fidl2:"40,0"` + "`",
+					FidlTag:     "16,40,0",
 				},
 			},
 		},
@@ -370,24 +404,32 @@ func TestCompileStruct(t *testing.T) {
 			Name: types.EncodedCompoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
-					Type:   VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), nil),
-					Name:   types.Identifier("no_vec_bounds"),
-					Offset: 0,
+					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), nil),
+					Name: types.Identifier("no_vec_bounds"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 0,
+					},
 				},
 				{
-					Type:   VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), &one),
-					Name:   types.Identifier("outer_vec_bounds"),
-					Offset: 16,
+					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), nil), 2), &one),
+					Name: types.Identifier("outer_vec_bounds"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 16,
+					},
 				},
 				{
-					Type:   VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), nil),
-					Name:   types.Identifier("inner_vec_bounds"),
-					Offset: 32,
+					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), nil),
+					Name: types.Identifier("inner_vec_bounds"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 32,
+					},
 				},
 				{
-					Type:   VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), &one),
-					Name:   types.Identifier("both_vec_bounds"),
-					Offset: 48,
+					Type: VectorType(ArrayType(VectorType(ArrayType(PrimitiveType(types.Uint8), 4), &three), 2), &one),
+					Name: types.Identifier("both_vec_bounds"),
+					FieldShapeOld: types.FieldShape{
+						Offset: 48,
+					},
 				},
 			},
 		},
@@ -399,25 +441,25 @@ func TestCompileStruct(t *testing.T) {
 					Type:        "[][2][][4]uint8",
 					PrivateName: "noVecBounds",
 					Name:        "NoVecBounds",
-					Tags:        "`" + `fidl:"0,,"` + "`",
+					FidlTag:     "0,,",
 				},
 				{
 					Type:        "[][2][][4]uint8",
 					PrivateName: "outerVecBounds",
 					Name:        "OuterVecBounds",
-					Tags:        "`" + `fidl:"16,1," fidl2:"1,"` + "`",
+					FidlTag:     "16,1,",
 				},
 				{
 					Type:        "[][2][][4]uint8",
 					PrivateName: "innerVecBounds",
 					Name:        "InnerVecBounds",
-					Tags:        "`" + `fidl:"32,,3" fidl2:",3"` + "`",
+					FidlTag:     "32,,3",
 				},
 				{
 					Type:        "[][2][][4]uint8",
 					PrivateName: "bothVecBounds",
 					Name:        "BothVecBounds",
-					Tags:        "`" + `fidl:"48,1,3" fidl2:"1,3"` + "`",
+					FidlTag:     "48,1,3",
 				},
 			},
 		},
@@ -624,9 +666,11 @@ func TestCompileInterface(t *testing.T) {
 				HasRequest: true,
 				Request: []types.Parameter{
 					{
-						Type:   PrimitiveType(types.Int16),
-						Name:   types.Identifier("Value"),
-						Offset: 16,
+						Type: PrimitiveType(types.Int16),
+						Name: types.Identifier("Value"),
+						FieldShapeOld: types.FieldShape{
+							Offset: 16,
+						},
 					},
 				},
 				RequestTypeShapeOld: types.TypeShape{
@@ -643,9 +687,11 @@ func TestCompileInterface(t *testing.T) {
 				HasRequest: true,
 				Request: []types.Parameter{
 					{
-						Type:   Nullable(StringType(nil)),
-						Name:   types.Identifier("Value"),
-						Offset: 16,
+						Type: Nullable(StringType(nil)),
+						Name: types.Identifier("Value"),
+						FieldShapeOld: types.FieldShape{
+							Offset: 16,
+						},
 					},
 				},
 				RequestTypeShapeOld: types.TypeShape{
@@ -657,9 +703,11 @@ func TestCompileInterface(t *testing.T) {
 				HasResponse: true,
 				Response: []types.Parameter{
 					{
-						Type:   PrimitiveType(types.Uint32),
-						Name:   types.Identifier("Value"),
-						Offset: 16,
+						Type: PrimitiveType(types.Uint32),
+						Name: types.Identifier("Value"),
+						FieldShapeOld: types.FieldShape{
+							Offset: 16,
+						},
 					},
 				},
 				ResponseTypeShapeOld: types.TypeShape{
@@ -704,7 +752,7 @@ func TestCompileInterface(t *testing.T) {
 							Name:        "Value",
 							PrivateName: "value",
 							Type:        "int16",
-							Tags:        "`" + `fidl:"0"` + "`",
+							FidlTag:     "0",
 						},
 					},
 					InlineSizeOld:    2,
@@ -730,7 +778,7 @@ func TestCompileInterface(t *testing.T) {
 							Name:        "Value",
 							PrivateName: "value",
 							Type:        "*string",
-							Tags:        "`" + `fidl:"0,"` + "`",
+							FidlTag:     "0,",
 						},
 					},
 					InlineSizeOld:    16,
@@ -743,7 +791,7 @@ func TestCompileInterface(t *testing.T) {
 							Name:        "Value",
 							PrivateName: "value",
 							Type:        "uint32",
-							Tags:        "`" + `fidl:"0"` + "`",
+							FidlTag:     "0",
 						},
 					},
 					InlineSizeOld:    4,
@@ -770,9 +818,11 @@ func TestCompileInterface(t *testing.T) {
 				HasResponse: true,
 				Response: []types.Parameter{
 					{
-						Type:   StringType(nil),
-						Name:   types.Identifier("value"),
-						Offset: 16,
+						Type: StringType(nil),
+						Name: types.Identifier("value"),
+						FieldShapeOld: types.FieldShape{
+							Offset: 16,
+						},
 					},
 				},
 				ResponseTypeShapeOld: types.TypeShape{
@@ -817,7 +867,7 @@ func TestCompileInterface(t *testing.T) {
 							Name:        "Value",
 							PrivateName: "value",
 							Type:        "string",
-							Tags:        "`" + `fidl:"0,"` + "`",
+							FidlTag:     "0,",
 						},
 					},
 					InlineSizeOld:    16,
@@ -866,7 +916,7 @@ func TestCompileXUnion(t *testing.T) {
 					Ordinal:     2,
 					PrivateName: "second",
 					Name:        "Second",
-					Tags:        "`" + `fidl:"2,7" fidl2:"2,7"` + "`",
+					FidlTag:     "2,7",
 				},
 			},
 		})
@@ -908,7 +958,7 @@ func TestCompileUnion(t *testing.T) {
 					XUnionOrdinal: 2,
 					PrivateName:   "second",
 					Name:          "Second",
-					Tags:          "`" + `fidl:"2,7"` + "`",
+					FidlTag:       "2,7",
 				},
 			},
 		})
@@ -959,7 +1009,7 @@ func TestCompileTable(t *testing.T) {
 					GetterWithDefault: "GetSecondWithDefault",
 					Haser:             "HasSecond",
 					Clearer:           "ClearSecond",
-					Tags:              "`" + `fidl:"2,7" fidl2:"2,7"` + "`",
+					FidlTag:           "2,7",
 				},
 			},
 		})
@@ -1015,7 +1065,7 @@ func TestCompileTable(t *testing.T) {
 					GetterWithDefault: "GetSecondWithDefault",
 					Haser:             "HasSecond",
 					Clearer:           "ClearSecond",
-					Tags:              "`" + `fidl:"2,5,7" fidl2:"2,5,7"` + "`",
+					FidlTag:           "2,5,7",
 				},
 				{
 					Type:              "[]_zx.Handle",
@@ -1027,7 +1077,7 @@ func TestCompileTable(t *testing.T) {
 					GetterWithDefault: "GetFourthWithDefault",
 					Haser:             "HasFourth",
 					Clearer:           "ClearFourth",
-					Tags:              "`" + `fidl:"4,5,1" fidl2:"4,5,1"` + "`",
+					FidlTag:           "4,5,1",
 				},
 			},
 		})

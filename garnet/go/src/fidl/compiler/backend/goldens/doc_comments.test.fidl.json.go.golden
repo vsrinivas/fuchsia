@@ -27,7 +27,7 @@ type Struct struct {
 	// struct member comment #1
 	//
 	// struct member comment #3
-	Field int32`fidl:"0"`
+	Field int32`fidl:"0" fidl_offset_v1_no_ee:"0"`
 }
 
 var _mStruct = _bindings.CreateLazyMarshaler(Struct{})
@@ -50,7 +50,7 @@ type Union struct {
 	// union member comment #1
 	//
 	// union member comment #3
-	Field int32 `fidl:"1868605377"`
+	Field int32  `fidl:"1868605377"`
 }
 
 func (u *Union) Which() I_unionTag {
@@ -76,7 +76,7 @@ type Table struct {
 	// table field comment #1
 	//
 	// table field comment #3
-	Field int32 `fidl:"1" fidl2:"1"`
+	Field int32 `fidl:"1"`
 	FieldPresent bool
 }
 
