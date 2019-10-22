@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/crashpad_agent/queue.h"
 
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/timekeeper/test_clock.h>
 
@@ -75,7 +76,7 @@ std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
 
-class QueueTest : public ::testing::Test {
+class QueueTest : public gtest::TestLoopFixture {
  public:
   void TearDown() override {
     ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
@@ -93,7 +94,8 @@ class QueueTest : public ::testing::Test {
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    queue_ = Queue::TryCreate(kDatabaseConfig, crash_server_.get(), inspect_manager_.get());
+    queue_ = Queue::TryCreate(dispatcher(), kDatabaseConfig, crash_server_.get(),
+                              inspect_manager_.get());
 
     ASSERT_TRUE(queue_);
 
@@ -119,6 +121,7 @@ class QueueTest : public ::testing::Test {
                                   /*attachments=*/MakeAttachments(),
                                   /*minidump=*/BuildAttachment(kMinidumpValue),
                                   /*annotations=*/MakeAnnotations()));
+          ASSERT_TRUE(RunLoopUntilIdle());
           ++program_id_;
           if (!queue_->IsEmpty()) {
             AddExpectedReport(queue_->LatestReport());

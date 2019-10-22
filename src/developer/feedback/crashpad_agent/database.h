@@ -24,9 +24,6 @@ class Database {
  public:
   static std::unique_ptr<Database> TryCreate(CrashpadDatabaseConfig config);
 
-  // Returns the path to the underlying Crashpad database.
-  const char* path();
-
   // Make a new report in |database_|.
   //
   // Return false if there is an error with the database.

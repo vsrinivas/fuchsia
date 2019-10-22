@@ -4,17 +4,22 @@
 
 #include "src/developer/feedback/crashpad_agent/queue.h"
 
+#include <lib/async/cpp/task.h>
+#include <zircon/errors.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
+using async::PostTask;
 using crashpad::FileReader;
 using crashpad::UUID;
 using UploadPolicy = feedback::Settings::UploadPolicy;
 
-std::unique_ptr<Queue> Queue::TryCreate(CrashpadDatabaseConfig database_config,
+std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
+                                        CrashpadDatabaseConfig database_config,
                                         CrashServer* crash_server,
                                         InspectManager* inspect_manager) {
   auto database = Database::TryCreate(database_config);
@@ -22,7 +27,8 @@ std::unique_ptr<Queue> Queue::TryCreate(CrashpadDatabaseConfig database_config,
     return nullptr;
   }
 
-  return std::unique_ptr<Queue>(new Queue(std::move(database), crash_server, inspect_manager));
+  return std::unique_ptr<Queue>(
+      new Queue(dispatcher, std::move(database), crash_server, inspect_manager));
 }
 
 void Queue::WatchSettings(feedback::Settings* settings) {
@@ -30,13 +36,14 @@ void Queue::WatchSettings(feedback::Settings* settings) {
       [this](const UploadPolicy& upload_policy) { OnUploadPolicyChange(upload_policy); });
 }
 
-Queue::Queue(std::unique_ptr<Database> database, CrashServer* crash_server,
-             InspectManager* inspect_manager)
-    : database_(std::move(database)),
+Queue::Queue(async_dispatcher_t* dispatcher, std::unique_ptr<Database> database,
+             CrashServer* crash_server, InspectManager* inspect_manager)
+    : dispatcher_(dispatcher),
+      database_(std::move(database)),
       crash_server_(crash_server),
       inspect_manager_(inspect_manager) {
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(database_);
-  FXL_DCHECK(crash_server_);
   FXL_DCHECK(inspect_manager_);
 }
 
@@ -57,8 +64,19 @@ bool Queue::Add(const std::string& program_name,
   inspect_manager_->AddReport(program_name, local_report_id.ToString());
 
   pending_reports_.push_back(local_report_id);
-  ProcessAll();
-  database_->GarbageCollect();
+
+  // We do the processing and garbage collection asynchronously as we don't want to block the
+  // caller.
+  if (const auto status = PostTask(dispatcher_,
+                                   [this] {
+                                     ProcessAll();
+                                     database_->GarbageCollect();
+                                   });
+
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Error posting task to process reports after adding new report";
+  }
+
   return true;
 }
 

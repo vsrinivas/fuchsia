@@ -45,8 +45,6 @@ Database::Database(CrashpadDatabaseConfig config,
   FXL_DCHECK(database_);
 }
 
-const char* Database::path() { return kCrashpadDatabasePath; }
-
 bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& attachments,
                              const std::optional<fuchsia::mem::Buffer>& minidump,
                              const std::map<std::string, std::string>& annotations,
@@ -126,6 +124,9 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
 }
 
 bool Database::Archive(const crashpad::UUID& local_report_id) {
+  FX_LOGS(INFO) << fxl::StringPrintf("Archiving local crash report, ID %s, under %s",
+                                     local_report_id.ToString().c_str(), kCrashpadDatabasePath);
+
   if (const auto status =
           database_->SkipReportUpload(local_report_id, CrashSkippedReason::kUploadFailed);
       status != OperationStatus::kNoError) {

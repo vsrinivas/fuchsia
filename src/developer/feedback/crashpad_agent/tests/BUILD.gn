@@ -285,6 +285,7 @@ executable("queue_unittest") {
   ]
 
   deps = [
+    "//garnet/public/lib/gtest",
     "//garnet/public/lib/timekeeper:testing",
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",

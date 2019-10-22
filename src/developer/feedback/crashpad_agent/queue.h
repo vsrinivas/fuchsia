@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
 
+#include <lib/async/dispatcher.h>
+
 #include <map>
 #include <vector>
 
@@ -21,7 +23,8 @@ namespace feedback {
 // Queues pending reports and processes them according to its internal State.
 class Queue {
  public:
-  static std::unique_ptr<Queue> TryCreate(CrashpadDatabaseConfig database_config,
+  static std::unique_ptr<Queue> TryCreate(async_dispatcher_t* dispatcher,
+                                          CrashpadDatabaseConfig database_config,
                                           CrashServer* crash_server,
                                           InspectManager* inspect_manager);
 
@@ -43,8 +46,8 @@ class Queue {
   const crashpad::UUID& LatestReport() { return pending_reports_.back(); }
 
  private:
-  Queue(std::unique_ptr<Database> database, CrashServer* crash_server,
-        InspectManager* inspect_manager);
+  Queue(async_dispatcher_t* dispatcher_, std::unique_ptr<Database> database,
+        CrashServer* crash_server, InspectManager* inspect_manager);
 
   // How the queue should handle processing existing pending reports and new reports.
   enum class State {
@@ -68,6 +71,7 @@ class Queue {
   // Callback to update |state_| on upload policy changes.
   void OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy);
 
+  async_dispatcher_t* dispatcher_;
   std::unique_ptr<Database> database_;
   CrashServer* crash_server_;
   InspectManager* inspect_manager_;

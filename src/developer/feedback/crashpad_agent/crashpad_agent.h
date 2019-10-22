@@ -18,11 +18,10 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
-#include "src/developer/feedback/crashpad_agent/database.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/developer/feedback/crashpad_agent/queue.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/macros.h"
-#include "third_party/crashpad/util/misc/uuid.h"
 
 namespace feedback {
 
@@ -49,18 +48,15 @@ class CrashpadAgent : public fuchsia::feedback::CrashReporter {
 
  private:
   CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                Config config, std::unique_ptr<Database> database,
+                Config config, std::unique_ptr<Queue> queue_,
                 std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
-
-  // Uploads local crash report of ID |local_report_id|.
-  bool UploadReport(const crashpad::UUID& local_report_id);
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config config_;
   Settings settings_;
-  const std::unique_ptr<Database> database_;
+  const std::unique_ptr<Queue> queue_;
   const std::unique_ptr<CrashServer> crash_server_;
   InspectManager* inspect_manager_;
 
