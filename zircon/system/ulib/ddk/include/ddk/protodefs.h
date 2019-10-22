@@ -2,6 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ADDING A NEW PROTOCOL
+// When adding a new protocol, add a macro call at the end of this file after
+// the last protocol definition with a tag, value, name, and flags in the form:
+//
+// DDK_PROTOCOL_DEF(tag, value, name, flags)
+//
+// The value must be a unique identifier that is just the previous protocol
+// value plus 1.
+
 // clang-format off
 
 #ifndef DDK_PROTOCOL_DEF
