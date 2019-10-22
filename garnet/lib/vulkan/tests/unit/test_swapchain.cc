@@ -168,6 +168,14 @@ class TestSwapchain {
         .protectedMemory = VK_FALSE,
     };
     if (protected_memory_) {
+      VkPhysicalDeviceProperties properties;
+      vkGetPhysicalDeviceProperties(physical_devices[0], &properties);
+      if (properties.apiVersion < VK_MAKE_VERSION(1, 1, 0)) {
+        protected_memory_is_supported_ = false;
+        fprintf(stderr, "Vulkan 1.1 is not supported by device\n");
+        return;
+      }
+
       PFN_vkGetPhysicalDeviceFeatures2 get_physical_device_features_2_ =
           reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2>(
               vkGetInstanceProcAddr(vk_instance_, "vkGetPhysicalDeviceFeatures2"));
