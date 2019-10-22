@@ -1003,7 +1003,6 @@ pub fn process_channel_switch(
     bss
 }
 
-
 fn handle_supplicant_start_failure(
     responder: Option<Responder<ConnectResult>>,
     bss: Box<BssDescription>,
@@ -1804,9 +1803,8 @@ mod tests {
         let mut h = TestHelper::new();
         let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
 
-        let switch_ind = MlmeEvent::OnChannelSwitched {
-            info: fidl_mlme::ChannelSwitchInfo { new_channel: 36 },
-        };
+        let switch_ind =
+            MlmeEvent::OnChannelSwitched { info: fidl_mlme::ChannelSwitchInfo { new_channel: 36 } };
 
         assert_variant!(&state, State::Associated { bss, ..} => {
             assert_eq!(bss.chan.primary, 1);

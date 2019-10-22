@@ -57,6 +57,27 @@ pub extern "C" fn client_sta_send_deauth_frame(sta: &mut Client, reason_code: u1
 }
 
 #[no_mangle]
+pub extern "C" fn client_sta_send_assoc_req_frame(
+    sta: &mut Client,
+    cap_info: u16,
+    ssid: CSpan,
+    rates: CSpan,
+    rsne: CSpan,
+    ht_cap: CSpan,
+    vht_cap: CSpan,
+) -> i32 {
+    sta.send_assoc_req_frame(
+        cap_info,
+        ssid.into(),
+        rates.into(),
+        rsne.into(),
+        ht_cap.into(),
+        vht_cap.into(),
+    )
+    .into_raw_zx_status()
+}
+
+#[no_mangle]
 pub extern "C" fn client_sta_handle_data_frame(
     sta: &mut Client,
     data_frame: CSpan,

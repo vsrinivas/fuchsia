@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{auth, error::Error},
+    crate::{auth, error::Error, RatesWriter},
+    failure::format_err,
     wlan_common::{
         appendable::Appendable,
         big_endian::BigEndianU16,
         data_writer,
+        ie::{rsn::rsne, *},
         mac::{self, Aid, Bssid, MacAddr},
         mgmt_writer,
         sequence::SequenceManager,
@@ -31,6 +33,53 @@ pub fn write_open_auth_frame<B: Appendable>(
     )?;
 
     buf.append_value(&auth::make_open_client_req())?;
+    Ok(())
+}
+
+pub fn write_assoc_req_frame<B: Appendable>(
+    buf: &mut B,
+    bssid: Bssid,
+    client_addr: MacAddr,
+    seq_mgr: &mut SequenceManager,
+    cap_info: mac::CapabilityInfo,
+    ssid: &[u8],
+    rates: &[u8],
+    rsne: Option<rsne::Rsne>,
+    ht_cap: Option<HtCapabilities>,
+    vht_cap: Option<VhtCapabilities>,
+) -> Result<(), Error> {
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_REQ);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid.0) as u16);
+    mgmt_writer::write_mgmt_hdr(
+        buf,
+        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
+        None,
+    )?;
+
+    buf.append_value(&mac::AssocReqHdr { capabilities: cap_info, listen_interval: 0 })?;
+
+    write_ssid(buf, ssid)?;
+    let rates_writer = RatesWriter::try_new(&rates[..])?;
+    rates_writer.write_supported_rates(buf);
+    rates_writer.write_ext_supported_rates(buf);
+
+    if let Some(rsne) = rsne {
+        write_rsne(buf, &rsne)?;
+    }
+
+    if let Some(ht_cap) = ht_cap {
+        write_ht_capabilities(buf, &ht_cap)?;
+        if let Some(vht_cap) = vht_cap {
+            write_vht_capabilities(buf, &vht_cap)?;
+        }
+    } else {
+        if vht_cap.is_some() {
+            return Err(Error::Internal(format_err!("vht_ap without ht_ap is invalid")));
+        }
+    }
+
     Ok(())
 }
 
@@ -211,6 +260,84 @@ mod tests {
             ],
             &buf[..]
         );
+    }
+
+    #[test]
+    fn assoc_req_frame_ok() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        let rsne = rsne::from_bytes(&wlan_common::test_utils::fake_frames::fake_wpa2_rsne()[..])
+            .expect("creating RSNE")
+            .1;
+
+        write_assoc_req_frame(
+            &mut buf,
+            Bssid([1; 6]),
+            [2; 6],
+            &mut seq_mgr,
+            mac::CapabilityInfo(0x1234),
+            &"ssid".as_bytes(),
+            &[8, 7, 6, 5, 4, 3, 2, 1, 0],
+            Some(rsne),
+            Some(wlan_common::ie::fake_ht_capabilities()),
+            Some(wlan_common::ie::fake_vht_capabilities()),
+        )
+        .expect("writing association request frame");
+
+        assert_eq!(
+            &buf[..],
+            &[
+                // Mgmt Header
+                0, 0, // frame control
+                0, 0, // duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // sequence control
+                // Association Request Header
+                0x34, 0x12, // capability info
+                0, 0, // listen interval
+                // IEs
+                0, 4, // SSID id and length
+                115, 115, 105, 100, // SSID
+                1, 8, // supp_rates id and length
+                8, 7, 6, 5, 4, 3, 2, 1, // supp_rates
+                50, 1, // ext_supp rates id and length
+                0, // ext_supp_rates
+                48, 18, // rsne id and length
+                1, 0, 0, 15, 172, 4, 1, 0, // rsne
+                0, 15, 172, 4, 1, 0, 0, 15, // rsne
+                172, 2, // rsne (18 bytes total)
+                45, 26, // ht_cap id and length
+                254, 1, 0, 255, 0, 0, 0, 1, // ht_cap
+                0, 0, 0, 0, 0, 0, 0, 1, // ht_cap
+                0, 0, 0, 0, 0, 0, 0, 0, // ht_cap
+                0, 0, // ht_cap (26 bytes total)
+                191, 12, // vht_cap id and length
+                177, 2, 0, 177, 3, 2, 99, 67, // vht_cap
+                3, 2, 99, 3 // vht_cap (12 bytes total)
+            ][..]
+        );
+    }
+
+    #[test]
+    fn assoc_req_frame_vht_without_ht_error() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+
+        assert!(write_assoc_req_frame(
+            &mut buf,
+            Bssid([1; 6]),
+            [2; 6],
+            &mut seq_mgr,
+            mac::CapabilityInfo(0),
+            &"ssid".as_bytes(),
+            &[0],
+            None, // RSNE
+            None, // HT Capabilities
+            Some(wlan_common::ie::fake_vht_capabilities()),
+        )
+        .is_err());
     }
 
     #[test]

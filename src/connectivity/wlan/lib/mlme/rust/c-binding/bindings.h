@@ -151,6 +151,11 @@ extern "C" wlan_client_sta_t *client_sta_new(mlme_device_ops_t device,
                                              const uint8_t (*bssid)[6],
                                              const uint8_t (*iface_mac)[6]);
 
+extern "C" int32_t client_sta_send_assoc_req_frame(wlan_client_sta_t *sta, uint16_t cap_info,
+                                                   wlan_span_t ssid, wlan_span_t rates,
+                                                   wlan_span_t rsne, wlan_span_t ht_cap,
+                                                   wlan_span_t vht_cap);
+
 extern "C" int32_t client_sta_send_data_frame(wlan_client_sta_t *sta, const uint8_t (*src)[6],
                                               const uint8_t (*dest)[6], bool is_protected,
                                               bool is_qos, uint16_t ether_type,

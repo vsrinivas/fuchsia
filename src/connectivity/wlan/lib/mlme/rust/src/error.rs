@@ -6,7 +6,10 @@ use {
     failure::{self, Fail},
     fuchsia_zircon as zx,
     log::error,
-    wlan_common::{appendable::BufferTooSmall, error::FrameWriteError},
+    wlan_common::{
+        appendable::BufferTooSmall,
+        error::{FrameParseError, FrameWriteError},
+    },
 };
 
 #[derive(Debug, Fail)]
@@ -15,6 +18,8 @@ pub enum Error {
     NoResources(usize),
     #[fail(display = "provided buffer to small")]
     BufferTooSmall,
+    #[fail(display = "error parsing frame: {}", _0)]
+    ParsingFrame(#[cause] FrameParseError),
     #[fail(display = "error writing frame: {}", _0)]
     WritingFrame(#[cause] FrameWriteError),
     #[fail(display = "{}", _0)]
@@ -31,6 +36,7 @@ impl From<Error> for zx::Status {
             Error::NoResources(_) => zx::Status::NO_RESOURCES,
             Error::BufferTooSmall => zx::Status::BUFFER_TOO_SMALL,
             Error::Internal(_) => zx::Status::INTERNAL,
+            Error::ParsingFrame(_) => zx::Status::IO_INVALID,
             Error::WritingFrame(_) => zx::Status::IO_REFUSED,
             Error::Fidl(e) => match e {
                 fidl::Error::ClientRead(status)
@@ -66,6 +72,12 @@ impl ResultExt for Result<(), Error> {
 impl From<failure::Error> for Error {
     fn from(e: failure::Error) -> Self {
         Error::Internal(e)
+    }
+}
+
+impl From<FrameParseError> for Error {
+    fn from(e: FrameParseError) -> Self {
+        Error::ParsingFrame(e)
     }
 }
 

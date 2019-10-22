@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{constants::*, fields::*, id::Id, wpa},
+    super::{constants::*, fields::*, id::Id, rsn::rsne, wpa},
     crate::{
         appendable::{Appendable, BufferTooSmall},
         error::FrameWriteError,
@@ -68,12 +68,30 @@ pub fn write_supported_rates<B: Appendable>(
     write_ie!(buf, Id::SUPPORTED_RATES, rates)
 }
 
+pub fn write_rsne<B: Appendable>(buf: &mut B, rsne: &rsne::Rsne) -> Result<(), FrameWriteError> {
+    rsne.write_into(buf).map_err(|e| e.into())
+}
+
 pub fn write_ext_supported_rates<B: Appendable>(
     buf: &mut B,
     rates: &[u8],
 ) -> Result<(), FrameWriteError> {
     validate!(!rates.is_empty(), "List of Extended Supported Rates is empty");
     write_ie!(buf, Id::EXT_SUPPORTED_RATES, rates)
+}
+
+pub fn write_ht_capabilities<B: Appendable>(
+    buf: &mut B,
+    ht_cap: &HtCapabilities,
+) -> Result<(), FrameWriteError> {
+    write_ie!(buf, Id::HT_CAPABILITIES, ht_cap.as_bytes())
+}
+
+pub fn write_ht_operation<B: Appendable>(
+    buf: &mut B,
+    ht_op: &HtOperation,
+) -> Result<(), FrameWriteError> {
+    write_ie!(buf, Id::HT_OPERATION, ht_op.as_bytes())
 }
 
 pub fn write_dsss_param_set<B: Appendable>(
@@ -238,6 +256,20 @@ pub fn write_perr<B: Appendable>(
     write_ie!(buf, Id::PERR, header, destinations)
 }
 
+pub fn write_vht_capabilities<B: Appendable>(
+    buf: &mut B,
+    vht_cap: &VhtCapabilities,
+) -> Result<(), FrameWriteError> {
+    write_ie!(buf, Id::VHT_CAPABILITIES, vht_cap.as_bytes())
+}
+
+pub fn write_vht_operation<B: Appendable>(
+    buf: &mut B,
+    vht_op: &VhtOperation,
+) -> Result<(), FrameWriteError> {
+    write_ie!(buf, Id::VHT_OPERATION, vht_op.as_bytes())
+}
+
 /// Writes the entire WPA1 IE into the given buffer, including the vendor IE header.
 pub fn write_wpa1_ie<B: Appendable>(
     buf: &mut B,
@@ -268,7 +300,7 @@ mod tests {
     };
 
     #[test]
-    pub fn write_ie_body_too_long() {
+    fn write_ie_body_too_long() {
         let mut buf = vec![];
         let mut f = || write_ie!(&mut buf, Id::SSID, &[0u8; 256][..]);
         assert_eq!(
@@ -280,7 +312,7 @@ mod tests {
     }
 
     #[test]
-    pub fn write_ie_buffer_too_small() {
+    fn write_ie_buffer_too_small() {
         let mut buf = [7u8; 5];
         let mut writer = BufferWriter::new(&mut buf[..]);
         let mut f = || write_ie!(&mut writer, Id::SSID, &[1u8, 2, 3, 4][..]);
@@ -290,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    pub fn write_ie_buffer_exactly_long_enough() {
+    fn write_ie_buffer_exactly_long_enough() {
         let mut buf = [0u8; 5];
         let mut writer = BufferWriter::new(&mut buf[..]);
         let mut f = || write_ie!(&mut writer, Id::SSID, &[1u8, 2, 3][..]);
@@ -299,21 +331,21 @@ mod tests {
     }
 
     #[test]
-    pub fn ssid_ok() {
+    fn ssid_ok() {
         let mut buf = vec![];
         write_ssid(&mut buf, &[1, 2, 3]).expect("expected Ok");
         assert_eq!(&[0, 3, 1, 2, 3], &buf[..]);
     }
 
     #[test]
-    pub fn ssid_ok_empty() {
+    fn ssid_ok_empty() {
         let mut buf = vec![];
         write_ssid(&mut buf, &[]).expect("expected Ok");
         assert_eq!(&[0, 0], &buf[..]);
     }
 
     #[test]
-    pub fn ssid_too_long() {
+    fn ssid_too_long() {
         let mut buf = vec![];
         assert_eq!(
             Err(FrameWriteError::new_invalid_data(
@@ -324,14 +356,14 @@ mod tests {
     }
 
     #[test]
-    pub fn supported_rates_ok() {
+    fn supported_rates_ok() {
         let mut buf = vec![];
         write_supported_rates(&mut buf, &[1, 2, 3, 4, 5, 6, 7, 8]).expect("expected Ok");
         assert_eq!(&[1, 8, 1, 2, 3, 4, 5, 6, 7, 8], &buf[..]);
     }
 
     #[test]
-    pub fn supported_rates_empty() {
+    fn supported_rates_empty() {
         let mut buf = vec![];
         assert_eq!(
             Err(FrameWriteError::new_invalid_data("List of Supported Rates is empty".to_string())),
@@ -340,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    pub fn supported_rates_too_long() {
+    fn supported_rates_too_long() {
         let mut buf = vec![];
         assert_eq!(
             Err(FrameWriteError::new_invalid_data(
@@ -351,14 +383,14 @@ mod tests {
     }
 
     #[test]
-    pub fn ext_supported_rates_ok() {
+    fn ext_supported_rates_ok() {
         let mut buf = vec![];
         write_ext_supported_rates(&mut buf, &[1, 2, 3, 4, 5, 6, 7, 8]).expect("expected Ok");
         assert_eq!(&[50, 8, 1, 2, 3, 4, 5, 6, 7, 8], &buf[..]);
     }
 
     #[test]
-    pub fn ext_supported_rates_empty() {
+    fn ext_supported_rates_empty() {
         let mut buf = vec![];
         assert_eq!(
             Err(FrameWriteError::new_invalid_data(
@@ -369,14 +401,14 @@ mod tests {
     }
 
     #[test]
-    pub fn dsss_param_set() {
+    fn dsss_param_set() {
         let mut buf = vec![];
         write_dsss_param_set(&mut buf, &DsssParamSet { current_chan: 6 }).expect("expected Ok");
         assert_eq!(&[3, 1, 6], &buf[..]);
     }
 
     #[test]
-    pub fn tim_ok() {
+    fn tim_ok() {
         let mut buf = vec![];
         write_tim(
             &mut buf,
@@ -388,7 +420,7 @@ mod tests {
     }
 
     #[test]
-    pub fn tim_empty_bitmap() {
+    fn tim_empty_bitmap() {
         let mut buf = vec![];
         assert_eq!(
             Err(FrameWriteError::new_invalid_data(
@@ -403,7 +435,7 @@ mod tests {
     }
 
     #[test]
-    pub fn tim_bitmap_too_long() {
+    fn tim_bitmap_too_long() {
         let mut buf = vec![];
         assert_eq!(
             Err(FrameWriteError::new_invalid_data(
@@ -418,7 +450,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_open_no_pmk() {
+    fn mpm_open_no_pmk() {
         let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
         let mut buf = vec![];
         write_mpm_open(&mut buf, &header, None).expect("expected Ok");
@@ -426,7 +458,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_open_with_pmk() {
+    fn mpm_open_with_pmk() {
         let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
         let pmk = MpmPmk([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
         let mut buf = vec![];
@@ -442,7 +474,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_confirm_no_pmk() {
+    fn mpm_confirm_no_pmk() {
         let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
         let mut buf = vec![];
         write_mpm_confirm(&mut buf, &header, 0x6655, None).expect("expected Ok");
@@ -450,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_confirm_with_pmk() {
+    fn mpm_confirm_with_pmk() {
         let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
         let pmk = MpmPmk([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
         let mut buf = vec![];
@@ -466,7 +498,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_minimal() {
+    fn mpm_close_minimal() {
         let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
         let mut buf = vec![];
         write_mpm_close(&mut buf, &header, None, ReasonCode(0x6655), None).expect("expected Ok");
@@ -474,7 +506,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_full() {
+    fn mpm_close_full() {
         let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
         let pmk = MpmPmk([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
         let mut buf = vec![];
@@ -491,7 +523,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_minimal() {
+    fn preq_minimal() {
         let header = PreqHeader {
             flags: PreqFlags(0),
             hop_count: 0x01,
@@ -522,7 +554,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_full() {
+    fn preq_full() {
         let header = PreqHeader {
             flags: PreqFlags(0).with_addr_ext(true),
             hop_count: 0x01,
@@ -563,7 +595,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_addr_ext_flag_set_but_no_addr_given() {
+    fn preq_addr_ext_flag_set_but_no_addr_given() {
         let header = PreqHeader {
             flags: PreqFlags(0).with_addr_ext(true),
             hop_count: 0x01,
@@ -583,7 +615,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_ext_addr_given_but_no_flag_set() {
+    fn preq_ext_addr_given_but_no_flag_set() {
         let header = PreqHeader {
             flags: PreqFlags(0),
             hop_count: 0x01,
@@ -604,7 +636,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_target_count_mismatch() {
+    fn preq_target_count_mismatch() {
         let header = PreqHeader {
             flags: PreqFlags(0),
             hop_count: 0x01,
@@ -624,7 +656,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_no_ext() {
+    fn prep_no_ext() {
         let mut buf = vec![];
         let header = PrepHeader {
             flags: PrepFlags(0),
@@ -656,7 +688,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_with_ext() {
+    fn prep_with_ext() {
         let mut buf = vec![];
         let header = PrepHeader {
             flags: PrepFlags(0).with_addr_ext(true),
@@ -690,7 +722,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_addr_ext_flag_set_but_no_addr_given() {
+    fn prep_addr_ext_flag_set_but_no_addr_given() {
         let header = PrepHeader {
             flags: PrepFlags(0).with_addr_ext(true),
             hop_count: 1,
@@ -714,7 +746,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_ext_addr_given_but_no_flag_set() {
+    fn prep_ext_addr_given_but_no_flag_set() {
         let header = PrepHeader {
             flags: PrepFlags(0),
             hop_count: 1,
@@ -739,7 +771,7 @@ mod tests {
     }
 
     #[test]
-    pub fn perr_destination_ok_no_ext() {
+    fn perr_destination_ok_no_ext() {
         let mut buf = vec![];
         let header = PerrDestinationHeader {
             flags: PerrDestinationFlags(0),
@@ -758,7 +790,7 @@ mod tests {
     }
 
     #[test]
-    pub fn perr_destination_ok_with_ext() {
+    fn perr_destination_ok_with_ext() {
         let mut buf = vec![];
         let header = PerrDestinationHeader {
             flags: PerrDestinationFlags(0).with_addr_ext(true),
@@ -780,7 +812,7 @@ mod tests {
     }
 
     #[test]
-    pub fn perr_destination_addr_ext_flag_set_but_no_addr_given() {
+    fn perr_destination_addr_ext_flag_set_but_no_addr_given() {
         let header = PerrDestinationHeader {
             flags: PerrDestinationFlags(0).with_addr_ext(true),
             dest_addr: [1, 2, 3, 4, 5, 6],
@@ -796,7 +828,7 @@ mod tests {
     }
 
     #[test]
-    pub fn perr_destination_ext_addr_given_but_no_flag_set() {
+    fn perr_destination_ext_addr_given_but_no_flag_set() {
         let header = PerrDestinationHeader {
             flags: PerrDestinationFlags(0),
             dest_addr: [1, 2, 3, 4, 5, 6],
@@ -814,7 +846,7 @@ mod tests {
     }
 
     #[test]
-    pub fn perr_destination_buffer_too_small() {
+    fn perr_destination_buffer_too_small() {
         let mut buf = [0u8; 12]; // 1 byte short
         let mut writer = BufferWriter::new(&mut buf[..]);
         let header = PerrDestinationHeader {
@@ -831,7 +863,7 @@ mod tests {
     }
 
     #[test]
-    pub fn perr() {
+    fn perr() {
         let header = PerrHeader { element_ttl: 11, num_destinations: 7 };
         let mut buf = vec![];
         write_perr(&mut buf, &header, &[1, 2, 3]).expect("expected Ok");
@@ -840,7 +872,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_write_wpa1_ie() {
+    fn test_write_wpa1_ie() {
         let wpa_ie = wpa::WpaIe {
             multicast_cipher: cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP },
             unicast_cipher_list: vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }],
@@ -860,7 +892,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_write_wpa1_ie_buffer_too_small() {
+    fn test_write_wpa1_ie_buffer_too_small() {
         let wpa_ie = wpa::WpaIe {
             multicast_cipher: cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP },
             unicast_cipher_list: vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }],
@@ -872,5 +904,85 @@ mod tests {
         write_wpa1_ie(&mut writer, &wpa_ie).expect_err("WPA1 write to short buf should fail");
         // The buffer is not long enough, so no bytes should be written.
         assert_eq!(writer.into_written().len(), 0);
+    }
+
+    #[test]
+    fn ht_capabilities_ok() {
+        let mut buf = vec![];
+        let ht_cap = crate::ie::fake_ies::fake_ht_capabilities();
+        write_ht_capabilities(&mut buf, &ht_cap).expect("writing ht cap");
+        assert_eq!(
+            &buf[..],
+            &[
+                45, 26, // HT Cap id and length
+                254, 1, 0, 255, 0, 0, 0, 1, // byte 0-7
+                0, 0, 0, 0, 0, 0, 0, 1, // byte 8-15
+                0, 0, 0, 0, 0, 0, 0, 0, // byte 16-23
+                0, 0, // byte 24-25
+            ]
+        );
+    }
+
+    #[test]
+    fn ht_operation_ok() {
+        let mut buf = vec![];
+        let ht_op = crate::ie::fake_ies::fake_ht_operation();
+        write_ht_operation(&mut buf, &ht_op).expect("writing ht op");
+        assert_eq!(
+            &buf[..],
+            &[
+                61, 22, // HT Op id and length
+                36, 5, 20, 0, 0, 0, 255, 0, // byte 0-7
+                0, 0, 1, 0, 0, 0, 0, 0, // byte 8-15
+                0, 0, 1, 0, 0, 0, // byte 16-21
+            ]
+        );
+    }
+
+    #[test]
+    fn vht_capabilities_ok() {
+        let mut buf = vec![];
+        let vht_cap = crate::ie::fake_ies::fake_vht_capabilities();
+        write_vht_capabilities(&mut buf, &vht_cap).expect("writing vht cap");
+        assert_eq!(
+            &buf[..],
+            &[
+                191, 12, // VHT Cap id and length
+                177, 2, 0, 177, 3, 2, 99, 67, // byte 0-7
+                3, 2, 99, 3, // byte 8-11
+            ]
+        );
+    }
+
+    #[test]
+    fn vht_operation_ok() {
+        let mut buf = vec![];
+        let vht_op = crate::ie::fake_ies::fake_vht_operation();
+        write_vht_operation(&mut buf, &vht_op).expect("writing vht op");
+        assert_eq!(
+            &buf[..],
+            &[
+                192, 5, // VHT Op id and length
+                1, 42, 0, 27, 27, // byte 0-4
+            ]
+        );
+    }
+
+    #[test]
+    fn rsne_ok() {
+        let mut buf = vec![];
+        let rsne = rsne::from_bytes(&crate::test_utils::fake_frames::fake_wpa2_rsne()[..])
+            .expect("creating rsne")
+            .1;
+        write_rsne(&mut buf, &rsne).expect("writing rsne");
+        assert_eq!(
+            &buf[..],
+            &[
+                48, 18, // RSNE id and length
+                1, 0, 0, 15, 172, 4, 1, 0, // byte 0-7
+                0, 15, 172, 4, 1, 0, 0, 15, // byte 8-15
+                172, 2, // byte 16-17
+            ]
+        );
     }
 }

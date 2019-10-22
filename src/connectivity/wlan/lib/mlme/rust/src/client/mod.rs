@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod frame_writer;
 mod state;
-mod utils;
 
 use {
     crate::{
@@ -15,16 +15,18 @@ use {
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::error,
+    state::States,
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
+        ie::{parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, IE_PREFIX_LEN},
         mac::{self, Aid, Bssid, MacAddr, OptionalField, Presence},
         sequence::SequenceManager,
     },
     zerocopy::ByteSlice,
 };
 
-use {state::States, utils::*};
+pub use frame_writer::*;
 
 /// Maximum size of EAPOL frames forwarded to SME.
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.
@@ -170,6 +172,61 @@ impl Client {
         self.device
             .send_wlan_frame(out_buf, TxFlags::NONE)
             .map_err(|s| Error::Status(format!("error sending open auth frame"), s))
+    }
+
+    /// Sends an association request frame based on device capability.
+    // TODO(fxb/39148): Use an IE set instead of individual IEs.
+    pub fn send_assoc_req_frame(
+        &mut self,
+        cap_info: u16,
+        ssid: &[u8],
+        rates: &[u8],
+        rsne: &[u8],
+        ht_cap: &[u8],
+        vht_cap: &[u8],
+    ) -> Result<(), Error> {
+        let frame_len = frame_len!(mac::MgmtHdr, mac::AssocReqHdr);
+        let ssid_len = IE_PREFIX_LEN + ssid.len();
+        let rates_len = IE_PREFIX_LEN + rates.len();
+        let rsne_len = if rsne.is_empty() { 0 } else { IE_PREFIX_LEN + rsne.len() };
+        let ht_cap_len = if ht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + ht_cap.len() };
+        let vht_cap_len = if vht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + vht_cap.len() };
+        let frame_len = frame_len + ssid_len + rates_len + rsne_len + ht_cap_len + vht_cap_len;
+        let mut buf = self.buf_provider.get_buffer(frame_len)?;
+        let mut w = BufferWriter::new(&mut buf[..]);
+
+        let rsne = if rsne.is_empty() {
+            None
+        } else {
+            Some(
+                rsne::from_bytes(rsne)
+                    .map_err(|e| format_err!("error parsing rsne {:?} : {:?}", rsne, e))?
+                    .1,
+            )
+        };
+
+        let ht_cap = if ht_cap.is_empty() { None } else { Some(*parse_ht_capabilities(ht_cap)?) };
+
+        let vht_cap =
+            if vht_cap.is_empty() { None } else { Some(*parse_vht_capabilities(vht_cap)?) };
+
+        write_assoc_req_frame(
+            &mut w,
+            self.bssid,
+            self.iface_mac,
+            &mut self.seq_mgr,
+            mac::CapabilityInfo(cap_info),
+            ssid,
+            rates,
+            rsne,
+            ht_cap,
+            vht_cap,
+        )?;
+        let bytes_written = w.bytes_written();
+        let out_buf = OutBuf::from(buf, bytes_written);
+        self.device
+            .send_wlan_frame(out_buf, TxFlags::NONE)
+            .map_err(|s| Error::Status(format!("error sending assoc req frame"), s))
     }
 
     /// Sends a "keep alive" response to the BSS. A keep alive response is a NULL data frame sent as
@@ -390,6 +447,57 @@ mod tests {
             1, 0, // auth txn seq num
             0, 0, // status code
         ][..]);
+    }
+
+    #[test]
+    fn client_send_assoc_req_frame() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut client =
+            make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
+        client
+            .send_assoc_req_frame(
+                0x1234,
+                &[11, 22, 33, 44],
+                &[8, 7, 6, 5, 4, 3, 2, 1, 0],
+                &[55, 66, 77, 88],
+                &(0..26).collect::<Vec<u8>>()[..],
+                &(100..112).collect::<Vec<u8>>()[..],
+            )
+            .expect("error delivering WLAN frame");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header:
+                0, 0, // FC
+                0, 0, // Duration
+                6, 6, 6, 6, 6, 6, // addr1
+                7, 7, 7, 7, 7, 7, // addr2
+                6, 6, 6, 6, 6, 6, // addr3
+                0x10, 0, // Sequence Control
+                // Association Request header:
+                0x34, 0x12, // capability info
+                0, 0, // listen interval
+                // IEs
+                0, 4, // SSID id and length
+                11, 22, 33, 44, // SSID
+                1, 8, // supp rates id and length
+                8, 7, 6, 5, 4, 3, 2, 1, // supp rates
+                50, 1, // ext supp rates and length
+                0, // ext supp rates
+                48, 2, // RSNE id and length
+                77, 88, // RSNE
+                45, 26, // HT Cap id and length
+                0, 1, 2, 3, 4, 5, 6, 7, // HT Cap \
+                8, 9, 10, 11, 12, 13, 14, 15, // HT Cap \
+                16, 17, 18, 19, 20, 21, 22, 23, // HT Cap \
+                24, 25, // HT Cap (26 bytes)
+                191, 12, // VHT Cap id and length
+                100, 101, 102, 103, 104, 105, 106, 107, // VHT Cap \
+                108, 109, 110, 111, // VHT Cap (12 bytes)
+            ][..]
+        );
     }
 
     #[test]
