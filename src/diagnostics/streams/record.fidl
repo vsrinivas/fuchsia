@@ -1,0 +1,49 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.diagnostics.streaming;
+using zx;
+
+/// Maximum number of arguments that can be encoded per record, as specified by the tracing format:
+///
+/// https://fuchsia.dev/fuchsia-src/development/tracing/trace-format#arguments
+const uint32 MAX_ARGS = 15;
+
+/// A small(ish) limit on the length of argument names is used because argument names are expected
+/// to be used repeatedly, many times.
+const uint32 MAX_ARG_NAME_LENGTH = 256;
+
+/// The maximum string length which we can encode into the tracing format.
+const uint32 MAX_TEXT_ARG_LENGTH = 32768;
+
+/// A record in the diagnostic stream.
+[MaxHandles = "0"]
+struct Record {
+    /// The monotonic time at which the record was generated.
+    zx.time timestamp;
+    /// The key-value pairs which make up this record.
+    vector<Argument>:MAX_ARGS arguments;
+};
+
+/// A named key-value pair in the diagnostic record.
+[MaxHandles = "0"]
+struct Argument {
+    /// The name of the argument.
+    string:MAX_ARG_NAME_LENGTH name;
+    /// The value of the argument.
+    Value value;
+};
+
+/// An argument value which can be one of several types.
+[MaxHandles = "0"]
+xunion Value {
+    /// A signed integral argument.
+    int64 signed;
+    /// An unsigned integral argument.
+    uint64 unsigned;
+    /// A double-precision floating-point argument.
+    float64 floating;
+    /// A UTF8 text argument.
+    string:MAX_TEXT_ARG_LENGTH text;
+};

@@ -16,6 +16,7 @@ group("tests") {
     "inspect_validator/lib/rust:tests",
     "iquery_rs:tests",
     "lib:tests",
+    "streams:tests",
 
     # "transit_bench",
   ]
