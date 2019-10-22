@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("thread-safe-deleter") {
+  sources = [
+    "thread-safe-deleter-test.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
+    "$zx/system/ulib/thread-safe-deleter",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/zxtest",
+  ]
+}

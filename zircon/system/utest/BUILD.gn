@@ -290,6 +290,7 @@ if (current_cpu != "") {
       "sysinfo",
       "sysmem",
       "task-utils",
+      "thread-safe-deleter",
       "thread-initial-state",
       "thread-state",
       "time",
