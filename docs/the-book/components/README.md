@@ -8,6 +8,7 @@ provide and consume capabilities such as services and directories, declare
 routing of these capabilities, provide isolation boundaries, and have continuity
 between executions.
 
+- [Introduction](introduction.md)
 - [Capabilities](capabilities/README.md)
 - [Component manifests](component_manifests.md)
 - [ELF runner](elf_runner.md)

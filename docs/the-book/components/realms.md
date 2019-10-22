@@ -128,7 +128,7 @@ inherent restriction: there's no way to statically declare a route from a
 capability exposed by a dynamic instance. However, certain capabilities can be
 routed from the collection as a whole. TODO: service directories as an example
 
-### Component collections
+### Component collections {#collections}
 
 A *collection* is a container for [dynamic children](#dynamic-children) which
 may be created and destroyed at runtime using the
