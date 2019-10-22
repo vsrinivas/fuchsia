@@ -70,7 +70,7 @@ zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& di
   return ZX_OK;
 }
 
-// Version of recursive_wait_for_file that can mutate its path
+// Version of RecursiveWaitForFile that can mutate its path
 zx_status_t RecursiveWaitForFileHelper(const fbl::unique_fd& rootdir, const fbl::unique_fd& dir,
                                        const char* full_path, char* path, fbl::unique_fd* out) {
   char* first_slash = strchr(path, '/');
