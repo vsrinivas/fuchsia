@@ -7,6 +7,7 @@
 
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
+#include "src/developer/debug/debug_agent/test_utils.h"
 
 namespace debug_agent {
 namespace {
@@ -78,13 +79,6 @@ debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_k
   return location;
 }
 
-#define ZX_ASSERT_EQ(stmt, expected)                                                          \
-  {                                                                                           \
-    zx_status_t status = (stmt);                                                              \
-    ASSERT_EQ(status, expected) << "Expected " << zx_status_get_string(expected) << std::endl \
-                                << "Got: " << zx_status_get_string(status);                   \
-  }
-
 // Tests -------------------------------------------------------------------------------------------
 
 constexpr zx_koid_t kProcessKoid = 0x1;
@@ -105,7 +99,7 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   Breakpoint breakpoint(&process_delegate);
   breakpoint.SetSettings(debug_ipc::BreakpointType::kSoftware, settings);
 
-  ZX_ASSERT_EQ(process.RegisterBreakpoint(&breakpoint, kAddress1), ZX_OK);
+  ASSERT_ZX_EQ(process.RegisterBreakpoint(&breakpoint, kAddress1), ZX_OK);
 
   ASSERT_EQ(process.software_breakpoints().size(), 1u);
   auto it = process.software_breakpoints().begin();
@@ -113,8 +107,8 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   EXPECT_EQ(it, process.software_breakpoints().end());
 
   // Add 2 other breakpoints.
-  ZX_ASSERT_EQ(process.RegisterBreakpoint(&breakpoint, kAddress2), ZX_OK);
-  ZX_ASSERT_EQ(process.RegisterBreakpoint(&breakpoint, kAddress3), ZX_OK);
+  ASSERT_ZX_EQ(process.RegisterBreakpoint(&breakpoint, kAddress2), ZX_OK);
+  ASSERT_ZX_EQ(process.RegisterBreakpoint(&breakpoint, kAddress3), ZX_OK);
   ASSERT_EQ(process.software_breakpoints().size(), 3u);
   it = process.software_breakpoints().begin();
   EXPECT_EQ(it++->first, kAddress1);
@@ -136,8 +130,8 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress4));
   hw_breakpoint.SetSettings(debug_ipc::BreakpointType::kHardware, hw_settings);
 
-  ZX_ASSERT_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress3), ZX_OK);
-  ZX_ASSERT_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress4), ZX_OK);
+  ASSERT_ZX_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress3), ZX_OK);
+  ASSERT_ZX_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress4), ZX_OK);
 
   // Should've inserted 2 HW breakpoint.
   ASSERT_EQ(process.software_breakpoints().size(), 2u);

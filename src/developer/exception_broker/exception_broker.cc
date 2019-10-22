@@ -127,7 +127,7 @@ void ExceptionBroker::ListProcessesWaitingOnException(ListProcessesWaitingOnExce
   cb(std::move(exceptions));
 }
 
-void ExceptionBroker::RetrieveException(uint64_t process_koid, RetrieveExceptionCallback cb) {
+void ExceptionBroker::RetrieveException(zx_koid_t process_koid, RetrieveExceptionCallback cb) {
   ProcessLimbo_RetrieveException_Result result;
 
   auto it = limbo_.find(process_koid);
@@ -135,11 +135,20 @@ void ExceptionBroker::RetrieveException(uint64_t process_koid, RetrieveException
     FX_LOGS(WARNING) << "Could not find process " << process_koid << " in limbo.";
     cb(fit::error(ZX_ERR_NOT_FOUND));
   } else {
-    /* result.set_response({std::move(it->second)}); */
     auto res = fit::ok(std::move(it->second));
     limbo_.erase(it);
     cb(std::move(res));
   }
+}
+
+void ExceptionBroker::ReleaseProcess(zx_koid_t process_koid, ReleaseProcessCallback cb) {
+  auto it = limbo_.find(process_koid);
+  if (it == limbo_.end()) {
+    return cb(fit::error(ZX_ERR_NOT_FOUND));
+  }
+
+  limbo_.erase(it);
+  return cb(fit::ok());
 }
 
 // ExceptionBroker implementation ------------------------------------------------------------------

@@ -34,6 +34,8 @@ class ExceptionBroker : public Handler, public ProcessLimbo {
 
   void RetrieveException(zx_koid_t process_koid, RetrieveExceptionCallback) override;
 
+  void ReleaseProcess(zx_koid_t process_koid, ReleaseProcessCallback) override;
+
   fxl::WeakPtr<ExceptionBroker> GetWeakPtr();
 
   const std::map<uint64_t, fuchsia::feedback::CrashReporterPtr>& connections() const {
@@ -46,8 +48,8 @@ class ExceptionBroker : public Handler, public ProcessLimbo {
   const std::map<zx_koid_t, ProcessException>& limbo() const { return limbo_; }
 
  private:
-  void FileCrashReport(ProcessException);     // |use_limbo_| == false.
-  void AddToLimbo(ProcessException);          // |use_limbo_| == true.
+  void FileCrashReport(ProcessException);  // |use_limbo_| == false.
+  void AddToLimbo(ProcessException);       // |use_limbo_| == true.
 
   ExceptionBroker(std::shared_ptr<sys::ServiceDirectory> services);
 

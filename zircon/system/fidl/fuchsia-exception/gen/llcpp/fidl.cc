@@ -8,6 +8,65 @@ namespace llcpp {
 namespace fuchsia {
 namespace exception {
 
+::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::ProcessLimbo_ReleaseProcess_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::~ProcessLimbo_ReleaseProcess_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~ProcessLimbo_ReleaseProcess_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::MoveImpl_(ProcessLimbo_ReleaseProcess_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result) == ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::PrimarySize);
+}
+
+
+::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 namespace {
 
 [[maybe_unused]]
@@ -283,6 +342,11 @@ constexpr uint64_t kProcessLimbo_RetrieveException_Ordinal = 0x47ad466f00000000l
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_RetrieveException_GenOrdinal = 0x6ee2df26d6e0444blu;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_ReleaseProcess_Ordinal = 0x7adea12100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_ReleaseProcess_GenOrdinal = 0x76911553fea22b87lu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 
 }  // namespace
 template <>
@@ -408,6 +472,68 @@ ProcessLimbo::UnownedResultOf::RetrieveException ProcessLimbo::Call::RetrieveExc
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+ProcessLimbo::ResultOf::ReleaseProcess_Impl<ProcessLimbo::ReleaseProcessResponse>::ReleaseProcess_Impl(zx::unowned_channel _client_end, uint64_t process_koid) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseProcessRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ReleaseProcessRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ReleaseProcessRequest*>(_write_bytes);
+  _request.process_koid = std::move(process_koid);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReleaseProcessRequest));
+  ::fidl::DecodedMessage<ReleaseProcessRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      ProcessLimbo::InPlace::ReleaseProcess(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+ProcessLimbo::ResultOf::ReleaseProcess ProcessLimbo::SyncClient::ReleaseProcess(uint64_t process_koid) {
+  return ResultOf::ReleaseProcess(zx::unowned_channel(this->channel_), std::move(process_koid));
+}
+
+ProcessLimbo::ResultOf::ReleaseProcess ProcessLimbo::Call::ReleaseProcess(zx::unowned_channel _client_end, uint64_t process_koid) {
+  return ResultOf::ReleaseProcess(std::move(_client_end), std::move(process_koid));
+}
+
+template <>
+ProcessLimbo::UnownedResultOf::ReleaseProcess_Impl<ProcessLimbo::ReleaseProcessResponse>::ReleaseProcess_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < ReleaseProcessRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<ReleaseProcessResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, ReleaseProcessRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ReleaseProcessRequest*>(_request_buffer.data());
+  _request.process_koid = std::move(process_koid);
+  _request_buffer.set_actual(sizeof(ReleaseProcessRequest));
+  ::fidl::DecodedMessage<ReleaseProcessRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      ProcessLimbo::InPlace::ReleaseProcess(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+ProcessLimbo::UnownedResultOf::ReleaseProcess ProcessLimbo::SyncClient::ReleaseProcess(::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ReleaseProcess(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(process_koid), std::move(_response_buffer));
+}
+
+ProcessLimbo::UnownedResultOf::ReleaseProcess ProcessLimbo::Call::ReleaseProcess(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ReleaseProcess(std::move(_client_end), std::move(_request_buffer), std::move(process_koid), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<ProcessLimbo::ReleaseProcessResponse> ProcessLimbo::InPlace::ReleaseProcess(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseProcessRequest> params, ::fidl::BytePart response_buffer) {
+  ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::ReleaseProcessResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<ReleaseProcessRequest, ReleaseProcessResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::ReleaseProcessResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -440,6 +566,19 @@ bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
       auto message = result.message.message();
       impl->RetrieveException(std::move(message->process_koid),
         Interface::RetrieveExceptionCompleter::Sync(txn));
+      return true;
+    }
+    case kProcessLimbo_ReleaseProcess_Ordinal:
+    case kProcessLimbo_ReleaseProcess_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<ReleaseProcessRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->ReleaseProcess(std::move(message->process_koid),
+        Interface::ReleaseProcessCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -565,6 +704,55 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::Deco
 }
 
 
+void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseProcessResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ReleaseProcessResponse*>(_write_bytes);
+  ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(
+      ::fidl::DecodedMessage<ReleaseProcessResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ReleaseProcessResponse::PrimarySize,
+              ReleaseProcessResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReleaseProcessResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseProcessResponse>(std::move(_response_bytes)));
+}
+void ProcessLimbo::Interface::ReleaseProcessCompleterBase::ReplySuccess() {
+  ProcessLimbo_ReleaseProcess_Response response;
+
+  Reply(ProcessLimbo_ReleaseProcess_Result::WithResponse(std::move(response)));
+}
+void ProcessLimbo::Interface::ReleaseProcessCompleterBase::ReplyError(int32_t error) {
+  Reply(ProcessLimbo_ReleaseProcess_Result::WithErr(std::move(error)));
+}
+
+void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result) {
+  if (_buffer.capacity() < ReleaseProcessResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ReleaseProcessResponse*>(_buffer.data());
+  ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(
+      ::fidl::DecodedMessage<ReleaseProcessResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ReleaseProcessResponse::PrimarySize,
+              ReleaseProcessResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(ReleaseProcessResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseProcessResponse>(std::move(_buffer)));
+}
+void ProcessLimbo::Interface::ReleaseProcessCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  ProcessLimbo_ReleaseProcess_Response response;
+
+  Reply(std::move(_buffer), ProcessLimbo_ReleaseProcess_Result::WithResponse(std::move(response)));
+}
+
+void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::DecodedMessage<ReleaseProcessResponse> params) {
+  ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 
 void ProcessLimbo::SetTransactionHeaderFor::ListProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ListProcessesWaitingOnException_Ordinal);
@@ -578,6 +766,13 @@ void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionRequest(const ::fid
 }
 void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RetrieveException_Ordinal);
+}
+
+void ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessRequest(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_Ordinal);
+}
+void ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_Ordinal);
 }
 
 }  // namespace exception

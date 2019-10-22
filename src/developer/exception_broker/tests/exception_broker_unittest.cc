@@ -26,7 +26,7 @@
 namespace fuchsia {
 namespace exception {
 
-void ToString(const ExceptionType& value, std::ostream* os) { *os << value; }
+inline void ToString(const ExceptionType& value, std::ostream* os) { *os << value; }
 
 namespace {
 
@@ -421,15 +421,14 @@ TEST(ExceptionBroker, ProcessLimbo) {
 
   // Getting the last one should work.
   called = false;
-  result = {};
-  broker->RetrieveException(infos[1].process_koid,
-                            [&called, &result](ProcessLimbo_RetrieveException_Result res) {
-                              called = true;
-                              result = std::move(res);
-                            });
+  ProcessLimbo_ReleaseProcess_Result release_result = {};
+  broker->ReleaseProcess(infos[1].process_koid,
+                         [&called, &release_result](ProcessLimbo_ReleaseProcess_Result res) {
+                           called = true;
+                           release_result = std::move(res);
+                         });
   ASSERT_TRUE(called);
-  ASSERT_TRUE(result.is_response());
-  ValidateException(excps[1], result.response().process_exception);
+  ASSERT_TRUE(release_result.is_response());
 
   // There should be one less exception.
   ASSERT_EQ(broker->limbo().size(), 0u);

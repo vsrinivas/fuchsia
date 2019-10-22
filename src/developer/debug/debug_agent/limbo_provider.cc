@@ -14,39 +14,45 @@ LimboProvider::LimboProvider(std::shared_ptr<sys::ServiceDirectory> services)
 LimboProvider::~LimboProvider() = default;
 
 zx_status_t LimboProvider::ListProcessesOnLimbo(std::vector<ProcessExceptionMetadata>* out) {
-  // We connect synchronously to the limbo service.
   ProcessLimboSyncPtr process_limbo;
   zx_status_t status = services_->Connect(process_limbo.NewRequest());
-  if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "Could not connect to process limbo: " << zx_status_get_string(status);
+  if (status != ZX_OK)
     return status;
-  }
 
   return process_limbo->ListProcessesWaitingOnException(out);
 }
 
-zx_status_t LimboProvider::RetrieveException(uint64_t process_koid,
+zx_status_t LimboProvider::RetrieveException(zx_koid_t process_koid,
                                              fuchsia::exception::ProcessException* out) {
   ProcessLimboSyncPtr process_limbo;
-  if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK) {
-    FXL_LOG(WARNING) << "Could not connect to process limbo: " << zx_status_get_string(status);
+  if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
     return status;
-  }
 
   ProcessLimbo_RetrieveException_Result result = {};
   if (zx_status_t status = process_limbo->RetrieveException(process_koid, &result);
       status != ZX_OK) {
-    FXL_LOG(WARNING) << "Could not obtain exception from limbo: " << zx_status_get_string(status);
     return status;
   }
 
-  if (result.is_err()) {
-    zx_status_t status = result.err();
-    FXL_LOG(WARNING) << "Error retreiving exception from limbo: " << zx_status_get_string(status);
-    return status;
-  }
+  if (result.is_err())
+    return result.err();
 
   *out = std::move(result.response().ResultValue_());
+  return ZX_OK;
+}
+
+zx_status_t LimboProvider::ReleaseProcess(zx_koid_t process_koid) {
+  ProcessLimboSyncPtr process_limbo;
+  if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
+    return status;
+
+  ProcessLimbo_ReleaseProcess_Result result;
+  if (zx_status_t status = process_limbo->ReleaseProcess(process_koid, &result); status != ZX_OK)
+    return status;
+
+  if (result.is_err())
+    return result.err();
+
   return ZX_OK;
 }
 

@@ -23,6 +23,8 @@ namespace llcpp {
 namespace fuchsia {
 namespace exception {
 
+struct ProcessLimbo_ReleaseProcess_Response;
+struct ProcessLimbo_ReleaseProcess_Result;
 enum class ExceptionType : uint32_t {
   GENERAL = 8u,
   FATAL_PAGE_FAULT = 264u,
@@ -238,6 +240,113 @@ class ProcessException::Builder {
 
   uint64_t max_ordinal_ = 0;
   ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
+};
+
+
+
+struct ProcessLimbo_ReleaseProcess_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
+
+struct ProcessLimbo_ReleaseProcess_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  ProcessLimbo_ReleaseProcess_Result();
+  ~ProcessLimbo_ReleaseProcess_Result();
+
+  ProcessLimbo_ReleaseProcess_Result(ProcessLimbo_ReleaseProcess_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  ProcessLimbo_ReleaseProcess_Result& operator=(ProcessLimbo_ReleaseProcess_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static ProcessLimbo_ReleaseProcess_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response&& val) {
+    ProcessLimbo_ReleaseProcess_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static ProcessLimbo_ReleaseProcess_Result WithErr(int32_t&& val) {
+    ProcessLimbo_ReleaseProcess_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(ProcessLimbo_ReleaseProcess_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response response_;
+    int32_t err_;
+  };
 };
 
 // The maximum amount of exceptions that will be listed at any given time by a
@@ -592,6 +701,7 @@ struct ProcessLimbo_RetrieveException_Result {
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 
 // Protocol meant for clients interested in obtaining processes that are
 // suspended waiting for an exception handler (in limbo). This is the core
@@ -644,6 +754,34 @@ class ProcessLimbo final {
     using ResponseType = RetrieveExceptionResponse;
   };
 
+  struct ReleaseProcessResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct ReleaseProcessRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint64_t process_koid;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ReleaseProcessResponse;
+  };
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -681,10 +819,27 @@ class ProcessLimbo final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class ReleaseProcess_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      ReleaseProcess_Impl(zx::unowned_channel _client_end, uint64_t process_koid);
+      ~ReleaseProcess_Impl() = default;
+      ReleaseProcess_Impl(ReleaseProcess_Impl&& other) = default;
+      ReleaseProcess_Impl& operator=(ReleaseProcess_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using ListProcessesWaitingOnException = ListProcessesWaitingOnException_Impl<ListProcessesWaitingOnExceptionResponse>;
     using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
+    using ReleaseProcess = ReleaseProcess_Impl<ReleaseProcessResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -724,10 +879,27 @@ class ProcessLimbo final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class ReleaseProcess_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      ReleaseProcess_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
+      ~ReleaseProcess_Impl() = default;
+      ReleaseProcess_Impl(ReleaseProcess_Impl&& other) = default;
+      ReleaseProcess_Impl& operator=(ReleaseProcess_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using ListProcessesWaitingOnException = ListProcessesWaitingOnException_Impl<ListProcessesWaitingOnExceptionResponse>;
     using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
+    using ReleaseProcess = ReleaseProcess_Impl<ReleaseProcessResponse>;
   };
 
   class SyncClient final {
@@ -781,6 +953,18 @@ class ProcessLimbo final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::RetrieveException RetrieveException(::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
+    // Removes the process from limbo, releasing the exception. This will make
+    // it "bubble up" beyond the scope of of this limbo, making it
+    // unretrievable in the future from here.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::ReleaseProcess ReleaseProcess(uint64_t process_koid);
+
+    // Removes the process from limbo, releasing the exception. This will make
+    // it "bubble up" beyond the scope of of this limbo, making it
+    // unretrievable in the future from here.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ReleaseProcess ReleaseProcess(::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -830,6 +1014,18 @@ class ProcessLimbo final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::RetrieveException RetrieveException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
+    // Removes the process from limbo, releasing the exception. This will make
+    // it "bubble up" beyond the scope of of this limbo, making it
+    // unretrievable in the future from here.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::ReleaseProcess ReleaseProcess(zx::unowned_channel _client_end, uint64_t process_koid);
+
+    // Removes the process from limbo, releasing the exception. This will make
+    // it "bubble up" beyond the scope of of this limbo, making it
+    // unretrievable in the future from here.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ReleaseProcess ReleaseProcess(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -855,6 +1051,11 @@ class ProcessLimbo final {
     //
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
     static ::fidl::DecodeResult<RetrieveExceptionResponse> RetrieveException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RetrieveExceptionRequest> params, ::fidl::BytePart response_buffer);
+
+    // Removes the process from limbo, releasing the exception. This will make
+    // it "bubble up" beyond the scope of of this limbo, making it
+    // unretrievable in the future from here.
+    static ::fidl::DecodeResult<ReleaseProcessResponse> ReleaseProcess(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseProcessRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -897,6 +1098,23 @@ class ProcessLimbo final {
 
     virtual void RetrieveException(uint64_t process_koid, RetrieveExceptionCompleter::Sync _completer) = 0;
 
+    class ReleaseProcessCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
+      void Reply(::fidl::DecodedMessage<ReleaseProcessResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ReleaseProcessCompleter = ::fidl::Completer<ReleaseProcessCompleterBase>;
+
+    virtual void ReleaseProcess(uint64_t process_koid, ReleaseProcessCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -926,6 +1144,8 @@ class ProcessLimbo final {
     static void ListProcessesWaitingOnExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::ListProcessesWaitingOnExceptionResponse>& _msg);
     static void RetrieveExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionRequest>& _msg);
     static void RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg);
+    static void ReleaseProcessRequest(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessRequest>& _msg);
+    static void ReleaseProcessResponse(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessResponse>& _msg);
   };
 };
 
@@ -934,6 +1154,16 @@ class ProcessLimbo final {
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response) == ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ExceptionInfo> : public std::true_type {};
@@ -993,5 +1223,21 @@ struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptio
 static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionResponse)
     == ::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::RetrieveExceptionResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessRequest)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessRequest, process_koid) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessResponse)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessResponse, result) == 16);
 
 }  // namespace fidl
