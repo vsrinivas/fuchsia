@@ -118,7 +118,9 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
   }
 
   zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection) {
-    // Currently, do nothing
+    // Stash the tee_connection_ so the channel can stay open long enough to avoid a potentially
+    // confusing error message during the test.
+    tee_connection_ = std::move(tee_connection);
     return ZX_OK;
   }
 
@@ -129,6 +131,7 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
 
  private:
   sysmem_protocol_t proto_;
+  zx::channel tee_connection_;
 };
 
 // We cover the code involved in supporting non-VDEC secure memory and VDEC secure memory in
@@ -196,6 +199,14 @@ class AmlogicSecureMemTest : public zxtest::Test {
     ddk_.SetProtocols(std::move(protocols));
 
     ASSERT_OK(amlogic_secure_mem::AmlogicSecureMemDevice::Create(nullptr, parent()));
+  }
+
+  void TearDown() override {
+    // For now, we use DdkSuspend(mexec) partly to cover DdkSuspend(mexec) handling, and partly
+    // because it's the only way of cleaning up safely that we've implemented so far, as
+    // aml-securemem doesn't yet implement DdkUnbind() - and arguably it doesn't really need to
+    // given what aml-securemem is.
+    dev()->DdkSuspend(DEVICE_SUSPEND_FLAG_MEXEC);
   }
 
   zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
