@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 #include "mt8167s-display.h"
 
+#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake-bti/bti.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/mmio/mmio.h>
+#include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include <ddktl/protocol/platform/device.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
@@ -15,12 +20,29 @@
 #include "mt-dsi-host.h"
 #include "mt-sysconfig.h"
 
+namespace sysmem = llcpp::fuchsia::sysmem;
+
 namespace mt8167s_display {
 
 namespace {
 constexpr uint32_t kDsiHostRegNum = 132;
 constexpr uint32_t kSyscfgRegNum = 336;
 constexpr uint32_t kMutexRegNum = 48;
+
+class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
+ public:
+  void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
+                      SetConstraintsCompleter::Sync _completer) override {
+    EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
+    set_constraints_called_ = true;
+  }
+
+  bool set_constraints_called() const { return set_constraints_called_; }
+
+ private:
+  bool set_constraints_called_ = false;
+};
+
 }  // namespace
 
 /********************************/
@@ -226,6 +248,26 @@ TEST(DisplayTest, ImportRGBX) {
   display.SetBtiForTesting(std::move(bti));
 
   EXPECT_OK(display.DisplayControllerImplImportVmoImage(&image, std::move(vmo), 0));
+}
+
+TEST(DisplayTest, SetConstraints) {
+  mt8167s_display::Mt8167sDisplay display(nullptr);
+
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  MockNoCpuBufferCollection collection;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  image_t image = {};
+  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &collection));
+
+  EXPECT_OK(
+      display.DisplayControllerImplSetBufferCollectionConstraints(&image, client_channel.get()));
+  // Ensure loop processes all FIDL messages
+  loop.RunUntilIdle();
+
+  EXPECT_TRUE(collection.set_constraints_called());
 }
 
 }  // namespace mt8167s_display

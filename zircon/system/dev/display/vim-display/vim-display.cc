@@ -506,7 +506,7 @@ static zx_status_t set_buffer_collection_constraints(void* ctx, const image_t* c
   buffer_constraints.physically_contiguous_required = true;
   buffer_constraints.secure_required = false;
   buffer_constraints.ram_domain_supported = true;
-  buffer_constraints.cpu_domain_supported = true;
+  buffer_constraints.cpu_domain_supported = false;
   buffer_constraints.heap_permitted_count = 1;
   buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
   constraints.image_format_constraints_count = 1;

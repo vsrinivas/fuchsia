@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <zircon/pixelformat.h>
 
 #include <thread>
@@ -83,7 +84,7 @@ constexpr uint32_t kBytesPerRowDivisor = 128;
 
 class StubDisplayController : public fhd::Controller::Interface {
  public:
-  StubDisplayController() {
+  StubDisplayController(bool use_ram_domain) : use_ram_domain_(use_ram_domain) {
     zx::channel sysmem_server, sysmem_client;
     ASSERT_OK(zx::channel::create(0, &sysmem_server, &sysmem_client));
     ASSERT_OK(fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server.release()));
@@ -215,29 +216,23 @@ class StubDisplayController : public fhd::Controller::Interface {
     constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
     constraints.min_buffer_count = 1;
     constraints.image_format_constraints_count = 1;
-    constraints.image_format_constraints[0] = sysmem::ImageFormatConstraints();
-    constraints.image_format_constraints[0].pixel_format.type = sysmem::PixelFormatType::BGRA32;
-    constraints.image_format_constraints[0].pixel_format.has_format_modifier = true;
-    constraints.image_format_constraints[0].pixel_format.format_modifier.value =
-        sysmem::FORMAT_MODIFIER_LINEAR;
-    constraints.image_format_constraints[0].color_spaces_count = 1;
-    constraints.image_format_constraints[0].color_space[0].type = sysmem::ColorSpaceType::SRGB;
-    constraints.image_format_constraints[0].min_coded_width = 0;
-    constraints.image_format_constraints[0].min_coded_height = 0;
-    constraints.image_format_constraints[0].layers = 1;
     auto& image_constraints = constraints.image_format_constraints[0];
+    image_constraints = image_format::GetDefaultImageFormatConstraints();
+    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
     image_constraints.max_coded_width = 0xffffffff;
     image_constraints.max_coded_height = 0xffffffff;
     image_constraints.min_bytes_per_row = 0;
     image_constraints.max_bytes_per_row = 0xffffffff;
-    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
-    image_constraints.layers = 1;
-    image_constraints.coded_width_divisor = 1;
-    image_constraints.coded_height_divisor = 1;
     image_constraints.bytes_per_row_divisor = kBytesPerRowDivisor;
-    image_constraints.start_offset_divisor = 1;
-    image_constraints.display_width_divisor = 1;
-    image_constraints.display_height_divisor = 1;
+
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints = image_format::GetDefaultBufferMemoryConstraints();
+    constraints.buffer_memory_constraints.ram_domain_supported = use_ram_domain_;
+    constraints.buffer_memory_constraints.cpu_domain_supported = !use_ram_domain_;
 
     current_buffer_collection_->SetConstraints(true, constraints);
     _completer.Reply(ZX_OK);
@@ -264,6 +259,7 @@ class StubDisplayController : public fhd::Controller::Interface {
  private:
   std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator_;
   std::unique_ptr<sysmem::BufferCollection::SyncClient> current_buffer_collection_;
+  bool use_ram_domain_;
 };
 
 }  // namespace
@@ -279,12 +275,11 @@ void SendInitialDisplay(const zx::channel& server_channel, fhd::Mode* mode, uint
                                                       removed));
 }
 
-// Check that the correct stride is returned when a weird one is used.
-TEST(Framebuffer, DisplayStride) {
+void TestDisplayStride(bool ram_domain) {
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
-  StubDisplayController controller;
+  StubDisplayController controller(ram_domain);
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   fhd::Mode mode;
   mode.horizontal_resolution = 301;
@@ -319,3 +314,8 @@ TEST(Framebuffer, DisplayStride) {
   EXPECT_OK(zx_vmo_get_size(buffer_handle, &buffer_size));
   EXPECT_LE(linear_stride_px * ZX_PIXEL_FORMAT_BYTES(format) * height, buffer_size);
 }
+
+// Check that the correct stride is returned when a weird one is used.
+TEST(Framebuffer, DisplayStrideCpuDomain) { TestDisplayStride(false); }
+
+TEST(Framebuffer, DisplayStrideRamDomain) { TestDisplayStride(true); }

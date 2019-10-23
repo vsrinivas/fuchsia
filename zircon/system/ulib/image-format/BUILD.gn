@@ -12,7 +12,7 @@ library("image-format") {
     "image_format.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/fidl/fuchsia-sysmem:c.headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysmem:c",
@@ -30,7 +30,9 @@ library("image-format-llcpp") {
   ]
   public_deps = [
     ":image-format",
+    "$zx/system/fidl/fuchsia-sysmem:c.headers",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp.headers",
   ]
 }
 

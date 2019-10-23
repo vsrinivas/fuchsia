@@ -7,6 +7,12 @@
 
 #if __cplusplus
 
+#include <lib/mmio/mmio.h>
+#include <lib/zx/channel.h>
+#include <threads.h>
+
+#include <optional>
+
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <ddk/protocol/intelgpucore.h>
@@ -16,11 +22,6 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hw/pci.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/channel.h>
-#include <threads.h>
-
-#include <optional>
 
 #include "display-device.h"
 #include "dp-display.h"
@@ -128,7 +129,7 @@ class Controller : public DeviceType,
   bool DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size);
 
   pci_protocol_t* pci() { return &pci_; }
-  ddk::MmioBuffer* mmio_space() { return &*mmio_space_; }
+  ddk::MmioBuffer* mmio_space() { return mmio_space_.has_value() ? &*mmio_space_ : nullptr; }
   Gtt* gtt() { return &gtt_; }
   Interrupts* interrupts() { return &interrupts_; }
   uint16_t device_id() const { return device_id_; }

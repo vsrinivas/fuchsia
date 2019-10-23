@@ -74,7 +74,12 @@ test("dsi-host") {
     ":common",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/dev/lib/mock-sysmem",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
     "$zx/system/ulib/driver",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/zxtest",
   ]
 }

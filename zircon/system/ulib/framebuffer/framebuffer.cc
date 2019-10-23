@@ -11,6 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
 #include <lib/fzl/fdio.h>
+#include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -168,29 +169,23 @@ static zx_status_t create_buffer_collection(
   constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
   constraints.min_buffer_count = 1;
   constraints.image_format_constraints_count = 1;
-  constraints.image_format_constraints[0] = sysmem::ImageFormatConstraints();
-  constraints.image_format_constraints[0].pixel_format.type = sysmem::PixelFormatType::BGRA32;
-  constraints.image_format_constraints[0].pixel_format.has_format_modifier = true;
-  constraints.image_format_constraints[0].pixel_format.format_modifier.value =
-      sysmem::FORMAT_MODIFIER_LINEAR;
-  constraints.image_format_constraints[0].color_spaces_count = 1;
-  constraints.image_format_constraints[0].color_space[0].type = sysmem::ColorSpaceType::SRGB;
-  constraints.image_format_constraints[0].min_coded_width = width;
-  constraints.image_format_constraints[0].min_coded_height = height;
-  constraints.image_format_constraints[0].layers = 1;
   auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints = image_format::GetDefaultImageFormatConstraints();
+  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+  image_constraints.min_coded_width = width;
+  image_constraints.min_coded_height = height;
   image_constraints.max_coded_width = 0xffffffff;
   image_constraints.max_coded_height = 0xffffffff;
   image_constraints.min_bytes_per_row = 0;
   image_constraints.max_bytes_per_row = 0xffffffff;
-  image_constraints.max_coded_width_times_coded_height = 0xffffffff;
-  image_constraints.layers = 1;
-  image_constraints.coded_width_divisor = 1;
-  image_constraints.coded_height_divisor = 1;
-  image_constraints.bytes_per_row_divisor = 1;
-  image_constraints.start_offset_divisor = 1;
-  image_constraints.display_width_divisor = 1;
-  image_constraints.display_height_divisor = 1;
+
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = image_format::GetDefaultBufferMemoryConstraints();
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
 
   collection->SetConstraints(true, constraints);
   *collection_client =
@@ -357,20 +352,9 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   }
   local_vmo = std::move(info_result->buffer_collection_info.buffers[0].vmo);
 
-  // Hacky cast that should work for now until we get an LLCPP version of
-  // ImageFormat.
-  static_assert(
-      sizeof(fuchsia_sysmem_ImageFormatConstraints) == sizeof(sysmem::ImageFormatConstraints),
-      "LLCPP and C image format constraints don't match");
-  union BothImageFormatConstraints {
-    fuchsia_sysmem_ImageFormatConstraints c;
-    sysmem::ImageFormatConstraints cpp;
-  } received_image_constraints = {
-      .cpp = info_result->buffer_collection_info.settings.image_format_constraints};
-
   uint32_t bytes_per_row;
-  bool got_stride =
-      ImageFormatMinimumRowBytes(&received_image_constraints.c, width, &bytes_per_row);
+  bool got_stride = image_format::GetMinimumRowBytes(
+      info_result->buffer_collection_info.settings.image_format_constraints, width, &bytes_per_row);
 
   if (!got_stride) {
     *err_msg_out = "Couldn't get stride";

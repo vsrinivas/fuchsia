@@ -37,3 +37,46 @@ driver("intel-i915") {
     "$zx/system/ulib/zx",
   ]
 }
+
+test("intel-i915-test") {
+  sources = [
+    "display-device.cc",
+    "dp-display.cc",
+    "gtt.cc",
+    "hdmi-display.cc",
+    "igd.cc",
+    "intel-i915-test.cc",
+    "intel-i915.cc",
+    "interrupts.cc",
+    "pipe.cc",
+    "power.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.display.controller",
+    "$zx/system/banjo/ddk.protocol.i2cimpl",
+    "$zx/system/banjo/ddk.protocol.intelgpucore",
+    "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/banjo/ddk.protocol.sysmem",
+    "$zx/system/dev/lib/device-protocol-pci",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mock-sysmem",
+    "$zx/system/fidl/fuchsia-hardware-backlight:llcpp",
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/edid",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/image-format",
+    "$zx/system/ulib/region-alloc",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

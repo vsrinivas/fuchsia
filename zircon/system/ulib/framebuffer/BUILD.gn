@@ -20,6 +20,7 @@ library("framebuffer") {
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/image-format",
+    "$zx/system/ulib/image-format:image-format-llcpp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
@@ -34,6 +35,7 @@ test("framebuffer-test") {
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/image-format:image-format-llcpp",
     "$zx/system/ulib/zxtest",
   ]
   sources = [

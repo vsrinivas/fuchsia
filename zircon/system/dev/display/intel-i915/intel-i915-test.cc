@@ -1,39 +1,47 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "astro-display.h"
+#include "intel-i915.h"
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
+#include <ddk/driver.h>
+
 #include "zxtest/zxtest.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
 
-class MockBufferCollection : public mock_sysmem::MockBufferCollection {
+zx_handle_t get_root_resource(void) { return ZX_HANDLE_INVALID; }
+
+zx_status_t device_get_profile(zx_device_t* device, uint32_t priority, const char* name,
+                               zx_handle_t* out_profile) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+namespace {
+class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
+  bool set_constraints_called() const { return set_constraints_called_; }
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync _completer) override {
-    EXPECT_TRUE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
-    EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
     set_constraints_called_ = true;
+    EXPECT_FALSE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
+    EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
   }
-
-  bool set_constraints_called() const { return set_constraints_called_; }
 
  private:
   bool set_constraints_called_ = false;
 };
 
-TEST(AstroDisplay, SysmemRequirements) {
-  astro_display::AstroDisplay display(nullptr);
+TEST(IntelI915Display, SysmemRequirements) {
+  i915::Controller display(nullptr);
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
-  MockBufferCollection collection;
+  MockNoCpuBufferCollection collection;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   image_t image = {};
@@ -45,3 +53,5 @@ TEST(AstroDisplay, SysmemRequirements) {
   loop.RunUntilIdle();
   EXPECT_TRUE(collection.set_constraints_called());
 }
+
+}  // namespace

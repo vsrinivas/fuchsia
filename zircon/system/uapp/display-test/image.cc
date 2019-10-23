@@ -160,7 +160,10 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
   fuchsia_sysmem_BufferCollectionConstraints constraints = {};
   constraints.usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
-  constraints.has_buffer_memory_constraints = false;
+  constraints.has_buffer_memory_constraints = true;
+  fuchsia_sysmem_BufferMemoryConstraints& buffer_constraints =
+      constraints.buffer_memory_constraints;
+  buffer_constraints.ram_domain_supported = true;
   constraints.image_format_constraints_count = 1;
   fuchsia_sysmem_ImageFormatConstraints& image_constraints =
       constraints.image_format_constraints[0];

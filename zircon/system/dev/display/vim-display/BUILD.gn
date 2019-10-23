@@ -65,6 +65,7 @@ test("vim-display-test") {
   deps = common_deps
   deps += [
     "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-sysmem",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",

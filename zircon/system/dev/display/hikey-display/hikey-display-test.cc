@@ -1,14 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "astro-display.h"
-
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
+#include "ddk-interface.h"
 #include "zxtest/zxtest.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
@@ -17,7 +16,7 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync _completer) override {
-    EXPECT_TRUE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
+    EXPECT_FALSE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
     set_constraints_called_ = true;
   }
@@ -28,8 +27,8 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
   bool set_constraints_called_ = false;
 };
 
-TEST(AstroDisplay, SysmemRequirements) {
-  astro_display::AstroDisplay display(nullptr);
+TEST(HikeyDisplay, SysmemRequirements) {
+  hi_display::HiDisplay display(nullptr);
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 

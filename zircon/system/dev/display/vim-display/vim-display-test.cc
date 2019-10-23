@@ -7,6 +7,7 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include <ddk/protocol/display/controller.h>
 #include <zxtest/zxtest.h>
@@ -17,15 +18,13 @@ namespace {
 // Use a stub buffer collection instead of the real sysmem since some tests may
 // require things (like protected memory) that aren't available on the current
 // system.
-class StubBufferCollection : public sysmem::BufferCollection::Interface {
+class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
-  void SetEventSink(::zx::channel events, SetEventSinkCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void Sync(SyncCompleter::Sync _completer) override { EXPECT_TRUE(false); }
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
+    EXPECT_FALSE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
+    EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
+    set_constraints_called_ = true;
   }
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync _completer) override {
     sysmem::BufferCollectionInfo_2 info;
@@ -41,27 +40,11 @@ class StubBufferCollection : public sysmem::BufferCollection::Interface {
     constraints.bytes_per_row_divisor = 1;
     _completer.Reply(ZX_OK, std::move(info));
   }
-  void CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
 
-  void CloseSingleBuffer(uint64_t buffer_index,
-                         CloseSingleBufferCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void AllocateSingleBuffer(uint64_t buffer_index,
-                            AllocateSingleBufferCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void WaitForSingleBufferAllocated(
-      uint64_t buffer_index, WaitForSingleBufferAllocatedCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void CheckSingleBufferAllocated(uint64_t buffer_index,
-                                  CheckSingleBufferAllocatedCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-  void Close(CloseCompleter::Sync _completer) override { EXPECT_TRUE(false); }
+  bool set_constraints_called() const { return set_constraints_called_; }
+
+ private:
+  bool set_constraints_called_ = false;
 };
 
 static zx_status_t stub_canvas_config(void* ctx, zx_handle_t vmo, size_t offset,
@@ -90,7 +73,7 @@ TEST(VimDisplay, ImportVmo) {
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
-  StubBufferCollection collection;
+  MockBufferCollection collection;
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   image_t image = {};
@@ -101,7 +84,11 @@ TEST(VimDisplay, ImportVmo) {
 
   loop.StartThread();
 
+  EXPECT_OK(
+      protocol.ops->set_buffer_collection_constraints(protocol.ctx, &image, client_channel.get()));
   EXPECT_OK(protocol.ops->import_image(protocol.ctx, &image, client_channel.get(), 0));
+
+  EXPECT_TRUE(collection.set_constraints_called());
 }
 
 }  // namespace
