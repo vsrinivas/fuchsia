@@ -20,6 +20,7 @@ use {
 use {
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    fuchsia_zircon as zx,
     futures::{self, Future, FutureExt, TryFutureExt, TryStreamExt},
 };
 
@@ -96,6 +97,54 @@ pub trait RequestStream: Sized + Send + Stream + TryStream<Error = crate::Error>
 
 /// The Request type associated with a Marker.
 pub type Request<Marker> = <<Marker as ServiceMarker>::RequestStream as futures::TryStream>::Ok;
+
+/// A marker for a particular FIDL Unified Service.
+#[cfg(target_os = "fuchsia")]
+pub trait UnifiedServiceMarker: Sized + Send + Sync + 'static {
+    /// The type of the proxy object upon which calls are made to a remote FIDL service.
+    type Proxy: UnifiedServiceProxy<Service = Self>;
+
+    /// The request type for this particular FIDL Unified Service.
+    type Request: UnifiedServiceRequest<Service = Self>;
+
+    /// The name of the Unified Service. Used for service lookup and discovery.
+    const SERVICE_NAME: &'static str;
+}
+
+/// A request to initiate a connection to a FIDL Unified Service.
+#[cfg(target_os = "fuchsia")]
+pub trait UnifiedServiceRequest: Sized + Send + Sync {
+    /// The FIDL Unified Service for which this request is destined.
+    type Service: UnifiedServiceMarker<Request = Self>;
+
+    /// Dispatches a connection attempt to this FIDL Unified Service's member protocol
+    /// identified by `name`, producing an instance of this trait.
+    fn dispatch(name: &str, channel: fasync::Channel) -> Self;
+
+    /// Returns an array of the service members' names.
+    fn member_names() -> &'static [&'static str];
+}
+
+/// Proxy by which a client sends messages to a FIDL Unified Service.
+#[cfg(target_os = "fuchsia")]
+pub trait UnifiedServiceProxy: Sized {
+    /// The FIDL Unified Service this proxy represents.
+    type Service: UnifiedServiceMarker<Proxy = Self>;
+
+    /// Create a proxy from a MemberOpener implementation.
+    #[doc(hidden)]
+    fn from_member_opener(opener: Box<dyn MemberOpener>) -> Self;
+}
+
+/// Used to create an indirection between the fuchsia.io.Directory protocol
+/// and this library, which cannot depend on fuchsia.io.
+#[doc(hidden)]
+#[cfg(target_os = "fuchsia")]
+pub trait MemberOpener {
+    /// Opens a member protocol of a FIDL Unified Service by name, serving that protocol
+    /// on the given channel.
+    fn open_member(&self, member: &str, server_end: zx::Channel) -> Result<(), Error>;
+}
 
 /// Utility that spawns a new task to handle requests of a particular type, requiring a
 /// singlethreaded executor. The requests are handled one at a time.

@@ -4,9 +4,9 @@
 
 use argh::FromArgs;
 use failure::{Error, ResultExt};
-use fidl_fidl_examples_echo::EchoMarker;
+use fidl_fidl_examples_echo::EchoServiceMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::{launcher, launch};
+use fuchsia_component::client::{launch, launcher};
 
 // [START main]
 #[fasync::run_singlethreaded]
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Error> {
             option,
             long = "server",
             default = "\"fuchsia-pkg://fuchsia.com/echo_server_rust#meta/echo_server_rust.cmx\"\
-                .to_string()",
+                       .to_string()"
         )]
         server_url: String,
     }
@@ -29,13 +29,15 @@ async fn main() -> Result<(), Error> {
     let Opt { server_url } = argh::from_env();
 
     let launcher = launcher().context("Failed to open launcher service")?;
-    let app = launch(&launcher, server_url, None)
-                      .context("Failed to launch echo service")?;
+    let app = launch(&launcher, server_url, None).context("Failed to launch echo service")?;
 
-    let echo = app.connect_to_service::<EchoMarker>()
-       .context("Failed to connect to echo service")?;
+    let echo = app
+        .connect_to_unified_service::<EchoServiceMarker>()
+        .context("Failed to connect to echo service")?;
 
-    let res = echo.echo_string(Some("hello world!")).await?;
+    let foo = echo.foo().context("failed to connect to foo member")?;
+
+    let res = foo.echo_string(Some("hello world!")).await?;
     println!("response: {:?}", res);
     Ok(())
 }

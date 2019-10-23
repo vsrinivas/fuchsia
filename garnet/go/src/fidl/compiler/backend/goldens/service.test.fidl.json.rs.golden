@@ -643,3 +643,199 @@ impl SecondProtocolControlHandle {
 	}}
 
 /* beginning of response types */
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct SingleMemberServiceMarker;
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceMarker for SingleMemberServiceMarker {
+    type Proxy = SingleMemberServiceProxy;
+    type Request = SingleMemberServiceRequest;
+    const SERVICE_NAME: &'static str = "test.name.SingleMemberService";
+}
+
+/// A request for one of the member protocols of SingleMemberService.
+///
+#[cfg(target_os = "fuchsia")]
+pub enum SingleMemberServiceRequest {
+    SingleMember(FirstProtocolRequestStream),
+}
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceRequest for SingleMemberServiceRequest {
+    type Service = SingleMemberServiceMarker;
+
+    fn dispatch(name: &str, channel: ::fuchsia_async::Channel) -> Self {
+        match name {
+            "single_member" => Self::SingleMember(
+                <FirstProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+            ),
+            _ => panic!("no such member protocol name for service SingleMemberService"),
+        }
+    }
+
+    fn member_names() -> &'static [&'static str] {
+        &[
+            "single_member",
+        ]
+    }
+}
+#[cfg(target_os = "fuchsia")]
+pub struct SingleMemberServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceProxy for SingleMemberServiceProxy {
+    type Service = SingleMemberServiceMarker;
+
+    fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
+        Self(opener)
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+impl SingleMemberServiceProxy {
+    pub fn single_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
+        let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
+        self.0.open_member("single_member", server)?;
+        let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        Ok(FirstProtocolProxy::new(proxy))
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct MultiHeterogeneousMemberServiceMarker;
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceMarker for MultiHeterogeneousMemberServiceMarker {
+    type Proxy = MultiHeterogeneousMemberServiceProxy;
+    type Request = MultiHeterogeneousMemberServiceRequest;
+    const SERVICE_NAME: &'static str = "test.name.MultiHeterogeneousMemberService";
+}
+
+/// A request for one of the member protocols of MultiHeterogeneousMemberService.
+///
+#[cfg(target_os = "fuchsia")]
+pub enum MultiHeterogeneousMemberServiceRequest {
+    FirstMember(FirstProtocolRequestStream),
+    SecondMember(SecondProtocolRequestStream),
+}
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceRequest for MultiHeterogeneousMemberServiceRequest {
+    type Service = MultiHeterogeneousMemberServiceMarker;
+
+    fn dispatch(name: &str, channel: ::fuchsia_async::Channel) -> Self {
+        match name {
+            "first_member" => Self::FirstMember(
+                <FirstProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+            ),
+            "second_member" => Self::SecondMember(
+                <SecondProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+            ),
+            _ => panic!("no such member protocol name for service MultiHeterogeneousMemberService"),
+        }
+    }
+
+    fn member_names() -> &'static [&'static str] {
+        &[
+            "first_member",
+            "second_member",
+        ]
+    }
+}
+#[cfg(target_os = "fuchsia")]
+pub struct MultiHeterogeneousMemberServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceProxy for MultiHeterogeneousMemberServiceProxy {
+    type Service = MultiHeterogeneousMemberServiceMarker;
+
+    fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
+        Self(opener)
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+impl MultiHeterogeneousMemberServiceProxy {
+    pub fn first_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
+        let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
+        self.0.open_member("first_member", server)?;
+        let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        Ok(FirstProtocolProxy::new(proxy))
+    }
+    pub fn second_member(&self) -> Result<SecondProtocolProxy, fidl::Error> {
+        let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
+        self.0.open_member("second_member", server)?;
+        let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        Ok(SecondProtocolProxy::new(proxy))
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct MultiHomogeneousMemberServiceMarker;
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceMarker for MultiHomogeneousMemberServiceMarker {
+    type Proxy = MultiHomogeneousMemberServiceProxy;
+    type Request = MultiHomogeneousMemberServiceRequest;
+    const SERVICE_NAME: &'static str = "test.name.MultiHomogeneousMemberService";
+}
+
+/// A request for one of the member protocols of MultiHomogeneousMemberService.
+///
+#[cfg(target_os = "fuchsia")]
+pub enum MultiHomogeneousMemberServiceRequest {
+    FirstMember(FirstProtocolRequestStream),
+    SecondMember(FirstProtocolRequestStream),
+}
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceRequest for MultiHomogeneousMemberServiceRequest {
+    type Service = MultiHomogeneousMemberServiceMarker;
+
+    fn dispatch(name: &str, channel: ::fuchsia_async::Channel) -> Self {
+        match name {
+            "first_member" => Self::FirstMember(
+                <FirstProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+            ),
+            "second_member" => Self::SecondMember(
+                <FirstProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+            ),
+            _ => panic!("no such member protocol name for service MultiHomogeneousMemberService"),
+        }
+    }
+
+    fn member_names() -> &'static [&'static str] {
+        &[
+            "first_member",
+            "second_member",
+        ]
+    }
+}
+#[cfg(target_os = "fuchsia")]
+pub struct MultiHomogeneousMemberServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceProxy for MultiHomogeneousMemberServiceProxy {
+    type Service = MultiHomogeneousMemberServiceMarker;
+
+    fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
+        Self(opener)
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+impl MultiHomogeneousMemberServiceProxy {
+    pub fn first_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
+        let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
+        self.0.open_member("first_member", server)?;
+        let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        Ok(FirstProtocolProxy::new(proxy))
+    }
+    pub fn second_member(&self) -> Result<FirstProtocolProxy, fidl::Error> {
+        let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
+        self.0.open_member("second_member", server)?;
+        let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        Ok(FirstProtocolProxy::new(proxy))
+    }
+}

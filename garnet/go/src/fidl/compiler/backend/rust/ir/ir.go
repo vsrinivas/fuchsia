@@ -171,6 +171,21 @@ type Parameter struct {
 	Offset       int
 }
 
+type Service struct {
+	types.Attributes
+	Name        string
+	Members     []ServiceMember
+	ServiceName string
+}
+
+type ServiceMember struct {
+	types.Attributes
+	InterfaceType string
+	Name          string
+	CamelName     string
+	SnakeName     string
+}
+
 type Root struct {
 	ExternCrates []string
 	Bits         []Bits
@@ -182,6 +197,7 @@ type Root struct {
 	Results      []Result
 	Tables       []Table
 	Interfaces   []Interface
+	Services     []Service
 }
 
 func (r *Root) findInterface(eci EncodedCompoundIdentifier) *Interface {
@@ -740,6 +756,28 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	return r
 }
 
+func (c *compiler) compileService(val types.Service) Service {
+	r := Service{
+		Attributes:  val.Attributes,
+		Name:        c.compileCamelCompoundIdentifier(val.Name),
+		Members:     []ServiceMember{},
+		ServiceName: val.GetServiceName(),
+	}
+
+	for _, v := range val.Members {
+		m := ServiceMember{
+			Attributes:    v.Attributes,
+			Name:          string(v.Name),
+			CamelName:     compileCamelIdentifier(v.Name),
+			SnakeName:     compileSnakeIdentifier(v.Name),
+			InterfaceType: c.compileCamelCompoundIdentifier(v.Type.Identifier),
+		}
+		r.Members = append(r.Members, m)
+	}
+
+	return r
+}
+
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	memberType := c.compileType(val.Type, false)
 	return StructMember{
@@ -1283,6 +1321,10 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Interfaces {
 		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
+	}
+
+	for _, v := range r.Services {
+		root.Services = append(root.Services, c.compileService(v))
 	}
 
 	for _, v := range r.Structs {

@@ -5,11 +5,15 @@
 //! Tools for providing Fuchsia services.
 
 use {
+    crate::DEFAULT_SERVICE_INSTANCE,
     byteorder::{LittleEndian, WriteBytesExt as _},
     failure::{bail, Error, Fail, ResultExt},
     fidl::{
         encoding::OutOfLine,
-        endpoints::{DiscoverableService, Proxy as _, RequestStream, ServerEnd},
+        endpoints::{
+            DiscoverableService, Proxy as _, RequestStream, ServerEnd, UnifiedServiceMarker,
+            UnifiedServiceRequest,
+        },
     },
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileRequest,
@@ -40,7 +44,9 @@ use {
 };
 
 mod service;
-pub use service::{FidlService, Service, ServiceObj, ServiceObjLocal, ServiceObjTrait};
+pub use service::{
+    FidlService, FidlServiceMember, Service, ServiceObj, ServiceObjLocal, ServiceObjTrait,
+};
 
 mod stream_helpers;
 use stream_helpers::NextWith;
@@ -365,6 +371,131 @@ macro_rules! add_functions {
                 path,
                 FidlService::from(service),
             )
+        }
+
+        /// Adds a FIDL Unified Service to the directory as the default instance.
+        ///
+        /// The name of the default instance is
+        /// [`DEFAULT_SERVICE_INSTANCE`](../constant.DEFAULT_SERVICE_INSTANCE.html).
+        ///
+        /// The FIDL service will be hosted at `[SERVICE_NAME]/[default]/` where `SERVICE_NAME` is
+        /// constructed from the FIDL library path and the name of the FIDL service.
+        ///
+        /// # Example
+        ///
+        /// For the following FIDL definition,
+        /// ```fidl
+        /// library lib.foo;
+        ///
+        /// service Bar {
+        ///   ...
+        /// }
+        /// ```
+        ///
+        /// The `SERVICE_NAME` of FIDL Service `Bar` would be `lib.foo.Bar`.
+        pub fn add_unified_service<F, USR>(
+            &mut self,
+            service: F,
+        ) -> &mut Self
+        where
+            F: Fn(USR) -> ServiceObjTy::Output,
+            F: Clone,
+            USR: UnifiedServiceRequest,
+            FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
+        {
+            self.add_unified_service_at(
+                USR::Service::SERVICE_NAME,
+                service,
+            )
+        }
+
+        /// Adds a FIDL Unified Service to the directory as the default instance at the given path.
+        ///
+        /// The path must be a single component containing no `/` characters.
+        /// The name of the default instance is
+        /// [`DEFAULT_SERVICE_INSTANCE`](../constant.DEFAULT_SERVICE_INSTANCE.html).
+        ///
+        /// The FIDL service will be hosted at `[path]/default/`.
+        pub fn add_unified_service_at<F, USR>(
+            &mut self,
+            path: impl Into<String>,
+            service: F,
+        ) -> &mut Self
+        where
+            F: Fn(USR) -> ServiceObjTy::Output,
+            F: Clone,
+            USR: UnifiedServiceRequest,
+            FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
+        {
+            self.add_unified_service_instance_at(path, DEFAULT_SERVICE_INSTANCE, service)
+        }
+
+        /// Adds a named instance of a FIDL Unified Service to the directory.
+        ///
+        /// The FIDL service will be hosted at `[SERVICE_NAME]/[instance]/` where `SERVICE_NAME` is
+        /// constructed from the FIDL library path and the name of the FIDL service.
+        ///
+        /// The `instance` must be a single component containing no `/` characters.
+        ///
+        /// # Example
+        ///
+        /// For the following FIDL definition,
+        /// ```fidl
+        /// library lib.foo;
+        ///
+        /// service Bar {
+        ///   ...
+        /// }
+        /// ```
+        ///
+        /// The `SERVICE_NAME` of FIDL Service `Bar` would be `lib.foo.Bar`.
+        pub fn add_unified_service_instance<F, USR>(
+            &mut self,
+            instance: impl Into<String>,
+            service: F,
+        ) -> &mut Self
+        where
+            F: Fn(USR) -> ServiceObjTy::Output,
+            F: Clone,
+            USR: UnifiedServiceRequest,
+            FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
+        {
+            self.add_unified_service_instance_at(
+                USR::Service::SERVICE_NAME,
+                instance,
+                service,
+            )
+        }
+
+        /// Adds a named instance of a FIDL Unified Service to the directory at the given path.
+        ///
+        /// The FIDL service will be hosted at `[path]/[instance]/`.
+        ///
+        /// The `path` and `instance` must be single components containing no `/` characters.
+        pub fn add_unified_service_instance_at<F, USR>(
+            &mut self,
+            path: impl Into<String>,
+            instance: impl Into<String>,
+            service: F,
+        ) -> &mut Self
+        where
+            F: Fn(USR) -> ServiceObjTy::Output,
+            F: Clone,
+            USR: UnifiedServiceRequest,
+            FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
+        {
+            // Create the service directory, with an instance subdirectory.
+            let mut dir = self.dir(path);
+            let mut dir = dir.dir(instance);
+
+            // Attach member protocols under the instance directory.
+            for member in USR::member_names() {
+                dir.add_service_at(
+                    *member,
+                    FidlServiceMember::from(service.clone()),
+                );
+            }
+            self
         }
 
         /// Adds a service that proxies requests to the current environment.
@@ -819,7 +950,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
 
     /// Add an additional connection to the `ServiceFs` to provide services to.
     pub fn serve_connection(&mut self, chan: zx::Channel) -> Result<&mut Self, Error> {
-        match self.serve_connection_at(chan.into(), ROOT_NODE, NO_FLAGS)? {
+        match self.serve_connection_at(chan.into(), ROOT_NODE, None, NO_FLAGS)? {
             Some(_) => panic!("root directory connection should not return output"),
             None => {}
         }
@@ -831,6 +962,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         &mut self,
         object: ServerEnd<NodeMarker>,
         position: usize,
+        name: Option<&str>,
         flags: u32,
     ) -> Result<Option<ServiceObjTy::Output>, Error> {
         let node = &self.nodes[position];
@@ -907,7 +1039,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 ));
                 Ok(None)
             }
-            ServiceFsNode::Service(service) => Ok(service.service().connect(chan)),
+            ServiceFsNode::Service(service) => {
+                if let Some(name) = name {
+                    Ok(service.service().connect_at(name, chan))
+                } else {
+                    Ok(service.service().connect(chan))
+                }
+            }
         }
     }
 
@@ -920,7 +1058,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         match (|| {
             let object =
                 handle_potentially_unsupported_flags(object, flags, CLONE_REQ_SUPPORTED_FLAGS)?;
-            self.serve_connection_at(object, position, flags)
+            self.serve_connection_at(object, position, None, flags)
         })() {
             Ok(output) => output,
             Err(e) => {
@@ -955,7 +1093,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     handle_potentially_unsupported_flags(object, flags, OPEN_REQ_SUPPORTED_FLAGS)?;
 
                 if path == "." {
-                    match self.serve_connection_at(object, connection.position, flags) {
+                    match self.serve_connection_at(object, connection.position, None, flags) {
                         Ok(Some(_)) => panic!("serving directory '.' should not return output"),
                         Ok(None) => {}
                         Err(e) => eprintln!("ServiceFs failed to serve '.': {:?}", e),
@@ -980,7 +1118,12 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 match descend_result {
                     DescendResult::LocalChildren(children) => {
                         if let Some(&next_node_pos) = children.get(end_segment) {
-                            let output = self.serve_connection_at(object, next_node_pos, flags)?;
+                            let output = self.serve_connection_at(
+                                object,
+                                next_node_pos,
+                                Some(end_segment),
+                                flags,
+                            )?;
                             return Ok((output, ConnectionState::Open));
                         } else {
                             maybe_send_error(object, flags, zx::sys::ZX_ERR_NOT_FOUND)?;

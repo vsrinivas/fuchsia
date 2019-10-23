@@ -19,5 +19,8 @@ macro_rules! fuchsia_single_component_package_url {
     };
 }
 
+/// The name of the default instance of a FIDL Unified Service.
+pub const DEFAULT_SERVICE_INSTANCE: &'static str = "default";
+
 pub mod client;
 pub mod server;

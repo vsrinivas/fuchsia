@@ -5,8 +5,13 @@
 //! Tools for starting or connecting to existing Fuchsia applications and services.
 
 use {
+    crate::DEFAULT_SERVICE_INSTANCE,
     failure::{Error, Fail, ResultExt},
-    fidl::endpoints::{DiscoverableService, Proxy},
+    fidl::endpoints::{
+        DiscoverableService, MemberOpener, Proxy, ServerEnd, UnifiedServiceMarker,
+        UnifiedServiceProxy,
+    },
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerEventStream, ComponentControllerProxy,
         FileDescriptor, FlatNamespace, LaunchInfo, LauncherMarker, LauncherProxy,
@@ -54,6 +59,68 @@ pub fn connect_to_service_at<S: DiscoverableService>(
 /// Connect to a FIDL service using the application root namespace.
 pub fn connect_to_service<S: DiscoverableService>() -> Result<S::Proxy, Error> {
     connect_to_service_at::<S>("/svc")
+}
+
+struct DirectoryProtocolImpl(DirectoryProxy);
+
+impl MemberOpener for DirectoryProtocolImpl {
+    fn open_member(&self, member: &str, server_end: zx::Channel) -> Result<(), fidl::Error> {
+        let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+        self.0.open(
+            flags,
+            fidl_fuchsia_io::MODE_TYPE_SERVICE,
+            member,
+            ServerEnd::new(server_end),
+        )?;
+        Ok(())
+    }
+}
+
+/// Connect to an instance of a FIDL Unified Service using the provided namespace prefix.
+pub fn connect_to_unified_service_instance_at<US: UnifiedServiceMarker>(
+    service_prefix: &str,
+    instance: &str,
+) -> Result<US::Proxy, Error> {
+    let service_path = format!("{}/{}/{}", service_prefix, US::SERVICE_NAME, instance);
+    let directory_proxy = io_util::open_directory_in_namespace(
+        &service_path,
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+    )?;
+    Ok(US::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
+}
+
+/// Connect to an instance of a FIDL Unified Service using the default namespace prefix "/svc".
+pub fn connect_to_unified_service_instance<US: UnifiedServiceMarker>(
+    instance: &str,
+) -> Result<US::Proxy, Error> {
+    connect_to_unified_service_instance_at::<US>("/svc", instance)
+}
+
+/// Connect to the "default" instance of a FIDL Unified Service using the default namespace prefix "/svc".
+pub fn connect_to_unified_service<US: UnifiedServiceMarker>() -> Result<US::Proxy, Error> {
+    connect_to_unified_service_instance::<US>(DEFAULT_SERVICE_INSTANCE)
+}
+
+/// Connect to the "default" instance of a FIDL Unified Service hosted on the directory protocol channel `directory`.
+pub fn connect_to_unified_service_at_dir<US: UnifiedServiceMarker>(
+    directory: &zx::Channel,
+) -> Result<US::Proxy, Error> {
+    connect_to_unified_service_instance_at_dir::<US>(directory, DEFAULT_SERVICE_INSTANCE)
+}
+
+/// Connect to an instance of a FIDL Unified Service hosted on the directory protocol channel `directory`.
+pub fn connect_to_unified_service_instance_at_dir<US: UnifiedServiceMarker>(
+    directory: &zx::Channel,
+    instance: &str,
+) -> Result<US::Proxy, Error> {
+    let service_path = format!("{}/{}", US::SERVICE_NAME, instance);
+    let (directory_proxy, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+    let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
+        | fidl_fuchsia_io::OPEN_RIGHT_READABLE
+        | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+    fdio::open_at(directory, &service_path, flags, server_end.into_channel())?;
+    Ok(US::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
 /// Adds a new directory handle to the namespace for the new process.
@@ -181,6 +248,12 @@ impl App {
         Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
+    /// Connect to a FIDL Unified Service provided by the `App`.
+    #[inline]
+    pub fn connect_to_unified_service<US: UnifiedServiceMarker>(&self) -> Result<US::Proxy, Error> {
+        connect_to_unified_service_at_dir::<US>(&self.directory_request)
+    }
+
     /// Connect to a service by passing a channel for the server.
     #[inline]
     pub fn pass_to_service<S: DiscoverableService>(
@@ -215,11 +288,7 @@ impl App {
     pub fn wait_with_output(mut self) -> impl Future<Output = Result<Output, Error>> {
         let drain = |pipe: Option<fasync::Socket>| match pipe {
             None => future::ready(Ok(vec![])).left_future(),
-            Some(pipe) => pipe
-                .into_datagram_stream()
-                .try_concat()
-                .err_into()
-                .right_future(),
+            Some(pipe) => pipe.into_datagram_stream().try_concat().err_into().right_future(),
         };
 
         future::try_join3(self.wait(), drain(self.stdout), drain(self.stderr))

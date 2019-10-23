@@ -7,20 +7,25 @@
 #![cfg(test)]
 
 use {
-    failure::Error,
-    fidl::endpoints::{create_proxy, ServerEnd},
+    failure::{Error, ResultExt},
+    fidl::endpoints::{create_proxy, ServerEnd, UnifiedServiceMarker},
+    fidl_fuchsia_component_test::{
+        CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
+    },
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin,
         Service,
     },
-    fuchsia_async::run_until_stalled,
+    fuchsia_async::{self as fasync, run_until_stalled},
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_vfs_pseudo_fs::{
         directory::entry::DirectoryEntry, file::simple::read_only_static, pseudo_directory,
     },
     fuchsia_zircon::{self as zx, HandleBased as _},
-    futures::{future::try_join, FutureExt, StreamExt},
+    futures::{future::try_join, stream::TryStreamExt, FutureExt, StreamExt},
     std::future::Future,
+    std::path::Path,
+    test_util::assert_matches,
 };
 
 #[run_until_stalled(test)]
@@ -157,6 +162,184 @@ async fn clone_service_dir() -> Result<(), Error> {
     };
 
     let ((), ()) = try_join(serve_fut, open_reference_fut).await?;
+    Ok(())
+}
+
+/// Serves a dummy unified service `US` that immediately drops the request channel.
+fn serve_dummy_unified_service<US>() -> (impl Future<Output = Result<(), Error>>, DirectoryProxy)
+where
+    US: UnifiedServiceMarker,
+{
+    let (mut fs, dir_proxy) = fs_with_connection();
+    fs.add_unified_service(|_: US::Request| ());
+    (fs.collect().map(Ok), dir_proxy)
+}
+
+/// Serves an instance of a dummy unified service `US` named `instance` that immediately drops the request channel.
+fn serve_dummy_unified_service_instance<US>(
+    instance: &str,
+) -> (impl Future<Output = Result<(), Error>>, DirectoryProxy)
+where
+    US: UnifiedServiceMarker,
+{
+    let (mut fs, dir_proxy) = fs_with_connection();
+    fs.add_unified_service_instance(instance, |_: US::Request| ());
+    (fs.collect().map(Ok), dir_proxy)
+}
+
+/// Returns the NodeInfo of a node reference located at `path` under the directory `dir_proxy`.
+async fn node_reference_type_at_path(
+    dir_proxy: &DirectoryProxy,
+    path: &str,
+) -> Result<NodeInfo, Error> {
+    let flags = fidl_fuchsia_io::OPEN_FLAG_NODE_REFERENCE;
+    let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+    let (node_proxy, node_server_end) = create_proxy::<NodeMarker>()?;
+    dir_proxy.open(flags, mode, path, node_server_end)?;
+    Ok(node_proxy.describe().await?)
+}
+
+#[run_until_stalled(test)]
+async fn open_unified_service_node_reference() -> Result<(), Error> {
+    let (serve_fut, dir_proxy) = serve_dummy_unified_service::<CounterServiceMarker>();
+
+    let open_reference_fut = async {
+        let info = node_reference_type_at_path(&dir_proxy, CounterServiceMarker::SERVICE_NAME)
+            .await
+            .expect("failed to get NodeInfo");
+        assert_matches!(info, NodeInfo::Directory(_));
+        drop(dir_proxy);
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, open_reference_fut).await?;
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn open_unified_service_instance_node_reference() -> Result<(), Error> {
+    let (serve_fut, dir_proxy) = serve_dummy_unified_service::<CounterServiceMarker>();
+
+    let open_reference_fut = async {
+        let path = format!("{}/default", CounterServiceMarker::SERVICE_NAME);
+        let info =
+            node_reference_type_at_path(&dir_proxy, &path).await.expect("failed to get NodeInfo");
+        assert_matches!(info, NodeInfo::Directory(_));
+        drop(dir_proxy);
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, open_reference_fut).await?;
+    Ok(())
+}
+
+async fn list_service_entries(
+    dir_proxy: &DirectoryProxy,
+    path: &str,
+) -> Result<Vec<String>, Error> {
+    let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
+        | fidl_fuchsia_io::OPEN_RIGHT_READABLE
+        | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+    let instance_proxy = io_util::open_directory(dir_proxy, Path::new(&path), flags)?;
+    let mut entries =
+        files_async::readdir(&instance_proxy)
+            .await?
+            .into_iter()
+            .filter_map(|e| {
+                if let files_async::DirentKind::Service = e.kind {
+                    Some(e.name)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+    entries.sort();
+    Ok(entries)
+}
+
+#[run_until_stalled(test)]
+async fn list_unified_service_members_of_default_instance() -> Result<(), Error> {
+    let (serve_fut, dir_proxy) = serve_dummy_unified_service::<CounterServiceMarker>();
+
+    let open_reference_fut = async {
+        let path = format!("{}/default", CounterServiceMarker::SERVICE_NAME);
+        let entries =
+            list_service_entries(&dir_proxy, &path).await.expect("failed to list service entries");
+        assert_eq!(vec![String::from("counter"), String::from("counter_v2")], entries);
+        drop(dir_proxy);
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, open_reference_fut).await?;
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn list_unified_service_members_of_other_instance() -> Result<(), Error> {
+    let (serve_fut, dir_proxy) =
+        serve_dummy_unified_service_instance::<CounterServiceMarker>("other");
+
+    let open_reference_fut = async {
+        let path = format!("{}/other", CounterServiceMarker::SERVICE_NAME);
+        let entries =
+            list_service_entries(&dir_proxy, &path).await.expect("failed to list service entries");
+        assert_eq!(vec![String::from("counter"), String::from("counter_v2")], entries);
+        drop(dir_proxy);
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, open_reference_fut).await?;
+    Ok(())
+}
+
+async fn serve_get_and_increment(mut stream: CounterRequestStream) -> Result<(), Error> {
+    let mut value: u32 = 0;
+    while let Some(CounterRequest::GetAndIncrement { responder }) =
+        stream.try_next().await.context("error running fetching next request")?
+    {
+        responder.send(value).context("error sending response")?;
+        value += 1;
+    }
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn connect_to_unified_service_member_of_default_instance() -> Result<(), Error> {
+    enum IncomingService {
+        Counter(CounterServiceRequest),
+    }
+
+    let (mut fs, dir_proxy) = fs_with_connection();
+
+    // Serve the default instance of CounterService.
+    fs.add_unified_service(IncomingService::Counter);
+    let serve_fut = fs.for_each_concurrent(1, |IncomingService::Counter(req)| {
+        async {
+            match req {
+                CounterServiceRequest::Counter(stream) => {
+                    serve_get_and_increment(stream).await.expect("serving Counter failed")
+                }
+                CounterServiceRequest::CounterV2(_) => (), // Not under test
+            }
+        }
+    });
+    fasync::spawn(serve_fut);
+
+    let dir_request =
+        dir_proxy.into_channel().expect("failed to extract channel from proxy").into_zx_channel();
+
+    // Connect to the default instance of CounterService and make calls to the "counter" member.
+    let service_proxy = fuchsia_component::client::connect_to_unified_service_at_dir::<
+        CounterServiceMarker,
+    >(&dir_request)?;
+    let counter_proxy = service_proxy.counter().expect("failed conencting to counter member");
+    let value: u32 =
+        counter_proxy.get_and_increment().await.expect("first call to get_and_increment failed");
+    assert_eq!(value, 0);
+    let value =
+        counter_proxy.get_and_increment().await.expect("second call to get_and_increment failed");
+    assert_eq!(value, 1);
+    drop(dir_request);
     Ok(())
 }
 

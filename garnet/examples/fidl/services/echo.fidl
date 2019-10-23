@@ -8,3 +8,11 @@ library fidl.examples.echo;
 protocol Echo {
     EchoString(string? value) -> (string? response);
 };
+
+/// A service with multiple Echo protocol implementations.
+service EchoService {
+    /// An implementation of `Echo` that prefixes its output with "foo: ".
+    Echo foo;
+    /// An implementation of `Echo` that prefixes its output with "bar: ".
+    Echo bar;
+};

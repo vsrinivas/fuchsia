@@ -60,5 +60,10 @@ use fidl::{
 {{ if eq $transport "Channel" -}}{{ template "InterfaceDeclaration" $interface }}{{- end }}
 {{ end -}}
 {{ end -}}
+{{ range $service := .Services -}}
+{{ range $transport, $_ := .Transports -}}
+{{ if eq $transport "Channel" -}}{{ template "ServiceDeclaration" $service }}{{- end }}
+{{ end -}}
+{{ end -}}
 {{- end -}}
 `
