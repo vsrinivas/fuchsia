@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("sdmmc") {
+zx_driver("sdmmc") {
   sources = [
     "mmc.cc",
     "sd.cc",
@@ -39,7 +39,7 @@ driver("sdmmc") {
   deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-test("sdmmc-test") {
+zx_test("sdmmc-test") {
   output_name = "sdmmc-test"
   sources = [
     "fake-sdmmc-device.cc",

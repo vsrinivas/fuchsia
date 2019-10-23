@@ -6,7 +6,7 @@
 #
 # Related unittests exist alongside the backtrace and crashsvc code, but
 # this verifies that the pieces are working together correctly.
-test("backtrace-request-integration") {
+zx_test("backtrace-request-integration") {
   sources = [
     "backtrace-request-test.cc",
   ]

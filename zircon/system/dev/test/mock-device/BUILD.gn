@@ -5,7 +5,7 @@
 import("$zx/public/gn/fidl.gni")
 
 if (current_toolchain != default_toolchain) {
-  test_driver("mock-device") {
+  zx_test_driver("mock-device") {
     sources = [
       "device.cc",
       "fidl.cc",

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("as370-power") {
+zx_driver("as370-power") {
   sources = [
     "as370-power.cc",
   ]
@@ -25,7 +25,7 @@ driver("as370-power") {
   ]
 }
 
-test("as370-power-test") {
+zx_test("as370-power-test") {
   testonly = true
   output_name = "as370-power-test"
   sources = [

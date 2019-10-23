@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("audio-proto-utils") {
+zx_library("audio-proto-utils") {
   sdk = "source"
   sdk_headers = [ "audio-proto-utils/format-utils.h" ]
   sources = [

@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_driver_shim.gni")
 
-library("ddktl") {
+zx_library("ddktl") {
   sdk = "static"
   sdk_publishable = false
   sdk_headers = [
@@ -30,7 +30,7 @@ library("ddktl") {
   ]
 }
 
-test_driver("ddktl-test") {
+zx_test_driver("ddktl-test") {
   sources = [
     "test/ddktl-test-binding.c",
     "test/ddktl-test.cc",

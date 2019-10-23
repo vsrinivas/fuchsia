@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("audio-driver-proto") {
+zx_library("audio-driver-proto") {
   sdk = "source"
   sdk_headers = [ "audio-proto/audio-proto.h" ]
   sources = [

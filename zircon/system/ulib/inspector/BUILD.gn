@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("inspector") {
+zx_library("inspector") {
   # This should only ever be used as a shared library because it hides
   # the otherwise problematic ngunwind symbols.
   shared = true

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("zx") {
+zx_test("zx") {
   sources = [
     "object-test.cc",
     "traits.cc",

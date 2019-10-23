@@ -4,7 +4,7 @@
 
 assert(current_cpu == "x64")
 
-driver("intel-i915") {
+zx_driver("intel-i915") {
   sources = [
     "display-device.cc",
     "dp-display.cc",

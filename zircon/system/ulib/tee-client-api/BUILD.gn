@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("tee-client-api") {
+zx_library("tee-client-api") {
   sdk = "shared"
   sdk_headers = []
   foreach(file,

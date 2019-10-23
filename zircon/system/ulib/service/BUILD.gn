@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("service-llcpp") {
+zx_library("service-llcpp") {
   sdk = "source"
   sdk_headers = [
     "lib/service/llcpp/constants.h",

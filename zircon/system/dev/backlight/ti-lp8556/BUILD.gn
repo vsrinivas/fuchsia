@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("ti-lp8556") {
+zx_driver("ti-lp8556") {
   sources = [
     "ti-lp8556.cc",
   ]
@@ -25,7 +25,7 @@ driver("ti-lp8556") {
   ]
 }
 
-test("ti-lp8556-test") {
+zx_test("ti-lp8556-test") {
   testonly = true
   output_name = "ti-lp8556-test"
   sources = [

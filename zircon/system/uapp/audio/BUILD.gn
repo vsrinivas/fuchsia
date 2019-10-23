@@ -31,7 +31,7 @@ source_set("src") {
   ]
 }
 
-executable("bin") {
+zx_executable("bin") {
   output_name = "audio"
   sources = [
     "audio.cc",
@@ -41,7 +41,7 @@ executable("bin") {
   ]
 }
 
-test("test") {
+zx_test("test") {
   output_name = "audio-test"
   sources = [
     "sine-source-test.cc",

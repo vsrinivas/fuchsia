@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("bma253") {
+zx_driver("bma253") {
   sources = [
     "bma253.cc",
   ]
@@ -26,7 +26,7 @@ driver("bma253") {
   ]
 }
 
-test("bma253-test") {
+zx_test("bma253-test") {
   output_name = "bma253-test"
   sources = [
     "bma253-test.cc",

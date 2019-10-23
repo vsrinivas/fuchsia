@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("msm8x53-sdhci") {
+zx_driver("msm8x53-sdhci") {
   sources = [
     "msm8x53-sdhci.cc",
   ]

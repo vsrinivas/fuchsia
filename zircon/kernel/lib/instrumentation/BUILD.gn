@@ -6,7 +6,7 @@ _profile_config = [ "$zx/public/gn/config/instrumentation:profile" ]
 is_profile =
     toolchain.configs + _profile_config - _profile_config != toolchain.configs
 
-library("instrumentation") {
+zx_library("instrumentation") {
   kernel = true
   sources = []
   public_deps = [

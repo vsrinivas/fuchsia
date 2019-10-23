@@ -11,7 +11,7 @@ group("test") {
   ]
 }
 
-test("usb-virtual-bus-ums") {
+zx_test("usb-virtual-bus-ums") {
   sources = [
     "main.cc",
     "ums-test.cc",
@@ -35,7 +35,7 @@ test("usb-virtual-bus-ums") {
   ]
 }
 
-test("usb-virtual-bus-hid") {
+zx_test("usb-virtual-bus-hid") {
   sources = [
     "usb-hid-test.cc",
   ]
@@ -54,7 +54,7 @@ test("usb-virtual-bus-hid") {
   ]
 }
 
-test("usb-virtual-bus-ftdi") {
+zx_test("usb-virtual-bus-ftdi") {
   sources = [
     "ftdi-test.cc",
   ]
@@ -72,7 +72,7 @@ test("usb-virtual-bus-ftdi") {
   ]
 }
 
-test("usb-virtual-bus-cdc-acm") {
+zx_test("usb-virtual-bus-cdc-acm") {
   sources = [
     "usb-cdc-acm-test.cc",
   ]

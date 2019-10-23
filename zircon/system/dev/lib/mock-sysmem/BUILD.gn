@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("mock-sysmem") {
+zx_library("mock-sysmem") {
   testonly = true
   sources = []
 }

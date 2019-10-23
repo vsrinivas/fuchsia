@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("zx-panic-libc") {
+zx_library("zx-panic-libc") {
   sdk = "source"
 
   host = true

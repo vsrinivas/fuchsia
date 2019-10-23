@@ -12,7 +12,7 @@ group("test") {
   ]
 }
 
-test("affine") {
+zx_test("affine") {
   sources = [
     "ratio.cc",
     "transform.cc",

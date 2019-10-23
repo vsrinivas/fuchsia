@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("ftdi") {
+zx_driver("ftdi") {
   sources = [
     "ftdi-i2c.cc",
     "ftdi-mpsse.cc",
@@ -28,7 +28,7 @@ driver("ftdi") {
   ]
 }
 
-driver("ftdi-fake-usb") {
+zx_driver("ftdi-fake-usb") {
   sources = [
     "ftdi-function.cc",
   ]

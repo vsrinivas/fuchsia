@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("miscsvc") {
+zx_executable("miscsvc") {
   sources = [
     "miscsvc.cc",
   ]

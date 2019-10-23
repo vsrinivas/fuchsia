@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("digest") {
+zx_library("digest") {
   host = true
 
   sources = [

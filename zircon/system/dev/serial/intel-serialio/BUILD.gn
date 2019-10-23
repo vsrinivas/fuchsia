@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("intel-serialio") {
+zx_driver("intel-serialio") {
   sources = [
     "dma/dma.c",
     "sdio/sdio.c",

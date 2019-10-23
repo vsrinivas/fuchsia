@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("svc") {
+zx_library("svc") {
   sdk = "source"
   sdk_headers = [
     "lib/svc/outgoing.h",

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("launchpad") {
+zx_test("launchpad") {
   sources = [
     "launchpad.cc",
   ]

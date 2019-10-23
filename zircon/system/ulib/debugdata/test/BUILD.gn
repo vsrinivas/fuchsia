@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("debugdata") {
+zx_test("debugdata") {
   sources = [
     "debugdata.cc",
   ]

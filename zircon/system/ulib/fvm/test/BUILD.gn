@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("fvm-unit") {
+zx_test("fvm-unit") {
   sources = [
     "integrity-validation-test.cc",
     "format-info-test.cc",
@@ -31,7 +31,7 @@ test("fvm-unit") {
   }
 }
 
-library("devices") {
+zx_library("devices") {
   testonly = true
   sources = [
     "device-ref.cc",

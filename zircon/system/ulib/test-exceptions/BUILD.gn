@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("test-exceptions") {
+zx_library("test-exceptions") {
   testonly = true
   shared = true
   sources = [

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("zbi") {
+zx_test("zbi") {
   sources = [
     "zbi.cc",
   ]

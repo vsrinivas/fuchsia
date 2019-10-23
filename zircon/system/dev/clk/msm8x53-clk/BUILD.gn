@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("msm8x53-clk") {
+zx_driver("msm8x53-clk") {
   sources = [
     "msm8x53-clk.cc",
   ]
@@ -29,7 +29,7 @@ driver("msm8x53-clk") {
   ]
 }
 
-test("msm8x53-clk-test") {
+zx_test("msm8x53-clk-test") {
   testonly = true
   output_name = "msm8x53-clk-test"
   sources = [

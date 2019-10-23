@@ -8,7 +8,7 @@ import("$zx_build/public/gn/library_shim.gni")
 #
 # This library requires an environment with mtd/mtd-user.h and MTD support.
 
-library("nand-redundant-storage") {
+zx_library("nand-redundant-storage") {
   host = true
 
   if (current_os == "linux") {

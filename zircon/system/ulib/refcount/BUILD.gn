@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("refcount") {
+zx_library("refcount") {
   sources = [
     "blocking_refcount.cc",
   ]
@@ -19,7 +19,7 @@ group("test") {
   ]
 }
 
-test("refcount-test") {
+zx_test("refcount-test") {
   testonly = true
   sources = [
     "blocking_refcount_test.cc",

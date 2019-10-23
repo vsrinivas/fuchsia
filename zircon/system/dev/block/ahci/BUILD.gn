@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("ahci") {
+zx_driver("ahci") {
   deps = [
     ":shared",
   ]
@@ -15,7 +15,7 @@ group("test") {
   ]
 }
 
-test("ahci-unittest") {
+zx_test("ahci-unittest") {
   output_name = "ahci-unittest"
   sources = [
     "test/fake-bus.cc",

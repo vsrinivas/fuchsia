@@ -9,7 +9,7 @@ import("$zx_build/public/gn/fuzzer.gni")
 # Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
 lz4_lib = "$zx/../third_party/lz4/lib"
 
-library("lz4") {
+zx_library("lz4") {
   host = true
   sources = [
     "$lz4_lib/lz4.c",

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("nandpart") {
+zx_driver("nandpart") {
   sources = [
     "aml-bad-block.cc",
     "bad-block.cc",
@@ -25,7 +25,7 @@ driver("nandpart") {
   ]
 }
 
-test("nandpart-test") {
+zx_test("nandpart-test") {
   output_name = "nandpart-test"
   sources = [
     "aml-bad-block.cc",

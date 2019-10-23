@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("hisi3660") {
+zx_driver("hisi3660") {
   sources = [
     "hisi3660-clk.cc",
   ]

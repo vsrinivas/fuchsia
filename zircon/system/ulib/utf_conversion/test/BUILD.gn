@@ -11,7 +11,7 @@ group("test") {
   ]
 }
 
-test("utf_conversion") {
+zx_test("utf_conversion") {
   sources = [
     "main.cc",
   ]

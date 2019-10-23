@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("journal") {
+zx_library("journal") {
   host = true
   sources = []
   static = true
@@ -52,7 +52,7 @@ group("test") {
   ]
 }
 
-test("journal-unit") {
+zx_test("journal-unit") {
   test_group = "fs"
   sources = [
     "test/background_executor_test.cc",

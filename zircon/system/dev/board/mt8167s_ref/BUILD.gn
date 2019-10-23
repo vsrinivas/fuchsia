@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("mt8167s_ref") {
+zx_driver("mt8167s_ref") {
   sources = [
     "mt8167-audio.cc",
     "mt8167-backlight.cc",
@@ -48,7 +48,7 @@ driver("mt8167s_ref") {
   ]
 }
 
-test("mt8167s_ref-test") {
+zx_test("mt8167s_ref-test") {
   output_name = "mt8167s_ref-test"
   sources = [
     "mt8167-audio.cc",

@@ -46,7 +46,7 @@ source_set("smbios") {
   ]
 }
 
-driver("platform-bus-x86") {
+zx_driver("platform-bus-x86") {
   sources = [
     "acpi-dev/dev-battery.c",
     "acpi-dev/dev-cros-ec/dev.cc",
@@ -108,7 +108,7 @@ driver("platform-bus-x86") {
   ]
 }
 
-test("x86-battery-test") {
+zx_test("x86-battery-test") {
   output_name = "x86-battery-test"
   test_group = "ddk"
   sources = [
@@ -139,7 +139,7 @@ test("x86-battery-test") {
   ]
 }
 
-test("x86-lid-test") {
+zx_test("x86-lid-test") {
   output_name = "x86-lid-test"
   test_group = "ddk"
   sources = [
@@ -165,7 +165,7 @@ test("x86-lid-test") {
   ]
 }
 
-test("x86-pwrsrc-test") {
+zx_test("x86-pwrsrc-test") {
   output_name = "x86-pwrsrc-test"
   test_group = "ddk"
   sources = [
@@ -190,7 +190,7 @@ test("x86-pwrsrc-test") {
   ]
 }
 
-test("x86-board-test") {
+zx_test("x86-board-test") {
   test_group = "ddk"
   sources = [
     "smbios-test.cc",
@@ -203,7 +203,7 @@ test("x86-board-test") {
   ]
 }
 
-test("x86-thermal-test") {
+zx_test("x86-thermal-test") {
   output_name = "x86-thermal-test"
   test_group = "ddk"
   sources = [

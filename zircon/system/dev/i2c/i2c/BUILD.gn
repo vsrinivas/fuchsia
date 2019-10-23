@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("i2c") {
+zx_driver("i2c") {
   sources = [
     "i2c-bus.cc",
     "i2c-child.cc",

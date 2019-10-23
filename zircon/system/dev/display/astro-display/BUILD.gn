@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("astro-display") {
+zx_driver("astro-display") {
   sources = [
     "aml-dsi-host.cc",
     "aml-mipi-phy.cc",
@@ -38,7 +38,7 @@ driver("astro-display") {
   ]
 }
 
-test("astro-display-test") {
+zx_test("astro-display-test") {
   sources = [
     "aml-dsi-host.cc",
     "aml-mipi-phy.cc",

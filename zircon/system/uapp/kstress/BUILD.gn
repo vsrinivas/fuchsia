@@ -4,7 +4,7 @@
 
 import("$zx/kernel/params.gni")
 
-executable("kstress") {
+zx_executable("kstress") {
   sources = [
     "main.cc",
     "stress_test.cc",

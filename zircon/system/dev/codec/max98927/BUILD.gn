@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("max98927") {
+zx_driver("max98927") {
   sources = [
     "max98927.cc",
   ]

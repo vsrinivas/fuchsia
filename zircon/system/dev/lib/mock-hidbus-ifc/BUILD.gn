@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("mock-hidbus-ifc") {
+zx_library("mock-hidbus-ifc") {
   testonly = true
   sources = []
   deps = [

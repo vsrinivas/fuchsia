@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("zircon-internal") {
+zx_library("zircon-internal") {
   sdk = "source"
   sdk_headers = [
     "lib/zircon-internal/default_stack_size.h",

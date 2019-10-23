@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("fvm") {
+zx_test("fvm") {
   sources = [
     "fvm.cc",
     "resize-tests.cc",
@@ -43,5 +43,18 @@ test("fvm") {
     "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/uboringssl",
+  ]
+}
+
+zx_test("fvm-integration") {
+  sources = [
+    "resize-tests.cc",
+  ]
+
+  deps = [
+    "$zx/system/ulib/fvm/test:devices",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/zxtest",
   ]
 }

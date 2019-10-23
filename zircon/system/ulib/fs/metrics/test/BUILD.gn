@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # Separated into own target, so it is easier to cleanup later.
-test("metrics-composite-latency-event") {
+zx_test("metrics-composite-latency-event") {
   test_group = "fs"
   sources = [
     "composite_latency_event_test.cc",
@@ -19,7 +19,7 @@ test("metrics-composite-latency-event") {
   ]
 }
 
-test("metrics-inspect") {
+zx_test("metrics-inspect") {
   test_group = "fs"
   sources = [
     "histograms_test.cc",
@@ -36,7 +36,7 @@ test("metrics-inspect") {
   ]
 }
 
-test("metrics-cobalt") {
+zx_test("metrics-cobalt") {
   test_group = "fs"
   sources = [
     "cobalt_metrics_test.cc",

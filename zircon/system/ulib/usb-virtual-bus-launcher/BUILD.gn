@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("usb-virtual-bus-launcher") {
+zx_library("usb-virtual-bus-launcher") {
   sdk = "source"
   sdk_headers = [
     "usb-virtual-bus-launcher/usb-virtual-bus-launcher.h",

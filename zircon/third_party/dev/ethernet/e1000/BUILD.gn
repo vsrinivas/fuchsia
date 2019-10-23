@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("e1000") {
+zx_driver("e1000") {
   sources = [
     "e1000_80003es2lan.c",
     "e1000_82540.c",

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("sg-micro") {
+zx_driver("sg-micro") {
   sources = [
     "sgm37603a.cc",
   ]
@@ -24,7 +24,7 @@ driver("sg-micro") {
   ]
 }
 
-test("sgm37603a-test") {
+zx_test("sgm37603a-test") {
   output_name = "sgm37603a-test"
   sources = [
     "sgm37603a-test.cc",

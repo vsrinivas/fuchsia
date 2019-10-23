@@ -86,7 +86,7 @@ template("fuzzer") {
     # The test() template is used for programs that verify proper operation of
     # associated code if the tests passes. This isn't an appropriate choice for
     # fuzzers as they run indefinitely and never "pass".
-    executable(fuzzer_name) {
+    zx_executable(fuzzer_name) {
       testonly = true
 
       # Explicitly forward visibility for nested scope, and ensure the redirect

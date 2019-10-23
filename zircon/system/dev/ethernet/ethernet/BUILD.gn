@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("ethernet") {
+zx_driver("ethernet") {
   sources = [
     "ethernet.cc",
   ]
@@ -22,7 +22,7 @@ driver("ethernet") {
   ]
 }
 
-test("ethernet-unittest") {
+zx_test("ethernet-unittest") {
   testonly = true
   output_name = "ethernet-unittest"
   sources = [

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("qcom") {
+zx_library("qcom") {
   sdk = "source"
   sdk_headers = [ "qcom/smc.h" ]
   sources = [

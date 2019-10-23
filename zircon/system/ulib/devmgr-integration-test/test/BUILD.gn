@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("devmgr-integration") {
+zx_test("devmgr-integration") {
   test_group = "ddk"
   sources = [
     "launcher_test.cc",

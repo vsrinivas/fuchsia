@@ -4,7 +4,7 @@
 
 assert(current_cpu == "x64")
 
-driver("pc-ps2") {
+zx_driver("pc-ps2") {
   sources = [
     "i8042.c",
   ]

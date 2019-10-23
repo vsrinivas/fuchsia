@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("mt-musb-host") {
+zx_driver("mt-musb-host") {
   deps = [
     ":common",
   ]
@@ -36,7 +36,7 @@ source_set("common") {
   ]
 }
 
-test("mt-hci-test") {
+zx_test("mt-hci-test") {
   output_name = "mt-hci-test"
   sources = [
     "usb-hci-test.cc",
@@ -48,7 +48,7 @@ test("mt-hci-test") {
   ]
 }
 
-test("mt-hci-transaction-test") {
+zx_test("mt-hci-transaction-test") {
   sources = [
     "usb-transaction-test.cc",
     "usb-transaction.cc",
@@ -69,7 +69,7 @@ test("mt-hci-transaction-test") {
   ]
 }
 
-test("mt-hci-request-queue-test") {
+zx_test("mt-hci-request-queue-test") {
   sources = [
     "usb-request-queue-test.cc",
     "usb-request-queue.cc",

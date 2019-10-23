@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("mtk-thermal") {
+zx_driver("mtk-thermal") {
   sources = [
     "mtk-thermal.cc",
   ]
@@ -30,7 +30,7 @@ driver("mtk-thermal") {
   ]
 }
 
-test("mtk-thermal-test") {
+zx_test("mtk-thermal-test") {
   output_name = "mtk-thermal-test"
   sources = [
     "mtk-thermal-test.cc",

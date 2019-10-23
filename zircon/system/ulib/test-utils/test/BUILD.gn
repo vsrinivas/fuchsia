@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("test-utils") {
+zx_test("test-utils") {
   sources = [
     "test-utils-test.cc",
   ]

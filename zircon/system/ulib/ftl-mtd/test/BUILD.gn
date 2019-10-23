@@ -23,7 +23,7 @@ source_set("common") {
   ]
 }
 
-test("nand-volume-driver") {
+zx_test("nand-volume-driver") {
   sources = [
     "nand-volume-driver-tests.cc",
   ]
@@ -36,7 +36,7 @@ test("nand-volume-driver") {
   ]
 }
 
-test("ftl-volume-wrapper") {
+zx_test("ftl-volume-wrapper") {
   sources = [
     "ftl-volume-wrapper-tests.cc",
   ]

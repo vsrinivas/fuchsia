@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("aml-rawnand") {
+zx_driver("aml-rawnand") {
   sources = [
     "aml-rawnand.cc",
     "onfi.cc",

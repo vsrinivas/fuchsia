@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("io-scheduler") {
+zx_library("io-scheduler") {
   static = true
   sources = [
     "queue.cc",
@@ -18,7 +18,7 @@ library("io-scheduler") {
   ]
 }
 
-test("io-scheduler-test") {
+zx_test("io-scheduler-test") {
   output_name = "iosched"
   sources = [
     "test/main.cc",

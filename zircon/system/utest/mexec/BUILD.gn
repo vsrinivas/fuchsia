@@ -18,7 +18,7 @@ group("mexec") {
 
 # A test binary that returns success unconditionally. This binary running at
 # all indicates that the system booted sufficiently to run a userspace process.
-test("zbi-child") {
+zx_test("zbi-child") {
   test_group = "core"
   sources = [
     "success.cc",
@@ -55,7 +55,7 @@ resource("zbi-child-image-resource") {
 }
 
 # Simple binary that mexecs into the child binary.
-test("zbi-parent") {
+zx_test("zbi-parent") {
   test_group = "core"
   sources = [
     "parent.cc",

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("display-core-unittests") {
+zx_test("display-core-unittests") {
   sources = [
     "display-test.cc",
     "fence-test.cc",

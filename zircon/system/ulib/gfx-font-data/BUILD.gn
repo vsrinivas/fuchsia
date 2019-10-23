@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("gfx-font-data") {
+zx_library("gfx-font-data") {
   kernel = true
   static = true
   public_deps = [

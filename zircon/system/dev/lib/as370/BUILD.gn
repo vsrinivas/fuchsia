@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("as370") {
+zx_library("as370") {
   sources = [
     "audio-dsp.cc",
     "syn-audio-in.cc",
@@ -24,7 +24,7 @@ library("as370") {
   ]
 }
 
-test("syn-audio-in-test") {
+zx_test("syn-audio-in-test") {
   output_name = "syn-audio-in-test"
   sources = [
     "syn-audio-in-test.cc",
@@ -46,7 +46,7 @@ test("syn-audio-in-test") {
   ]
 }
 
-test("audio-dsp-test") {
+zx_test("audio-dsp-test") {
   output_name = "audio-dsp-test"
   sources = [
     "audio-dsp-test.cc",

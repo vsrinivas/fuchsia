@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("usb") {
+zx_library("usb") {
   sdk = "source"
   sdk_headers = [
     "usb/usb-request.h",
@@ -41,7 +41,7 @@ group("usb-lib-test") {
   ]
 }
 
-test("usb-request-cpp-test") {
+zx_test("usb-request-cpp-test") {
   output_name = "usb-request-cpp-test"
   sources = [
     "request-cpp-test.cc",
@@ -62,7 +62,7 @@ test("usb-request-cpp-test") {
   ]
 }
 
-test("usb-wrapper-test") {
+zx_test("usb-wrapper-test") {
   output_name = "usb-wrapper-test"
   sources = [
     "usb-wrapper-test.cc",

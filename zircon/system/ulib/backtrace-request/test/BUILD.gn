@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("backtrace-request") {
+zx_test("backtrace-request") {
   sources = [
     "backtrace-request-test.cc",
   ]

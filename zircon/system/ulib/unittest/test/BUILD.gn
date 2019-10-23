@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("unittest") {
+zx_test("unittest") {
   sources = [
     "unittest-test.cpp",
   ]

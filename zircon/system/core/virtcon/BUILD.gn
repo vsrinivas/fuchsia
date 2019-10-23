@@ -49,7 +49,7 @@ group("common") {
   ]
 }
 
-executable("virtual-console") {
+zx_executable("virtual-console") {
   sources = common_sources + [
               "main.cc",
               "vc-display.cc",
@@ -60,7 +60,7 @@ executable("virtual-console") {
   ]
 }
 
-test("virtual-console-display-test") {
+zx_test("virtual-console-display-test") {
   defines = [ "BUILD_FOR_DISPLAY_TEST" ]
   sources = [
     "vc-display-test.cc",
@@ -75,7 +75,7 @@ test("virtual-console-display-test") {
   ]
 }
 
-test("virtual-console-test") {
+zx_test("virtual-console-test") {
   output_name = "virtual-console-test"
   defines = [ "BUILD_FOR_TEST" ]
   sources = common_sources + [
@@ -88,7 +88,7 @@ test("virtual-console-test") {
   ]
 }
 
-test("virtual-console-integration") {
+zx_test("virtual-console-integration") {
   sources = [
     "vc-integration-test.cc",
   ]

@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("simple-audio-stream") {
+zx_library("simple-audio-stream") {
   sdk = "source"
   sdk_headers = [ "lib/simple-audio-stream/simple-audio-stream.h" ]
   sources = [
@@ -34,7 +34,7 @@ library("simple-audio-stream") {
   ]
 }
 
-test("sa-unittest") {
+zx_test("sa-unittest") {
   sources = [
     "tests/sas-test.cc",
   ]

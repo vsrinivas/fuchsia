@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("audio-utils") {
+zx_library("audio-utils") {
   sdk = "source"
   sdk_headers = [
     "audio-utils/audio-device-stream.h",

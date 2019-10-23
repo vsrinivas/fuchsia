@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fake-hidbus-ifc") {
+zx_library("fake-hidbus-ifc") {
   testonly = true
   sources = []
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("mbr") {
+zx_driver("mbr") {
   sources = [
     "mbr-device.cc",
     "mbr-device.h",
@@ -21,7 +21,7 @@ driver("mbr") {
   ]
 }
 
-test("mbr-test") {
+zx_test("mbr-test") {
   output_name = "mbr-test"
   sources = [
     "mbr-device-test.cc",

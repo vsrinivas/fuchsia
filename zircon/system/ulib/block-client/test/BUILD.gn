@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("block-client-unit") {
+zx_test("block-client-unit") {
   test_group = "fs"
   sources = [
     "block-group-registry-tests.cc",

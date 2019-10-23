@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("aml-gpu") {
+zx_driver("aml-gpu") {
   sources = [
     "aml-gpu.c",
     "aml-s905d2g.c",

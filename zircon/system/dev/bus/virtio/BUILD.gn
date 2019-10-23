@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("virtio") {
+zx_driver("virtio") {
   sources = [
     "backends/pci.cc",
     "backends/pci_legacy.cc",
@@ -69,7 +69,7 @@ source_set("common") {
   ]
 }
 
-test("virtio-test") {
+zx_test("virtio-test") {
   sources = [
     "gpu_test.cc",
     "scsi_test.cc",

@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("operation") {
+zx_library("operation") {
   host = true
   sources = []
   static = true
@@ -38,7 +38,7 @@ group("test") {
   ]
 }
 
-test("storage-operation") {
+zx_test("storage-operation") {
   test_group = "storage"
   sources = [
     "test/unbuffered-operations-builder-test.cc",

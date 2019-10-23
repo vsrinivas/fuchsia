@@ -5,14 +5,14 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("mock-mmio-reg") {
+zx_library("mock-mmio-reg") {
   sdk = "source"
   sdk_headers = [ "lib/mock-mmio-reg/mock-mmio-reg.h" ]
   testonly = true
   sources = []
 }
 
-test("mock-mmio-reg-test") {
+zx_test("mock-mmio-reg-test") {
   output_name = "mock-mmio-reg-test"
   sources = [
     "mock-mmio-reg-test.cc",

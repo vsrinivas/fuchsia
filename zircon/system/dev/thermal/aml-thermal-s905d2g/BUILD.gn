@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("aml-thermal-s905d2g") {
+zx_driver("aml-thermal-s905d2g") {
   sources = [
     "aml-cpufreq.cc",
     "aml-fclk-rates.c",
@@ -34,7 +34,7 @@ driver("aml-thermal-s905d2g") {
   ]
 }
 
-test("aml-thermal-s905d2g-test") {
+zx_test("aml-thermal-s905d2g-test") {
   output_name = "aml-thermal-s905d2g-test"
   sources = [
     "aml-cpufreq.cc",

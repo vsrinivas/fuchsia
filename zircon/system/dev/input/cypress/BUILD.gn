@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("cypress") {
+zx_driver("cypress") {
   sources = [
     "cy8cmbr3108.cc",
   ]
@@ -22,7 +22,7 @@ driver("cypress") {
   ]
 }
 
-test("cypress-touch-test") {
+zx_test("cypress-touch-test") {
   output_name = "cypress-touch-test"
   sources = [
     "cy8cmbr3108.cc",

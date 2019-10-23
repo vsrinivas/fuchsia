@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("max98373") {
+zx_driver("max98373") {
   sources = [
     "max98373.cc",
   ]
@@ -22,7 +22,7 @@ driver("max98373") {
   ]
 }
 
-test("max98373-test") {
+zx_test("max98373-test") {
   output_name = "max98373-test"
   sources = [
     "max98373-test.cc",

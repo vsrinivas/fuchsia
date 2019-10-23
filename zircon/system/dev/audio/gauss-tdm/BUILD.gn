@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("gauss-tdm") {
+zx_driver("gauss-tdm") {
   sources = [
     "gauss-tdm-out.c",
     "gauss-tdm-stream.cc",

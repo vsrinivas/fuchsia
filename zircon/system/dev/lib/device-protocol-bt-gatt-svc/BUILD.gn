@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("device-protocol-bt-gatt-svc") {
+zx_library("device-protocol-bt-gatt-svc") {
   sdk = "source"
   sdk_headers = [ "lib/device-protocol/bt-gatt-svc.h" ]
   sources = []

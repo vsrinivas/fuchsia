@@ -43,7 +43,7 @@ template("boot_shim") {
   if (toolchain.environment == "physmem") {
     shim_name = "${board}-boot-shim"
 
-    executable(shim_name) {
+    zx_executable(shim_name) {
       output_extension = "elf"
       configs += [ ":boot_shim_config" ]
       deps = [

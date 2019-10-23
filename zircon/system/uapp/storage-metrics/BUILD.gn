@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("storage-metrics") {
+zx_executable("storage-metrics") {
   sources = [
     "main.cc",
   ]

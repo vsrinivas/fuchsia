@@ -5,7 +5,7 @@
 import("$zx/public/gn/firmware.gni")
 
 # TODO: test_driver?
-driver("flash-programmer") {
+zx_driver("flash-programmer") {
   testonly = true
   sources = [
     "flash-programmer.cc",

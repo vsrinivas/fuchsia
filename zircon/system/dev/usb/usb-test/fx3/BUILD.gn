@@ -4,7 +4,7 @@
 
 import("$zx/public/gn/firmware.gni")
 
-driver("fx3") {  # TODO: test_driver?
+zx_driver("fx3") {  # TODO: test_driver?
   testonly = true
   sources = [
     "fx3.c",

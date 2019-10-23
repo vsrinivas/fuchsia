@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("minfs-allocator-unit") {
+zx_test("minfs-allocator-unit") {
   test_group = "fs"
   sources = [
     "allocator-test.cc",

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("bitmap") {
+zx_test("bitmap") {
   sources = [
     "raw-bitmap-tests.cc",
     "rle-bitmap-tests.cc",

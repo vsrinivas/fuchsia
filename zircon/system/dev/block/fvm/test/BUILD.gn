@@ -10,7 +10,7 @@ group("test") {
   ]
 }
 
-test("fvm-driver-unittests") {
+zx_test("fvm-driver-unittests") {
   sources = [
     "block-device-test.cc",
     "slice-extent-test.cc",

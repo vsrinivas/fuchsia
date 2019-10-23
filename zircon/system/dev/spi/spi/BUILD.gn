@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("spi") {
+zx_driver("spi") {
   sources = [
     "spi-child.cc",
     "spi.cc",
@@ -21,7 +21,7 @@ driver("spi") {
   ]
 }
 
-test("spi-test") {
+zx_test("spi-test") {
   output_name = "spi-test"
   sources = [
     "spi-child.cc",

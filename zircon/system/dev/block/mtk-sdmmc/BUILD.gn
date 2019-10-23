@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("mtk-sdmmc") {
+zx_driver("mtk-sdmmc") {
   sources = [
     "mtk-sdmmc.cc",
   ]
@@ -28,7 +28,7 @@ driver("mtk-sdmmc") {
   ]
 }
 
-test("mtk-sdmmc-test") {
+zx_test("mtk-sdmmc-test") {
   output_name = "mtk-sdmmc-test"
   sources = [
     "mtk-sdmmc-test.cc",

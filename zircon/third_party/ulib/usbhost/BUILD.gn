@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 assert(current_os == "linux")
 
-library("usbhost") {
+zx_library("usbhost") {
   host = true
   static = false
   sources = [

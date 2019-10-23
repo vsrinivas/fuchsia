@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("qcom-gpio") {
+zx_driver("qcom-gpio") {
   sources = [
     "binding.cc",
     "qcom-gpio.cc",
@@ -23,7 +23,7 @@ driver("qcom-gpio") {
   ]
 }
 
-test("qcom-gpio-test") {
+zx_test("qcom-gpio-test") {
   output_name = "qcom-gpio-test"
   sources = [
     "qcom-gpio-test.cc",

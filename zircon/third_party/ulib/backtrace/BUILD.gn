@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("backtrace") {
+zx_library("backtrace") {
   sdk = "shared"
   sdk_headers = [
     "backtrace/backtrace-supported.h",

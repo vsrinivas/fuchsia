@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("perftest") {
+zx_library("perftest") {
   sdk = "source"
   sdk_headers = [
     "perftest/perftest.h",

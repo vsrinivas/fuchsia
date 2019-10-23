@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 import("$zx_build/public/gn/package.gni")
 
-library("fs-pty") {
+zx_library("fs-pty") {
   static = true
 
   sources = []

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("scsi") {
+zx_library("scsi") {
   sdk_headers = [
     "scsi/scsilib.h",
     "scsi/scsilib_controller.h",
@@ -25,7 +25,7 @@ library("scsi") {
   ]
 }
 
-test("scsilib-disk-test") {
+zx_test("scsilib-disk-test") {
   sources = [
     "scsilib-disk-test.cc",
   ]

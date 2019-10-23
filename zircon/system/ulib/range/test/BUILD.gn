@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("range") {
+zx_test("range") {
   test_group = "sys"
   sources = [
     "interval-tree-test.cc",

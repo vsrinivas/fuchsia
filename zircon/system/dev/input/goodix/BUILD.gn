@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("goodix") {
+zx_driver("goodix") {
   sources = [
     "gt92xx.cc",
   ]
@@ -36,7 +36,7 @@ group("test") {
   ]
 }
 
-test("gt92xx-test") {
+zx_test("gt92xx-test") {
   output_name = "gt92xx-test"
   sources = [
     "gt92xx-test.cc",

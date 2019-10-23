@@ -4,7 +4,7 @@
 
 import("$zx/public/gn/package.gni")
 
-executable("ptysvc") {
+zx_executable("ptysvc") {
   sources = [
     "main.cc",
   ]
@@ -53,7 +53,7 @@ source_set("common") {
   ]
 }
 
-test("ptysvc-test") {
+zx_test("ptysvc-test") {
   test_group = "sys"
 
   sources = [

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("intel") {
+zx_library("intel") {
   kernel = true
   sources = [
     "context_table_state.cc",

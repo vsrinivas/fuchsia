@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("libfs-pty-test") {
+zx_test("libfs-pty-test") {
   sources = [
     "service-test.cc",
   ]

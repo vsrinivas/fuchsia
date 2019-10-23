@@ -13,7 +13,7 @@ if (toolchain.tool_dir == "") {
   group("noop.${toolchain.variant}") {
   }
 } else {
-  test("noop") {
+  zx_test("noop") {
     sources = [
       "noop-test.cc",
     ]
@@ -65,7 +65,7 @@ default_stack_size_cases = [
 ]
 
 foreach(case, default_stack_size_cases) {
-  test("default-stack-size-${case.name}") {
+  zx_test("default-stack-size-${case.name}") {
     sources = [
       "default-stack-size-test.cc",
     ]
@@ -81,7 +81,7 @@ foreach(case, default_stack_size_cases) {
   }
 }
 
-executable("debugdata-test-helper") {
+zx_executable("debugdata-test-helper") {
   testonly = true
   sources = [
     "debugdata-test-helper.cc",
@@ -91,7 +91,7 @@ executable("debugdata-test-helper") {
   ]
 }
 
-test("debugdata") {
+zx_test("debugdata") {
   test_group = "c"
   sources = [
     "debugdata.cc",
@@ -117,7 +117,7 @@ test("debugdata") {
   ]
 }
 
-test("clock-gettime") {
+zx_test("clock-gettime") {
   test_group = "c"
   sources = [
     "clock-gettime.cc",

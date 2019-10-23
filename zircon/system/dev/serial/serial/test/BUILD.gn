@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("serial-unittest") {
+zx_test("serial-unittest") {
   sources = [
     "serial-test.cc",
   ]

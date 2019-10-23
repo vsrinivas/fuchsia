@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("aml-thermal-s912") {
+zx_driver("aml-thermal-s912") {
   sources = [
     "aml-thermal.cc",
   ]
@@ -23,7 +23,7 @@ driver("aml-thermal-s912") {
   ]
 }
 
-test("aml-thermal-s912-test") {
+zx_test("aml-thermal-s912-test") {
   output_name = "aml-thermal-s912-test"
   sources = [
     "aml-thermal-test.cc",

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("optee") {
+zx_driver("optee") {
   sources = [
     "optee-client.cc",
     "optee-controller.cc",
@@ -41,7 +41,7 @@ group("test") {
   ]
 }
 
-test("optee-message-test") {
+zx_test("optee-message-test") {
   output_name = "optee-message-test"
   sources = [
     "optee-client.cc",

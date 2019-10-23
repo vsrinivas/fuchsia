@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("thread-safe-deleter") {
+zx_library("thread-safe-deleter") {
   # Note: The appearance of "sdk" does not mean this will or is intended to be
   # in the sdk. It's just the way we export from zircon for use elsewhere.
   sdk = "source"

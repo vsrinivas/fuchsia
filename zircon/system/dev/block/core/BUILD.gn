@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("core") {
+zx_driver("core") {
   output_name = "block.core"
   deps = [
     ":shared",
@@ -16,7 +16,7 @@ group("test") {
   ]
 }
 
-test("core-unittest") {
+zx_test("core-unittest") {
   output_name = "blockcore"
   include_dirs = [ "." ]
   sources = [

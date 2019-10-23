@@ -10,7 +10,7 @@ group("test") {
   ]
 }
 
-test("ftl") {
+zx_test("ftl") {
   sources = [
     "block_device_test.cc",
     "driver-test.cc",
@@ -30,7 +30,7 @@ test("ftl") {
   ]
 }
 
-test("ftl-integration") {
+zx_test("ftl-integration") {
   sources = [
     "ftl_integration_test.cc",
     "ftl_test_observer.cc",

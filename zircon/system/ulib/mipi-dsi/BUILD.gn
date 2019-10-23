@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("mipi-dsi") {
+zx_library("mipi-dsi") {
   sources = [
     "mipi-dsi.cc",
   ]
@@ -13,7 +13,7 @@ library("mipi-dsi") {
   ]
 }
 
-test("mipidsi") {
+zx_test("mipidsi") {
   sources = [
     "test/mipi-dsi-test.cc",
   ]

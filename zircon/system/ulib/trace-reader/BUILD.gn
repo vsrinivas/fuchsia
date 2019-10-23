@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("trace-reader") {
+zx_library("trace-reader") {
   sdk = "source"
   sdk_headers = [
     "trace-reader/file_reader.h",
@@ -36,7 +36,7 @@ library("trace-reader") {
   ]
 }
 
-test("trace-reader-test") {
+zx_test("trace-reader-test") {
   sources = [
     "file_reader_tests.cc",
     "reader_tests.cc",

@@ -9,7 +9,7 @@ group("backlight") {
   ]
 }
 
-test("backlight-test") {
+zx_test("backlight-test") {
   testonly = true
   output_name = "backlight-test"
   sources = [

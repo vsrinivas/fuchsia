@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("aml-axg-gpio") {
+zx_driver("aml-axg-gpio") {
   sources = [
     "aml-axg-gpio.cc",
   ]
@@ -25,7 +25,7 @@ driver("aml-axg-gpio") {
   ]
 }
 
-test("aml-axg-gpio-test") {
+zx_test("aml-axg-gpio-test") {
   output_name = "aml-axg-gpio-test"
   sources = [
     "aml-axg-gpio-test.cc",

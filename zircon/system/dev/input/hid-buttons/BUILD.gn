@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("hid-buttons") {
+zx_driver("hid-buttons") {
   sources = [
     "hid-buttons.cc",
   ]
@@ -22,7 +22,7 @@ driver("hid-buttons") {
   ]
 }
 
-test("hid-buttons-test") {
+zx_test("hid-buttons-test") {
   output_name = "hid-buttons-test"
   sources = [
     "hid-buttons-test.cc",

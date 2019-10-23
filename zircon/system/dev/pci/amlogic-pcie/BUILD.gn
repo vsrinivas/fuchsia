@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("amlogic-pcie") {
+zx_driver("amlogic-pcie") {
   sources = [
     "aml-pcie-clk.cc",
     "aml-pcie-device.cc",

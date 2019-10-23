@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("common") {
+zx_library("common") {
   kernel = true
   sources = [
     "arm_gic_hw_interface.cc",

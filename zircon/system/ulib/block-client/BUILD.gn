@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("block-client") {
+zx_library("block-client") {
   sources = [
     "block-group-registry.cc",
     "client.c",
@@ -35,7 +35,7 @@ library("block-client") {
   ]
 }
 
-library("fake-device") {
+zx_library("fake-device") {
   testonly = true
   sources = [
     "fake-device.cc",

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/host_tool_shim.gni")
 
-host_tool("mkfs-msdosfs") {
+zx_host_tool("mkfs-msdosfs") {
   sources = [
     "mkfs_msdos.c",
     "mkfs_msdos.h",

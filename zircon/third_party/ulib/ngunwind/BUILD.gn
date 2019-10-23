@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 import("$zx_build/public/gn/config/levels.gni")
 
-library("ngunwind") {
+zx_library("ngunwind") {
   # This library is very crufty and should not be used in general.  It's
   # used as an implementation detail of the inspector library, which
   # statically links it into its shared library.

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("mt8167") {
+zx_library("mt8167") {
   sources = [
     "mt8167-audio-in.cc",
     "mt8167-audio-out.cc",
@@ -19,7 +19,7 @@ library("mt8167") {
   ]
 }
 
-test("mt8167-audio-lib-test") {
+zx_test("mt8167-audio-lib-test") {
   output_name = "mt8167-audio-lib-test"
   sources = [
     "mt8167-audio-in-test.cc",

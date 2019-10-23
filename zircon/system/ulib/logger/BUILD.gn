@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("logger") {
+zx_library("logger") {
   sources = [
     "logger.cc",
     "provider.cc",

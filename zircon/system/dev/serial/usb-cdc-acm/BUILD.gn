@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("usb-cdc-acm") {
+zx_driver("usb-cdc-acm") {
   sources = [
     "usb-cdc-acm.cc",
   ]
@@ -22,7 +22,7 @@ driver("usb-cdc-acm") {
   ]
 }
 
-driver("fake-usb-cdc-acm") {
+zx_driver("fake-usb-cdc-acm") {
   sources = [
     "usb-cdc-acm-function.cc",
   ]

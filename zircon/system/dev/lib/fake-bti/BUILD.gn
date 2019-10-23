@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fake-bti") {
+zx_library("fake-bti") {
   sdk = "shared"
   sdk_headers = [ "lib/fake-bti/bti.h" ]
   testonly = true

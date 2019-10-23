@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("platform-bus") {
+zx_test("platform-bus") {
   sources = [
     "main.cc",
   ]
@@ -45,7 +45,7 @@ group("test") {
   }
 }
 
-driver("test-board") {
+zx_driver("test-board") {
   sources = [
     "test-audio-codec.cc",
     "test-board.cc",
@@ -66,7 +66,7 @@ driver("test-board") {
   ]
 }
 
-driver("test-gpio") {
+zx_driver("test-gpio") {
   sources = [
     "test/gpio.cc",
   ]
@@ -83,7 +83,7 @@ driver("test-gpio") {
   ]
 }
 
-driver("test-power") {
+zx_driver("test-power") {
   sources = [
     "test/power.cc",
   ]
@@ -100,7 +100,7 @@ driver("test-power") {
   ]
 }
 
-driver("test-clock") {
+zx_driver("test-clock") {
   sources = [
     "test/clock.cc",
   ]
@@ -117,7 +117,7 @@ driver("test-clock") {
   ]
 }
 
-driver("test-i2c") {
+zx_driver("test-i2c") {
   sources = [
     "test/i2c.cc",
   ]
@@ -134,7 +134,7 @@ driver("test-i2c") {
   ]
 }
 
-driver("test-spi") {
+zx_driver("test-spi") {
   sources = [
     "test/spi.cc",
   ]
@@ -151,7 +151,7 @@ driver("test-spi") {
   ]
 }
 
-driver("test-audio-codec") {
+zx_driver("test-audio-codec") {
   sources = [
     "test/audio-codec.cc",
   ]
@@ -168,7 +168,7 @@ driver("test-audio-codec") {
 }
 
 foreach(driver, simple_drivers) {
-  driver("test-$driver") {
+  zx_driver("test-$driver") {
     sources = [
       "test/$driver.c",
     ]

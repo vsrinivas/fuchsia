@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("pcie") {
+zx_library("pcie") {
   kernel = true
   sources = [
     "address_provider/designware.cc",

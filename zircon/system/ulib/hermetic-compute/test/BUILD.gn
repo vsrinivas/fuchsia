@@ -38,7 +38,7 @@ foreach(name, test_modules) {
   }
 }
 
-test("hermetic-compute-module") {
+zx_test("hermetic-compute-module") {
   sources = [
     "test.cc",
   ]

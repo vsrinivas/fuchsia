@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("hid-parser") {
+zx_library("hid-parser") {
   sdk = "static"
   sdk_headers = [
     "hid-parser/item.h",

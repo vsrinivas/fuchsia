@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("as370") {
+zx_driver("as370") {
   sources = [
     "as370-audio.cc",
     "as370-clock.cc",

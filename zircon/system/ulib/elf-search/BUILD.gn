@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("elf-search") {
+zx_library("elf-search") {
   sdk = "source"
   sdk_headers = [ "elf-search.h" ]
   sources = [

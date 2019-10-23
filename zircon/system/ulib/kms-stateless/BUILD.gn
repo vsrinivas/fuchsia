@@ -1,4 +1,4 @@
-library("kms-stateless") {
+zx_library("kms-stateless") {
   sources = [
     "kms-stateless.cc",
   ]

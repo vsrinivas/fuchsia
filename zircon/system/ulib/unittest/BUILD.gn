@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("unittest") {
+zx_library("unittest") {
   sdk = "source"
   sdk_headers = [ "unittest/unittest.h" ]
   testonly = true

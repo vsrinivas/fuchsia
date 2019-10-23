@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("elfload") {
+zx_library("elfload") {
   sources = [
     "elf-load.c",
   ]

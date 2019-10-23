@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("kernel-debug") {
+zx_library("kernel-debug") {
   sources = [
     "kernel-debug.cc",
   ]

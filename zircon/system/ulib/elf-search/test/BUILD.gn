@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-library("elf") {
+zx_library("elf") {
   sources = [
     "elf.c",
   ]
@@ -21,7 +21,7 @@ library("elf") {
   visibility = [ ":*" ]
 }
 
-executable("elf-search-test-helper") {
+zx_executable("elf-search-test-helper") {
   sources = [
     "helper.cc",
   ]
@@ -29,7 +29,7 @@ executable("elf-search-test-helper") {
   visibility = [ ":*" ]
 }
 
-test("elf-search") {
+zx_test("elf-search") {
   sources = [
     "elf-search-test.cc",
   ]

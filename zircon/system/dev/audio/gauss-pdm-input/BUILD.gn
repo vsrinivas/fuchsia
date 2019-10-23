@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("gauss-pdm-input") {
+zx_driver("gauss-pdm-input") {
   sources = [
     "a113-audio-device.c",
     "a113-ddr.c",

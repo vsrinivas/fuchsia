@@ -63,7 +63,7 @@ source_set("user_pci.proxy") {
 }
 
 if (enable_user_pci) {
-  driver("bus-pci") {
+  zx_driver("bus-pci") {
     sources = [
       # The driver needs bind glue, unlike tests.
       "bind.cc",
@@ -73,13 +73,13 @@ if (enable_user_pci) {
     ]
   }
 
-  driver("bus-pci.proxy") {
+  zx_driver("bus-pci.proxy") {
     deps = [
       ":user_pci.proxy",
     ]
   }
 } else {
-  driver("bus-pci") {
+  zx_driver("bus-pci") {
     sources = [
       "kpci/kpci.c",
     ]
@@ -93,7 +93,7 @@ if (enable_user_pci) {
     ]
   }
 
-  driver("bus-pci.proxy") {
+  zx_driver("bus-pci.proxy") {
     sources = [
       "kpci/proxy.c",
     ]
@@ -116,7 +116,7 @@ if (enable_user_pci) {
 # pci_fake.proxy.so: The corresponding proxy driver that binds to pci_fake.so
 #                    and loads pci_test.so
 # pci_test.so: A zxtest driver to test the PCI protocol
-test("pci-unit") {
+zx_test("pci-unit") {
   sources = [
     "test/unit/allocation_tests.cc",
     "test/unit/config_tests.cc",
@@ -129,7 +129,7 @@ test("pci-unit") {
   ]
 }
 
-test("pci-driver") {
+zx_test("pci-driver") {
   sources = [
     "test/driver/driver_tests.cc",
   ]
@@ -145,7 +145,7 @@ test("pci-driver") {
   ]
 }
 
-driver("pci_fake") {
+zx_driver("pci_fake") {
   sources = [
     "test/driver/fake_bus_driver.cc",
   ]
@@ -158,13 +158,13 @@ driver("pci_fake") {
   ]
 }
 
-driver("pci_fake.proxy") {
+zx_driver("pci_fake.proxy") {
   deps = [
     ":user_pci.proxy",
   ]
 }
 
-driver("pci_protocol_test_driver") {
+zx_driver("pci_protocol_test_driver") {
   sources = [
     "test/driver/protocol_test_driver.cc",
   ]

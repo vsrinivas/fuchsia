@@ -13,7 +13,7 @@ declare_args() {
   driver_unittest_log_flags = "0x7"
 }
 
-library("fake_ddk") {
+zx_library("fake_ddk") {
   sdk = "static"
   sdk_headers = [ "lib/fake_ddk/fake_ddk.h" ]
   testonly = true

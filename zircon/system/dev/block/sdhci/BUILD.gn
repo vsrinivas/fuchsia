@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("sdhci") {
+zx_driver("sdhci") {
   sources = [
     "sdhci.cc",
   ]
@@ -21,7 +21,7 @@ driver("sdhci") {
   ]
 }
 
-test("sdhci-test") {
+zx_test("sdhci-test") {
   output_name = "sdhci-test"
   sources = [
     "sdhci.cc",

@@ -11,7 +11,7 @@ group("test") {
   ]
 }
 
-test("crypto") {
+zx_test("crypto") {
   sources = [
     "aead.cc",
     "bytes.cc",

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("intel-hda") {
+zx_library("intel-hda") {
   sources = [
     "codec-utils/codec-driver-base.cc",
     "codec-utils/stream-base.cc",
@@ -36,7 +36,7 @@ group("test") {
   ]
 }
 
-test("intel-hda-utils-test") {
+zx_test("intel-hda-utils-test") {
   testonly = true
   sources = [
     "utils/clock_test.cc",

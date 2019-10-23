@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("logger-unit") {
+zx_test("logger-unit") {
   sources = [
     "logger-test.cc",
   ]

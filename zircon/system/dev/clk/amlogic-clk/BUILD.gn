@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("amlogic-clk") {
+zx_driver("amlogic-clk") {
   sources = [
     "aml-clk.cc",
   ]
@@ -26,7 +26,7 @@ driver("amlogic-clk") {
   ]
 }
 
-test("amlogic-clk-test") {
+zx_test("amlogic-clk-test") {
   testonly = true
   output_name = "amlogic-clk-test"
   sources = [

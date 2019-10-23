@@ -31,7 +31,7 @@ config("zstd-config") {
   }
 }
 
-library("zstd") {
+zx_library("zstd") {
   host = true
   sources = [
     "$zstd/lib/common/debug.c",
@@ -70,7 +70,7 @@ library("zstd") {
   configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
 }
 
-host_tool("zstdcli") {
+zx_host_tool("zstdcli") {
   output_name = "zstd"
   sources = [
     "$zstd/programs/benchfn.c",

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("driver-integration") {
+zx_test("driver-integration") {
   test_group = "ddk"
   sources = [
     "main.cc",

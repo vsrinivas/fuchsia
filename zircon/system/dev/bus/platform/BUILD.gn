@@ -9,7 +9,7 @@ group("platform") {
   ]
 }
 
-driver("platform-bus") {
+zx_driver("platform-bus") {
   sources = [
     "cpu-trace.cc",
     "device-resources.cc",
@@ -40,7 +40,7 @@ driver("platform-bus") {
   deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-driver("platform-bus.proxy") {
+zx_driver("platform-bus.proxy") {
   sources = [
     "platform-proxy.cc",
   ]

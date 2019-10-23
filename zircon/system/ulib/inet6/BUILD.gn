@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("inet6") {
+zx_library("inet6") {
   sources = [
     "checksum.c",
     "eth-client.c",
@@ -21,7 +21,7 @@ library("inet6") {
   ]
 }
 
-library("netifc-discover") {
+zx_library("netifc-discover") {
   sources = [
     "netifc-discover.c",
   ]

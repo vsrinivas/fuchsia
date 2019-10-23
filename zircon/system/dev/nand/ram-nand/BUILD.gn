@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("ram-nand") {
+zx_driver("ram-nand") {
   sources = [
     "bind.cc",
     "ram-nand-ctl.cc",
@@ -37,7 +37,7 @@ source_set("common") {
   ]
 }
 
-test("ram-nand-test") {
+zx_test("ram-nand-test") {
   output_name = "ram-nand-test"
   sources = [
     "test/ram-nand-ctl.cc",

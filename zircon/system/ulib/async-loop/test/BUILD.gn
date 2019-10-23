@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("async-loop") {
+zx_test("async-loop") {
   sources = [
     "loop_tests.cc",
   ]

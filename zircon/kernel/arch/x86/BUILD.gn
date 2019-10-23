@@ -66,7 +66,7 @@ config("kernel") {
   ]
 }
 
-library("x86") {
+zx_library("x86") {
   kernel = true
   sources = [
     "acpi.S",

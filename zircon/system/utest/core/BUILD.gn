@@ -78,7 +78,7 @@ group("core") {
 
 # Build each test as a standalone binary meant to be run by runtests.
 foreach(test_name, core_tests) {
-  test(test_name) {
+  zx_test(test_name) {
     test_group = "core"
     deps = [
       test_name,
@@ -89,7 +89,7 @@ foreach(test_name, core_tests) {
 # Now build all of those (and more) together into the standalone core-tests
 # binary.  This can and must be run directly from userboot because it
 # requires the root resource handle but no system services whatsoever.
-test("standalone") {
+zx_test("standalone") {
   test_group = "core"
   deps = core_tests + unified_only
   sources = [

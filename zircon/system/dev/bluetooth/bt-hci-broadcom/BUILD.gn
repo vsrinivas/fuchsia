@@ -4,7 +4,7 @@
 
 import("$zx/public/gn/firmware.gni")
 
-driver("bt-hci-broadcom") {
+zx_driver("bt-hci-broadcom") {
   sources = [
     "bt-hci-broadcom.c",
   ]
@@ -28,7 +28,7 @@ firmware("firmware") {
   ]
 }
 
-test("bt-hci-broadcom-test") {
+zx_test("bt-hci-broadcom-test") {
   output_name = "bt-hci-broadcom-test"
   sources = [
     "bt-hci-broadcom-test.c",

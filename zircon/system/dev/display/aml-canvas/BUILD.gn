@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("aml-canvas") {
+zx_driver("aml-canvas") {
   sources = [
     "aml-canvas.cc",
   ]
@@ -21,7 +21,7 @@ driver("aml-canvas") {
   ]
 }
 
-test("aml-canvas-test") {
+zx_test("aml-canvas-test") {
   testonly = true
   output_name = "aml-canvas-test"
   sources = [

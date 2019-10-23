@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("memfs-tests") {
+zx_test("memfs-tests") {
   sources = [
     "memfs-tests.cc",
   ]

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("ddk-runcompatibilityhook-test") {
+zx_driver("ddk-runcompatibilityhook-test") {
   sources = [
     "test-driver.cc",
   ]
@@ -18,7 +18,7 @@ driver("ddk-runcompatibilityhook-test") {
   deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-driver("ddk-runcompatibilityhook-test-child") {
+zx_driver("ddk-runcompatibilityhook-test-child") {
   sources = [
     "test-driver-child.cc",
   ]
@@ -33,7 +33,7 @@ driver("ddk-runcompatibilityhook-test-child") {
   deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-test("ddk-runcompatibilityhook") {
+zx_test("ddk-runcompatibilityhook") {
   sources = [
     "test.cc",
   ]

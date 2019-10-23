@@ -29,7 +29,7 @@ trace_engine_header_deps = [
 ]
 
 template("trace_engine_library") {
-  library(target_name) {
+  zx_library(target_name) {
     forward_variables_from(invoker, "*")
 
     if (defined(extra_configs)) {
@@ -83,7 +83,7 @@ trace_engine_library("trace-engine-driver") {
 
 # Header-only source package for use by trace-provider:handler,
 # which is engine-agnostic.
-library("trace-engine-headers-for-handler") {
+zx_library("trace-engine-headers-for-handler") {
   sdk = "source"
   sdk_headers = trace_engine_headers
   public_deps = trace_engine_header_deps
@@ -92,7 +92,7 @@ library("trace-engine-headers-for-handler") {
 
 # Header-only source package for use by exported trace-reader package.
 # This code also runs on the host.
-library("trace-engine-headers-for-reader") {
+zx_library("trace-engine-headers-for-reader") {
   sdk = "source"
   host = true
   sdk_headers = [
@@ -109,7 +109,7 @@ group("tests") {
   ]
 }
 
-test("hash-table-test") {
+zx_test("hash-table-test") {
   visibility = [ ":*" ]
   output_name = "trace-engine-hash-table-test"
   sources = [

@@ -5,7 +5,7 @@
 import("$zx/public/gn/fuzzer.gni")
 import("$zx_build/public/gn/library_shim.gni")
 
-library("gfx") {
+zx_library("gfx") {
   sdk = "source"
   sdk_headers = [ "gfx/gfx.h" ]
   sources = [

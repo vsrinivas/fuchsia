@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("digest") {
+zx_test("digest") {
   sources = [
     "digest.cc",
     "hash-list.cc",

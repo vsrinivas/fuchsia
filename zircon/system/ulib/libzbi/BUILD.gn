@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("libzbi") {
+zx_library("libzbi") {
   output_prefix_override = true
   sdk = "static"
   sdk_headers = [

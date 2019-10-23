@@ -8,7 +8,7 @@ import("$zx/public/gn/fidl.gni")
 # fidl_library() invocations below.  But that toolchain doesn't support
 # compiling targets, so don't define the actual target there.
 if (current_toolchain != default_toolchain) {
-  test("fidl-llcpp-interop") {
+  zx_test("fidl-llcpp-interop") {
     sources = [
       "basictypes_tests.cc",
       "controlflow_tests.cc",

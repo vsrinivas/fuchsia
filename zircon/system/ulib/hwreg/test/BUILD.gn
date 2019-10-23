@@ -10,7 +10,7 @@ group("test") {
   ]
 }
 
-test("libhwreg") {
+zx_test("libhwreg") {
   sources = [
     "bitfields-test.cc",
     "indirect-test.cc",
@@ -29,7 +29,7 @@ test("libhwreg") {
   ]
 }
 
-test("libhwreg-i2c") {
+zx_test("libhwreg-i2c") {
   sources = [
     "i2c-hwreg-test.cc",
   ]

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("usb-mass-storage") {
+zx_driver("usb-mass-storage") {
   sources = [
     "usb-mass-storage.cc",
   ]
@@ -47,7 +47,7 @@ group("tests") {
   ]
 }
 
-test("ums-block") {
+zx_test("ums-block") {
   sources = [
     "tests/block.cc",
   ]
@@ -62,7 +62,7 @@ test("ums-block") {
   ]
 }
 
-test("ums") {
+zx_test("ums") {
   sources = [
     "tests/usb-mass-storage.cc",
     "usb-mass-storage.cc",

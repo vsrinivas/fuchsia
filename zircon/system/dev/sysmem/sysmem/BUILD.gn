@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("sysmem") {
+zx_driver("sysmem") {
   sources = [
     "allocator.cc",
     "binding.cc",
@@ -43,7 +43,7 @@ driver("sysmem") {
   deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-test("sysmem-unittest") {
+zx_test("sysmem-unittest") {
   output_name = "sysmem-unittest"
   sources = [
     "contiguous_pooled_memory_allocator.cc",

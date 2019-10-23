@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("hid") {
+zx_driver("hid") {
   sources = [
     "hid-fifo.c",
     "hid-instance.cc",
@@ -27,7 +27,7 @@ driver("hid") {
   ]
 }
 
-test("hid-test") {
+zx_test("hid-test") {
   sources = [
     "hid-fifo.c",
     "hid-instance.cc",

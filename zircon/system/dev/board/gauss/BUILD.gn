@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("gauss") {
+zx_driver("gauss") {
   sources = [
     "gauss-audio.c",
     "gauss-clk.c",
@@ -33,7 +33,7 @@ driver("gauss") {
   ]
 }
 
-driver("gauss-i2c-test") {
+zx_driver("gauss-i2c-test") {
   sources = [
     "gauss-i2c-test.c",
   ]

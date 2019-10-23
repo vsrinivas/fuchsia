@@ -4,7 +4,7 @@
 
 assert(current_cpu == "x64")
 
-driver("intel-ethernet") {
+zx_driver("intel-ethernet") {
   sources = [
     "ethernet.c",
     "ie.c",

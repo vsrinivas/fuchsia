@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("statusor") {
+zx_library("statusor") {
   sdk = "source"
   sdk_headers = [
     "lib/statusor/endpoint-or-error.h",

@@ -4,7 +4,7 @@
 
 assert(current_cpu == "x64")
 
-driver("tpm") {
+zx_driver("tpm") {
   sources = [
     "i2c-cr50.cc",
     "tpm-commands.cc",

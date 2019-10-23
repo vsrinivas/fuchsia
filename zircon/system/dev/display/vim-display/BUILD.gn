@@ -31,7 +31,7 @@ common_deps = [
   "$zx/third_party/ulib/uboringssl",
 ]
 
-driver("vim-display") {
+zx_driver("vim-display") {
   sources = [
     "edid.cc",
     "hdmitx.cc",
@@ -49,7 +49,7 @@ driver("vim-display") {
   deps = common_deps
 }
 
-test("vim-display-test") {
+zx_test("vim-display-test") {
   sources = [
     "edid.cc",
     "hdmitx.cc",

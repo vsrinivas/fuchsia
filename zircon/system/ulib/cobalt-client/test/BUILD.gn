@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("cobalt-client-unit") {
+zx_test("cobalt-client-unit") {
   sources = [
     "cobalt_logger_test.cc",
     "collector_test.cc",

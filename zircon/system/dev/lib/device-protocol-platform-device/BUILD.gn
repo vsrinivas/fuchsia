@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("device-protocol-platform-device") {
+zx_library("device-protocol-platform-device") {
   sdk = "source"
   sdk_headers = [ "lib/device-protocol/platform-device.h" ]
   sources = []

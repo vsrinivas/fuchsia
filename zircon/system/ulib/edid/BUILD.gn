@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("edid") {
+zx_library("edid") {
   sources = [
     "edid.cc",
     "eisa_vid_lut.cc",

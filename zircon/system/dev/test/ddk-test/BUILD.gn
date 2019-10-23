@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test_driver("ddk-test") {
+zx_test_driver("ddk-test") {
   sources = [
     "ddk-test-binding.c",
     "ddk-test.c",

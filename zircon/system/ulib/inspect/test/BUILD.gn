@@ -10,7 +10,7 @@ group("test") {
   ]
 }
 
-test("inspect") {
+zx_test("inspect") {
   test_group = "sys"
   sources = [
     "health_unittest.cc",
@@ -31,7 +31,7 @@ test("inspect") {
   ]
 }
 
-test("inspect-common") {
+zx_test("inspect-common") {
   test_group = "sys"
   sources = [
     "common_unittest.cc",

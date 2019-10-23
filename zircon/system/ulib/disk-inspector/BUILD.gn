@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("disk-inspector") {
+zx_library("disk-inspector") {
   static = true
   sources = [
     "disk-inspector.cc",

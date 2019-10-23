@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("component") {
+zx_driver("component") {
   sources = [
     "component.cc",
   ]
@@ -32,7 +32,7 @@ driver("component") {
   ]
 }
 
-driver("component.proxy") {
+zx_driver("component.proxy") {
   sources = [
     "component-proxy.cc",
   ]

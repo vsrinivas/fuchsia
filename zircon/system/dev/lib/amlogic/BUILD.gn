@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("amlogic") {
+zx_library("amlogic") {
   sources = [
     "a113-clocks.c",
     "aml-pdm-audio.cc",

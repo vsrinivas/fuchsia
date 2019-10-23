@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("sherlock") {
+zx_driver("sherlock") {
   sources = [
     "sherlock-audio.cc",
     "sherlock-backlight.cc",

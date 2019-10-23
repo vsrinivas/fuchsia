@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("devmgr-integration-test") {
+zx_library("devmgr-integration-test") {
   sdk = "shared"
   sdk_headers = [ "lib/devmgr-integration-test/fixture.h" ]
 

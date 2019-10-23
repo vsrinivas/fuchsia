@@ -12,7 +12,7 @@ if (is_fuchsia) {
     ]
   }
 
-  test("service-llcpp-test") {
+  zx_test("service-llcpp-test") {
     sources = [
       "llcpp/client_test.cc",
       "llcpp/server_test.cc",

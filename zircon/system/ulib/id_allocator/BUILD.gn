@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("id_allocator") {
+zx_library("id_allocator") {
   sdk = "source"
   sdk_headers = [ "id_allocator/id_allocator.h" ]
   sources = [

@@ -37,7 +37,7 @@ source_set("common") {
 }
 
 # Run the common tests under a strict invalid handle policy
-executable("fidl-handle-policy-test-app") {
+zx_executable("fidl-handle-policy-test-app") {
   testonly = true
   sources = []
   deps = [
@@ -45,7 +45,7 @@ executable("fidl-handle-policy-test-app") {
   ]
 }
 
-test("fidl") {
+zx_test("fidl") {
   sources = [
     "abi_tests.cc",
     "cpp_types_tests.cc",

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("usb-peripheral-utils") {
+zx_library("usb-peripheral-utils") {
   shared = true
   sources = [
     "event-watcher.cc",

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("zxcrypt-dev") {
+zx_library("zxcrypt-dev") {
   shared = true
   static = true
   sources = [
@@ -41,7 +41,7 @@ library("zxcrypt-dev") {
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }
 
-library("zxcrypt-fdio") {
+zx_library("zxcrypt-fdio") {
   shared = true
   sources = [
     "fdio-volume.cc",

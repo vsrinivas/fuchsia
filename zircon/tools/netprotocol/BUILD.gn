@@ -17,7 +17,7 @@ source_set("common") {
   ]
 }
 
-host_tool("netruncmd") {
+zx_host_tool("netruncmd") {
   sources = [
     "netruncmd.c",
   ]
@@ -26,7 +26,7 @@ host_tool("netruncmd") {
   ]
 }
 
-host_tool("netcp") {
+zx_host_tool("netcp") {
   sources = [
     "netcp.c",
   ]
@@ -36,7 +36,7 @@ host_tool("netcp") {
   ]
 }
 
-host_tool("netls") {
+zx_host_tool("netls") {
   sources = [
     "netls.c",
   ]
@@ -45,7 +45,7 @@ host_tool("netls") {
   ]
 }
 
-host_tool("netaddr") {
+zx_host_tool("netaddr") {
   sources = [
     "netaddr.c",
   ]

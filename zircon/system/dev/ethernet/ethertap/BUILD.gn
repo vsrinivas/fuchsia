@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("ethertap") {
+zx_driver("ethertap") {
   sources = [
     "ethertap.cc",
   ]
@@ -21,7 +21,7 @@ driver("ethertap") {
   ]
 }
 
-test("ethertap-unittest") {
+zx_test("ethertap-unittest") {
   testonly = true
   output_name = "ethertap-unittest"
   sources = [

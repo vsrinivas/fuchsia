@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("device-protocol-pdev") {
+zx_library("device-protocol-pdev") {
   sdk = "source"
   sdk_headers = [ "lib/device-protocol/pdev.h" ]
   sources = [
@@ -28,7 +28,7 @@ library("device-protocol-pdev") {
   ]
 }
 
-test("device-protocol-pdev-test") {
+zx_test("device-protocol-pdev-test") {
   output_name = "device-protocol-pdev-test"
   sources = [
     "pdev-test.cc",

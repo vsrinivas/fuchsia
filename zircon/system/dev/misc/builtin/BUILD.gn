@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("builtin") {
+zx_driver("builtin") {
   sources = [
     "null.c",
     "root.c",

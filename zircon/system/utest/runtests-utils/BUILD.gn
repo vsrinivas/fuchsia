@@ -4,7 +4,7 @@
 
 import("$zx/public/gn/resource.gni")
 
-test("runtests-utils") {
+zx_test("runtests-utils") {
   sources = [
     "runtests-utils-test-utils.cc",
     "runtests-utils-test.cc",
@@ -31,7 +31,7 @@ test("runtests-utils") {
 }
 
 if (is_fuchsia) {
-  executable("publish-data-helper") {
+  zx_executable("publish-data-helper") {
     testonly = true
     visibility = [ ":*" ]
     sources = [

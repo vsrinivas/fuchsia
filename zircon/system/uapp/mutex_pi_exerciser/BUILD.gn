@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("mutex_pi_exerciser") {
+zx_executable("mutex_pi_exerciser") {
   sources = [
     "event.cc",
     "main.cc",

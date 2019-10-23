@@ -4,7 +4,7 @@
 
 assert(is_kernel)
 
-library("mtrace") {
+zx_library("mtrace") {
   kernel = true
   sources = [
     "mtrace-ipt.cc",

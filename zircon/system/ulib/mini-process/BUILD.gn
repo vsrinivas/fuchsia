@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 import("$zx_build/public/gn/toolchain/environment_redirect.gni")
 
-library("mini-process") {
+zx_library("mini-process") {
   testonly = true
   shared = true
   sources = [

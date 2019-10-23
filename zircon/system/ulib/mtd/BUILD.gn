@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 # This library requires an environment with mtd/mtd-user.h and MTD support.
 
-library("mtd") {
+zx_library("mtd") {
   host = true
 
   if (current_os == "linux") {

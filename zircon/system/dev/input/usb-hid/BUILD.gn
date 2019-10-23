@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("usb-hid") {
+zx_driver("usb-hid") {
   sources = [
     "usb-hid.cc",
   ]
@@ -19,7 +19,7 @@ driver("usb-hid") {
   ]
 }
 
-driver("usb-hid-fake-usb") {
+zx_driver("usb-hid-fake-usb") {
   sources = [
     "usb-hid-function.cc",
   ]

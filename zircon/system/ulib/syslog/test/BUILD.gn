@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("syslog") {
+zx_test("syslog") {
   sources = [
     "syslog_socket_tests.cc",
     "syslog_tests.c",

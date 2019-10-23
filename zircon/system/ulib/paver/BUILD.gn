@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("paver") {
+zx_library("paver") {
   sources = [
     "abr.cc",
     "device-partitioner.cc",
@@ -50,7 +50,7 @@ library("paver") {
   ]
 }
 
-test("paver-test") {
+zx_test("paver-test") {
   output_name = "paver-test"
   sources = [
     "test/abr-test.cc",

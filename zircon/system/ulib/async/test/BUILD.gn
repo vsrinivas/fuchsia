@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("async") {
+zx_test("async") {
   sources = [
     "default_tests.cc",
     "dispatcher_tests.cc",

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("region-alloc") {
+zx_test("region-alloc") {
   sources = [
     "region-alloc-c-api.c",
     "region-alloc.cc",

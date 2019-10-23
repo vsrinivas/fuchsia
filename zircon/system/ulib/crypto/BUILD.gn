@@ -20,7 +20,7 @@ group("headers") {
   ]
 }
 
-library("zircon-crypto") {
+zx_library("zircon-crypto") {
   shared = true
   sources = [
     "aead.cc",

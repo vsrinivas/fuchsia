@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/source_set_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-executable("devhost") {
+zx_executable("devhost") {
   sources = [
     "main.cc",
   ]
@@ -67,7 +67,7 @@ source_set("common") {
 }
 
 # "$zx/system/ulib/driver" is an alias for this.
-library("driver") {
+zx_library("driver") {
   sdk = "shared"
   sdk_publishable = false
   sdk_headers = []
@@ -95,7 +95,7 @@ library("driver") {
   }
 }
 
-test("devhost-test") {
+zx_test("devhost-test") {
   test_group = "ddk"
   sources = [
     "device-api-test.cc",

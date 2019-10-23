@@ -9,7 +9,7 @@ group("psutils") {
   ]
 }
 
-test("ps") {
+zx_test("ps") {
   sources = [
     "../../uapp/psutils/ps_internal.c",
     "ps_test.c",

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("zxcrypt") {
+zx_driver("zxcrypt") {
   sources = [
     "device-info.cc",
     "device-manager.cc",

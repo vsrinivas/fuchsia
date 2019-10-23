@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("cobalt-client") {
+zx_library("cobalt-client") {
   sdk = "source"
   sdk_headers = [
     "cobalt-client/cpp/collector-internal.h",
@@ -48,7 +48,7 @@ library("cobalt-client") {
 
 
 # This library may only be imported from tests.
-library("in-memory-logger") {
+zx_library("in-memory-logger") {
   testonly = true
   sources = [ "in-memory-logger.cc" ]
   public_deps = [

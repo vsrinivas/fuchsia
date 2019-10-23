@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("storage-metrics") {
+zx_library("storage-metrics") {
   sdk = "source"
   sdk_headers = [ "storage-metrics/storage-metrics.h" ]
   sources = [

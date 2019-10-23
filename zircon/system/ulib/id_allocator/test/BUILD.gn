@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("id_allocator") {
+zx_test("id_allocator") {
   sources = [
     "id_allocator.cc",
   ]

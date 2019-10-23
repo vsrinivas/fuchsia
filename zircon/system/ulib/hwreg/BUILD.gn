@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("hwreg") {
+zx_library("hwreg") {
   sdk = "source"
   sdk_headers = [
     "hwreg/bitfields.h",
@@ -37,7 +37,7 @@ library("hwreg") {
   ]
 }
 
-library("hwreg-i2c") {
+zx_library("hwreg-i2c") {
   sdk = "source"
   sdk_headers = [
     "hwreg/bitfields.h",

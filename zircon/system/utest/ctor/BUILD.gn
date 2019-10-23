@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("ctor") {
+zx_test("ctor") {
   sources = [
     "ctor.cc",
   ]
@@ -13,7 +13,7 @@ test("ctor") {
   ]
 }
 
-library("dso-ctor") {
+zx_library("dso-ctor") {
   visibility = [ ":*" ]
   testonly = true
   shared = true

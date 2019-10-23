@@ -230,7 +230,7 @@ if (current_toolchain == default_toolchain) {
 
   # This is the kernel proper, an ELF executable with full symbols.
   # It's the file to use with a debugger, for example.
-  executable("zircon") {
+  zx_executable("zircon") {
     visibility = [ ":*" ]
 
     # $zx/scripts/zircon.elf-gdb.py expects kernel symbols in "zircon.elf".
@@ -371,7 +371,7 @@ if (current_toolchain == default_toolchain) {
 
   # Link the final kernel image layout including the extracted raw binary
   # and the generated fixups.
-  executable("image") {
+  zx_executable("image") {
     visibility = [ ":*" ]
     configs += [
       ":image_config",

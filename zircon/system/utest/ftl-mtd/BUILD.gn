@@ -10,7 +10,7 @@ group("ftl-mtd") {
   ]
 }
 
-test("ftl-volume-wrapper-integration") {
+zx_test("ftl-volume-wrapper-integration") {
   sources = [
     "ftl-volume-wrapper-integration-tests.cc",
   ]

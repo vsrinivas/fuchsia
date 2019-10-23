@@ -4,7 +4,7 @@
 
 assert(current_cpu == "x64")
 
-driver("intel-rtc") {
+zx_driver("intel-rtc") {
   sources = [
     "intel-rtc.c",
   ]

@@ -57,7 +57,7 @@ if (current_toolchain == default_toolchain) {
     cflags += [ "-U_MSC_VER" ]
   }
 
-  executable("bootloader") {
+  zx_executable("bootloader") {
     output_dir = root_out_dir
     if (current_cpu == "arm64") {
       output_name = "bootaa64"

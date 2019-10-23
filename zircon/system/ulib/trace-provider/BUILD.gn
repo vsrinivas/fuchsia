@@ -17,7 +17,7 @@ import("$zx_build/public/gn/test_shim.gni")
 # (4) trace-provider-driver: This copy is for use by libdriver.so for the DDK.
 
 template("trace_provider_library") {
-  library(target_name) {
+  zx_library(target_name) {
     forward_variables_from(invoker, "*")
 
     if (defined(extra_configs)) {
@@ -163,7 +163,7 @@ trace_provider_library("trace-provider-driver") {
 # For apps that use the trace engine, but not via a trace provider.
 # These are usually test and benchmarking apps.
 # Normal apps are not expected to use this.
-library("trace-handler") {
+zx_library("trace-handler") {
   sdk = "static"
   sdk_headers = [ "lib/trace-provider/handler.h" ]
   public_deps = [
@@ -179,7 +179,7 @@ library("trace-handler") {
 # A helper library for clients that want to use fdio to connect to
 # trace manager, outside of the regular libraries.
 # This is for special cases where the client is choosing its engine separately.
-library("trace-provider-fdio-connect") {
+zx_library("trace-provider-fdio-connect") {
   sdk = "static"
   sdk_headers = trace_provider_fdio_connect_headers
   sources = trace_provider_fdio_connect_sources
@@ -193,7 +193,7 @@ group("tests") {
   ]
 }
 
-test("provider-test") {
+zx_test("provider-test") {
   visibility = [ ":*" ]
   output_name = "trace-provider-test"
   sources = [

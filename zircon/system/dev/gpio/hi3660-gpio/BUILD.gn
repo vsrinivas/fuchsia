@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("hi3660-gpio") {
+zx_driver("hi3660-gpio") {
   sources = [
     "hi3660-gpio.c",
   ]

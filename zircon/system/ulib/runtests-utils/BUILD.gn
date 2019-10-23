@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("runtests-utils") {
+zx_library("runtests-utils") {
   testonly = true
   host = true
   sources = [

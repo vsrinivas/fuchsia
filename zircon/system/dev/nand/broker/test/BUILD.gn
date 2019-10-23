@@ -34,7 +34,7 @@ source_set("common") {
   ]
 }
 
-test("nand-broker") {
+zx_test("nand-broker") {
   sources = [
     "main.cc",
   ]
@@ -43,7 +43,7 @@ test("nand-broker") {
   ]
 }
 
-test("nandpart-broker") {
+zx_test("nandpart-broker") {
   sources = [
     "nandpart-main.cc",
   ]

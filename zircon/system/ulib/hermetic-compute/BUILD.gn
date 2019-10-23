@@ -9,7 +9,7 @@ import("hermetic_module.gni")
 if (is_hermetic) {
   # This is for hermetic_module() targets to use in deps.
   # It's not to used in programs that link to hermetic-compute.
-  library("hermetic-engine") {
+  zx_library("hermetic-engine") {
     sources = []
     public_deps = [
       # <lib/hermetic-compute/hermetic-engine.h> -> <zircon/syscalls.h>
@@ -25,7 +25,7 @@ if (is_hermetic) {
 }
 
 # This is the library for loading and launching hermetic engine modules.
-library("hermetic-compute") {
+zx_library("hermetic-compute") {
   sources = []
   public_deps = [
     # <lib/hermetic-compute/hermetic-compute.h> -> <fbl/macros.h>

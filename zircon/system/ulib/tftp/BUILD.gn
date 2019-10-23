@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("tftp") {
+zx_library("tftp") {
   sdk = "static"
   sdk_headers = [ "tftp/tftp.h" ]
   kernel = true
@@ -27,7 +27,7 @@ library("tftp") {
 }
 
 if (!is_kernel) {
-  test("tftp-test") {
+  zx_test("tftp-test") {
     output_name = "tftp-test"
     sources = [
       "tftp-file-test.cc",
@@ -41,7 +41,7 @@ if (!is_kernel) {
     ]
   }
 
-  host_tool("tftp-example") {
+  zx_host_tool("tftp-example") {
     sources = [
       "tftp-example.c",
     ]

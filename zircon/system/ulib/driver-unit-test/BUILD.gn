@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("driver-unit-test") {
+zx_library("driver-unit-test") {
   sdk = "static"
   sdk_headers = [
     "driver-unit-test/logger.h",

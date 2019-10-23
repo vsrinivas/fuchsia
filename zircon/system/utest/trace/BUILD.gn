@@ -41,7 +41,7 @@ source_set("common") {
 }
 
 # Version of test that uses libtrace-engine.so.
-test("trace") {
+zx_test("trace") {
   deps = [
     ":common",
     "$zx/system/ulib/trace-engine",
@@ -52,7 +52,7 @@ test("trace") {
 }
 
 # And again using libtrace-engine.a.
-test("trace-static-engine") {
+zx_test("trace-static-engine") {
   deps = [
     ":common",
     "$zx/system/ulib/trace-engine:trace-engine-static",

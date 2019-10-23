@@ -4,7 +4,7 @@
 
 import("$zx/public/gn/config/product_parameters.gni")
 
-executable("netsvc") {
+zx_executable("netsvc") {
   sources = [
     "debuglog.cc",
     "netsvc.cc",
@@ -33,7 +33,7 @@ executable("netsvc") {
   ]
 }
 
-executable("device-name-provider") {
+zx_executable("device-name-provider") {
   sources = [
     "device-name-provider.cc",
   ]
@@ -93,7 +93,7 @@ source_set("netsvc_common") {
   ]
 }
 
-test("netsvc-test") {
+zx_test("netsvc-test") {
   output_name = "netsvc-test"
   sources = [
     "test/args-test.cc",

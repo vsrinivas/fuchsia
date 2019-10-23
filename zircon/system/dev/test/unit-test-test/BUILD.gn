@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test_driver("unit-test-fail") {
+zx_test_driver("unit-test-fail") {
   sources = [
     "unit-test-fail.cc",
   ]
@@ -12,7 +12,7 @@ test_driver("unit-test-fail") {
   ]
 }
 
-test_driver("unit-test-pass") {
+zx_test_driver("unit-test-pass") {
   sources = [
     "unit-test-pass.cc",
   ]

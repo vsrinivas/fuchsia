@@ -4,7 +4,7 @@
 
 import("$zx/public/gn/package.gni")
 
-executable("console") {
+zx_executable("console") {
   sources = [
     "main.cc",
   ]
@@ -45,7 +45,7 @@ source_set("common") {
   ]
 }
 
-test("console-test") {
+zx_test("console-test") {
   test_group = "sys"
 
   sources = [

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("lockdep") {
+zx_library("lockdep") {
   sdk = "source"
   sdk_headers = [
     "lockdep/common.h",
@@ -35,7 +35,7 @@ library("lockdep") {
   }
 }
 
-test("lockdep-test") {
+zx_test("lockdep-test") {
   testonly = true
   sources = [
     "lock_dep_test.cc",

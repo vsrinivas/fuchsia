@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 assert(current_cpu == "x64")
 
-library("chromiumos-platform-ec") {
+zx_library("chromiumos-platform-ec") {
   sources = [
     "comm-lpc.cc",
   ]

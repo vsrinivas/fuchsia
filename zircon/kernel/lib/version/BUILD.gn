@@ -29,7 +29,7 @@ if (current_toolchain == default_toolchain) {
     args = rebase_path(outputs, root_build_dir)
   }
 } else {
-  library("version") {
+  zx_library("version") {
     kernel = true
     sources = [
       "version.cc",

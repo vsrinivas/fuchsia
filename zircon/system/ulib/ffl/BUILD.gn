@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("ffl") {
+zx_library("ffl") {
   sources = []
   host = true
   kernel = true

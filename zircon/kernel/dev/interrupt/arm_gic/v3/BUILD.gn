@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("v3") {
+zx_library("v3") {
   kernel = true
   sources = [
     "arm_gicv3.cc",

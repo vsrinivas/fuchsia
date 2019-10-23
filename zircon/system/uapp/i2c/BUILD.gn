@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("i2c") {
+zx_executable("i2c") {
   sources = [
     "i2c.c",
   ]

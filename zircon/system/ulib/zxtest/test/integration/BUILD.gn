@@ -9,7 +9,7 @@ group("integration") {
   ]
 }
 
-test("zxtest-integration") {
+zx_test("zxtest-integration") {
   sources = [
     "assertions_test.c",
     "assertions_test.cc",

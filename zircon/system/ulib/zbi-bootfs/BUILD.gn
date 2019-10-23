@@ -7,7 +7,7 @@ import("$zx/public/gn/resource.gni")
 import("$zx/public/gn/zbi.gni")
 import("$zx_build/public/gn/library_shim.gni")
 
-library("zbi-bootfs") {
+zx_library("zbi-bootfs") {
   sdk_headers = [ "zbi-bootfs/zbi-bootfs.h" ]
   sdk = "shared"
   shared = true
@@ -38,7 +38,7 @@ group("test") {
   ]
 }
 
-test("zbi-bootfs-test") {
+zx_test("zbi-bootfs-test") {
   sources = [
     "zbi-bootfs-test.cc",
   ]

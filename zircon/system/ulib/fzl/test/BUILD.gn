@@ -10,7 +10,7 @@ group("test") {
   ]
 }
 
-test("fzl-zxtest") {
+zx_test("fzl-zxtest") {
   sources = [
     "pinned-vmo-tests.cc",
     "vmo-pool-tests.cc",
@@ -34,7 +34,7 @@ test("fzl-zxtest") {
   ]
 }
 
-test("fzl") {
+zx_test("fzl") {
   sources = [
     "fdio.cc",
     "fzl-test.cc",

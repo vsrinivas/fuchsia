@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("fbl") {
+zx_test("fbl") {
   include_dirs = [ "include" ]
   sources = [
     "algorithm_tests.cc",

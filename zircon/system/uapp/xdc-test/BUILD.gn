@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("xdc-test") {
+zx_executable("xdc-test") {
   sources = [
     "xdc-device.cc",
     "xdc-test.cc",
@@ -17,7 +17,7 @@ executable("xdc-test") {
   ]
 }
 
-host_tool("xdc-test-host") {
+zx_host_tool("xdc-test-host") {
   sources = [
     "xdc-host.cc",
     "xdc-test.cc",

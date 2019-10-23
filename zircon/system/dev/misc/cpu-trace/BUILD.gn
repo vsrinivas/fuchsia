@@ -30,7 +30,7 @@ source_set("perf-mon") {
   ]
 }
 
-driver("cpu-trace") {
+zx_driver("cpu-trace") {
   sources = [
     "cpu-trace.cc",
   ]
@@ -60,7 +60,7 @@ group("tests") {
   ]
 }
 
-test("perf-mon-tests") {
+zx_test("perf-mon-tests") {
   sources = [
     "tests/perf-mon-tests.cc",
   ]

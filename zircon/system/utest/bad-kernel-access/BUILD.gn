@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("bad-kernel-access") {
+zx_test("bad-kernel-access") {
   sources = [
     "bad-kernel-access.c",
   ]

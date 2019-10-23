@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fidl-async-2") {
+zx_library("fidl-async-2") {
   sdk = "source"
 
   sdk_headers = [

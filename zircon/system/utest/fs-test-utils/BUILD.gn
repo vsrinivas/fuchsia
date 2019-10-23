@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("fs-test-utils") {
+zx_test("fs-test-utils") {
   test_group = "fs"
   sources = [
     "fixture_test.cc",

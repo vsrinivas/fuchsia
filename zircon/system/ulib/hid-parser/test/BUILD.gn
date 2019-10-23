@@ -12,7 +12,7 @@ group("test") {
   ]
 }
 
-test("hid-parser") {
+zx_test("hid-parser") {
   sources = [
     "hid-descriptor-test.cc",
     "hid-helper-test.cc",

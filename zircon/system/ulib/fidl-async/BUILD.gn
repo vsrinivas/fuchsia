@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fidl-async") {
+zx_library("fidl-async") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/fidl-async/bind.h" ]
@@ -18,7 +18,7 @@ library("fidl-async") {
   ]
 }
 
-library("fidl-async-cpp") {
+zx_library("fidl-async-cpp") {
   sdk = "source"
   sdk_headers = [
     "lib/fidl-async/cpp/bind.h",

@@ -22,14 +22,14 @@ source_set("alc5663_sources") {
   ]
 }
 
-driver("alc5663") {
+zx_driver("alc5663") {
   deps = [
     ":alc5663_sources",
     "$zx/system/ulib/ddk",
   ]
 }
 
-test("alc5663_test") {
+zx_test("alc5663_test") {
   testonly = true
   output_name = "alc5663-test"
 

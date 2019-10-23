@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("zxs") {
+zx_library("zxs") {
   sdk = "static"
   sdk_headers = [ "lib/zxs/protocol.h" ]
   sources = []

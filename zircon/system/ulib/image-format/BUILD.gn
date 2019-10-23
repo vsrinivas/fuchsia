@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("image-format") {
+zx_library("image-format") {
   sdk = "source"
   sdk_headers = [ "lib/image-format/image_format.h" ]
   sources = [
@@ -22,7 +22,7 @@ library("image-format") {
   ]
 }
 
-library("image-format-llcpp") {
+zx_library("image-format-llcpp") {
   sdk = "source"
   sdk_headers = [ "lib/image-format-llcpp/image-format-llcpp.h" ]
   sources = [
@@ -36,7 +36,7 @@ library("image-format-llcpp") {
   ]
 }
 
-test("image-format-test") {
+zx_test("image-format-test") {
   sources = [
     "image-format-test.cc",
   ]

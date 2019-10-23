@@ -10,7 +10,7 @@ group("test") {
   ]
 }
 
-test("minfs-unit") {
+zx_test("minfs-unit") {
   test_group = "fs"
   sources = [
     "unit/bcache-test.cc",
@@ -38,7 +38,7 @@ test("minfs-unit") {
   configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
-test("minfs-integration") {
+zx_test("minfs-integration") {
   test_group = "fs"
   sources = [
     "integration/backup-superblock.cc",
@@ -53,7 +53,7 @@ test("minfs-integration") {
   ]
 }
 
-test("minfs-host") {
+zx_test("minfs-host") {
   sources = [
     "host/bcache-test.cc",
   ]

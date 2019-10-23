@@ -5,7 +5,7 @@
 import("$zx/public/gn/fidl.gni")
 
 if (is_fuchsia) {
-  test("fidl-utils") {
+  zx_test("fidl-utils") {
     sources = [
       "binding_tests.cc",
     ]

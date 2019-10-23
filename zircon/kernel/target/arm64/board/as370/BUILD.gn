@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("as370-boot-shim-test") {
+zx_test("as370-boot-shim-test") {
   output_name = "as370-boot-shim-test"
   sources = [
     "as370-boot-shim-test.cc",

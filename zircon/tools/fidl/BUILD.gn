@@ -15,7 +15,7 @@ config("fidlc_config") {
 }
 
 if (defined(zx)) {
-  library("fidl") {
+  zx_library("fidl") {
     host = true
     sources = [
       "lib/attributes.cc",
@@ -90,7 +90,7 @@ if (defined(zx)) {
     ]
   }
 
-  host_tool("fidlc") {
+  zx_host_tool("fidlc") {
     sources = [
       "compiler/main.cc",
     ]
@@ -99,7 +99,7 @@ if (defined(zx)) {
     ]
   }
 
-  host_tool("fidl-format") {
+  zx_host_tool("fidl-format") {
     sources = [
       "formatter/main.cc",
     ]
@@ -108,7 +108,7 @@ if (defined(zx)) {
     ]
   }
 
-  host_tool("fidl-lint") {
+  zx_host_tool("fidl-lint") {
     sources = [
       "linter/command_line_options.cc",
       "linter/main.cc",

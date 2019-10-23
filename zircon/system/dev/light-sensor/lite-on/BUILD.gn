@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("lite-on") {
+zx_driver("lite-on") {
   sources = [
     "ltr-578als.cc",
   ]
@@ -24,7 +24,7 @@ driver("lite-on") {
   ]
 }
 
-test("ltr-578als-test") {
+zx_test("ltr-578als-test") {
   output_name = "ltr-578als-test"
   sources = [
     "ltr-578als-test.cc",

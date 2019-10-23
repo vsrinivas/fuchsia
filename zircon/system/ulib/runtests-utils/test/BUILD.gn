@@ -12,7 +12,7 @@ if (is_fuchsia) {
     ]
   }
 
-  test("service-proxy-dir") {
+  zx_test("service-proxy-dir") {
     sources = [
       "service-proxy-dir.cc",
     ]

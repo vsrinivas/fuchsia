@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("fdio") {
+zx_test("fdio") {
   sources = [
     "fdio_atexit.cc",
     "fdio_directory.cc",
@@ -44,7 +44,7 @@ test("fdio") {
   ]
 }
 
-executable("accept-child") {
+zx_executable("accept-child") {
   visibility = [ ":*" ]
   testonly = true
   sources = [
@@ -56,7 +56,7 @@ executable("accept-child") {
   ]
 }
 
-executable("null-namespace-child") {
+zx_executable("null-namespace-child") {
   visibility = [ ":*" ]
   testonly = true
   sources = [

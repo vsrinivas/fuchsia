@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("hid") {
+zx_library("hid") {
   sdk = "static"
   sdk_headers = [
     "hid/acer12.h",

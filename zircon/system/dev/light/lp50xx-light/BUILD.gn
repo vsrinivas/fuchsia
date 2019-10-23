@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("lp50xx-light") {
+zx_driver("lp50xx-light") {
   sources = [
     "lp50xx-light.cc",
   ]
@@ -24,7 +24,7 @@ driver("lp50xx-light") {
   ]
 }
 
-test("lp50xx-light-test") {
+zx_test("lp50xx-light-test") {
   output_name = "lp50xx-light-test"
   sources = [
     "lp50xx-light-test.cc",

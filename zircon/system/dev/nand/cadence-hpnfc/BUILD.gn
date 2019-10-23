@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("cadence-hpnfc") {
+zx_driver("cadence-hpnfc") {
   sources = [
     "cadence-hpnfc.cc",
   ]
@@ -22,7 +22,7 @@ driver("cadence-hpnfc") {
   ]
 }
 
-test("cadence-hpnfc-test") {
+zx_test("cadence-hpnfc-test") {
   testonly = "true"
   output_name = "cadence-hpnfc-test"
   sources = [

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("vdso-variant") {
+zx_test("vdso-variant") {
   sources = [
     "vdso-variant.c",
   ]
@@ -15,7 +15,7 @@ test("vdso-variant") {
   ]
 }
 
-executable("vdso-variant-helper") {
+zx_executable("vdso-variant-helper") {
   visibility = [ ":*" ]
   testonly = true
   sources = [

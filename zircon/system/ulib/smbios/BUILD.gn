@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("smbios") {
+zx_library("smbios") {
   kernel = true
   static = true
   sources = [
@@ -15,7 +15,7 @@ library("smbios") {
   ]
 }
 
-test("smbios-test") {
+zx_test("smbios-test") {
   sources = [
     "smbios-test.cc",
   ]

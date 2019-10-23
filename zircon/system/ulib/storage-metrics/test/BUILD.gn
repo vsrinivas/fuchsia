@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("storage-metrics") {
+zx_test("storage-metrics") {
   sources = [
     "storage-metrics-test.cc",
   ]

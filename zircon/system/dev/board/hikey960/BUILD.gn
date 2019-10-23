@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("hikey960") {
+zx_driver("hikey960") {
   sources = [
     "hikey960-devices.c",
     "hikey960-dsi.c",
@@ -34,7 +34,7 @@ driver("hikey960") {
   ]
 }
 
-driver("hi3660-i2c-test") {
+zx_driver("hi3660-i2c-test") {
   # TODO: testonly = true
   sources = [
     "hikey960-i2c-test.c",

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("simplehid") {
+zx_test("simplehid") {
   sources = [
     "simplehid-test.cc",
   ]

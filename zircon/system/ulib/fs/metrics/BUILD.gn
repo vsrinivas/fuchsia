@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
 # Metrics which depend on cobalt only.
-library("metrics-cobalt") {
+zx_library("metrics-cobalt") {
   sources = [
     "cobalt_metrics.cc",
   ]
@@ -21,7 +21,7 @@ library("metrics-cobalt") {
 }
 
 # Metrics which are logged by inspect vmo only.
-library("metrics-inspect") {
+zx_library("metrics-inspect") {
   sources = [
     "histograms.cc",
   ]
@@ -41,7 +41,7 @@ library("metrics-inspect") {
 
 # Helper library that uses both cobalt and inspect to record metrics.
 # TODO(ZX-3150): Remove once inspect broker service is complete.
-library("metrics-composite-latency-event") {
+zx_library("metrics-composite-latency-event") {
   sources = [
     "composite_latency_event.cc",
   ]

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("disk-inspector-unit") {
+zx_test("disk-inspector-unit") {
   sources = [
     "basic-types-test.cc",
   ]

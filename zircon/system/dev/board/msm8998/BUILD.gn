@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("msm8998") {
+zx_driver("msm8998") {
   sources = [
     "msm8998.cc",
   ]

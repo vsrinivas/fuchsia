@@ -36,7 +36,7 @@ source_set("common") {
 }
 
 # The default version for the normal case.
-library("trace-vthread") {
+zx_library("trace-vthread") {
   sdk = "static"
   sdk_headers = [
     "trace-vthread/internal/event_vthread.h",
@@ -60,7 +60,7 @@ library("trace-vthread") {
 # libtrace-engine.so.
 # N.B. Please verify that you really need this before using it.
 # Generally you DON'T want to use this.
-library("trace-vthread-with-static-engine") {
+zx_library("trace-vthread-with-static-engine") {
   sdk = "static"
   sdk_headers = [
     "trace-vthread/internal/event_vthread.h",
@@ -116,7 +116,7 @@ source_set("test-common") {
 }
 
 # The unittest for the default case of dynamically linked trace-engine.
-test("trace-vthread-test") {
+zx_test("trace-vthread-test") {
   deps = [
     ":test-common",
     "$zx/system/ulib/trace-engine",
@@ -124,7 +124,7 @@ test("trace-vthread-test") {
 }
 
 # The unittest with a static trace-engine.
-test("trace-vthread-with-static-engine-test") {
+zx_test("trace-vthread-with-static-engine-test") {
   deps = [
     ":test-common",
     "$zx/system/ulib/trace-engine:trace-engine-static",

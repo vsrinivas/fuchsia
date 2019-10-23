@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("crashsvc") {
+zx_library("crashsvc") {
   sources = [
     "crashsvc.cc",
   ]
@@ -20,7 +20,7 @@ library("crashsvc") {
   ]
 }
 
-executable("svchost") {
+zx_executable("svchost") {
   sources = [
     "svchost.cc",
     "sysmem.cc",
@@ -58,7 +58,7 @@ executable("svchost") {
   ]
 }
 
-test("crashsvc-test") {
+zx_test("crashsvc-test") {
   output_name = "crashsvc-test"
   sources = [
     "crashsvc-test.cc",

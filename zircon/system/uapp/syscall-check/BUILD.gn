@@ -5,7 +5,7 @@
 import("$zx/public/gn/test/zbi_test.gni")
 
 # Prints out the status of syscalls used to confirm them being disabled.
-executable("syscall-check") {
+zx_executable("syscall-check") {
   sources = [
     "main.cc",
   ]

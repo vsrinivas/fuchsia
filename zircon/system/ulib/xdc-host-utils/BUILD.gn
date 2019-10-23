@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("xdc-host-utils") {
+zx_library("xdc-host-utils") {
   host = true
   sources = [
     "client.cc",

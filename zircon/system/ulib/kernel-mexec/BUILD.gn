@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("kernel-mexec") {
+zx_library("kernel-mexec") {
   sources = [
     "kernel-mexec.cc",
   ]
@@ -27,7 +27,7 @@ library("kernel-mexec") {
   ]
 }
 
-test("kernel-mexec-test") {
+zx_test("kernel-mexec-test") {
   sources = [
     "kernel-mexec_test.cc",
   ]

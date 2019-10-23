@@ -46,7 +46,7 @@ if (current_toolchain == default_toolchain) {
            rebase_path(sources, root_build_dir)
   }
 } else {
-  test("fidl-compiler") {
+  zx_test("fidl-compiler") {
     sources = [
       "array_tests.cc",
       "attributes_tests.cc",

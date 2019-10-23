@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fake-i2c") {
+zx_library("fake-i2c") {
   testonly = true
   sources = []
 }

@@ -4,7 +4,7 @@
 
 assert(current_cpu == "x64")
 
-driver("realtek-8111") {
+zx_driver("realtek-8111") {
   sources = [
     "rtl8111.c",
   ]

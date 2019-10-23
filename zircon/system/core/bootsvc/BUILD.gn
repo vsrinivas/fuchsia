@@ -23,7 +23,7 @@ zbi_input("cmdline") {
   args = [ "--entry=userboot.root=${bootfs_package_prefix}bootsvc" ]
 }
 
-executable("bin") {
+zx_executable("bin") {
   output_name = "bootsvc"
   sources = [
     "bootfs-loader-service.cc",
@@ -85,7 +85,7 @@ group("tests") {
   ]
 }
 
-test("bootsvc-unit-test") {
+zx_test("bootsvc-unit-test") {
   output_name = "bootsvc-unit-test"
   sources = [
     "unit-test.cc",
@@ -97,7 +97,7 @@ test("bootsvc-unit-test") {
   ]
 }
 
-executable("bootsvc-integration-test") {
+zx_executable("bootsvc-integration-test") {
   testonly = true
   defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
   sources = [

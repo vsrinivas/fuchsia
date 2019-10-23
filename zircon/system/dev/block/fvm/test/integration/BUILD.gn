@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("fvm-driver-integration") {
+zx_test("fvm-driver-integration") {
   sources = [
     "volume_manager_api_test.cc",
   ]

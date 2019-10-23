@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("as370-thermal") {
+zx_driver("as370-thermal") {
   sources = [
     "as370-thermal.cc",
   ]
@@ -26,7 +26,7 @@ driver("as370-thermal") {
   ]
 }
 
-test("as370-thermal-test") {
+zx_test("as370-thermal-test") {
   output_name = "as370-thermal-test"
   sources = [
     "as370-thermal-test.cc",

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fzl") {
+zx_library("fzl") {
   sdk = "source"
   sdk_headers = [
     "lib/fzl/fdio.h",

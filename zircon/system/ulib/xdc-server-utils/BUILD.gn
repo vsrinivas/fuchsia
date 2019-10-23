@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("xdc-server-utils") {
+zx_library("xdc-server-utils") {
   host = true
   sources = [
     "packet.c",

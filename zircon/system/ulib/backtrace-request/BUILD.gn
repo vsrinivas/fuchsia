@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 
 # SDK library to request a backtrace.
-library("backtrace-request") {
+zx_library("backtrace-request") {
   sdk = "source"
   sdk_headers = [ "lib/backtrace-request/backtrace-request.h" ]
   sources = []
@@ -13,7 +13,7 @@ library("backtrace-request") {
 
 # Internal library to request, detect, and clean up backtrace requests.
 # This is a superset of the SDK backtrace-request library.
-library("utils") {
+zx_library("utils") {
   sources = [
     "backtrace-request-utils.cc",
   ]

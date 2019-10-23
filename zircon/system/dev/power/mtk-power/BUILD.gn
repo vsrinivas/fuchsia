@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("mtk-power") {
+zx_driver("mtk-power") {
   sources = [
     "mtk-power.cc",
   ]
@@ -26,7 +26,7 @@ driver("mtk-power") {
   ]
 }
 
-test("mtk-power-test") {
+zx_test("mtk-power-test") {
   testonly = true
   output_name = "mtk-power-test"
   sources = [

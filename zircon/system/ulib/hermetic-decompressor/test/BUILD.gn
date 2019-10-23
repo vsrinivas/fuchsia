@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("hermetic-decompressor") {
+zx_test("hermetic-decompressor") {
   sources = [
     "test.cc",
   ]

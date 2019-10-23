@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("device-protocol-i2c-channel") {
+zx_library("device-protocol-i2c-channel") {
   sdk = "source"
   sdk_headers = [ "lib/device-protocol/i2c-channel.h" ]
   sources = []

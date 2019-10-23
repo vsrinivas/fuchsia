@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("log-writer-textfile") {
+zx_library("log-writer-textfile") {
   shared = true
   host = true
   sources = [

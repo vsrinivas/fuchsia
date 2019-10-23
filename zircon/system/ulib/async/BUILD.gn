@@ -6,7 +6,7 @@ import("$zx_build/public/gn/library_shim.gni")
 
 assert(is_fuchsia)
 
-library("async") {
+zx_library("async") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
@@ -31,7 +31,7 @@ library("async") {
   ]
 }
 
-library("async-cpp") {
+zx_library("async-cpp") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
@@ -67,7 +67,7 @@ library("async-cpp") {
   ]
 }
 
-library("async-default") {
+zx_library("async-default") {
   sdk = "shared"
   sdk_publishable = true
   sdk_headers = [ "lib/async/default.h" ]

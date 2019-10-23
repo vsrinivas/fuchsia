@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-host_tool("minfs") {
+zx_host_tool("minfs") {
   sources = [
     "main.cc",
   ]

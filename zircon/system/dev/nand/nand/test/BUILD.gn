@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("nand-unittest") {
+zx_test("nand-unittest") {
   sources = [
     "nand-test.cc",
   ]

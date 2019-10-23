@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 if (is_fuchsia) {
-  driver("usb-peripheral-test") {
+  zx_driver("usb-peripheral-test") {
     sources = [
       "driver.cc",
     ]
@@ -19,7 +19,7 @@ if (is_fuchsia) {
     ]
   }
 } else if (current_os == "linux") {
-  test("usb-peripheral-test") {
+  zx_test("usb-peripheral-test") {
     output_name = "usb-peripheral-test"
     sources = [
       "test.cc",

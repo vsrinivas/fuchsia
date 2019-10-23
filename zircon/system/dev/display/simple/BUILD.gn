@@ -32,7 +32,7 @@ group("simple") {
 }
 
 foreach(driver, simple_drivers) {
-  driver("simple.$driver") {
+  zx_driver("simple.$driver") {
     sources = [
       "simple-$driver.c",
     ]

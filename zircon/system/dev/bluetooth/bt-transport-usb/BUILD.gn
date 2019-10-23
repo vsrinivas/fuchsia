@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("bt-transport-usb") {
+zx_driver("bt-transport-usb") {
   sources = [
     "bt-transport-usb.c",
   ]

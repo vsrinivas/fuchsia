@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("tas5782") {
+zx_driver("tas5782") {
   sources = [
     "tas5782.cc",
   ]
@@ -22,7 +22,7 @@ driver("tas5782") {
   ]
 }
 
-test("tas5782-test") {
+zx_test("tas5782-test") {
   output_name = "tas5782-test"
   sources = [
     "tas5782-test.cc",

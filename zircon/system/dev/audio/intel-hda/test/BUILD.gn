@@ -37,7 +37,7 @@ source_set("test_libs") {
   ]
 }
 
-test("intel-hda-test") {
+zx_test("intel-hda-test") {
   sources = [
     "intel_hda_test.cc",
   ]
@@ -46,7 +46,7 @@ test("intel-hda-test") {
   ]
 }
 
-test("pixelbook-eve-test") {
+zx_test("pixelbook-eve-test") {
   sources = [
     "pixelbook_eve_test.cc",
   ]

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("thermal-cli") {
+zx_executable("thermal-cli") {
   sources = [
     "main.cc",
   ]
@@ -29,7 +29,7 @@ source_set("common") {
   ]
 }
 
-test("thermal-cli-test") {
+zx_test("thermal-cli-test") {
   output_name = "thermal-cli-test"
   sources = [
     "test/thermal-cli-test.cc",

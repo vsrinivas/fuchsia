@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("virtio") {
+zx_test("virtio") {
   sources = [
     "$zx/system/dev/bus/virtio/input_touch.cc",
     "virtio-input.cc",

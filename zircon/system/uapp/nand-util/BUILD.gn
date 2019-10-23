@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("nand-util") {
+zx_executable("nand-util") {
   sources = [
     "aml.cc",
     "commands.cc",
@@ -40,7 +40,7 @@ source_set("common") {
   ]
 }
 
-test("nand-util-test") {
+zx_test("nand-util-test") {
   output_name = "nand-util-test"
   sources = [
     "test/ftl_internal_test.cc",

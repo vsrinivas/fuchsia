@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("fidl-llcpp-driver") {
+zx_driver("fidl-llcpp-driver") {
   sources = [
     "driver.cc",
   ]

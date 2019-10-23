@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("asix-88772b") {
+zx_driver("asix-88772b") {
   sources = [
     "asix-88772b.c",
   ]

@@ -5,7 +5,7 @@
 import("$zx_build/public/gn/library_shim.gni")
 import("$zx_build/public/gn/test_shim.gni")
 
-library("pretty") {
+zx_library("pretty") {
   sdk = "static"
   sdk_headers = [
     "pretty/hexdump.h",
@@ -22,7 +22,7 @@ library("pretty") {
   }
 }
 
-test("pretty-test") {
+zx_test("pretty-test") {
   sources = [
     "test.c",
   ]

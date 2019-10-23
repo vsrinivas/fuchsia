@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("minfs") {
+zx_library("minfs") {
   host = true
   static = true
   sources = [

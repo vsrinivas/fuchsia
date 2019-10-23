@@ -8,7 +8,7 @@ import("$zx_build/public/gn/library_shim.gni")
 #
 # Used to implement the C++ components of Memfs, which
 # can be plugged into ulib/fs.
-library("memfs-cpp") {
+zx_library("memfs-cpp") {
   sdk = "source"
   sdk_headers = [ "lib/memfs/cpp/vnode.h" ]
   sources = [
@@ -34,7 +34,7 @@ library("memfs-cpp") {
 # libmemfs.so: The C ABI client library.
 #
 # Used to create local temporary filesystems.
-library("memfs") {
+zx_library("memfs") {
   sdk = "shared"
   sdk_publishable = true
   sdk_headers = [ "lib/memfs/memfs.h" ]

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("async-loop") {
+zx_library("async-loop") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/loop.h" ]
@@ -22,7 +22,7 @@ library("async-loop") {
   ]
 }
 
-library("async-loop-cpp") {
+zx_library("async-loop-cpp") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/cpp/loop.h" ]
@@ -43,7 +43,7 @@ library("async-loop-cpp") {
   ]
 }
 
-library("async-loop-default") {
+zx_library("async-loop-default") {
   sdk = "static"
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/default.h" ]

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("clock") {
+zx_executable("clock") {
   sources = [
     "clock.c",
   ]
@@ -13,7 +13,7 @@ executable("clock") {
   ]
 }
 
-executable("clkctl") {
+zx_executable("clkctl") {
   sources = [
     "clkctl.c",
   ]

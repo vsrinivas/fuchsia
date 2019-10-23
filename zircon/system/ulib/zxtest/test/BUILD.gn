@@ -10,7 +10,7 @@ group("test") {
   ]
 }
 
-test("zxtest") {
+zx_test("zxtest") {
   sources = [
     "assertion_test.cc",
     "event-broadcaster_test.cc",

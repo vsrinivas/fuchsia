@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fvm-host") {
+zx_library("fvm-host") {
   host = true
   sources = [
     "container/container.cc",

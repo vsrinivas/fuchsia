@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fs") {
+zx_library("fs") {
   sdk = "source"
   sdk_headers = [
     "fs/client.h",
@@ -106,7 +106,7 @@ library("fs") {
 if (is_fuchsia) {
   # TODO(mcgrathr): This is for libdriver.so to include so it won't get
   # libtrace-engine.so.  Figure out a better way to handle this.
-  library("fs-for-driver") {
+  zx_library("fs-for-driver") {
     visibility = [
       ":*",
       "$zx/system/core/devmgr/*",

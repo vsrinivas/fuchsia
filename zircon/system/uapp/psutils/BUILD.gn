@@ -17,7 +17,7 @@ group("psutils") {
   ]
 }
 
-executable("ps") {
+zx_executable("ps") {
   sources = [
     "ps.c",
     "ps_internal.c",
@@ -31,7 +31,7 @@ executable("ps") {
   ]
 }
 
-executable("top") {
+zx_executable("top") {
   sources = [
     "top.c",
   ]
@@ -44,7 +44,7 @@ executable("top") {
   ]
 }
 
-executable("kill") {
+zx_executable("kill") {
   sources = [
     "kill.c",
   ]
@@ -56,7 +56,7 @@ executable("kill") {
   ]
 }
 
-executable("killall") {
+zx_executable("killall") {
   sources = [
     "killall.c",
   ]
@@ -68,7 +68,7 @@ executable("killall") {
   ]
 }
 
-executable("vmaps") {
+zx_executable("vmaps") {
   sources = [
     "vmaps.c",
   ]
@@ -81,7 +81,7 @@ executable("vmaps") {
   ]
 }
 
-executable("vmos") {
+zx_executable("vmos") {
   sources = [
     "vmo-utils.c",
     "vmos.cc",
@@ -95,7 +95,7 @@ executable("vmos") {
   ]
 }
 
-executable("memgraph") {
+zx_executable("memgraph") {
   sources = [
     "memgraph.cc",
     "resources.c",
@@ -124,7 +124,7 @@ action("gen-memgraph-schema") {
          rebase_path(sources, root_build_dir)
 }
 
-executable("kstats") {
+zx_executable("kstats") {
   sources = [
     "kstats.c",
     "resources.c",
@@ -137,7 +137,7 @@ executable("kstats") {
   ]
 }
 
-executable("threads") {
+zx_executable("threads") {
   sources = [
     "threads.cc",
   ]
@@ -153,7 +153,7 @@ executable("threads") {
   ]
 }
 
-executable("signal") {
+zx_executable("signal") {
   sources = [
     "signal.c",
   ]

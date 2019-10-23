@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("mt-8167") {
+zx_driver("mt-8167") {
   sources = [
     "binding.cc",
     "mt8167-gpio.cc",
@@ -25,7 +25,7 @@ driver("mt-8167") {
   ]
 }
 
-test("mtk-gpio") {
+zx_test("mtk-gpio") {
   sources = [
     "mt8167-gpio-test.cc",
     "mt8167-gpio.cc",

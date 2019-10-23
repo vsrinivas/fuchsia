@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("runtime") {
+zx_library("runtime") {
   sources = [
     "thread.c",
   ]

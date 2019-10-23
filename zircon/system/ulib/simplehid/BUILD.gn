@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("simplehid") {
+zx_library("simplehid") {
   sources = []
   public_deps = [
     # <lib/simplehid/simplehid.h> has #include <ddktl/protocol/hidbus.h>.

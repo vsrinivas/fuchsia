@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("ldmsg") {
+zx_library("ldmsg") {
   sdk = "static"
   sdk_headers = [ "ldmsg/ldmsg.h" ]
   sources = [

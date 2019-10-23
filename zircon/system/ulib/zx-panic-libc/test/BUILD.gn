@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("zx-panic-libc-test") {
+zx_test("zx-panic-libc-test") {
   sources = [
     "zx-panic-libc-test.cc",
   ]

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("bitmap") {
+zx_library("bitmap") {
   sdk = "source"
   sdk_headers = [
     "bitmap/bitmap.h",

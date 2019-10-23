@@ -9,7 +9,7 @@ group("aml-scpi-s912") {
   ]
 }
 
-driver("aml-scpi-s912.mailbox") {
+zx_driver("aml-scpi-s912.mailbox") {
   sources = [
     "aml-mailbox.cc",
   ]
@@ -31,7 +31,7 @@ driver("aml-scpi-s912.mailbox") {
   ]
 }
 
-driver("scpi") {
+zx_driver("scpi") {
   sources = [
     "aml-scpi.cc",
   ]

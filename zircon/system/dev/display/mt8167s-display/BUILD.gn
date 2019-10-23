@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("mt8167s-display") {
+zx_driver("mt8167s-display") {
   sources = [
     "aal.cc",
     "ccorr.cc",
@@ -55,7 +55,7 @@ group("tests") {
   ]
 }
 
-test("dsi-host") {
+zx_test("dsi-host") {
   sources = [
     "aal.cc",
     "ccorr.cc",

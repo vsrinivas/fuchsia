@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fbl") {
+zx_library("fbl") {
   sdk = "source"
   sdk_headers = [
     "fbl/algorithm.h",

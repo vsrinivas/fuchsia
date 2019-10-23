@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("aml-sd-emmc") {
+zx_driver("aml-sd-emmc") {
   sources = [
     "aml-sd-emmc.cc",
   ]
@@ -25,7 +25,7 @@ driver("aml-sd-emmc") {
   ]
 }
 
-test("aml-sd-emmc-test") {
+zx_test("aml-sd-emmc-test") {
   testonly = true
   output_name = "aml-sd-emmc-test"
   sources = [

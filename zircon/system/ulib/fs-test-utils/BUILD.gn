@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("fs-test-utils") {
+zx_library("fs-test-utils") {
   sdk = "source"
   sdk_headers = [
     "fs-test-utils/blobfs/blobfs.h",

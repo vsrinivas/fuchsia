@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("inspect") {
+zx_library("inspect") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
@@ -45,7 +45,7 @@ library("inspect") {
   ]
 }
 
-library("inspect-common") {
+zx_library("inspect-common") {
   sdk = "shared"
   sdk_publishable = true
   shared = true

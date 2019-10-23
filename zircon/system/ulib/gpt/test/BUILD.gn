@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("gpt-unit") {
+zx_test("gpt-unit") {
   sources = [
     "gpt-tests.cc",
     "main.cc",

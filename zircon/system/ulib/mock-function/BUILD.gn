@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("mock-function") {
+zx_library("mock-function") {
   testonly = true
   sdk = "source"
   sdk_headers = [ "lib/mock-function/mock-function.h" ]

@@ -4,7 +4,7 @@
 
 import("$zx_build/public/gn/library_shim.gni")
 
-library("sysmem-connector") {
+zx_library("sysmem-connector") {
   sdk = "source"
   sdk_headers = [ "lib/sysmem-connector/sysmem-connector.h" ]
   sources = [

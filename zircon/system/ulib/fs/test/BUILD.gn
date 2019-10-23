@@ -11,7 +11,7 @@ group("test") {
   ]
 }
 
-test("fs-vnode") {
+zx_test("fs-vnode") {
   sources = [
     "lazy_dir_tests.cc",
     "main.cc",
@@ -46,7 +46,7 @@ test("fs-vnode") {
   ]
 }
 
-test("fs-connection") {
+zx_test("fs-connection") {
   sources = [
     "connection_tests.cc",
   ]

@@ -9,7 +9,7 @@ group("test") {
   ]
 }
 
-test("zxio") {
+zx_test("zxio") {
   sources = [
     "debuglog-test.cc",
     "null-test.cc",

@@ -14,7 +14,7 @@ group("test") {
   ]
 }
 
-test("blobfs-unit") {
+zx_test("blobfs-unit") {
   test_group = "fs"
   sources = [
     "unit/allocated-extent-iterator-test.cc",
@@ -54,7 +54,7 @@ test("blobfs-unit") {
   include_dirs = [ ".." ]
 }
 
-test("blobfs-host") {
+zx_test("blobfs-host") {
   sources = [
     "host/host-test.cc",
   ]
@@ -65,7 +65,7 @@ test("blobfs-host") {
 }
 
 source_set("integration-fixtures") {
-testonly = true
+  testonly = true
   sources = [
     "integration/blobfs_fixtures.cc",
   ]
@@ -80,7 +80,7 @@ testonly = true
   ]
 }
 
-test("blobfs-integration") {
+zx_test("blobfs-integration") {
   test_group = "fs"
   sources = [
     "integration/blobfs_integration_test.cc",
@@ -105,7 +105,7 @@ test("blobfs-integration") {
   ]
 }
 
-test("blobfs-large-integration") {
+zx_test("blobfs-large-integration") {
   test_group = "fs"
   sources = [
     "integration/large_integration_main.cc",

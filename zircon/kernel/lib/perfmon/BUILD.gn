@@ -6,7 +6,7 @@ config("config") {
   include_dirs = [ "include" ]
 }
 
-library("perfmon") {
+zx_library("perfmon") {
   kernel = true
   sources = [
     "perfmon.cc",
