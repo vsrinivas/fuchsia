@@ -6,6 +6,7 @@
 
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
+#![recursion_limit = "256"]
 
 // TODO(joshlf): Remove this once the old packet crate has been deleted and the
 // new one's name has been changed back to `packet`.

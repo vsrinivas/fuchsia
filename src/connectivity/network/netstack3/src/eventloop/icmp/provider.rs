@@ -6,10 +6,11 @@
 //! creation of ICMP sockets.
 
 use fuchsia_zircon as zx;
+use futures::channel::mpsc;
 use log::{error, trace};
 use rand::RngCore;
 
-use net_types::ip::{IpAddr, IpAddress};
+use net_types::ip::{Ip, IpAddr, IpAddress};
 use net_types::SpecifiedAddr;
 
 use fidl_fuchsia_net_icmp::{EchoSocketConfig, EchoSocketRequestStream, ProviderRequest};
@@ -17,10 +18,12 @@ use fidl_fuchsia_net_icmp::{EchoSocketConfig, EchoSocketRequestStream, ProviderR
 use netstack3_core::icmp as core_icmp;
 use netstack3_core::{Context, EventDispatcher};
 
+use crate::eventloop::icmp::echo::EchoSocketWorker;
+use crate::eventloop::icmp::RX_BUFFER_SIZE;
 use crate::eventloop::util::CoreCompatible;
-use crate::eventloop::{EventLoop, EventLoopInner};
+use crate::eventloop::{EchoSocket, EventLoop, EventLoopInner};
 
-/// Handle a fuchsia.net.icmp.Provider FIDL request, which are used for opening ICMP sockets.
+/// Handle a [`fidl_fuchsia_net_icmp::ProviderRequest`], which is used for opening ICMP sockets.
 pub fn handle_request(event_loop: &mut EventLoop, req: ProviderRequest) -> Result<(), fidl::Error> {
     match req {
         ProviderRequest::OpenEchoSocket { config, socket, control_handle: _ } => {
@@ -79,14 +82,21 @@ fn connect_echo_socket<A: IpAddress>(
 
 fn connect_echo_socket_inner<A: IpAddress>(
     ctx: &mut Context<EventLoopInner>,
-    _stream: EchoSocketRequestStream,
+    stream: EchoSocketRequestStream,
     local: Option<SpecifiedAddr<A>>,
     remote: SpecifiedAddr<A>,
     icmp_id: u16,
 ) -> Result<(), zx::Status> {
     match core_icmp::new_icmp_connection(ctx, local, remote, icmp_id) {
-        Ok(_conn) => {
-            // TODO(sbalana): Spawn an EchoSocketWorker to handle requests.
+        Ok(conn) => {
+            let (reply_tx, reply_rx) = mpsc::channel(RX_BUFFER_SIZE);
+            let worker =
+                EchoSocketWorker::new(stream, reply_rx, A::Version::VERSION, conn, icmp_id);
+            worker.spawn(ctx.dispatcher().event_send.clone());
+            trace!("Spawned ICMP Echo socket worker");
+
+            let socket = EchoSocket { reply_tx };
+            ctx.dispatcher_mut().icmp_echo_sockets.insert(conn, socket);
             Ok(())
         }
         Err(e) => {
@@ -103,14 +113,16 @@ mod test {
     use log::debug;
 
     use fidl_fuchsia_net as fidl_net;
-    use fidl_fuchsia_net_icmp::{EchoSocketConfig, EchoSocketEvent, EchoSocketMarker};
+    use fidl_fuchsia_net_icmp::{
+        EchoPacket, EchoSocketConfig, EchoSocketEvent, EchoSocketMarker, EchoSocketProxy,
+    };
 
     use net_types::ip::{AddrSubnetEither, Ipv4Addr};
     use net_types::{SpecifiedAddr, Witness};
 
     use super::connect_echo_socket_inner;
     use crate::eventloop::integration_tests::{
-        new_ipv4_addr_subnet, new_ipv6_addr_subnet, StackSetupBuilder, TestSetupBuilder,
+        new_ipv4_addr_subnet, new_ipv6_addr_subnet, StackSetupBuilder, TestSetup, TestSetupBuilder,
     };
 
     /// `TestAddr` abstracts extraction of IP addresses (or lack thereof) for testing. This eases
@@ -181,10 +193,10 @@ mod test {
     struct TestNoIpv6Addr;
     impl TestAddr for TestNoIpv6Addr {
         fn local_subnet() -> Option<AddrSubnetEither> {
-            Some(new_ipv6_addr_subnet([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2], 128))
+            Some(new_ipv6_addr_subnet([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2], 64))
         }
         fn remote_subnet() -> Option<AddrSubnetEither> {
-            Some(new_ipv6_addr_subnet([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3], 128))
+            Some(new_ipv6_addr_subnet([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3], 64))
         }
 
         fn local_fidl() -> Option<fidl_net::IpAddress> {
@@ -198,7 +210,9 @@ mod test {
     const ALICE: usize = 0;
     const BOB: usize = 1;
 
-    async fn open_icmp_echo_socket<Src: TestAddr, Dst: TestAddr>(expected_status: zx::Status) {
+    async fn open_icmp_echo_socket<Src: TestAddr, Dst: TestAddr>(
+        expected_status: zx::Status,
+    ) -> (TestSetup, EchoSocketProxy) {
         let mut t = TestSetupBuilder::new()
             .add_named_endpoint("alice")
             .add_named_endpoint("bob")
@@ -233,30 +247,47 @@ mod test {
                 }
             }
         }
+
+        (t, socket)
+    }
+
+    async fn send_echoes(mut t: TestSetup, socket: EchoSocketProxy, payload: Vec<u8>) {
+        for sequence_num in 1u16..=4 {
+            debug!("Sending ping seq {} to socket {:?}", sequence_num, socket);
+            let mut req = EchoPacket { sequence_num, payload: payload.to_owned() };
+            socket.send_request(&mut req).unwrap();
+
+            let packet = t.run_until(socket.watch()).await.unwrap().unwrap().unwrap();
+            debug!("Received packet: {:?}", packet);
+            assert_eq!(packet.sequence_num, sequence_num);
+            assert_eq!(packet.payload, payload);
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv4() {
-        open_icmp_echo_socket::<TestIpv4Addr, TestIpv4Addr>(zx::Status::OK).await;
-        // TODO(sbalana): Send ICMP echoes from Source to Destination
+        let (t, socket) = open_icmp_echo_socket::<TestIpv4Addr, TestIpv4Addr>(zx::Status::OK).await;
+        send_echoes(t, socket, vec![1, 2, 3, 4, 5, 6]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv6() {
-        open_icmp_echo_socket::<TestIpv6Addr, TestIpv6Addr>(zx::Status::OK).await;
-        // TODO(sbalana): Send ICMP echoes from Source to Destination
+        let (t, socket) = open_icmp_echo_socket::<TestIpv6Addr, TestIpv6Addr>(zx::Status::OK).await;
+        send_echoes(t, socket, vec![1, 2, 3, 4, 5, 6]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv4_no_local_ip() {
-        open_icmp_echo_socket::<TestNoIpv4Addr, TestIpv4Addr>(zx::Status::OK).await;
-        // TODO(sbalana): Send ICMP echoes from Source to Destination
+        let (t, socket) =
+            open_icmp_echo_socket::<TestNoIpv4Addr, TestIpv4Addr>(zx::Status::OK).await;
+        send_echoes(t, socket, vec![1, 2, 3, 4, 5, 6]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv6_no_local_ip() {
-        open_icmp_echo_socket::<TestNoIpv6Addr, TestIpv6Addr>(zx::Status::OK).await;
-        // TODO(sbalana): Send ICMP echoes from Source to Destination
+        let (t, socket) =
+            open_icmp_echo_socket::<TestNoIpv6Addr, TestIpv6Addr>(zx::Status::OK).await;
+        send_echoes(t, socket, vec![1, 2, 3, 4, 5, 6]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -289,7 +320,7 @@ mod test {
         open_icmp_echo_socket::<TestNoIpv6Addr, TestNoIpv6Addr>(zx::Status::INVALID_ARGS).await;
     }
 
-    // Relies on connect_echo_socket_inner, thus cannot use `open_icmp_echo_socket`.
+    // Relies on connect_echo_socket_inner, thus cannot use the `open_icmp_echo_socket` test helper.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_duplicate() {
         const ALICE: usize = 0;

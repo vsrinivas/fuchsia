@@ -85,6 +85,7 @@ use ethernet as eth;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -207,6 +208,8 @@ impl EthernetWorker {
 pub enum Event {
     /// A request from the fuchsia.net.icmp.Provider FIDL interface.
     FidlIcmpProviderEvent(fidl_icmp::ProviderRequest),
+    /// A request from fuchsia.net.icmp.EchoSocket FIDL interface.
+    FidlEchoSocketEvent(icmp::echo::Request),
     /// A request from the fuchsia.net.stack.Stack FIDL interface.
     FidlStackEvent(StackRequest),
     /// A request from the fuchsia.posix.socket.Provider FIDL interface.
@@ -266,6 +269,7 @@ impl EventLoop {
                 EventLoopInner {
                     devices: Devices::default(),
                     timers: timers::TimerDispatcher::new(event_send.clone()),
+                    icmp_echo_sockets: HashMap::new(),
                     // TODO(joshlf): Is unwrapping safe here? Alternatively,
                     // wait until we upgrade to rand 0.7, where OsRng is an
                     // empty struct.
@@ -327,6 +331,9 @@ impl EventLoop {
                 if let Err(err) = icmp::provider::handle_request(self, req) {
                     error!("Failed to handle ICMP Provider request: {}", err);
                 }
+            }
+            Some(Event::FidlEchoSocketEvent(req)) => {
+                req.handle_request(self);
             }
             Some(Event::FidlStackEvent(req)) => {
                 self.handle_fidl_stack_request(req).await;
@@ -767,9 +774,14 @@ struct EventLoopInner {
     devices: Devices,
     timers: timers::TimerDispatcher<TimerId, Event>,
     rng: OsRng,
+    icmp_echo_sockets: HashMap<IcmpConnId, EchoSocket>,
     event_send: mpsc::UnboundedSender<Event>,
     #[cfg(test)]
     test_events: Option<mpsc::UnboundedSender<TestEvent>>,
+}
+
+struct EchoSocket {
+    reply_tx: mpsc::Sender<fidl_icmp::EchoPacket>,
 }
 
 impl EventLoopInner {
@@ -882,7 +894,11 @@ impl Icmpv4EventDispatcher for EventLoopInner {}
 // TODO(rheacock): remove `allow(unused)` once the implementation uses the inputs
 #[allow(unused)]
 impl<B: BufferMut> IcmpEventDispatcher<B> for EventLoopInner {
+    // TODO(fxb/38633): `IcmpConnId` does not carry IP version information, making it possible to
+    // receive two of the same IcmpConnId for two different connections with different IP versions.
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
+        trace!("Received ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());
+
         #[cfg(test)]
         self.send_test_event(TestEvent::IcmpEchoReply {
             conn,
@@ -890,7 +906,27 @@ impl<B: BufferMut> IcmpEventDispatcher<B> for EventLoopInner {
             data: data.as_ref().to_owned(),
         });
 
-        // TODO(brunodalbo) implement actual handling of icmp echo replies
+        let socket = match self.icmp_echo_sockets.get_mut(&conn) {
+            Some(socket) => socket,
+            None => {
+                trace!("Received ICMP echo reply for unknown socket w/ id: {:?}", conn);
+                return;
+            }
+        };
+
+        let packet =
+            fidl_icmp::EchoPacket { sequence_num: seq_num, payload: data.as_ref().to_vec() };
+
+        // TODO(fxb/39186): Consider not dropping ICMP replies when the channel is full.
+        match socket.reply_tx.try_send(packet) {
+            Ok(()) => {
+                trace!("Processed ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());
+            }
+            Err(e) => {
+                // Channel is full or disconnected.
+                debug!("Unable to handle ICMP echo reply: {:?}", e);
+            }
+        }
     }
 }
 

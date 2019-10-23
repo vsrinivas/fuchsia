@@ -7,4 +7,10 @@
 //!
 //! The entry point for all ICMP-related tasks is fuchsia.net.icmp.Provider.
 
+pub mod echo;
 pub mod provider;
+
+// ICMP messages are buffered upon receival to allow circumvention of DoS attack vectors.
+// Messages are taken from these buffers by calling EchoSocket's `watch` method, giving the client
+// the ability to throttle consumption.
+const RX_BUFFER_SIZE: usize = 256;
