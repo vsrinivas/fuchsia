@@ -24,6 +24,7 @@ group("tests") {
     "gtest_runner:tests",
     "lib:tests",
     "locate:tests",
+    "run_test_suite:tests",
     "timekeeper:tests",
   ]
 }

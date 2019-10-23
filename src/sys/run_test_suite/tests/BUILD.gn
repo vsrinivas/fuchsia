@@ -1,0 +1,95 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("tests_bin") {
+  edition = "2018"
+  source_root = "main.rs"
+  name = "run_test_suite_integration_tests"
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//src/sys/run_test_suite:lib",
+    "//third_party/rust_crates:serde_json",
+  ]
+}
+
+test_package("run_test_suite_integration_tests") {
+  deps = [
+    ":tests_bin",
+    "//examples/tests:all_bins",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//examples/tests/meta/passing-test-example.cmx")
+      dest = "passing-test-example.cmx"
+    },
+    {
+      path = rebase_path("//examples/tests/meta/failing-test-example.cmx")
+      dest = "failing-test-example.cmx"
+    },
+    {
+      path = rebase_path("//examples/tests/meta/incomplete-test-example.cmx")
+      dest = "incomplete-test-example.cmx"
+    },
+    {
+      path = rebase_path("//examples/tests/meta/invalid-test-example.cmx")
+      dest = "invalid-test-example.cmx"
+    },
+    {
+      path = rebase_path("//examples/tests/meta/passing-test-example_v2.cml")
+      dest = "passing-test-example_v2.cm"
+    },
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      dest = "echo_server.cm"
+    },
+    {
+      path = rebase_path("//examples/tests/meta/echo_test_client.cml")
+      dest = "echo_test_client.cm"
+    },
+    {
+      path = rebase_path("//examples/tests/meta/echo_test_realm.cml")
+      dest = "echo_test_realm.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "passing-test-example"
+    },
+    {
+      name = "failing-test-example"
+    },
+    {
+      name = "echo_test_client"
+    },
+    {
+      name = "echo_server"
+    },
+    {
+      name = "incomplete-test-example"
+    },
+    {
+      name = "invalid-test-example"
+    },
+  ]
+
+  tests = [
+    {
+      name = "run_test_suite_integration_tests"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":run_test_suite_integration_tests",
+  ]
+}

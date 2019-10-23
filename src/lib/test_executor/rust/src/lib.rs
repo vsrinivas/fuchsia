@@ -23,7 +23,7 @@ use {
         ready,
         task::{Context, Poll},
     },
-    std::{cell::RefCell, marker::Unpin, pin::Pin},
+    std::{cell::RefCell, collections::HashMap, marker::Unpin, pin::Pin},
     zx::HandleBased,
 };
 
@@ -201,7 +201,7 @@ pub async fn run_test_component(
         )
         .map_err(|e| format_err!("Error running tests in '{}': {}", url, e))?;
 
-    let mut log_processors = Vec::<LogProcessor>::new();
+    let mut log_processors = HashMap::new();
     while let Some(result_event) = run_listener
         .try_next()
         .await
@@ -211,11 +211,16 @@ pub async fn run_test_component(
             OnTestCaseStarted { name, primary_log, control_handle: _ } => {
                 sender.send(TestEvent::TestCaseStarted { test_case_name: name.clone() }).await?;
 
-                let mut log_processor = LogProcessor::new(name);
+                let mut log_processor = LogProcessor::new(name.clone());
                 log_processor.collect_and_send_logs(primary_log, sender.clone());
-                log_processors.push(log_processor);
+                log_processors.insert(name, log_processor);
             }
             OnTestCaseFinished { name, outcome, control_handle: _ } => {
+                // get all logs before sending finish event.
+                match log_processors.remove(&name) {
+                    Some(mut l) => l.await_logs().await?,
+                    None => {}
+                }
                 let outcome = match outcome.status {
                     Some(status) => match status {
                         fidl_fuchsia_test::Status::Passed => Outcome::Passed,
@@ -232,7 +237,8 @@ pub async fn run_test_component(
         }
     }
 
-    join_all(log_processors.iter_mut().map(|l| l.await_logs()))
+    // await for rest of logs for which test case never completed.
+    join_all(log_processors.iter_mut().map(|(_, l)| l.await_logs()))
         .await
         .into_iter()
         .fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
