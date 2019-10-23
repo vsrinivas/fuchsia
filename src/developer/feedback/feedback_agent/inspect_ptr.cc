@@ -13,12 +13,12 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
 #include "src/lib/inspect_deprecated/query/json_formatter.h"
 #include "src/lib/inspect_deprecated/query/location.h"
@@ -27,6 +27,15 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace {
+
+template <typename T>
+struct LockedBridge {
+  fit::bridge<T, void> bridge;
+  std::mutex lock;
+};
+
+}  // namespace
 
 fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispatcher,
                                                       zx::duration timeout) {
@@ -38,24 +47,25 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
   //
   // We use a shared_ptr to share the bridge between this function, the async loop on which we post
   // the delayed task to timeout and the second thread on which we run the discovery.
-  std::shared_ptr<fit::bridge<Locations, void>> discovery_done =
-      std::make_shared<fit::bridge<Locations, void>>();
+  std::shared_ptr<LockedBridge<Locations>> discovery_done =
+      std::make_shared<LockedBridge<Locations>>();
 
   // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
   // the completer after the timeout and return an error.
-  //
-  // We wrap the delayed task in a CancelableClosure so we can cancel it when the fit::bridge is
-  // completed another way.
-  std::unique_ptr<fxl::CancelableClosure> discovery_done_after_timeout =
-      std::make_unique<fxl::CancelableClosure>([discovery_done] {
-        if (discovery_done->completer) {
-          FX_LOGS(ERROR) << "Inspect data discovery timed out";
-          discovery_done->completer.complete_error();
-        }
-      });
   if (const zx_status_t status = async::PostDelayedTask(
-          dispatcher, [cb = discovery_done_after_timeout->callback()] { cb(); }, timeout);
-      status != ZX_OK) {
+                                     dispatcher,
+                                     [discovery_done] {
+                                       {  // We keep the lock_guard's scope to a minimum.
+                                         std::lock_guard<std::mutex> lock(discovery_done->lock);
+                                         if (!discovery_done->bridge.completer) {
+                                           return;
+                                         }
+                                         discovery_done->bridge.completer.complete_error();
+                                       }
+
+                                       FX_LOGS(ERROR) << "Inspect data discovery timed out";
+                                     },
+                                     timeout) != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to post delayed task";
     FX_LOGS(ERROR)
         << "Skipping Inspect data collection as Inspect discovery is not safe without a timeout";
@@ -69,67 +79,67 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
   // currently serving out/ directory from one of the discovered components. It is okay to have
   // potentially dangling threads as we run each fuchsia.feedback.DataProvider request in a separate
   // process that exits when the connection with the client is closed.
-  std::thread([discovery_done,
-               discovery_done_after_timeout = std::move(discovery_done_after_timeout)]() mutable {
+  std::thread([discovery_done]() mutable {
     Locations locations = inspect_deprecated::SyncFindPaths("/hub");
 
-    discovery_done_after_timeout->Cancel();
-    if (locations.empty()) {
-      FX_LOGS(ERROR) << "Failed to find any Inspect location";
-      if (discovery_done->completer) {
-        discovery_done->completer.complete_error();
-      }
+    std::lock_guard<std::mutex> lock(discovery_done->lock);
+    if (!discovery_done->bridge.completer) {
       return;
     }
-    if (discovery_done->completer) {
-      discovery_done->completer.complete_ok(std::move(locations));
+
+    if (locations.empty()) {
+      FX_LOGS(ERROR) << "Failed to find any Inspect location";
+      discovery_done->bridge.completer.complete_error();
+    } else {
+      discovery_done->bridge.completer.complete_ok(std::move(locations));
     }
   }).detach();
 
   // Then, we connect to each entrypoint and read asynchronously its Inspect data.
-  return discovery_done->consumer.promise_or(fit::error()).and_then([](Locations& locations) {
-    std::vector<fit::promise<inspect_deprecated::Source, std::string>> sources;
-    for (auto location : locations) {
-      if (location.directory_path.find("system_objects") == std::string::npos) {
-        sources.push_back(inspect_deprecated::ReadLocation(std::move(location)));
-      }
-    }
-
-    return fit::join_promise_vector(std::move(sources))
-        .and_then([](std::vector<fit::result<inspect_deprecated::Source, std::string>>& sources)
-                      -> fit::result<fuchsia::mem::Buffer> {
-          std::vector<inspect_deprecated::Source> ok_sources;
-          for (auto& source : sources) {
-            if (source.is_ok()) {
-              inspect_deprecated::Source ok_source = source.take_value();
-              ok_source.SortHierarchy();
-              ok_sources.push_back(std::move(ok_source));
-            } else {
-              FX_LOGS(ERROR) << "Failed to read one Inspect source: " << source.take_error();
-            }
+  return discovery_done->bridge.consumer.promise_or(fit::error())
+      .and_then([](Locations& locations) {
+        std::vector<fit::promise<inspect_deprecated::Source, std::string>> sources;
+        for (auto location : locations) {
+          if (location.directory_path.find("system_objects") == std::string::npos) {
+            sources.push_back(inspect_deprecated::ReadLocation(std::move(location)));
           }
+        }
 
-          if (ok_sources.empty()) {
-            FX_LOGS(WARNING) << "No valid Inspect sources found";
-            return fit::error();
-          }
+        return fit::join_promise_vector(std::move(sources))
+            .and_then([](std::vector<fit::result<inspect_deprecated::Source, std::string>>& sources)
+                          -> fit::result<fuchsia::mem::Buffer> {
+              std::vector<inspect_deprecated::Source> ok_sources;
+              for (auto& source : sources) {
+                if (source.is_ok()) {
+                  inspect_deprecated::Source ok_source = source.take_value();
+                  ok_source.SortHierarchy();
+                  ok_sources.push_back(std::move(ok_source));
+                } else {
+                  FX_LOGS(ERROR) << "Failed to read one Inspect source: " << source.take_error();
+                }
+              }
 
-          fsl::SizedVmo vmo;
-          if (!fsl::VmoFromString(inspect_deprecated::JsonFormatter(
-                                      inspect_deprecated::JsonFormatter::Options{},
-                                      inspect_deprecated::Formatter::PathFormat::ABSOLUTE)
-                                      .FormatSourcesRecursive(ok_sources),
-                                  &vmo)) {
-            FX_LOGS(ERROR) << "Failed to convert Inspect data JSON string to vmo";
-            return fit::error();
-          }
-          return fit::ok(std::move(vmo).ToTransport());
-        })
-        .or_else([]() {
-          FX_LOGS(ERROR) << "Failed to get Inspect data";
-          return fit::error();
-        });
-  });
+              if (ok_sources.empty()) {
+                FX_LOGS(WARNING) << "No valid Inspect sources found";
+                return fit::error();
+              }
+
+              fsl::SizedVmo vmo;
+              if (!fsl::VmoFromString(inspect_deprecated::JsonFormatter(
+                                          inspect_deprecated::JsonFormatter::Options{},
+                                          inspect_deprecated::Formatter::PathFormat::ABSOLUTE)
+                                          .FormatSourcesRecursive(ok_sources),
+                                      &vmo)) {
+                FX_LOGS(ERROR) << "Failed to convert Inspect data JSON string to vmo";
+                return fit::error();
+              }
+              return fit::ok(std::move(vmo).ToTransport());
+            })
+            .or_else([]() {
+              FX_LOGS(ERROR) << "Failed to get Inspect data";
+              return fit::error();
+            });
+      });
 }
 
 }  // namespace feedback
