@@ -237,17 +237,17 @@ A reference may refer to:
 
 ### program
 
-`program` varies depending on how the component is run. If the component
-contains no executable, `program` is to omitted. If the component contains an
-ELF binary, `program` will contain information on how to run the binary.
+If the component contains executable code, the content of the `program` section
+is determined by the runner the component uses. Some components don't have
+executable code; the declarations for those components lack a `program` section.
 
-When `program` contains information on how to run a binary, it is an object with
-the following properties:
+#### ELF runners
+
+If the component uses the ELF runner, `program` is an object with the following
+properties:
 
 - `binary`: Package-relative path to the executable binary
 - `args` *(optional)*: List of arguments
-
-Example:
 
 ```
 "program": {
@@ -406,10 +406,9 @@ explained in [Routing terminology](#routing-terminology).
       capabilities.
     - `#<storage-name>` A [reference](#references) to a storage declaration.
       This source can only be used when offering storage capabilities.
-- `to`: An array of target declarations, each of which is an object with the
-  following properties:
-    - `dest`: A [reference](#references) to the target (child or collection) to
-      which the capability is being offered, `#<target-name>`.
+    - `to`: An array of capability targets, each of which is a
+      [reference](#references) to the child or collection to which the
+      capability is being offered, of the form `#<target-name>`.
     - `as` *(optional)*: The explicit [target path](#capability-paths) for the
       capability. If omitted, defaults to the source path. This path cannot be
       used for storage capabilities.
@@ -421,31 +420,23 @@ Example:
     {
         "service": "/svc/fuchsia.logger.LogSink",
         "from": "#logger",
-        "to": [
-            { "dest": "#fshost" },
-            { "dest": "#pkg_cache" },
-        ],
+        "to": [ "#fshost", "#pkg_cache" ],
     },
     {
         "directory": "/data/blobfs",
         "from": "self",
-        "to": [
-            { "dest": "#pkg_cache", "as": "/blobfs" },
-        ],
+        "to": [ "#pkg_cache" ],
+        "as": "/blobfs",
     },
     {
         "directory": "/data",
         "from": "realm",
-        "to": [
-            { "dest": "#fshost" },
-        ],
+        "to": [ "#fshost" ],
     },
     {
         "storage": "meta",
         "from": "realm",
-        "to": [
-            { "dest": "#logger" },
-        ],
+        "to": [ "#logger" ],
     },
 ],
 ```
