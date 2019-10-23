@@ -269,7 +269,10 @@ void ImagePipe2::PresentImage(uint32_t image_id, zx::time presentation_time,
                               std::vector<::zx::event> acquire_fences,
                               std::vector<::zx::event> release_fences,
                               PresentImageCallback callback) {
-  TRACE_DURATION("gfx", "ImagePipe2::PresentImage", "image_id", image_id);
+  // NOTE: This name is important for benchmarking.  Do not remove or modify it
+  // without also updating the script.
+  TRACE_DURATION("gfx", "ImagePipe2::PresentImage", "image_id", image_id, "use_protected_memory",
+                 use_protected_memory());
   TRACE_FLOW_END("gfx", "image_pipe_present_image", image_id);
 
   if (!frames_.empty() && presentation_time < frames_.back().presentation_time) {
