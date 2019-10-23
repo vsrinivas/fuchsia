@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,8 +59,23 @@ int main(int argc, char** argv) {
     argv++;
   }
 
-  if (zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &h) < 0) {
-    fprintf(stderr, "dlog: cannot open debug log\n");
+  zx_handle_t local, remote;
+  zx_status_t status = zx_channel_create(0, &local, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to create channel: %d\n", status);
+    return -1;
+  }
+
+  const char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
+  status = fdio_service_connect(kReadOnlyLogPath, remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to connect to ReadOnlyLog: %d\n", status);
+    return -1;
+  }
+
+  status = fuchsia_boot_ReadOnlyLogGet(local, &h);
+  if (status != ZX_OK) {
+    fprintf(stderr, "ReadOnlyLogGet failed: %d\n", status);
     return -1;
   }
 

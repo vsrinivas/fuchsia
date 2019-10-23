@@ -7,6 +7,7 @@ executable("dlog") {
     "dlog.c",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]
