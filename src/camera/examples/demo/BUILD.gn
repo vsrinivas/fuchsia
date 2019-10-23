@@ -27,6 +27,8 @@ executable("demo_bin") {
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fzl",
+
+    "//src/camera/stream_utils"
   ]
 }
 

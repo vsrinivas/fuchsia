@@ -7,6 +7,9 @@
       "class/isp-device-test",
       "camera-controller"
     ],
+    "features": [
+      "isolated-persistent-storage"
+    ],
     "services": [
       "fuchsia.sys.Environment",
       "fuchsia.sys.Launcher",

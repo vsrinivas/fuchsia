@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/stream_utils_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

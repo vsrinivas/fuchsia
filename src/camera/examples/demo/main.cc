@@ -24,6 +24,7 @@ fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cm
 
 #include <fbl/unique_fd.h>
 
+#include "src/camera/stream_utils/image_io_util.h"
 #include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -58,14 +59,15 @@ static fuchsia::images::PixelFormat convertFormat(fuchsia::sysmem::PixelFormatTy
 // constructed with buffers populated by a stream provider.
 class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::EventSender_ {
  public:
-  explicit DemoView(scenic::ViewContext context, async::Loop* loop, bool chaos)
+  explicit DemoView(scenic::ViewContext context, async::Loop* loop, bool chaos, bool image_io)
       : BaseView(std::move(context), "Camera Demo"),
         loop_(loop),
         chaos_(chaos),
         chaos_dist_(kChaosMaxSleepMsec,
                     static_cast<float>(kChaosMeanSleepMsec) / kChaosMaxSleepMsec),
         node_(session()),
-        text_node_(session()) {}
+        text_node_(session()),
+        image_io_(image_io) {}
 
   ~DemoView() override {
     // Manually delete Wait instances before their corresponding events to avoid a failed assert.
@@ -77,8 +79,8 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
   };
 
   static std::unique_ptr<DemoView> Create(scenic::ViewContext context, async::Loop* loop,
-                                          bool chaos) {
-    auto view = std::make_unique<DemoView>(std::move(context), loop, chaos);
+                                          bool chaos, bool image_io) {
+    auto view = std::make_unique<DemoView>(std::move(context), loop, chaos, image_io);
 
     view->stream_provider_ = StreamProvider::Create(StreamProvider::Source::CONTROLLER);
     if (!view->stream_provider_) {
@@ -100,6 +102,13 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
     });
     view->stream_.events().OnFrameAvailable =
         fit::bind_member(view.get(), &DemoView::OnFrameAvailable);
+
+    view->image_io_util_ = camera::ImageIOUtil::Create(&buffers, "/demo");
+    if (!view->image_io_util_) {
+      FXL_LOG(ERROR) << "Failed to create ImageIOUtil";
+    } else {
+      FXL_LOG(INFO) << "ImageIOUtil Created!";
+    }
 
     uint32_t image_pipe_id = view->session()->AllocResourceId();
     view->session()->Enqueue(
@@ -193,6 +202,16 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
       return;
     }
 
+    // If flag is enabled, write frame to disk once.
+    if (image_io_util_ && image_io_) {
+      status = image_io_util_->WriteImageData(info.buffer_id);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to write to disk";
+      }
+      FXL_LOG(INFO) << "Image written to disk";
+      image_io_ = false;
+    }
+
     uint64_t now_ns = zx_clock_get_monotonic();
     image_pipe_->PresentImage(
         image_ids_[info.buffer_id], now_ns, std::move(acquire_fences), std::move(release_fences),
@@ -249,19 +268,28 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
   bool should_rotate_;
   std::queue<std::pair<std::unique_ptr<async::Wait>, zx::event>> waiters_;
   std::unique_ptr<StreamProvider> stream_provider_;
+
+  bool image_io_;
+  std::unique_ptr<camera::ImageIOUtil> image_io_util_;
 };
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   // Chaos mode adds random delays between frame acquisition, presentation, and release.
   bool chaos = false;
-  if (argc > 1 && std::string(argv[1]) == "--chaos") {
-    std::cout << "Chaos mode enabled!" << std::endl;
-    chaos = true;
+  bool image_io = false;
+  for (auto i = 1; i < argc; ++i) {
+    if (std::string(argv[i]) == "--chaos") {
+      std::cout << "Chaos mode enabled!" << std::endl;
+      chaos = true;
+    } else if (std::string(argv[i]) == "--io") {
+      std::cout << "Image IO enabled!" << std::endl;
+      image_io = true;
+    }
   }
   scenic::ViewProviderComponent component(
-      [&loop, chaos](scenic::ViewContext context) {
-        return DemoView::Create(std::move(context), &loop, chaos);
+      [&loop, chaos, image_io](scenic::ViewContext context) {
+        return DemoView::Create(std::move(context), &loop, chaos, image_io);
       },
       &loop);
   FXL_LOG(INFO) << argv[0] << " initialized successfully - entering loop";
