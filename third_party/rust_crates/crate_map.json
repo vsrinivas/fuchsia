@@ -421,6 +421,11 @@
             "package_name": "smallvec"
         },
         {
+            "crate_name": "splines",
+            "crate_type": "lib",
+            "package_name": "splines"
+        },
+        {
             "crate_name": "static_assertions",
             "crate_type": "lib",
             "package_name": "static_assertions"
@@ -781,6 +786,11 @@
             "crate_name": "slab",
             "crate_type": "lib",
             "package_name": "slab"
+        },
+        {
+            "crate_name": "splines",
+            "crate_type": "lib",
+            "package_name": "splines"
         },
         {
             "crate_name": "structopt",
