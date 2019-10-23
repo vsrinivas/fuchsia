@@ -279,8 +279,7 @@ zx_status_t MtkSdmmc::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
 
 zx_status_t MtkSdmmc::SdmmcSetBusFreq(uint32_t bus_freq) {
   if (bus_freq == 0) {
-    MsdcCfg::Get().ReadFrom(&mmio_).set_ck_pwr_down(0).set_ck_drive(0).WriteTo(&mmio_);
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // For kCardCkModeDiv the bus clock frequency is determined as follows:
@@ -325,7 +324,7 @@ zx_status_t MtkSdmmc::SdmmcSetBusFreq(uint32_t bus_freq) {
 
   while (!msdc_cfg.ReadFrom(&mmio_).card_ck_stable()) {
   }
-  msdc_cfg.set_ck_pwr_down(1).set_ck_drive(1).WriteTo(&mmio_);
+  msdc_cfg.set_ck_pwr_down(1).WriteTo(&mmio_);
 
   return ZX_OK;
 }

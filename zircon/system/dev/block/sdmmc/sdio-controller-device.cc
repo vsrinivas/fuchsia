@@ -82,8 +82,6 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
     return st;
   }
 
-  sdmmc_.SdSendIfCond();
-
   uint32_t ocr;
   if ((st = sdmmc_.SdioSendOpCond(0, &ocr)) != ZX_OK) {
     zxlogf(TRACE, "sdmmc_probe_sdio: SDIO_SEND_OP_COND failed, retcode = %d\n", st);
@@ -102,16 +100,7 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
     zxlogf(ERROR, "sdmmc_probe_sdio: Combo card not supported\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (!(ocr & SDIO_SEND_OP_COND_RESP_IORDY)) {
-    zxlogf(ERROR, "sdmmc_probe_sdio: IO not ready after SDIO_SEND_OP_COND\n");
-    return ZX_ERR_IO;
-  }
-  if (ocr & SDIO_SEND_OP_COND_RESP_S18A) {
-    if ((st = sdmmc_.SdSwitchUhsVoltage(ocr)) != ZX_OK) {
-      zxlogf(ERROR, "sdmmc_probe_sdio: Failed to switch voltage to 1.8V\n");
-      return st;
-    }
-  }
+  sdmmc_.SetCurrentVoltage(SDMMC_VOLTAGE_V180);
   hw_info_.num_funcs =
       GetBits(ocr, SDIO_SEND_OP_COND_RESP_NUM_FUNC_MASK, SDIO_SEND_OP_COND_RESP_NUM_FUNC_LOC);
   if ((st = sdmmc_.SdSendRelativeAddr(nullptr)) != ZX_OK) {
@@ -133,6 +122,13 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
   if ((st = ProcessCis(0)) != ZX_OK) {
     zxlogf(ERROR, "sdmmc_probe_sdio: Read CIS failed, retcode = %d\n", st);
     return st;
+  }
+
+  if (ocr & SDIO_SEND_OP_COND_RESP_S18A) {
+    if ((st = sdmmc_.SdSwitchUhsVoltage(ocr)) != ZX_OK) {
+      zxlogf(INFO, "Failed to switch voltage to 1.8V\n");
+      return st;
+    }
   }
 
   // BCM43458 includes function 0 in its OCR register. This violates the SDIO specification and
@@ -1028,19 +1024,19 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
   }
   // Switch the host timing
   if ((st = sdmmc_.host().SetTiming(timing)) != ZX_OK) {
-    zxlogf(ERROR, "sdio: failed to switch to uhs timing on host : %d\n", st);
+    zxlogf(ERROR, "sdio: failed to switch to hs timing on host : %d\n", st);
     return st;
   }
 
   if ((st = SwitchFreq(new_freq)) != ZX_OK) {
-    zxlogf(ERROR, "sdio: failed to switch to uhs timing on host : %d\n", st);
+    zxlogf(ERROR, "sdio: failed to switch to hs timing on host : %d\n", st);
     return st;
   }
 
   if ((hw_caps & SDIO_CARD_UHS_SDR104) || (hw_caps & SDIO_CARD_UHS_SDR50)) {
     st = sdmmc_.host().PerformTuning(SD_SEND_TUNING_BLOCK);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "sdio: tuning failed %d\n", st);
+      zxlogf(ERROR, "mmc: tuning failed %d\n", st);
       return st;
     }
   }

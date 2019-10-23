@@ -159,7 +159,7 @@ TEST_F(SdioControllerDeviceTest, MultiplexInterrupts) {
 TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
   // Report five IO functions.
   sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd000'0000; });
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x5000'0000; });
   sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{0x00}, 0);
 
   // Set the maximum block size for function three to eight bytes.
@@ -232,7 +232,7 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
 
 TEST_F(SdioControllerDeviceTest, SdioDoRwTxnMultiBlock) {
   sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xf000'0000; });
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x7000'0000; });
 
   sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{SDIO_CIA_CCCR_CARD_CAP_SMB}, 0);
 
@@ -313,7 +313,7 @@ TEST_F(SdioControllerDeviceTest, DdkLifecycle) {
   fbl::AutoCall stop_thread([&]() { dut_.StopSdioIrqThread(); });
 
   sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xc000'0000; });
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x4000'0000; });
 
   EXPECT_OK(dut_.ProbeSdio());
 
@@ -379,9 +379,6 @@ TEST_F(SdioControllerDeviceTest, EnableDisableFnIntr) {
 }
 
 TEST_F(SdioControllerDeviceTest, ProcessCccr) {
-  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x8000'0000; });
-
   sdmmc_.Write(0x00, std::vector<uint8_t>{0x43}, 0);  // CCCR/SDIO revision.
   sdmmc_.Write(0x08, std::vector<uint8_t>{0xc2}, 0);  // Card capability.
   sdmmc_.Write(0x13, std::vector<uint8_t>{0xa9}, 0);  // Bus speed select.
@@ -414,7 +411,7 @@ TEST_F(SdioControllerDeviceTest, ProcessCccr) {
 
 TEST_F(SdioControllerDeviceTest, ProcessCis) {
   sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd000'0000; });
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x5000'0000; });
 
   sdmmc_.Write(0x0000'0509, std::vector<uint8_t>{0xa2, 0xc2, 0x00}, 0);  // CIS pointer.
 
@@ -446,7 +443,7 @@ TEST_F(SdioControllerDeviceTest, ProcessCis) {
 
 TEST_F(SdioControllerDeviceTest, ProcessCisFunction0) {
   sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd000'0000; });
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x5000'0000; });
 
   sdmmc_.set_host_info({
       .caps = 0,
@@ -488,7 +485,7 @@ TEST_F(SdioControllerDeviceTest, ProcessCisFunction0) {
 
 TEST_F(SdioControllerDeviceTest, ProcessFbr) {
   sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xf000'0000; });
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x7000'0000; });
 
   sdmmc_.Write(0x100, std::vector<uint8_t>{0x83}, 0);
   sdmmc_.Write(0x500, std::vector<uint8_t>{0x00}, 0);
@@ -510,7 +507,7 @@ TEST_F(SdioControllerDeviceTest, ProcessFbr) {
 
 TEST_F(SdioControllerDeviceTest, SmallHostTransferSize) {
   sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xb000'0000; });
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x3000'0000; });
 
   sdmmc_.set_host_info({
       .caps = 0,
@@ -587,28 +584,13 @@ TEST_F(SdioControllerDeviceTest, SmallHostTransferSize) {
 
 TEST_F(SdioControllerDeviceTest, ProbeFail) {
   sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd000'0000; });
+                              [](sdmmc_req_t* req) -> void { req->response[0] = 0x5000'0000; });
 
   // Set the function 3 CIS pointer to zero. This should cause InitFunc and subsequently ProbeSdio
   // to fail.
   sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x00, 0x00}, 0);
 
   EXPECT_NOT_OK(dut_.ProbeSdio());
-}
-
-TEST_F(SdioControllerDeviceTest, ProbeSetVoltage) {
-  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd000'0000; });
-
-  EXPECT_OK(dut_.ProbeSdio());
-  // Card does not report 1.8V support so we don't request a change from the host.
-  EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_MAX);
-
-  sdmmc_.set_command_callback(SDIO_SEND_OP_COND,
-                              [](sdmmc_req_t* req) -> void { req->response[0] = 0xd100'0000; });
-
-  EXPECT_OK(dut_.ProbeSdio());
-  EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
 }
 
 }  // namespace sdmmc

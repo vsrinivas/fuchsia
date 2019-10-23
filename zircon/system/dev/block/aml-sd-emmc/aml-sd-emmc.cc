@@ -324,8 +324,8 @@ zx_status_t AmlSdEmmc::SdmmcRegisterInBandInterrupt(
 zx_status_t AmlSdEmmc::SdmmcSetBusFreq(uint32_t freq) {
   uint32_t clk = 0, clk_src = 0, clk_div = 0;
   if (freq == 0) {
-    AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(0).WriteTo(&mmio_);
-    return ZX_OK;
+    // TODO: Disable clock here
+    return ZX_ERR_NOT_SUPPORTED;
   } else if (freq > max_freq_) {
     freq = max_freq_;
   } else if (freq < min_freq_) {

@@ -22,7 +22,6 @@ class MsdcCfg : public hwreg::RegisterBase<MsdcCfg, uint32_t> {
   DEF_BIT(18, hs400_ck_mode);
   DEF_FIELD(15, 8, card_ck_div);
   DEF_BIT(7, card_ck_stable);
-  DEF_BIT(4, ck_drive);
   DEF_BIT(3, pio_mode);
   DEF_BIT(2, reset);
   DEF_BIT(1, ck_pwr_down);
@@ -136,10 +135,6 @@ class SdcCmd : public hwreg::RegisterBase<SdcCmd, uint32_t> {
   static SdcCmd FromRequest(const sdmmc_req_t* req, bool is_sdio) {
     SdcCmd cmd = Get().FromValue(0);
 
-    if (req->cmd_idx == SD_VOLTAGE_SWITCH) {
-      cmd.set_vol_switch(1);
-    }
-
     cmd.set_cmd(req->cmd_idx);
     uint32_t resp_type =
         req->cmd_flags & (SDMMC_RESP_R1 | SDMMC_RESP_R2 | SDMMC_RESP_R3 | SDMMC_RESP_R1b);
@@ -178,7 +173,6 @@ class SdcCmd : public hwreg::RegisterBase<SdcCmd, uint32_t> {
     return cmd;
   }
 
-  DEF_BIT(30, vol_switch);
   DEF_FIELD(29, 28, auto_cmd);
   DEF_FIELD(27, 16, block_size);
   DEF_BIT(14, stop);
