@@ -187,26 +187,36 @@ async fn basic_hub_test() -> Result<(), Error> {
 
     // Verify that echo_realm has two children.
     test_runner
-        .verify_global_directory_listing("children", vec!["echo_server:0", "hub_client:0"])
+        .verify_global_directory_listing("children", vec!["echo_server", "hub_client"])
+        .await;
+
+    // Verify hub_client's instance id.
+    test_runner
+        .verify_global_file_content("children/hub_client/id", "0")
+        .await;
+
+    // Verify echo_server's instance id.
+    test_runner
+        .verify_global_file_content("children/echo_server/id", "0")
         .await;
 
     // Verify the args from hub_client.cml.
     test_runner
-        .verify_global_file_content("children/hub_client:0/exec/runtime/args/0", "Hippos")
+        .verify_global_file_content("children/hub_client/exec/runtime/args/0", "Hippos")
         .await;
     test_runner
-        .verify_global_file_content("children/hub_client:0/exec/runtime/args/1", "rule!")
+        .verify_global_file_content("children/hub_client/exec/runtime/args/1", "rule!")
         .await;
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
-    let expose_svc_dir = "children/echo_server:0/exec/expose/svc";
+    let expose_svc_dir = "children/echo_server/exec/expose/svc";
 
     // Verify that the Echo service is exposed by echo_server
     test_runner.verify_global_directory_listing(expose_svc_dir, vec![echo_service_name]).await;
 
     // Verify that hub_client is using HubReport and Echo services
-    let in_dir = "children/hub_client:0/exec/in";
+    let in_dir = "children/hub_client/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
     test_runner
         .verify_global_directory_listing(
@@ -251,7 +261,7 @@ async fn basic_hub_test() -> Result<(), Error> {
     let responder = test_runner
         .verify_local_directory_listing(
             "/parent_hub/children",
-            vec!["echo_server:0", "hub_client:0"],
+            vec!["echo_server", "hub_client"],
         )
         .await;
     responder.send().expect("Could not respond");
@@ -282,31 +292,41 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     .await?;
 
     // Verify that the dynamic child exists in the parent's hub
-    test_runner.verify_directory_listing("children", vec!["coll:simple_instance:1"]).await;
+    test_runner.verify_directory_listing("children", vec!["coll:simple_instance"]).await;
 
     // Before binding, verify that the dynamic child's hub has the directories we expect
     // i.e. "children" and "url" but no "exec" because the child has not been bound.
     test_runner
         .verify_directory_listing(
-            "children/coll:simple_instance:1",
-            vec!["children", "deleting", "url"],
+            "children/coll:simple_instance",
+            vec!["children", "deleting", "id", "url"],
         )
         .await;
 
+    // Verify that the dynamic child has the correct instance id.
+    test_runner
+        .verify_local_file_content("/hub/children/coll:simple_instance/id", "1")
+        .await;
+
     // Before binding, verify that the dynamic child's static children are invisible
-    test_runner.verify_directory_listing("children/coll:simple_instance:1/children", vec![]).await;
+    test_runner.verify_directory_listing("children/coll:simple_instance/children", vec![]).await;
 
     // After binding, verify that the dynamic child's hub has the directories we expect
     test_runner
         .verify_directory_listing(
-            "children/coll:simple_instance:1",
-            vec!["children", "deleting", "exec", "url"],
+            "children/coll:simple_instance",
+            vec!["children", "deleting", "exec", "id", "url"],
         )
         .await;
 
     // After binding, verify that the dynamic child's static child is visible
     test_runner
-        .verify_directory_listing("children/coll:simple_instance:1/children", vec!["child:0"])
+        .verify_directory_listing("children/coll:simple_instance/children", vec!["child"])
+        .await;
+
+    // Verify that the dynamic child's static child has the correct instance id.
+    test_runner
+        .verify_local_file_content("/hub/children/coll:simple_instance/children/child/id", "0")
         .await;
 
     // Wait for the dynamic child to begin deletion
@@ -320,7 +340,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     test_runner
         .verify_global_directory_listing(
             "deleting/coll:simple_instance:1",
-            vec!["children", "deleting", "exec", "url"],
+            vec!["children", "deleting", "exec", "id", "url"],
         )
         .await;
 
@@ -336,7 +356,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     test_runner
         .verify_global_directory_listing(
             "deleting/coll:simple_instance:1",
-            vec!["children", "deleting", "url"],
+            vec!["children", "deleting", "id", "url"],
         )
         .await;
 
@@ -361,7 +381,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     test_runner
         .verify_global_directory_listing(
             "deleting/coll:simple_instance:1/deleting/child:0",
-            vec!["children", "deleting", "url"],
+            vec!["children", "deleting", "id", "url"],
         )
         .await;
 
@@ -404,15 +424,15 @@ async fn grandchild_of_lazy_child_is_not_shown_test() -> Result<(), Error> {
     let test_runner = TestRunner::new(root_component_url).await?;
 
     // Verify that the child exists in the parent's hub
-    test_runner.verify_directory_listing("children", vec!["child:0"]).await;
+    test_runner.verify_directory_listing("children", vec!["child"]).await;
 
     // Verify that the child's hub has the directories we expect
-    // i.e. "children" and "url" but no "exec" because the child has not been bound.
+    // i.e. no "exec" because the child has not been bound.
     test_runner
-        .verify_directory_listing("children/child:0", vec!["children", "deleting", "url"])
+        .verify_directory_listing("children/child", vec!["children", "deleting", "id", "url"])
         .await;
 
     // Verify that the grandchild is not shown because the child is lazy
-    test_runner.verify_directory_listing("children/child:0/children", vec![]).await;
+    test_runner.verify_directory_listing("children/child/children", vec![]).await;
     Ok(())
 }

@@ -216,6 +216,18 @@ impl HubInner {
             &abs_moniker,
         )?;
 
+        // Add an 'id' file.
+        if let Some(child_moniker) = abs_moniker.leaf() {
+            instance_controlled.add_node(
+                "id",
+                {
+                    let child_moniker = child_moniker.clone();
+                    read_only(move || Ok(child_moniker.instance().to_string().into_bytes()))
+                },
+                &abs_moniker,
+            )?;
+        }
+
         // Add a children directory.
         let (children_controller, children_controlled) =
             directory::controlled::controlled(directory::simple::empty());
@@ -250,9 +262,11 @@ impl HubInner {
             HubInner::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
             if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
+                // In the children directory, the child's instance id is not used
+                let partial_moniker = leaf.to_partial();
                 instances_map[&parent_moniker]
                     .children_directory
-                    .add_node(leaf.as_str(), controlled, &abs_moniker)
+                    .add_node(partial_moniker.as_str(), controlled, &abs_moniker)
                     .await?;
             }
         }
@@ -466,12 +480,15 @@ impl HubInner {
             realm.abs_moniker.parent().expect("A root component cannot be destroyed");
         let leaf = realm.abs_moniker.leaf().expect("A root component cannot be destroyed");
 
+        // In the children directory, the child's instance id is not used
+        let partial_moniker = leaf.to_partial();
         let directory = instance_map[&parent_moniker]
             .children_directory
-            .remove_node(leaf.as_str())
+            .remove_node(partial_moniker.as_str())
             .await?
             .ok_or(ModelError::remove_entry_error(leaf.as_str()))?;
 
+        // In the deleting directory, the child's instance id is used
         instance_map[&parent_moniker]
             .deleting_directory
             .add_node(leaf.as_str(), directory, &realm.abs_moniker)
@@ -749,7 +766,7 @@ mod tests {
             format!("{}_resolved", root_component_url),
             read_file(&hub_proxy, "exec/resolved_url").await
         );
-        assert_eq!("test:///a", read_file(&hub_proxy, "children/a:0/url").await);
+        assert_eq!("test:///a", read_file(&hub_proxy, "children/a/url").await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -39,11 +39,11 @@ async fn main() -> Result<(), Error> {
 
     // Read the hub of the child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/child:0").await?;
+    report_directory_contents(&hub_report, "/hub/children/child").await?;
 
     // Read the grandchildren and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/child:0/children").await?;
+    report_directory_contents(&hub_report, "/hub/children/child/children").await?;
 
     Ok(())
 }

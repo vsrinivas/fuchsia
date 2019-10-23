@@ -30,6 +30,17 @@ async fn report_directory_contents(
     Ok(())
 }
 
+async fn report_file_content(hub_report: &fhub::HubReportProxy, path: &str) -> Result<(), Error> {
+    let resolved_url_proxy = io_util::open_file_in_namespace(path, io_util::OPEN_RIGHT_READABLE)
+        .expect("Unable to open the file.");
+    let resolved_url_file_content = io_util::read_file(&resolved_url_proxy).await?;
+    hub_report
+        .report_file_content(path, &resolved_url_file_content)
+        .await
+        .context("report file content failed")?;
+    Ok(())
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Create a dynamic child component
@@ -55,11 +66,15 @@ async fn main() -> Result<(), Error> {
 
     // Read the hub of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1").await?;
+    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance").await?;
+
+    // Read the instance id of the dynamic child and pass the results to the integration test
+    // via HubReport
+    report_file_content(&hub_report, "/hub/children/coll:simple_instance/id").await?;
 
     // Read the children of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1/children").await?;
+    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance/children").await?;
 
     // Bind to the dynamic child
     let mut child_ref = fsys::ChildRef {
@@ -71,11 +86,15 @@ async fn main() -> Result<(), Error> {
 
     // Read the hub of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1").await?;
+    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance").await?;
 
     // Read the children of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance:1/children").await?;
+    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance/children").await?;
+
+    // Read the instance id of the dynamic child's static child and pass the results to the
+    // integration test via HubReport
+    report_file_content(&hub_report, "/hub/children/coll:simple_instance/children/child/id").await?;
 
     // Delete the dynamic child
     let mut child_ref = fsys::ChildRef {
