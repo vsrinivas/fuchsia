@@ -171,8 +171,14 @@ void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
   ASSERT_OK(ramdisk_rebind(ramdisk_));
   fzl::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
   zx_status_t call_status;
-  ASSERT_OK(fuchsia_device_ControllerBind(disk_caller.borrow_channel(), FVM_DRIVER_LIB,
-                                          STRLEN(FVM_DRIVER_LIB), &call_status));
+  zx_status_t status;
+
+  status = fuchsia_device_ControllerBind(disk_caller.borrow_channel(), FVM_DRIVER_LIB,
+                                          STRLEN(FVM_DRIVER_LIB), &call_status);
+  // TODO(fxb/39460) Prevent ALREADY_BOUND from being an option
+  if (!(status == ZX_OK || status == ZX_ERR_ALREADY_BOUND)) {
+    ASSERT_TRUE(false, "Could not bind disk to FVM driver (or failed to find existing bind)");
+  }
   ASSERT_OK(call_status);
 
   char path[PATH_MAX];

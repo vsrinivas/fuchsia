@@ -267,7 +267,10 @@ bool BlobfsTest::Init(FsTestState state) {
     zx_status_t io_status = fuchsia_device_ControllerBind(caller.borrow_channel(), FVM_DRIVER_LIB,
                                                           STRLEN(FVM_DRIVER_LIB), &status);
     ASSERT_EQ(io_status, ZX_OK, "[FAILED]: Could not send bind to FVM driver");
-    ASSERT_EQ(status, ZX_OK, "[FAILED]: Could not bind disk to FVM driver");
+    // TODO(fxb/39460) Prevent ALREADY_BOUND from being an option
+    if (!(status == ZX_OK || status == ZX_ERR_ALREADY_BOUND)) {
+      ASSERT_TRUE(false, "[FAILED] Driver wasn't already bound or failed to bind");
+    }
     caller.reset();
 
     snprintf(fvm_path_, sizeof(fvm_path_), "%s/fvm", device_path_);

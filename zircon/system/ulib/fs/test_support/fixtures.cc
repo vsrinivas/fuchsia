@@ -131,7 +131,10 @@ void FilesystemTestWithFvm::BindFvm() {
   zx_status_t io_status = fuchsia_device_ControllerBind(caller.borrow_channel(), kFvmDriverLib,
                                                         sizeof(kFvmDriverLib) - 1, &status);
   ASSERT_OK(io_status, "Could not send bind to FVM driver");
-  ASSERT_OK(status, "Could not bind disk to FVM driver");
+  // TODO(fxb/39460) Prevent ALREADY_BOUND from being an option
+  if (!(status == ZX_OK || status == ZX_ERR_ALREADY_BOUND)) {
+    ASSERT_TRUE(false, "Could not bind disk to FVM driver (or failed to find existing bind)");
+  }
   ASSERT_OK(wait_for_device(fvm_path_.c_str(), zx::sec(10).get()));
 }
 
