@@ -31,6 +31,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//sdk/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

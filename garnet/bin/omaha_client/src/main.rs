@@ -15,6 +15,7 @@ mod channel;
 mod configuration;
 mod fidl;
 mod http_request;
+mod inspect;
 mod install_plan;
 mod installer;
 mod metrics;
@@ -65,6 +66,14 @@ fn main() -> Result<(), Error> {
             fidl::FidlServer::new(state_machine_ref.clone(), stash_ref, app_set, channel_configs);
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
+
+        let inspector = fuchsia_inspect::Inspector::new();
+        inspector.export(&mut fs);
+        let root = inspector.root();
+        let configuration_node =
+            inspect::ConfigurationNode::new(root.create_child("configuration"));
+        configuration_node.set(&config);
+
         // `.boxed_local()` was added to workaround stack overflow when we have too many levels of
         // nested async functions. Remove them when the generator optimization lands.
         future::join3(
