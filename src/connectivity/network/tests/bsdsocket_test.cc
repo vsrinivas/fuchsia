@@ -16,6 +16,7 @@
 #include <future>
 #include <thread>
 
+#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 
 #include "gtest/gtest.h"
@@ -992,57 +993,67 @@ enum sendMethod {
   SENDMSG,
 };
 
-class SendSocketTest : public ::testing::TestWithParam<sendMethod /* send method */> {};
+enum closeSocket {
+  CLIENT,
+  SERVER,
+};
 
-TEST_P(SendSocketTest, sendMethod) {
-  sendMethod sendMethod = GetParam();
+class SendSocketTest : public ::testing::TestWithParam<std::tuple<sendMethod, closeSocket>> {};
 
-  int acptfd;
-  ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+TEST_P(SendSocketTest, CloseWhileSending) {
+  sendMethod whichMethod = std::get<0>(GetParam());
+  closeSocket whichSocket = std::get<1>(GetParam());
 
-  struct sockaddr_in addr = {};
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  ASSERT_EQ(bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+  fbl::unique_fd client, server;
+  {
+    fbl::unique_fd listener;
+    ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
-  ASSERT_EQ(addrlen, sizeof(addr));
+    struct sockaddr_in addr = {};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    ASSERT_EQ(bind(listener.get(), (const struct sockaddr*)&addr, sizeof(addr)), 0)
+        << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
+    socklen_t addrlen = sizeof(addr);
+    ASSERT_EQ(getsockname(listener.get(), (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+    ASSERT_EQ(addrlen, sizeof(addr));
 
-  int client_fd;
-  ASSERT_GE(client_fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(connect(client_fd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+    ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
 
-  int server_fd;
-  ASSERT_GE(server_fd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
-  // We're done with the listener.
-  EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+    ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+    ASSERT_EQ(connect(client.get(), (const struct sockaddr*)&addr, sizeof(addr)), 0)
+        << strerror(errno);
+
+    ASSERT_TRUE(server = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+        << strerror(errno);
+    // We're done with the listener.
+    ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+  }
 
   // Fill the send buffer of the client socket to trigger write to wait.
-  fill_stream_send_buf(client_fd, server_fd);
+  fill_stream_send_buf(client.get(), server.get());
 
   // In the process of writing to the socket, close its peer socket with outstanding data to read,
   // ECONNRESET is expected; write to the socket after it's closed, EPIPE is expected.
-  const auto fut = std::async(std::launch::async, [=]() {
+  const auto fut = std::async(std::launch::async, [&]() {
     char buf[16];
-    auto do_send = [=]() {
-      switch (sendMethod) {
+    auto do_send = [&]() {
+      switch (whichMethod) {
         case sendMethod::WRITE: {
-          return write(client_fd, buf, sizeof(buf));
+          return write(client.get(), buf, sizeof(buf));
         }
         case sendMethod::WRITEV: {
           struct iovec iov = {};
           iov.iov_base = (void*)buf;
           iov.iov_len = sizeof(buf);
-          return writev(client_fd, &iov, 1);
+          return writev(client.get(), &iov, 1);
         }
         case sendMethod::SEND: {
-          return send(client_fd, buf, sizeof(buf), 0);
+          return send(client.get(), buf, sizeof(buf), 0);
         }
         case sendMethod::SENDTO: {
-          return sendto(client_fd, buf, sizeof(buf), 0, nullptr, 0);
+          return sendto(client.get(), buf, sizeof(buf), 0, nullptr, 0);
         }
         case sendMethod::SENDMSG: {
           struct iovec iov = {};
@@ -1051,7 +1062,7 @@ TEST_P(SendSocketTest, sendMethod) {
           struct msghdr msg = {};
           msg.msg_iov = &iov;
           msg.msg_iovlen = 1;
-          return sendmsg(client_fd, &msg, 0);
+          return sendmsg(client.get(), &msg, 0);
         }
         default:
           ADD_FAILURE() << "unsupported test parameter";
@@ -1060,46 +1071,91 @@ TEST_P(SendSocketTest, sendMethod) {
     };
 
     EXPECT_EQ(do_send(), -1);
-    EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
-    struct pollfd ufds = {};
-    ufds.fd = client_fd;
-    ufds.events = POLLOUT;
-    // 1 second timeout
-    int timeout_ms = 1000;
-    // This is needed to make sure the write half connection of the client is closed.
-    int n = poll(&ufds, 1, timeout_ms);
-    EXPECT_GE(n, 0) << strerror(errno);
-    EXPECT_EQ(n, 1);
+    switch (whichSocket) {
+      case closeSocket::CLIENT: {
+        // On Linux, the pending I/O call is allowed to complete in spite of its argument having
+        // been closed. See below for more detail.
+#if defined(__linux__)
+        EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
+#else
+        EXPECT_EQ(errno, EBADF) << strerror(errno);
+#endif
+        break;
+      }
+      case closeSocket::SERVER: {
+        EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
+        break;
+      }
+      default:
+        ADD_FAILURE() << "unsupported test parameter";
+    }
 
     // Linux generates SIGPIPE when the peer on a stream-oriented socket has closed the connection.
     // send{,to,msg} support the MSG_NOSIGNAL flag to suppress this behaviour, but write and writev
     // do not. We only expect this during the second attempt, so we remove the default signal
     // handler, make our attempt, and then restore it.
+    {
 #if defined(__linux__)
-    struct sigaction act = {};
-    act.sa_handler = SIG_IGN;
+      struct sigaction act = {};
+      act.sa_handler = SIG_IGN;
 
-    struct sigaction oldact;
-    EXPECT_EQ(sigaction(SIGPIPE, &act, &oldact), 0) << strerror(errno);
+      struct sigaction oldact;
+      ASSERT_EQ(sigaction(SIGPIPE, &act, &oldact), 0) << strerror(errno);
+
+      auto undo = fbl::MakeAutoCall(
+          [&]() { ASSERT_EQ(sigaction(SIGPIPE, &oldact, nullptr), 0) << strerror(errno); });
 #endif
-    EXPECT_EQ(do_send(), -1);
-#if defined(__linux__)
-    EXPECT_EQ(sigaction(SIGPIPE, &oldact, nullptr), 0) << strerror(errno);
-#endif
+      ASSERT_EQ(do_send(), -1);
+    }
 
     // The socket writes after the the peer socket is closed.
-    EXPECT_EQ(errno, EPIPE) << strerror(errno);
+    switch (whichSocket) {
+      case closeSocket::CLIENT: {
+        EXPECT_EQ(errno, EBADF) << strerror(errno);
+        break;
+      }
+      case closeSocket::SERVER: {
+        EXPECT_EQ(errno, EPIPE) << strerror(errno);
+        break;
+      }
+      default:
+        ADD_FAILURE() << "unsupported test parameter";
+    }
   });
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
-  // Closing the remote end should cause the write to complete.
-  EXPECT_EQ(close(server_fd), 0) << strerror(errno);
+
+  switch (whichSocket) {
+    case closeSocket::CLIENT: {
+      EXPECT_EQ(close(client.get()), 0) << strerror(errno);
+      // This is weird! The I/O is allowed to proceed past the close call - at least on Linux.
+      // Therefore we have to fallthrough to closing the server, which will actually unblock the
+      // future.
+      //
+      // In Fuchsia, fdio will eagerly clean up all the resources associated with the file
+      // descriptor.
+#if defined(__linux__)
+      EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
+#else
+      break;
+#endif
+    }
+    case closeSocket::SERVER: {
+      EXPECT_EQ(close(server.get()), 0) << strerror(errno);
+      break;
+    }
+    default:
+      ADD_FAILURE() << "unsupported test parameter";
+  }
+
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(50)), std::future_status::ready);
-  EXPECT_EQ(close(client_fd), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(DISABLED_NetStreamTest, SendSocketTest,
-                         ::testing::Values(sendMethod::WRITE, sendMethod::WRITEV, sendMethod::SEND,
-                                           sendMethod::SENDTO, sendMethod::SENDMSG));
+// TODO(35619): deflake and re-enable this test.
+INSTANTIATE_TEST_SUITE_P(
+    DISABLED_NetStreamTest, SendSocketTest,
+    ::testing::Combine(::testing::Values(sendMethod::WRITE, sendMethod::WRITEV, sendMethod::SEND,
+                                         sendMethod::SENDTO, sendMethod::SENDMSG),
+                       ::testing::Values(closeSocket::CLIENT, closeSocket::SERVER)));
 
 // Use this routine to test blocking socket reads. On failure, this attempts to recover the blocked
 // thread.
