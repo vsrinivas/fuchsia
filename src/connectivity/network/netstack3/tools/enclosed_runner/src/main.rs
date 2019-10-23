@@ -6,6 +6,7 @@ use failure::{format_err, Error, ResultExt};
 use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_icmp;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_posix_socket;
@@ -153,6 +154,9 @@ async fn main() -> Result<(), Error> {
     services
         .add_proxy_service_to::<StackMarker, _>(ns_builder.directory_request().unwrap().clone())
         .add_proxy_service_to::<fidl_fuchsia_posix_socket::ProviderMarker, _>(
+            ns_builder.directory_request().unwrap().clone(),
+        )
+        .add_proxy_service_to::<fidl_fuchsia_net_icmp::ProviderMarker, _>(
             ns_builder.directory_request().unwrap().clone(),
         );
 
