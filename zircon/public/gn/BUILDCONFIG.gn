@@ -1965,11 +1965,17 @@ _compile_target_types = [
   "source_set",
   "static_library",
   "test",
+  "zx_executable",
+  "zx_host_tool",
+  "zx_library",
+  "zx_test",
 ]
 if (toolchain.environment == "user") {
   _compile_target_types += [
     "driver",
     "test_driver",
+    "zx_driver",
+    "zx_test_driver",
   ]
 }
 
@@ -1999,3 +2005,6 @@ foreach(target_type, _compile_target_types) {
     }
   }
 }
+
+# Make wrapper templates used for build unification universally available.
+import("//public/gn/unification/wrappers.gni")

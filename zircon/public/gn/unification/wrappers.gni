@@ -1,0 +1,10 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("zx_driver.gni")
+import("zx_executable.gni")
+import("zx_host_tool.gni")
+import("zx_library.gni")
+import("zx_test.gni")
+import("zx_test_driver.gni")

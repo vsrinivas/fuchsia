@@ -2,11 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# No particular functionality in this file whose only purpose is to provide a hook for the Fuchsia
-# GN build to inject parameters into build files.
-
-template("zx_executable") {
-  executable(target_name) {
+template("zx_test") {
+  test(target_name) {
     forward_variables_from(invoker, "*")
   }
 }
