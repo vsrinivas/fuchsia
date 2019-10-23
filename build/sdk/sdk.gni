@@ -363,6 +363,8 @@ template("sdk") {
     stamp_file = "$target_gen_dir/$target_name.exported"
 
     action("${target_name}_export") {
+      forward_variables_from(invoker, [ "testonly" ])
+
       script = "//build/sdk/export_sdk.py"
 
       inputs = [
