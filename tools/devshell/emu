@@ -289,6 +289,12 @@ if (( $NET )); then
       echo "sudo ip link set $IFNAME up"
       exit 1
     fi
+    # Try to detect if a firewall is active. There are only few ways to do that
+    # without being root. Unfortunately, using systemd or systemctl does not work
+    # (at least on Debian), so use the following hack instead:
+    if (which ufw && grep -q "^ENABLED=yes" /etc/ufw/ufw.conf) >/dev/null 2>&1; then
+      fx-warn "Active firewall detected: If this emulator is unreachable, run: fx setup-ufw"
+    fi
   fi
   ARGS+=("-netdev" "type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0")
   HASH=$(echo $IFNAME | shasum)

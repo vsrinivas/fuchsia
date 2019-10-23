@@ -262,6 +262,13 @@ else
         echo "sudo ip link set $IFNAME up"
         exit 1
       fi
+
+      # Try to detect if a firewall is active. There are only few ways to do that
+      # without being root. Unfortunately, using systemd or systemctl does not work
+      # on Debian, so use the following hack instead:
+      if (which ufw && grep -q "^ENABLED=yes" /etc/ufw/ufw.conf) >/dev/null 2>&1; then
+        echo "Active firewall detected: If this emulator is unreachable, run: fx setup-ufw"
+      fi
     fi
     HASH=$(echo $IFNAME | shasum)
     SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
