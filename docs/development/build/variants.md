@@ -19,7 +19,7 @@ detailed GN syntax.  For simple cases, this can just be a list of strings.
 Using `fx set`:
 
 ```sh
-fx set core.x64 --variant={host_asan,asan/cat,asan/ledger}
+fx set core.x64 --variant=host_asan --variant=asan/cat --variant=asan/ledger
 ```
 
 Alternatively, you can add or modify the variants on an existing build by
