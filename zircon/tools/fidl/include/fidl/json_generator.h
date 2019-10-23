@@ -85,6 +85,60 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
     EmitArrayEnd();
   }
 
+  // TODO(39429): Remove this once reserved is supported in the various backends
+  // Temporarily specializing for union members to avoid printing reserved members
+  void GenerateArray(std::vector<flat::XUnion::Member>::const_iterator begin,
+                     std::vector<flat::XUnion::Member>::const_iterator end) {
+    EmitArrayBegin();
+
+    bool is_first = true;
+    for (auto it = begin; it != end; ++it) {
+      if (!(*it).maybe_used)
+        continue;
+      if (is_first) {
+        Indent();
+        EmitNewlineWithIndent();
+        is_first = false;
+      } else {
+        EmitArraySeparator();
+      }
+      Generate(*it);
+    }
+    if (!is_first) {
+      Outdent();
+      EmitNewlineWithIndent();
+    }
+
+    EmitArrayEnd();
+  }
+
+  // TODO(39429): Remove this once reserved is supported in the various backends
+  // Temporarily specializing for xunion members to avoid printing reserved members
+  void GenerateArray(std::vector<flat::Union::Member>::const_iterator begin,
+                     std::vector<flat::Union::Member>::const_iterator end) {
+    EmitArrayBegin();
+
+    bool is_first = true;
+    for (auto it = begin; it != end; ++it) {
+      if (!(*it).maybe_used)
+        continue;
+      if (is_first) {
+        Indent();
+        EmitNewlineWithIndent();
+        is_first = false;
+      } else {
+        EmitArraySeparator();
+      }
+      Generate(*it);
+    }
+    if (!is_first) {
+      Outdent();
+      EmitNewlineWithIndent();
+    }
+
+    EmitArrayEnd();
+  }
+
   void Generate(const flat::Decl* decl);
 
   void Generate(SourceLocation value);

@@ -864,8 +864,9 @@ table TableWithOptionalUnion {
                                  .has_padding = true,
                              }));
   ASSERT_EQ(a_union->members.size(), 2);
+  ASSERT_NONNULL(a_union->members[0].maybe_used);
   EXPECT_TRUE(
-      CheckFieldShape(a_union->members[0],
+      CheckFieldShape(*a_union->members[0].maybe_used,
                       ExpectedField{
                           .offset = 8,
                           .padding = 15  // The other variant, |BoolAndU64|, has a size of 16 bytes.
@@ -874,7 +875,8 @@ table TableWithOptionalUnion {
                           .offset = 0,
                           .padding = 7,
                       }));
-  EXPECT_TRUE(CheckFieldShape(a_union->members[1],
+  ASSERT_NONNULL(a_union->members[1].maybe_used);
+  EXPECT_TRUE(CheckFieldShape(*a_union->members[1].maybe_used,
                               ExpectedField{
                                   .offset = 8,
                                   .padding = 0  // This is the biggest variant.
@@ -961,7 +963,8 @@ union ManyHandleUnion {
                                  .has_padding = true,
                              }));
   ASSERT_EQ(one_handle_union->members.size(), 3);
-  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[0],
+  ASSERT_NONNULL(one_handle_union->members[0].maybe_used);
+  EXPECT_TRUE(CheckFieldShape(*one_handle_union->members[0].maybe_used,
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 0  // This is the biggest variant.
@@ -970,7 +973,8 @@ union ManyHandleUnion {
                                   .offset = 0,
                                   .padding = 4,
                               }));
-  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[1],
+  ASSERT_NONNULL(one_handle_union->members[1].maybe_used);
+  EXPECT_TRUE(CheckFieldShape(*one_handle_union->members[1].maybe_used,
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 3  // The other variants all have size of 4.
@@ -979,7 +983,8 @@ union ManyHandleUnion {
                                   .offset = 0,
                                   .padding = 7,
                               }));
-  EXPECT_TRUE(CheckFieldShape(one_handle_union->members[2],
+  ASSERT_NONNULL(one_handle_union->members[2].maybe_used);
+  EXPECT_TRUE(CheckFieldShape(*one_handle_union->members[2].maybe_used,
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 0  // This is the biggest variant.
@@ -1009,8 +1014,9 @@ union ManyHandleUnion {
                                  .has_padding = true,
                              }));
   ASSERT_EQ(many_handle_union->members.size(), 3);
+  ASSERT_NONNULL(many_handle_union->members[1].maybe_used);
   EXPECT_TRUE(CheckFieldShape(
-      many_handle_union->members[0],
+      *many_handle_union->members[0].maybe_used,
       ExpectedField{
           .offset = 8,
           .padding = 28  // The biggest variant, |array<handle>:8|, has a size of 32.
@@ -1019,14 +1025,16 @@ union ManyHandleUnion {
           .offset = 0,
           .padding = 4,
       }));
-  EXPECT_TRUE(CheckFieldShape(many_handle_union->members[1],
+  ASSERT_NONNULL(many_handle_union->members[1].maybe_used);
+  EXPECT_TRUE(CheckFieldShape(*many_handle_union->members[1].maybe_used,
                               ExpectedField{
                                   .offset = 8,
                                   .padding = 0  // This is the biggest variant.
                               },
                               ExpectedField{}));
+  ASSERT_NONNULL(many_handle_union->members[2].maybe_used);
   EXPECT_TRUE(CheckFieldShape(
-      many_handle_union->members[2],
+      *many_handle_union->members[2].maybe_used,
       ExpectedField{
           .offset = 8,
           .padding = 16  // This biggest variant, |array<handle>:8|, has a size of 32.
@@ -1562,7 +1570,8 @@ xunion PaddingCheck {
                                            .has_flexible_envelope = true,
                                        }));
   ASSERT_EQ(one_bool->members.size(), 1);
-  EXPECT_TRUE(CheckFieldShape(one_bool->members[0], ExpectedField{.padding = 7}));
+  ASSERT_NONNULL(one_bool->members[0].maybe_used);
+  EXPECT_TRUE(CheckFieldShape(*one_bool->members[0].maybe_used, ExpectedField{.padding = 7}));
 
   auto opt_one_bool = test_library.LookupStruct("StructWithOptionalXUnionWithOneBool");
   ASSERT_NONNULL(opt_one_bool);
@@ -1623,8 +1632,9 @@ xunion PaddingCheck {
                                                 .has_flexible_envelope = true,
                                             }));
   ASSERT_EQ(padding_check->members.size(), 2);
-  EXPECT_TRUE(CheckFieldShape(padding_check->members[0], ExpectedField{.padding = 5}));
-  EXPECT_TRUE(CheckFieldShape(padding_check->members[1], ExpectedField{.padding = 3}));
+  ASSERT_NONNULL(padding_check->members[0].maybe_used);
+  EXPECT_TRUE(CheckFieldShape(*padding_check->members[0].maybe_used, ExpectedField{.padding = 5}));
+  EXPECT_TRUE(CheckFieldShape(*padding_check->members[1].maybe_used, ExpectedField{.padding = 3}));
 
   END_TEST;
 }
@@ -2385,7 +2395,7 @@ struct Sandwich {
                                  .has_padding = true,
                              }));
   ASSERT_EQ(sandwich->members.size(), 3);
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[0], // before
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[0],  // before
                               ExpectedField{
                                   .offset = 0,
                                   .padding = 0,
@@ -2394,7 +2404,7 @@ struct Sandwich {
                                   .offset = 0,
                                   .padding = 4,
                               }));
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[1], // union
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[1],  // union
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 0,
@@ -2403,7 +2413,7 @@ struct Sandwich {
                                   .offset = 8,
                                   .padding = 0,
                               }));
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[2], // after
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[2],  // after
                               ExpectedField{
                                   .offset = 12,
                                   .padding = 0,
@@ -2452,7 +2462,7 @@ struct Sandwich {
                                  .has_padding = true,
                              }));
   ASSERT_EQ(sandwich->members.size(), 3);
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[0], // before
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[0],  // before
                               ExpectedField{
                                   .offset = 0,
                                   .padding = 0,
@@ -2461,7 +2471,7 @@ struct Sandwich {
                                   .offset = 0,
                                   .padding = 4,
                               }));
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[1], // union
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[1],  // union
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 0,
@@ -2470,7 +2480,7 @@ struct Sandwich {
                                   .offset = 8,
                                   .padding = 0,
                               }));
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[2], // after
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[2],  // after
                               ExpectedField{
                                   .offset = 16,
                                   .padding = 0,
@@ -2524,7 +2534,7 @@ struct Sandwich {
                                  .has_padding = true,
                              }));
   ASSERT_EQ(sandwich->members.size(), 3);
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[0], // before
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[0],  // before
                               ExpectedField{
                                   .offset = 0,
                                   .padding = 4,
@@ -2533,7 +2543,7 @@ struct Sandwich {
                                   .offset = 0,
                                   .padding = 4,
                               }));
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[1], // union
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[1],  // union
                               ExpectedField{
                                   .offset = 8,
                                   .padding = 0,
@@ -2542,7 +2552,7 @@ struct Sandwich {
                                   .offset = 8,
                                   .padding = 0,
                               }));
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[2], // after
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[2],  // after
                               ExpectedField{
                                   .offset = 32,
                                   .padding = 4,
@@ -2591,7 +2601,7 @@ struct Sandwich {
                                  .has_padding = true,
                              }));
   ASSERT_EQ(sandwich->members.size(), 3);
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[0], // before
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[0],  // before
                               ExpectedField{
                                   .offset = 0,
                                   .padding = 0,
@@ -2600,7 +2610,7 @@ struct Sandwich {
                                   .offset = 0,
                                   .padding = 4,
                               }));
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[1], // union
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[1],  // union
                               ExpectedField{
                                   .offset = 4,
                                   .padding = 0,
@@ -2609,7 +2619,7 @@ struct Sandwich {
                                   .offset = 8,
                                   .padding = 0,
                               }));
-  EXPECT_TRUE(CheckFieldShape(sandwich->members[2], // after
+  EXPECT_TRUE(CheckFieldShape(sandwich->members[2],  // after
                               ExpectedField{
                                   .offset = 40,
                                   .padding = 0,

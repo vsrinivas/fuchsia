@@ -178,6 +178,8 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
   virtual void OnUnionMember(std::unique_ptr<UnionMember> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
+    ScopedBool before_colon(blank_space_before_colon_, false);
+    ScopedBool after_colon(blank_space_after_colon_, true);
     TreeVisitor::OnUnionMember(element);
   }
 

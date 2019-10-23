@@ -267,11 +267,18 @@ void TableDeclaration::Accept(TreeVisitor* visitor) const {
 
 void UnionMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+  if (maybe_used != nullptr) {
+    if (maybe_used->attributes != nullptr) {
+      visitor->OnAttributeList(maybe_used->attributes);
+    }
   }
-  visitor->OnTypeConstructor(type_ctor);
-  visitor->OnIdentifier(identifier);
+  if (maybe_ordinal != nullptr) {
+    visitor->OnOrdinal32(*maybe_ordinal);
+  }
+  if (maybe_used != nullptr) {
+    visitor->OnTypeConstructor(maybe_used->type_ctor);
+    visitor->OnIdentifier(maybe_used->identifier);
+  }
 }
 
 void UnionDeclaration::Accept(TreeVisitor* visitor) const {
@@ -287,12 +294,18 @@ void UnionDeclaration::Accept(TreeVisitor* visitor) const {
 
 void XUnionMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+  if (maybe_used != nullptr) {
+    if (maybe_used->attributes != nullptr) {
+      visitor->OnAttributeList(maybe_used->attributes);
+    }
   }
-
-  visitor->OnTypeConstructor(type_ctor);
-  visitor->OnIdentifier(identifier);
+  if (maybe_ordinal != nullptr) {
+    visitor->OnOrdinal32(*maybe_ordinal);
+  }
+  if (maybe_used != nullptr) {
+    visitor->OnTypeConstructor(maybe_used->type_ctor);
+    visitor->OnIdentifier(maybe_used->identifier);
+  }
 }
 
 void XUnionDeclaration::Accept(TreeVisitor* visitor) const {

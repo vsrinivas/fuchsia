@@ -69,6 +69,19 @@ class Scope {
 using Ordinal32Scope = Scope<uint32_t>;
 using Ordinal64Scope = Scope<uint64_t>;
 
+std::optional<std::pair<uint32_t, SourceLocation>> FindFirstNonDenseOrdinal(
+    const Ordinal32Scope& scope) {
+  uint32_t last_ordinal_seen = 0;
+  for (const auto& ordinal_and_loc : scope) {
+    uint32_t next_expected_ordinal = last_ordinal_seen + 1;
+    if (ordinal_and_loc.first != next_expected_ordinal) {
+      return std::optional{std::make_pair(next_expected_ordinal, ordinal_and_loc.second)};
+    }
+    last_ordinal_seen = ordinal_and_loc.first;
+  }
+  return std::nullopt;
+}
+
 struct MethodScope {
   Ordinal64Scope ordinals;
   Scope<std::string_view> names;
@@ -214,11 +227,11 @@ FieldShape Table::Member::Used::fieldshape(WireFormat wire_format) const {
   return FieldShape(*this, wire_format);
 }
 
-FieldShape Union::Member::fieldshape(WireFormat wire_format) const {
+FieldShape Union::Member::Used::fieldshape(WireFormat wire_format) const {
   return FieldShape(*this, wire_format);
 }
 
-FieldShape XUnion::Member::fieldshape(WireFormat wire_format) const {
+FieldShape XUnion::Member::Used::fieldshape(WireFormat wire_format) const {
   return FieldShape(*this, wire_format);
 }
 
@@ -822,7 +835,9 @@ bool ResultShapeConstraint(ErrorReporter* error_reporter, const raw::Attribute& 
   assert(decl->kind == Decl::Kind::kUnion);
   auto union_decl = static_cast<const Union*>(decl);
   assert(union_decl->members.size() == 2);
-  auto error_type = union_decl->members.at(1).type_ctor->type;
+  auto& error_member = union_decl->members.at(1);
+  assert(error_member.maybe_used && "must have an error member");
+  auto error_type = error_member.maybe_used->type_ctor->type;
 
   const PrimitiveType* error_primitive = nullptr;
   if (error_type->kind == Type::Kind::kPrimitive) {
@@ -1556,7 +1571,9 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
   auto result_attributelist =
       std::make_unique<raw::AttributeList>(*method, std::move(result_attributes));
   auto xunion_decl = std::make_unique<Union>(std::move(result_attributelist),
-                                             std::move(result_name), std::move(result_members));
+                                             std::move(result_name), std::move(result_members),
+                                             true  // are_ordinals_explicit
+  );
   auto result_decl = xunion_decl.get();
   if (!RegisterDecl(std::move(xunion_decl)))
     return false;
@@ -1743,54 +1760,85 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
   auto name = Name(this, union_declaration->identifier->location());
 
+  assert(!union_declaration->members.empty() && "unions must have at least one member");
+  bool are_ordinals_explicit = union_declaration->members[0]->maybe_ordinal != nullptr;
   std::vector<Union::Member> members;
   for (auto& member : union_declaration->members) {
-    auto xunion_ordinal = std::make_unique<raw::Ordinal32>(
-        fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
-    auto location = member->identifier->location();
-    std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructor(std::move(member->type_ctor), location, &type_ctor))
-      return false;
+    auto xunion_ordinal = std::move(member->maybe_ordinal);
 
-    if (type_ctor->nullability != types::Nullability::kNonnullable) {
-      return Fail(member->location(), "Union members cannot be nullable");
+    bool is_member_ordinal_explicit = xunion_ordinal != nullptr;
+    if (are_ordinals_explicit != is_member_ordinal_explicit) {
+      return Fail(member->location(), "cannot mix explicit and implicit ordinals");
     }
 
-    auto attributes = std::move(member->attributes);
-    members.emplace_back(std::move(xunion_ordinal), std::move(type_ctor), location,
-                         std::move(attributes));
+    if (member->maybe_used) {
+      if (!xunion_ordinal) {
+        xunion_ordinal = std::make_unique<raw::Ordinal32>(
+            fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
+      }
+      auto location = member->maybe_used->identifier->location();
+      std::unique_ptr<TypeConstructor> type_ctor;
+      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), location, &type_ctor))
+        return false;
+
+      if (type_ctor->nullability != types::Nullability::kNonnullable) {
+        return Fail(member->location(), "Union members cannot be nullable");
+      }
+
+      auto attributes = std::move(member->maybe_used->attributes);
+      members.emplace_back(std::move(xunion_ordinal), std::move(type_ctor), location,
+                           std::move(attributes));
+    } else {
+      assert(xunion_ordinal && "Reserved union members must have an ordinal specified");
+      members.emplace_back(std::move(xunion_ordinal), member->location());
+    }
   }
 
   auto attributes = std::move(union_declaration->attributes);
 
-  return RegisterDecl(
-      std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));
+  return RegisterDecl(std::make_unique<Union>(std::move(attributes), std::move(name),
+                                              std::move(members), are_ordinals_explicit));
 }
 
 bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
   auto name = Name(this, xunion_declaration->identifier->location());
 
+  assert(!xunion_declaration->members.empty() && "unions must have at least one member");
+  bool are_ordinals_explicit = xunion_declaration->members[0]->maybe_ordinal != nullptr;
   std::vector<XUnion::Member> members;
   for (auto& member : xunion_declaration->members) {
-    auto ordinal = std::make_unique<raw::Ordinal32>(
-        fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
+    auto ordinal = std::move(member->maybe_ordinal);
 
-    auto location = member->identifier->location();
-    std::unique_ptr<TypeConstructor> type_ctor;
-    if (!ConsumeTypeConstructor(std::move(member->type_ctor), location, &type_ctor))
-      return false;
-
-    if (type_ctor->nullability != types::Nullability::kNonnullable) {
-      return Fail(member->location(), "Extensible union members cannot be nullable");
+    bool is_member_ordinal_explicit = ordinal != nullptr;
+    if (are_ordinals_explicit != is_member_ordinal_explicit) {
+      return Fail(member->location(), "cannot mix explicit and implicit ordinals");
     }
 
-    members.emplace_back(std::move(ordinal), std::move(type_ctor), location,
-                         std::move(member->attributes));
+    if (member->maybe_used) {
+      if (!ordinal) {
+        ordinal = std::make_unique<raw::Ordinal32>(
+            fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
+      }
+      auto location = member->maybe_used->identifier->location();
+      std::unique_ptr<TypeConstructor> type_ctor;
+      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), location, &type_ctor))
+        return false;
+
+      if (type_ctor->nullability != types::Nullability::kNonnullable) {
+        return Fail(member->location(), "Extensible union members cannot be nullable");
+      }
+
+      members.emplace_back(std::move(ordinal), std::move(type_ctor), location,
+                           std::move(member->maybe_used->attributes));
+    } else {
+      assert(ordinal && "Reserved union members must have an ordinal specified");
+      members.emplace_back(std::move(ordinal), member->location());
+    }
   }
 
-  return RegisterDecl(std::make_unique<XUnion>(std::move(xunion_declaration->attributes),
-                                               std::move(name), std::move(members),
-                                               xunion_declaration->strictness));
+  return RegisterDecl(std::make_unique<XUnion>(
+      std::move(xunion_declaration->attributes), std::move(name), std::move(members),
+      xunion_declaration->strictness, are_ordinals_explicit));
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
@@ -2434,14 +2482,18 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(decl);
       for (const auto& member : union_decl->members) {
-        maybe_add_decl(member.type_ctor.get());
+        if (!member.maybe_used)
+          continue;
+        maybe_add_decl(member.maybe_used->type_ctor.get());
       }
       break;
     }
     case Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const XUnion*>(decl);
       for (const auto& member : xunion_decl->members) {
-        maybe_add_decl(member.type_ctor.get());
+        if (!member.maybe_used)
+          continue;
+        maybe_add_decl(member.maybe_used->type_ctor.get());
       }
       break;
     }
@@ -2698,10 +2750,10 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
       ValidateAttributesPlacement(AttributeSchema::Placement::kTableDecl,
                                   table_declaration->attributes.get());
       for (const auto& member : table_declaration->members) {
-        if (member.maybe_used) {
-          ValidateAttributesPlacement(AttributeSchema::Placement::kTableMember,
-                                      member.maybe_used->attributes.get());
-        }
+        if (!member.maybe_used)
+          continue;
+        ValidateAttributesPlacement(AttributeSchema::Placement::kTableMember,
+                                    member.maybe_used->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
@@ -2715,8 +2767,10 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
       ValidateAttributesPlacement(AttributeSchema::Placement::kUnionDecl,
                                   union_declaration->attributes.get());
       for (const auto& member : union_declaration->members) {
+        if (!member.maybe_used)
+          continue;
         ValidateAttributesPlacement(AttributeSchema::Placement::kUnionMember,
-                                    member.attributes.get());
+                                    member.maybe_used->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
@@ -2730,8 +2784,10 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
       ValidateAttributesPlacement(AttributeSchema::Placement::kXUnionDecl,
                                   xunion_declaration->attributes.get());
       for (const auto& member : xunion_declaration->members) {
+        if (!member.maybe_used)
+          continue;
         ValidateAttributesPlacement(AttributeSchema::Placement::kXUnionMember,
-                                    member.attributes.get());
+                                    member.maybe_used->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
@@ -3042,16 +3098,12 @@ bool Library::CompileTable(Table* table_declaration) {
     }
   }
 
-  uint64_t last_ordinal_seen = 0;
-  for (const auto& ordinal_and_loc : ordinal_scope) {
-    uint64_t next_expected_ordinal = last_ordinal_seen + 1;
-    if (ordinal_and_loc.first != next_expected_ordinal) {
-      std::ostringstream msg_stream;
-      msg_stream << "missing ordinal " << next_expected_ordinal;
-      msg_stream << " (ordinals must be dense); consider marking it reserved";
-      return Fail(ordinal_and_loc.second, msg_stream.str());
-    }
-    last_ordinal_seen = ordinal_and_loc.first;
+  if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
+    auto [ordinal, location] = *ordinal_and_loc;
+    std::ostringstream msg_stream;
+    msg_stream << "missing ordinal " << ordinal;
+    msg_stream << " (ordinals must be dense); consider marking it reserved";
+    return Fail(location, msg_stream.str());
   }
 
   return true;
@@ -3059,13 +3111,33 @@ bool Library::CompileTable(Table* table_declaration) {
 
 bool Library::CompileUnion(Union* union_declaration) {
   Scope<std::string_view> scope;
+  Ordinal32Scope ordinal_scope;
+
   for (auto& member : union_declaration->members) {
-    auto name_result = scope.Insert(member.name.data(), member.name);
-    if (!name_result.ok())
-      return Fail(member.name, "Multiple union members with the same name; previous was at " +
-                                   name_result.previous_occurrence().position_str());
-    if (!CompileTypeConstructor(member.type_ctor.get()))
-      return false;
+    auto ordinal_result =
+        ordinal_scope.Insert(member.xunion_ordinal->value, member.xunion_ordinal->location());
+    if (!ordinal_result.ok())
+      return Fail(member.xunion_ordinal->location(),
+                  "Multiple union fields with the same ordinal; previous was at " +
+                      ordinal_result.previous_occurrence().position_str());
+    if (member.maybe_used) {
+      auto name_result = scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
+      if (!name_result.ok())
+        return Fail(member.maybe_used->name,
+                    "Multiple union members with the same name; previous was at " +
+                        name_result.previous_occurrence().position_str());
+      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
+        return false;
+    }
+  }
+
+  auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope);
+  if (union_declaration->are_ordinals_explicit && ordinal_and_loc) {
+    auto [ordinal, location] = *ordinal_and_loc;
+    std::ostringstream msg_stream;
+    msg_stream << "missing ordinal " << ordinal;
+    msg_stream << " (ordinals must be dense); consider marking it reserved";
+    return Fail(location, msg_stream.str());
   }
 
   return true;
@@ -3081,14 +3153,25 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
       return Fail(member.ordinal->location(),
                   "Multiple xunion fields with the same ordinal; previous was at " +
                       ordinal_result.previous_occurrence().position_str());
+    if (member.maybe_used) {
+      auto name_result = scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
+      if (!name_result.ok())
+        return Fail(member.maybe_used->name,
+                    "Multiple xunion members with the same name; previous was at " +
+                        name_result.previous_occurrence().position_str());
 
-    auto name_result = scope.Insert(member.name.data(), member.name);
-    if (!name_result.ok())
-      return Fail(member.name, "Multiple xunion members with the same name; previous was at " +
-                                   name_result.previous_occurrence().position_str());
+      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
+        return false;
+    }
+  }
 
-    if (!CompileTypeConstructor(member.type_ctor.get()))
-      return false;
+  auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope);
+  if (xunion_declaration->are_ordinals_explicit && ordinal_and_loc) {
+    auto [ordinal, location] = *ordinal_and_loc;
+    std::ostringstream msg_stream;
+    msg_stream << "missing ordinal " << ordinal;
+    msg_stream << " (ordinals must be dense); consider marking it reserved";
+    return Fail(location, msg_stream.str());
   }
 
   return true;

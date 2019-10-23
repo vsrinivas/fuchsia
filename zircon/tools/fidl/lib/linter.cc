@@ -816,24 +816,28 @@ Linter::Linter()
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
       //
       (const raw::TableMember& element) {
-        if (element.maybe_used != nullptr) {
-          linter.CheckCase("table members", element.maybe_used->identifier, case_check, case_type);
-          linter.CheckRepeatedName("table member", element.maybe_used->identifier);
-        }
+        if (element.maybe_used == nullptr)
+          return;
+        linter.CheckCase("table members", element.maybe_used->identifier, case_check, case_type);
+        linter.CheckRepeatedName("table member", element.maybe_used->identifier);
       });
   callbacks_.OnUnionMember(
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
       //
       (const raw::UnionMember& element) {
-        linter.CheckCase("union members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("union member", element.identifier);
+        if (element.maybe_used == nullptr)
+          return;
+        linter.CheckCase("union members", element.maybe_used->identifier, case_check, case_type);
+        linter.CheckRepeatedName("union member", element.maybe_used->identifier);
       });
   callbacks_.OnXUnionMember(
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
       //
       (const raw::XUnionMember& element) {
-        linter.CheckCase("xunion members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("xunion member", element.identifier);
+        if (element.maybe_used == nullptr)
+          return;
+        linter.CheckCase("xunion members", element.maybe_used->identifier, case_check, case_type);
+        linter.CheckRepeatedName("xunion member", element.maybe_used->identifier);
       });
   // clang-format off
   callbacks_.OnTypeConstructor(

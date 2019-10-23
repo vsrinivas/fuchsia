@@ -74,6 +74,7 @@ if (current_toolchain == default_toolchain) {
       "type_alias_tests.cc",
       "types_tests.cc",
       "typeshape_tests.cc",
+      "union_tests.cc",
       "using_tests.cc",
       "utils_tests.cc",
       "virtual_source_tests.cc",

@@ -158,19 +158,22 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
 raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
                                      const std::string_view& xunion_declaration_name,
                                      const raw::XUnionMember& xunion_member) {
+  assert(xunion_member.maybe_used && "Generated ordinal must be for hashed variant");
   // Note that this ordinal hashing for xunion members uses the same ordinal
   // hashing algorithm as for FIDL methods, which results in 31 bits, not 32.
   return GetGeneratedOrdinal32(library_name, xunion_declaration_name,
-                               xunion_member.attributes.get(), xunion_member.identifier->location(),
-                               xunion_member);
+                               xunion_member.maybe_used->attributes.get(),
+                               xunion_member.maybe_used->identifier->location(), xunion_member);
 }
 
 raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
                                      const std::string_view& union_declaration_name,
                                      const raw::UnionMember& union_member) {
+  assert(union_member.maybe_used && "Generated ordinal must be for hashed variant");
   // Copy the alogrithm used by xunions for the union to xunion migration.
-  return GetGeneratedOrdinal32(library_name, union_declaration_name, union_member.attributes.get(),
-                               union_member.identifier->location(), union_member);
+  return GetGeneratedOrdinal32(library_name, union_declaration_name,
+                               union_member.maybe_used->attributes.get(),
+                               union_member.maybe_used->identifier->location(), union_member);
 }
 
 }  // namespace ordinals

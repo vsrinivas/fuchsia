@@ -133,12 +133,13 @@ xunion ExampleXUnion {
   auto example_union = library.LookupUnion("ExampleUnion");
   ASSERT_NONNULL(example_union);
   EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
-  EXPECT_TRUE(example_union->members.front().attributes->HasAttribute("OnUnionMember"));
+  EXPECT_TRUE(example_union->members.front().maybe_used->attributes->HasAttribute("OnUnionMember"));
 
   auto example_xunion = library.LookupXUnion("ExampleXUnion");
   ASSERT_NONNULL(example_xunion);
   EXPECT_TRUE(example_xunion->attributes->HasAttribute("OnXUnion"));
-  EXPECT_TRUE(example_xunion->members.front().attributes->HasAttribute("OnXUnionMember"));
+  EXPECT_TRUE(
+      example_xunion->members.front().maybe_used->attributes->HasAttribute("OnXUnionMember"));
 
   END_TEST;
 }
@@ -609,6 +610,48 @@ union MyUnion {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_STR_STR(errors[0].c_str(), "placement of attribute");
   ASSERT_STR_STR(errors[0].c_str(), "disallowed here");
+
+  END_TEST;
+}
+
+bool no_attributes_on_reserved() {
+  BEGIN_TEST;
+
+  TestLibrary on_union(R"FIDL(
+library fidl.test;
+
+union Foo {
+  [Foo]
+  1: reserved;
+};
+)FIDL");
+  ASSERT_FALSE(on_union.Compile());
+  ASSERT_EQ(on_union.errors().size(), 1);
+  ASSERT_STR_STR(on_union.errors()[0].c_str(), "idk");
+
+  TestLibrary on_xunion(R"FIDL(
+library fidl.test;
+
+xunion Foo {
+  [Foo]
+  1: reserved;
+};
+)FIDL");
+  ASSERT_FALSE(on_xunion.Compile());
+  ASSERT_EQ(on_xunion.errors().size(), 1);
+  ASSERT_STR_STR(on_xunion.errors()[0].c_str(), "idk");
+
+  TestLibrary on_table(R"FIDL(
+library fidl.test;
+
+table Foo {
+  [Foo]
+  1: reserved;
+};
+)FIDL");
+  ASSERT_FALSE(on_table.Compile());
+  ASSERT_EQ(on_table.errors().size(), 1);
+  ASSERT_STR_STR(on_table.errors()[0].c_str(), "idk");
 
   END_TEST;
 }

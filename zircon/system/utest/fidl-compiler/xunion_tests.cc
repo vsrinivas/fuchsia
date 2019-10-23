@@ -12,12 +12,22 @@
 
 namespace {
 
-bool Compiles(const std::string& source_code) {
-  return TestLibrary("test.fidl", source_code).Compile();
+static bool Compiles(const std::string& source_code,
+                     std::vector<std::string>* out_errors = nullptr) {
+  auto library = TestLibrary("test.fidl", source_code);
+  const bool success = library.Compile();
+
+  if (out_errors) {
+    *out_errors = library.errors();
+  }
+
+  return success;
 }
 
 bool compiling() {
   BEGIN_TEST;
+
+  std::vector<std::string> errors;
 
   // Populated fields.
   EXPECT_TRUE(Compiles(R"FIDL(
@@ -28,8 +38,93 @@ xunion Foo {
 };
 )FIDL"));
 
-  // Explicit ordinals are invalid.
+  // Reserved and populated fields.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Foo {
+    1: reserved;
+    2: int64 x;
+};
+)FIDL"));
+
+  EXPECT_TRUE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Foo {
+    1: int64 x;
+    2: reserved;
+};
+)FIDL"));
+
+  // Out of order fields.
+  EXPECT_TRUE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Foo {
+    3: reserved;
+    1: uint32 x;
+    2: reserved;
+};
+)FIDL"));
+
+  // Must have a non reserved field.
   EXPECT_FALSE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Foo {
+    1: reserved;
+    2: reserved;
+    3: reserved;
+};
+)FIDL",
+                        &errors));
+
+  EXPECT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(), "must have at least one non reserved member");
+
+  // Duplicate ordinals.
+  EXPECT_FALSE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Foo {
+    1: reserved;
+    1: uint64 x;
+};
+)FIDL",
+                        &errors));
+  EXPECT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(), "Multiple xunion fields with the same ordinal");
+
+  // Missing ordinals.
+  EXPECT_FALSE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Foo {
+    1: uint32 x;
+    3: reserved;
+};
+)FIDL",
+                        &errors));
+  EXPECT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(),
+                 "missing ordinal 2 (ordinals must be dense); consider marking it reserved");
+
+  // No zero ordinals.
+  EXPECT_FALSE(Compiles(R"FIDL(
+library fidl.test.xunions;
+
+xunion Foo {
+    2: int32 y;
+    0: int64 x;
+};
+)FIDL",
+                        &errors));
+  EXPECT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(), "ordinals must start at 1");
+
+  // Explicit ordinals are valid.
+  EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.xunions;
 
 xunion Foo {
@@ -37,26 +132,18 @@ xunion Foo {
 };
 )FIDL"));
 
-  // Attributes on fields.
-  EXPECT_TRUE(Compiles(R"FIDL(
+  // Cannot mix explicit/hashed ordinals
+  EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.xunions;
 
 xunion Foo {
-    [FooAttr="bar"] int64 x;
-    [BarAttr] bool bar;
+    int32 y;
+    1: int64 x;
 };
-)FIDL"));
-
-  // Attributes on xunions.
-  EXPECT_TRUE(Compiles(R"FIDL(
-library fidl.test.xunions;
-
-[FooAttr="bar"]
-xunion Foo {
-    int64 x;
-    bool please;
-};
-)FIDL"));
+)FIDL",
+                        &errors));
+  EXPECT_EQ(errors.size(), 1u);
+  ASSERT_STR_STR(errors.at(0).c_str(), "cannot mix explicit and implicit ordinals");
 
   // Keywords as field names.
   EXPECT_TRUE(Compiles(R"FIDL(
@@ -101,7 +188,7 @@ struct Bar {
 }
 
 bool no_directly_recursive_xunions() {
-    BEGIN_TEST;
+  BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
 library example;
@@ -131,12 +218,12 @@ xunion Foo {};
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "must have at least one member");
+  ASSERT_STR_STR(errors[0].c_str(), "must have at least one non reserved member");
 
   END_TEST;
 }
 
-bool union_xunion_same_ordinals() {
+bool union_xunion_same_ordinals_hashed() {
   BEGIN_TEST;
 
   TestLibrary xunion_library(R"FIDL(
@@ -167,6 +254,41 @@ union Foo {
 
   ASSERT_EQ(ex_union->members.front().xunion_ordinal->value,
             ex_xunion->members.front().ordinal->value);
+
+  END_TEST;
+}
+
+bool union_xunion_same_ordinals_explicit() {
+  BEGIN_TEST;
+
+  TestLibrary xunion_library(R"FIDL(
+library example;
+
+xunion Foo {
+  1: int8 bar;
+};
+
+)FIDL");
+  ASSERT_TRUE(xunion_library.Compile());
+
+  TestLibrary union_library(R"FIDL(
+library example;
+
+union Foo {
+  1: int8 bar;
+};
+
+)FIDL");
+  ASSERT_TRUE(union_library.Compile());
+
+  const fidl::flat::XUnion* ex_xunion = xunion_library.LookupXUnion("Foo");
+  const fidl::flat::Union* ex_union = union_library.LookupUnion("Foo");
+
+  ASSERT_NOT_NULL(ex_xunion);
+  ASSERT_NOT_NULL(ex_union);
+
+  ASSERT_EQ(ex_union->members.front().xunion_ordinal->value, 1);
+  ASSERT_EQ(ex_xunion->members.front().ordinal->value, 1);
 
   END_TEST;
 }
@@ -231,7 +353,8 @@ BEGIN_TEST_CASE(xunion_tests)
 RUN_TEST(compiling)
 RUN_TEST(no_directly_recursive_xunions)
 RUN_TEST(invalid_empty_xunions)
-RUN_TEST(union_xunion_same_ordinals)
+RUN_TEST(union_xunion_same_ordinals_explicit)
+RUN_TEST(union_xunion_same_ordinals_hashed)
 RUN_TEST(error_syntax_explicit_ordinals)
 RUN_TEST(no_nullable_members_in_unions)
 RUN_TEST(no_nullable_members_in_xunions)

@@ -15,8 +15,8 @@ namespace flat {
 struct Object;
 struct StructMember;
 struct TableMemberUsed;
-struct UnionMember;
-struct XUnionMember;
+struct UnionMemberUsed;
+struct XUnionMemberUsed;
 
 }  // namespace flat
 
@@ -73,8 +73,8 @@ struct TypeShape {
 struct FieldShape {
   explicit FieldShape(const flat::StructMember&, const WireFormat wire_format);
   explicit FieldShape(const flat::TableMemberUsed&, const WireFormat wire_format);
-  explicit FieldShape(const flat::UnionMember&, const WireFormat wire_format);
-  explicit FieldShape(const flat::XUnionMember&, const WireFormat wire_format);
+  explicit FieldShape(const flat::UnionMemberUsed&, const WireFormat wire_format);
+  explicit FieldShape(const flat::XUnionMemberUsed&, const WireFormat wire_format);
 
   uint32_t Offset() const { return offset; }
   // Padding after this field until the next field or the end of the container.

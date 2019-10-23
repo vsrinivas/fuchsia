@@ -254,20 +254,28 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       coded::UnionType* union_struct =
           static_cast<coded::UnionType*>(named_coded_types_[&decl->name].get());
       std::vector<coded::UnionField>& union_members = union_struct->members;
+      std::map<uint32_t, const flat::Union::Member*> members;
       for (const auto& member : union_decl->members) {
-        std::string member_name = union_struct->coded_name + "_" + std::string(member.name.data());
+        if (!members.emplace(member.xunion_ordinal->value, &member).second) {
+          assert(false && "Duplicate ordinal found in table generation");
+        }
+        if (!member.maybe_used)
+          continue;
+        std::string member_name =
+            union_struct->coded_name + "_" + std::string(member.maybe_used->name.data());
         auto coded_member_type =
-            CompileType(member.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
+            CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kOutsideEnvelope);
         if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
           [[maybe_unused]] auto is_primitive =
               coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in union coding table!");
           union_members.emplace_back(coded_member_type,
-                                     member.fieldshape(WireFormat::kOld).Padding());
+                                     member.maybe_used->fieldshape(WireFormat::kOld).Padding());
         } else {
           // We need union_members.size() to match union_decl->members.size() because
           // the coding tables will use the union |tag| to index into the member array.
-          union_members.emplace_back(nullptr, member.fieldshape(WireFormat::kOld).Padding());
+          union_members.emplace_back(nullptr,
+                                     member.maybe_used->fieldshape(WireFormat::kOld).Padding());
         }
       }
       break;
@@ -290,8 +298,10 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
 
       for (const auto& member_pair : members) {
         const auto& member = *member_pair.second;
+        if (!member.maybe_used)
+          continue;
         auto coded_member_type =
-            CompileType(member.type_ctor->type, coded::CodingContext::kInsideEnvelope);
+            CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
         coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
         nullable_coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
       }

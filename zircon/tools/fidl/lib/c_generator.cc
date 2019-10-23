@@ -617,7 +617,9 @@ std::vector<CGenerator::Member> GenerateMembers(
   std::vector<CGenerator::Member> members;
   members.reserve(union_members.size());
   for (const auto& union_member : union_members) {
-    members.push_back(CreateMember(library, union_member));
+    if (union_member.maybe_used) {
+      members.push_back(CreateMember(library, *union_member.maybe_used));
+    }
   }
   return members;
 }
@@ -627,7 +629,9 @@ std::vector<CGenerator::Member> GenerateMembers(
   std::vector<CGenerator::Member> members;
   members.reserve(xunion_members.size());
   for (const auto& xunion_member : xunion_members) {
-    members.push_back(CreateMember(library, xunion_member));
+    if (xunion_member.maybe_used) {
+      members.push_back(CreateMember(library, *xunion_member.maybe_used));
+    }
   }
   return members;
 }
@@ -1059,12 +1063,14 @@ void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
 
   uint32_t tag = 0u;
   for (const auto& member : named_union.union_info.members) {
-    std::string tag_name = NameUnionTag(named_union.name, member);
-    auto union_tag_type = types::PrimitiveSubtype::kUint32;
-    std::ostringstream value;
-    value << tag;
-    GenerateIntegerDefine(std::move(tag_name), union_tag_type, value.str());
-    ++tag;
+    if (member.maybe_used) {
+      std::string tag_name = NameUnionTag(named_union.name, *member.maybe_used);
+      auto union_tag_type = types::PrimitiveSubtype::kUint32;
+      std::ostringstream value;
+      value << tag;
+      GenerateIntegerDefine(std::move(tag_name), union_tag_type, value.str());
+      ++tag;
+    }
   }
 
   EmitBlank(&file_);
@@ -1077,12 +1083,14 @@ void CGenerator::ProduceXUnionDeclaration(const NamedXUnion& named_xunion) {
 
   uint32_t tag = 0u;
   for (const auto& member : named_xunion.xunion_info.members) {
-    std::string tag_name = NameXUnionTag(named_xunion.name, member);
-    auto xunion_tag_type = types::PrimitiveSubtype::kUint32;
-    std::ostringstream value;
-    value << tag;
-    GenerateIntegerDefine(std::move(tag_name), xunion_tag_type, value.str());
-    ++tag;
+    if (member.maybe_used) {
+      std::string tag_name = NameXUnionTag(named_xunion.name, *member.maybe_used);
+      auto xunion_tag_type = types::PrimitiveSubtype::kUint32;
+      std::ostringstream value;
+      value << tag;
+      GenerateIntegerDefine(std::move(tag_name), xunion_tag_type, value.str());
+      ++tag;
+    }
   }
 
   EmitBlank(&file_);

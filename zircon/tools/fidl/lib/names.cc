@@ -298,11 +298,11 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
   }
 }
 
-std::string NameUnionTag(std::string_view union_name, const flat::Union::Member& member) {
+std::string NameUnionTag(std::string_view union_name, const flat::Union::Member::Used& member) {
   return std::string(union_name) + "Tag_" + NameIdentifier(member.name);
 }
 
-std::string NameXUnionTag(std::string_view xunion_name, const flat::XUnion::Member& member) {
+std::string NameXUnionTag(std::string_view xunion_name, const flat::XUnion::Member::Used& member) {
   return std::string(xunion_name) + "Tag_" + NameIdentifier(member.name);
 }
 

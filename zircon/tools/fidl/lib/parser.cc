@@ -219,18 +219,25 @@ std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
   std::string string_data(data.data(), data.data() + data.size());
   errno = 0;
   unsigned long long value = strtoull(string_data.data(), nullptr, 0);
-  assert(errno == 0 && "Unparsable number should not be lexed.");
+  assert(errno == 0 && "unparsable number should not be lexed.");
   if (value > std::numeric_limits<uint32_t>::max())
-    return Fail("Ordinal out-of-bound");
+    return Fail("ordinal out-of-bound");
   uint32_t ordinal = static_cast<uint32_t>(value);
   if (ordinal == 0u)
-    return Fail("Fidl ordinals cannot be 0");
+    return Fail("ordinals must start at 1");
 
   ConsumeToken(OfKind(Token::Kind::kColon));
   if (!Ok())
     return Fail();
 
   return std::make_unique<raw::Ordinal32>(scope.GetSourceElement(), ordinal);
+}
+
+std::unique_ptr<raw::Ordinal32> Parser::MaybeParseOrdinal32() {
+  if (Peek().kind() == Token::Kind::kNumericLiteral) {
+    return ParseOrdinal32();
+  }
+  return nullptr;
 }
 
 std::unique_ptr<raw::TrueLiteral> Parser::ParseTrueLiteral() {
@@ -1063,6 +1070,20 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
+  auto maybe_ordinal = MaybeParseOrdinal32();
+  if (!Ok())
+    return Fail();
+
+  if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kReserved))) {
+    if (!Ok())
+      return Fail();
+    if (attributes)
+      return Fail("Cannot attach attributes to reserved ordinals");
+    if (!maybe_ordinal)
+      return Fail("Reserved members must have an explicit ordinal specified");
+    return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(maybe_ordinal));
+  }
+
   auto type_ctor = ParseTypeConstructor();
   if (!Ok())
     return Fail();
@@ -1070,8 +1091,14 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(type_ctor),
-                                            std::move(identifier), std::move(attributes));
+  if (!maybe_ordinal) {
+    return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(type_ctor),
+                                              std::move(identifier), std::move(attributes));
+  } else {
+    return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(maybe_ordinal),
+                                              std::move(type_ctor), std::move(identifier),
+                                              std::move(attributes));
+  }
 }
 
 std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
@@ -1088,12 +1115,15 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
   if (!Ok())
     return Fail();
 
-  auto parse_member = [&members, this]() {
+  bool contains_non_reserved_member = false;
+  auto parse_member = [&members, &contains_non_reserved_member, this]() {
     if (Peek().kind() == Token::Kind::kRightCurly) {
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
     } else {
       members.emplace_back(ParseUnionMember());
+      if (members.back() && members.back()->maybe_used)
+        contains_non_reserved_member = true;
       return More;
     }
   };
@@ -1108,8 +1138,10 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
   if (!Ok())
     Fail();
 
-  if (members.empty())
-    Fail();
+  if (!contains_non_reserved_member)
+    return Fail(
+        "must have at least one non reserved member; you can use an empty struct "
+        "to define a placeholder variant");
 
   return std::make_unique<raw::UnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                  std::move(identifier), std::move(members));
@@ -1121,6 +1153,19 @@ std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
+  auto maybe_ordinal = MaybeParseOrdinal32();
+  if (!Ok())
+    return Fail();
+
+  if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kReserved))) {
+    if (!Ok())
+      return Fail();
+    if (attributes)
+      return Fail("Cannot attach attributes to reserved ordinals");
+    if (!maybe_ordinal)
+      return Fail("Reserved members must have an explicit ordinal specified");
+    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(maybe_ordinal));
+  }
 
   auto type_ctor = ParseTypeConstructor();
   if (!Ok())
@@ -1130,8 +1175,14 @@ std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(type_ctor),
-                                             std::move(identifier), std::move(attributes));
+  if (!maybe_ordinal) {
+    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(type_ctor),
+                                               std::move(identifier), std::move(attributes));
+  } else {
+    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(maybe_ordinal),
+                                               std::move(type_ctor), std::move(identifier),
+                                               std::move(attributes));
+  };
 }
 
 std::unique_ptr<raw::XUnionDeclaration> Parser::ParseXUnionDeclaration(
@@ -1150,12 +1201,15 @@ std::unique_ptr<raw::XUnionDeclaration> Parser::ParseXUnionDeclaration(
   if (!Ok())
     return Fail();
 
+  bool contains_non_reserved_member = false;
   auto parse_member = [&]() {
     if (Peek().kind() == Token::Kind::kRightCurly) {
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
     } else {
       members.emplace_back(ParseXUnionMember());
+      if (members.back() && members.back()->maybe_used)
+        contains_non_reserved_member = true;
       return More;
     }
   };
@@ -1171,10 +1225,10 @@ std::unique_ptr<raw::XUnionDeclaration> Parser::ParseXUnionDeclaration(
   if (!Ok())
     return Fail();
 
-  if (members.empty())
+  if (!contains_non_reserved_member)
     return Fail(
-        "must have at least one member; you can use an empty struct "
-        "to define a placeholder variant, or use an optional union");
+        "must have at least one non reserved member; you can use an empty struct "
+        "to define a placeholder variant");
 
   return std::make_unique<raw::XUnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                   std::move(identifier), std::move(members),

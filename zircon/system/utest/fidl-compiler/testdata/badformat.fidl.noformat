@@ -52,9 +52,19 @@ union MyUnion {  // super annoying!
       string? s;
 };
 
-        xunion MyUnion {  // super annoying!
+union MyExplicitUnion {
+            1: string? s;
+2: reserved;
+    3: int32 y; 4: reserved; };
+
+        xunion MyXUnion {  // super annoying!
       string? s;
  }    ;
+
+xunion MyExplicitXUnion { 4: reserved
+;2: reserved;            1: string? s;
+      3:int32 y;}
+   ;
 
 /// Doc comments
     /// of multiple

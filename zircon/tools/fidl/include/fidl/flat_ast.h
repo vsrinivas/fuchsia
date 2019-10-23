@@ -968,15 +968,10 @@ struct Union;
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxb/37535): Move this to a nested class inside Union.
-struct UnionMember : public Object {
-  UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal,
-              std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
-              std::unique_ptr<raw::AttributeList> attributes)
-      : xunion_ordinal(std::move(xunion_ordinal)),
-        type_ctor(std::move(type_ctor)),
-        name(std::move(name)),
-        attributes(std::move(attributes)) {}
-  std::unique_ptr<raw::Ordinal32> xunion_ordinal;
+struct UnionMemberUsed : public Object {
+  UnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+                  std::unique_ptr<raw::AttributeList> attributes)
+      : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceLocation name;
   std::unique_ptr<raw::AttributeList> attributes;
@@ -988,19 +983,46 @@ struct UnionMember : public Object {
   const Union* parent = nullptr;
 };
 
+// See the comment on the StructMember class for why this is a top-level class.
+// TODO(fxb/37535): Move this to a nested class inside Union.
+struct UnionMember : public Object {
+  using Used = UnionMemberUsed;
+
+  UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal,
+              std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+              std::unique_ptr<raw::AttributeList> attributes)
+      : xunion_ordinal(std::move(xunion_ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
+  UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal, SourceLocation location)
+      : xunion_ordinal(std::move(xunion_ordinal)),
+        maybe_location(std::make_unique<SourceLocation>(location)) {}
+
+  std::unique_ptr<raw::Ordinal32> xunion_ordinal;
+  // The location for reserved members.
+  std::unique_ptr<SourceLocation> maybe_location;
+
+  std::unique_ptr<Used> maybe_used;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+};
+
 struct Union final : public TypeDecl {
   using Member = UnionMember;
 
   Union(std::unique_ptr<raw::AttributeList> attributes, Name name,
-        std::vector<Member> unparented_members)
+        std::vector<Member> unparented_members, bool are_ordinals_explicit)
       : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
-        members(std::move(unparented_members)) {
+        members(std::move(unparented_members)),
+        are_ordinals_explicit(are_ordinals_explicit) {
     for (auto& member : members) {
-      member.parent = this;
+      if (member.maybe_used) {
+        member.maybe_used->parent = this;
+      }
     }
   }
 
   std::vector<Member> members;
+  const bool are_ordinals_explicit;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -1012,15 +1034,11 @@ struct Union final : public TypeDecl {
 struct XUnion;
 
 // See the comment on the StructMember class for why this is a top-level class.
-// TODO(fxb/37535): Move this to a nested class inside XUnion.
-struct XUnionMember : public Object {
-  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
-               SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
-      : ordinal(std::move(ordinal)),
-        type_ctor(std::move(type_ctor)),
-        name(std::move(name)),
-        attributes(std::move(attributes)) {}
-  std::unique_ptr<raw::Ordinal32> ordinal;
+// TODO(fxb/37535): Move this to a nested class inside Union.
+struct XUnionMemberUsed : public Object {
+  XUnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+                   std::unique_ptr<raw::AttributeList> attributes)
+      : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceLocation name;
   std::unique_ptr<raw::AttributeList> attributes;
@@ -1032,21 +1050,47 @@ struct XUnionMember : public Object {
   const XUnion* parent = nullptr;
 };
 
+// See the comment on the StructMember class for why this is a top-level class.
+// TODO(fxb/37535): Move this to a nested class inside Union.
+struct XUnionMember : public Object {
+  using Used = XUnionMemberUsed;
+
+  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+               SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
+      : ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
+  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceLocation location)
+      : ordinal(std::move(ordinal)), maybe_location(std::make_unique<SourceLocation>(location)) {}
+
+  std::unique_ptr<raw::Ordinal32> ordinal;
+  // The location for reserved members.
+  std::unique_ptr<SourceLocation> maybe_location;
+
+  std::unique_ptr<Used> maybe_used;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+};
+
 struct XUnion final : public TypeDecl {
   using Member = XUnionMember;
 
   XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name,
-         std::vector<Member> unparented_members, types::Strictness strictness)
+         std::vector<Member> unparented_members, types::Strictness strictness,
+         bool are_ordinals_explicit)
       : TypeDecl(Kind::kXUnion, std::move(attributes), std::move(name)),
         members(std::move(unparented_members)),
-        strictness(strictness) {
+        strictness(strictness),
+        are_ordinals_explicit(are_ordinals_explicit) {
     for (auto& member : members) {
-      member.parent = this;
+      if (member.maybe_used) {
+        member.maybe_used->parent = this;
+      }
     }
   }
 
   std::vector<Member> members;
   const types::Strictness strictness;
+  const bool are_ordinals_explicit;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
@@ -1510,8 +1554,10 @@ struct Object::VisitorAny {
   virtual std::any Visit(const Table::Member::Used&) = 0;
   virtual std::any Visit(const Union&) = 0;
   virtual std::any Visit(const Union::Member&) = 0;
+  virtual std::any Visit(const Union::Member::Used&) = 0;
   virtual std::any Visit(const XUnion&) = 0;
   virtual std::any Visit(const XUnion::Member&) = 0;
+  virtual std::any Visit(const XUnion::Member::Used&) = 0;
   virtual std::any Visit(const Protocol&) = 0;
 };
 
@@ -1574,9 +1620,17 @@ inline std::any Union::Member::AcceptAny(VisitorAny* visitor) const {
   return visitor->Visit(*this);
 }
 
+inline std::any Union::Member::Used::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
 inline std::any XUnion::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 
 inline std::any XUnion::Member::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any XUnion::Member::Used::AcceptAny(VisitorAny* visitor) const {
   return visitor->Visit(*this);
 }
 

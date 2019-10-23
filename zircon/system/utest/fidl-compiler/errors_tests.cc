@@ -39,14 +39,18 @@ protocol Example {
   ASSERT_TRUE(result_union->attributes->HasAttribute("Result"));
   ASSERT_EQ(result_union->members.size(), 2);
 
-  ASSERT_STR_EQ("response", std::string(result_union->members.at(0).name.data()).c_str());
+  const auto& success = result_union->members.at(0);
+  ASSERT_NOT_NULL(success.maybe_used);
+  ASSERT_STR_EQ("response", std::string(success.maybe_used->name.data()).c_str());
 
   const fidl::flat::Union::Member& error = result_union->members.at(1);
-  ASSERT_STR_EQ("err", std::string(error.name.data()).c_str());
+  ASSERT_NOT_NULL(error.maybe_used);
+  ASSERT_STR_EQ("err", std::string(error.maybe_used->name.data()).c_str());
 
-  ASSERT_NOT_NULL(error.type_ctor->type);
-  ASSERT_EQ(error.type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
-  auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(error.type_ctor->type);
+  ASSERT_NOT_NULL(error.maybe_used->type_ctor->type);
+  ASSERT_EQ(error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto primitive_type =
+      static_cast<const fidl::flat::PrimitiveType*>(error.maybe_used->type_ctor->type);
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
 
   END_TEST;

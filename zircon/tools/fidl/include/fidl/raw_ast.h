@@ -19,7 +19,8 @@
 // pretty much exactly corresponding to the grammar of a single fidl
 // file. File is the root of the tree, and consists of lists of
 // Declarations, and so on down to individual SourceLocations.
-// See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#compiler_internals
+// See
+// https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#compiler_internals
 // for additional context
 
 // Each node owns its children via unique_ptr and vector. All tokens
@@ -567,15 +568,35 @@ class UnionMember final : public SourceElement {
   UnionMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
               std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
-        type_ctor(std::move(type_ctor)),
-        identifier(std::move(identifier)),
-        attributes(std::move(attributes)) {}
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
+                                          std::move(attributes))) {}
+
+  UnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal,
+              std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+              std::unique_ptr<AttributeList> attributes)
+      : SourceElement(element),
+        maybe_ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
+                                          std::move(attributes))) {}
+
+  UnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal)
+      : SourceElement(element), maybe_ordinal(std::move(ordinal)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructor> type_ctor;
-  std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<AttributeList> attributes;
+  std::unique_ptr<Ordinal32> maybe_ordinal;
+  // A used member is not 'reserved'
+  struct Used {
+    Used(std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+         std::unique_ptr<AttributeList> attributes)
+        : type_ctor(std::move(type_ctor)),
+          identifier(std::move(identifier)),
+          attributes(std::move(attributes)) {}
+    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<Identifier> identifier;
+    std::unique_ptr<AttributeList> attributes;
+  };
+  std::unique_ptr<Used> maybe_used;
 };
 
 class UnionDeclaration final : public SourceElement {
@@ -600,15 +621,36 @@ class XUnionMember final : public SourceElement {
   XUnionMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
                std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
-        type_ctor(std::move(type_ctor)),
-        identifier(std::move(identifier)),
-        attributes(std::move(attributes)) {}
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
+                                          std::move(attributes))) {}
+
+  XUnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal,
+               std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+               std::unique_ptr<AttributeList> attributes)
+      : SourceElement(element),
+        maybe_ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
+                                          std::move(attributes))) {}
+
+  XUnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal)
+      : SourceElement(element), maybe_ordinal(std::move(ordinal)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructor> type_ctor;
-  std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<AttributeList> attributes;
+  std::unique_ptr<Ordinal32> maybe_ordinal;
+
+  // A used member is not 'reserved'
+  struct Used {
+    Used(std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
+         std::unique_ptr<AttributeList> attributes)
+        : type_ctor(std::move(type_ctor)),
+          identifier(std::move(identifier)),
+          attributes(std::move(attributes)) {}
+    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<Identifier> identifier;
+    std::unique_ptr<AttributeList> attributes;
+  };
+  std::unique_ptr<Used> maybe_used;
 };
 
 class XUnionDeclaration final : public SourceElement {

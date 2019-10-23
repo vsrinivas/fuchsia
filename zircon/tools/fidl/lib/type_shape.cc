@@ -240,12 +240,20 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member& object) override {
+    return object.maybe_used ? UnalignedSize(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::Union::Member::Used& object) override {
     return UnalignedSize(object.type_ctor->type);
   }
 
   std::any Visit(const flat::XUnion& object) override { return DataSize(24); }
 
   std::any Visit(const flat::XUnion::Member& object) override {
+    return object.maybe_used ? UnalignedSize(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::XUnion::Member::Used& object) override {
     return UnalignedSize(object.type_ctor->type);
   }
 
@@ -369,12 +377,20 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member& object) override {
+    return object.maybe_used ? Alignment(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::UnionMember::Used& object) override {
     return Alignment(object.type_ctor->type);
   }
 
   std::any Visit(const flat::XUnion& object) override { return DataSize(8); }
 
   std::any Visit(const flat::XUnion::Member& object) override {
+    return object.maybe_used ? Alignment(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::XUnion::Member::Used& object) override {
     return Alignment(object.type_ctor->type);
   }
 
@@ -506,6 +522,10 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member& object) override {
+    return object.maybe_used ? Depth(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::Union::Member::Used& object) override {
     return Depth(object.type_ctor->type);
   }
 
@@ -520,6 +540,10 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::XUnion::Member& object) override {
+    return object.maybe_used ? Depth(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::XUnion::Member::Used& object) override {
     return Depth(object.type_ctor->type);
   }
 
@@ -637,6 +661,10 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member& object) override {
+    return object.maybe_used ? MaxHandles(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::Union::Member::Used& object) override {
     return MaxHandles(object.type_ctor->type);
   }
 
@@ -651,6 +679,10 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::XUnion::Member& object) override {
+    return object.maybe_used ? MaxHandles(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::XUnion::Member::Used& object) override {
     return MaxHandles(object.type_ctor->type);
   }
 
@@ -784,6 +816,10 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member& object) override {
+    return object.maybe_used ? MaxOutOfLine(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::Union::Member::Used& object) override {
     return MaxOutOfLine(object.type_ctor->type);
   }
 
@@ -800,6 +836,10 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::XUnion::Member& object) override {
+    return object.maybe_used ? MaxOutOfLine(*object.maybe_used) : DataSize(0);
+  }
+
+  std::any Visit(const flat::XUnion::Member::Used& object) override {
     return MaxOutOfLine(object.type_ctor->type);
   }
 
@@ -942,6 +982,10 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Union::Member& object) override {
+    return object.maybe_used ? HasPadding(*object.maybe_used) : false;
+  }
+
+  std::any Visit(const flat::Union::Member::Used& object) override {
     // TODO(fxb/36331): This code only accounts for inline padding for the union member. We also
     // need to account for out-of-line padding.
     return object.fieldshape(wire_format()).Padding() > 0;
@@ -954,6 +998,10 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::XUnion::Member& object) override {
+    return object.maybe_used ? HasPadding(*object.maybe_used) : false;
+  }
+
+  std::any Visit(const flat::XUnion::Member::Used& object) override {
     // TODO(fxb/36332): This code only accounts for inline padding for the xunion member. We should
     // also account for out-of-line padding.
     return object.fieldshape(wire_format()).Padding() > 0;
@@ -1053,6 +1101,10 @@ class HasFlexibleEnvelopeVisitor final : public flat::Object::Visitor<bool> {
   }
 
   std::any Visit(const flat::Union::Member& object) override {
+    return object.maybe_used ? HasFlexibleEnvelope(*object.maybe_used) : false;
+  }
+
+  std::any Visit(const flat::Union::Member::Used& object) override {
     return HasFlexibleEnvelope(object.type_ctor->type);
   }
 
@@ -1071,6 +1123,10 @@ class HasFlexibleEnvelopeVisitor final : public flat::Object::Visitor<bool> {
   }
 
   std::any Visit(const flat::XUnion::Member& object) override {
+    return object.maybe_used ? HasFlexibleEnvelope(*object.maybe_used) : false;
+  }
+
+  std::any Visit(const flat::XUnion::Member::Used& object) override {
     return HasFlexibleEnvelope(object.type_ctor->type);
   }
 
@@ -1190,7 +1246,7 @@ FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_f
 FieldShape::FieldShape(const flat::TableMemberUsed& member, const WireFormat wire_format)
     : padding(::Padding(UnalignedSize(member, wire_format), 8)) {}
 
-FieldShape::FieldShape(const flat::UnionMember& member, const WireFormat wire_format)
+FieldShape::FieldShape(const flat::UnionMemberUsed& member, const WireFormat wire_format)
     : offset([&] {
         switch (wire_format) {
           case WireFormat::kOld:
@@ -1211,7 +1267,7 @@ FieldShape::FieldShape(const flat::UnionMember& member, const WireFormat wire_fo
         }
       }()) {}
 
-FieldShape::FieldShape(const flat::XUnionMember& member, const WireFormat wire_format)
+FieldShape::FieldShape(const flat::XUnionMemberUsed& member, const WireFormat wire_format)
     : padding(
           ::Padding(UnalignedSize(member, wire_format), Alignment(member.parent, wire_format))) {}
 

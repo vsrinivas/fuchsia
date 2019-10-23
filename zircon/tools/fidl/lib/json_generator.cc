@@ -490,19 +490,28 @@ void JSONGenerator::Generate(const flat::Union& value) {
 }
 
 void JSONGenerator::Generate(const flat::Union::Member& value) {
+  // TODO(39429): remove once reserved is supported in the various backends
+  assert(value.maybe_used && "must wait for backends to ignore reserved members first");
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.name, Position::kFirst);
-    GenerateTypeAndFromTypeAlias(*value.type_ctor);
-    GenerateObjectMember("xunion_ordinal", value.xunion_ordinal);
-    GenerateObjectMember("location", NameLocation(value.name));
-    if (value.attributes)
-      GenerateObjectMember("maybe_attributes", value.attributes);
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    auto deprecated_field_shape = value.fieldshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
-    GenerateObjectMember("offset", deprecated_field_shape.Offset());
+    GenerateObjectMember("xunion_ordinal", value.xunion_ordinal, Position::kFirst);
+    if (value.maybe_used) {
+      assert(!value.maybe_location);
+      GenerateObjectMember("reserved", false);
+      GenerateObjectMember("name", value.maybe_used->name);
+      GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
+      GenerateObjectMember("location", NameLocation(value.maybe_used->name));
+      if (value.maybe_used->attributes)
+        GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
+      auto deprecated_type_shape = value.maybe_used->typeshape(WireFormat::kOld);
+      auto deprecated_field_shape = value.maybe_used->fieldshape(WireFormat::kOld);
+      GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+      GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+      GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+      GenerateObjectMember("offset", deprecated_field_shape.Offset());
+    } else {
+      GenerateObjectMember("reserved", true);
+      GenerateObjectMember("location", NameLocation(*value.maybe_location));
+    }
   });
 }
 
@@ -524,19 +533,28 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
 }
 
 void JSONGenerator::Generate(const flat::XUnion::Member& value) {
+  // TODO(39429): remove once reserved is supported in the various backends
+  assert(value.maybe_used && "must wait for backends to ignore reserved members first");
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.name, Position::kFirst);
-    GenerateTypeAndFromTypeAlias(*value.type_ctor);
-    GenerateObjectMember("ordinal", value.ordinal);
-    GenerateObjectMember("location", NameLocation(value.name));
-    if (value.attributes)
-      GenerateObjectMember("maybe_attributes", value.attributes);
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    auto deprecated_field_shape = value.fieldshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
-    GenerateObjectMember("offset", deprecated_field_shape.Offset());
+    GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
+    if (value.maybe_used) {
+      assert(!value.maybe_location);
+      GenerateObjectMember("reserved", false);
+      GenerateObjectMember("name", value.maybe_used->name);
+      GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
+      GenerateObjectMember("location", NameLocation(value.maybe_used->name));
+      if (value.maybe_used->attributes)
+        GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
+      auto deprecated_type_shape = value.maybe_used->typeshape(WireFormat::kOld);
+      auto deprecated_field_shape = value.maybe_used->fieldshape(WireFormat::kOld);
+      GenerateObjectMember("size", deprecated_type_shape.InlineSize());
+      GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
+      GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
+      GenerateObjectMember("offset", deprecated_field_shape.Offset());
+    } else {
+      GenerateObjectMember("reserved", true);
+      GenerateObjectMember("location", NameLocation(*value.maybe_location));
+    }
   });
 }
 
