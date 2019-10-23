@@ -3,10 +3,12 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/fuzzer.gni")
+
 group("test") {
   testonly = true
   deps = [
     ":blobfs-integration",
+    ":blobfs-large-integration",
     ":blobfs-unit",
     ":zstd-fuzzer",
   ]
@@ -62,16 +64,31 @@ test("blobfs-host") {
   ]
 }
 
+source_set("integration-fixtures") {
+testonly = true
+  sources = [
+    "integration/blobfs_fixtures.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/blobfs",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs-test-utils",
+    "$zx/system/ulib/fs/test_support",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
 test("blobfs-integration") {
   test_group = "fs"
   sources = [
-    "integration/blobfs_fixtures.cc",
     "integration/blobfs_integration_test.cc",
     "integration/integration_main.cc",
-    "integration/large_integration_test.cc",
     "integration/superblock-test.cc",
   ]
   deps = [
+    ":integration-fixtures",
     "$zx/system/fidl/fuchsia-blobfs:c",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-default.static",
@@ -84,6 +101,27 @@ test("blobfs-integration") {
     "$zx/system/ulib/memfs",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("blobfs-large-integration") {
+  test_group = "fs"
+  sources = [
+    "integration/large_integration_main.cc",
+    "integration/large_integration_test.cc",
+  ]
+  deps = [
+    ":integration-fixtures",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/blobfs",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs-test-utils",
+    "$zx/system/ulib/fs/test_support",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/memfs",
+    "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]
 }
