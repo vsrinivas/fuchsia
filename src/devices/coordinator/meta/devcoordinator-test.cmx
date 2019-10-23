@@ -6,8 +6,6 @@
         "features": [
             "deprecated-shell"
         ],
-        "services": [
-            "fuchsia.boot.Items"
-        ]
+        "services": [ ]
     }
 }

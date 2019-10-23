@@ -98,6 +98,7 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
   fbl::RefPtr<zx_device_t> new_dev;
   r = device_open(dev, &new_dev, flags);
   if (r != ZX_OK) {
+    fprintf(stderr, "devhost_device_connect(%p:%s) open r=%d\n", dev.get(), dev->name, r);
     goto fail;
   }
   newconn->dev = new_dev;
@@ -121,6 +122,7 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
   // If we can't add the new conn and handle to the dispatcher our only option
   // is to give up and tear down.  In practice, this should never happen.
   if ((r = devhost_start_connection(std::move(newconn), std::move(rh))) != ZX_OK) {
+    fprintf(stderr, "devhost_device_connect: failed to start iostate\n");
     // TODO(teisenbe/kulakowski): Should this be goto fail_open?
     goto fail;
   }
@@ -234,7 +236,7 @@ static zx_status_t fidl_directory_watch(void* ctx, uint32_t mask, uint32_t optio
   auto dev = conn->dev;
   zx::channel watcher(raw_watcher);
 
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INTERNAL);
   }

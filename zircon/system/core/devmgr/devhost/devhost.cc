@@ -248,9 +248,7 @@ zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx
   return new_driver->status();
 }
 
-void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
-                                               zx::channel device_controller_rpc,
-                                               ::fidl::StringView driver_path_view,
+void DevhostControllerConnection::CreateDevice(zx::channel rpc, ::fidl::StringView driver_path_view,
                                                ::zx::vmo driver_vmo, ::zx::handle parent_proxy,
                                                ::fidl::StringView proxy_args,
                                                uint64_t local_device_id,
@@ -260,7 +258,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   // since the newly created device is not visible to
   // any API surface until a driver is bound to it.
   // (which can only happen via another message on this thread)
-  log(ERROR, "devhost: create device drv='%.*s' args='%.*s'\n",
+  log(RPC_IN, "devhost: create device drv='%.*s' args='%.*s'\n",
       static_cast<int>(driver_path.size()), driver_path.data(), static_cast<int>(proxy_args.size()),
       proxy_args.data());
 
@@ -289,8 +287,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   CreationContext creation_context = {
       .parent = std::move(parent),
       .child = nullptr,
-      .device_controller_rpc = zx::unowned_channel(device_controller_rpc),
-      .coordinator_rpc = zx::unowned_channel(coordinator_rpc),
+      .rpc = zx::unowned_channel(rpc),
   };
 
   r = drv->CreateOp(&creation_context, creation_context.parent, "proxy", proxy_args.data(),
@@ -315,8 +312,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
   new_device->set_local_id(local_device_id);
   std::unique_ptr<DeviceControllerConnection> newconn;
-  r = DeviceControllerConnection::Create(std::move(new_device), std::move(device_controller_rpc),
-                                         std::move(coordinator_rpc), &newconn);
+  r = DeviceControllerConnection::Create(std::move(new_device), std::move(rpc), &newconn);
   if (r != ZX_OK) {
     return;
   }
@@ -332,9 +328,8 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 }
 
 void DevhostControllerConnection::CreateCompositeDevice(
-    zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-    ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id,
-    CreateCompositeDeviceCompleter::Sync completer) {
+    zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name,
+    uint64_t local_device_id, CreateCompositeDeviceCompleter::Sync completer) {
   log(RPC_IN, "devhost: create composite device %.*s'\n", static_cast<int>(name.size()),
       name.data());
 
@@ -369,8 +364,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
   dev->set_local_id(local_device_id);
 
   std::unique_ptr<DeviceControllerConnection> newconn;
-  status = DeviceControllerConnection::Create(dev, std::move(device_controller_rpc),
-                                              std::move(coordinator_rpc), &newconn);
+  status = DeviceControllerConnection::Create(dev, std::move(rpc), &newconn);
   if (status != ZX_OK) {
     completer.Reply(status);
     return;
@@ -391,9 +385,8 @@ void DevhostControllerConnection::CreateCompositeDevice(
   completer.Reply(ZX_OK);
 }
 
-void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
-                                                   zx::channel device_controller_rpc,
-                                                   uint32_t protocol_id, uint64_t local_device_id,
+void DevhostControllerConnection::CreateDeviceStub(zx::channel rpc, uint32_t protocol_id,
+                                                   uint64_t local_device_id,
                                                    CreateDeviceStubCompleter::Sync completer) {
   log(RPC_IN, "devhost: create device stub\n");
 
@@ -410,8 +403,7 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
   dev->set_local_id(local_device_id);
 
   std::unique_ptr<DeviceControllerConnection> newconn;
-  r = DeviceControllerConnection::Create(dev, std::move(device_controller_rpc),
-                                         std::move(coordinator_rpc), &newconn);
+  r = DeviceControllerConnection::Create(dev, std::move(rpc), &newconn);
   if (r != ZX_OK) {
     return;
   }
@@ -569,6 +561,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
                         zx::channel client_remote) {
   char buffer[512];
   const char* path = mkdevpath(parent, buffer, sizeof(buffer));
+  log(RPC_OUT, "devhost[%s] add '%s'\n", path, child->name);
 
   bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
   fuchsia::device::manager::AddDeviceConfig add_device_config;
@@ -578,24 +571,18 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
   }
 
   zx_status_t status;
-  zx::channel coordinator, coordinator_remote;
-  if ((status = zx::channel::create(0, &coordinator, &coordinator_remote)) != ZX_OK) {
-    return status;
-  }
-
-  zx::channel device_controller, device_controller_remote;
-  if ((status = zx::channel::create(0, &device_controller, &device_controller_remote)) != ZX_OK) {
+  zx::channel hrpc, hsend;
+  if ((status = zx::channel::create(0, &hrpc, &hsend)) != ZX_OK) {
     return status;
   }
 
   std::unique_ptr<DeviceControllerConnection> conn;
-  status = DeviceControllerConnection::Create(child, std::move(device_controller),
-                                              std::move(coordinator), &conn);
+  status = DeviceControllerConnection::Create(child, std::move(hrpc), &conn);
   if (status != ZX_OK) {
     return status;
   }
 
-  const zx::channel& rpc = *parent->coordinator_rpc;
+  const zx::channel& rpc = *parent->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -605,8 +592,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
   uint64_t device_id = 0;
   if (add_invisible) {
     auto response = fuchsia::device::manager::Coordinator::Call::AddDeviceInvisible(
-        zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote),
+        zx::unowned_channel(rpc.get()), std::move(hsend),
         ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)),
                            prop_count),
         ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
@@ -622,8 +608,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
     }
   } else {
     auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
-        zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote),
+        zx::unowned_channel(rpc.get()), std::move(hsend),
         ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)),
                            prop_count),
         ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
@@ -672,7 +657,7 @@ static void log_rpc_result(const char* opname, zx_status_t status,
 }
 
 void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev) {
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return;
   }
@@ -709,8 +694,18 @@ zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) {
 
   log(DEVLC, "removing device %p, conn %p\n", dev.get(), conn);
 
-  // respond to the remove fidl call
-  dev->removal_cb(ZX_OK);
+  const zx::channel& rpc = *dev->rpc;
+  ZX_ASSERT(rpc.is_valid());
+  // TODO(teisenbe): Handle failures here...
+
+  log_rpc(dev, "remove-done");
+  auto resp =
+      fuchsia::device::manager::Coordinator::Call::RemoveDone(zx::unowned_channel(rpc.get()));
+  zx_status_t call_status = ZX_OK;
+  if (resp.status() == ZX_OK && resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+  log_rpc_result("remove-done", resp.status(), call_status);
 
   // Forget our local ID, to release the reference stored by the local ID map
   dev->set_local_id(0);
@@ -718,7 +713,6 @@ zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) {
   // Forget about our rpc channel since after the port_queue below it may be
   // closed.
   dev->rpc = zx::unowned_channel();
-  dev->coordinator_rpc = zx::unowned_channel();
 
   // queue an event to destroy the connection
   ConnectionDestroyer::Get()->QueueDeviceControllerConnection(DevhostAsyncLoop()->dispatcher(),
@@ -730,18 +724,32 @@ zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) {
   return ZX_OK;
 }
 
+zx_status_t devhost_send_unbind_done(const fbl::RefPtr<zx_device_t>& dev) {
+  const zx::channel& rpc = *dev->rpc;
+  ZX_ASSERT(rpc.is_valid());
+  log_rpc(dev, "unbind-done");
+  auto resp =
+      fuchsia::device::manager::Coordinator::Call::UnbindDone(zx::unowned_channel(rpc.get()));
+  zx_status_t call_status = ZX_OK;
+  if (resp.status() == ZX_OK && resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+  log_rpc_result("unbind-done", resp.status(), call_status);
+  return resp.status();
+}
+
 zx_status_t devhost_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   ZX_ASSERT(rpc.is_valid());
   log_rpc(dev, "schedule-remove");
   auto resp = fuchsia::device::manager::Coordinator::Call::ScheduleRemove(
       zx::unowned_channel(rpc.get()), unbind_self);
-  log_rpc_result("schedule-remove called", resp.status());
+  log_rpc_result("schedule-remove", resp.status());
   return resp.status();
 }
 
 zx_status_t devhost_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   ZX_ASSERT(rpc.is_valid());
   log_rpc(dev, "schedule-unbind-children");
   auto resp = fuchsia::device::manager::Coordinator::Call::ScheduleUnbindChildren(
@@ -765,7 +773,7 @@ zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* pat
     remote_dev = dev->parent;
   }
 
-  const zx::channel& rpc = *remote_dev->coordinator_rpc;
+  const zx::channel& rpc = *remote_dev->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -804,9 +812,8 @@ zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* pat
 }
 
 zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) {
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
-    log_rpc(dev, "bind failed");
     return ZX_ERR_IO_REFUSED;
   }
   log_rpc(dev, "bind-device");
@@ -818,17 +825,16 @@ zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev, const char*
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {
     call_status = response.Unwrap()->result.err();
   }
-  log_rpc_result("bind-device finished!", status, call_status);
+  log_rpc_result("bind-device", status, call_status);
   if (status != ZX_OK) {
     return status;
   }
-
   return call_status;
 }
 
 zx_status_t devhost_device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                                    int64_t hook_wait_time) {
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -854,7 +860,7 @@ zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const cha
   }
 
   zx::vmo vmo;
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -889,7 +895,7 @@ zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
     return ZX_ERR_INVALID_ARGS;
   }
 
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -926,7 +932,7 @@ zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
 
 zx_status_t devhost_get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
                                       size_t* out_length) {
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -957,7 +963,7 @@ zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
   if (!data && length) {
     return ZX_ERR_INVALID_ARGS;
   }
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -981,7 +987,7 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
   if (!path || (!data && length)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
@@ -1009,7 +1015,7 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
   if ((props == nullptr && props_count > 0) || components_data == nullptr || name == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  const zx::channel& rpc = *dev->coordinator_rpc;
+  const zx::channel& rpc = *dev->rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }

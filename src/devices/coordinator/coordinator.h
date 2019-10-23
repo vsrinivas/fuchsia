@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_COORDINATOR_COORDINATOR_H_
-#define SRC_DEVICES_COORDINATOR_COORDINATOR_H_
+#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COORDINATOR_H_
+#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COORDINATOR_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/svc/outgoing.h>
@@ -196,11 +196,10 @@ class Coordinator {
                                  const AttemptBindFunc& attempt_bind);
 
   // Used to implement fuchsia::device::manager::Coordinator.
-  zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
-                        zx::channel coordinator, const uint64_t* props_data, size_t props_count,
-                        fbl::StringPiece name, uint32_t protocol_id, fbl::StringPiece driver_path,
-                        fbl::StringPiece args, bool invisible, zx::channel client_remote,
-                        fbl::RefPtr<Device>* new_device);
+  zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel rpc,
+                        const uint64_t* props_data, size_t props_count, fbl::StringPiece name,
+                        uint32_t protocol_id, fbl::StringPiece driver_path, fbl::StringPiece args,
+                        bool invisible, zx::channel client_remote, fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);
   // This is for scheduling the initial unbind task as a result of a devhost's |ScheduleRemove|
@@ -375,4 +374,4 @@ zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_h
 
 }  // namespace devmgr
 
-#endif  // SRC_DEVICES_COORDINATOR_COORDINATOR_H_
+#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COORDINATOR_H_

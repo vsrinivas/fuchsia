@@ -57,8 +57,7 @@ static thread_local CreationContext* g_creation_context;
 void devhost_set_bind_context(BindContext* ctx) { g_bind_context = ctx; }
 
 void devhost_set_creation_context(CreationContext* ctx) {
-  ZX_DEBUG_ASSERT(!ctx || ctx->device_controller_rpc->is_valid() ||
-                  ctx->coordinator_rpc->is_valid());
+  ZX_DEBUG_ASSERT(!ctx || ctx->rpc->is_valid());
   g_creation_context = ctx;
 }
 
@@ -389,8 +388,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
     }
     dev->flags |= DEV_FLAG_ADDED;
     dev->flags &= (~DEV_FLAG_BUSY);
-    dev->rpc = zx::unowned_channel(creation_ctx->device_controller_rpc);
-    dev->coordinator_rpc = zx::unowned_channel(creation_ctx->coordinator_rpc);
+    dev->rpc = zx::unowned_channel(creation_ctx->rpc);
     creation_ctx->child = dev;
     mark_dead.cancel();
     return ZX_OK;
@@ -471,14 +469,10 @@ void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOC
            dev.get(), dev->name, dev->flags);
     panic();
   }
-
-  if (dev->unbind_cb) {
-    dev->unbind_cb(ZX_OK);
-  } else {
-    printf("device: %p(%s): cannot reply to unbind, no callback set, flags are 0x%x\n", dev.get(),
-           dev->name, dev->flags);
-    panic();
-  }
+#if TRACE_ADD_REMOVE
+  printf("device: %p(%s): sending unbind completed\n", dev.get(), dev->name);
+#endif
+  devhost_send_unbind_done(dev);
 }
 
 zx_status_t devhost_device_remove_deprecated(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
@@ -500,6 +494,7 @@ zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
   } else {
     return devhost_device_bind(dev, "");
   }
+
   return ZX_OK;
 }
 
@@ -517,9 +512,10 @@ zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
       dev->UnbindOp();
     } else {
       // We should reply to the unbind hook so we don't get stuck.
-      dev->unbind_cb(ZX_OK);
+      devhost_send_unbind_done(dev);
     }
   }
+
   enum_lock_release();
 
   return ZX_OK;

@@ -23,8 +23,8 @@ source_set("common") {
     "composite-device.cc",
     "connection-destroyer.cc",
     "core.cc",
-    "devhost-context.cc",
     "devhost.cc",
+    "devhost-context.cc",
     "device-controller-connection.cc",
     "proxy-iostate.cc",
     "rpc-server.cc",
@@ -63,7 +63,9 @@ source_set("common") {
     "../shared:env",
   ]
 
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  configs += [
+    "$zx_build/public/gn/config:static-libc++",
+  ]
 }
 
 # "$zx/system/ulib/driver" is an alias for this.
@@ -98,6 +100,7 @@ zx_library("driver") {
 zx_test("devhost-test") {
   test_group = "ddk"
   sources = [
+    "core-test.cc",
     "device-api-test.cc",
     "device-controller-connection-test.cc",
     "device-controller-integration-test.cc",

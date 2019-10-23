@@ -495,9 +495,9 @@ void Coordinator::ReleaseDevhost(Devhost* dh) {
 // Add a new device to a parent device (same devhost)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
-zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
-                                   zx::channel coordinator, const uint64_t* props_data,
-                                   size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
+zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channel rpc,
+                                   const uint64_t* props_data, size_t props_count,
+                                   fbl::StringPiece name, uint32_t protocol_id,
                                    fbl::StringPiece driver_path, fbl::StringPiece args,
                                    bool invisible, zx::channel client_remote,
                                    fbl::RefPtr<Device>* new_device) {
@@ -548,10 +548,9 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
   }
 
   fbl::RefPtr<Device> dev;
-  zx_status_t status =
-      Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
-                     std::move(args_str), protocol_id, std::move(props), std::move(coordinator),
-                     std::move(device_controller), invisible, std::move(client_remote), &dev);
+  zx_status_t status = Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
+                                      std::move(args_str), protocol_id, std::move(props),
+                                      std::move(rpc), invisible, std::move(client_remote), &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -1000,12 +999,10 @@ static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh,
                                     zx::handle rpc_proxy) {
   zx_status_t r;
 
-  zx::channel hcoordinator, hcoordinator_remote;
-  if ((r = zx::channel::create(0, &hcoordinator, &hcoordinator_remote)) != ZX_OK) {
+  zx::channel hrpc, hrpc_remote;
+  if ((r = zx::channel::create(0, &hrpc, &hrpc_remote)) != ZX_OK) {
     return r;
   }
-
-  auto hdevice_controller_remote = dev->ConnectDeviceController(dev->coordinator->dispatcher());
 
   if (dev->libname().size() != 0) {
     zx::vmo vmo;
@@ -1013,22 +1010,19 @@ static zx_status_t dh_create_device(const fbl::RefPtr<Device>& dev, Devhost* dh,
       return r;
     }
 
-    r = dh_send_create_device(dev.get(), dh, std::move(hcoordinator_remote),
-                              hdevice_controller_remote.TakeChannel(), std::move(vmo),
-                              args, std::move(rpc_proxy));
+    r = dh_send_create_device(dev.get(), dh, std::move(hrpc_remote), std::move(vmo), args,
+                              std::move(rpc_proxy));
     if (r != ZX_OK) {
       return r;
     }
   } else {
-    r = dh_send_create_device_stub(dev.get(), dh, std::move(hcoordinator_remote),
-                                   hdevice_controller_remote.TakeChannel(),
-                                   dev->protocol_id());
+    r = dh_send_create_device_stub(dev.get(), dh, std::move(hrpc_remote), dev->protocol_id());
     if (r != ZX_OK) {
       return r;
     }
   }
 
-  dev->set_channel(std::move(hcoordinator));
+  dev->set_channel(std::move(hrpc));
   if ((r = Device::BeginWait(dev, dev->coordinator->dispatcher())) != ZX_OK) {
     return r;
   }
@@ -1043,51 +1037,7 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
   if (status != ZX_OK) {
     return status;
   }
-  status = dh_send_bind_driver(
-      dev.get(), libname, std::move(vmo), [dev](zx_status_t status, zx::channel test_output) {
-        if (status != ZX_OK) {
-          log(ERROR, "devcoordinator: rpc: bind-driver '%s' status %d\n", dev->name().data(),
-              status);
-          return;
-        }
-        fbl::RefPtr<Device> real_parent;
-        if (dev->flags & DEV_CTX_PROXY) {
-          real_parent = dev->parent();
-        } else {
-          real_parent = dev;
-        }
-        for (auto& child : real_parent->children()) {
-          char bootarg[256] = {0};
-          const char* drivername =
-              dev->coordinator->LibnameToDriver(child.libname().data())->name.data();
-          snprintf(bootarg, sizeof(bootarg), "driver.%s.compatibility-tests-enable", drivername);
-
-          if (dev->coordinator->boot_args().GetBool(bootarg, false) &&
-              (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
-            snprintf(bootarg, sizeof(bootarg), "driver.%s.compatibility-tests-wait-time",
-                     drivername);
-            const char* test_timeout = dev->coordinator->boot_args().Get(bootarg);
-            zx::duration test_time =
-                (test_timeout != nullptr ? zx::msec(atoi(test_timeout)) : kDefaultTestTimeout);
-            real_parent->set_test_time(test_time);
-            real_parent->DriverCompatibiltyTest();
-            break;
-          } else if (real_parent->test_state() == Device::TestStateMachine::kTestBindSent) {
-            real_parent->test_event().signal(0, TEST_BIND_DONE_SIGNAL);
-            break;
-          }
-        }
-        if (test_output.is_valid()) {
-          log(ERROR, "devcoordinator: rpc: bind-driver '%s' set test channel\n",
-              dev->name().data());
-          status = dev->set_test_output(std::move(test_output), dev->coordinator->dispatcher());
-          if (status != ZX_OK) {
-            log(ERROR,
-                "devcoordinator: rpc: bind-driver '%s' failed to start test output wait: %d\n",
-                dev->name().data(), status);
-          }
-        }
-      });
+  status = dh_send_bind_driver(dev.get(), libname, std::move(vmo));
   if (status != ZX_OK) {
     return status;
   }
@@ -1139,7 +1089,6 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
         return r;
       }
     }
-
     dev->proxy()->set_host(target_devhost);
     if ((r = dh_create_device(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1))) < 0) {
       log(ERROR, "devcoordinator: dh_create_device: %d\n", r);
@@ -1299,23 +1248,22 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
   suspend_context().set_task(std::move(task));
 
-  auto status = async::PostDelayedTask(
-      dispatcher(),
-      [this, callback] {
-        if (!InSuspend()) {
-          return;  // Suspend failed to complete.
-        }
-        auto& ctx = suspend_context();
-        log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
-        log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
-        dump_suspend_task_dependencies(ctx.task());
-        if (suspend_fallback()) {
-          ::suspend_fallback(root_resource(), ctx.sflags());
-          // Unless in test env, we should not reach here.
-          callback(ZX_ERR_TIMED_OUT);
-        }
-      },
-      zx::sec(30));
+  auto status = async::PostDelayedTask(dispatcher(),
+                                       [this, callback] {
+                                         if (!InSuspend()) {
+                                           return;  // Suspend failed to complete.
+                                         }
+                                         auto& ctx = suspend_context();
+                                         log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
+                                         log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
+                                         dump_suspend_task_dependencies(ctx.task());
+                                         if (suspend_fallback()) {
+                                           ::suspend_fallback(root_resource(), ctx.sflags());
+                                           // Unless in test env, we should not reach here.
+                                           callback(ZX_ERR_TIMED_OUT);
+                                         }
+                                       },
+                                       zx::sec(30));
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: Failed to create suspend timeout watchdog\n");
   }
@@ -1492,6 +1440,7 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
   if (!running_) {
     return ZX_ERR_UNAVAILABLE;
   }
+  printf("devcoordinator: driver '%s' added\n", drv->name.data());
   for (auto& dev : devices_) {
     zx_status_t status =
         BindDriverToDevice(fbl::RefPtr(&dev), drv, true /* autobind */, attempt_bind);

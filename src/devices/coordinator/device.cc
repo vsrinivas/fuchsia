@@ -5,7 +5,6 @@
 #include "device.h"
 
 #include <fuchsia/device/manager/c/fidl.h>
-#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/driver/test/c/fidl.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/clock.h>
@@ -67,8 +66,8 @@ Device::~Device() {
 zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
                            fbl::String name, fbl::String driver_path, fbl::String args,
                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
-                           zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                           bool invisible, zx::channel client_remote, fbl::RefPtr<Device>* device) {
+                           zx::channel rpc, bool invisible, zx::channel client_remote,
+                           fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -89,8 +88,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
     return status;
   }
 
-  dev->device_controller_.Bind(std::move(device_controller_rpc), coordinator->dispatcher());
-  dev->set_channel(std::move(coordinator_rpc));
+  dev->set_channel(std::move(rpc));
 
   // If we have bus device args we are, by definition, a bus device.
   if (dev->args_.size() > 0) {
@@ -126,8 +124,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
 }
 
 zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
-                                    const CompositeDevice& composite, zx::channel coordinator_rpc,
-                                    zx::channel device_controller_rpc,
+                                    const CompositeDevice& composite, zx::channel rpc,
                                     fbl::RefPtr<Device>* device) {
   const auto& composite_props = composite.properties();
   fbl::Array<zx_device_prop_t> props(new zx_device_prop_t[composite_props.size()],
@@ -146,8 +143,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
     return status;
   }
 
-  dev->device_controller_.Bind(std::move(device_controller_rpc), coordinator->dispatcher());
-  dev->set_channel(std::move(coordinator_rpc));
+  dev->set_channel(std::move(rpc));
   // We exist within our parent's device host
   dev->set_host(devhost);
 
@@ -343,12 +339,12 @@ zx_status_t Device::SendUnbind(UnbindCompletion completion) {
     return ZX_ERR_UNAVAILABLE;
   }
   log(DEVLC, "devcoordinator: unbind dev %p name='%s'\n", this, name_.data());
-  state_ = Device::State::kUnbinding;
-  unbind_completion_ = std::move(completion);
   zx_status_t status = dh_send_unbind(this);
   if (status != ZX_OK) {
     return status;
   }
+  state_ = Device::State::kUnbinding;
+  unbind_completion_ = std::move(completion);
   return ZX_OK;
 }
 
@@ -358,13 +354,12 @@ zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
     return ZX_ERR_UNAVAILABLE;
   }
   log(DEVLC, "devcoordinator: complete removal dev %p name='%s'\n", this, name_.data());
-  state_ = Device::State::kUnbinding;
-  remove_completion_ = std::move(completion);
-  zx_status_t status = dh_send_complete_removal(
-      this, [dev = fbl::RefPtr(this)]() mutable { dev->CompleteRemove(); });
+  zx_status_t status = dh_send_complete_removal(this);
   if (status != ZX_OK) {
     return status;
   }
+  state_ = Device::State::kUnbinding;
+  remove_completion_ = std::move(completion);
   return ZX_OK;
 }
 
@@ -555,10 +550,119 @@ zx_status_t Device::HandleRead() {
     }
   }
 
-  log(ERROR, "devcoordinator: rpc: dev '%s' received wrong unexpected protocol. Ordinal: %16lx\n",
-      name_.data(), hdr->ordinal);
-  zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
-  return ZX_ERR_IO;
+  // TODO: Check txid on the message
+  // This is an if statement because, depending on the state of the ordinal
+  // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
+  uint64_t ordinal = hdr->ordinal;
+  if (ordinal == fuchsia_device_manager_DeviceControllerBindDriverOrdinal ||
+      ordinal == fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal) {
+    const char* err_msg = nullptr;
+    r = fidl_decode_msg(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, &fidl_msg,
+                        &err_msg);
+    if (r != ZX_OK) {
+      log(ERROR, "devcoordinator: rpc: bind-driver '%s' received malformed reply: %s\n",
+          name_.data(), err_msg);
+      return ZX_ERR_IO;
+    }
+    auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(
+        fidl_msg.bytes);
+    if (resp->status != ZX_OK) {
+      // TODO: try next driver, clear BOUND flag
+      log(ERROR, "devcoordinator: rpc: bind-driver '%s' status %d\n", name_.data(), resp->status);
+    } else {
+      Device* real_parent;
+      if (flags & DEV_CTX_PROXY) {
+        real_parent = this->parent().get();
+      } else {
+        real_parent = this;
+      }
+
+      for (auto& child : real_parent->children()) {
+        char bootarg[256] = {0};
+        const char* drivername =
+            this->coordinator->LibnameToDriver(child.libname().data())->name.data();
+        snprintf(bootarg, sizeof(bootarg), "driver.%s.compatibility-tests-enable", drivername);
+
+        if (this->coordinator->boot_args().GetBool(bootarg, false) &&
+            (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
+          snprintf(bootarg, sizeof(bootarg), "driver.%s.compatibility-tests-wait-time", drivername);
+          const char* test_timeout = coordinator->boot_args().Get(bootarg);
+          zx::duration test_time =
+              (test_timeout != nullptr ? zx::msec(atoi(test_timeout)) : kDefaultTestTimeout);
+          real_parent->set_test_time(test_time);
+          real_parent->DriverCompatibiltyTest();
+          break;
+        } else if (real_parent->test_state() == Device::TestStateMachine::kTestBindSent) {
+          real_parent->test_event().signal(0, TEST_BIND_DONE_SIGNAL);
+          break;
+        }
+      }
+    }
+    if (resp->test_output) {
+      log(ERROR, "devcoordinator: rpc: bind-driver '%s' set test channel\n", name_.data());
+      test_output_ = zx::channel(resp->test_output);
+      test_wait_.set_object(test_output_.get());
+      test_wait_.set_trigger(ZX_CHANNEL_PEER_CLOSED);
+      zx_status_t status = test_wait_.Begin(coordinator->dispatcher());
+      if (status != ZX_OK) {
+        log(ERROR, "devcoordinator: rpc: bind-driver '%s' failed to start test output wait: %d\n",
+            name_.data(), status);
+        return status;
+      }
+    }
+  } else if (ordinal == fuchsia_device_manager_DeviceControllerSuspendOrdinal ||
+             ordinal == fuchsia_device_manager_DeviceControllerSuspendGenOrdinal) {
+    const char* err_msg = nullptr;
+    r = fidl_decode_msg(&fuchsia_device_manager_DeviceControllerSuspendResponseTable, &fidl_msg,
+                        &err_msg);
+    if (r != ZX_OK) {
+      log(ERROR, "devcoordinator: rpc: suspend '%s' received malformed reply: %s\n", name_.data(),
+          err_msg);
+      return ZX_ERR_IO;
+    }
+    auto resp =
+        reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendResponse*>(fidl_msg.bytes);
+    if (resp->status != ZX_OK) {
+      log(ERROR, "devcoordinator: rpc: suspend '%s' status %d\n", name_.data(), resp->status);
+    }
+
+    if (!suspend_completion_) {
+      log(ERROR, "devcoordinator: rpc: unexpected suspend reply for '%s' status %d\n", name_.data(),
+          resp->status);
+      return ZX_ERR_IO;
+    }
+    log(DEVLC, "devcoordinator: suspended dev %p name='%s'\n", this, name_.data());
+    CompleteSuspend(resp->status);
+  } else if (ordinal == fuchsia_device_manager_DeviceControllerResumeOrdinal ||
+             ordinal == fuchsia_device_manager_DeviceControllerResumeGenOrdinal) {
+    const char* err_msg = nullptr;
+    r = fidl_decode_msg(&fuchsia_device_manager_DeviceControllerResumeResponseTable, &fidl_msg,
+                        &err_msg);
+    if (r != ZX_OK) {
+      log(ERROR, "devcoordinator: rpc: suspend '%s' received malformed reply: %s\n", name_.data(),
+          err_msg);
+      return ZX_ERR_IO;
+    }
+    auto resp =
+        reinterpret_cast<fuchsia_device_manager_DeviceControllerResumeResponse*>(fidl_msg.bytes);
+    if (resp->status != ZX_OK) {
+      log(ERROR, "devcoordinator: rpc: resume '%s' status %d\n", name_.data(), resp->status);
+    }
+
+    if (!resume_completion_) {
+      log(ERROR, "devcoordinator: rpc: unexpected resume reply for '%s' status %d\n", name_.data(),
+          resp->status);
+      return ZX_ERR_IO;
+    }
+    log(INFO, "devcoordinator: resumed dev %p name='%s'\n", this, name_.data());
+    CompleteResume(resp->status);
+  } else {
+    log(ERROR, "devcoordinator: rpc: dev '%s' received wrong unexpected reply %16lx\n",
+        name_.data(), hdr->ordinal);
+    zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
 }
 
 zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
@@ -722,10 +826,9 @@ int Device::RunCompatibilityTests() {
   return 0;
 }
 
-void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controller_client,
-                       ::fidl::VectorView<uint64_t> props, ::fidl::StringView name_view,
-                       uint32_t protocol_id, ::fidl::StringView driver_path_view,
-                       ::fidl::StringView args_view,
+void Device::AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props,
+                       ::fidl::StringView name_view, uint32_t protocol_id,
+                       ::fidl::StringView driver_path_view, ::fidl::StringView args_view,
                        llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
                        ::zx::channel client_remote, AddDeviceCompleter::Sync completer) {
   auto parent = fbl::RefPtr(this);
@@ -735,9 +838,8 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
 
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
-      parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, false, std::move(client_remote),
-      &device);
+      parent, std::move(rpc), props.data(), props.count(), name, protocol_id, driver_path, args,
+      false, std::move(client_remote), &device);
   if (device != nullptr &&
       (device_add_config &
        llcpp::fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE)) {
@@ -772,10 +874,10 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
   completer.Reply(std::move(response));
 }
 
-void Device::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller_client,
-                                ::fidl::VectorView<uint64_t> props, ::fidl::StringView name_view,
-                                uint32_t protocol_id, ::fidl::StringView driver_path_view,
-                                ::fidl::StringView args_view, ::zx::channel client_remote,
+void Device::AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props,
+                                ::fidl::StringView name_view, uint32_t protocol_id,
+                                ::fidl::StringView driver_path_view, ::fidl::StringView args_view,
+                                ::zx::channel client_remote,
                                 AddDeviceInvisibleCompleter::Sync completer) {
   auto parent = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
@@ -784,8 +886,8 @@ void Device::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_
 
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
-      parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, true, std::move(client_remote), &device);
+      parent, std::move(rpc), props.data(), props.count(), name, protocol_id, driver_path, args,
+      true, std::move(client_remote), &device);
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
   if (status != ZX_OK) {
@@ -800,7 +902,7 @@ void Device::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_
 void Device::ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
 
-  log(ERROR, "devcoordinator: schedule remove '%s'\n", dev->name().data());
+  log(DEVLC, "devcoordinator: schedule remove '%s'\n", dev->name().data());
 
   dev->coordinator->ScheduleDevhostRequestedRemove(dev, unbind_self);
 }
@@ -811,6 +913,36 @@ void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync comple
   log(DEVLC, "devcoordinator: schedule unbind children '%s'\n", dev->name().data());
 
   dev->coordinator->ScheduleDevhostRequestedUnbindChildren(dev);
+}
+
+void Device::UnbindDone(UnbindDoneCompleter::Sync completer) {
+  auto dev = fbl::RefPtr(this);
+
+  log(DEVLC, "devcoordinator: unbind done '%s'\n", dev->name().data());
+
+  zx_status_t status = dev->CompleteUnbind();
+  llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result response;
+  if (status != ZX_OK) {
+    response.set_err(status);
+  } else {
+    response.set_response(llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response{});
+  }
+  completer.Reply(std::move(response));
+}
+
+void Device::RemoveDone(RemoveDoneCompleter::Sync completer) {
+  auto dev = fbl::RefPtr(this);
+
+  log(DEVLC, "devcoordinator: remove done '%s'\n", dev->name().data());
+
+  zx_status_t status = dev->CompleteRemove();
+  llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result response;
+  if (status != ZX_OK) {
+    response.set_err(status);
+  } else {
+    response.set_response(llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response{});
+  }
+  completer.Reply(std::move(response));
 }
 
 void Device::MakeVisible(MakeVisibleCompleter::Sync completer) {
@@ -831,7 +963,7 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync completer) {
 }
 
 void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter::Sync completer) {
-  auto dev = fbl::RefPtr(this);
+  auto dev = fbl::RefPtr(this);  // static_cast<Device*>(ctx));
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
 
   llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result response;
