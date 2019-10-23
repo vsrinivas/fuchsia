@@ -40,11 +40,6 @@ inline constexpr size_t type_size<const volatile void>() {
   return 1u;
 }
 
-// Generates a type whose ::value is true if |T| is the same type as one of the types in the |Ts|
-// parameter pack.
-template <typename T, typename... Ts>
-struct is_one_of : ktl::disjunction<ktl::is_same<T, Ts>...> {};
-
 // Generates a type whose ::value is true if |T| is on the copy_to_user exception list.
 //
 // The copy_to_user exception list is a list of kernel ABI types that contain implicit padding, but
@@ -54,10 +49,10 @@ struct is_one_of : ktl::disjunction<ktl::is_same<T, Ts>...> {};
 // Eventually, this exception list should be empty.
 template <typename T>
 struct is_on_copy_to_user_exception_list
-    : is_one_of<T, ArchPmuProperties, zx_exception_report_t, zx_info_bti_t, zx_info_handle_basic_t,
-                zx_info_job_t, zx_info_maps_mapping_t, zx_info_maps_t, zx_info_process_t,
-                zx_info_socket_t, zx_info_thread_stats_t, zx_info_timer_t, zx_info_vmo_t,
-                zx_pci_bar_t, zx_pcie_device_info_t, zx_port_packet_t> {};
+    : ktl::is_one_of<T, ArchPmuProperties, zx_exception_report_t, zx_info_bti_t,
+                     zx_info_handle_basic_t, zx_info_job_t, zx_info_maps_mapping_t, zx_info_maps_t,
+                     zx_info_process_t, zx_info_socket_t, zx_info_thread_stats_t, zx_info_timer_t,
+                     zx_info_vmo_t, zx_pci_bar_t, zx_pcie_device_info_t, zx_port_packet_t> {};
 
 // Generates a type whose ::value is true if |T| is allowed to be copied out to usermode.
 //

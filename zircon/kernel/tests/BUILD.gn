@@ -14,6 +14,7 @@ source_set("tests") {
     "dpc_tests.cc",
     "fibo.cc",
     "job_tests.cc",
+    "ktl_type_traits_tests.cc",
     "lock_dep_tests.cc",
     "mem_tests.cc",
     "mmu_tests.cc",
