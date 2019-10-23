@@ -117,7 +117,7 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
   }
 }
 
-// Format Floating Point (x87) -------------------------------------------------
+// Format Floating Point (x87) ---------------------------------------------------------------------
 
 inline const std::set<RegisterID>& GetFPControlRegistersSet() {
   static std::set<RegisterID> regs = {RegisterID::kX64_fcw, RegisterID::kX64_fsw,
@@ -173,7 +173,7 @@ void FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out
     // Output the control table.
     OutputBuffer control_out;
     auto colspecs =
-        std::vector<ColSpec>({ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kLeft, 0, "Raw", 1),
+        std::vector<ColSpec>({ColSpec(Align::kRight, 0, "", 2), ColSpec(Align::kLeft, 0, "", 1),
                               ColSpec(Align::kLeft, 0, "", 1)});
     FormatTable(colspecs, rows, &control_out);
     out->Append(std::move(control_out));
@@ -205,6 +205,58 @@ void FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out
     FormatTable(std::move(colspecs), rows, &value_out);
     out->Append(std::move(value_out));
   }
+}
+
+// Vector Registers --------------------------------------------------------------------------------
+
+void FormatVectorRegistersX64(const FormatRegisterOptions& options,
+                              const std::vector<Register>& registers, OutputBuffer* out) {
+  // This uses the standard vector register formatting, but converts from AVX-512 to AVX. Zircon
+  // doesn't currently support AVX-512 but our canonical registers use this format. Unnecessarily
+  // displaying all those 0's makes things more difficult to follow. If AVX-512 is supported in
+  // the future we can show the zmm and xmm/ymm registers >= 16 when the target CPU has them.
+  std::vector<Register> non_vect;  // Control registers.
+  std::vector<Register> filtered;
+  filtered.reserve(registers.size());
+
+  for (auto& r : registers) {
+    uint32_t id = static_cast<uint32_t>(r.id);
+    // Filter out all vector registers >= 16 (these are additions in AVX-512).
+    if (id >= static_cast<uint32_t>(RegisterID::kX64_zmm16) &&
+        id <= static_cast<uint32_t>(RegisterID::kX64_zmm31))
+      continue;
+
+    if (id >= static_cast<uint32_t>(RegisterID::kX64_zmm0) &&
+        id <= static_cast<uint32_t>(RegisterID::kX64_zmm15) && r.data.size() == 64) {
+      // Convert 512-bit zmm0-15 to 256-bit "ymm" registers.
+      RegisterID ymm_id =
+          static_cast<RegisterID>(id - static_cast<uint32_t>(RegisterID::kX64_zmm0) +
+                                  static_cast<uint32_t>(RegisterID::kX64_ymm0));
+      filtered.emplace_back(ymm_id, std::vector<uint8_t>(r.data.begin(), r.data.begin() + 32));
+    } else if ((id >= static_cast<uint32_t>(RegisterID::kX64_xmm0) &&
+                id <= static_cast<uint32_t>(RegisterID::kX64_xmm15)) ||
+               (id >= static_cast<uint32_t>(RegisterID::kX64_ymm0) &&
+                id <= static_cast<uint32_t>(RegisterID::kX64_ymm15))) {
+      // All other vector registers that happen to be in the list. We don't expect to have other
+      // vector registers here, but pass the rest through unchanged if they appear.
+      filtered.push_back(r);
+    } else {
+      // Control registers get a separate section.
+      non_vect.push_back(r);
+    }
+  }
+
+  // Start with any control registers.
+  if (!non_vect.empty()) {
+    FormatGeneralRegisters(non_vect, out);
+
+    // Blank line separating sections.
+    if (!filtered.empty())
+      out->Append("\n");
+  }
+
+  if (!filtered.empty())
+    FormatGeneralVectorRegisters(options, filtered, out);
 }
 
 // Debug Registers ---------------------------------------------------------------------------------
@@ -301,6 +353,9 @@ bool FormatCategoryX64(const FormatRegisterOptions& options, RegisterCategory ca
       return true;
     case RegisterCategory::kFloatingPoint:
       FormatFPRegisters(registers, out);
+      return true;
+    case RegisterCategory::kVector:
+      FormatVectorRegistersX64(options, registers, out);
       return true;
     case RegisterCategory::kDebug:
       FormatDebugRegisters(registers, out);

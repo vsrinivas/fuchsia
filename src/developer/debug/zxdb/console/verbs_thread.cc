@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/step_into_thread_controller.h"
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -857,7 +858,7 @@ Expressions
 
     - Precedence: ( <expression> )
 
-  Not supported: function calls, overloaded operators, casting.
+  Not supported: function calls, overloaded operators.
 
 Examples
 
@@ -1141,6 +1142,10 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
 
   FormatRegisterOptions options;
   options.arch = cmd.thread()->session()->arch();
+
+  std::string vec_fmt = cmd.target()->settings().GetString(ClientSettings::Target::kVectorFormat);
+  if (auto found = StringToVectorRegisterFormat(vec_fmt))
+    options.vector_format = *found;
 
   // When empty, print all the registers.
   if (!cmd.args().empty()) {

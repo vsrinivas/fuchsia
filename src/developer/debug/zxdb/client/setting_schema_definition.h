@@ -5,6 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_SCHEMA_DEFINITION_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_SCHEMA_DEFINITION_H_
 
+#include <string>
+#include <vector>
+
 namespace zxdb {
 
 // This header contains the definitions for all the settings used within the client. They are within
@@ -40,22 +43,11 @@ struct ClientSettings {
     static const char* kBuildDirs;
     static const char* kBuildDirsDescription;  // Help for kBuildDirs.
 
-    static const char* kVectorFormat;
+    static const char* kVectorFormat;  // Possible values are the kVectorRegisterFormatStr_*.
     static const char* kVectorFormatDescription;  // Help for kBuildDirs.
 
-    // Options for the kVector setting value.
-    static const char* kVectorFormat_i8;
-    static const char* kVectorFormat_u8;
-    static const char* kVectorFormat_i16;
-    static const char* kVectorFormat_u16;
-    static const char* kVectorFormat_i32;
-    static const char* kVectorFormat_u32;
-    static const char* kVectorFormat_i64;
-    static const char* kVectorFormat_u64;
-    static const char* kVectorFormat_i128;
-    static const char* kVectorFormat_u128;
-    static const char* kVectorFormat_float;
-    static const char* kVectorFormat_double;
+    // Returns the possible options for kVectorFormat.
+    static std::vector<std::string> GetVectorFormatOptions();
   };
 
   struct Thread {

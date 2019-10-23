@@ -12,35 +12,82 @@ namespace zxdb {
 
 using debug_ipc::RegisterID;
 
+const char kVectorRegisterFormatStr_Signed8[] = "i8";
+const char kVectorRegisterFormatStr_Unsigned8[] = "u8";
+const char kVectorRegisterFormatStr_Signed16[] = "i16";
+const char kVectorRegisterFormatStr_Unsigned16[] = "u16";
+const char kVectorRegisterFormatStr_Signed32[] = "i32";
+const char kVectorRegisterFormatStr_Unsigned32[] = "u32";
+const char kVectorRegisterFormatStr_Signed64[] = "i64";
+const char kVectorRegisterFormatStr_Unsigned64[] = "u64";
+const char kVectorRegisterFormatStr_Signed128[] = "i128";
+const char kVectorRegisterFormatStr_Unsigned128[] = "u128";
+const char kVectorRegisterFormatStr_Float[] = "float";
+const char kVectorRegisterFormatStr_Double[] = "double";
+
 const char* VectorRegisterFormatToString(VectorRegisterFormat fmt) {
   switch (fmt) {
     case VectorRegisterFormat::kSigned8:
-      return "i8";
+      return kVectorRegisterFormatStr_Signed8;
     case VectorRegisterFormat::kUnsigned8:
-      return "u8";
+      return kVectorRegisterFormatStr_Unsigned8;
     case VectorRegisterFormat::kSigned16:
-      return "i16";
+      return kVectorRegisterFormatStr_Signed16;
     case VectorRegisterFormat::kUnsigned16:
-      return "u16";
+      return kVectorRegisterFormatStr_Unsigned16;
     case VectorRegisterFormat::kSigned32:
-      return "i32";
+      return kVectorRegisterFormatStr_Signed32;
     case VectorRegisterFormat::kUnsigned32:
-      return "u32";
+      return kVectorRegisterFormatStr_Unsigned32;
     case VectorRegisterFormat::kSigned64:
-      return "i64";
+      return kVectorRegisterFormatStr_Signed64;
     case VectorRegisterFormat::kUnsigned64:
-      return "u64";
+      return kVectorRegisterFormatStr_Unsigned64;
     case VectorRegisterFormat::kSigned128:
-      return "i128";
+      return kVectorRegisterFormatStr_Signed128;
     case VectorRegisterFormat::kUnsigned128:
-      return "u128";
+      return kVectorRegisterFormatStr_Unsigned128;
     case VectorRegisterFormat::kFloat:
-      return "float";
+      return kVectorRegisterFormatStr_Float;
     case VectorRegisterFormat::kDouble:
-      return "double";
+      return kVectorRegisterFormatStr_Double;
   }
   FXL_NOTREACHED();
   return "";
+}
+
+std::optional<VectorRegisterFormat> StringToVectorRegisterFormat(const std::string& fmt) {
+  if (fmt == kVectorRegisterFormatStr_Signed8)
+    return VectorRegisterFormat::kSigned8;
+  if (fmt == kVectorRegisterFormatStr_Unsigned8)
+    return VectorRegisterFormat::kUnsigned8;
+
+  if (fmt == kVectorRegisterFormatStr_Signed16)
+    return VectorRegisterFormat::kSigned16;
+  if (fmt == kVectorRegisterFormatStr_Unsigned16)
+    return VectorRegisterFormat::kUnsigned16;
+
+  if (fmt == kVectorRegisterFormatStr_Signed32)
+    return VectorRegisterFormat::kSigned32;
+  if (fmt == kVectorRegisterFormatStr_Unsigned32)
+    return VectorRegisterFormat::kUnsigned32;
+
+  if (fmt == kVectorRegisterFormatStr_Signed64)
+    return VectorRegisterFormat::kSigned64;
+  if (fmt == kVectorRegisterFormatStr_Unsigned64)
+    return VectorRegisterFormat::kUnsigned64;
+
+  if (fmt == kVectorRegisterFormatStr_Signed128)
+    return VectorRegisterFormat::kSigned128;
+  if (fmt == kVectorRegisterFormatStr_Unsigned128)
+    return VectorRegisterFormat::kUnsigned128;
+
+  if (fmt == kVectorRegisterFormatStr_Float)
+    return VectorRegisterFormat::kFloat;
+  if (fmt == kVectorRegisterFormatStr_Double)
+    return VectorRegisterFormat::kDouble;
+
+  return std::nullopt;
 }
 
 ExprValue VectorRegisterToValue(VectorRegisterFormat fmt, std::vector<uint8_t> data) {

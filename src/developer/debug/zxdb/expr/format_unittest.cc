@@ -99,6 +99,18 @@ TEST_F(FormatTest, Unsigned) {
   EXPECT_EQ(" = float, 16909060\n", GetDebugTreeForValue(eval_context(), val_float, opts));
   opts.num_format = FormatOptions::NumFormat::kHex;
   EXPECT_EQ(" = float, 0x1020304\n", GetDebugTreeForValue(eval_context(), val_float, opts));
+
+  opts.zero_pad_hex = true;
+  EXPECT_EQ(" = float, 0x01020304\n", GetDebugTreeForValue(eval_context(), val_float, opts));
+  EXPECT_EQ(" = char, 0x7b\n", GetDebugTreeForValue(eval_context(), val_int8, opts));
+  ExprValue val_int8_short(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "char"),
+                           {1});
+  EXPECT_EQ(" = char, 0x01\n", GetDebugTreeForValue(eval_context(), val_int8_short, opts));
+  ExprValue val_int64_short(
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8, "uint64_t"),
+      {1, 0, 0, 0, 0, 0, 0, 0});
+  EXPECT_EQ(" = uint64_t, 0x0000000000000001\n",
+            GetDebugTreeForValue(eval_context(), val_int64_short, opts));
 }
 
 TEST_F(FormatTest, Bool) {

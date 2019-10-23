@@ -32,36 +32,8 @@ VectorRegisterFormat ClientEvalContextImpl::GetVectorRegisterFormat() const {
     return VectorRegisterFormat::kDouble;  // Reasonable default if the target is gone.
 
   std::string fmt = weak_target_->settings().GetString(ClientSettings::Target::kVectorFormat);
-
-  if (fmt == ClientSettings::Target::kVectorFormat_i8)
-    return VectorRegisterFormat::kSigned8;
-  if (fmt == ClientSettings::Target::kVectorFormat_u8)
-    return VectorRegisterFormat::kUnsigned8;
-
-  if (fmt == ClientSettings::Target::kVectorFormat_i16)
-    return VectorRegisterFormat::kSigned16;
-  if (fmt == ClientSettings::Target::kVectorFormat_u16)
-    return VectorRegisterFormat::kUnsigned16;
-
-  if (fmt == ClientSettings::Target::kVectorFormat_i32)
-    return VectorRegisterFormat::kSigned32;
-  if (fmt == ClientSettings::Target::kVectorFormat_u32)
-    return VectorRegisterFormat::kUnsigned32;
-
-  if (fmt == ClientSettings::Target::kVectorFormat_i64)
-    return VectorRegisterFormat::kSigned64;
-  if (fmt == ClientSettings::Target::kVectorFormat_u64)
-    return VectorRegisterFormat::kUnsigned64;
-
-  if (fmt == ClientSettings::Target::kVectorFormat_i128)
-    return VectorRegisterFormat::kSigned128;
-  if (fmt == ClientSettings::Target::kVectorFormat_u128)
-    return VectorRegisterFormat::kUnsigned128;
-
-  if (fmt == ClientSettings::Target::kVectorFormat_float)
-    return VectorRegisterFormat::kFloat;
-  if (fmt == ClientSettings::Target::kVectorFormat_double)
-    return VectorRegisterFormat::kDouble;
+  if (auto found = StringToVectorRegisterFormat(fmt))
+    return *found;
 
   // The settings schema should have validated the setting is one of the known ones.
   FXL_NOTREACHED();

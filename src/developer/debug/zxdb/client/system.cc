@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/client/system.h"
 
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/expr/vector_register_format.h"
 
 namespace zxdb {
 
@@ -81,17 +82,9 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::Thread::kDebugStepping,
                   ClientSettings::Thread::kDebugSteppingDescription, false);
 
-  std::vector<std::string> vector_options = {
-      ClientSettings::Target::kVectorFormat_i8,    ClientSettings::Target::kVectorFormat_u8,
-      ClientSettings::Target::kVectorFormat_i16,   ClientSettings::Target::kVectorFormat_u16,
-      ClientSettings::Target::kVectorFormat_i32,   ClientSettings::Target::kVectorFormat_u32,
-      ClientSettings::Target::kVectorFormat_i64,   ClientSettings::Target::kVectorFormat_u64,
-      ClientSettings::Target::kVectorFormat_i128,  ClientSettings::Target::kVectorFormat_u128,
-      ClientSettings::Target::kVectorFormat_float, ClientSettings::Target::kVectorFormat_double,
-  };
-  schema->AddString(ClientSettings::Target::kVectorFormat,
-                    ClientSettings::Target::kVectorFormatDescription,
-                    ClientSettings::Target::kVectorFormat_double, vector_options);
+  schema->AddString(
+      ClientSettings::Target::kVectorFormat, ClientSettings::Target::kVectorFormatDescription,
+      kVectorRegisterFormatStr_Double, ClientSettings::Target::GetVectorFormatOptions());
 
   return schema;
 }

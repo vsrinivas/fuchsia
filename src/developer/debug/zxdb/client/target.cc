@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system.h"
+#include "src/developer/debug/zxdb/expr/vector_register_format.h"
 
 namespace zxdb {
 
@@ -49,18 +50,17 @@ const char* ClientSettings::Target::kVectorFormatDescription =
     i128 / u128 : Array of signed/unsigned 128-bit integers.
     float       : Array of single-precision floating point.
     double      : Array of double-precision floating point.)";
-const char* ClientSettings::Target::kVectorFormat_i8 = "i8";
-const char* ClientSettings::Target::kVectorFormat_u8 = "u8";
-const char* ClientSettings::Target::kVectorFormat_i16 = "i16";
-const char* ClientSettings::Target::kVectorFormat_u16 = "u16";
-const char* ClientSettings::Target::kVectorFormat_i32 = "i32";
-const char* ClientSettings::Target::kVectorFormat_u32 = "u32";
-const char* ClientSettings::Target::kVectorFormat_i64 = "i64";
-const char* ClientSettings::Target::kVectorFormat_u64 = "u64";
-const char* ClientSettings::Target::kVectorFormat_i128 = "i128";
-const char* ClientSettings::Target::kVectorFormat_u128 = "u128";
-const char* ClientSettings::Target::kVectorFormat_float = "float";
-const char* ClientSettings::Target::kVectorFormat_double = "double";
+
+// static
+std::vector<std::string> ClientSettings::Target::GetVectorFormatOptions() {
+  return std::vector<std::string>{
+      kVectorRegisterFormatStr_Signed8,   kVectorRegisterFormatStr_Unsigned8,
+      kVectorRegisterFormatStr_Signed16,  kVectorRegisterFormatStr_Unsigned16,
+      kVectorRegisterFormatStr_Signed32,  kVectorRegisterFormatStr_Unsigned32,
+      kVectorRegisterFormatStr_Signed64,  kVectorRegisterFormatStr_Unsigned64,
+      kVectorRegisterFormatStr_Signed128, kVectorRegisterFormatStr_Unsigned128,
+      kVectorRegisterFormatStr_Float,     kVectorRegisterFormatStr_Double};
+}
 
 namespace {
 
@@ -76,16 +76,9 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::Thread::kDebugStepping,
                   ClientSettings::Thread::kDebugSteppingDescription, false);
 
-  std::vector<std::string> vector_options = {
-      ClientSettings::Target::kVectorFormat_i8,    ClientSettings::Target::kVectorFormat_u8,
-      ClientSettings::Target::kVectorFormat_i16,   ClientSettings::Target::kVectorFormat_u16,
-      ClientSettings::Target::kVectorFormat_i32,   ClientSettings::Target::kVectorFormat_u32,
-      ClientSettings::Target::kVectorFormat_i64,   ClientSettings::Target::kVectorFormat_u64,
-      ClientSettings::Target::kVectorFormat_i128,  ClientSettings::Target::kVectorFormat_u128,
-      ClientSettings::Target::kVectorFormat_float, ClientSettings::Target::kVectorFormat_double,
-  };
   schema->AddString(ClientSettings::Target::kVectorFormat,
-                    ClientSettings::Target::kVectorFormatDescription, "", vector_options);
+                    ClientSettings::Target::kVectorFormatDescription, "",
+                    ClientSettings::Target::GetVectorFormatOptions());
 
   return schema;
 }

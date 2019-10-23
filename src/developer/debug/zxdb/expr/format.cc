@@ -110,12 +110,18 @@ void FormatUnsignedInt(FormatNode* node, const FormatOptions& options) {
   // This formatter handles unsigned and hex output.
   uint64_t int_val = 0;
   Err err = node->value().PromoteTo64(&int_val);
-  if (err.has_error())
+  if (err.has_error()) {
     node->set_err(err);
-  else if (options.num_format == NumFormat::kHex)
-    node->set_description(fxl::StringPrintf("0x%" PRIx64, int_val));
-  else
+  } else if (options.num_format == NumFormat::kHex) {
+    if (options.zero_pad_hex) {
+      int pad_to = node->value().data().size() * 2;
+      node->set_description(fxl::StringPrintf("0x%0*" PRIx64, pad_to, int_val));
+    } else {
+      node->set_description(fxl::StringPrintf("0x%" PRIx64, int_val));
+    }
+  } else {
     node->set_description(fxl::StringPrintf("%" PRIu64, int_val));
+  }
 }
 
 // Returns true if the given symbol points to a character type that would appear in a pretty-printed

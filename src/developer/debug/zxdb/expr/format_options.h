@@ -12,18 +12,19 @@ namespace zxdb {
 struct FormatOptions {
   enum class NumFormat { kDefault, kUnsigned, kSigned, kHex, kChar };
 
-  // Maximum number of elements to print in an array. For strings we'll
-  // speculatively fetch this much data since we don't know mow long the string
-  // will be in advance. This means that increasing this will make all string
-  // printing (even small strings) slower.
+  // Maximum number of elements to print in an array. For strings we'll speculatively fetch this
+  // much data since we don't know mow long the string will be in advance. This means that
+  // increasing this will make all string printing (even small strings) slower.
   //
-  // If we want to support larger sizes, we may want to add a special memory
-  // request option where the debug agent fetches until a null terminator is
-  // reached.
+  // If we want to support larger sizes, we may want to add a special memory request option where
+  // the debug agent fetches until a null terminator is reached.
   uint32_t max_array_size = 256;
 
   // Format to apply to numeric types.
   NumFormat num_format = NumFormat::kDefault;
+
+  // When set, hex numbers will be 0-padded out to the size of their data type.
+  bool zero_pad_hex = false;
 
   bool enable_pretty_printing = true;
 };

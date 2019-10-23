@@ -112,19 +112,26 @@ TEST(FormatRegisters, GeneralRegisters) {
 }
 
 TEST(FormatRegisters, VectorRegisters) {
-  auto registers = GetRegisters();
+  // Add a zmm register. This should be converted to a ymm register.
+  std::vector<Register> registers;
+
+  registers.emplace_back(RegisterID::kX64_zmm0,
+                         std::vector<uint8_t>{0xd0, 0x0f, 0x49, 0x40});  // = 3.14159 in float.
+  // Pad out to 64 bytes;
+  while (registers[0].data.size() < 64)
+    registers[0].data.push_back(0);
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
   options.categories = {RegisterCategory::kVector};
+  options.vector_format = VectorRegisterFormat::kFloat;
 
   EXPECT_EQ(
       "Vector Registers\n"
-      "  xmm0 00000000 00000000 00000000 00000001\n"
-      "  xmm1 00000000 00000000 00000000 00000102\n"
-      "  xmm2 00000000 00000000 00000000 01020304\n"
-      "  xmm3 00000000 00000000 01020304 05060708\n"
-      "  xmm4 01020304 05060708 090a0b0c 0d0e0f10\n"
+      "  Name [7] [6] [5] [4] [3] [2] [1]     [0]\n"
+      "  ymm0   0   0   0   0   0   0   0 3.14159\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"float\".)\n"
       "\n",
       FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
@@ -132,12 +139,15 @@ TEST(FormatRegisters, VectorRegisters) {
 TEST(FormatRegisters, AllRegisters) {
   auto registers = GetRegisters();
 
+  // Add mxcsr since that appears in a separate category.
+  registers.emplace_back(RegisterID::kX64_mxcsr, 0x1f80);
+
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
   options.categories = {RegisterCategory::kGeneral, RegisterCategory::kFloatingPoint,
                         RegisterCategory::kVector};
+  options.vector_format = VectorRegisterFormat::kUnsigned32;
 
-  // TODO(donosoc): Detect the maximum length and make the tables coincide.
   EXPECT_EQ(
       "General Purpose Registers\n"
       "  rax                0x1 = 1\n"
@@ -151,11 +161,16 @@ TEST(FormatRegisters, AllRegisters) {
       "  st2  0.000000000000000000e+00    00000000 00000000 00000000 00000000\n"
       "\n"
       "Vector Registers\n"
-      "  xmm0 00000000 00000000 00000000 00000001\n"
-      "  xmm1 00000000 00000000 00000000 00000102\n"
-      "  xmm2 00000000 00000000 00000000 01020304\n"
-      "  xmm3 00000000 00000000 01020304 05060708\n"
-      "  xmm4 01020304 05060708 090a0b0c 0d0e0f10\n"
+      "  mxcsr 0x1f80 = 8064\n"
+      "\n"
+      "  Name        [3]        [2]        [1]        [0]\n"
+      "  xmm0 0x00000000 0x00000000 0x00000000 0x00000001\n"
+      "  xmm1 0x00000000 0x00000000 0x00000000 0x00000102\n"
+      "  xmm2 0x00000000 0x00000000 0x00000000 0x01020304\n"
+      "  xmm3 0x00000000 0x00000000 0x01020304 0x05060708\n"
+      "  xmm4 0x01020304 0x05060708 0x090a0b0c 0x0d0e0f10\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"u32\".)\n"
       "\n",
       FormatRegisters(options, registers).AsString());
 }
@@ -168,10 +183,14 @@ TEST(FormatRegisters, OneRegister) {
   ASSERT_TRUE(options.filter_regex.Init("xmm3"));
   options.categories = {RegisterCategory::kGeneral, RegisterCategory::kFloatingPoint,
                         RegisterCategory::kVector};
+  options.vector_format = VectorRegisterFormat::kUnsigned16;
 
   EXPECT_EQ(
       "Vector Registers\n"
-      "  xmm3 00000000 00000000 01020304 05060708\n"
+      "  Name    [7]    [6]    [5]    [4]    [3]    [2]    [1]    [0]\n"
+      "  xmm3 0x0000 0x0000 0x0000 0x0000 0x0102 0x0304 0x0506 0x0708\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"u16\".)\n"
       "\n",
       FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
@@ -186,9 +205,12 @@ TEST(FormatRegister, RegexSearch) {
 
   EXPECT_EQ(
       "Vector Registers\n"
-      "  xmm2 00000000 00000000 00000000 01020304\n"
-      "  xmm3 00000000 00000000 01020304 05060708\n"
-      "  xmm4 01020304 05060708 090a0b0c 0d0e0f10\n"
+      "  Name         [3]         [2]         [1]         [0]\n"
+      "  xmm2           0           0           0 2.38794e-38\n"
+      "  xmm3           0           0 2.38794e-38 6.30194e-36\n"
+      "  xmm4 2.38794e-38 6.30194e-36 1.66163e-33 4.37753e-31\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"float\".)\n"
       "\n",
       FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }

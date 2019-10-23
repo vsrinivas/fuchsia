@@ -13,6 +13,7 @@
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/expr/vector_register_format.h"
 
 namespace debug_ipc {
 struct Register;
@@ -35,6 +36,9 @@ struct FormatRegisterOptions {
 
   // Whether to print extra information about the registers.
   bool extended = false;
+
+  // VectorRegisterFormat vector_format = VectorRegisterFormat::kUnsigned8;
+  VectorRegisterFormat vector_format = VectorRegisterFormat::kFloat;
 };
 
 // Filters the available registers to the ones matching the given categories and matching the
@@ -45,6 +49,12 @@ std::vector<debug_ipc::Register> FilterRegisters(const FormatRegisterOptions& op
 // Format the output of the FilterRegisters call into a console readable format.
 OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
                              const std::vector<debug_ipc::Register>& registers);
+
+// Formats the given registers as platform-independent values/vectors.
+void FormatGeneralRegisters(const std::vector<debug_ipc::Register>& registers, OutputBuffer* out);
+void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
+                                  const std::vector<debug_ipc::Register>& registers,
+                                  OutputBuffer* out);
 
 // Formats the register and returns a vector with the following information:
 //  - name
