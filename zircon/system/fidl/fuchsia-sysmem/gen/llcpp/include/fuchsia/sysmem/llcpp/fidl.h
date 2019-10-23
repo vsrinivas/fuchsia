@@ -121,6 +121,8 @@ constexpr uint32_t videoUsageHwProtected = 4u;
 
 constexpr uint32_t videoUsageHwEncoder = 2u;
 
+constexpr uint32_t videoUsageHwDecoderInternal = 32u;
+
 constexpr uint32_t videoUsageHwDecoder = 1u;
 
 constexpr uint32_t videoUsageDecryptorOutput = 16u;

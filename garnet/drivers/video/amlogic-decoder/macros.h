@@ -10,19 +10,26 @@
 #include <chrono>
 #include <thread>
 
-#define DECODE_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt "\n", __func__, __LINE__, ##__VA_ARGS__)
+// severity can be ERROR, WARN, INFO, TRACE, SPEW.  See ddk/debug.h.
+//
+// Using ## __VA_ARGS__ instead of __VA_OPT__(,) __VA_ARGS__ for now, since
+// __VA_OPT__ doesn't seem to be available yet.
+#define LOG(severity, fmt, ...) \
+  zxlogf(severity, "[%s:%s:%d] " fmt "\n", "amlogic-video", __func__, __LINE__, ##__VA_ARGS__)
 
-#define DECODE_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt "\n", __func__, __LINE__, ##__VA_ARGS__)
+#define DECODE_ERROR(fmt, ...) LOG(ERROR, fmt, ##__VA_ARGS__)
+
+#define DECODE_INFO(fmt, ...) LOG(INFO, fmt, ##__VA_ARGS__)
 
 #ifndef AMLOGIC_DLOG_ENABLE
 #define AMLOGIC_DLOG_ENABLE 0
 #endif
 
-#define DLOG(...)               \
-  do {                          \
-    if (AMLOGIC_DLOG_ENABLE) {  \
-      DECODE_INFO(__VA_ARGS__); \
-    }                           \
+#define DLOG(fmt, ...)               \
+  do {                               \
+    if (AMLOGIC_DLOG_ENABLE) {       \
+      LOG(INFO, fmt, ##__VA_ARGS__); \
+    }                                \
   } while (0)
 
 inline uint32_t truncate_to_32(uint64_t input) {

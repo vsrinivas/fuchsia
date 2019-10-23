@@ -63,3 +63,7 @@ const uint32 videoUsageCapture = 8;
 // a usage that isn't nonUsage, and the decryptor output participant shouldn't be specifying
 // videoUsageHwDecoder because the decryptor isn't the decoder.
 const uint32 videoUsageDecryptorOutput = 16;
+// This usage is for a HW video decoder's internal buffers that aren't shared with other
+// particpants.  These are allocated via sysmem becuase sysmem pre-reserves contiguous SYSTEM_RAM
+// as appropriate, and is the only way to allocate secure memory.
+const uint32 videoUsageHwDecoderInternal = 32;

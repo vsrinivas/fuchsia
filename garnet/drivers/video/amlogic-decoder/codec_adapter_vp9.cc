@@ -404,7 +404,9 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     }
 
     auto instance = std::make_unique<DecoderInstance>(std::move(decoder), video_->hevc_core());
-    status = video_->AllocateStreamBuffer(instance->stream_buffer(), 512 * PAGE_SIZE);
+    status = video_->AllocateStreamBuffer(
+        instance->stream_buffer(), 512 * PAGE_SIZE, /*use_parser=*/false,
+        /*is_secure=*/false);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;

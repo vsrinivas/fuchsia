@@ -131,7 +131,7 @@ class TestVP9 {
       video->SetDefaultInstance(
           std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream), true);
     }
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, PAGE_SIZE));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, PAGE_SIZE, /*is_secure=*/false));
 
     video->InitializeInterrupts();
 
@@ -227,7 +227,8 @@ class TestVP9 {
           std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream), true);
     }
 
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE,
+                                                   /*is_secure=*/false));
 
     video->InitializeInterrupts();
 
@@ -298,7 +299,8 @@ class TestVP9 {
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
     // well.
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false, 1024 * PAGE_SIZE));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
+                                                   /*is_secure=*/false));
 
     video->InitializeInterrupts();
 
@@ -370,7 +372,8 @@ class TestVP9 {
       video->swapped_out_instances_.push_back(
           std::make_unique<DecoderInstance>(std::move(decoder), video->hevc_core_.get()));
       StreamBuffer* buffer = video->swapped_out_instances_.back()->stream_buffer();
-      EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024));
+      EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(
+          buffer, PAGE_SIZE * 1024, /*use_parser=*/false, /*is_secure=*/false));
     }
 
     {
@@ -465,15 +468,15 @@ class TestVP9 {
       // Only use the first 30 frames to save time. Ensure this is different
       // from above, to test whether ending decoding early works.
       for (uint32_t i = 0; i < 30; i++) {
-        memcpy((uint8_t*)io_buffer_virt(buffer->buffer()) + offset, aml_data2[i].data.data(),
+        memcpy(buffer->buffer().virt_base() + offset, aml_data2[i].data.data(),
                aml_data2[i].data.size());
         offset += aml_data2[i].data.size();
       }
       buffer->set_data_size(offset);
       buffer->set_padding_size(sizeof(padding));
-      memcpy((uint8_t*)io_buffer_virt(buffer->buffer()) + offset, padding, sizeof(padding));
+      memcpy(buffer->buffer().virt_base() + offset, padding, sizeof(padding));
       offset += sizeof(padding);
-      io_buffer_cache_flush(buffer->buffer(), 0, offset);
+      buffer->buffer().CacheFlush(0, offset);
     }
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);

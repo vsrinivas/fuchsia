@@ -25,7 +25,8 @@ class TestMpeg2 {
       video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()), false);
     }
 
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true, PAGE_SIZE));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE,
+                                                   /*is_secure=*/false));
 
     video->InitializeInterrupts();
     std::promise<void> wait_valid;
@@ -68,7 +69,8 @@ class TestMpeg2 {
       video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()), false);
     }
 
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false, PAGE_SIZE * 1024));
+    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, PAGE_SIZE * 1024,
+                                                   /*is_secure=*/false));
 
     video->InitializeInterrupts();
     std::promise<void> wait_valid;

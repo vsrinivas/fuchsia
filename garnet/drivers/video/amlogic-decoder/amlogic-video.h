@@ -89,7 +89,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void RemoveDecoder(VideoDecoder* decoder);
 
   __WARN_UNUSED_RESULT
-  zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size);
+  zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure);
   __WARN_UNUSED_RESULT
   zx_status_t InitializeEsParser();
   __WARN_UNUSED_RESULT
@@ -140,7 +140,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     TryToReschedule();
   }
 
-  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size);
+  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
+                                                        bool use_parser, bool is_secure);
 
   // This gets started connecting to sysmem, but returns an InterfaceHandle
   // instead of InterfacePtr so that the caller can bind to the dispatcher.
@@ -180,13 +181,17 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   std::unique_ptr<FirmwareBlob> firmware_;
 
+  // Private for use by AmlogicVideo, when creating InternalBuffer(s).  Decoders
+  // can create their own separate InterfaceHandle<Allocator>(s) by calling
+  // ConnectToSysmem().
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_sync_ptr_;
   std::unique_ptr<io_buffer_t> parser_input_;
 
   // This buffer holds an ES start code that's used to get an interrupt when the
   // parser is finished.
   io_buffer_t search_pattern_ = {};
 
-  zx::handle bti_;
+  zx::bti bti_;
 
   // ZX_USER_SIGNAL_0 is for parser done.
   // ZX_USER_SIGNAL_1 is for client wants ParseVideo() to return

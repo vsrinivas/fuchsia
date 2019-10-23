@@ -82,6 +82,8 @@ if (target_cpu == "arm64") {
       "h264_decoder.h",
       "hevcdec.cc",
       "hevcdec.h",
+      "internal_buffer.cc",
+      "internal_buffer.h",
       "macros.h",
       "mpeg12_decoder.cc",
       "mpeg12_decoder.h",

@@ -228,7 +228,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
     video_->SetDefaultInstance(std::move(decoder), false);
-    status = video_->InitializeStreamBuffer(true, PAGE_SIZE);
+    status = video_->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE, /*is_secure=*/false);
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
       return;

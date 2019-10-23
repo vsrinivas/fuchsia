@@ -38,6 +38,18 @@
 #include "util.h"
 #include "vdec1.h"
 
+// TODO(35200):
+//
+// (AllocateStreamBuffer() moved to InternalBuffer.)
+// (VideoDecoder::Owner::ProtectableHardwareUnit::kParser pays attention to is_secure.)
+//
+// (Fine as io_buffer_t for now:
+//  search_pattern_ - HW only reads this
+//  parser_input_ - not used when secure)
+//
+// AllocateIoBuffer() - only used by VP9 - switch to InternalBuffer when we do zero copy on input
+// for VP9.
+
 // These match the regions exported when the bus device was added.
 enum MmioRegion {
   kCbus,
@@ -172,31 +184,40 @@ void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
   }
 }
 
-zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size) {
-  zx_status_t status =
-      io_buffer_init(buffer->buffer(), bti_.get(), size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to make video fifo: %d", status);
-    return status;
+zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
+                                               bool use_parser, bool is_secure) {
+  // So far, is_secure can only be true if use_parser is also true.
+  ZX_DEBUG_ASSERT(!is_secure || use_parser);
+  // is_writable is always true because we either need to write into this buffer using the CPU, or
+  // using the parser - either way we'll be writing.
+  auto create_result = InternalBuffer::Create(
+      &sysmem_sync_ptr_, &bti_, size, is_secure, /*is_writable=*/true,
+      /*is_mapping_needed=*/!use_parser);
+  if (!create_result.is_ok()) {
+    DECODE_ERROR("Failed to make video fifo: %d", create_result.error());
+    return create_result.error();
   }
+  buffer->optional_buffer().emplace(create_result.take_value());
 
-  io_buffer_cache_flush(buffer->buffer(), 0, io_buffer_size(buffer->buffer(), 0));
+  // Sysmem guarantees that the newly-allocated buffer starts out zeroed and cache clean, to the
+  // extent possible based on is_secure.
+
   return ZX_OK;
 }
 
 void AmlogicVideo::InitializeStreamInput(bool use_parser) {
-  uint32_t buffer_address = truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
+  uint32_t buffer_address = truncate_to_32(stream_buffer_->buffer().phys_base());
   core_->InitializeStreamInput(use_parser, buffer_address,
-                               io_buffer_size(stream_buffer_->buffer(), 0));
+                               stream_buffer_->buffer().size());
 }
 
-zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser, uint32_t size) {
-  zx_status_t status = AllocateStreamBuffer(stream_buffer_, size);
+zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure) {
+  zx_status_t status = AllocateStreamBuffer(stream_buffer_, size, use_parser, is_secure);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, false);
+  status = SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, is_secure);
   if (status != ZX_OK) {
     return status;
   }
@@ -291,10 +312,10 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
   ParserControl::Get().FromValue(ParserControl::kAutoSearch).WriteTo(parser_.get());
 
   // Set up output fifo.
-  uint32_t buffer_address = truncate_to_32(io_buffer_phys(stream_buffer_->buffer()));
+  uint32_t buffer_address = truncate_to_32(stream_buffer_->buffer().phys_base());
   ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(parser_.get());
   ParserVideoEndPtr::Get()
-      .FromValue(buffer_address + io_buffer_size(stream_buffer_->buffer(), 0) - 8)
+      .FromValue(buffer_address + stream_buffer_->buffer().size() - 8)
       .WriteTo(parser_.get());
 
   ParserEsControl::Get()
@@ -519,7 +540,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_
   if (read_offset > write_offset) {
     available_space = read_offset - write_offset;
   } else {
-    available_space = io_buffer_size(stream_buffer_->buffer(), 0) - write_offset + read_offset;
+    available_space = stream_buffer_->buffer().size() - write_offset + read_offset;
   }
   // Subtract 8 to ensure the read pointer doesn't become equal to the write
   // pointer, as that means the buffer is empty.
@@ -538,19 +559,19 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_
   uint32_t input_offset = 0;
   while (len > 0) {
     uint32_t write_length = len;
-    if (write_offset + len > io_buffer_size(stream_buffer_->buffer(), 0))
-      write_length = io_buffer_size(stream_buffer_->buffer(), 0) - write_offset;
-    memcpy(static_cast<uint8_t*>(io_buffer_virt(stream_buffer_->buffer())) + write_offset,
+    if (write_offset + len > stream_buffer_->buffer().size())
+      write_length = stream_buffer_->buffer().size() - write_offset;
+    memcpy(stream_buffer_->buffer().virt_base() + write_offset,
            static_cast<const uint8_t*>(data) + input_offset, write_length);
-    io_buffer_cache_flush(stream_buffer_->buffer(), write_offset, write_length);
+    stream_buffer_->buffer().CacheFlush(write_offset, write_length);
     write_offset += write_length;
-    if (write_offset == io_buffer_size(stream_buffer_->buffer(), 0))
+    if (write_offset == stream_buffer_->buffer().size())
       write_offset = 0;
     len -= write_length;
     input_offset += write_length;
   }
   BarrierAfterFlush();
-  core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) + write_offset);
+  core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() + write_offset);
   return ZX_OK;
 }
 
@@ -635,7 +656,7 @@ void AmlogicVideo::SwapInCurrentInstance() {
     // that spot.
     // Generally data will only be added after this decoder is swapped in, so
     // RestoreInputContext will handle that state.
-    core_->UpdateWritePointer(io_buffer_phys(stream_buffer_->buffer()) +
+    core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() +
                               stream_buffer_->data_size() + stream_buffer_->padding_size());
   } else {
     core_->RestoreInputContext(current_instance_->input_context());
@@ -860,7 +881,14 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   firmware_ = std::make_unique<FirmwareBlob>();
   status = firmware_->LoadFirmware(parent_);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed load firmware\n");
+    DECODE_ERROR("Failed load firmware");
+    return status;
+  }
+
+  sysmem_sync_ptr_.Bind(ConnectToSysmem());
+  if (!sysmem_sync_ptr_) {
+    DECODE_ERROR("ConnectToSysmem() failed");
+    status = ZX_ERR_INTERNAL;
     return status;
   }
 

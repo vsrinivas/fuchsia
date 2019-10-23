@@ -35,7 +35,6 @@ const uint32_t kMaxClientVmoRights =
     //
     // Remaining bits of ZX_DEFAULT_VMO_RIGHTS (as of this writing):
     ZX_RIGHT_MAP;
-
 }  // namespace
 
 const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
@@ -315,7 +314,8 @@ uint32_t BufferCollection::GetUsageBasedRightsAttenuation() {
       fuchsia_sysmem_vulkanUsageTransferDst | fuchsia_sysmem_vulkanUsageStorage;
   // Display usages don't include any writing.
   const uint32_t kDisplayWriteBits = 0;
-  const uint32_t kVideoWriteBits = fuchsia_sysmem_videoUsageHwDecoder;
+  const uint32_t kVideoWriteBits =
+      fuchsia_sysmem_videoUsageHwDecoder | fuchsia_sysmem_videoUsageHwDecoderInternal;
 
   is_write_needed = (usage->cpu & kCpuWriteBits) || (usage->vulkan & kVulkanWriteBits) ||
                     (usage->display & kDisplayWriteBits) || (usage->video & kVideoWriteBits);

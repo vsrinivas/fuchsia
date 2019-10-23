@@ -15,6 +15,19 @@
 #include "pts_manager.h"
 #include "util.h"
 
+// TODO(35200):
+//
+// Change these to InternalBuffer:
+//
+// reference_mv_buffer_ - optionally secure
+// codec_data_ - optionally secure
+// sei_data_buffer_ - optionally secure
+//
+// (Fine as io_bufer_t for now:
+//    * loading firmware can use clear memory, since those are just reads by the HW, and we can only
+//      load firmware if we can write the firmware bits to RAM using REE CPU.
+//    * secondary_firmware_ - never secure)
+
 static const uint32_t kBufferAlignShift = 4 + 12;
 
 // AvScratch1
