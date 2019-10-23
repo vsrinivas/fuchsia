@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fuzzer.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":elfload-fuzzer",
+  ]
+}
+
+fuzzer("elfload-fuzzer") {
+  sources = [
+    "elfload-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/kernel/vm",
+    "$zx/system/ulib/elfload",
+    "$zx/system/ulib/zx",
+  ]
+}
