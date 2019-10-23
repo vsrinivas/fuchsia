@@ -9,9 +9,8 @@
 #include <stddef.h>
 #include <zircon/types.h>
 
-#include <type_traits>
-
 #include <arch/user_copy.h>
+#include <ktl/type_traits.h>
 #include <vm/vm.h>
 
 // user_*_ptr<> wraps a pointer to user memory, to differentiate it from kernel
@@ -28,10 +27,10 @@ enum InOutPolicy {
 template <typename T, InOutPolicy Policy>
 class user_ptr {
  public:
-  using ValueType = std::remove_const_t<T>;
+  using ValueType = ktl::remove_const_t<T>;
 
-  static_assert(std::is_const<T>::value == (Policy == kIn),
-                "In pointers must be const, and Out and InOut pointers must not be const");
+  static_assert(ktl::is_const<T>::value == (Policy == kIn),
+                "In pointers must be const, and Out and InOut pointers must not be const.");
 
   explicit user_ptr(T* p) : ptr_(p) {}
 
@@ -70,9 +69,10 @@ class user_ptr {
   // Copies a single T to user memory. T must not be |void|.
   template <typename S>
   __WARN_UNUSED_RESULT zx_status_t copy_to_user(const S& src) const {
-    static_assert(!std::is_void<S>::value, "Source type must not be void.");
-    static_assert(std::is_same<S, T>::value, "S and T must be the same type.");
-    static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
+    static_assert(!ktl::is_void<S>::value, "Source type must not be void.");
+    static_assert(ktl::is_same<S, T>::value, "S and T must be the same type.");
+    static_assert(is_copy_out_allowed<S>::value, "Source type must not have implicit padding.");
+    static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     return arch_copy_to_user(ptr_, &src, sizeof(S));
   }
 
@@ -83,15 +83,17 @@ class user_ptr {
   template <typename S>
   __WARN_UNUSED_RESULT zx_status_t copy_to_user_capture_faults(const S& src, vaddr_t* pf_va,
                                                                uint* pf_flags) const {
-    static_assert(!std::is_void<S>::value, "Source type must not be void.");
-    static_assert(std::is_same<S, T>::value, "S and T must be the same type.");
-    static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
+    static_assert(!ktl::is_void<S>::value, "Source type must not be void.");
+    static_assert(ktl::is_same<S, T>::value, "S and T must be the same type.");
+    static_assert(is_copy_out_allowed<S>::value, "Source type must not have implicit padding.");
+    static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     return arch_copy_to_user_capture_faults(ptr_, &src, sizeof(S), pf_va, pf_flags);
   }
 
   // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
   __WARN_UNUSED_RESULT zx_status_t copy_array_to_user(const T* src, size_t count) const {
-    static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
+    static_assert(is_copy_out_allowed<T>::value, "Source type must not have implicit padding.");
+    static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
       return ZX_ERR_INVALID_ARGS;
@@ -106,7 +108,8 @@ class user_ptr {
   __WARN_UNUSED_RESULT zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count,
                                                                      vaddr_t* pf_va,
                                                                      uint* pf_flags) const {
-    static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
+    static_assert(is_copy_out_allowed<T>::value, "Source type must not have implicit padding.");
+    static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
       return ZX_ERR_INVALID_ARGS;
@@ -117,7 +120,8 @@ class user_ptr {
   // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
   __WARN_UNUSED_RESULT zx_status_t copy_array_to_user(const T* src, size_t count,
                                                       size_t offset) const {
-    static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
+    static_assert(is_copy_out_allowed<T>::value, "Source type must not have implicit padding.");
+    static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
       return ZX_ERR_INVALID_ARGS;
@@ -132,7 +136,8 @@ class user_ptr {
   __WARN_UNUSED_RESULT zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count,
                                                                      size_t offset, vaddr_t* pf_va,
                                                                      uint* pf_flags) const {
-    static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
+    static_assert(is_copy_out_allowed<T>::value, "Source type must not have implicit padding.");
+    static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
       return ZX_ERR_INVALID_ARGS;
@@ -141,9 +146,9 @@ class user_ptr {
   }
 
   // Copies a single T from user memory. T must not be |void|.
-  __WARN_UNUSED_RESULT zx_status_t copy_from_user(typename std::remove_const<T>::type* dst) const {
-    static_assert(!std::is_void<T>::value, "Source type must not be void.");
-    static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
+  __WARN_UNUSED_RESULT zx_status_t copy_from_user(typename ktl::remove_const<T>::type* dst) const {
+    static_assert(!ktl::is_void<T>::value, "Source type must not be void.");
+    static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     return arch_copy_from_user(dst, ptr_, sizeof(T));
   }
 
@@ -152,16 +157,16 @@ class user_ptr {
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
   __WARN_UNUSED_RESULT zx_status_t copy_from_user_capture_faults(
-      typename std::remove_const<T>::type* dst, vaddr_t* pf_va, uint* pf_flags) const {
-    static_assert(!std::is_void<T>::value, "Source type must not be void.");
-    static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
+      typename ktl::remove_const<T>::type* dst, vaddr_t* pf_va, uint* pf_flags) const {
+    static_assert(!ktl::is_void<T>::value, "Source type must not be void.");
+    static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     return arch_copy_from_user_capture_faults(dst, ptr_, sizeof(T), pf_va, pf_flags);
   }
 
   // Copies an array of T from user memory. Note: This takes a count not a size, unless T is |void|.
-  __WARN_UNUSED_RESULT zx_status_t copy_array_from_user(typename std::remove_const<T>::type* dst,
+  __WARN_UNUSED_RESULT zx_status_t copy_array_from_user(typename ktl::remove_const<T>::type* dst,
                                                         size_t count) const {
-    static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
+    static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
       return ZX_ERR_INVALID_ARGS;
@@ -174,9 +179,9 @@ class user_ptr {
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
   __WARN_UNUSED_RESULT zx_status_t
-  copy_array_from_user_capture_faults(typename std::remove_const<T>::type* dst, size_t count,
+  copy_array_from_user_capture_faults(typename ktl::remove_const<T>::type* dst, size_t count,
                                       vaddr_t* pf_va, uint* pf_flags) const {
-    static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
+    static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
       return ZX_ERR_INVALID_ARGS;
@@ -186,9 +191,9 @@ class user_ptr {
 
   // Copies a sub-array of T from user memory. Note: This takes a count not a size, unless T is
   // |void|.
-  __WARN_UNUSED_RESULT zx_status_t copy_array_from_user(typename std::remove_const<T>::type* dst,
+  __WARN_UNUSED_RESULT zx_status_t copy_array_from_user(typename ktl::remove_const<T>::type* dst,
                                                         size_t count, size_t offset) const {
-    static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
+    static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
       return ZX_ERR_INVALID_ARGS;
@@ -202,9 +207,9 @@ class user_ptr {
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
   __WARN_UNUSED_RESULT zx_status_t
-  copy_array_from_user_capture_faults(typename std::remove_const<T>::type* dst, size_t count,
+  copy_array_from_user_capture_faults(typename ktl::remove_const<T>::type* dst, size_t count,
                                       size_t offset, vaddr_t* pf_va, uint* pf_flags) const {
-    static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
+    static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, internal::type_size<T>(), &len)) {
       return ZX_ERR_INVALID_ARGS;

@@ -4,7 +4,9 @@
 
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
+#include <lib/user_copy/internal.h>
 #include <lib/user_copy/user_ptr.h>
+#include <zircon/syscalls/port.h>
 
 #include <vm/fault.h>
 #include <vm/vm_aspace.h>
@@ -118,6 +120,23 @@ bool capture_faults_test_capture() {
 
   END_TEST;
 }
+
+// Verify is_copy_out_allowed<T>::value is false when T contains implicit padding.
+struct SomeTypeWithPadding {
+  uint64_t field1;
+  uint32_t field2;
+};
+static_assert(!internal::is_copy_out_allowed<SomeTypeWithPadding>::value);
+
+// Verify is_copy_out_allowed<T>::value is true when T contains no implicit padding.
+static_assert(internal::is_copy_out_allowed<void>::value);
+struct SomeTypeWithNoPadding {
+  uint64_t field1;
+};
+static_assert(internal::is_copy_out_allowed<SomeTypeWithNoPadding>::value);
+static_assert(internal::is_copy_out_allowed<int>::value);
+static_assert(internal::is_copy_out_allowed<zx_port_packet_t>::value);
+
 }  // namespace
 
 #define USER_COPY_UNITTEST(fname) UNITTEST(#fname, fname)

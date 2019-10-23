@@ -6,6 +6,15 @@
 #define ZIRCON_KERNEL_LIB_USER_COPY_INCLUDE_LIB_USER_COPY_INTERNAL_H_
 
 #include <stddef.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
+
+#include <ktl/type_traits.h>
+
+#include <arch/arch_perfmon.h>
 
 namespace internal {
 
@@ -30,6 +39,43 @@ template <>
 inline constexpr size_t type_size<const volatile void>() {
   return 1u;
 }
+
+// Generates a type whose ::value is true if |T| is the same type as one of the types in the |Ts|
+// parameter pack.
+template <typename T, typename... Ts>
+struct is_one_of : ktl::disjunction<ktl::is_same<T, Ts>...> {};
+
+// Generates a type whose ::value is true if |T| is on the copy_to_user exception list.
+//
+// The copy_to_user exception list is a list of kernel ABI types that contain implicit padding, but
+// are allowed to be copied out to usermode. The purpose of this list is to prevent new types with
+// implicit padding from being added while continuing to allow existing code to function.
+//
+// Eventually, this exception list should be empty.
+template <typename T>
+struct is_on_copy_to_user_exception_list
+    : is_one_of<T, ArchPmuProperties, zx_exception_report_t, zx_info_bti_t, zx_info_handle_basic_t,
+                zx_info_job_t, zx_info_maps_mapping_t, zx_info_maps_t, zx_info_process_t,
+                zx_info_socket_t, zx_info_thread_stats_t, zx_info_timer_t, zx_info_vmo_t,
+                zx_pci_bar_t, zx_pcie_device_info_t, zx_port_packet_t> {};
+
+// Generates a type whose ::value is true if |T| is allowed to be copied out to usermode.
+//
+// The purpose of this type trait is to prevent bugs by restricting the types that may be copied to
+// usermode. Generally speaking, there are two kinds of types allowed.
+//
+// 1. void - Used for bulk data transfer between kernel and usermode. Think VMO read/write and IPC.
+//
+// 2. Types with no implict padding (has_unique_object_representations) - Copying types with
+// implicit padding can lead information disclosure bugs because the padding may or may not contain
+// uninitialized data.
+//
+// Exception: We make an exception for existing ABI types with implicit padding. See
+// |is_on_copy_to_user_exception_list|.
+template <typename T>
+struct is_copy_out_allowed
+    : ktl::disjunction<ktl::is_void<T>, ktl::has_unique_object_representations<T>,
+                       is_on_copy_to_user_exception_list<T>> {};
 
 }  // namespace internal
 
