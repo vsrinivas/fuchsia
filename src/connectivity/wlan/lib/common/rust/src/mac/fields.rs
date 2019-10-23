@@ -9,7 +9,7 @@ use {
 };
 
 // IEEE Std 802.11-2016, 9.2.4.1.3
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct FrameType(pub u8);
 
 impl FrameType {
@@ -27,11 +27,11 @@ impl FrameType {
     3 qos,
     4..=7 _ // subtype is a 4-bit number
 )]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct DataSubtype(pub u8);
 
 // IEEE Std 802.11-2016, 9.2.4.1.3
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct MgmtSubtype(u8);
 
 impl MgmtSubtype {
@@ -54,7 +54,7 @@ impl MgmtSubtype {
 }
 
 // IEEE Std 802.11-2016, 9.2.4.1.3
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct CtrlSubtype(u8);
 
 impl CtrlSubtype {

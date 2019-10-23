@@ -7,8 +7,11 @@ use {
     fidl_fuchsia_wlan_common::{Cbw, WlanChan},
     fidl_fuchsia_wlan_tap as wlantap,
     std::collections::hash_map::HashMap,
-    wlan_common::bss::Protection,
-    wlan_common::mac::Bssid,
+    wlan_common::{
+        bss::Protection,
+        buffer_reader::BufferReader,
+        mac::{Bssid, FrameControl, FrameType, Msdu, MsduIterator},
+    },
 };
 
 /// An Action is a unary function with no return value. It can be passed to the various `on_`-
@@ -21,13 +24,13 @@ pub trait Action<T> {
 pub struct NoAction;
 
 impl<T> Action<T> for NoAction {
-    fn run(&mut self, _args: &T) {}
+    fn run(&mut self, _arg: &T) {}
 }
 
 // Trivial implementation so anonymous functions can be substitutible for Action<T>.
-impl<T, F: FnMut(&T) + Sized> Action<T> for F {
-    fn run(&mut self, args: &T) {
-        self(&args)
+impl<T, F: FnMut(&T)> Action<T> for F {
+    fn run(&mut self, arg: &T) {
+        self(&arg)
     }
 }
 
@@ -48,9 +51,9 @@ impl<'a, T> Sequence<'a, T> {
 }
 
 impl<'a, T> Action<T> for Sequence<'a, T> {
-    fn run(&mut self, args: &T) {
+    fn run(&mut self, arg: &T) {
         for action in self.actions.iter_mut() {
-            action.run(&args)
+            action.run(&arg)
         }
     }
 }
@@ -156,21 +159,90 @@ impl<'a> Action<wlantap::SetChannelArgs> for Beacon<'a> {
     }
 }
 
+pub struct ForEachMsdu<A>(A);
+
+impl<A: for<'b> Action<Msdu<&'b [u8]>>> Action<Vec<u8>> for ForEachMsdu<A> {
+    fn run(&mut self, data: &Vec<u8>) {
+        for msdu in MsduIterator::from_raw_data_frame(&data[..], false)
+            .expect("reading msdu from data frame")
+        {
+            self.0.run(&msdu)
+        }
+    }
+}
+
+/// MatchTx matches frames by frame type.
+pub struct MatchTx<'a> {
+    frame_type_actions: HashMap<FrameType, Box<dyn Action<Vec<u8>> + 'a>>,
+}
+
+impl<'a> MatchTx<'a> {
+    pub fn new() -> Self {
+        Self { frame_type_actions: HashMap::new() }
+    }
+
+    pub fn on_frame_type(
+        mut self,
+        frame_type: FrameType,
+        action: impl Action<Vec<u8>> + 'a,
+    ) -> Self {
+        self.frame_type_actions.insert(frame_type, Box::new(action));
+        self
+    }
+
+    pub fn on_mgmt(self, action: impl Action<Vec<u8>> + 'a) -> Self {
+        self.on_frame_type(FrameType::MGMT, action)
+    }
+
+    pub fn on_data(self, action: impl Action<Vec<u8>> + 'a) -> Self {
+        self.on_frame_type(FrameType::DATA, action)
+    }
+
+    pub fn on_msdu(self, action: impl for<'b> Action<Msdu<&'b [u8]>> + 'a) -> Self {
+        self.on_data(ForEachMsdu(action))
+    }
+
+    pub fn on_ctrl(self, action: impl Action<Vec<u8>> + 'a) -> Self {
+        self.on_frame_type(FrameType::CTRL, action)
+    }
+}
+
+impl<'a> Action<wlantap::TxArgs> for MatchTx<'a> {
+    fn run(&mut self, args: &wlantap::TxArgs) {
+        let reader = BufferReader::new(&args.packet.data[..]);
+        let fc = FrameControl(reader.peek_value().unwrap());
+
+        if let Some(action) = self.frame_type_actions.get_mut(&fc.frame_type()) {
+            action.run(&args.packet.data)
+        }
+    }
+}
+
 /// EventHandlerBuilder builds a action that can be passed to
 /// `TestHelper::run_until_complete_or_timeout`.
 pub struct EventHandlerBuilder<'a> {
     set_channel_action: Box<dyn Action<wlantap::SetChannelArgs> + 'a>,
+    tx_action: Box<dyn Action<wlantap::TxArgs> + 'a>,
     phy_event_action: Box<dyn Action<wlantap::WlantapPhyEvent> + 'a>,
 }
 
 impl<'a> EventHandlerBuilder<'a> {
     pub fn new() -> Self {
-        Self { set_channel_action: Box::new(NoAction), phy_event_action: Box::new(NoAction) }
+        Self {
+            set_channel_action: Box::new(NoAction),
+            tx_action: Box::new(NoAction),
+            phy_event_action: Box::new(NoAction),
+        }
     }
 
     /// Sets the action for SetChannel events. Only one may be registered.
     pub fn on_set_channel(mut self, action: impl Action<wlantap::SetChannelArgs> + 'a) -> Self {
         self.set_channel_action = Box::new(action);
+        self
+    }
+
+    pub fn on_tx(mut self, action: impl Action<wlantap::TxArgs> + 'a) -> Self {
+        self.tx_action = Box::new(action);
         self
     }
 
@@ -190,6 +262,8 @@ impl<'a> EventHandlerBuilder<'a> {
                 wlantap::WlantapPhyEvent::SetChannel { ref args } => {
                     self.set_channel_action.run(&args)
                 }
+
+                wlantap::WlantapPhyEvent::Tx { ref args } => self.tx_action.run(&args),
 
                 _ => {}
             }

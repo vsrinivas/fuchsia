@@ -5,7 +5,6 @@
 use {
     failure::ensure,
     fidl_fuchsia_wlan_service::WlanMarker,
-    fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
@@ -17,30 +16,6 @@ use {
 const BSS: mac::Bssid = mac::Bssid([0x65, 0x74, 0x68, 0x6e, 0x65, 0x74]);
 const SSID: &[u8] = b"ethernet";
 const PAYLOAD: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-
-fn handle_eth_tx(event: WlantapPhyEvent, actual: &mut Vec<u8>, phy: &WlantapPhyProxy) {
-    if let WlantapPhyEvent::Tx { args } = event {
-        if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(&args.packet.data[..], false) {
-            for mac::Msdu { dst_addr, src_addr, llc_frame } in msdus {
-                if dst_addr == ETH_DST_MAC && src_addr == CLIENT_MAC_ADDR {
-                    assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_IPV4);
-                    actual.clear();
-                    actual.extend_from_slice(llc_frame.body);
-                    rx_wlan_data_frame(
-                        &CHANNEL,
-                        &CLIENT_MAC_ADDR,
-                        &BSS.0,
-                        &ETH_DST_MAC,
-                        &PAYLOAD,
-                        mac::ETHER_TYPE_IPV4,
-                        phy,
-                    )
-                    .expect("sending wlan data frame");
-                }
-            }
-        }
-    }
-}
 
 async fn send_and_receive<'a>(
     client: &'a mut ethernet::Client,
@@ -82,9 +57,26 @@ async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils
         .run_until_complete_or_timeout(
             5.seconds(),
             "verify ethernet_tx_rx",
-            |event| {
-                handle_eth_tx(event, &mut actual, &phy);
-            },
+            EventHandlerBuilder::new()
+                .on_tx(MatchTx::new().on_msdu(|msdu: &mac::Msdu<&[u8]>| {
+                    let mac::Msdu { dst_addr, src_addr, llc_frame } = msdu;
+                    if *dst_addr == ETH_DST_MAC && *src_addr == CLIENT_MAC_ADDR {
+                        assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_IPV4);
+                        actual.clear();
+                        actual.extend_from_slice(llc_frame.body);
+                        rx_wlan_data_frame(
+                            &CHANNEL,
+                            &CLIENT_MAC_ADDR,
+                            &BSS.0,
+                            &ETH_DST_MAC,
+                            &PAYLOAD,
+                            mac::ETHER_TYPE_IPV4,
+                            &phy,
+                        )
+                        .expect("sending wlan data frame");
+                    }
+                }))
+                .build(),
             eth_tx_rx_fut,
         )
         .await
