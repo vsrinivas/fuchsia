@@ -436,6 +436,24 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   EXPECT_TRUE(reg.called);
   EXPECT_FALSE(reg.value.has_error()) << reg.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value.value());
+
+  // This register is synchronously known unavailable.
+  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x2, true, std::vector<uint8_t>{});
+  reg.called = false;
+  GetNamedValue(context, "x2", &reg);
+  ASSERT_TRUE(reg.called);
+  ASSERT_TRUE(reg.value.has_error());
+  EXPECT_EQ("Register x2 unavailable in this context.", reg.value.err().msg());
+
+  // This register is synchronously unavailable.
+  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x3, false, std::vector<uint8_t>{});
+  reg.called = false;
+  GetNamedValue(context, "x3", &reg);
+  ASSERT_FALSE(reg.called);
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(reg.called);
+  ASSERT_TRUE(reg.value.has_error());
+  EXPECT_EQ("Register x3 unavailable in this context.", reg.value.err().msg());
 }
 
 TEST_F(EvalContextImplTest, RegisterShadowed) {
@@ -478,6 +496,26 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
   EXPECT_TRUE(val.called);
   EXPECT_FALSE(val.value.has_error()) << val.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), val.value.value());
+}
+
+// Tests that a < 64-bit register is read into a value of the correct size, and that the
+// pseudoregisters referring to a sub-part of a canonical register are working properly.
+TEST_F(EvalContextImplTest, RegisterShort) {
+  ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
+
+  constexpr uint64_t kRegValue = 0x44332211;
+  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_w0, true, {0x11, 0x22, 0x33, 0x44});
+  auto context = MakeEvalContext();
+
+  // "w0" is the ARM64 way to refer to the low 32-bits of teh "x0" register we set above.
+  ValueResult reg;
+  GetNamedValue(context, "w0", &reg);
+
+  // Above we set the register to be returned synchronously.
+  ASSERT_TRUE(reg.called);
+  ASSERT_FALSE(reg.value.has_error()) << reg.value.err().msg();
+  EXPECT_EQ(ExprValue(static_cast<uint32_t>(kRegValue)), reg.value.value());
+  EXPECT_EQ("uint32_t", reg.value.value().type()->GetFullName());
 }
 
 // Also tests ResolveForwardDefinition().

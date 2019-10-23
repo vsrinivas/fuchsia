@@ -26,10 +26,12 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   void set_cfa(uint64_t cfa) { cfa_ = cfa; }
 
   // Adds the given canned result for the given register. Set synchronous if the register contents
-  // should be synchronously available, false if it should require a callback to retrieve.
+  // should be synchronously available, false if it should require a callback to retrieve. If the
+  // uint64_t version is called, the register is assumed to be 64 bits.
   //
   // Any registers not set will be synchronously reported as unknown.
-  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, uint128_t value);
+  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, uint64_t value);
+  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, std::vector<uint8_t> value);
 
   // Sets an expected memory value.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
@@ -40,10 +42,10 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   // SymbolDataProvider implementation.
   debug_ipc::Arch GetArch() override;
-  bool GetRegister(debug_ipc::RegisterID id, std::optional<uint128_t>* value) override;
+  std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
   void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
-  void GetFrameBaseAsync(GetRegisterCallback callback) override;
+  void GetFrameBaseAsync(GetFrameBaseCallback callback) override;
   uint64_t GetCanonicalFrameAddress() const override;
   void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteMemoryCallback cb) override;
@@ -51,10 +53,10 @@ class MockSymbolDataProvider : public SymbolDataProvider {
  private:
   struct RegData {
     RegData() = default;
-    RegData(bool sync, uint128_t v) : synchronous(sync), value(v) {}
+    RegData(bool sync, std::vector<uint8_t> v) : synchronous(sync), value(v) {}
 
     bool synchronous = false;
-    uint64_t value = 0;
+    std::vector<uint8_t> value;
   };
 
   uint64_t ip_ = 0;

@@ -13,6 +13,7 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
+#include "src/lib/containers/cpp/array_view.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
@@ -35,28 +36,30 @@ class Err;
 class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
  public:
   using GetMemoryCallback = fit::callback<void(const Err&, std::vector<uint8_t>)>;
-  using GetRegisterCallback = fit::callback<void(const Err&, uint128_t)>;
+
+  // The Err indicates whether the operation was successful. Common failure cases are the thread is
+  // running or this register wasn't saved on the stack frame.
+  using GetRegisterCallback = fit::callback<void(const Err&, std::vector<uint8_t>)>;
+
+  using GetFrameBaseCallback = fit::callback<void(const Err&, uint64_t value)>;
+
   using WriteMemoryCallback = fit::callback<void(const Err&)>;
 
   virtual debug_ipc::Arch GetArch();
 
-  // Request for synchronous register data. If the value is not synchronously available, the *value
-  // will always be a nullopt.
+  // Request for synchronous register data if possible.
   //
-  // A return value of false means that the value is not known synchronously. In this case,
-  // GetRegisterAsync should be called to retrieve the value.
+  // If the value is not synchronously known, the return value will be std::nullopt. In this case,
+  // GetRegisterAsync() should be called to retrieve the value.
   //
-  // In the synchronous case, we could have the value, but we could also know that the value is not
-  // known (e.g. when that register was not saved for the stack frame). The *value will reflect this
-  // when the return value is true.
-  virtual bool GetRegister(debug_ipc::RegisterID id, std::optional<uint128_t>* value);
+  // The return value can be an empty view if the implementation knows synchronously that we don't
+  // know the value. An example is an unsaved register in a non-topmost stack frame.
+  //
+  // On successful data return, the data is owned by the implementor and should not be saved.
+  virtual std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id);
 
   // Request for register data with an asynchronous callback. The callback will be issued when the
   // register data is available.
-  //
-  // The success parameter indicates whether the operation was successful. If the register is not
-  // available now (maybe the thread is running), success will be set to false. When the register
-  // value contains valid data, success will indicate true.
   virtual void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback);
 
   // Synchronously returns the frame base pointer if possible. As with GetRegister, if this is not
@@ -69,7 +72,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   virtual std::optional<uint64_t> GetFrameBase();
 
   // Asynchronous version of GetFrameBase.
-  virtual void GetFrameBaseAsync(GetRegisterCallback callback);
+  virtual void GetFrameBaseAsync(GetFrameBaseCallback callback);
 
   // Returns the canonical frame address of the current frame. Returns 0 if it is not known. See
   // Frame::GetCanonicalFrameAddress().

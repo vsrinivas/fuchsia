@@ -18,19 +18,19 @@ Err NoFrameErr() { return Err("No stack frame to evaluate."); }
 
 debug_ipc::Arch SymbolDataProvider::GetArch() { return debug_ipc::Arch::kUnknown; }
 
-bool SymbolDataProvider::GetRegister(debug_ipc::RegisterID id, std::optional<uint128_t>* value) {
-  *value = std::nullopt;
-  return true;  // Known to be unknown.
+std::optional<containers::array_view<uint8_t>> SymbolDataProvider::GetRegister(
+    debug_ipc::RegisterID id) {
+  return containers::array_view<uint8_t>();  // Known to be unknown.
 }
 
 void SymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID, GetRegisterCallback cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoFrameErr(), 0); });
+      FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoFrameErr(), std::vector<uint8_t>()); });
 }
 
 std::optional<uint64_t> SymbolDataProvider::GetFrameBase() { return std::nullopt; }
 
-void SymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
+void SymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoFrameErr(), 0); });
 }

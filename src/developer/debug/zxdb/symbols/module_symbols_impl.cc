@@ -50,9 +50,9 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
   debug_ipc::Arch GetArch() override { return debug_ipc::Arch::kUnknown; }
   void GetRegisterAsync(debug_ipc::RegisterID, GetRegisterCallback callback) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(callback)]() mutable { cb(GetContextError(), 0); });
+        FROM_HERE, [cb = std::move(callback)]() mutable { cb(GetContextError(), {}); });
   }
-  void GetFrameBaseAsync(GetRegisterCallback callback) override {
+  void GetFrameBaseAsync(GetFrameBaseCallback callback) override {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(callback)]() mutable { cb(GetContextError(), 0); });
   }

@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/ipc/register_desc.h"
 
+#include <algorithm>
 #include <map>
 
 #include "src/developer/debug/ipc/protocol.h"
@@ -596,6 +597,39 @@ RegisterCategory RegisterIDToCategory(RegisterID id) {
   }
 
   return RegisterCategory::kNone;
+}
+
+containers::array_view<uint8_t> GetRegisterData(const std::vector<Register>& regs, RegisterID id) {
+  const RegisterInfo* info = InfoForRegister(id);
+  if (!info)
+    return containers::array_view<uint8_t>();
+
+  const Register* found_canonical = nullptr;
+  for (const auto& reg : regs) {
+    if (reg.id == id)
+      return reg.data;  // Prefer an exact match.
+    if (reg.id == info->canonical_id) {
+      found_canonical = &reg;
+      break;
+    }
+  }
+
+  if (!found_canonical)
+    return containers::array_view<uint8_t>();
+
+  // Here we found a canonical register match that's not the exact register being requested. Extract
+  // the correct number of bits.
+
+  // Expect everything to be a multiple of 8. Currently all of our processors' pseudoregisters have
+  // this property.
+  FXL_DCHECK(info->bits > 0);
+  FXL_DCHECK(info->bits % 8 == 0);
+  FXL_DCHECK(info->shift % 8 == 0);
+
+  containers::array_view<uint8_t> result = found_canonical->data;
+
+  // The shift is a trim from the left because we assume little-endian.
+  return result.subview(info->shift / 8, info->bits / 8);
 }
 
 }  // namespace debug_ipc

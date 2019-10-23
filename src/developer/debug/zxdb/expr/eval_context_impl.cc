@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
@@ -12,6 +13,8 @@
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_const_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/symbols/array_type.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -30,7 +33,7 @@
 namespace zxdb {
 namespace {
 
-debug_ipc::RegisterID GetRegister(const ParsedIdentifier& ident) {
+debug_ipc::RegisterID GetRegisterID(const ParsedIdentifier& ident) {
   auto str = GetSingleComponentIdentifierName(ident);
   if (!str)
     return debug_ipc::RegisterID::kUnknown;
@@ -38,6 +41,44 @@ debug_ipc::RegisterID GetRegister(const ParsedIdentifier& ident) {
     return debug_ipc::StringToRegisterID(str->substr(1));
   }
   return debug_ipc::StringToRegisterID(*str);
+}
+
+Err GetUnavailableRegisterErr(debug_ipc::RegisterID id) {
+  return Err("Register %s unavailable in this context.", debug_ipc::RegisterIDToString(id));
+}
+
+ExprValue RegisterDataToValue(containers::array_view<uint8_t> data) {
+  if (data.size() <= sizeof(uint64_t)) {
+    uint64_t int_value = 0;
+    memcpy(&int_value, &data[0], data.size());
+
+    // Use the types defined by ExprValue for the unsigned number of the corresponding size.
+    switch (data.size()) {
+      case 1:
+        return ExprValue(static_cast<uint8_t>(int_value));
+      case 2:
+        return ExprValue(static_cast<uint16_t>(int_value));
+      case 4:
+        return ExprValue(static_cast<uint32_t>(int_value));
+      case 8:
+        return ExprValue(static_cast<uint64_t>(int_value));
+    }
+  }
+
+  // For very large registers and for those with an unexpected size, assume they're vector ones and
+  // just show the bytes. This reverses the bytes so the low bytes in the little-endian input are on
+  // the right. This is how most people will expect to view vector registers.
+  //
+  // TODO(bug 39308) provide a better data type for vector registers.
+  std::vector<uint8_t> reversed;
+  reversed.reserve(data.size());
+  for (uint8_t cur : Reversed(data))
+    reversed.push_back(cur);
+
+  auto byte_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "byte");
+  auto array_type = fxl::MakeRefCounted<ArrayType>(byte_type, reversed.size());
+
+  return ExprValue(array_type, std::move(reversed));
 }
 
 }  // namespace
@@ -125,20 +166,30 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
     }
   }
 
-  auto reg = GetRegister(identifier);
-
+  auto reg = GetRegisterID(identifier);
   if (reg == debug_ipc::RegisterID::kUnknown ||
       GetArchForRegisterID(reg) != data_provider_->GetArch())
     return cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()), nullptr);
 
   // Fall back to matching registers when no symbol is found.
-  data_provider_->GetRegisterAsync(reg,
-                                   [cb = std::move(cb)](const Err& err, uint64_t value) mutable {
-                                     if (err.has_error())
-                                       cb(err, fxl::RefPtr<zxdb::Symbol>());
-                                     else
-                                       cb(ExprValue(value), fxl::RefPtr<zxdb::Symbol>());
-                                   });
+  if (std::optional<containers::array_view<uint8_t>> opt_reg_data =
+          data_provider_->GetRegister(reg)) {
+    // Available synchronously.
+    if (opt_reg_data->empty())
+      cb(GetUnavailableRegisterErr(reg), fxl::RefPtr<zxdb::Symbol>());
+    else
+      cb(RegisterDataToValue(*opt_reg_data), fxl::RefPtr<zxdb::Symbol>());
+  } else {
+    data_provider_->GetRegisterAsync(
+        reg, [reg, cb = std::move(cb)](const Err& err, std::vector<uint8_t> value) mutable {
+          if (err.has_error())
+            cb(err, fxl::RefPtr<zxdb::Symbol>());
+          else if (value.empty())
+            cb(GetUnavailableRegisterErr(reg), fxl::RefPtr<zxdb::Symbol>());
+          else
+            cb(RegisterDataToValue(value), fxl::RefPtr<zxdb::Symbol>());
+        });
+  }
 }
 
 void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallback cb) const {
@@ -162,15 +213,15 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallba
   if (!type)
     return cb(Err("Missing type information."), var);
 
-  std::optional<uint128_t> ip;
-  data_provider_->GetRegister(debug_ipc::GetSpecialRegisterID(data_provider_->GetArch(),
-                                                              debug_ipc::SpecialRegisterType::kIP),
-                              &ip);
-  if (!ip)  // The IP should never require an async call.
+  std::optional<containers::array_view<uint8_t>> ip_data =
+      data_provider_->GetRegister(debug_ipc::GetSpecialRegisterID(
+          data_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP));
+  TargetPointer ip;
+  if (!ip_data || ip_data->size() != sizeof(ip))  // The IP should never require an async call.
     return cb(Err("No location available."), var);
+  memcpy(&ip, &(*ip_data)[0], ip_data->size());
 
-  const VariableLocation::Entry* loc_entry =
-      var->location().EntryForIP(symbol_context_, static_cast<TargetPointer>(*ip));
+  const VariableLocation::Entry* loc_entry = var->location().EntryForIP(symbol_context_, ip);
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
     const char* err_str;

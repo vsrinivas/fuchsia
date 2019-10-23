@@ -20,10 +20,10 @@ class FrameSymbolDataProvider : public ProcessSymbolDataProvider {
   void Disown() override;
 
   // SymbolDataProvider implementation:
-  bool GetRegister(debug_ipc::RegisterID id, std::optional<uint128_t>* value) override;
+  std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
   void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
-  void GetFrameBaseAsync(GetRegisterCallback callback) override;
+  void GetFrameBaseAsync(GetFrameBaseCallback callback) override;
   uint64_t GetCanonicalFrameAddress() const override;
 
  private:

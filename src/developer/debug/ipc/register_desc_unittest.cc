@@ -198,10 +198,11 @@ TEST(RegisterIDToCategory, x64) {
   EXPECT_EQ(IDToCat(RegisterID::kX64_st6), RegisterCategory::kFloatingPoint);
   EXPECT_EQ(IDToCat(RegisterID::kX64_st7), RegisterCategory::kFloatingPoint);
 
+  EXPECT_EQ(IDToCat(RegisterID::kX64_mm0), RegisterCategory::kFloatingPoint);
+  EXPECT_EQ(IDToCat(RegisterID::kX64_mm7), RegisterCategory::kFloatingPoint);
+
   // Vector.
   EXPECT_EQ(IDToCat(RegisterID::kX64_mxcsr), RegisterCategory::kVector);
-  EXPECT_EQ(IDToCat(RegisterID::kX64_mm0), RegisterCategory::kVector);
-  EXPECT_EQ(IDToCat(RegisterID::kX64_mm7), RegisterCategory::kVector);
   EXPECT_EQ(IDToCat(RegisterID::kX64_xmm0), RegisterCategory::kVector);
   EXPECT_EQ(IDToCat(RegisterID::kX64_xmm31), RegisterCategory::kVector);
   EXPECT_EQ(IDToCat(RegisterID::kX64_ymm0), RegisterCategory::kVector);
@@ -368,6 +369,44 @@ TEST(RegisterIDToString, Registers) {
   EXPECT_STREQ("dr3", RegisterIDToString(RegisterID::kX64_dr3));
   EXPECT_STREQ("dr6", RegisterIDToString(RegisterID::kX64_dr6));
   EXPECT_STREQ("dr7", RegisterIDToString(RegisterID::kX64_dr7));
+}
+
+TEST(RegisterDesc, GetRegisterData) {
+  // Searching in empty list.
+  std::vector<Register> register_list;
+  EXPECT_TRUE(GetRegisterData(register_list, RegisterID::kX64_rax).empty());
+
+  // Search not found.
+  register_list.emplace_back(RegisterID::kX64_rbx,
+                             std::vector<uint8_t>{21, 22, 23, 24, 25, 26, 27, 28});
+  register_list.emplace_back(RegisterID::kX64_rcx,
+                             std::vector<uint8_t>{11, 12, 13, 14, 15, 16, 17, 18});
+  EXPECT_TRUE(GetRegisterData(register_list, RegisterID::kX64_rax).empty());
+
+  // Search found, match with canonical.
+  register_list.emplace_back(RegisterID::kX64_rax, std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8});
+  containers::array_view<uint8_t> found = GetRegisterData(register_list, RegisterID::kX64_rax);
+  ASSERT_EQ(8u, found.size());
+  EXPECT_EQ(1, found[0]);
+  EXPECT_EQ(8, found[7]);
+
+  // Search found, match with non-canonical (32-bit register).
+  register_list.emplace_back(RegisterID::kX64_edx, std::vector<uint8_t>{41, 42, 43, 44});
+  found = GetRegisterData(register_list, RegisterID::kX64_edx);
+  ASSERT_EQ(4u, found.size());
+  EXPECT_EQ(41, found[0]);
+  EXPECT_EQ(44, found[3]);
+
+  // Search found, match with non-canincal low 32 bits.
+  found = GetRegisterData(register_list, RegisterID::kX64_eax);
+  ASSERT_EQ(4u, found.size());
+  EXPECT_EQ(1, found[0]);
+  EXPECT_EQ(4, found[3]);
+
+  // Search found, match with non-canonical non-low bit (requires a shift). "ah" is the 2nd byte.
+  found = GetRegisterData(register_list, RegisterID::kX64_ah);
+  ASSERT_EQ(1u, found.size());
+  EXPECT_EQ(2, found[0]);
 }
 
 }  // namespace debug_ipc

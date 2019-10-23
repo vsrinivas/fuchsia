@@ -10,6 +10,8 @@
 #include <optional>
 #include <string>
 
+#include "src/lib/containers/cpp/array_view.h"
+
 // Holds constant description values for all the register data for all the
 // supported architectures.
 // The enum definitions mirror the structs defined in the debug information
@@ -19,6 +21,8 @@ namespace debug_ipc {
 
 enum class Arch : uint32_t;        // Forward declaration
 enum class RegisterID : uint32_t;  // Forward declaration.
+
+struct Register;
 
 enum class SpecialRegisterType { kNone, kIP, kSP };
 
@@ -35,6 +39,8 @@ struct RegisterInfo {
   // When asking for a name-to-register mapping, sometimes they map to a part of a register. For
   // example "al" on x64 is the low 8 bits of rax. These will both be 0 for the "canonical" register
   // record.
+  //
+  // Currently these both must be a multiple of 8 for GetRegisterData() below.
   int bits = 0;
   int shift = 0;  // How many bits shited to the right is the low bit of the value.
 
@@ -65,6 +71,19 @@ Arch GetArchForRegisterID(RegisterID);
 // registers are sent as part of the unwind frame data. Other registers must
 // be requested specially from the target.
 bool IsGeneralRegister(RegisterID);
+
+// Gets the data for the given register from the array.
+//
+// This does two things. It searches for either the requested register or the canonical register.
+// If it's a different canonical register (like you're asking for the a 32 bits pseudoregister out
+// of a 64 bit register), the relevant bits will be extracted.
+//
+// If found, the return value will be the range of data within the data owned by |regs|
+// corresponding to the requested register. If the source data is truncated, the result will be
+// truncated also so it may have less data than expected.
+//
+// If the register is not found, the returned view will be empty.
+containers::array_view<uint8_t> GetRegisterData(const std::vector<Register>& regs, RegisterID id);
 
 // These ranges permit to make transformation from registerID to category and
 // make some formal verifications.
@@ -315,6 +334,17 @@ enum class RegisterID : uint32_t {
   kX64_st6 = 2116,
   kX64_st7 = 2117,
 
+  // Although these are technically vector registers, they're aliased on top of the x87 (fp*)
+  // registers so must be in the same category.
+  kX64_mm0 = 2120,
+  kX64_mm1 = 2121,
+  kX64_mm2 = 2122,
+  kX64_mm3 = 2123,
+  kX64_mm4 = 2124,
+  kX64_mm5 = 2125,
+  kX64_mm6 = 2126,
+  kX64_mm7 = 2127,
+
   // Vector.
 
   kX64_mxcsr = 2200,  // Control and Status register.
@@ -419,15 +449,6 @@ enum class RegisterID : uint32_t {
   kX64_ymm29 = 2493,
   kX64_ymm30 = 2494,
   kX64_ymm31 = 2495,
-
-  kX64_mm0 = 2496,
-  kX64_mm1 = 2497,
-  kX64_mm2 = 2498,
-  kX64_mm3 = 2499,
-  kX64_mm4 = 2500,
-  kX64_mm5 = 2501,
-  kX64_mm6 = 2502,
-  kX64_mm7 = 2503,
 
   // Debug.
 

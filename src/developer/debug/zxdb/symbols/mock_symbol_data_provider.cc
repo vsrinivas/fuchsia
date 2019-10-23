@@ -18,8 +18,16 @@ namespace zxdb {
 MockSymbolDataProvider::MockSymbolDataProvider() : weak_factory_(this) {}
 
 void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
-                                              uint128_t value) {
-  regs_[id] = RegData(synchronous, value);
+                                              uint64_t value) {
+  std::vector<uint8_t> data;
+  data.resize(sizeof(value));
+  memcpy(&data[0], &value, sizeof(value));
+  regs_[id] = RegData(synchronous, std::move(data));
+}
+
+void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
+                                              std::vector<uint8_t> value) {
+  regs_[id] = RegData(synchronous, std::move(value));
 }
 
 void MockSymbolDataProvider::AddMemory(uint64_t address, std::vector<uint8_t> data) {
@@ -28,24 +36,21 @@ void MockSymbolDataProvider::AddMemory(uint64_t address, std::vector<uint8_t> da
 
 debug_ipc::Arch MockSymbolDataProvider::GetArch() { return debug_ipc::Arch::kArm64; }
 
-bool MockSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
-                                         std::optional<uint128_t>* value) {
-  *value = std::nullopt;
-
+std::optional<containers::array_view<uint8_t>> MockSymbolDataProvider::GetRegister(
+    debug_ipc::RegisterID id) {
   if (GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP) {
-    *value = ip_;
-    return true;
+    const uint8_t* ip_as_char = reinterpret_cast<const uint8_t*>(&ip_);
+    return containers::array_view(ip_as_char, ip_as_char + sizeof(ip_));
   }
 
   const auto& found = regs_.find(id);
   if (found == regs_.end())
-    return true;  // Known to be unknown.
+    return containers::array_view<uint8_t>();  // Known to be unknown.
 
   if (!found->second.synchronous)
-    return false;
+    return std::nullopt;
 
-  *value = found->second.value;
-  return true;
+  return found->second.value;
 }
 
 void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
@@ -60,14 +65,14 @@ void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
 
         const auto& found = weak_provider->regs_.find(id);
         if (found == weak_provider->regs_.end())
-          callback(Err("Failed"), 0);
+          callback(Err("Failed"), {});
         callback(Err(), found->second.value);
       });
 }
 
 std::optional<uint64_t> MockSymbolDataProvider::GetFrameBase() { return bp_; }
 
-void MockSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback callback) {
+void MockSymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback callback) {
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE,
       [callback = std::move(callback), weak_provider = weak_factory_.GetWeakPtr()]() mutable {

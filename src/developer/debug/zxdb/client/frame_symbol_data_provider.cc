@@ -30,21 +30,6 @@ Err RegisterUnavailableErr(debug_ipc::RegisterID id) {
   return Err(fxl::StringPrintf("Register %s unavailable.", debug_ipc::RegisterIDToString(id)));
 }
 
-std::optional<uint128_t> FindRegister(const std::vector<Register>& regs, RegisterID id) {
-  for (const auto& r : regs) {
-    // TODO(brettw) handle non-canonical registers which are a subset of data from one of the
-    // canonical ones in the |regs| vector.
-    if (r.id == id) {
-      // Currently we expect all general registers to be <= 128 bits.
-      if (r.data.size() > 0 && r.data.size() <= sizeof(uint128_t))
-        return r.GetValue();
-      return std::nullopt;
-    }
-  }
-
-  return std::nullopt;
-}
-
 }  // namespace
 
 FrameSymbolDataProvider::FrameSymbolDataProvider(Frame* frame)
@@ -57,31 +42,27 @@ void FrameSymbolDataProvider::Disown() {
   frame_ = nullptr;
 }
 
-bool FrameSymbolDataProvider::GetRegister(RegisterID id, std::optional<uint128_t>* value) {
+std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegister(RegisterID id) {
   FXL_DCHECK(id != RegisterID::kUnknown);
-
-  *value = std::nullopt;
   if (!frame_)
-    return true;  // Synchronously know we don't have the value.
+    return containers::array_view<uint8_t>();  // Synchronously know we don't have the value.
 
   RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
   FXL_DCHECK(category != RegisterCategory::kNone);
 
   const std::vector<Register>* regs = frame_->GetRegisterCategorySync(category);
-  if (regs) {
-    // Have this register synchronously (or know we can't have it).
-    *value = FindRegister(*regs, id);
-    return true;  // Result known synchronously.
-  }
+  if (!regs)
+    return std::nullopt;  // Not known synchronously.
 
-  return false;
+  // Have this register synchronously (or know we can't have it).
+  return debug_ipc::GetRegisterData(*regs, id);
 }
 
 void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallback cb) {
   if (!frame_) {
     // Frame deleted out from under us.
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [id, cb = std::move(cb)]() mutable { cb(RegisterUnavailableErr(id), 0); });
+        FROM_HERE, [id, cb = std::move(cb)]() mutable { cb(RegisterUnavailableErr(id), {}); });
     return;
   }
 
@@ -92,12 +73,13 @@ void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallbac
       category,
       [id, cb = std::move(cb)](const Err& err, const std::vector<Register>& regs) mutable {
         if (err.has_error())
-          return cb(err, 0);
+          return cb(err, {});
 
-        if (std::optional<uint128_t> value = FindRegister(regs, id))
-          cb(Err(), *value);
+        auto found_reg_data = debug_ipc::GetRegisterData(regs, id);
+        if (found_reg_data.empty())
+          cb(RegisterUnavailableErr(id), {});
         else
-          cb(RegisterUnavailableErr(id), 0);
+          cb(Err(), std::vector<uint8_t>(found_reg_data.begin(), found_reg_data.end()));
       });
 }
 
@@ -107,7 +89,7 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
   return frame_->GetBasePointer();
 }
 
-void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
+void FrameSymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback cb) {
   if (!frame_) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(CallFrameDestroyedErr(), 0); });

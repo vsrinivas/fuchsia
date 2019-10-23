@@ -302,33 +302,43 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
     return Completion::kSync;
   }
 
-  // This function doesn't set the result_type_ because it is called from
-  // different contexts. The callers should set the result_type_ as appropriate
-  // for their operation.
-  if (std::optional<StackEntry> reg_data; data_provider_->GetRegister(reg_info->id, &reg_data)) {
+  // This function doesn't set the result_type_ because it is called from different contexts. The
+  // callers should set the result_type_ as appropriate for their operation.
+  if (auto reg_data = data_provider_->GetRegister(reg_info->id)) {
     // State known synchronously (could be available or known unavailable).
-    if (!reg_data) {
+    if (reg_data->empty()) {
       ReportError(fxl::StringPrintf("Register %d not available.", dwarf_register_number));
     } else {
-      Push(*reg_data + offset);
+      // This truncates to 128 bits and converts from little-endian. DWARF doesn't seem to use the
+      // stack machine for vector computations (it's not specified that the stack items are large
+      // enough). When it uses a stack register for a floating-point scalar computation, it just
+      // uses the low bits.
+      StackEntry reg_value = 0;
+      memcpy(&reg_value, reg_data->data(), std::min(sizeof(StackEntry), reg_data->size()));
+      Push(reg_value + offset);
     }
     return Completion::kSync;
   }
 
   // Must request async.
-  data_provider_->GetRegisterAsync(reg_info->id, [weak_eval = weak_factory_.GetWeakPtr(), offset](
-                                                     const Err& err, StackEntry value) {
-    if (!weak_eval)
-      return;
-    if (err.has_error()) {
-      weak_eval->ReportError(err);
-      return;
-    }
-    weak_eval->Push(static_cast<StackEntry>(value + offset));
+  data_provider_->GetRegisterAsync(
+      reg_info->id, [weak_eval = weak_factory_.GetWeakPtr(), offset](
+                        const Err& err, std::vector<uint8_t> reg_data) {
+        if (!weak_eval)
+          return;
+        if (err.has_error()) {
+          weak_eval->ReportError(err);
+          return;
+        }
 
-    // Picks up processing at the next instruction.
-    weak_eval->ContinueEval();
-  });
+        // Truncate/convert from little-endian as above.
+        StackEntry reg_value = 0;
+        memcpy(&reg_value, reg_data.data(), std::min(sizeof(StackEntry), reg_data.size()));
+        weak_eval->Push(static_cast<StackEntry>(reg_value + offset));
+
+        // Picks up processing at the next instruction.
+        weak_eval->ContinueEval();
+      });
 
   return Completion::kAsync;
 }
