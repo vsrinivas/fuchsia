@@ -116,6 +116,55 @@ VK_TEST_F(BatchGpuUploaderTest, AcquireSubmitMultipleReaders) {
   EXPECT_TRUE(batched_upload_done);
 }
 
+// Test to make sure that multiple readers can access the same
+// buffer and still succesfully submit work to the GPU and have
+// it finish. This is to make sure that the command buffer does
+// not get stuck waiting on itself by accidentally giving itself
+// its own signal semaphore to wait on.
+VK_TEST_F(BatchGpuUploaderTest, MultipleReaderSameBuffer) {
+  auto escher = test::GetEscher()->GetWeakPtr();
+  std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
+
+  // Create buffer to read from.
+  const size_t buffer_size = 3 * sizeof(vec3);
+  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(), escher->resource_recycler());
+  BufferPtr vertex_buffer = buffer_factory.NewBuffer(buffer_size,
+                                                     vk::BufferUsageFlagBits::eVertexBuffer |
+                                                         vk::BufferUsageFlagBits::eTransferSrc |
+                                                         vk::BufferUsageFlagBits::eTransferDst,
+                                                     vk::MemoryPropertyFlagBits::eHostVisible);
+
+  // Buffer should not have wait semaphore.
+  EXPECT_FALSE(vertex_buffer->HasWaitSemaphore());
+
+  // Create a reader and read the vertex buffer.
+  auto reader = uploader->AcquireReader(vertex_buffer->size());
+  reader->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
+  uploader->PostReader(std::move(reader), [](BufferPtr) {});
+
+  // Buffer now has a wait semaphore.
+  EXPECT_TRUE(vertex_buffer->HasWaitSemaphore());
+
+  // Create a second reader and read the *same* vertex buffer.
+  auto reader2 = uploader->AcquireReader(vertex_buffer->size());
+  reader2->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
+  uploader->PostReader(std::move(reader2), [](BufferPtr) {});
+
+  // Create a third reader and read the *same* vertex buffer.
+  auto reader3 = uploader->AcquireReader(vertex_buffer->size());
+  reader3->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
+  uploader->PostReader(std::move(reader3), [](BufferPtr) {});
+
+  bool batched_upload_done = false;
+  uploader->Submit([&batched_upload_done]() { batched_upload_done = true; });
+
+  // Trigger Cleanup, which triggers the callback on the submitted command
+  // buffer.
+  escher->vk_device().waitIdle();
+  EXPECT_TRUE(escher->Cleanup());
+  EXPECT_TRUE(batched_upload_done);
+}
+
 VK_TEST_F(BatchGpuUploaderTest, WriteBuffer) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto uploader = BatchGpuUploader::New(escher);

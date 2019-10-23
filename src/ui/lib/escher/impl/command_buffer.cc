@@ -102,6 +102,11 @@ void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
   }
 }
 
+bool CommandBuffer::ContainsSignalSemaphore(const SemaphorePtr& semaphore) const {
+  return std::find(signal_semaphores_.begin(), signal_semaphores_.end(), semaphore) !=
+         signal_semaphores_.end();
+}
+
 void CommandBuffer::KeepAlive(Resource* resource) {
   FXL_DCHECK(is_active_);
   if (sequence_number_ == resource->sequence_number()) {

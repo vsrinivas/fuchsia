@@ -62,6 +62,10 @@ class CommandBuffer {
   // No-op if semaphore is null.
   void AddSignalSemaphore(SemaphorePtr semaphore);
 
+  // Checks to see if the provided semaphore is part of the command buffer's vector
+  // of signal semaphores.
+  bool ContainsSignalSemaphore(const SemaphorePtr& semaphore) const;
+
   // These resources will be retained until the command-buffer is finished
   // running on the GPU.
   void KeepAlive(Resource* resource);

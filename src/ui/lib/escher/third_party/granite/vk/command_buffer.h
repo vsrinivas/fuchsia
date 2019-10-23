@@ -118,6 +118,12 @@ class CommandBuffer : public Reffable {
   // No-op if semaphore is null.
   void AddSignalSemaphore(SemaphorePtr semaphore) { impl_->AddSignalSemaphore(semaphore); }
 
+  // Checks to see if the provided semaphore is part of the command buffer's vector
+  // of signal semaphores.
+  bool ContainsSignalSemaphore(const SemaphorePtr& semaphore) const {
+    return impl_->ContainsSignalSemaphore(semaphore);
+  }
+
   // Transition the image between the two layouts; see section 11.4 of the
   // Vulkan spec.  Retain image in used_resources.
   void TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,

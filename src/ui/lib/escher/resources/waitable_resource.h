@@ -28,6 +28,8 @@ class WaitableResource : public Resource {
   SemaphorePtr TakeWaitSemaphore() { return std::move(wait_semaphore_); }
   bool HasWaitSemaphore() const { return !!wait_semaphore_; }
 
+  const SemaphorePtr& wait_semaphore() const { return wait_semaphore_; }
+
  protected:
   explicit WaitableResource(ResourceManager* owner);
 

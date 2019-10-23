@@ -120,6 +120,14 @@ BatchGpuUploader::~BatchGpuUploader() { FXL_CHECK(!frame_); }
 void BatchGpuUploader::SemaphoreAssignmentHelper(WaitableResource* resource,
                                                  CommandBuffer* command_buffer) {
   if (resource->HasWaitSemaphore()) {
+    // The resource's wait semaphore has already been set to the command buffer's
+    // signal semaphore. If the command buffer then takes on this semaphore again
+    // as its own wait semaphore, then it will effectively be waiting on its own
+    // semaphore to fire in order to finish its work, resulting in a complete hang.
+    if (command_buffer->ContainsSignalSemaphore(resource->wait_semaphore())) {
+      return;
+    }
+
     command_buffer->TakeWaitSemaphore(resource, vk::PipelineStageFlagBits::eTransfer);
   }
   // The resource no longer has a wait semaphore, so add a semaphore that's
