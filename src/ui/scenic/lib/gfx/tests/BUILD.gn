@@ -182,6 +182,7 @@ executable("unittests") {
   deps = [
     ":gfx_tests_main",
     ":testing_deps",
+    "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fsl",
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:object_linker",

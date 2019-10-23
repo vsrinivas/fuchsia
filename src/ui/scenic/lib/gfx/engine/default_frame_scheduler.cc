@@ -22,12 +22,13 @@ namespace gfx {
 
 DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
                                              std::unique_ptr<FramePredictor> predictor,
-                                             inspect_deprecated::Node inspect_node)
+                                             inspect_deprecated::Node inspect_node,
+                                             std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
       frame_predictor_(std::move(predictor)),
       inspect_node_(std::move(inspect_node)),
-      stats_(inspect_node_.CreateChild("Frame Stats")),
+      stats_(inspect_node_.CreateChild("Frame Stats"), std::move(cobalt_logger)),
       weak_factory_(this) {
   FXL_DCHECK(display_);
   FXL_DCHECK(frame_predictor_);

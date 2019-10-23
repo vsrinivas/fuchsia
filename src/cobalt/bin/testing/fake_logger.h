@@ -7,21 +7,9 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
-namespace cobalt {
+#include "src/cobalt/bin/testing/log_method.h"
 
-enum LogMethod {
-  kOther = 0,
-  kLogEvent = 1,
-  kLogEventCount = 2,
-  kLogElapsedTime = 3,
-  kLogFrameRate = 4,
-  kLogMemoryUsage = 5,
-  kLogString = 6,
-  kLogCustomEvent = 7,
-  kLogCobaltEvents = 8,
-  kLogCobaltEvent = 9,
-  kLogIntHistogram = 10,
-};
+namespace cobalt {
 
 class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
  public:

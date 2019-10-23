@@ -21,6 +21,7 @@ source_set("fake_logger_lib") {
   ]
 
   public_deps = [
+    ":log_method",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
@@ -33,5 +34,12 @@ source_set("fake_clock_lib") {
 
   public_deps = [
     "//src/cobalt/bin/utils:clock",
+  ]
+}
+
+source_set("log_method") {
+  testonly = true
+  sources = [
+    "log_method.h",
   ]
 }

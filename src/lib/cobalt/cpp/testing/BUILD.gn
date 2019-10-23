@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("mock_cobalt_logger") {
+  testonly = true
+  sources = [
+    "mock_cobalt_logger.cc",
+    "mock_cobalt_logger.h",
+  ]
+
+  public_deps = [
+    "..:cobalt_logger",
+    "//src/cobalt/bin/testing:log_method",
+  ]
+}

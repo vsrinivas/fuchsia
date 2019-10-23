@@ -41,7 +41,7 @@ using fuchsia.mem;
 const int64 MAX_BYTES_PER_EVENT = 102400;
 
 // This is intended as a reasonable maximum number of histogram buckets per event.
-const uint32 MAX_HISTOGRAM_BUCKETS = 100;
+const uint32 MAX_HISTOGRAM_BUCKETS = 500;
 
 // Since batch logging can represent significant CPU load, we want to keep the number of events
 // relatively low.

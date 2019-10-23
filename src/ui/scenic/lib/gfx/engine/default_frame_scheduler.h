@@ -11,6 +11,7 @@
 
 #include <queue>
 
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -28,9 +29,9 @@ class Display;
 // scheduler should be added to it as well.
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(
-      const Display* display, std::unique_ptr<FramePredictor> predictor,
-      inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
+  explicit DefaultFrameScheduler(const Display* display, std::unique_ptr<FramePredictor> predictor,
+                                 inspect_deprecated::Node inspect_node = inspect_deprecated::Node(),
+                                 std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = nullptr);
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|

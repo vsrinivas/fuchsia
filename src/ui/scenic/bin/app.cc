@@ -7,6 +7,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <lib/syslog/cpp/logger.h>
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
@@ -16,9 +17,11 @@
 #include "src/ui/scenic/lib/input/input_system.h"
 #endif
 
+#include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/engine/windowed_frame_predictor.h"
+#include "src/ui/scenic/lib/gfx/frame_metrics_registry.cb.h"
 
 namespace {
 
@@ -95,12 +98,17 @@ void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* displ
 
   escher_ = std::move(escher);
 
+  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = cobalt::NewCobaltLoggerFromProjectName(
+      async_get_default_dispatcher(), app_context_.get(), cobalt_registry::kProjectName);
+  if (cobalt_logger == nullptr) {
+    FX_LOGS(ERROR) << "CobaltLogger creation failed!";
+  }
   frame_scheduler_ = std::make_shared<gfx::DefaultFrameScheduler>(
       display,
       std::make_unique<gfx::WindowedFramePredictor>(
           gfx::DefaultFrameScheduler::kInitialRenderDuration,
           gfx::DefaultFrameScheduler::kInitialUpdateDuration),
-      scenic_.inspect_node()->CreateChild("FrameScheduler"));
+      scenic_.inspect_node()->CreateChild("FrameScheduler"), std::move(cobalt_logger));
 
   engine_.emplace(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
                   scenic_.inspect_node()->CreateChild("Engine"));
