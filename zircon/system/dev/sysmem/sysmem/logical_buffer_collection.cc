@@ -71,6 +71,31 @@ T AlignUp(T value, T divisor) {
 
 bool IsCpuUsage(const fuchsia_sysmem_BufferUsage& usage) { return usage.cpu != 0; }
 
+void BarrierAfterFlush() {
+#if defined(__aarch64__)
+  // According to the ARMv8 ARM K11.5.4 it's better to use DSB instead of DMB
+  // for ordering with respect to MMIO (DMB is ok if all agents are just
+  // observing memory). The system shareability domain is used because that's
+  // the only domain the video decoder is guaranteed to be in. SY is used
+  // instead of LD or ST because section B2.3.5 says that the barrier needs both
+  // read and write access types to be effective with regards to cache
+  // operations.
+  asm __volatile__("dsb sy");
+#elif defined(__x86_64__)
+  // This is here just in case we both (a) don't need to flush cache on x86 due to cache coherent
+  // DMA (CLFLUSH not needed), and (b) we have code using non-temporal stores or "string
+  // operations" whose surrounding code didn't itself take care of doing an SFENCE.  After returning
+  // from this function, we may write to MMIO to start DMA - we want any previous (program order)
+  // non-temporal stores to be visible to HW before that MMIO write that starts DMA.  The MFENCE
+  // instead of SFENCE is mainly paranoia, though one could hypothetically create HW that starts or
+  // continues DMA based on an MMIO read (please don't), in which case MFENCE might be needed here
+  // before that read.
+  asm __volatile__("mfence");
+#else
+  ZX_PANIC("logical_buffer_collection.cc missing BarrierAfterFlush() impl for this platform");
+#endif
+}
+
 }  // namespace
 
 // static
@@ -1493,6 +1518,7 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
     // Transfer ownership from zx::vmo to FidlStruct<>.
     result->buffers[i].vmo = vmo.release();
   }
+  BarrierAfterFlush();
 
   // Register failure handler with memory allocator.
   allocator->AddDestroyCallback(reinterpret_cast<intptr_t>(this), [this]() {

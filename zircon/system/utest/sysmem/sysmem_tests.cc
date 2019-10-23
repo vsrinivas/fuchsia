@@ -2222,6 +2222,89 @@ extern "C" bool test_sysmem_cpu_usage_and_inaccessible_domain_supported_succeeds
   END_TEST;
 }
 
+extern "C" bool test_sysmem_allocated_buffer_zero_in_ram(void) {
+  BEGIN_TEST;
+
+  constexpr uint32_t kBufferCount = 1;
+  // Since we're reading from buffer start to buffer end, let's not allocate too large a buffer,
+  // since perhaps that'd hide problems if the cache flush is missing in sysmem.
+  constexpr uint32_t kBufferSize = 64 * 1024;
+  constexpr uint32_t kIterationCount = 200;
+
+  auto zero_buffer = std::make_unique<uint8_t[]>(kBufferSize);
+  ZX_ASSERT(zero_buffer);
+  auto tmp_buffer = std::make_unique<uint8_t[]>(kBufferSize);
+  ZX_ASSERT(tmp_buffer);
+  for (uint32_t iter = 0; iter < kIterationCount; ++iter) {
+    zx::channel collection_client;
+    zx_status_t status = make_single_participant_collection(&collection_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+    constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+    constraints->min_buffer_count_for_camping = kBufferCount;
+    constraints->has_buffer_memory_constraints = true;
+    constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = kBufferSize,
+        .max_size_bytes = kBufferSize,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
+    };
+    ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(allocation_status, ZX_OK, "");
+
+    // We intentionally don't check a bunch of stuff here.  We assume that sysmem allocated
+    // kBufferCount (1) buffer of kBufferSize (64 KiB).  That way we're comparing ASAP after buffer
+    // allocation, in case that helps catch any failure to actually zero in RAM.  Ideally we'd read
+    // using a DMA in this test instead of using CPU reads, but that wouldn't be a portable test.
+
+    zx::vmo vmo(buffer_collection_info->buffers[0].vmo);
+    buffer_collection_info->buffers[0].vmo = ZX_HANDLE_INVALID;
+
+    // Before we read from the VMO, we need to invalidate cache for the VMO.  We do this via a
+    // syscall since it seems like mapping would have a greater chance of doing a fence.
+    // Unfortunately none of these steps are guarnteed not to hide a problem with flushing or fence
+    // in sysmem...
+    status = vmo.op_range(ZX_VMO_OP_CACHE_INVALIDATE, /*offset=*/0, kBufferSize, /*buffer=*/nullptr,
+                          /*buffer_size=*/0);
+    ASSERT_EQ(status, ZX_OK);
+
+    // Read using a syscall instead of mapping, just in case mapping would do a bigger fence.
+    status = vmo.read(tmp_buffer.get(), 0, kBufferSize);
+    ASSERT_EQ(status, ZX_OK);
+
+    // Any non-zero bytes could be a problem with sysmem's zeroing, or cache flushing, or fencing of
+    // the flush (depending on whether a given architecture is willing to cancel a cache line flush
+    // on later cache line invalidate, which would seem at least somewhat questionable, and may not
+    // be a thing).  This not catching a problem doesn't mean there are no problems, so that's why
+    // we loop kIterationCount times to see if we can detect a problem.
+    EXPECT_EQ(0, memcmp(zero_buffer.get(), tmp_buffer.get(), kBufferSize));
+
+    // These should be noticed by sysmem before we've allocated enough space in the loop to cause
+    // any trouble allocating:
+    // ~vmo
+    // ~collection_client
+  }
+
+  END_TEST;
+}
+
 // TODO(dustingreen): Add tests to cover more failure cases.
 
 // clang-format off
@@ -2248,5 +2331,6 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_heap_amlogic_secure)
     RUN_TEST(test_sysmem_heap_amlogic_secure_vdec)
     RUN_TEST(test_sysmem_cpu_usage_and_inaccessible_domain_supported_succeeds)
+    RUN_TEST(test_sysmem_allocated_buffer_zero_in_ram)
 END_TEST_CASE(sysmem_tests)
 // clang-format on
