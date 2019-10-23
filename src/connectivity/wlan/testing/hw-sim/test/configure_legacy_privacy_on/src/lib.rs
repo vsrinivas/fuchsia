@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_service::{ErrCode, ScanRequest, ScanResult, WlanMarker, WlanProxy},
-    fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
+    fidl_fuchsia_wlan_tap::WlantapPhyProxy,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     wlan_common::{bss::Protection, mac::Bssid},
@@ -29,42 +29,32 @@ async fn scan(
         .run_until_complete_or_timeout(
             10.seconds(),
             "receive a scan response",
-            |event| {
-                if let WlantapPhyEvent::SetChannel { args } = event {
-                    if args.chan.primary == CHANNEL {
-                        send_beacon(
-                            &mut vec![],
-                            &args.chan,
-                            &BSS_WPA1,
-                            SSID_WPA1,
-                            &Protection::Wpa1,
-                            &phy,
-                            0,
-                        )
-                        .unwrap();
-                        send_beacon(
-                            &mut vec![],
-                            &args.chan,
-                            &BSS_WEP,
-                            SSID_WEP,
-                            &Protection::Wep,
-                            &phy,
-                            0,
-                        )
-                        .unwrap();
-                        send_beacon(
-                            &mut vec![],
-                            &args.chan,
-                            &BSS_MIXED,
-                            SSID_MIXED,
-                            &Protection::Wpa1Wpa2Personal,
-                            &phy,
-                            0,
-                        )
-                        .unwrap();
-                    }
-                }
-            },
+            EventHandlerBuilder::new()
+                .on_set_channel(
+                    MatchChannel::new().on_primary(
+                        CHANNEL,
+                        Sequence::start()
+                            .then(
+                                Beacon::send(&phy)
+                                    .bssid(BSS_WPA1)
+                                    .ssid(SSID_WPA1.to_vec())
+                                    .protection(Protection::Wpa1),
+                            )
+                            .then(
+                                Beacon::send(&phy)
+                                    .bssid(BSS_WEP)
+                                    .ssid(SSID_WEP.to_vec())
+                                    .protection(Protection::Wep),
+                            )
+                            .then(
+                                Beacon::send(&phy)
+                                    .bssid(BSS_MIXED)
+                                    .ssid(SSID_MIXED.to_vec())
+                                    .protection(Protection::Wpa1Wpa2Personal),
+                            ),
+                    ),
+                )
+                .build(),
             wlan_service.scan(&mut ScanRequest { timeout: 5 }),
         )
         .await

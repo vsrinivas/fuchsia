@@ -31,6 +31,30 @@ impl<T, F: FnMut(&T) + Sized> Action<T> for F {
     }
 }
 
+/// A Sequence chains multiple Actions together sequentially.
+pub struct Sequence<'a, T> {
+    actions: Vec<Box<dyn Action<T> + 'a>>,
+}
+
+impl<'a, T> Sequence<'a, T> {
+    pub fn start() -> Self {
+        Self { actions: vec![] }
+    }
+
+    pub fn then(mut self, action: impl Action<T> + 'a) -> Self {
+        self.actions.push(Box::new(action));
+        self
+    }
+}
+
+impl<'a, T> Action<T> for Sequence<'a, T> {
+    fn run(&mut self, args: &T) {
+        for action in self.actions.iter_mut() {
+            action.run(&args)
+        }
+    }
+}
+
 /// MatchChannel provides functions to register dispatches to different actions based on the
 /// WlanChan found in SetChannelArgs, as well as a fallthrough case.
 pub struct MatchChannel<'a> {
