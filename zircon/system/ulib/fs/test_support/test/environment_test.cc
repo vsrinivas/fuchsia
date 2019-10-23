@@ -82,7 +82,7 @@ TEST(EnvironmentTest, ValidOptions) {
 
   Environment::TestConfig config = {};
   EXPECT_TRUE(config.GetOptions(fbl::count_of(options) - 1, const_cast<char**>(options)));
-  EXPECT_STR_EQ("path", config.path);
+  EXPECT_STR_EQ("path", config.physical_device_path);
   EXPECT_FALSE(config.use_journal);
 }
 
@@ -92,7 +92,7 @@ TEST(EnvironmentTest, RejectsMissingDevice) {
 
   Environment::TestConfig config = {};
   EXPECT_FALSE(config.GetOptions(fbl::count_of(options) - 1, const_cast<char**>(options)));
-  EXPECT_NULL(config.path);
+  EXPECT_NULL(config.physical_device_path);
 }
 
 }  // namespace

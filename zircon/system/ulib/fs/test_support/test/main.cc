@@ -14,6 +14,7 @@ int main(int argc, char** argv) {
   fs::Environment::TestConfig config = {};
   config.mount_path = "/tmp/foo";
   config.format_type = DISK_FORMAT_BLOBFS;
+  config.ramdisk_block_count = 1 << 16;  // 32 MB.
 
   auto parent = std::make_unique<fs::Environment>(config);
   fs::g_environment = parent.get();

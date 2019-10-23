@@ -57,7 +57,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
     }
     switch (c) {
       case 'd':
-        config->path = optarg;
+        config->physical_device_path = optarg;
         break;
       case 'j':
         config->use_journal = false;
@@ -124,9 +124,10 @@ const char* Environment::TestConfig::HelpMessage() const {
 void Environment::SetUp() {
   ASSERT_NO_FAILURES(CreateDevmgr());
 
-  if (config_.path) {
-    ASSERT_TRUE(OpenDevice(config_.path));
+  if (config_.physical_device_path) {
+    ASSERT_TRUE(OpenDevice(config_.physical_device_path));
   } else {
+    block_count_ = config_.ramdisk_block_count;
     ramdisk_ = std::make_unique<RamDisk>(devfs_root(), block_size_, block_count_);
     path_.assign(ramdisk_->path());
   }

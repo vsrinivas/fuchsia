@@ -45,8 +45,14 @@ class RamDisk {
 // parameters.
 class Environment : public zxtest::Environment {
  public:
+  // Controls how the executable is running. The basic choice is between using
+  // a real block device (physical_device_path) or a ram-disk device of a given
+  // size (ramdisk_block_count, when the path is null).
   struct TestConfig {
-    const char* path;  // Path to an existing device.
+    uint64_t ramdisk_block_count;
+    const char* physical_device_path;  // Path to an existing device.
+
+    // Options that apply to any kind of device:
     const char* mount_path;
     disk_format_type format_type;
     bool show_help;
@@ -100,7 +106,7 @@ class Environment : public zxtest::Environment {
   std::string path_;
 
   uint32_t block_size_ = 512;
-  uint64_t block_count_ = 1 << 19;  // TODO(ZX-4203): Reduce this value.
+  uint64_t block_count_ = 0;
 };
 
 extern Environment* g_environment;
