@@ -63,9 +63,9 @@ template("_fuzzer_cmx") {
 # environment. This means dependents on this target will get fuzzers for their
 # base environment (e.g. host dependents will get host fuzzers, etc.).
 #
-# For clarity, it is strongly recommended that fuzzer names include the name of
-# the code being fuzzed and end in "-fuzzer", e.g. a fuzzer in
-# $zx/system/ulib/foo might be named "foo-fuzzer".
+# In order to be properly picked up by the //garnet/tests/zircon:zircon_fuzzers
+# package, it is required that Zircon fuzzer names end in "-fuzzer", e.g. a
+# fuzzer in $zx/system/ulib/foo might be named "foo-fuzzer".
 #
 # Parameters
 #
