@@ -70,8 +70,7 @@ const Config kDefaultConfig = Config{kDefaultAnnotations, kDefaultAttachments};
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
 
-constexpr zx::duration kTimeout = zx::sec(20);
-constexpr zx::duration kInspectTimeout = zx::sec(10);
+constexpr zx::duration kDataProviderIdleTimeout = zx::sec(5);
 
 // Returns a Screenshot with the right dimensions, no image.
 std::unique_ptr<Screenshot> MakeUniqueScreenshot(const size_t image_dim_in_px) {
@@ -151,13 +150,13 @@ class DataProviderTest : public gtest::TestLoopFixture {
   void SetUpDataProvider(const Config& config) {
     data_provider_.reset(new DataProvider(
         dispatcher(), service_directory_provider_.service_directory(), config,
-        [this] { data_provider_timed_out_ = true; }, kTimeout));
+        [this] { data_provider_timed_out_ = true; }, kDataProviderIdleTimeout));
   }
 
-  void SetUpDataProvider(zx::duration timeout) {
+  void SetUpDataProviderOnlyRequestingChannel(zx::duration timeout) {
     data_provider_.reset(new DataProvider(
-        dispatcher(), service_directory_provider_.service_directory(), kDefaultConfig,
-        [this] { data_provider_timed_out_ = true; }, timeout));
+        dispatcher(), service_directory_provider_.service_directory(),
+        Config{{kAnnotationChannel}, {}}, [this] { data_provider_timed_out_ = true; }, timeout));
   }
 
   void SetUpScenic(std::unique_ptr<StubScenic> stub_scenic) {
@@ -173,11 +172,12 @@ class DataProviderTest : public gtest::TestLoopFixture {
     FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler()) == ZX_OK);
   }
 
-  void SetUpChannelProvider(std::string channel) {
-    stub_channel_provider_.reset(new StubChannelProvider());
-    stub_channel_provider_->set_channel(channel);
-    FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
-              ZX_OK);
+  void SetUpChannelProvider(std::unique_ptr<StubChannelProvider> stub_channel_provider) {
+    stub_channel_provider_ = std::move(stub_channel_provider);
+    if (stub_channel_provider_) {
+      FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
+                ZX_OK);
+    }
   }
 
   GetScreenshotResponse GetScreenshot() {
@@ -194,9 +194,9 @@ class DataProviderTest : public gtest::TestLoopFixture {
     fit::result<Data, zx_status_t> out_result;
     data_provider_->GetData(
         [&out_result](fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
-    // The Inspect data collection happens in a different thread so we need to wait for the timeout
-    // of 10s.
-    RunLoopFor(kInspectTimeout);
+    // The Inspect data collection happens in a different thread so we need to wait for the
+    // timeout of 10s.
+    RunLoopFor(zx::sec(10));
     return out_result;
   }
 
@@ -220,9 +220,9 @@ class DataProviderTest : public gtest::TestLoopFixture {
  private:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
+  std::unique_ptr<StubChannelProvider> stub_channel_provider_;
   std::unique_ptr<StubScenic> stub_scenic_;
   std::unique_ptr<StubLogger> stub_logger_;
-  std::unique_ptr<StubChannelProvider> stub_channel_provider_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -482,7 +482,9 @@ TEST_F(DataProviderTest, GetData_SysLog) {
 }
 
 TEST_F(DataProviderTest, GetData_Channel) {
-  SetUpChannelProvider("my-channel");
+  auto stub_channel_provider = std::make_unique<StubChannelProvider>();
+  stub_channel_provider->set_channel("my-channel");
+  SetUpChannelProvider(std::move(stub_channel_provider));
 
   fit::result<Data, zx_status_t> result = GetData();
 
@@ -567,151 +569,132 @@ TEST_F(DataProviderTest, GetData_UnknownAllowlistedAttachment) {
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 
-TEST_F(DataProviderTest, TimeoutAfter_OneScreenshotRequestCompletes) {
-  // We use a stub that always returns false as we are not interested in the responses.
-  SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
-  std::vector<GetScreenshotResponse> feedback_responses;
+TEST_F(DataProviderTest, Check_IdleTimeout) {
+  // This test checks that requests to the data provider properly delay the idle timeout function
+  // that data provider executes and that said function runs after data provider is idle for a
+  // sufficient period of time.
+  //
+  // We setup the system such that requests for both data and screentshots hang,
+  // relying on their respective timeouts to ensure that an error is returned. Additionally, we set
+  // the idle timeout of the data provider to be half as long as the time it takes for a
+  // request to return in order to determine that neither is interruped by the idle timeout while
+  // completing.
+  //
+  // We test scenarios in which a single request is made, sequential requests are made, and
+  // concurrent requests are made, in that order.
 
-  // Get the screenshot and the timeout hasn't happened.
-  data_provider_->GetScreenshot(ImageEncoding::PNG,
-                                [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
-                                  feedback_responses.push_back({std::move(screenshot)});
-                                });
-  RunLoopUntilIdle();
-  ASSERT_EQ(feedback_responses.size(), 1u);
+  // Track if requests have completed.
+  bool got_data = false;
+  bool got_screenshot = false;
+
+  const zx::duration kGetScreenshotOrDataTimeout = zx::sec(10);
+
+  ASSERT_GE(kGetScreenshotOrDataTimeout, kDataProviderIdleTimeout);
+
+  SetUpDataProviderOnlyRequestingChannel(kDataProviderIdleTimeout);
+
+  SetUpScenic(std::make_unique<StubScenicNeverReturns>());
+  SetUpChannelProvider(std::make_unique<StubChannelProviderNeverReturns>());
+
+  // In the following tests we list the current time of a stopwatch that starts at 0 seconds and the
+  // point in time at which the idle timeout function is expected to run. In the circumstance the
+  // idle timeout function is blocked from running we denote the timeout as X.
+
+  // Make a single request for a screenshot to check that the idle timeout happens after the
+  // screenshot has been returned.
+
+  // TIME = 0; TIMEOUT @ X (unset)
+  data_provider_->GetScreenshot(
+      ImageEncoding::PNG,
+      [&got_screenshot](std::unique_ptr<Screenshot> _) { got_screenshot = true; });
+  RunLoopFor(kGetScreenshotOrDataTimeout);
+
+  // TIME = 10; TIMEOUT @ 15 (10 + 5, current time + kDataProviderIdleTimeout)
+  ASSERT_TRUE(got_screenshot);
   ASSERT_FALSE(data_provider_timed_out_);
 
-  // The timeout doesn't happen until expected.
-  RunLoopFor(kTimeout / 2);
-  ASSERT_FALSE(data_provider_timed_out_);
-  RunLoopFor(kTimeout / 2);
-  EXPECT_TRUE(data_provider_timed_out_);
-}
+  RunLoopFor(kDataProviderIdleTimeout);
 
-TEST_F(DataProviderTest, TimeoutAfter_SequentialScreenshotRequestsComplete) {
-  // We use a stub that always returns false as we are not interested in the responses.
-  SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
-  std::vector<GetScreenshotResponse> feedback_responses;
+  // TIME = 15; TIMEOUT @ 15 (unchanged)
+  ASSERT_TRUE(data_provider_timed_out_);
 
-  // Get the first screenshot and the timeout hasn't happened.
-  data_provider_->GetScreenshot(ImageEncoding::PNG,
-                                [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
-                                  feedback_responses.push_back({std::move(screenshot)});
-                                });
-  RunLoopUntilIdle();
-  ASSERT_EQ(feedback_responses.size(), 1u);
+  // Make a single request for data to check that the idle timeout happens after the data has been
+  // returned.
+
+  // TIME = 15; TIMEOUT @ X (reset)
+  data_provider_timed_out_ = false;
+  data_provider_->GetData([&got_data](fit::result<Data, zx_status_t> _) { got_data = true; });
+  RunLoopFor(kGetScreenshotOrDataTimeout);
+
+  // TIME = 25; TIMEOUT @ 30 (25 + 5, current time + kDataProviderIdleTimeout)
+  ASSERT_TRUE(got_data);
   ASSERT_FALSE(data_provider_timed_out_);
 
-  // The timeout hasn't happened.
-  RunLoopFor(kTimeout / 2);
+  RunLoopFor(kDataProviderIdleTimeout);
+
+  // TIME = 30; TIMEOUT @ 30 (unchanged)
+  ASSERT_TRUE(data_provider_timed_out_);
+
+  got_screenshot = false;
+  got_data = false;
+  data_provider_timed_out_ = false;
+
+  // Check that sequential requests for a screenshot and data properly block the idle timeout
+  // function and that it executes when expected.
+
+  // TIME = 30; TIMEOUT @ X (reset)
+  data_provider_->GetScreenshot(
+      ImageEncoding::PNG,
+      [&got_screenshot](std::unique_ptr<Screenshot> _) { got_screenshot = true; });
+  RunLoopFor(kGetScreenshotOrDataTimeout);
+
+  // TIME = 40; TIMEOUT @ 45 (40 + 5, current time + kDataProviderIdleTimeout)
+  ASSERT_TRUE(got_screenshot);
   ASSERT_FALSE(data_provider_timed_out_);
 
-  // Get the second screenshot and the timeout hasn't happened.
-  data_provider_->GetScreenshot(ImageEncoding::PNG,
-                                [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
-                                  feedback_responses.push_back({std::move(screenshot)});
-                                });
-  RunLoopUntilIdle();
-  ASSERT_EQ(feedback_responses.size(), 2u);
+  data_provider_->GetData([&got_data](fit::result<Data, zx_status_t> _) { got_data = true; });
+  RunLoopFor(kGetScreenshotOrDataTimeout);
+
+  // TIME = 50; TIMEOUT @ 55 (50 + 5, current time + kDataProviderIdleTimeout)
+
+  ASSERT_TRUE(got_data);
   ASSERT_FALSE(data_provider_timed_out_);
 
-  // The the timout was reset upon the second screenshoot being returned so check
-  // the timeout doesn't happen until expected.
-  RunLoopFor(kTimeout / 2);
+  RunLoopFor(kDataProviderIdleTimeout);
+
+  // TIME = 55; TIMEOUT @ 55 (unchanged)
+  ASSERT_TRUE(data_provider_timed_out_);
+
+  got_screenshot = false;
+  got_data = false;
+  data_provider_timed_out_ = false;
+
+  // Check that concurrent requests for a screenshot and data properly block the idle timeout
+  // function and that it executes when expected.
+
+  // TIME = 55; TIMEOUT @ X (reset)
+  data_provider_->GetScreenshot(
+      ImageEncoding::PNG,
+      [&got_screenshot](std::unique_ptr<Screenshot> _) { got_screenshot = true; });
+  RunLoopFor(kDataProviderIdleTimeout);
+
+  // TIME = 60; TIMEOUT @ X (reset)
+  data_provider_->GetData([&got_data](fit::result<Data, zx_status_t> _) { got_data = true; });
+  RunLoopFor(kDataProviderIdleTimeout);
+
+  // TIME = 65; TIMEOUT @ X (reset)
+  ASSERT_TRUE(got_screenshot);
+  ASSERT_FALSE(got_data);
   ASSERT_FALSE(data_provider_timed_out_);
-  RunLoopFor(kTimeout / 2);
-  EXPECT_TRUE(data_provider_timed_out_);
-}
+  RunLoopFor(kDataProviderIdleTimeout);
 
-TEST_F(DataProviderTest, TimeoutAfter_ParallelScreenshotRequestsComplete) {
-  // We use a stub that always returns false as we are not interested in the responses.
-  SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
-  std::vector<GetScreenshotResponse> feedback_responses;
+  // TIME = 70; TIMEOUT @ 75 (70 + 5, current time + kDataProviderIdleTimeout)
 
-  const size_t num_screenshots = 5u;
-
-  for (size_t i = 0; i < num_screenshots; ++i) {
-    // Get the all screenshots and the timeout hasn't happened.
-    data_provider_->GetScreenshot(ImageEncoding::PNG,
-                                  [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
-                                    feedback_responses.push_back({std::move(screenshot)});
-                                  });
-  }
-
-  RunLoopUntilIdle();
-  ASSERT_EQ(feedback_responses.size(), num_screenshots);
+  ASSERT_TRUE(got_data);
   ASSERT_FALSE(data_provider_timed_out_);
+  RunLoopFor(kDataProviderIdleTimeout);
 
-  // The the timout was reset upon the second screenshoot being returned so check
-  // the timeout doesn't happen until expected.
-  RunLoopFor(kTimeout / 2);
-  ASSERT_FALSE(data_provider_timed_out_);
-  RunLoopFor(kTimeout / 2);
-  EXPECT_TRUE(data_provider_timed_out_);
-}
-
-TEST_F(DataProviderTest, TimeoutAfter_DataRequestCompletes) {
-  const zx::duration data_provider_time_out = kInspectTimeout / 2;
-  // Set up the timeout to happen in half as much time as it takes to complete GetData().
-  SetUpDataProvider(data_provider_time_out);
-
-  fit::result<Data, zx_status_t> out_result;
-  data_provider_->GetData(
-      [&out_result](fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
-
-  // Neither the timeout nor GetData() have completed.
-  RunLoopFor(data_provider_time_out);
-  ASSERT_TRUE(out_result.is_pending());
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  // GetData(), but not the timeout has completed.
-  RunLoopFor(data_provider_time_out);
-  ASSERT_TRUE(out_result.is_ok());
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  // The timeout doesn't happen until expected.
-  RunLoopFor(data_provider_time_out / 2);
-  ASSERT_FALSE(data_provider_timed_out_);
-  RunLoopFor(data_provider_time_out / 2);
-  EXPECT_TRUE(data_provider_timed_out_);
-}
-
-TEST_F(DataProviderTest, TimeoutAfter_InterleavedDataAndScenicRequestsComplete) {
-  const zx::duration data_provider_time_out = kInspectTimeout / 2;
-  // Set up the timeout to happen in half as much time as it takes to complete GetData().
-  SetUpDataProvider(data_provider_time_out);
-
-  fit::result<Data, zx_status_t> out_result;
-  data_provider_->GetData(
-      [&out_result](fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
-
-  // Neither the timeout nor GetData() have completed.
-  RunLoopFor(data_provider_time_out);
-  ASSERT_TRUE(out_result.is_pending());
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  // Get the screenshot and check that neither the timeout nor GetData() have completed.
-  SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
-  std::vector<GetScreenshotResponse> feedback_responses;
-  data_provider_->GetScreenshot(ImageEncoding::PNG,
-                                [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
-                                  feedback_responses.push_back({std::move(screenshot)});
-                                });
-  RunLoopUntilIdle();
-  ASSERT_EQ(feedback_responses.size(), 1u);
-  ASSERT_TRUE(out_result.is_pending());
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  // GetData(), but not the timeout has completed.
-  RunLoopFor(data_provider_time_out);
-  ASSERT_TRUE(out_result.is_ok());
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  // The the timout was reset upon the data being returned so check
-  // the timeout doesn't happen until expected.
-  RunLoopFor(data_provider_time_out / 2);
-  ASSERT_FALSE(data_provider_timed_out_);
-  RunLoopFor(data_provider_time_out / 2);
+  // TIME = 75; TIMEOUT @ 75 (unchanged)
   EXPECT_TRUE(data_provider_timed_out_);
 }
 
@@ -748,8 +731,8 @@ class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
   // Injects a test app that exposes some Inspect data in the test environment.
   //
   // Useful to guarantee there is a component within the environment that exposes Inspect data as
-  // we are excluding system_objects paths from the Inspect discovery and the test component
-  // itself only has a system_objects Inspect node.
+  // we are excluding system_objects paths from the Inspect discovery and the test component itself
+  // only has a system_objects Inspect node.
   void InjectInspectTestApp() {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
