@@ -367,7 +367,6 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Validate every target of this offer.
-        let mut seen_targets = HashSet::new();
         for to in offer.to.iter() {
             // Ensure the "to" value is a child.
             let to_target = if let cml::Ref::Named(name) = to {
@@ -375,17 +374,6 @@ impl<'a> ValidationContext<'a> {
             } else {
                 return Err(Error::validate(format!("invalid \"offer\" target: \"{}\"", to)));
             };
-
-            // Ensure that there are no duplicate names in the "to" list.
-            let target_cap_id = CapabilityId::from_clause(offer)?;
-            if !seen_targets.insert(to_target) {
-                return Err(Error::validate(format!(
-                    "\"{}\" is a duplicate \"offer\" target for {} \"{}\"",
-                    to,
-                    target_cap_id.type_str(),
-                    target_cap_id.as_str()
-                )));
-            }
 
             // Check that any referenced child actually exists.
             if !self.all_children.contains(to_target) && !self.all_collections.contains(to_target) {
@@ -398,6 +386,7 @@ impl<'a> ValidationContext<'a> {
 
             // Ensure something hasn't already been offered under the same
             // name to this target.
+            let target_cap_id = CapabilityId::from_clause(offer)?;
             let ids_for_entity = used_ids.entry(to_target).or_insert(HashSet::new());
             if !ids_for_entity.insert(target_cap_id) {
                 return Err(Error::validate(format!(
@@ -1922,6 +1911,16 @@ mod tests {
                 } ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "MinItems condition is not met at /offer/0/to")),
+        },
+        test_cml_offer_duplicate_targets => {
+            input = json!({
+                "offer": [ {
+                    "service": "/svc/fuchsia.logger.Log",
+                    "from": "#logger",
+                    "to": ["#a", "#a"]
+                } ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "UniqueItems condition is not met at /offer/0/to")),
         },
         test_cml_offer_target_missing_props => {
             input = json!({
