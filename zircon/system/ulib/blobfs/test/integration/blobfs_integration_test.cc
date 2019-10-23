@@ -34,8 +34,6 @@ using fs::GetTopologicalPath;
 using fs::FilesystemTest;
 using fs::RamDisk;
 
-// This is work in progress!. See ZX-4203 for context.
-
 // Go over the parent device logic and test fixture.
 TEST_F(BlobfsTest, Trivial) {}
 
@@ -1294,96 +1292,45 @@ TEST_F(BlobfsTestWithFvm, ResizePartition) {
   EXPECT_LT(2, slices[1].count);
 }
 
-/*
-
-static bool CorruptAtMount(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    ASSERT_EQ(blobfsTest->GetType(), FsTestType::kFvm);
-    ASSERT_TRUE(blobfsTest->Teardown());
-    ASSERT_TRUE(blobfsTest->Reset());
-    ASSERT_TRUE(blobfsTest->Init(FsTestState::kMinimal), "Mounting Blobfs");
-
-    char device_path[PATH_MAX];
-    ASSERT_TRUE(blobfsTest->GetDevicePath(device_path, PATH_MAX));
-    ASSERT_EQ(mkfs(device_path, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
-              ZX_OK);
-
-    fbl::unique_fd fd(blobfsTest->GetFd());
-    ASSERT_TRUE(fd, "Could not open ramdisk");
-    fzl::UnownedFdioCaller caller(fd.get());
-
-    // Manually shrink slice so FVM will differ from Blobfs.
-    uint64_t offset = blobfs::kFVMNodeMapStart / kBlocksPerSlice;
-    uint64_t length = 1;
-    zx_status_t status;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(caller.borrow_channel(), offset,
-                                                         length, &status), ZX_OK);
-    ASSERT_OK(status);
-
-    // Verify that shrink was successful.
-    uint64_t start_slices[1];
-    start_slices[0] = offset;
-    fuchsia_hardware_block_volume_VsliceRange
-            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-    size_t actual_ranges_count;
-
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
-                caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
-                ranges, &actual_ranges_count), ZX_OK);
-    ASSERT_OK(status);
-    ASSERT_EQ(actual_ranges_count, 1);
-    ASSERT_FALSE(ranges[0].allocated);
-    ASSERT_EQ(ranges[0].count,
-              (blobfs::kFVMJournalStart - blobfs::kFVMNodeMapStart) / kBlocksPerSlice);
-
-    // Attempt to mount the VPart. This should fail since slices are missing.
-    mount_options_t options = default_mount_options;
-    options.enable_journal = gEnableJournal;
-    caller.reset();
-    ASSERT_NE(mount(fd.release(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options,
-                    launch_stdio_async), ZX_OK);
-
-    fd.reset(blobfsTest->GetFd());
-    ASSERT_TRUE(fd, "Could not open ramdisk");
-    caller.reset(fd.get());
-
-    // Manually grow slice count to twice what it was initially.
-    length = 2;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(), offset,
-                                                         length, &status), ZX_OK);
-    ASSERT_OK(status);
-
-    // Verify that extend was successful.
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
-                caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
-                ranges, &actual_ranges_count), ZX_OK);
-    ASSERT_OK(status);
-    ASSERT_EQ(actual_ranges_count, 1);
-    ASSERT_TRUE(ranges[0].allocated);
-    ASSERT_EQ(ranges[0].count, 2);
-
-    // Attempt to mount the VPart. This should succeed.
-    caller.reset();
-    ASSERT_EQ(mount(fd.release(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &options,
-                    launch_stdio_async), ZX_OK);
-
-    ASSERT_OK(umount(MOUNT_PATH));
-    fd.reset(blobfsTest->GetFd());
-    ASSERT_TRUE(fd, "Could not open ramdisk");
-    caller.reset(fd.get());
-
-    // Verify that mount automatically removed extra slice.
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
-                caller.borrow_channel(), start_slices, fbl::count_of(start_slices), &status,
-                ranges, &actual_ranges_count), ZX_OK);
-    ASSERT_OK(status);
-    ASSERT_EQ(actual_ranges_count, 1);
-    ASSERT_TRUE(ranges[0].allocated);
-    ASSERT_EQ(ranges[0].count, 1);
-    END_HELPER;
+void FvmShrink(const std::string& path, uint64_t offset, uint64_t length) {
+  std::unique_ptr<block_client::RemoteBlockDevice> block_device;
+  ASSERT_NO_FAILURES(OpenBlockDevice(path, &block_device));
+  ASSERT_OK(block_device->VolumeShrink(offset, length));
 }
 
-*/
+void FvmExtend(const std::string& path, uint64_t offset, uint64_t length) {
+  std::unique_ptr<block_client::RemoteBlockDevice> block_device;
+  ASSERT_NO_FAILURES(OpenBlockDevice(path, &block_device));
+  ASSERT_OK(block_device->VolumeExtend(offset, length));
+}
+
+TEST_F(BlobfsTestWithFvm, CorruptAtMount) {
+  ASSERT_NO_FAILURES(Unmount());
+
+  // Shrink slice so FVM will differ from Blobfs.
+  uint64_t offset = BlobfsBlockToFvmSlice(blobfs::kFVMNodeMapStart);
+  ASSERT_NO_FAILURES(FvmShrink(device_path(), offset, 1));
+
+  fbl::unique_fd fd(open(device_path().c_str(), O_RDWR));
+  ASSERT_TRUE(fd);
+
+  mount_options_t options = default_mount_options;
+  ASSERT_NOT_OK(mount(fd.release(), mount_path(), format_type(), &options, launch_stdio_async));
+
+  // Grow slice count to twice what it should be.
+  ASSERT_NO_FAILURES(FvmExtend(device_path(), offset, 2));
+
+  ASSERT_NO_FAILURES(Mount());
+  ASSERT_NO_FAILURES(Unmount());
+
+  // Verify that mount automatically removed the extra slice.
+  std::vector<SliceRange> slices;
+  std::vector<uint64_t> query = {BlobfsBlockToFvmSlice(blobfs::kFVMNodeMapStart)};
+  ASSERT_NO_FAILURES(GetSliceRange(*this, query, &slices));
+  ASSERT_EQ(1, slices.size());
+  EXPECT_TRUE(slices[0].allocated);
+  EXPECT_EQ(1, slices[0].count);
+}
 
 void RunFailedWriteTest(const RamDisk* disk) {
   if (!disk) {
@@ -1456,11 +1403,3 @@ TEST_F(BlobfsTestWithFvm, FailedWrite) {
 }
 
 }  // namespace
-
-/*
-
-BEGIN_TEST_CASE(blobfs_tests)
-RUN_TEST_FVM(MEDIUM, CorruptAtMount)
-END_TEST_CASE(blobfs_tests)
-
-*/
