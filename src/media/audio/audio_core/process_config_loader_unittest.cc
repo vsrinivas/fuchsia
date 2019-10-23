@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/config_loader.h"
+#include "src/media/audio/audio_core/process_config_loader.h"
 
 #include <gtest/gtest.h>
 
@@ -13,7 +13,7 @@ namespace {
 
 constexpr char kTestVolumeCurveFilename[] = "/tmp/volume_curve.json";
 
-TEST(ConfigLoaderTest, LoadVolumeCurve) {
+TEST(ProcessConfigLoaderTest, LoadVolumeCurve) {
   static std::string kTestVolumeCurve =
       R"JSON({
     "volume_curve": [
@@ -30,7 +30,7 @@ TEST(ConfigLoaderTest, LoadVolumeCurve) {
   ASSERT_TRUE(
       files::WriteFile(kTestVolumeCurveFilename, kTestVolumeCurve.data(), kTestVolumeCurve.size()));
 
-  const auto maybe_curve = ConfigLoader::LoadVolumeCurveFromDisk(kTestVolumeCurveFilename);
+  const auto maybe_curve = ProcessConfigLoader::LoadVolumeCurveFromDisk(kTestVolumeCurveFilename);
   ASSERT_TRUE(maybe_curve.has_value());
 
   const auto& curve = maybe_curve.value();
@@ -38,8 +38,8 @@ TEST(ConfigLoaderTest, LoadVolumeCurve) {
   EXPECT_FLOAT_EQ(curve.VolumeToDb(1.0), 0.0);
 }
 
-TEST(ConfigLoaderTest, NulloptOnMissingVolumeCurve) {
-  const auto maybe_curve = ConfigLoader::LoadVolumeCurveFromDisk("not-present-file");
+TEST(ProcessConfigLoaderTest, NulloptOnMissingVolumeCurve) {
+  const auto maybe_curve = ProcessConfigLoader::LoadVolumeCurveFromDisk("not-present-file");
   ASSERT_FALSE(maybe_curve.has_value());
 }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/config_loader.h"
+#include "src/media/audio/audio_core/process_config_loader.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -26,7 +26,7 @@ rapidjson::SchemaDocument LoadSchema() {
 
 }  // namespace
 
-std::optional<VolumeCurve> ConfigLoader::LoadVolumeCurveFromDisk(const char* filename) {
+std::optional<VolumeCurve> ProcessConfigLoader::LoadVolumeCurveFromDisk(const char* filename) {
   std::string buffer;
   const auto file_exists = files::ReadFileToString(filename, &buffer);
   if (!file_exists) {

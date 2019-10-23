@@ -10,9 +10,9 @@
 #include <algorithm>
 
 #include "src/lib/fxl/logging.h"
-#include "src/media/audio/audio_core/config_loader.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
+#include "src/media/audio/audio_core/process_config_loader.h"
 
 namespace media::audio {
 
@@ -21,7 +21,7 @@ namespace {
 constexpr char kDefaultCurveFilename[] = "/config/data/default_volume_curve.json";
 
 const auto kDefaultCurve =
-    ConfigLoader::LoadVolumeCurveFromDisk(kDefaultCurveFilename)
+    ProcessConfigLoader::LoadVolumeCurveFromDisk(kDefaultCurveFilename)
         .value_or(VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume));
 
 }  // namespace
