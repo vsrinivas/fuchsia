@@ -31,36 +31,50 @@ impl Backlight {
         Ok(Backlight { proxy })
     }
 
-    async fn get(&self) -> Result<u16, Error> {
-        let result = self.proxy.get_state_normalized().await?;
-        let backlight_info =
-            result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
-        Ok((backlight_info.brightness * 255.0) as u16)
+    async fn get(&self, auto_brightness_on: bool) -> Result<u16, Error> {
+        if auto_brightness_on {
+            let result = self.proxy.get_state_absolute().await?;
+            let backlight_info =
+                result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
+            Ok((backlight_info.brightness) as u16)
+        } else {
+            let result = self.proxy.get_state_normalized().await?;
+            let backlight_info =
+                result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
+            Ok((backlight_info.brightness * 250.0) as u16)
+        }
     }
 
-    fn set(&mut self, nits: u16) -> Result<(), Error> {
+    fn set(&mut self, nits: u16, auto_brightness_on: bool) -> Result<(), Error> {
         // TODO(fxb/36302): Handle error here as well, similar to get_brightness above. Might involve
         // changing this to an async function, requiring further changes in main.rs.
-        let _result = self.proxy.set_state_normalized(&mut BacklightState {
-            backlight_on: nits != 0,
-            brightness: nits as f64 / 255.0,
-        });
+        if auto_brightness_on {
+            let _result = self.proxy.set_state_absolute(&mut BacklightState {
+                backlight_on: nits != 0,
+                brightness: nits as f64,
+            });
+        } else {
+            let _result = self.proxy.set_state_normalized(&mut BacklightState {
+                backlight_on: nits != 0,
+                brightness: nits as f64 / 250.0,
+            });
+        }
         Ok(())
     }
 }
 
 #[async_trait]
 pub trait BacklightControl: Send {
-    async fn get_brightness(&self) -> Result<u16, Error>;
-    fn set_brightness(&mut self, value: u16) -> Result<(), Error>;
+    async fn get_brightness(&self, auto_brightness_on: bool) -> Result<u16, Error>;
+    fn set_brightness(&mut self, value: u16, auto_brightness_on: bool) -> Result<(), Error>;
 }
 
 #[async_trait]
 impl BacklightControl for Backlight {
-    async fn get_brightness(&self) -> Result<u16, Error> {
-        self.get().await
+    async fn get_brightness(&self, auto_brightness_on: bool) -> Result<u16, Error> {
+        self.get(auto_brightness_on).await
     }
-    fn set_brightness(&mut self, value: u16) -> Result<(), Error> {
-        self.set(value)
+    fn set_brightness(&mut self, value: u16, auto_brightness_on: bool) -> Result<(), Error> {
+        self.set(value, auto_brightness_on)
     }
 }
