@@ -136,15 +136,27 @@ extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment
 const fidl_type_t* SandwichUnionSize8Alignment4::FidlType = &test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
 
 void SandwichUnionSize8Alignment4::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &before, _offset + 0);
-  ::fidl::Encode(_encoder, &union_, _offset + 4);
-  ::fidl::Encode(_encoder, &after, _offset + 12);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 8);
+    ::fidl::Encode(_encoder, &after, _offset + 32);
+  } else {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 4);
+    ::fidl::Encode(_encoder, &after, _offset + 12);
+  }
 }
 
 void SandwichUnionSize8Alignment4::Decode(::fidl::Decoder* _decoder, SandwichUnionSize8Alignment4* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->before, _offset + 0);
-  ::fidl::Decode(_decoder, &value->union_, _offset + 4);
-  ::fidl::Decode(_decoder, &value->after, _offset + 12);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
+    ::fidl::Decode(_decoder, &value->after, _offset + 32);
+  } else {
+    ::fidl::Decode(_decoder, &value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &value->union_, _offset + 4);
+    ::fidl::Decode(_decoder, &value->after, _offset + 12);
+  }
 }
 
 zx_status_t SandwichUnionSize8Alignment4::Clone(SandwichUnionSize8Alignment4* _result) const {
@@ -288,15 +300,27 @@ extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignmen
 const fidl_type_t* SandwichUnionSize36Alignment4::FidlType = &test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
 
 void SandwichUnionSize36Alignment4::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &before, _offset + 0);
-  ::fidl::Encode(_encoder, &union_, _offset + 4);
-  ::fidl::Encode(_encoder, &after, _offset + 40);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 8);
+    ::fidl::Encode(_encoder, &after, _offset + 32);
+  } else {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 4);
+    ::fidl::Encode(_encoder, &after, _offset + 40);
+  }
 }
 
 void SandwichUnionSize36Alignment4::Decode(::fidl::Decoder* _decoder, SandwichUnionSize36Alignment4* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->before, _offset + 0);
-  ::fidl::Decode(_decoder, &value->union_, _offset + 4);
-  ::fidl::Decode(_decoder, &value->after, _offset + 40);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
+    ::fidl::Decode(_decoder, &value->after, _offset + 32);
+  } else {
+    ::fidl::Decode(_decoder, &value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &value->union_, _offset + 4);
+    ::fidl::Decode(_decoder, &value->after, _offset + 40);
+  }
 }
 
 zx_status_t SandwichUnionSize36Alignment4::Clone(SandwichUnionSize36Alignment4* _result) const {
@@ -440,15 +464,27 @@ extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignmen
 const fidl_type_t* SandwichUnionSize12Alignment4::FidlType = &test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
 
 void SandwichUnionSize12Alignment4::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &before, _offset + 0);
-  ::fidl::Encode(_encoder, &union_, _offset + 4);
-  ::fidl::Encode(_encoder, &after, _offset + 16);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 8);
+    ::fidl::Encode(_encoder, &after, _offset + 32);
+  } else {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 4);
+    ::fidl::Encode(_encoder, &after, _offset + 16);
+  }
 }
 
 void SandwichUnionSize12Alignment4::Decode(::fidl::Decoder* _decoder, SandwichUnionSize12Alignment4* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->before, _offset + 0);
-  ::fidl::Decode(_decoder, &value->union_, _offset + 4);
-  ::fidl::Decode(_decoder, &value->after, _offset + 16);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
+    ::fidl::Decode(_decoder, &value->after, _offset + 32);
+  } else {
+    ::fidl::Decode(_decoder, &value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &value->union_, _offset + 4);
+    ::fidl::Decode(_decoder, &value->after, _offset + 16);
+  }
 }
 
 zx_status_t SandwichUnionSize12Alignment4::Clone(SandwichUnionSize12Alignment4* _result) const {
@@ -467,13 +503,23 @@ extern "C" const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table
 const fidl_type_t* StructSize16Alignment8::FidlType = &test_fidl_unionsandwich_StructSize16Alignment8Table;
 
 void StructSize16Alignment8::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &f1, _offset + 0);
-  ::fidl::Encode(_encoder, &f2, _offset + 8);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &f1, _offset + 0);
+    ::fidl::Encode(_encoder, &f2, _offset + 8);
+  } else {
+    ::fidl::Encode(_encoder, &f1, _offset + 0);
+    ::fidl::Encode(_encoder, &f2, _offset + 8);
+  }
 }
 
 void StructSize16Alignment8::Decode(::fidl::Decoder* _decoder, StructSize16Alignment8* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->f1, _offset + 0);
-  ::fidl::Decode(_decoder, &value->f2, _offset + 8);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->f1, _offset + 0);
+    ::fidl::Decode(_decoder, &value->f2, _offset + 8);
+  } else {
+    ::fidl::Decode(_decoder, &value->f1, _offset + 0);
+    ::fidl::Decode(_decoder, &value->f2, _offset + 8);
+  }
 }
 
 zx_status_t StructSize16Alignment8::Clone(StructSize16Alignment8* _result) const {
@@ -614,15 +660,27 @@ extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignmen
 const fidl_type_t* SandwichUnionSize24Alignment8::FidlType = &test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
 
 void SandwichUnionSize24Alignment8::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &before, _offset + 0);
-  ::fidl::Encode(_encoder, &union_, _offset + 8);
-  ::fidl::Encode(_encoder, &after, _offset + 32);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 8);
+    ::fidl::Encode(_encoder, &after, _offset + 32);
+  } else {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 8);
+    ::fidl::Encode(_encoder, &after, _offset + 32);
+  }
 }
 
 void SandwichUnionSize24Alignment8::Decode(::fidl::Decoder* _decoder, SandwichUnionSize24Alignment8* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->before, _offset + 0);
-  ::fidl::Decode(_decoder, &value->union_, _offset + 8);
-  ::fidl::Decode(_decoder, &value->after, _offset + 32);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
+    ::fidl::Decode(_decoder, &value->after, _offset + 32);
+  } else {
+    ::fidl::Decode(_decoder, &value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &value->union_, _offset + 8);
+    ::fidl::Decode(_decoder, &value->after, _offset + 32);
+  }
 }
 
 zx_status_t SandwichUnionSize24Alignment8::Clone(SandwichUnionSize24Alignment8* _result) const {

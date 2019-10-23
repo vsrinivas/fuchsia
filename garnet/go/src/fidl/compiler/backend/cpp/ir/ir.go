@@ -224,6 +224,8 @@ type StructMember struct {
 	Name         string
 	DefaultValue string
 	Offset       int
+	OffsetOld    int
+	OffsetV1NoEE int
 }
 
 func (s Struct) NeedsEncodeDecode() bool {
@@ -1030,6 +1032,8 @@ func (c *compiler) compileStructMember(val types.StructMember, appendNamespace s
 		Name:         changeIfReserved(val.Name, ""),
 		DefaultValue: defaultValue,
 		Offset:       val.Offset,
+		OffsetOld:    val.FieldShapeOld.Offset,
+		OffsetV1NoEE: val.FieldShapeV1NoEE.Offset,
 	}
 }
 

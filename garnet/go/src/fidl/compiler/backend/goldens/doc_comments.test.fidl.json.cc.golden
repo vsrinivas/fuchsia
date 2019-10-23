@@ -239,11 +239,19 @@ extern "C" const fidl_type_t test_name_StructTable;
 const fidl_type_t* Struct::FidlType = &test_name_StructTable;
 
 void Struct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &Field, _offset + 0);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &Field, _offset + 0);
+  } else {
+    ::fidl::Encode(_encoder, &Field, _offset + 0);
+  }
 }
 
 void Struct::Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->Field, _offset + 0);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->Field, _offset + 0);
+  } else {
+    ::fidl::Decode(_decoder, &value->Field, _offset + 0);
+  }
 }
 
 zx_status_t Struct::Clone(Struct* _result) const {

@@ -73,15 +73,27 @@ extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  {{- range .Members }}
-  ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .Offset }});
-  {{- end }}
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    {{- range .Members }}
+    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1NoEE }});
+    {{- end }}
+  } else {
+    {{- range .Members }}
+    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetOld }});
+    {{- end }}
+  }
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t _offset) {
-  {{- range .Members }}
-  ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .Offset }});
-  {{- end }}
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    {{- range .Members }}
+    ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .OffsetV1NoEE }});
+    {{- end }}
+  } else {
+    {{- range .Members }}
+    ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .OffsetOld }});
+    {{- end }}
+  }
 }
 
 zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {

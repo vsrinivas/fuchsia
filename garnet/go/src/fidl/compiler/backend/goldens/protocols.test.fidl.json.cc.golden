@@ -10,15 +10,27 @@ extern "C" const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_Response
 const fidl_type_t* WithErrorSyntax_ResponseAsStruct_Response::FidlType = &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 void WithErrorSyntax_ResponseAsStruct_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &a, _offset + 0);
-  ::fidl::Encode(_encoder, &b, _offset + 8);
-  ::fidl::Encode(_encoder, &c, _offset + 16);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 8);
+    ::fidl::Encode(_encoder, &c, _offset + 16);
+  } else {
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 8);
+    ::fidl::Encode(_encoder, &c, _offset + 16);
+  }
 }
 
 void WithErrorSyntax_ResponseAsStruct_Response::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Response* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->a, _offset + 0);
-  ::fidl::Decode(_decoder, &value->b, _offset + 8);
-  ::fidl::Decode(_decoder, &value->c, _offset + 16);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &value->b, _offset + 8);
+    ::fidl::Decode(_decoder, &value->c, _offset + 16);
+  } else {
+    ::fidl::Decode(_decoder, &value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &value->b, _offset + 8);
+    ::fidl::Decode(_decoder, &value->c, _offset + 16);
+  }
 }
 
 zx_status_t WithErrorSyntax_ResponseAsStruct_Response::Clone(WithErrorSyntax_ResponseAsStruct_Response* _result) const {
@@ -196,11 +208,19 @@ extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_Response
 const fidl_type_t* WithErrorSyntax_ErrorAsPrimitive_Response::FidlType = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  } else {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  }
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Response::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Response* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+  } else {
+    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+  }
 }
 
 zx_status_t WithErrorSyntax_ErrorAsPrimitive_Response::Clone(WithErrorSyntax_ErrorAsPrimitive_Response* _result) const {
@@ -372,11 +392,19 @@ extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable
 const fidl_type_t* WithErrorSyntax_ErrorAsEnum_Response::FidlType = &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 void WithErrorSyntax_ErrorAsEnum_Response::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  } else {
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+  }
 }
 
 void WithErrorSyntax_ErrorAsEnum_Response::Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Response* value, size_t _offset) {
-  ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+  } else {
+    ::fidl::Decode(_decoder, &value->__reserved, _offset + 0);
+  }
 }
 
 zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(WithErrorSyntax_ErrorAsEnum_Response* _result) const {
