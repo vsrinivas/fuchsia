@@ -6,6 +6,7 @@
 
 #include "metrics.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/time.h>
 
@@ -14,9 +15,16 @@
 namespace blobfs {
 namespace {
 
+// Time between each Cobalt flush.
+constexpr zx::duration kCobaltFlushTimer = zx::min(5);
+
 size_t TicksToMs(const zx::ticks& ticks) { return fzl::TicksToNs(ticks) / zx::msec(1); }
 
 }  // namespace
+
+BlobfsMetrics::~BlobfsMetrics() {
+  Dump();
+}
 
 cobalt_client::CollectorOptions BlobfsMetrics::GetBlobfsOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::GeneralAvailability();
@@ -51,6 +59,22 @@ void BlobfsMetrics::Dump() const {
   FS_TRACE_INFO("  Spent %zu ms reading %zu MB from disk, %zu ms verifying\n",
                 TicksToMs(total_read_from_disk_time_ticks_), bytes_read_from_disk_ / mb,
                 TicksToMs(total_verification_time_ticks_));
+}
+
+void BlobfsMetrics::ScheduleMetricFlush() {
+  async::PostDelayedTask(
+      flush_loop_.dispatcher(), [this]() {
+        mutable_collector()->Flush();
+        ScheduleMetricFlush();
+      }, kCobaltFlushTimer);
+}
+
+void BlobfsMetrics::Collect() {
+  cobalt_metrics_.EnableMetrics(true);
+  // TODO(gevalentino): Once we have async llcpp bindings, instead pass a dispatcher for
+  // handling collector IPCs.
+  flush_loop_.StartThread("blobfs-metric-flusher");
+  ScheduleMetricFlush();
 }
 
 void BlobfsMetrics::UpdateAllocation(uint64_t size_data, const fs::Duration& duration) {

@@ -15,9 +15,6 @@
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/wait.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
@@ -38,7 +35,6 @@
 #include <fbl/vector.h>
 #include <fs/journal/journal.h>
 #include <fs/managed_vfs.h>
-#include <fs/metrics/cobalt_metrics.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
@@ -142,15 +138,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   static zx_status_t Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
                             std::unique_ptr<Blobfs>* out);
 
-  void CollectMetrics() { collecting_metrics_ = true; }
-  bool CollectingMetrics() const { return collecting_metrics_; }
-  void DisableMetrics() { collecting_metrics_ = false; }
-  void DumpMetrics() const {
-    if (collecting_metrics_) {
-      metrics_.Dump();
-    }
-  }
-
   void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
 
   virtual ~Blobfs();
@@ -231,10 +218,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   void DeleteExtent(uint64_t start_block, uint64_t num_blocks,
                     fbl::Vector<storage::BufferedOperation>* trim_data);
 
-  // When will flush the metrics in the calling thread and will schedule itself
-  // to flush again in the future.
-  void ScheduleMetricFlush();
-
   // Creates an unique identifier for this instance. This is to be called only during
   // "construction".
   zx_status_t CreateFsId();
@@ -261,13 +244,8 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   uint64_t fs_id_ = 0;
 
-  bool collecting_metrics_ = false;
   BlobfsMetrics metrics_ = {};
-
   fbl::Closure on_unmount_ = {};
-
-  // Loop for flushing the collector periodically.
-  async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 
 }  // namespace blobfs

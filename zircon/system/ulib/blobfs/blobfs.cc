@@ -55,9 +55,6 @@ using storage::VmoidRegistry;
 namespace blobfs {
 namespace {
 
-// Time between each Cobalt flush.
-constexpr zx::duration kCobaltFlushTimer = zx::min(5);
-
 // Writeback enabled, journaling enabled.
 zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, VmoidRegistry* registry,
                               uint64_t journal_start, uint64_t journal_length,
@@ -213,8 +210,6 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
           // Although the transaction shouldn't reference 'this'
           // after completing, scope it here to be extra cautious.
         }
-        metrics_.Dump();
-        flush_loop_.Shutdown();
         auto on_unmount = std::move(on_unmount_);
 
         // Manually destroy Blobfs. The promise of Shutdown is that no
@@ -535,19 +530,13 @@ void Blobfs::Sync(SyncCallback closure) {
 }
 
 Blobfs::Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info)
-    : block_device_(std::move(device)), metrics_() {
+    : block_device_(std::move(device)) {
   memcpy(&info_, info, sizeof(Superblock));
 }
 
 Blobfs::~Blobfs() {
   journal_.reset();
   Cache().Reset();
-}
-
-void Blobfs::ScheduleMetricFlush() {
-  metrics_.mutable_collector()->Flush();
-  async::PostDelayedTask(
-      flush_loop_.dispatcher(), [this]() { ScheduleMetricFlush(); }, kCobaltFlushTimer);
 }
 
 bool Blobfs::IsReadonly() {
@@ -604,13 +593,6 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* op
 
   if (options->metrics) {
     fs->Metrics().Collect();
-    // TODO(gevalentino): Once we have async llcpp bindings, instead pass a dispatcher for
-    // handling collector IPCs.
-    fs->flush_loop_.StartThread("blobfs-metric-flusher");
-    Blobfs* fsptr = fs.get();
-    async::PostDelayedTask(
-        fs->flush_loop_.dispatcher(), [fsptr]() { fsptr->ScheduleMetricFlush(); },
-        kCobaltFlushTimer);
   }
 
   if (options->journal) {

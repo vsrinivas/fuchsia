@@ -11,6 +11,8 @@
 #error Fuchsia-only Header
 #endif
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 
@@ -28,15 +30,18 @@ using LatencyEvent = fs_metrics::CompositeLatencyEvent;
 
 class BlobfsMetrics {
  public:
+  ~BlobfsMetrics();
+
   // Print information about metrics to stdout.
   //
   // TODO(ZX-1999): This is a stop-gap solution; long-term, this information
   // should be extracted from devices.
   void Dump() const;
 
-  void Collect() { cobalt_metrics_.EnableMetrics(true); }
+  // Begin collecting blobfs metrics. Metrics collection is not implicitly enabled
+  // with the creation of a "BlobfsMetrics" object.
+  void Collect();
   bool Collecting() const { return cobalt_metrics_.IsEnabled(); }
-  void Disable() { cobalt_metrics_.EnableMetrics(false); }
 
   // Updates aggregate information about the total number of created
   // blobs since mounting.
@@ -76,11 +81,14 @@ class BlobfsMetrics {
     return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_vnode_metrics());
   }
 
+ private:
   // Returns the underlying collector of cobalt metrics.
   cobalt_client::Collector* mutable_collector() { return cobalt_metrics_.mutable_collector(); }
 
- private:
   static cobalt_client::CollectorOptions GetBlobfsOptions();
+
+  // Flushes the metrics to the cobalt client and schedules itself to flush again.
+  void ScheduleMetricFlush();
 
   // ALLOCATION STATS
 
@@ -134,6 +142,9 @@ class BlobfsMetrics {
 
   // Cobalt metrics.
   fs_metrics::Metrics cobalt_metrics_ = fs_metrics::Metrics(GetBlobfsOptions(), false, "blobfs");
+
+  // Loop for flushing the collector periodically.
+  async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 
 }  // namespace blobfs
