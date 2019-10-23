@@ -54,9 +54,35 @@ struct LicenseServerMessage {
     fuchsia.mem.Buffer message;
 };
 
+// TODO(38522): Remove once consumers have switched to KeyState.
 struct KeyInfo {
     fuchsia.media.KeyId key_id;
     KeyStatus status;
+};
+
+enum KeyStatus {
+    /// The key is currently usable for decryption.
+    USABLE = 0;
+    /// The Key is no longer usable for decryption because it has expired.
+    EXPIRED = 1;
+    /// The Key is no longer usable for decryption, but is still known to the
+    /// CDM.
+    RELEASED = 2;
+    /// The Key has output restrictions that cannot currently be met and may be
+    /// unusable for decryption.
+    OUTPUT_RESTRICTED = 3;
+    /// The Key has output restrictions that cannot currently be met. The Key
+    /// may be usable for decryption with lower quality content.
+    OUTPUT_DOWNSCALED = 4;
+    /// The Key is not yet known or usable for decryption.
+    STATUS_PENDING = 5;
+    /// The Key is not usable for decryption because of an internal error.
+    INTERNAL_ERROR = 6;
+};
+
+table KeyState {
+    1: bytes:fuchsia.media.MAX_KEY_ID_SIZE key_id;
+    2: KeyStatus status;
 };
 
 /// A protocol for exchanging messages pertaining to the establishment of a
@@ -122,12 +148,15 @@ protocol LicenseSession {
     ///   should send to the license server.
     -> OnLicenseMessageGenerated(LicenseMessage request);
 
-    /// Provides updated key status information.
+    // TODO(38522): Remove once consumers have switched to OnKeyStatesChanged.
+    -> OnKeysChanged(vector<KeyInfo> key_info);
+
+    /// Provides updated key state information.
     ///
     /// Some examples on when this might occur would be on license creation,
     /// expiration, renewal, or load of a persistent license session.
     ///
-    /// - response `key_info` a list of the [`fuchsia.media/KeyId`]s and their related
-    ///   [`KeyStatus`]es
-    -> OnKeysChanged(vector<KeyInfo> key_info);
+    /// - response `key_states` a list of the key_ids and their related
+    ///   [`KeyStatusCode`]s
+    -> OnKeyStatesChanged(vector<KeyState> key_states);
 };

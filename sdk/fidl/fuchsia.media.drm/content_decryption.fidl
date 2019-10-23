@@ -6,24 +6,12 @@ library fuchsia.media.drm;
 
 using fuchsia.media;
 
-// Encryption modes as defined by ISO 23001-7: Common encryption in ISO base
-// media file format files. These are defined as strings rather than enums so as
-// to not limit the types of encryption formats to just the set as defined by
-// the current Common Encryption standard.
+// TODO(38438): Remove once consumers have migrated to
+// fuchsia.media.ENCRYPTION_SCHEME
 const string ENCRYPTION_MODE_CENC = "cenc";
 const string ENCRYPTION_MODE_CBC1 = "cbc1";
 const string ENCRYPTION_MODE_CENS = "cens";
 const string ENCRYPTION_MODE_CBCS = "cbcs";
-
-enum KeyStatus {
-    USABLE = 0;
-    EXPIRED = 1;
-    RELEASED = 2;
-    OUTPUT_RESTRICTED = 3;
-    OUTPUT_DOWNSCALED = 4;
-    STATUS_PENDING = 5;
-    INTERNAL_ERROR = 6;
-};
 
 table DecryptorParams {
     /// Requires the decryptor [`fuchsia.media/StreamProcessor`] to only output
@@ -123,10 +111,21 @@ protocol ContentDecryptionModule {
     ///   hypothetical key would be for this device if one could be licensed.
     GetKeyStatusForHdcpVersion(string hdcp_version) -> (KeyStatus key_status);
 
-    /// Queries for the list of supported encryption modes.
-    ///
-    /// The common encryption modes include 'cenc', 'cbc1', 'cens', or 'cbcs'.
-    ///
-    /// - response `encryption_modes` a list of the supported encryption modes.
+    // TODO(38438): Remove once consumers have migrated to
+    // GetSupportedEncryptionSchemes.
+    [Transitional]
     GetSupportedEncryptionModes() -> (vector<string> encryption_modes);
+
+    /// Queries for the list of supported encryption schemes.
+    ///
+    /// This returns a list of the supported encryption schemes that the
+    /// `ContentDecryptionModule` supports, such as 'cenc' or 'cbcs'. If the
+    /// implementation supports passing unencrypted frames through decryption
+    /// prior to license arrival, it should also report
+    /// `fuchsia.media.UNECNRYPTED` as a supported scheme.
+    ///
+    /// - response `encryption_schemes` a list of the supported encryption
+    ///   schemes.
+    [Transitional]
+    GetSupportedEncryptionSchemes() -> (vector<string> encryption_schemes);
 };

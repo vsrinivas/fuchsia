@@ -6,7 +6,9 @@ library fuchsia.media;
 
 using fuchsia.sysmem;
 
+//TODO(38522): Remove KEY_ID_SIZE once usages have been removed.
 const uint32 KEY_ID_SIZE = 16;
+const uint32 MAX_KEY_ID_SIZE = 16;
 const uint32 MAX_INIT_VECTOR_SIZE = 16;
 
 /// Value
@@ -332,6 +334,16 @@ union VideoFormat {
     VideoUncompressedFormat uncompressed;
 };
 
+// Encryption schemes as defined by ISO 23001-7: Common encryption in ISO base
+// media file format files. These are defined as strings rather than enums so as
+// to not limit the encryption schemes that an implementation supports to the
+// constants that are defined here.
+const string ENCRYPTION_SCHEME_UNENCRYPTED = "unencrypted";
+const string ENCRYPTION_SCHEME_CENC = "cenc";
+const string ENCRYPTION_SCHEME_CBC1 = "cbc1";
+const string ENCRYPTION_SCHEME_CENS = "cens";
+const string ENCRYPTION_SCHEME_CBCS = "cbcs";
+
 /// KeyId
 ///
 /// An encryption key identifier.
@@ -367,12 +379,19 @@ struct EncryptionPattern {
 /// other than the data stream. It is only necessary to update fields if they
 /// changed, but not an error if the same value is repeated.
 table EncryptedFormat {
-    /// `mode` specifies which encryption scheme to use, such as
-    /// `fuchsia.media.ENCRYPTION_MODE_CENC`.
+    // TODO(38438): Remove once clients have migrated to scheme.
+    1: string mode;
+
+    /// `scheme` specifies which encryption scheme to use, such as
+    /// `fuchsia.media.ENCRYPTION_SCHEME_CENC`.
     /// Usage:
     ///  - It is required to be set prior to delivery of input packets.
-    ///  - This should only be changed at the beginning of a data stream.
-    1: string mode;
+    ///  - Changing the scheme mid-stream is only permitted in some scenarios.
+    ///    Once an encrypted scheme is selected for a stream, the scheme may
+    ///    only be set to `fuchsia.media.ENCRYPTION_SCHEME_UNENCRYPTED` or that
+    ///    same initial encrypted scheme. The scheme may be set to
+    ///    `fuchsia.media.ENCRYPTION_SCHEME_UNENCRYPTED` at any point.
+    6: string scheme;
 
     /// `key_id` identifies the key that should be used for decrypting
     /// subsequent data.
@@ -380,7 +399,9 @@ table EncryptedFormat {
     ///  - It is required to be set prior to delivery of input packets to a
     ///    decryptor.
     ///  - This may be changed multiple times during a data stream.
+    // TODO(38522): Update type once clients have migrated to key_id_temp.
     2: KeyId key_id;
+    7: bytes:MAX_KEY_ID_SIZE key_id_temp;
 
     /// `init_vector` is used in combination with a key and a block of content
     /// to create the first cipher block in a chain and derive subsequent cipher
