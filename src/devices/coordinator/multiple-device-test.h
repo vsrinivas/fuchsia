@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_MULTIPLE_DEVICE_TEST_H_
-#define SRC_DRIVER_FRAMEWORK_MULTIPLE_DEVICE_TEST_H_
+#ifndef SRC_DEVICES_COORDINATOR_MULTIPLE_DEVICE_TEST_H_
+#define SRC_DEVICES_COORDINATOR_MULTIPLE_DEVICE_TEST_H_
 
 #include <zxtest/zxtest.h>
 
@@ -13,7 +13,9 @@ struct DeviceState {
   // The representation in the coordinator of the device
   fbl::RefPtr<devmgr::Device> device;
   // The remote end of the channel that the coordinator is talking to
-  zx::channel remote;
+  zx::channel coordinator_remote;
+  // The remote end of the channel that the controller is talking to
+  zx::channel controller_remote;
 };
 
 class MultipleDeviceTestCase : public zxtest::Test {
@@ -29,7 +31,12 @@ class MultipleDeviceTestCase : public zxtest::Test {
   const zx::channel& devhost_remote() { return devhost_remote_; }
 
   const fbl::RefPtr<devmgr::Device>& platform_bus() const { return platform_bus_.device; }
-  const zx::channel& platform_bus_remote() const { return platform_bus_.remote; }
+  const zx::channel& platform_bus_coordinator_remote() const {
+    return platform_bus_.coordinator_remote;
+  }
+  const zx::channel& platform_bus_controller_remote() const {
+    return platform_bus_.controller_remote;
+  }
   DeviceState* device(size_t index) const { return &devices_[index]; }
 
   void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name, uint32_t protocol_id,
@@ -45,20 +52,23 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void DoResume(SystemPowerState target_state);
   void DoResume(SystemPowerState target_state, fit::function<void(SystemPowerState)> resume_cb);
 
-  void CheckUnbindReceived(const zx::channel& remote);
-  void SendUnbindReply(const zx::channel& remote);
+  void CheckUnbindReceived(const zx::channel& remote, zx_txid_t* txid);
+  void SendUnbindReply(const zx::channel& remote, zx_txid_t txid);
   void CheckUnbindReceivedAndReply(const zx::channel& remote);
-  void CheckRemoveReceived(const zx::channel& remote);
-  void SendRemoveReply(const zx::channel& remote);
+  void CheckRemoveReceived(const zx::channel& remote, zx_txid_t* zxid);
+  void SendRemoveReply(const zx::channel& remote, zx_txid_t txid);
   void CheckRemoveReceivedAndReply(const zx::channel& remote);
-  void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags);
-  void SendSuspendReply(const zx::channel& remote, zx_status_t return_status);
+
+  void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags, zx_txid_t* txid);
+  void SendSuspendReply(const zx::channel& remote, zx_status_t return_status, zx_txid_t txid);
   void CheckSuspendReceived(const zx::channel& remote, uint32_t expected_flags,
                             zx_status_t return_status);
   void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_driver,
-                                 zx::channel* device_remote);
-  void CheckResumeReceived(const zx::channel& remote, SystemPowerState target_state);
-  void SendResumeReply(const zx::channel& remote, zx_status_t return_status);
+                                 zx::channel* device_coordinator_remote,
+                                 zx::channel* device_controller_remote);
+  void CheckResumeReceived(const zx::channel& remote, SystemPowerState target_state,
+                           zx_txid_t* txid);
+  void SendResumeReply(const zx::channel& remote, zx_status_t return_status, zx_txid_t txid);
   void CheckResumeReceived(const zx::channel& remote, SystemPowerState target_state,
                            zx_status_t return_status);
 
@@ -75,7 +85,8 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   // The remote end of the channel that the coordinator uses to talk to the
   // sys device proxy
-  zx::channel sys_proxy_remote_;
+  zx::channel sys_proxy_coordinator_remote_;
+  zx::channel sys_proxy_controller_remote_;
 
   // The device object representing the platform bus driver (child of the
   // sys proxy)
@@ -93,4 +104,4 @@ class MultipleDeviceTestCase : public zxtest::Test {
   fbl::Vector<DeviceState> devices_;
 };
 
-#endif  // SRC_DRIVER_FRAMEWORK_MULTIPLE_DEVICE_TEST_H_
+#endif  // SRC_DEVICES_COORDINATOR_MULTIPLE_DEVICE_TEST_H_

@@ -53,12 +53,14 @@ void BindDriverTestOutput(const zx::channel& remote, zx::channel test_output) {
   ASSERT_EQ(fuchsia_device_manager_DeviceControllerBindDriverOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DeviceControllerBindDriverRequestTable, bytes,
                        actual_bytes, handles, actual_handles, nullptr);
+  zx_txid_t txid = hdr->txid;
   ASSERT_OK(status);
 
   // Write the BindDriver response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
   resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
+  resp->hdr.txid = txid;
   resp->status = ZX_OK;
   resp->test_output = test_output.release();
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
@@ -140,6 +142,7 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
   ASSERT_EQ(fuchsia_device_manager_DeviceControllerBindDriverOrdinal, hdr->ordinal);
   status = fidl_decode(&fuchsia_device_manager_DeviceControllerBindDriverRequestTable, bytes,
                        actual_bytes, handles, actual_handles, nullptr);
+  zx_txid_t txid = hdr->txid;
   ASSERT_OK(status);
   auto req = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverRequest*>(bytes);
   ASSERT_EQ(req->driver_path.size, strlen(expected_driver));
@@ -151,6 +154,7 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
   resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
+  resp->hdr.txid = txid;
   resp->status = ZX_OK;
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
                        sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
@@ -364,13 +368,19 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
   // Add the device.
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
+  zx::channel coordinator_local, coordinator_remote;
+  zx_status_t status = zx::channel::create(0, &coordinator_local, &coordinator_remote);
   ASSERT_OK(status);
+
+  zx::channel controller_local, controller_remote;
+  status = zx::channel::create(0, &controller_local, &controller_remote);
+  ASSERT_OK(status);
+
   fbl::RefPtr<devmgr::Device> device;
-  status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
-                                 nullptr /* props_data */, 0 /* props_count */, "mock-device",
-                                 ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
+  status = coordinator.AddDevice(coordinator.test_device(), std::move(controller_local),
+                                 std::move(coordinator_local), nullptr /* props_data */,
+                                 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
+                                 nullptr /* driver_path */, nullptr /* args */,
                                  false /* invisible */, zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
@@ -390,12 +400,13 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_OK(status);
 
   // Check the BindDriver request.
-  ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(remote, kDriverPath));
+  ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(controller_remote, kDriverPath));
   loop.RunUntilIdle();
 
   // Reset the fake devhost connection.
   dev->set_host(nullptr);
-  remote.reset();
+  coordinator_remote.reset();
+  controller_remote.reset();
   loop.RunUntilIdle();
 }
 
@@ -406,14 +417,21 @@ TEST(MiscTestCase, TestOutput) {
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
   // Add the device.
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
+  zx::channel coordinator_local, coordinator_remote;
+  zx_status_t status = zx::channel::create(0, &coordinator_local, &coordinator_remote);
   ASSERT_OK(status);
+
+  zx::channel controller_local, controller_remote;
+  status = zx::channel::create(0, &controller_local, &controller_remote);
+  ASSERT_OK(status);
+
   fbl::RefPtr<devmgr::Device> device;
-  status = coordinator.AddDevice(coordinator.test_device(), std::move(local),
-                                 nullptr /* props_data */, 0 /* props_count */, "mock-device",
-                                 ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
+  status = coordinator.AddDevice(coordinator.test_device(), std::move(controller_local),
+                                 std::move(coordinator_local), nullptr /* props_data */,
+                                 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
+                                 nullptr /* driver_path */, nullptr /* args */,
                                  false /* invisible */, zx::channel() /* client_remote */, &device);
+  device->AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
@@ -439,7 +457,7 @@ TEST(MiscTestCase, TestOutput) {
   // Check the BindDriver request.
   zx::channel test_device, test_coordinator;
   zx::channel::create(0, &test_device, &test_coordinator);
-  ASSERT_NO_FATAL_FAILURES(BindDriverTestOutput(remote, std::move(test_coordinator)));
+  ASSERT_NO_FATAL_FAILURES(BindDriverTestOutput(controller_remote, std::move(test_coordinator)));
   loop.RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(WriteTestLog(test_device));
@@ -462,7 +480,8 @@ TEST(MiscTestCase, TestOutput) {
 
   // Reset the fake devhost connection.
   dev->set_host(nullptr);
-  remote.reset();
+  controller_remote.reset();
+  coordinator_remote.reset();
   loop.RunUntilIdle();
 }
 

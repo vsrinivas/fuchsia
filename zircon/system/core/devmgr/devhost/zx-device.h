@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_ZX_DEVICE_H_
 
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
@@ -15,6 +16,7 @@
 #include <atomic>
 #include <optional>
 
+#include <ddk/debug.h>
 #include <ddk/device-power-states.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -110,8 +112,18 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   zx::eventpair event;
   zx::eventpair local_event;
+
   // The RPC channel is owned by |conn|
+  // fuchsia.device.manager.DeviceController
   zx::unowned_channel rpc;
+
+  // The RPC channel is owned by |conn|
+  // fuchsia.device.manager.Coordinator
+  zx::unowned_channel coordinator_rpc;
+
+  fit::callback<void(zx_status_t)> removal_cb;
+
+  fit::callback<void(zx_status_t)> unbind_cb;
 
   // most devices implement a single
   // protocol beyond the base device protocol
@@ -181,6 +193,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
  private:
   zx_device() = default;
+
+  // The fuchsia.Device.Manager.Coordinator protocol
+  zx::channel coordinator_rpc_;
 
   friend class fbl::Recyclable<zx_device_t>;
   void fbl_recycle();

@@ -22,19 +22,20 @@ void ResumeTestCase::StateTest(zx_status_t resume_status, devmgr::Device::State 
   device(index)->device->set_state(devmgr::Device::State::kSuspended);
   ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
 
-  ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(sys_proxy_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  zx_txid_t txid;
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      sys_proxy_controller_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
-      platform_bus_remote(), SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+      platform_bus_controller_remote(), SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   // Check for the resume message without replying.
-  ASSERT_NO_FATAL_FAILURES(
-      CheckResumeReceived(device(index)->remote, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      device(index)->controller_remote, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, &txid));
 
   ASSERT_EQ(device(index)->device->state(), devmgr::Device::State::kResuming);
 
-  ASSERT_NO_FATAL_FAILURES(SendResumeReply(device(index)->remote, resume_status));
+  ASSERT_NO_FATAL_FAILURES(SendResumeReply(device(index)->controller_remote, resume_status, txid));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_EQ(device(index)->device->state(), want_device_state);
@@ -84,13 +85,14 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
 
   ASSERT_NO_FATAL_FAILURES(DoResume(target_state));
 
-  ASSERT_TRUE(DeviceHasPendingMessages(sys_proxy_remote_));
-  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(sys_proxy_remote_, target_state, ZX_OK));
+  ASSERT_TRUE(DeviceHasPendingMessages(sys_proxy_controller_remote_));
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(sys_proxy_controller_remote_, target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_EQ(coordinator_.sys_device()->state(), devmgr::Device::State::kResumed);
 
-  ASSERT_TRUE(DeviceHasPendingMessages(platform_bus_remote()));
-  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(platform_bus_remote(), target_state, ZX_OK));
+  ASSERT_TRUE(DeviceHasPendingMessages(platform_bus_controller_remote()));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckResumeReceived(platform_bus_controller_remote(), target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
   ASSERT_EQ(platform_bus()->state(), devmgr::Device::State::kResumed);
 
@@ -107,7 +109,7 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
         continue;
       }
       ASSERT_NO_FATAL_FAILURES(
-          CheckResumeReceived(device(desc.index)->remote, target_state, ZX_OK));
+          CheckResumeReceived(device(desc.index)->controller_remote, target_state, ZX_OK));
       coordinator_loop()->RunUntilIdle();
       // Make sure all descendants of this device are not resumed yet.
       // We just need to check immediate children since this will

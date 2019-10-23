@@ -192,6 +192,12 @@ bool TestDevice::Rebind() {
   fvm_part_.reset();
 
   ASSERT_EQ(ramdisk_rebind(ramdisk_), ZX_OK);
+  // TODO(38113): remove rebind api
+  // BWB: Timing changes in the devhost caused this bug to surface. Most fixes result
+  // in a deadlock due to syncronous code paths. mid-term solution is to remove this
+  // api.
+  sleep(1);
+
   if (strlen(fvm_part_path_) != 0) {
     // We need to explicitly rebind FVM here, since now that we're not
     // relying on the system-wide block-watcher, the driver won't rebind by

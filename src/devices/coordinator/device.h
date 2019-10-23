@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVICE_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVICE_H_
+#ifndef SRC_DEVICES_COORDINATOR_DEVICE_H_
+#define SRC_DEVICES_COORDINATOR_DEVICE_H_
 
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
@@ -84,12 +85,11 @@ class Device : public fbl::RefCounted<Device>,
                public llcpp::fuchsia::device::manager::Coordinator::Interface,
                public AsyncLoopRefCountedRpcHandler<Device> {
  public:
-  void AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name,
-                 uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args,
+  void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
+                 ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id,
+                 ::fidl::StringView driver_path, ::fidl::StringView args,
                  llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
                  ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) override;
-  void UnbindDone(UnbindDoneCompleter::Sync _completer) override;
-  void RemoveDone(RemoveDoneCompleter::Sync _completer) override;
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) override;
   void AddCompositeDevice(
       ::fidl::StringView name, ::fidl::VectorView<uint64_t> props,
@@ -98,10 +98,10 @@ class Device : public fbl::RefCounted<Device>,
   void PublishMetadata(::fidl::StringView device_path, uint32_t key,
                        ::fidl::VectorView<uint8_t> data,
                        PublishMetadataCompleter::Sync _completer) override;
-  void AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props,
-                          ::fidl::StringView name, uint32_t protocol_id,
-                          ::fidl::StringView driver_path, ::fidl::StringView args,
-                          ::zx::channel client_remote,
+  void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller,
+                          ::fidl::VectorView<uint64_t> props, ::fidl::StringView name,
+                          uint32_t protocol_id, ::fidl::StringView driver_path,
+                          ::fidl::StringView args, ::zx::channel client_remote,
                           AddDeviceInvisibleCompleter::Sync _completer) override;
   void MakeVisible(MakeVisibleCompleter::Sync _completer) override;
   void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync _completer) override;
@@ -273,10 +273,11 @@ class Device : public fbl::RefCounted<Device>,
   static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
                             fbl::String name, fbl::String driver_path, fbl::String args,
                             uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
-                            zx::channel rpc, bool invisible, zx::channel client_remote,
-                            fbl::RefPtr<Device>* device);
+                            zx::channel coordinator_rpc, zx::channel device_controller_rpc,
+                            bool invisible, zx::channel client_remote, fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
-                                     const CompositeDevice& composite, zx::channel rpc,
+                                     const CompositeDevice& composite, zx::channel coordinator_rpc,
+                                     zx::channel device_controller_rpc,
                                      fbl::RefPtr<Device>* device);
   zx_status_t CreateProxy();
 
@@ -487,12 +488,38 @@ class Device : public fbl::RefCounted<Device>,
   // This is public for testing purposes.
   std::unique_ptr<DriverTestReporter> test_reporter;
 
- private:
-  zx_status_t HandleRead();
-  int RunCompatibilityTests();
+  zx_status_t set_test_output(zx::channel test_output, async_dispatcher_t* dispatcher) {
+    test_output_ = std::move(test_output);
+    test_wait_.set_object(test_output_.get());
+    test_wait_.set_trigger(ZX_CHANNEL_PEER_CLOSED);
+    return test_wait_.Begin(dispatcher);
+  }
 
+  const fidl::InterfacePtr<fuchsia::device::manager::DeviceController>& device_controller() const {
+    return device_controller_;
+  }
+
+  const fidl::InterfaceRequest<fuchsia::device::manager::DeviceController> ConnectDeviceController(
+      async_dispatcher_t* dispatcher) {
+    return device_controller_.NewRequest(dispatcher);
+  }
+
+ private:
   void HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
+
+  // The driver sends output from run_unit_tests over this channel.
+  zx::channel test_output_;
+
+  // Async waiter that drives the consumption of test_output_. It is triggered when the channel is
+  // closed by the driver, signalling the end of the tests. We don't print log messages until the
+  // entire test is finished to avoid interleaving output from multiple drivers.
+  async::WaitMethod<Device, &Device::HandleTestOutput> test_wait_{this};
+
+  fidl::InterfacePtr<fuchsia::device::manager::DeviceController> device_controller_;
+
+  zx_status_t HandleRead();
+  int RunCompatibilityTests();
 
   const fbl::String name_;
   const fbl::String libname_;
@@ -587,18 +614,10 @@ class Device : public fbl::RefCounted<Device>,
   fuchsia_device_manager_CompatibilityTestStatus test_status_;
   bool test_reply_required_ = false;
 
-  // The driver sends output from run_unit_tests over this channel.
-  zx::channel test_output_;
-
-  // Async waiter that drives the consumption of test_output_. It is triggered when the channel is
-  // closed by the driver, signalling the end of the tests. We don't print log messages until the
-  // entire test is finished to avoid interleaving output from multiple drivers.
-  async::WaitMethod<Device, &Device::HandleTestOutput> test_wait_{this};
-
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;
 };
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVICE_H_
+#endif  // SRC_DEVICES_COORDINATOR_DEVICE_H_
