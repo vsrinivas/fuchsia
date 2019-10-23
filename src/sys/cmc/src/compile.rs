@@ -97,36 +97,38 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
 fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
-        let target_path = extract_target_path(use_, use_);
+        let target_id = target_capability_id(use_, use_);
         let out = if let Some(p) = use_.service() {
             let source = extract_use_source(use_)?;
-            let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
+            let target_id = target_id.ok_or(Error::internal(format!("no capability")))?;
             Ok(cm::Use::Service(cm::UseService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_path)?,
+                target_path: cm::Path::new(target_id)?,
             }))
         } else if let Some(p) = use_.legacy_service() {
             let source = extract_use_source(use_)?;
-            let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
+            let target_id = target_id.ok_or(Error::internal(format!("no capability")))?;
             Ok(cm::Use::LegacyService(cm::UseLegacyService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_path)?,
+                target_path: cm::Path::new(target_id)?,
             }))
         } else if let Some(p) = use_.directory() {
             let source = extract_use_source(use_)?;
-            let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
+            let target_id = target_id.ok_or(Error::internal(format!("no capability")))?;
             Ok(cm::Use::Directory(cm::UseDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_path)?,
+                target_path: cm::Path::new(target_id)?,
             }))
         } else if let Some(p) = use_.storage() {
             Ok(cm::Use::Storage(cm::UseStorage {
                 type_: str_to_storage_type(p.as_str())?,
-                target_path: target_path.map(cm::Path::new).transpose()?,
+                target_path: target_id.map(cm::Path::new).transpose()?,
             }))
+        } else if let Some(p) = use_.runner() {
+            Ok(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
         } else {
             Err(Error::internal(format!("no capability")))
         }?;
@@ -139,29 +141,36 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let source = extract_expose_source(expose)?;
-        let target_path =
-            extract_target_path(expose, expose).ok_or(Error::internal(format!("no capability")))?;
+        let target_id = target_capability_id(expose, expose)
+            .ok_or(Error::internal(format!("no capability")))?;
         let target = extract_expose_target(expose)?;
         let out = if let Some(p) = expose.service() {
             Ok(cm::Expose::Service(cm::ExposeService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_path)?,
+                target_path: cm::Path::new(target_id)?,
                 target,
             }))
         } else if let Some(p) = expose.legacy_service() {
             Ok(cm::Expose::LegacyService(cm::ExposeLegacyService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_path)?,
+                target_path: cm::Path::new(target_id)?,
                 target,
             }))
         } else if let Some(p) = expose.directory() {
             Ok(cm::Expose::Directory(cm::ExposeDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_path)?,
+                target_path: cm::Path::new(target_id)?,
                 target,
+            }))
+        } else if let Some(p) = expose.runner() {
+            Ok(cm::Expose::Runner(cm::ExposeRunner {
+                source,
+                source_name: cm::Name::new(p.clone())?,
+                target,
+                target_name: cm::Name::new(target_id)?,
             }))
         } else {
             Err(Error::internal(format!("no capability")))
@@ -181,34 +190,34 @@ fn translate_offer(
         if let Some(p) = offer.service() {
             let source = extract_offer_source(offer)?;
             let targets = extract_targets(offer, all_children, all_collections)?;
-            for (target, target_path) in targets {
+            for (target, target_id) in targets {
                 out_offers.push(cm::Offer::Service(cm::OfferService {
                     source_path: cm::Path::new(p.clone())?,
                     source: source.clone(),
                     target,
-                    target_path: cm::Path::new(target_path)?,
+                    target_path: cm::Path::new(target_id)?,
                 }));
             }
         } else if let Some(p) = offer.legacy_service() {
             let source = extract_offer_source(offer)?;
             let targets = extract_targets(offer, all_children, all_collections)?;
-            for (target, target_path) in targets {
+            for (target, target_id) in targets {
                 out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
                     source_path: cm::Path::new(p.clone())?,
                     source: source.clone(),
                     target,
-                    target_path: cm::Path::new(target_path)?,
+                    target_path: cm::Path::new(target_id)?,
                 }));
             }
         } else if let Some(p) = offer.directory() {
             let source = extract_offer_source(offer)?;
             let targets = extract_targets(offer, all_children, all_collections)?;
-            for (target, target_path) in targets {
+            for (target, target_id) in targets {
                 out_offers.push(cm::Offer::Directory(cm::OfferDirectory {
                     source_path: cm::Path::new(p.clone())?,
                     source: source.clone(),
                     target,
-                    target_path: cm::Path::new(target_path)?,
+                    target_path: cm::Path::new(target_id)?,
                 }));
             }
         } else if let Some(p) = offer.storage() {
@@ -220,6 +229,17 @@ fn translate_offer(
                     type_: type_.clone(),
                     source: source.clone(),
                     target,
+                }));
+            }
+        } else if let Some(p) = offer.runner() {
+            let source = extract_offer_source(offer)?;
+            let targets = extract_targets(offer, all_children, all_collections)?;
+            for (target, target_id) in targets {
+                out_offers.push(cm::Offer::Runner(cm::OfferRunner {
+                    source: source.clone(),
+                    source_name: cm::Name::new(p.clone())?,
+                    target,
+                    target_name: cm::Name::new(target_id)?,
                 }));
             }
         } else {
@@ -329,7 +349,7 @@ where
     }
 }
 
-fn translate_child_reference(
+fn translate_child_or_collection_ref(
     reference: &cml::Ref,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
@@ -356,7 +376,7 @@ fn extract_storage_targets(
     in_obj
         .to
         .iter()
-        .map(|to| translate_child_reference(to, all_children, all_collections))
+        .map(|to| translate_child_or_collection_ref(to, all_children, all_collections))
         .collect()
 }
 
@@ -367,18 +387,19 @@ fn extract_targets(
 ) -> Result<Vec<(cm::Ref, String)>, Error> {
     let mut out_targets = vec![];
 
-    let target_path =
-        extract_target_path(in_obj, in_obj).ok_or(Error::internal("no capability".to_string()))?;
+    let target_id =
+        target_capability_id(in_obj, in_obj).ok_or(Error::internal("no capability".to_string()))?;
 
     // Validate the "to" references.
     for to in in_obj.to.iter() {
-        let target = translate_child_reference(to, all_children, all_collections)?;
-        out_targets.push((target, target_path.clone()))
+        let target = translate_child_or_collection_ref(to, all_children, all_collections)?;
+        out_targets.push((target, target_id.clone()))
     }
     Ok(out_targets)
 }
 
-fn extract_target_path<T, U>(in_obj: &T, to_obj: &U) -> Option<String>
+/// Return the target path or name of the given capability.
+fn target_capability_id<T, U>(in_obj: &T, to_obj: &U) -> Option<String>
 where
     T: cml::CapabilityClause,
     U: cml::AsClause,
@@ -391,6 +412,8 @@ where
         } else if let Some(p) = in_obj.legacy_service() {
             Some(p.clone())
         } else if let Some(p) = in_obj.directory() {
+            Some(p.clone())
+        } else if let Some(p) = in_obj.runner() {
             Some(p.clone())
         } else if let Some(type_) = in_obj.storage() {
             match type_.as_str() {
@@ -495,6 +518,8 @@ mod tests {
                     { "directory": "/data/config", "from": "realm", "rights": ["read_bytes"]},
                     { "storage": "meta" },
                     { "storage": "cache", "as": "/tmp" },
+                    { "runner": "elf" },
+                    { "runner": "web" }
                 ],
             }),
             output = r#"{
@@ -563,6 +588,16 @@ mod tests {
                 "type": "cache",
                 "target_path": "/tmp"
             }
+        },
+        {
+            "runner": {
+                "source_name": "elf"
+            }
+        },
+        {
+            "runner": {
+                "source_name": "web"
+            }
         }
     ]
 }"#,
@@ -583,7 +618,9 @@ mod tests {
                       "to": "realm"
                     },
                     { "directory": "/volumes/blobfs", "from": "self", "to": "framework", "rights": ["r*"]},
-                    { "directory": "/hub", "from": "framework" }
+                    { "directory": "/hub", "from": "framework" },
+                    { "runner": "web", "from": "self" },
+                    { "runner": "web", "from": "#logger", "to": "realm", "as": "web-rename" }
                 ],
                 "children": [
                     {
@@ -636,6 +673,28 @@ mod tests {
                 "source_path": "/hub",
                 "target_path": "/hub",
                 "target": "realm"
+            }
+        },
+        {
+            "runner": {
+                "source": {
+                    "self": {}
+                },
+                "source_name": "web",
+                "target": "realm",
+                "target_name": "web"
+            }
+        },
+        {
+            "runner": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_name": "web",
+                "target": "realm",
+                "target_name": "web-rename"
             }
         }
     ],
@@ -698,6 +757,17 @@ mod tests {
                             "#netstack",
                             "#modular"
                         ],
+                    },
+                    {
+                        "runner": "web",
+                        "from": "realm",
+                        "to": [ "#modular" ],
+                    },
+                    {
+                        "runner": "elf",
+                        "from": "realm",
+                        "to": [ "#modular" ],
+                        "as": "elf-renamed",
                     },
                 ],
                 "children": [
@@ -860,6 +930,34 @@ mod tests {
                         "name": "modular"
                     }
                 }
+            }
+        },
+        {
+            "runner": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "web",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_name": "web"
+            }
+        },
+        {
+            "runner": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "elf",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_name": "elf-renamed"
             }
         }
     ],

@@ -150,46 +150,16 @@ struct ValidationContext<'a> {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 enum CapabilityId<'a> {
     Path(&'a str),
+    Runner(&'a str),
     StorageType(&'a str),
 }
 
-/// Given an offer/expose struct, return the identifier of the
-/// exposed/offered target.
-///
-/// The target identifier is specified by the "as" keyword. If not
-/// present, we default to using the same name as the source.
-fn capability_id<'a, T>(clause: &'a T) -> Result<CapabilityId<'a>, Error>
-where
-    T: cml::CapabilityClause + cml::AsClause,
-{
-    // For storage types, return the path, using the "as" clause to
-    // rename if neccessary.
-    let alias = clause.r#as();
-    if let Some(p) = clause.service().as_ref() {
-        return Ok(CapabilityId::Path(alias.unwrap_or(p)));
-    } else if let Some(p) = clause.legacy_service().as_ref() {
-        return Ok(CapabilityId::Path(alias.unwrap_or(p)));
-    } else if let Some(p) = clause.directory().as_ref() {
-        return Ok(CapabilityId::Path(alias.unwrap_or(p)));
-    }
-
-    // Storage does not support "as" aliases. Return an error if it is
-    // used.
-    if let Some(p) = clause.storage().as_ref() {
-        if alias.is_some() {
-            return Err(Error::validate("\"as\" field cannot be used for storage offer targets"));
-        }
-        return Ok(CapabilityId::StorageType(p));
-    }
-
-    // Unknown capability type.
-    Err(Error::internal("unknown capability type"))
-}
-
 impl<'a> CapabilityId<'a> {
+    /// Return the string ID of this clause.
     pub fn as_str(&self) -> &'a str {
         match self {
             CapabilityId::Path(p) => p,
+            CapabilityId::Runner(r) => r,
             CapabilityId::StorageType(s) => s,
         }
     }
@@ -198,8 +168,46 @@ impl<'a> CapabilityId<'a> {
     pub fn type_str(&self) -> &'static str {
         match self {
             CapabilityId::Path(_) => "path",
+            CapabilityId::Runner(_) => "runner",
             CapabilityId::StorageType(_) => "storage type",
         }
+    }
+
+    /// Given a CaapabilityClause (such as an Offer or Expose), return
+    /// the identifier of the target.
+    ///
+    /// The target identifier is specified by the "as" keyword. If not
+    /// present, we default to using the same name as the source.
+    pub fn from_clause<'b, T>(clause: &'b T) -> Result<CapabilityId<'b>, Error>
+    where
+        T: cml::CapabilityClause + cml::AsClause,
+    {
+        // For directory/service/runner types, return the source name,
+        // using the "as" clause to rename if neccessary.
+        let alias = clause.r#as();
+        if let Some(p) = clause.service().as_ref() {
+            return Ok(CapabilityId::Path(alias.unwrap_or(p)));
+        } else if let Some(p) = clause.legacy_service().as_ref() {
+            return Ok(CapabilityId::Path(alias.unwrap_or(p)));
+        } else if let Some(p) = clause.directory().as_ref() {
+            return Ok(CapabilityId::Path(alias.unwrap_or(p)));
+        } else if let Some(p) = clause.runner().as_ref() {
+            return Ok(CapabilityId::Runner(alias.unwrap_or(p)));
+        }
+
+        // Storage does not support "as" aliases. Return an error if it is
+        // used.
+        if let Some(p) = clause.storage().as_ref() {
+            if alias.is_some() {
+                return Err(Error::validate(
+                    "\"as\" field cannot be used for storage offer targets",
+                ));
+            }
+            return Ok(CapabilityId::StorageType(p));
+        }
+
+        // Unknown capability type.
+        Err(Error::internal("unknown capability type"))
     }
 }
 
@@ -217,8 +225,13 @@ impl<'a> ValidationContext<'a> {
             self.document.all_collection_names().into_iter().zip(iter::repeat("collections"));
         let all_storage_names =
             self.document.all_storage_names().into_iter().zip(iter::repeat("storage"));
+        let all_runner_names =
+            self.document.all_runner_names().into_iter().zip(iter::repeat("runners"));
         ensure_no_duplicates(
-            all_children_names.chain(all_collection_names).chain(all_storage_names),
+            all_children_names
+                .chain(all_collection_names)
+                .chain(all_storage_names)
+                .chain(all_runner_names),
         )?;
 
         // Populate the sets of children and collections.
@@ -252,7 +265,14 @@ impl<'a> ValidationContext<'a> {
         // Validate "storage".
         if let Some(storage) = self.document.storage.as_ref() {
             for s in storage.iter() {
-                self.validate_storage(&s)?;
+                self.validate_component_ref("\"storage\" source", &s.from)?;
+            }
+        }
+
+        // Validate "runners".
+        if let Some(runners) = self.document.runners.as_ref() {
+            for r in runners.iter() {
+                self.validate_component_ref("\"runner\" source", &r.from)?;
             }
         }
 
@@ -285,24 +305,12 @@ impl<'a> ValidationContext<'a> {
         Ok(())
     }
 
-    fn validate_storage(&self, storage: &cml::Storage) -> Result<(), Error> {
-        if let cml::Ref::Named(child) = &storage.from {
-            if !self.all_children.contains(&child) {
-                return Err(Error::validate(format!(
-                    "\"{}\" is a \"storage\" source but it does not appear in \"children\"",
-                    storage.from,
-                )));
-            }
-        }
-        Ok(())
-    }
-
     fn validate_expose(
         &self,
         expose: &'a cml::Expose,
         used_ids: &mut HashSet<CapabilityId<'a>>,
     ) -> Result<(), Error> {
-        self.validate_source("expose", expose)?;
+        self.validate_component_ref("\"expose\" source", &expose.from)?;
 
         // Ensure directory rights are specified if exposing from self.
         if expose.directory.is_some() {
@@ -317,12 +325,13 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure we haven't already exposed an entity of the same name.
-        let capability_id = capability_id(expose)?;
+        let capability_id = CapabilityId::from_clause(expose)?;
         if !used_ids.insert(capability_id) {
             return Err(Error::validate(format!(
-                "\"{}\" is a duplicate \"expose\" target {}",
+                "\"{}\" is a duplicate \"expose\" target {} for \"{}\"",
                 capability_id.as_str(),
-                capability_id.type_str()
+                capability_id.type_str(),
+                expose.to.as_ref().unwrap_or(&cml::Ref::Realm)
             )));
         }
 
@@ -334,7 +343,14 @@ impl<'a> ValidationContext<'a> {
         offer: &'a cml::Offer,
         used_ids: &mut HashMap<&'a cml::Name, HashSet<CapabilityId<'a>>>,
     ) -> Result<(), Error> {
-        self.validate_source("offer", offer)?;
+        // If offered cap is a storage type, then "from" should be interpreted
+        // as a storage name. Otherwise, it should be interpreted as a child
+        // or collection.
+        if offer.storage.is_some() {
+            self.validate_storage_ref("\"offer\" source", &offer.from)?;
+        } else {
+            self.validate_component_ref("\"offer\" source", &offer.from)?;
+        }
 
         // Ensure directory rights are specified if offering from self.
         if offer.directory.is_some() {
@@ -361,7 +377,7 @@ impl<'a> ValidationContext<'a> {
             };
 
             // Ensure that there are no duplicate names in the "to" list.
-            let target_cap_id = capability_id(offer)?;
+            let target_cap_id = CapabilityId::from_clause(offer)?;
             if !seen_targets.insert(to_target) {
                 return Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"offer\" target for {} \"{}\"",
@@ -392,25 +408,28 @@ impl<'a> ValidationContext<'a> {
                 )));
             }
 
+            // Ensure we are not offering a capability back to its source.
             if let cml::Ref::Named(name) = &offer.from {
-                // Ensure we are not offering an object back to its source child.
-                if offer.storage.is_none() && name == to_target {
-                    return Err(Error::validate(format!(
-                        "Offer target \"{}\" is same as source",
-                        to
-                    )));
-                }
-
-                // Check that the source of this storage capability does not match the target
-                if offer.storage.is_some() {
-                    match self.all_storage_and_sources.get(name) {
-                        Some(cml::Ref::Named(source)) if to_target == source => {
+                match offer.storage {
+                    None => {
+                        if name == to_target {
                             return Err(Error::validate(format!(
-                                "Storage offer target \"{}\" is same as source",
+                                "Offer target \"{}\" is same as source",
                                 to
                             )));
                         }
-                        _ => {}
+                    }
+                    Some(_) => {
+                        if let Some(cml::Ref::Named(source)) =
+                            self.all_storage_and_sources.get(name)
+                        {
+                            if to_target == source {
+                                return Err(Error::validate(format!(
+                                    "Storage offer target \"{}\" is same as source",
+                                    to
+                                )));
+                            }
+                        }
                     }
                 }
             }
@@ -419,48 +438,53 @@ impl<'a> ValidationContext<'a> {
         Ok(())
     }
 
-    /// Validates that a source capability is valid, i.e. that any referenced child or storage is
-    /// valid.
+    /// Validates that the given component exists.
     ///
-    /// - `keyword` is the keyword for the clause ("offer" or "expose"), used in error strings.
-    /// - `source_obj` is the clause containing a "from" line that should be validated.
-    fn validate_source<T>(&self, keyword: &str, source_obj: &'a T) -> Result<(), Error>
-    where
-        T: cml::FromClause + cml::CapabilityClause,
-    {
-        // Fetch out the child collection/component name.
-        //
-        // We don't attempt to validate other refernce types.
-        let source_name = if let cml::Ref::Named(name) = source_obj.from() {
-            name
-        } else {
-            return Ok(());
-        };
+    /// - `reference_description` is a human-readable description of
+    ///   the reference used in error message, such as `"offer" source`.
+    /// - `component_ref` is a reference to a component. If the reference
+    ///   is a named child, we ensure that the child component exists.
+    fn validate_component_ref(
+        &self,
+        reference_description: &str,
+        component_ref: &cml::Ref,
+    ) -> Result<(), Error> {
+        match component_ref {
+            cml::Ref::Named(name) => {
+                // Ensure we have a child defined by that name.
+                if !self.all_children.contains(name) {
+                    return Err(Error::validate(format!(
+                        "{} \"{}\" does not appear in \"children\"",
+                        reference_description, component_ref
+                    )));
+                }
+                Ok(())
+            }
+            // We don't attempt to validate other reference types.
+            _ => Ok(()),
+        }
+    }
 
-        // If the object is storage, "from" is a storage type. Ensure we have
-        // a "storage" stanza defined.
-        if source_obj.storage().is_some() {
-            if !self.all_storage_and_sources.contains_key(source_name) {
+    /// Validates that the given storage reference exists.
+    ///
+    /// - `reference_description` is a human-readable description of
+    ///   the reference used in error message, such as `"storage" source`.
+    /// - `storage_ref` is a reference to a storage source.
+    fn validate_storage_ref(
+        &self,
+        reference_description: &str,
+        storage_ref: &cml::Ref,
+    ) -> Result<(), Error> {
+        if let cml::Ref::Named(name) = storage_ref {
+            if !self.all_storage_and_sources.contains_key(name) {
                 return Err(Error::validate(format!(
-                    "\"{}\" is an \"{}\" source but it does not appear in \"storage\"",
-                    source_obj.from(),
-                    keyword,
+                    "{} \"{}\" does not appear in \"storage\"",
+                    reference_description, storage_ref,
                 )));
             }
-            return Ok(());
         }
 
-        // Otherwise, "source" is a child name. Ensure we have a child
-        // defined by that name.
-        if !self.all_children.contains(source_name) {
-            return Err(Error::validate(format!(
-                "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
-                source_obj.from(),
-                keyword,
-            )));
-        }
-
-        return Ok(());
+        Ok(())
     }
 
     /// Validates that directory rights for all route types are valid, i.e that it does not
@@ -1614,7 +1638,8 @@ mod tests {
                   },
                   { "storage": "data", "as": "/example" },
                   { "storage": "cache", "as": "/tmp" },
-                  { "storage": "meta" }
+                  { "storage": "meta" },
+                  { "runner": "elf" }
                 ]
             }),
             result = Ok(()),
@@ -1630,6 +1655,12 @@ mod tests {
                 "use": [ { "storage": "meta", "as": "/meta" } ]
             }),
             result = Err(Error::validate("\"as\" field cannot be used with storage type \"meta\"")),
+        },
+        test_cml_use_as_with_runner => {
+            input = json!({
+                "use": [ { "runner": "elf", "as": "xxx" } ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/as")),
         },
         test_cml_use_from_with_meta_storage => {
             input = json!({
@@ -1656,7 +1687,8 @@ mod tests {
                         "as": "/svc/logger"
                     },
                     { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
-                    { "directory": "/hub", "from": "framework" }
+                    { "directory": "/hub", "from": "framework" },
+                    { "runner": "elf", "from": "#logger",  }
                 ],
                 "children": [
                     {
@@ -1693,7 +1725,7 @@ mod tests {
                     { "service": "/loggers/fuchsia.logger.Log", "from": "#missing" }
                 ]
             }),
-            result = Err(Error::validate("\"#missing\" is an \"expose\" source but it does not appear in \"children\"")),
+            result = Err(Error::validate("\"expose\" source \"#missing\" does not appear in \"children\"")),
         },
         test_cml_expose_duplicate_target_paths => {
             input = json!({
@@ -1709,7 +1741,9 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"/thing\" is a duplicate \"expose\" target path")),
+            result = Err(Error::validate(
+                    "\"/thing\" is a duplicate \"expose\" target path for \"realm\""
+            )),
         },
         test_cml_expose_bad_from => {
             input = json!({
@@ -1760,6 +1794,11 @@ mod tests {
                     {
                         "storage": "data",
                         "from": "#minfs",
+                        "to": [ "#modular", "#logger" ]
+                    },
+                    {
+                        "runner": "elf",
+                        "from": "realm",
                         "to": [ "#modular", "#logger" ]
                     }
                 ],
@@ -1837,7 +1876,7 @@ mod tests {
                         "to": [ "#echo_server" ],
                     } ]
                 }),
-            result = Err(Error::validate("\"#missing\" is an \"offer\" source but it does not appear in \"children\"")),
+            result = Err(Error::validate("\"offer\" source \"#missing\" does not appear in \"children\"")),
         },
         test_cml_storage_offer_missing_from => {
             input = json!({
@@ -1847,7 +1886,7 @@ mod tests {
                         "to": [ "#echo_server" ],
                     } ]
                 }),
-            result = Err(Error::validate("\"#missing\" is an \"offer\" source but it does not appear in \"storage\"")),
+            result = Err(Error::validate("\"offer\" source \"#missing\" does not appear in \"storage\"")),
         },
         test_cml_offer_bad_from => {
             input = json!({
@@ -2010,6 +2049,27 @@ mod tests {
                 } ]
             }),
             result = Err(Error::validate("\"cache\" is a duplicate \"offer\" target storage type for \"#echo_server\"")),
+        },
+        test_cml_offer_duplicate_runner_name => {
+            input = json!({
+                "offer": [
+                    {
+                        "runner": "elf",
+                        "from": "realm",
+                        "to": [ "#echo_server" ]
+                    },
+                    {
+                        "runner": "elf",
+                        "from": "framework",
+                        "to": [ "#echo_server" ]
+                    }
+                ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                } ]
+            }),
+            result = Err(Error::validate("\"elf\" is a duplicate \"offer\" target runner for \"#echo_server\"")),
         },
 
         // children
@@ -2178,7 +2238,75 @@ mod tests {
                         "path": "/minfs"
                     } ]
                 }),
-            result = Err(Error::validate("\"#missing\" is a \"storage\" source but it does not appear in \"children\"")),
+            result = Err(Error::validate("\"storage\" source \"#missing\" does not appear in \"children\"")),
+        },
+
+        // runner
+        test_cml_runner => {
+            input = json!({
+                "runner": [
+                    {
+                        "name": "a",
+                        "from": "#minfs",
+                        "path": "/minfs"
+                    },
+                    {
+                        "name": "b",
+                        "from": "realm",
+                        "path": "/data"
+                    },
+                    {
+                        "name": "c",
+                        "from": "self",
+                        "path": "/runner"
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "minfs",
+                        "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_runner_all_valid_chars => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-from",
+                        "url": "https://www.google.com/gmail"
+                    },
+                ],
+                "runner": [
+                    {
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-runner",
+                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
+                        "path": "/example"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_runner_missing_props => {
+            input = json!({
+                "runners": [ {} ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, concat!(
+                   "This property is required at /runners/0/from, ",
+                   "This property is required at /runners/0/name, ",
+                   "This property is required at /runners/0/path",
+            ))),
+        },
+        test_cml_runner_missing_from => {
+            input = json!({
+                    "runners": [ {
+                        "name": "minfs",
+                        "from": "#missing",
+                        "path": "/minfs"
+                    } ]
+                }),
+            result = Err(Error::validate("\"runner\" source \"#missing\" does not appear in \"children\"")),
         },
 
         // facets
@@ -2516,6 +2644,24 @@ mod tests {
            }),
            result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"storage\" and once in \"collections\"")),
         },
+        test_cml_duplicate_identifiers_children_runners => {
+           input = json!({
+               "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    }
+               ],
+               "runners": [
+                    {
+                        "name": "logger",
+                        "path": "/logs",
+                        "from": "realm"
+                    }
+                ]
+           }),
+           result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"runners\" and once in \"children\"")),
+        },
     }
 
     test_validate_cmx! {
@@ -2744,6 +2890,7 @@ mod tests {
             legacy_service: None,
             directory: None,
             storage: None,
+            runner: None,
             from: cml::Ref::Self_,
             to: vec![],
             r#as: None,
@@ -2755,25 +2902,37 @@ mod tests {
     fn test_capability_id() -> Result<(), Error> {
         // Simple tests.
         assert_eq!(
-            capability_id(&cml::Offer { service: Some("/a".to_string()), ..empty_offer() })?,
+            CapabilityId::from_clause(&cml::Offer {
+                service: Some("/a".to_string()),
+                ..empty_offer()
+            })?,
             CapabilityId::Path("/a")
         );
         assert_eq!(
-            capability_id(&cml::Offer { legacy_service: Some("/a".to_string()), ..empty_offer() })?,
+            CapabilityId::from_clause(&cml::Offer {
+                legacy_service: Some("/a".to_string()),
+                ..empty_offer()
+            })?,
             CapabilityId::Path("/a")
         );
         assert_eq!(
-            capability_id(&cml::Offer { directory: Some("/a".to_string()), ..empty_offer() })?,
+            CapabilityId::from_clause(&cml::Offer {
+                directory: Some("/a".to_string()),
+                ..empty_offer()
+            })?,
             CapabilityId::Path("/a")
         );
         assert_eq!(
-            capability_id(&cml::Offer { storage: Some("a".to_string()), ..empty_offer() })?,
+            CapabilityId::from_clause(&cml::Offer {
+                storage: Some("a".to_string()),
+                ..empty_offer()
+            })?,
             CapabilityId::StorageType("a")
         );
 
         // "as" aliasing.
         assert_eq!(
-            capability_id(&cml::Offer {
+            CapabilityId::from_clause(&cml::Offer {
                 service: Some("/a".to_string()),
                 r#as: Some("/b".to_string()),
                 ..empty_offer()
@@ -2782,7 +2941,7 @@ mod tests {
         );
 
         // Error case.
-        assert_matches!(capability_id(&empty_offer()), Err(_));
+        assert_matches!(CapabilityId::from_clause(&empty_offer()), Err(_));
 
         Ok(())
     }

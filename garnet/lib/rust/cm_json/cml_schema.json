@@ -131,6 +131,9 @@
           },
           {
             "required": [ "storage" ]
+          },
+          {
+            "required": [ "runner" ]
           }
         ],
         "properties": {
@@ -166,10 +169,18 @@
               "data"
             ]
           },
+          "runner": {
+            "title": "Used runner name",
+            "description": "The name of a runner offered to this component",
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "examples": [
+              "elf"
+            ]
+          },
           "from": {
             "title": "Used capability source",
             "pattern": "^(realm|framework)$",
-            "description": "The component which is offering the capability to use. Either \"realm\" (default) or \"framework\"\".",
+            "description": "The component which is offering the capability to use. Either \"realm\" (default) or \"framework\"\". May not be specified for runners, because the source is implicitly \"realm\" in that case.",
             "examples": [
               "realm",
               "framework"
@@ -177,7 +188,7 @@
           },
           "as": {
             "title": "Used capability target path",
-            "description": "The path to which the capability will be installed in the component's incoming namespace. Defaults to \"service\"/\"directory\".",
+            "description": "The path to which the capability will be installed in the component's incoming namespace. Defaults to \"service\"/\"directory\". May not be specified for runners.",
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.logger.Log"
@@ -214,6 +225,9 @@
           },
           {
             "required": [ "directory" ]
+          },
+          {
+            "required": [ "runner" ]
           }
         ],
         "properties": {
@@ -241,6 +255,14 @@
               "/data/assets/widgets"
             ]
           },
+          "runner": {
+            "title": "Exposed runner source name",
+            "description": "The name of the runner being exposed. This is either a runner provided by the componenet (if from \"self\"), or the name of a runner exposed by a child (if from \"#$CHILD\").",
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "examples": [
+              "elf"
+            ]
+          },
           "from": {
             "title": "Exposed capability source component",
             "pattern": "^(self|framework|#[0-9a-z_\\-\\.]+)$",
@@ -252,9 +274,12 @@
             ]
           },
           "as": {
-            "title": "Exposed capability target path",
-            "description": "The path under which the capability will be exposed. Defaults to \"service\"/\"directory\"",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "title": "Exposed capability target path or name",
+            "description": "The path or name by which the capability will be exposed. Defaults to the source path/name.",
+            "oneOf": [
+              { "$ref": "#/definitions/path-clause" },
+              { "$ref": "#/definitions/name-clause" }
+            ],
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
@@ -303,6 +328,9 @@
           },
           {
             "required": [ "storage" ]
+          },
+          {
+            "required": [ "runner" ]
           }
         ],
         "properties": {
@@ -338,9 +366,17 @@
               "data"
             ]
           },
+          "runner": {
+            "title": "Offered runner name",
+            "description": "The runner being offered. This is either a runner declared by this component (if from \"self\"), or a runner which was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "examples": [
+              "elf"
+            ]
+          },
           "from": {
             "title": "Offered capability source component",
-            "description": "The component which has the capability to offer. For services and directories either \"framework\", \"realm\", \"self\" or \"#$CHILD\", for storage either \"realm\" or \"$STORAGE_SECTION_NAME\".",
+            "description": "The component which has the capability to offer. For services, directories, and runners one of \"framework\", \"realm\", \"self\" or \"#$CHILD\"; for storage either \"realm\" or \"#$STORAGE_SECTION_NAME\".",
             "pattern": "^(realm|framework|self|#[0-9a-z_\\-\\.]+)$",
             "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
             "examples": [
@@ -366,9 +402,12 @@
             }
           },
           "as": {
-            "title": "Offered capability target path",
-            "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\"). Must be omitted for storage capabilities.",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "title": "Offered capability target path or name",
+            "description": "The path or name by which the capability will be offered. Must be omitted for storage capabilities.",
+            "oneOf": [
+              { "$ref": "#/definitions/path-clause" },
+              { "$ref": "#/definitions/name-clause" }
+            ],
             "examples": [
               "/data/assets/widgets",
               "/svc/fuchsia.ui.Scenic"
@@ -509,6 +548,49 @@
       "type": "object",
       "title": "Facets",
       "description": "Freeform dictionary containing third-party metadata"
+    },
+    "runners": {
+      "type": "array",
+      "title": "Runners",
+      "description": "Runners declared by this componenet.",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "from",
+          "path"
+        ],
+        "properties": {
+          "from": {
+            "title": "Runner source component",
+            "description": "The component providing the underlying runner service. Either \"realm\", \"self\" or \"#$CHILD\".",
+            "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
+            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "examples": [
+              "realm",
+              "self",
+              "#scenic"
+            ]
+          },
+          "name": {
+            "title": "Runner name",
+            "description": "The name of this runner.",
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "examples": [
+              "elf"
+            ]
+          },
+          "path": {
+            "title": "The path of the capability",
+            "description": "The path of the capability providing the runner service. The path is either a path into the component's outgoing directory (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
+            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "examples": [
+              "/elf"
+            ]
+          }
+        }
+      }
     }
   }
 }

@@ -197,6 +197,7 @@ pub struct Document {
     pub collections: Option<Vec<Collection>>,
     pub storage: Option<Vec<Storage>>,
     pub facets: Option<Map<String, Value>>,
+    pub runners: Option<Vec<Runner>>,
 }
 
 impl Document {
@@ -231,6 +232,14 @@ impl Document {
             HashMap::new()
         }
     }
+
+    pub fn all_runner_names(&self) -> Vec<&Name> {
+        if let Some(runners) = self.runners.as_ref() {
+            runners.iter().map(|s| &s.name).collect()
+        } else {
+            vec![]
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -239,6 +248,7 @@ pub struct Use {
     pub legacy_service: Option<String>,
     pub directory: Option<String>,
     pub storage: Option<String>,
+    pub runner: Option<String>,
     pub from: Option<Ref>,
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
@@ -249,6 +259,7 @@ pub struct Expose {
     pub service: Option<String>,
     pub legacy_service: Option<String>,
     pub directory: Option<String>,
+    pub runner: Option<String>,
     pub from: Ref,
     pub r#as: Option<String>,
     pub to: Option<Ref>,
@@ -261,6 +272,7 @@ pub struct Offer {
     pub legacy_service: Option<String>,
     pub directory: Option<String>,
     pub storage: Option<String>,
+    pub runner: Option<String>,
     pub from: Ref,
     pub to: Vec<Ref>,
     pub r#as: Option<String>,
@@ -287,6 +299,13 @@ pub struct Storage {
     pub path: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Runner {
+    pub name: Name,
+    pub from: Ref,
+    pub path: String,
+}
+
 pub trait FromClause {
     fn from(&self) -> &Ref;
 }
@@ -296,6 +315,7 @@ pub trait CapabilityClause {
     fn legacy_service(&self) -> &Option<String>;
     fn directory(&self) -> &Option<String>;
     fn storage(&self) -> &Option<String>;
+    fn runner(&self) -> &Option<String>;
 }
 
 pub trait AsClause {
@@ -314,6 +334,9 @@ impl CapabilityClause for Use {
     }
     fn storage(&self) -> &Option<String> {
         &self.storage
+    }
+    fn runner(&self) -> &Option<String> {
+        &self.runner
     }
 }
 
@@ -342,6 +365,9 @@ impl CapabilityClause for Expose {
     fn storage(&self) -> &Option<String> {
         &None
     }
+    fn runner(&self) -> &Option<String> {
+        &self.runner
+    }
 }
 
 impl AsClause for Expose {
@@ -368,6 +394,9 @@ impl CapabilityClause for Offer {
     }
     fn storage(&self) -> &Option<String> {
         &self.storage
+    }
+    fn runner(&self) -> &Option<String> {
+        &self.runner
     }
 }
 
