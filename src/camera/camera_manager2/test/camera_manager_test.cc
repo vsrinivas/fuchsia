@@ -121,7 +121,7 @@ TEST_F(CameraManagerTest, CanConnectToStream) {
     }
   };
   stream->Start();
-  RunLoopWithTimeoutOrUntil([&passed]() { return passed; }, zx::sec(5));
+  RunLoopUntil([&passed]() { return passed; });
   EXPECT_TRUE(passed);
 }
 

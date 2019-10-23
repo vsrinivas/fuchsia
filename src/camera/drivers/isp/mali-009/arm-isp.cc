@@ -440,19 +440,21 @@ zx_status_t ArmIspDevice::SetupIspConfig() {
 }
 
 zx_status_t ArmIspDevice::SetPort(uint8_t kMode) {
-  constexpr uint32_t kTimeout = ZX_MSEC(30);
-  constexpr uint32_t kDeadline = ZX_USEC(500);
+  constexpr uint32_t kCheckInterval = ZX_USEC(2000);
+  constexpr uint32_t kTimeout = ZX_MSEC(100);
 
   // Input port safe stop or stop
   InputPort_Config3::Get().ReadFrom(&isp_mmio_).set_mode_request(kMode).WriteTo(&isp_mmio_);
 
   // timeout 100ms
+  // NOTE: This is a required timeout. The mode register "should be [updated] within 1 frame ...
+  // set the timeout as 100 ms"
   zx_time_t deadline = zx_deadline_after(kTimeout);
   do {
     if (InputPort_ModeStatus::Get().ReadFrom(&isp_mmio_).value() == kMode) {
       return ZX_OK;
     }
-    zx_nanosleep(zx_deadline_after(kDeadline));
+    zx_nanosleep(zx_deadline_after(kCheckInterval));
   } while (zx_clock_get_monotonic() < deadline);
   return ZX_ERR_TIMED_OUT;
 }

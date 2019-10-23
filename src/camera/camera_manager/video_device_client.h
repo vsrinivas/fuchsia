@@ -136,6 +136,7 @@ class VideoDeviceClient : public fbl::RefCounted<VideoDeviceClient> {
   // to communicate driver information.  This timeout is mostly to make sure
   // that if the driver hangs, it will get dropped in a timely manner.
   // TODO(CAM-18): Remove this when we switch to a dynamic detection model.
+  // Intentionally leaving timeout in deprecated class. See TODO(39822): delete CameraManager1
   static constexpr uint32_t kDriverStartupTimeoutSec = 10;
   std::unique_ptr<ReadyCallbackHandler> ready_callback_;
 

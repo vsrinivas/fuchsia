@@ -259,6 +259,8 @@ void ArmIspDeviceTester::TestCallbacks(fuchsia_camera_test_TestReport* report) {
                      "Failed to start streaming.");
   // sleep for kFramesToSleep frame periods.
   auto frame_period_ms = 1000 * rate.frames_per_sec_denominator / rate.frames_per_sec_numerator;
+  // NOTE: this sleep is required, as there is no signal besides the hardware interrupt, which this
+  // test validates, to indicate that frames have been written by the ISP.
   zx_nanosleep(zx_deadline_after(ZX_MSEC(kFramesToSleep * frame_period_ms)));
   ISP_TEST_EXPECT_GT(full_res_receiver.ready_ids.size(), 1,
                      "Full res callbacks not increasing past 1. Additional callbacks "

@@ -191,6 +191,7 @@ void VideoDeviceClient::ReadyCallbackHandler::Signal(int signal) {
   if (has_formats_ && has_device_info_) {
     callback_(ZX_OK);
     callback_ = nullptr;
+    // Intentionally leaving timeout in deprecated class. See TODO(39822): delete CameraManager1
     timeout_task_.Cancel();
   }
 }
