@@ -20,9 +20,13 @@ def main():
     state_parser.add_argument('--off', dest='state', action='store_false')
     args = parser.parse_args()
 
+    # Different relays require different sequences to turn on/off.  The
+    # sequences don't interfere with each other so just do them all.
     if args.state:
+      args.tty.write(b'\xa0\x01\x00\xa1')
       args.tty.write(b'\x02')
     else:
+      args.tty.write(b'\xa0\x01\x01\xa2')
       args.tty.write(b'\x01')
 
 if __name__ == '__main__':
