@@ -24,6 +24,7 @@ an executable binary from the listed sources.  The Zircon build also provides a
 means to indicate the location in the image wherein that binary should be
 installed via the `install_path` variable in the target scope.
 `install_path` can be:
+
  * a string: the path relative to the root of the BOOTFS (with no leading `/`)
  * omitted: use the default path of `bin/<binary_name>`
  * `false`: do not install this file at all
@@ -149,7 +150,7 @@ library("object") {
 ```
 
 Note `system/ulib/fbl` is not `kernel/lib/fbl`: the one `fbl` serves
-all.  Here's a heavily abridged example for that case:
+all. Here's a heavily abridged example for that case:
 
 ```gn
 library("fbl") {
@@ -221,7 +222,7 @@ as-needed to resolve symbols.
 
   * A `source_set` *must* be used when creating groups of tests since the
     test harness depends on static initializers while the static library
-    linking rules will strip the tests. All kernel code 
+    linking rules will strip the tests. All kernel code.
 
   * A `static_library` should be used for higher-level things that looks like
     libraries or a part of one. The dead code stripping is more efficient which can
@@ -253,6 +254,7 @@ templates that should be used instead of `loadable_module()`.
 ## `driver()` and `test_driver()`
 
 Drivers are loadable modules with some special support and constraints.
+
  * They get a default `install_path` appropriate for drivers, so they will be
    found by `devmgr`.
  * They implicitly depend on `libdriver` so it shouldn't be listed in `deps`.
@@ -336,8 +338,9 @@ relative path.
 
 This template allows the definition of a FIDL library and its associated
 bindings.  Declaring a `fidl_library()` target will cause the build to
-generate bindings for all supported languages.  Note that to use this template
-you must import the `fidl.gni` file scope.
+generate bindings for all supported languages.
+
+Note: To use this template, you must import the `fidl.gni` file scope.
 
 ```gn
 import("$zx/public/gn/fidl.gni")
