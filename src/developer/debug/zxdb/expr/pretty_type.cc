@@ -37,21 +37,30 @@ class PrettyEvalContext : public EvalContext {
       : impl_(std::move(impl)), value_(std::move(value)) {}
 
   // EvalContext implementation. Everything except GetNamedValue() passes through to the impl_.
-  ExprLanguage GetLanguage() const { return impl_->GetLanguage(); }
-  void GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) const;
-  void GetVariableValue(fxl::RefPtr<Value> variable, ValueCallback cb) const {
+  ExprLanguage GetLanguage() const override { return impl_->GetLanguage(); }
+  void GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) const override;
+  void GetVariableValue(fxl::RefPtr<Value> variable, ValueCallback cb) const override {
     return impl_->GetVariableValue(std::move(variable), std::move(cb));
   }
-  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const {
+  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override {
     return impl_->ResolveForwardDefinition(type);
   }
-  fxl::RefPtr<Type> GetConcreteType(const Type* type) const { return impl_->GetConcreteType(type); }
-  fxl::RefPtr<SymbolDataProvider> GetDataProvider() { return impl_->GetDataProvider(); }
-  NameLookupCallback GetSymbolNameLookupCallback() { return impl_->GetSymbolNameLookupCallback(); }
-  Location GetLocationForAddress(uint64_t address) const {
+  fxl::RefPtr<Type> GetConcreteType(const Type* type) const override {
+    return impl_->GetConcreteType(type);
+  }
+  fxl::RefPtr<SymbolDataProvider> GetDataProvider() override { return impl_->GetDataProvider(); }
+  NameLookupCallback GetSymbolNameLookupCallback() override {
+    return impl_->GetSymbolNameLookupCallback();
+  }
+  Location GetLocationForAddress(uint64_t address) const override {
     return impl_->GetLocationForAddress(address);
   }
-  const PrettyTypeManager& GetPrettyTypeManager() const { return impl_->GetPrettyTypeManager(); }
+  const PrettyTypeManager& GetPrettyTypeManager() const override {
+    return impl_->GetPrettyTypeManager();
+  }
+  VectorRegisterFormat GetVectorRegisterFormat() const override {
+    return VectorRegisterFormat::kDouble;
+  }
 
  private:
   fxl::RefPtr<EvalContext> impl_;

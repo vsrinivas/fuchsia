@@ -49,6 +49,9 @@ class MockRemoteAPI : public RemoteAPI {
   // Sets a memory value that will be returned when requested.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
 
+  // Sets the register reply for a given category.
+  void SetRegisterCategory(debug_ipc::RegisterCategory cat, std::vector<debug_ipc::Register> regs);
+
   const debug_ipc::WriteRegistersRequest& last_write_registers() const {
     return last_write_registers_;
   }
@@ -68,6 +71,8 @@ class MockRemoteAPI : public RemoteAPI {
               fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) override;
   void ReadMemory(const debug_ipc::ReadMemoryRequest& request,
                   fit::callback<void(const Err&, debug_ipc::ReadMemoryReply)> cb) override;
+  void ReadRegisters(const debug_ipc::ReadRegistersRequest& request,
+                     fit::callback<void(const Err&, debug_ipc::ReadRegistersReply)> cb) override;
   void WriteRegisters(const debug_ipc::WriteRegistersRequest& request,
                       fit::callback<void(const Err&, debug_ipc::WriteRegistersReply)> cb) override;
 
@@ -80,6 +85,8 @@ class MockRemoteAPI : public RemoteAPI {
 
  private:
   debug_ipc::ThreadStatusReply thread_status_reply_;
+
+  std::map<debug_ipc::RegisterCategory, std::vector<debug_ipc::Register>> register_replies_;
 
   bool resume_quits_loop_ = false;
   int resume_count_ = 0;

@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
+#include "src/developer/debug/zxdb/expr/vector_register_format.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -100,6 +101,9 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   virtual Location GetLocationForAddress(uint64_t address) const = 0;
 
   virtual const PrettyTypeManager& GetPrettyTypeManager() const = 0;
+
+  // Returns the format to be used for converting vector registers to values.
+  virtual VectorRegisterFormat GetVectorRegisterFormat() const = 0;
 };
 
 }  // namespace zxdb

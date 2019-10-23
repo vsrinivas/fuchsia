@@ -22,6 +22,11 @@ void MockRemoteAPI::AddMemory(uint64_t address, std::vector<uint8_t> data) {
   memory_.AddMemory(address, std::move(data));
 }
 
+void MockRemoteAPI::SetRegisterCategory(debug_ipc::RegisterCategory cat,
+                                        std::vector<debug_ipc::Register> regs) {
+  register_replies_[cat] = std::move(regs);
+}
+
 void MockRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
                            fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) {
   debug_ipc::AttachReply reply;
@@ -93,6 +98,19 @@ void MockRemoteAPI::ReadMemory(const debug_ipc::ReadMemoryRequest& request,
 
                                                 cb(Err(), std::move(reply));
                                               });
+}
+
+void MockRemoteAPI::ReadRegisters(
+    const debug_ipc::ReadRegistersRequest& request,
+    fit::callback<void(const Err&, debug_ipc::ReadRegistersReply)> cb) {
+  debug_ipc::ReadRegistersReply reply;
+  for (auto& cat : request.categories) {
+    const auto& regs = register_replies_[cat];
+    reply.registers.insert(reply.registers.end(), regs.begin(), regs.end());
+  }
+
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [reply, cb = std::move(cb)]() mutable { cb(Err(), reply); });
 }
 
 void MockRemoteAPI::WriteRegisters(

@@ -68,6 +68,12 @@ class EvalContextImpl : public EvalContext {
   Location GetLocationForAddress(uint64_t address) const override;
   const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
 
+  // This implementation of EvalContextImpl always returns "double". To configure, implementations
+  // should override this to hook into their own settings systems. See ClientEvalContextImpl.
+  VectorRegisterFormat GetVectorRegisterFormat() const override {
+    return VectorRegisterFormat::kDouble;
+  }
+
  private:
   struct ResolutionState;
 

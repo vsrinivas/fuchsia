@@ -132,6 +132,7 @@ source_set("tests") {
     "verbs_settings_unittest.cc",
     "verbs_shared_unittest.cc",
     "verbs_symbol_unittest.cc",
+    "verbs_thread_unittest.cc",
   ]
 
   deps = [

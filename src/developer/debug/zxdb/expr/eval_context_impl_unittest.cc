@@ -507,7 +507,7 @@ TEST_F(EvalContextImplTest, RegisterShort) {
   provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_w0, true, {0x11, 0x22, 0x33, 0x44});
   auto context = MakeEvalContext();
 
-  // "w0" is the ARM64 way to refer to the low 32-bits of teh "x0" register we set above.
+  // "w0" is the ARM64 way to refer to the low 32-bits of the "x0" register we set above.
   ValueResult reg;
   GetNamedValue(context, "w0", &reg);
 
@@ -516,6 +516,31 @@ TEST_F(EvalContextImplTest, RegisterShort) {
   ASSERT_FALSE(reg.value.has_error()) << reg.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint32_t>(kRegValue)), reg.value.value());
   EXPECT_EQ("uint32_t", reg.value.value().type()->GetFullName());
+}
+
+TEST_F(EvalContextImplTest, VectorRegister) {
+  // This just tests that vector formatting for vector registers is hooked up in the EvalContext
+  // rather than trying to test all of the various formats. The EvalContextImpl formats all
+  // vector registers as doubles (in real life the client overrides this to integrate with the
+  // settings system).
+  ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
+
+  // 128-bit vector register.
+  std::vector<uint8_t> data{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+                            0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_v0, true, data);
+  auto context = MakeEvalContext();
+
+  ValueResult reg;
+  GetNamedValue(context, "v0", &reg);
+
+  ASSERT_TRUE(reg.called);
+  ASSERT_FALSE(reg.value.has_error()) << reg.value.err().msg();
+
+  EXPECT_EQ("double[2]", reg.value.value().type()->GetFullName());
+
+  // The data should be passed through unchanged, the array code will handle unpacking it.
+  EXPECT_EQ(data, reg.value.value().data());
 }
 
 // Also tests ResolveForwardDefinition().

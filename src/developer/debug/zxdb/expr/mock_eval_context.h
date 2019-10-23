@@ -23,6 +23,7 @@ class MockEvalContext : public EvalContext {
   PrettyTypeManager& pretty_type_manager() { return pretty_type_manager_; }
 
   void set_language(ExprLanguage lang) { language_ = lang; }
+  void set_vector_register_format(VectorRegisterFormat fmt) { vector_register_format_ = fmt; }
 
   // Adds the given mocked variable with the given name and value. If using the "Value" variant, the
   // checked thing is the actual pointer value, not the name.
@@ -46,6 +47,7 @@ class MockEvalContext : public EvalContext {
   NameLookupCallback GetSymbolNameLookupCallback() override;
   Location GetLocationForAddress(uint64_t address) const override;
   const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
+  VectorRegisterFormat GetVectorRegisterFormat() const override { return vector_register_format_; }
 
  private:
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
@@ -55,6 +57,7 @@ class MockEvalContext : public EvalContext {
   std::map<uint64_t, Location> locations_;
   ExprLanguage language_ = ExprLanguage::kC;
   PrettyTypeManager pretty_type_manager_;
+  VectorRegisterFormat vector_register_format_ = VectorRegisterFormat::kDouble;
 };
 
 }  // namespace zxdb

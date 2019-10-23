@@ -45,6 +45,8 @@ class MockFrame : public Frame {
 
   void set_is_ambiguous_inline(bool ambiguous) { is_ambiguous_inline_ = ambiguous; }
 
+  MockSymbolDataProvider* GetMockSymbolDataProvider();
+
   // Frame implementation.
   Thread* GetThread() const override;
   bool IsInline() const override;

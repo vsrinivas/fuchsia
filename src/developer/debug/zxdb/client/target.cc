@@ -33,6 +33,35 @@ const char* ClientSettings::Target::kBuildDirsDescription =
   that computer's build directory would have been given your code location so
   relative paths will resolve to the correct local files.)";
 
+const char* ClientSettings::Target::kVectorFormat = "vector-format";
+const char* ClientSettings::Target::kVectorFormatDescription =
+    R"(  How to treat vector registers.
+
+  This affects the display of vector registers in the "regs" command as well
+  as what it means when you type a register name in an expression.
+
+  Possible values:
+
+    i8 / u8     : Array of signed/unsigned 8-bit integers.
+    i16 / u16   : Array of signed/unsigned 16-bit integers.
+    i32 / u32   : Array of signed/unsigned 32-bit integers.
+    i64 / u64   : Array of signed/unsigned 64-bit integers.
+    i128 / u128 : Array of signed/unsigned 128-bit integers.
+    float       : Array of single-precision floating point.
+    double      : Array of double-precision floating point.)";
+const char* ClientSettings::Target::kVectorFormat_i8 = "i8";
+const char* ClientSettings::Target::kVectorFormat_u8 = "u8";
+const char* ClientSettings::Target::kVectorFormat_i16 = "i16";
+const char* ClientSettings::Target::kVectorFormat_u16 = "u16";
+const char* ClientSettings::Target::kVectorFormat_i32 = "i32";
+const char* ClientSettings::Target::kVectorFormat_u32 = "u32";
+const char* ClientSettings::Target::kVectorFormat_i64 = "i64";
+const char* ClientSettings::Target::kVectorFormat_u64 = "u64";
+const char* ClientSettings::Target::kVectorFormat_i128 = "i128";
+const char* ClientSettings::Target::kVectorFormat_u128 = "u128";
+const char* ClientSettings::Target::kVectorFormat_float = "float";
+const char* ClientSettings::Target::kVectorFormat_double = "double";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
@@ -46,6 +75,17 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   schema->AddBool(ClientSettings::Thread::kDebugStepping,
                   ClientSettings::Thread::kDebugSteppingDescription, false);
+
+  std::vector<std::string> vector_options = {
+      ClientSettings::Target::kVectorFormat_i8,    ClientSettings::Target::kVectorFormat_u8,
+      ClientSettings::Target::kVectorFormat_i16,   ClientSettings::Target::kVectorFormat_u16,
+      ClientSettings::Target::kVectorFormat_i32,   ClientSettings::Target::kVectorFormat_u32,
+      ClientSettings::Target::kVectorFormat_i64,   ClientSettings::Target::kVectorFormat_u64,
+      ClientSettings::Target::kVectorFormat_i128,  ClientSettings::Target::kVectorFormat_u128,
+      ClientSettings::Target::kVectorFormat_float, ClientSettings::Target::kVectorFormat_double,
+  };
+  schema->AddString(ClientSettings::Target::kVectorFormat,
+                    ClientSettings::Target::kVectorFormatDescription, "", vector_options);
 
   return schema;
 }

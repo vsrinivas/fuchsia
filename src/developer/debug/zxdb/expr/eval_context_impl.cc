@@ -33,7 +33,9 @@
 namespace zxdb {
 namespace {
 
-debug_ipc::RegisterID GetRegisterID(const ParsedIdentifier& ident) {
+using debug_ipc::RegisterID;
+
+RegisterID GetRegisterID(const ParsedIdentifier& ident) {
   auto str = GetSingleComponentIdentifierName(ident);
   if (!str)
     return debug_ipc::RegisterID::kUnknown;
@@ -43,11 +45,15 @@ debug_ipc::RegisterID GetRegisterID(const ParsedIdentifier& ident) {
   return debug_ipc::StringToRegisterID(*str);
 }
 
-Err GetUnavailableRegisterErr(debug_ipc::RegisterID id) {
+Err GetUnavailableRegisterErr(RegisterID id) {
   return Err("Register %s unavailable in this context.", debug_ipc::RegisterIDToString(id));
 }
 
-ExprValue RegisterDataToValue(containers::array_view<uint8_t> data) {
+ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
+                               containers::array_view<uint8_t> data) {
+  if (ShouldFormatRegisterAsVector(id))
+    return VectorRegisterToValue(vector_fmt, std::vector<uint8_t>(data.begin(), data.end()));
+
   if (data.size() <= sizeof(uint64_t)) {
     uint64_t int_value = 0;
     memcpy(&int_value, &data[0], data.size());
@@ -65,20 +71,8 @@ ExprValue RegisterDataToValue(containers::array_view<uint8_t> data) {
     }
   }
 
-  // For very large registers and for those with an unexpected size, assume they're vector ones and
-  // just show the bytes. This reverses the bytes so the low bytes in the little-endian input are on
-  // the right. This is how most people will expect to view vector registers.
-  //
-  // TODO(bug 39308) provide a better data type for vector registers.
-  std::vector<uint8_t> reversed;
-  reversed.reserve(data.size());
-  for (uint8_t cur : Reversed(data))
-    reversed.push_back(cur);
-
-  auto byte_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "byte");
-  auto array_type = fxl::MakeRefCounted<ArrayType>(byte_type, reversed.size());
-
-  return ExprValue(array_type, std::move(reversed));
+  // Very large non-vector data (?) or some unexpected size.
+  return Err("This %zu-byte register can not converted to a number.", data.size());
 }
 
 }  // namespace
@@ -167,8 +161,7 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
   }
 
   auto reg = GetRegisterID(identifier);
-  if (reg == debug_ipc::RegisterID::kUnknown ||
-      GetArchForRegisterID(reg) != data_provider_->GetArch())
+  if (reg == RegisterID::kUnknown || GetArchForRegisterID(reg) != data_provider_->GetArch())
     return cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()), nullptr);
 
   // Fall back to matching registers when no symbol is found.
@@ -178,16 +171,19 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
     if (opt_reg_data->empty())
       cb(GetUnavailableRegisterErr(reg), fxl::RefPtr<zxdb::Symbol>());
     else
-      cb(RegisterDataToValue(*opt_reg_data), fxl::RefPtr<zxdb::Symbol>());
+      cb(RegisterDataToValue(reg, GetVectorRegisterFormat(), *opt_reg_data),
+         fxl::RefPtr<zxdb::Symbol>());
   } else {
     data_provider_->GetRegisterAsync(
-        reg, [reg, cb = std::move(cb)](const Err& err, std::vector<uint8_t> value) mutable {
-          if (err.has_error())
+        reg, [reg, vector_fmt = GetVectorRegisterFormat(), cb = std::move(cb)](
+                 const Err& err, std::vector<uint8_t> value) mutable {
+          if (err.has_error()) {
             cb(err, fxl::RefPtr<zxdb::Symbol>());
-          else if (value.empty())
+          } else if (value.empty()) {
             cb(GetUnavailableRegisterErr(reg), fxl::RefPtr<zxdb::Symbol>());
-          else
-            cb(RegisterDataToValue(value), fxl::RefPtr<zxdb::Symbol>());
+          } else {
+            cb(RegisterDataToValue(reg, vector_fmt, value), fxl::RefPtr<zxdb::Symbol>());
+          }
         });
   }
 }

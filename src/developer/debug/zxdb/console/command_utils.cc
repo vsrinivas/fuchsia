@@ -10,6 +10,7 @@
 #include <limits>
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/client_eval_context_impl.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
@@ -467,15 +468,8 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
   if (cmd.frame())
     return cmd.frame()->GetEvalContext();
 
-  if (Process* process = cmd.target()->GetProcess()) {
-    // Process context only.
-    return fxl::MakeRefCounted<EvalContextImpl>(process->GetSymbols()->GetWeakPtr(),
-                                                process->GetSymbolDataProvider(), Location());
-  }
-
-  // No context.
-  return fxl::MakeRefCounted<EvalContextImpl>(
-      fxl::WeakPtr<ProcessSymbols>(), fxl::MakeRefCounted<SymbolDataProvider>(), Location());
+  // Target context only (it may or may not have a process).
+  return fxl::MakeRefCounted<ClientEvalContextImpl>(cmd.target());
 }
 
 Err EvalCommandExpression(const Command& cmd, const char* verb,

@@ -35,6 +35,11 @@ void MockFrame::SetFileLine(const FileLine& file_line) {
                        location_.symbol_context(), location_.symbol());
 }
 
+MockSymbolDataProvider* MockFrame::GetMockSymbolDataProvider() {
+  GetSymbolDataProvider();  // Force creation.
+  return symbol_data_provider_.get();
+}
+
 Thread* MockFrame::GetThread() const { return thread_; }
 
 bool MockFrame::IsInline() const { return !!physical_frame_; }

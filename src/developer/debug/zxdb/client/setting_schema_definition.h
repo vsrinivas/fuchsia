@@ -39,6 +39,23 @@ struct ClientSettings {
     static const char* kStoreBacktraces;
     static const char* kBuildDirs;
     static const char* kBuildDirsDescription;  // Help for kBuildDirs.
+
+    static const char* kVectorFormat;
+    static const char* kVectorFormatDescription;  // Help for kBuildDirs.
+
+    // Options for the kVector setting value.
+    static const char* kVectorFormat_i8;
+    static const char* kVectorFormat_u8;
+    static const char* kVectorFormat_i16;
+    static const char* kVectorFormat_u16;
+    static const char* kVectorFormat_i32;
+    static const char* kVectorFormat_u32;
+    static const char* kVectorFormat_i64;
+    static const char* kVectorFormat_u64;
+    static const char* kVectorFormat_i128;
+    static const char* kVectorFormat_u128;
+    static const char* kVectorFormat_float;
+    static const char* kVectorFormat_double;
   };
 
   struct Thread {

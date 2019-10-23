@@ -6,7 +6,6 @@
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
-#include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/console/mock_console.h"
 
 namespace zxdb {
@@ -59,8 +58,7 @@ TEST_F(VerbsMemoryTest, Stack) {
   Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
 
   // Eat the output from process attaching (this is asynchronously appended).
-  loop().PostTask(FROM_HERE, []() { MessageLoop::Current()->QuitNow(); });
-  loop().Run();
+  loop().RunUntilNoTasks();
   console.Clear();
 
   // Error case with no stopped thread.
@@ -100,8 +98,7 @@ TEST_F(VerbsMemoryTest, Stack) {
 
   console.ProcessInputLine("stack");
 
-  loop().PostTask(FROM_HERE, []() { MessageLoop::Current()->QuitNow(); });
-  loop().Run();
+  loop().RunUntilNoTasks();
 
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);

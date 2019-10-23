@@ -74,6 +74,8 @@ static_library("expr") {
     "template_type_extractor.h",
     "type_glob.cc",
     "type_glob.h",
+    "vector_register_format.cc",
+    "vector_register_format.h",
   ]
 
   public_deps = [
@@ -132,6 +134,7 @@ source_set("tests") {
     "resolve_variant_unittest.cc",
     "template_type_extractor_unittest.cc",
     "type_glob_unittest.cc",
+    "vector_register_format_unittest.cc",
   ]
 
   deps = [
