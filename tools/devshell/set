@@ -140,6 +140,7 @@ function explain-goal-argument {
   fx-error Run \"fx list-products\" to see the available products.
   fx-error Run \"fx list-boards\" to see the available boards.
   fx-error Run \"fx set --help\" to see full usage.
+  fx-error Run \"fx status\" to see the current developer settings.
   return 0
 }
 
