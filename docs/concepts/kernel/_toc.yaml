@@ -1,0 +1,10 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Zircon kernel concepts"
+  path: /docs/concepts/kernel/concepts.md
+- title: "vDSO (libzircon)"
+  path: /docs/concepts/kernel/vdso.md
+- title: "System calls"
+  path: /docs/reference/syscalls/README.md

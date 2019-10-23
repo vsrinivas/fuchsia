@@ -69,4 +69,4 @@ Stored in vDSO.  Accessed through [`zx_system_get_version`]( /docs/reference/sys
 ### Description
 Zircon revision computed during the kernel build process.
 
-[component-manifest]: /docs/the-book/package_metadata.md#component-manifest
+[component-manifest]: /docs/concepts/storage/package_metadata.md#component-manifest

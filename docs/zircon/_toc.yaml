@@ -8,9 +8,6 @@ toc:
 - title: "Architecture support"
   path: /docs/zircon/architecture_support.md
 
-- title: "Concepts"
-  path: /docs/zircon/concepts.md
-
 - title: Objects
   section:
   - title: "Kernel objects"

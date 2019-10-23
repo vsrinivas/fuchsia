@@ -1,0 +1,36 @@
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /docs/concepts
+- title: "Booting"
+  section:
+  - include: /docs/concepts/booting/_toc.yaml
+- title: "Components"
+  section:
+  - include: /docs/concepts/components/_toc.yaml
+- title: "Drivers"
+  section:
+  - include: /docs/concepts/drivers/_toc.yaml
+- title: "Framework"
+  section:
+  - include: /docs/concepts/framework/_toc.yaml
+- title: "Graphics"
+  section:
+  - include: /docs/concepts/graphics/_toc.yaml
+- title: "Kernel"
+  section:
+  - include: /docs/concepts/kernel/_toc.yaml
+- title: "Modular"
+  section:
+  - include: /docs/concepts/modular/_toc.yaml
+- title: "Networking"
+  section:
+  - include: /docs/concepts/networking/_toc.yaml
+- title: "Storage"
+  section:
+  - include: /docs/concepts/storage/_toc.yaml
+- title: "System"
+  section:
+  - include: /docs/concepts/system/_toc.yaml

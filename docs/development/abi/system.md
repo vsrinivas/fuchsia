@@ -16,7 +16,7 @@ The `fuchsia.io` FIDL library provides protocols for file and directory
 operations. Fuchsia uses the `fuchsia.io` protocols to provide a namespace to
 components through which components can access system services and resources.
 The names in these namespaces follow certain conventions, which are part of the
-system ABI. See [namespaces](../../the-book/namespaces.md) for more details.
+system ABI. See [namespaces](/docs/concepts/framework/namespaces.md) for more details.
 
 Packages themselves also provide an interface to the system in terms of
 directory structure and file formats. The system uses this information to

@@ -16,7 +16,7 @@ userspace environment at system startup. See [`userboot`](userboot.md) for more 
 The standard Zircon userspace environment uses the [Executable and Linkable Format (ELF)](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format)
 for machine-code executable files, and provides a dynamic linker and
 C/C++ execution environment based on ELF. Zircon processes can
-use [system calls] only through the Zircon [vDSO](vdso.md), which is
+use [system calls] only through the Zircon [vDSO](/docs/concepts/kernel/vdso.md), which is
 provided by the kernel in ELF format and uses the C/C++ calling conventions
 common to ELF-based systems.
 
@@ -134,7 +134,7 @@ Three types of file are handled:
     for the initial thread. If there was a `PT_GNU_STACK` program header
     with a nonzero `p_memsz`, that determines the size of the stack (rounded
     up to whole pages). Otherwise, a reasonable default stack size is used.
-  * The [vDSO](vdso.md) is mapped into the process
+  * The [vDSO](/docs/concepts/kernel/vdso.md) is mapped into the process
     (another VMO containing an ELF image), also at a random base address.
   * A new thread is created in the process with [`zx_thread_create()`].
   * A new [channel](objects/channel.md) is created, called the *bootstrap
@@ -230,7 +230,7 @@ fraction of the address space.
 the protocol for the *bootstrap message* sent on the *bootstrap channel* by
 the program loader. When a process starts up, it has a handle to this
 bootstrap channel and it has access to [system calls] through
-the [vDSO](vdso.md). The process has only this one handle and so it can
+the [vDSO](/docs/concepts/kernel/vdso.md). The process has only this one handle and so it can
 see only global system information and its own memory until it gets more
 information and handles through the bootstrap channel.
 
@@ -264,7 +264,7 @@ The handles serve many purposes, indicated by the *handle info entry* type:
    [process](objects/process.md), [VMAR](objects/vm_address_region.md),
    [thread](objects/thread.md), [job](objects/job.md)
  * [channel](objects/channel.md) to the [loader service](#the-loader-service)
- * [vDSO](vdso.md) [VMO](objects/vm_object.md)
+ * [vDSO](/docs/concepts/kernel/vdso.md) [VMO](objects/vm_object.md)
  * filesystem-related handles: current directory, file descriptors, name
    space bindings (these encode an index into the list of name strings)
  * special handles for system processes:
@@ -366,7 +366,7 @@ the [`processargs`](#the-processargs-protocol)
 and [loader service](#the-loader-service) protocols are the permanent
 system ABI for program loading. Programs can use any implementation of a
 machine code executable that meets the basic ELF format conventions. The
-implementation can use the [vDSO](vdso.md) [system calls].
+implementation can use the [vDSO](/docs/concepts/kernel/vdso.md) [system calls].
 
 ABI, the `processargs` data, and the loader service facilities as it sees
 fit. The exact details of what handles and data that programs receive through

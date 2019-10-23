@@ -198,7 +198,7 @@ runtime configuration, services and directories it receives in its
 In [Components v2](#components-v2), a component manifest is a file with a `.cm`
 extension, that encodes a [component declaration](#component-declaration).
 
--   [Component manifests v2](/docs/the-book/components/component_manifests.md)
+-   [Component manifests v2](/docs/concepts/components/component_manifests.md)
 
 #### **Component Manifest Facet** {#component-manifest-facet}
 
@@ -275,7 +275,7 @@ The Driver Development Kit is the documentation, APIs, and ABIs necessary to
 build Zircon Device Drivers. Device drivers are implemented as ELF shared
 libraries loaded by Zircon's Device Manager.
 
--   [DDK Overview](/docs/zircon/ddk/overview.md)
+-   [DDK Overview](/docs/concepts/drivers/overview.md)
 -   [DDK includes](/zircon/system/ulib/ddk/include/ddk/)
 
 #### **Directory capability** {#directory-capability}
@@ -317,7 +317,7 @@ qualities suitable for user interfaces.
 The Fuchsia Archive Format is a container for files to be used by Zircon and
 Fuchsia.
 
--   [FAR Spec](the-book/archive_format.md)
+-   [FAR Spec](/docs/concepts/storage/archive_format.md)
 
 #### **FBL** {#fbl}
 
@@ -366,7 +366,7 @@ identified using [fuchsia-pkg URLs](#fuchsia-pkg-url).
 
 #### **fuchsia-pkg URL** {#fuchsia-pkg-url}
 
-The [fuchsia-pkg URL](the-book/package_url.md) scheme is a means for referring
+The [fuchsia-pkg URL](/docs/concepts/storage/package_url.md) scheme is a means for referring
 to a repository, a package, or a package resource. The syntax is
 `fuchsia-pkg://<repo-hostname>[/<pkg-name>][#<path>]]`. E.g., for the component
 `echo_client_dart.cmx` published under the package `echo_dart`'s `meta`
@@ -394,7 +394,7 @@ allocated groups of blocks known as slices into a virtual block address space.
 The FVM partitions provide a block interface enabling filesystems to interact
 with it in a manner largely consistent with a regular block device.
 
--   [Filesystems](the-book/filesystems.md)
+-   [Filesystems](/docs/concepts/storage/filesystems.md)
 
 #### **GN** {#gn}
 
@@ -431,7 +431,7 @@ The hub is a portal for tools to access detailed structural information about
 component instances at runtime, such as their names, job and process ids, and
 exposed capabilities.
 
--   [Hub](/docs/the-book/components/hub.md)
+-   [Hub](/docs/concepts/components/hub.md)
 
 #### **Jiri** {#jiri}
 
@@ -471,7 +471,7 @@ A Kernel Object Identifier.
 
 [Ledger](/src/ledger/docs/README.md) is a distributed storage system for
 Fuchsia. Applications use Ledger either directly or through state
-synchronization primitives exposed by the [Modular](the-book/modular/overview.md) framework that are based on
+synchronization primitives exposed by the [Modular](/docs/concepts/modular/overview.md) framework that are based on
 Ledger under-the-hood.
 
 #### **LK** {#lk}
@@ -489,7 +489,7 @@ A module is a role a [component](#Component) can play to participate in a
 module is asked to show UI. Additionally, a module can have a `module` metadata
 file which describes the Module's data compatibility and semantic role.
 
--   [Module metadata format](/docs/the-book/modular/module.md)
+-   [Module metadata format](/docs/concepts/modular/module.md)
 
 #### **Musl** {#musl}
 
@@ -504,7 +504,7 @@ A namespace is the composite hierarchy of files, directories, sockets,
 [service](#service)s, and other named objects which are offered to components by
 their [environment](#environment).
 
--   [Fuchsia Namespace Spec](the-book/namespaces.md)
+-   [Fuchsia Namespace Spec](/docs/concepts/framework/namespaces.md)
 
 #### **Netstack** {#netstack}
 
@@ -577,7 +577,7 @@ any necessary processes, loading executable code, initializing language runtimes
 handing control to the component's entry points, and terminating the component when
 requested by the component framework.
 
--   [ELF runner](/docs/the-book/components/elf_runner.md)
+-   [ELF runner](/docs/concepts/components/elf_runner.md)
 
 #### **Scenic** {#scenic}
 
@@ -639,7 +639,7 @@ will be allocated for each individual use. This is different from
 directory is routed to a specific component instance.
 
 Isolation is achieved because Fuchsia does not support
-[dotdot](the-book/dotdot.md).
+[dotdot](/docs/concepts/storage/dotdot.md).
 
 There are three types of storage capabilities:
 
@@ -654,7 +654,7 @@ There are three types of storage capabilities:
 Storage capability is a [components v2](#components-v2) concept.
 
 -   [Capability routing](#capability-routing)
--   [Storage capabilities](/docs/the-book/components/capabilities/storage.md)
+-   [Storage capabilities](/docs/concepts/components/capabilities/storage.md)
 
 #### **Story** {#story}
 
@@ -735,7 +735,7 @@ libc, etc) at the core of Fuchsia. In a traditional monolithic kernel, many of
 the userspace components of Zircon would be part of the kernel itself.
 
 -   [Zircon Documentation](/zircon/README.md)
--   [Zircon Concepts](/docs/zircon/concepts.md)
+-   [Zircon Concepts](/docs/concepts/kernel/concepts.md)
 -   [Source](/zircon)
 
 #### **ZX** {#zx}

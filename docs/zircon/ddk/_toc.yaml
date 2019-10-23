@@ -2,8 +2,6 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Driver Development Kit"
-  path: /docs/zircon/ddk/overview.md
 - title: "Getting started"
   path: /docs/zircon/ddk/getting_started.md
 - title: "Device model"

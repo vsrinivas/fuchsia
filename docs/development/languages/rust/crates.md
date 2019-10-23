@@ -22,7 +22,7 @@
 
 * [fuchsia-merkle/](/garnet/public/rust/fuchsia-merkle/)
 
-    Protect and verify data blobs using [Merkle Trees](../../../the-book/merkleroot.md)
+    Protect and verify data blobs using [Merkle Trees](/docs/concepts/storage/merkleroot.md)
 
 * [fuchsia-scenic/](/garnet/public/rust/fuchsia-scenic/)
 

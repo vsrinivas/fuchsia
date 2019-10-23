@@ -1,0 +1,24 @@
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /docs/concepts/modular/overview.md
+- title: "Configuring the Modular framework"
+  path: /docs/concepts/modular/guide/config.md
+- title: "Story"
+  path: /docs/concepts/modular/story.md
+- title: "Module"
+  path: /docs/concepts/modular/module.md
+- title: "Module facet"
+  path: /docs/concepts/modular/module_facet.md
+- title: "Agent"
+  path: /docs/concepts/modular/agent.md
+- title: "Intent"
+  path: /docs/concepts/modular/intent.md
+- title: "Shell"
+  path: /docs/concepts/modular/shell.md
+- title: "Entity"
+  path: /docs/concepts/modular/entity.md
+- title: "Entity provider"
+  path: /docs/concepts/modular/guide/entity_provider.md

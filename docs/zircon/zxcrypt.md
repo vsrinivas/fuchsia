@@ -88,7 +88,7 @@ actually the original request, but instead a "shadow" request that encapsulates 
 request.
 
 As shadow requests are needed, they are allocated backed sequentially by pages in the
-[VMO](concepts.md#shared-memory-virtual-memory-objects-vmos-).  When the
+[VMO](/docs/concepts/kernel/concepts.md#shared-memory-virtual-memory-objects-vmos-).  When the
 worker needs to transform the data it either encrypts data from the original, encapsulated write
 request into the shadow request, or decrypts data from the shadow request into the original,
 encapsulated read request.  As soon as the original request can be handed back to the original

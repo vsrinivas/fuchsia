@@ -9,8 +9,8 @@ documentation.
    with Fuchsia
  - [Development](development/README.md) - instructions for building, running and
    testing Fuchsia and software that runs on Fuchsia
- - [System](the-book/README.md) - documentation for how Fuchsia works
- - [Zircon](zircon/README.md) - documentation for the Zircon kernel
+ - [System](/docs/concepts/README.md) - documentation for how Fuchsia works
+ - [Zircon](/docs/zircon/README.md) - documentation for the Zircon kernel
  - [Run the examples](/docs/development/build/run-examples.md) - instructions for running examples
    on a device
  - [Contributing changes](/CONTRIBUTING.md)

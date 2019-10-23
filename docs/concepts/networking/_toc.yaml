@@ -1,0 +1,12 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Wireless"
+  path: /docs/concepts/networking/wireless_networking.md
+- title: "Bluetooth architecture"
+  path: /docs/concepts/networking/bluetooth_architecture.md
+- title: "Bluetooth source code"
+  path: /docs/concepts/networking/bluetooth_source_layout.md
+- title: "Telephony"
+  path: https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/telephony/

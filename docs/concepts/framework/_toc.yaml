@@ -1,0 +1,14 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Boot sequence"
+  path: /docs/concepts/framework/boot_sequence.md
+- title: "Core libraries"
+  path: /docs/concepts/framework/core_libraries.md
+- title: "Namespaces"
+  path: /docs/concepts/framework/namespaces.md
+- title: "Hub"
+  path: /docs/concepts/framework/hub.md
+- title: "Sandboxing"
+  path: /docs/concepts/framework/sandboxing.md

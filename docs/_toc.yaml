@@ -13,9 +13,9 @@ toc:
 - name: "Development"
   contents:
   - include: /docs/development/_toc.yaml
-- name: "System"
+- name: "Concepts"
   contents:
-  - include: /docs/the-book/_toc.yaml
+  - include: /docs/concepts/_toc.yaml
 - name: "Zircon"
   contents:
   - include: /docs/zircon/_toc.yaml

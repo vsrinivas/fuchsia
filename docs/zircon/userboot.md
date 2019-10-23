@@ -48,12 +48,12 @@ any code for interpreting the BOOTFS format.  Instead, all of this work
 is done by the first userspace process, called `userboot`.
 
 `userboot` is a normal userspace process.  It can only make the standard
-system calls through the [vDSO](vdso.md) like any other process would, and
-is subject to the full [vDSO enforcement](vdso.md#Enforcement) regime.
+system calls through the [vDSO](/docs/concepts/kernel/vdso.md) like any other process would, and
+is subject to the full [vDSO enforcement](/docs/concepts/kernel/vdso.md#Enforcement) regime.
 What's special about `userboot` is the way it gets loaded.
 
 `userboot` is built as an ELF dynamic shared object, using the
-same [RODSO layout](vdso.md#Read_Only-Dynamic-Shared-Object-Layout) as
+same [RODSO layout](/docs/concepts/kernel/vdso.md#Read_Only-Dynamic-Shared-Object-Layout) as
 the vDSO.  Like the vDSO, the `userboot` ELF image is embedded in the
 kernel at compile time.  Its simple layout means that loading it does
 not require the kernel to interpret ELF headers at boot time.  The
@@ -81,11 +81,11 @@ bootstrap message.  All the handles that `userboot` itself will need, and
 that the rest of the system will need to access kernel facilities, are
 included in this message.  Following the normal format, *handle info
 entries* describe the purpose of each handle.  These include
-the [`PA_VMO_VDSO` handle](vdso.md#pa_vmo_vdso-handle).
+the [`PA_VMO_VDSO` handle](/docs/concepts/kernel/vdso.md#pa_vmo_vdso-handle).
 
 ## userboot finds system calls in the vDSO
 
-The [standard convention](vdso.md#process_start_argument) for informing
+The [standard convention](/docs/concepts/kernel/vdso.md#process_start_argument) for informing
 a new process of its vDSO mapping requires the process to interpret the
 vDSO's ELF headers and symbol table to locate system call entry points.
 To avoid this complexity, `userboot` finds the entry points in the vDSO

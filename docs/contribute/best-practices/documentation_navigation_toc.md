@@ -19,7 +19,7 @@ To change the documentation navigation for an existing document:
    tree.
 
    For example, if you want to modify the navigation for the
-   [concepts page of Zircon](/docs/zircon/concepts.md),
+   [concepts page of Zircon](/docs/concepts/kernel/concepts.md),
    you can see that there is a
    [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/zircon/_toc.yaml)
    file in the same directory.

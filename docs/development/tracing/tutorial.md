@@ -729,7 +729,7 @@ Here's a simple example:
 ```
 
 For further information on component manifests, see
-[Fuchsia Package Metadata](../../the-book/package_metadata.md).
+[Fuchsia Package Metadata](/docs/concepts/storage/package_metadata.md).
 
 # Background
 

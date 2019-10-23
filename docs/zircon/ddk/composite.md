@@ -1,7 +1,8 @@
 
 # Composite Devices
 
-This document is part of the [Zircon Driver Development Kit](overview.md)
+This document is part of the [Zircon Driver Development
+Kit](/docs/concepts/drivers/overview.md)
 documentation.
 
 [TOC]

@@ -62,8 +62,8 @@ the last remaining handle is stripped of the **ZX_RIGHT_DUPLICATE** right.
 
 ## SEE ALSO
 
-+ [Zircon concepts](../concepts.md)
-+ [Handles](../handles.md)
++ [Zircon concepts](/docs/concepts/kernel/concepts.md)
++ [Handles](/docs/zircon/handles.md)
 
 [`zx_channel_call()`]: /docs/reference/syscalls/channel_call.md
 [`zx_channel_create()`]: /docs/reference/syscalls/channel_create.md

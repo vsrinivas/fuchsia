@@ -29,7 +29,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [`abigen` grammar](abigen/grammar.md)
 + [GN in Zircon](/docs/development/build/zircon_gn.md)
 
-+ [Concepts Overview](concepts.md)
++ [Concepts Overview](/docs/concepts/kernel/concepts.md)
 + [Kernel Objects](objects.md)
 + [Kernel Invariants](kernel_invariants.md)
 + [Kernel Scheduling](kernel_scheduling.md)
@@ -46,7 +46,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [System Calls](/docs/reference/syscalls/README.md)
 + [zxcrypt](zxcrypt.md)
 
-+ [Driver Development Kit](ddk/overview.md)
++ [Driver Development Kit](/docs/concepts/drivers/overview.md)
 + [Driver interfaces - audio overview](driver_interfaces/audio_overview.md)
 
 + [libc](/docs/development/languages/c-cpp/libc.md)

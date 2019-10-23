@@ -11,12 +11,12 @@ Exposing these system calls lets programs written in the language interact with
 the kernel and, transitively, with the rest of the system.
 
 Programs cannot issue system calls directly. Instead, they make system calls by
-calling functions in the [vDSO](/docs/zircon/vdso.md),
+calling functions in the [vDSO](/docs/concepts/kernel/vdso.md),
 which is loaded into newly created processes by their creator.
 
 The public entry points for the vDSO are defined in
 [syscalls.banjo](/zircon/system/public/zircon/syscalls.banjo).
-This file is processed by the [abigen](/docs/zircon/vdso.md#abigen-tool)
+This file is processed by the [abigen](/docs/concepts/kernel/vdso.md#abigen-tool)
 tool. When adding a new language, consider using the `-json` flag to dump
 [a JSON representation](/zircon/tools/abigen/syscall_schema.json)
 of the Zircon system calls:

@@ -7,7 +7,7 @@
 
 # The Driver Development Kit Tutorial
 
-This document is part of the [Zircon Driver Development Kit](overview.md) documentation.
+This document is part of the [Zircon Driver Development Kit](/docs/concepts/drivers/overview.md) documentation.
 
 This Driver Development Kit (*DDK*) tutorial documentation section consists of:
 

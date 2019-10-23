@@ -1,0 +1,39 @@
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /docs/concepts/components
+- title: "Introduction to the component framework"
+  path: /docs/concepts/components/introduction.md
+- title: "Concepts"
+  section:
+  - title: "Lifecycle"
+    path: /docs/concepts/components/lifecycle.md
+  - title: "Hub"
+    path: /docs/concepts/components/hub.md
+  - title: "Instrumentation hooks"
+    path: /docs/concepts/components/instrumentation_hooks.md
+  - title: "Manifests"
+    path: /docs/concepts/components/component_manifests.md
+  - title: "Monikers"
+    path: /docs/concepts/components/monikers.md
+  - title: "Realms"
+    path: /docs/concepts/components/realms.md
+  - title: "Resolvers"
+    path: /docs/concepts/components/resolvers.md
+  - title: "Runners"
+    path: /docs/concepts/components/runners.md
+  - title: "Shutdown"
+    path: /docs/concepts/components/shutdown.md
+  - title: "Work Scheduler"
+    path: /docs/concepts/components/work_scheduler.md
+- title: "Capabilities"
+  section:
+  - include: /docs/concepts/components/capabilities/_toc.yaml
+- title: "Runners"
+  section:
+  - title: "ELF runner"
+    path: /docs/concepts/components/elf_runner.md
+- title: "Life of a service open"
+  path: /docs/concepts/components/life_of_a_service_open.md
