@@ -34,23 +34,31 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   const SchemaSetting& GetSetting(const std::string& name) const;
   const std::map<std::string, SchemaSetting>& settings() const { return settings_; }
 
-  // Create new items for settings that only belong to this schema.
-  // For inter-schema options, the easier way is to create the Setting
-  // separately and then insert it to each schema with AddSetting.
+  // Create new items for settings that only belong to this schema. For inter-schema options, the
+  // easier way is to create the Setting separately and then insert it to each schema with
+  // AddSetting.
+  //
+  // For the String variant, it can take a list of valid options which new values must match to
+  // validate against. This is done as a case-sensitive comparison.
   void AddBool(std::string name, std::string description, bool value = false);
   void AddInt(std::string name, std::string description, int value = 0);
-  void AddString(std::string name, std::string description, std::string value = {});
+  void AddString(std::string name, std::string description, std::string value = {},
+                 std::vector<std::string> valid_options = {});
 
-  // |valid_options| determines which options will be accepted when writing into
-  // a setting. They will be stored as lowercase and comparison will be in
-  // lowercase for simplicity.
-  // Will return false if the given list has a entry that is not within the
-  // valid options.
+  // |valid_options| determines which list values will be accepted when writing into a setting which
+  // allows implementation of a list of enumerations.
+  //
+  // Will return false if the given list has a entry that is not within the valid options.
   bool AddList(std::string name, std::string description, std::vector<std::string> list = {},
                std::vector<std::string> valid_options = {});
 
-  // |options| are used to implement enum-like strings/lists.
-  void AddSetting(const std::string& key, Setting setting, std::vector<std::string> options = {});
+  // |valid_options| determines which list values will be accepted when writing into a string or
+  // list setting  which allows implementation of a list of enumerations.
+  //
+  // In the future if we need enums that aren't strings, the valid_options vector should be changed
+  // to a vector<SettingValue>.
+  void AddSetting(const std::string& key, Setting setting,
+                  std::vector<std::string> valid_options = {});
 
   Err ValidateSetting(const std::string& key, const SettingValue&) const;
 

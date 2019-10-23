@@ -15,24 +15,12 @@ namespace zxdb {
 
 namespace {
 
-void TrimAndLowerCase(std::vector<std::string>* strings) {
-  for (std::string& s : *strings) {
-    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    s = fxl::TrimString(s, " ").ToString();
-  }
-}
-
-bool IsSuperSet(const std::vector<std::string>& super_set, const std::vector<std::string>& set) {
-  std::set<std::string> sset;
-  sset.insert(super_set.begin(), super_set.end());
+Err ValidateOptions(const std::vector<std::string>& options, const std::vector<std::string>& set) {
   for (auto& s : set) {
-    auto [_, inserted] = sset.insert(s);
-    // If we insert a new string, means that it's a new one.
-    if (inserted)
-      return false;
+    if (std::find(options.begin(), options.end(), s) == options.end())
+      return Err("Option \"%s\" is not a valid option", s.c_str());
   }
-
-  return true;
+  return Err();
 }
 
 }  // namespace
@@ -47,17 +35,15 @@ void SettingSchema::AddInt(std::string name, std::string description, int v) {
   AddSetting(std::move(name), {std::move(info), SettingValue(v)});
 }
 
-void SettingSchema::AddString(std::string name, std::string description, std::string v) {
+void SettingSchema::AddString(std::string name, std::string description, std::string v,
+                              std::vector<std::string> valid_options) {
   SettingInfo info{name, std::move(description)};
-  AddSetting(std::move(name), {std::move(info), SettingValue(v)});
+  AddSetting(std::move(name), {std::move(info), SettingValue(v)}, std::move(valid_options));
 }
 
 bool SettingSchema::AddList(std::string name, std::string description, std::vector<std::string> v,
                             std::vector<std::string> options) {
-  // Transform everything to lower case.
-  TrimAndLowerCase(&v);
-  TrimAndLowerCase(&options);
-  if (!options.empty() && !IsSuperSet(options, v))
+  if (!options.empty() && ValidateOptions(options, v).has_error())
     return false;
 
   SettingInfo info{name, std::move(description)};
@@ -88,17 +74,18 @@ Err SettingSchema::ValidateSetting(const std::string& key, const SettingValue& v
                SettingTypeToString(value.type), SettingTypeToString(setting.setting.value.type));
   }
 
-  if (setting.setting.value.is_list() && !setting.options.empty()) {
-    for (auto& item : value.get_list()) {
-      bool found = false;
-      for (auto& option : setting.options) {
-        if (item == option) {
-          found = true;
-          break;
-        }
+  if (!setting.options.empty()) {
+    // Validate the setting value.
+    if (setting.setting.value.is_list()) {
+      // Each list element must be in the valid option list.
+      if (Err err = ValidateOptions(setting.options, value.get_list()); err.has_error())
+        return err;
+    } else if (setting.setting.value.is_string()) {
+      // String must be in the valid option list.
+      if (std::find(setting.options.begin(), setting.options.end(), value.get_string()) ==
+          setting.options.end()) {
+        return Err("Option \"%s\" is not a valid option", value.get_string().c_str());
       }
-      if (!found)
-        return Err("Option \"%s\" is not a valid option", item.c_str());
     }
   }
 

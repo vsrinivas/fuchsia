@@ -88,6 +88,20 @@ TEST(SettingSchema, String) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 }
 
+TEST(SettingSchema, StringWithOptions) {
+  auto schema = fxl::MakeRefCounted<SettingSchema>();
+  const char kOne[] = "one";
+  const char kTwo[] = "Two";
+  const char kThree[] = "THREE";
+  schema->AddString(kName, kDescription, "", {kOne, kTwo, kThree});
+
+  EXPECT_TRUE(schema->ValidateSetting(kName, SettingValue(kOne)).ok());
+  EXPECT_FALSE(schema->ValidateSetting(kName, SettingValue("ONE")).ok());
+  EXPECT_TRUE(schema->ValidateSetting(kName, SettingValue(kTwo)).ok());
+  EXPECT_TRUE(schema->ValidateSetting(kName, SettingValue(kThree)).ok());
+  EXPECT_FALSE(schema->ValidateSetting(kName, SettingValue("random")).ok());
+}
+
 TEST(SettingSchema, List) {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
@@ -133,6 +147,12 @@ TEST(SettingSchema, ListWithOptions) {
     auto& schema_setting = schema->GetSetting("invalid");
     EXPECT_TRUE(schema_setting.setting.value.is_null());
   }
+
+  // Check validation.
+  EXPECT_TRUE(
+      schema->ValidateSetting("valid", SettingValue(std::vector<std::string>{"vector"})).ok());
+  EXPECT_FALSE(
+      schema->ValidateSetting("valid", SettingValue(std::vector<std::string>{"Vector"})).ok());
 }
 
 }  // namespace zxdb
