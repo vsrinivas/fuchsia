@@ -22,7 +22,7 @@ namespace camera {
 namespace {
 
 // IspDebugStream Parameters
-constexpr uint32_t kIspStreamMinBufferForCamping = 4;
+constexpr uint32_t kIspStreamMinBufferForCamping = 5;
 constexpr uint32_t kIspStreamWidth = 2176;
 constexpr uint32_t kIspStreamHeight = 2720;
 constexpr uint32_t kIspStreamStride = 2176;
