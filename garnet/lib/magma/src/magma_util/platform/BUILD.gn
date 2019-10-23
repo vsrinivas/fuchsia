@@ -258,12 +258,12 @@ source_set("connection_header") {
   ]
 }
 
-source_set("client_connection") {
+source_set("connection_client") {
   public_deps = [
     ":connection_header",
   ]
   deps = [
-    "zircon:client_connection",
+    "zircon:connection_client",
   ]
 }
 
@@ -273,6 +273,27 @@ source_set("connection") {
   ]
   deps = [
     "zircon:connection",
+  ]
+}
+
+source_set("device_client_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":connection_header",
+  ]
+
+  sources = [
+    "platform_device_client.h",
+  ]
+}
+
+source_set("device_client") {
+  public_deps = [
+    ":device_client_header",
+  ]
+  deps = [
+    "zircon:device_client",
   ]
 }
 

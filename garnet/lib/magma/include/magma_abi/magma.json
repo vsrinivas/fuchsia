@@ -1,12 +1,12 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 46,
+    "next-free-ordinal": 51,
     "exports": [
       {
         "ordinal": 1,
         "name": "magma_query",
         "type": "magma_status_t",
-        "description": "Performs a query and returns a result synchronously.",
+        "description": "Performs a query and returns a result synchronously. TODO(fxb/13095): Remove",
         "arguments": [
           {
             "name": "file_descriptor",
@@ -29,7 +29,7 @@
         "ordinal": 2,
         "name": "magma_query_returns_buffer",
         "type": "magma_status_t",
-        "description": "Performs a query for a large amount of data and puts that into a buffer. Returns synchronously",
+        "description": "Performs a query for a large amount of data and puts that into a buffer. Returns synchronously.  TODO(fxb/13095): Remove",
         "arguments": [
           {
             "name": "file_descriptor",
@@ -52,7 +52,7 @@
         "ordinal": 3,
         "name": "magma_create_connection",
         "type": "magma_status_t",
-        "description": "Opens a connection to a device.",
+        "description": "Opens a connection to a device.  TODO(fxb/13095): Remove",
         "arguments": [
           {
             "name": "file_descriptor",
@@ -852,6 +852,101 @@
             "name": "channel",
             "type": "magma_handle_t",
             "description": "An open connection to a tracing provider."
+          }
+        ]
+      },
+      {
+        "ordinal": 46,
+        "name": "magma_device_import",
+        "type": "magma_status_t",
+        "description": "Imports and takes ownership of a channel to a device.",
+        "arguments": [
+          {
+            "name": "device_channel",
+            "type": "magma_handle_t",
+            "description": "A channel connecting to a gpu class device."
+          },
+          {
+            "name": "device_out",
+            "type": "magma_device_t*",
+            "description": "Returned device."
+          }
+        ]
+      },
+      {
+        "ordinal": 47,
+        "name": "magma_device_release",
+        "type": "void",
+        "description": "Releases a handle to a device",
+        "arguments": [
+          {
+            "name": "device",
+            "type": "magma_device_t",
+            "description": "An open device."
+          }
+        ]
+      },
+      {
+        "ordinal": 48,
+        "name": "magma_query2",
+        "type": "magma_status_t",
+        "description": "Performs a query and returns a result synchronously.",
+        "arguments": [
+          {
+            "name": "device",
+            "type": "magma_device_t",
+            "description": "An open device."
+          },
+          {
+            "name": "id",
+            "type": "uint64_t",
+            "description": "Either MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from MAGMA_QUERY_VENDOR_PARAM_0."
+          },
+          {
+            "name": "value_out",
+            "type": "uint64_t*",
+            "description": "Returned value."
+          }
+        ]
+      },
+      {
+        "ordinal": 49,
+        "name": "magma_query_returns_buffer2",
+        "type": "magma_status_t",
+        "description": "Performs a query for a large amount of data and puts that into a buffer. Returns synchronously",
+        "arguments": [
+          {
+            "name": "device",
+            "type": "magma_device_t",
+            "description": "An open device."
+          },
+          {
+            "name": "id",
+            "type": "uint64_t",
+            "description": "A vendor-specific ID."
+          },
+          {
+            "name": "handle_out",
+            "type": "uint32_t*",
+            "description": "Handle to the returned buffer."
+          }
+        ]
+      },
+      {
+        "ordinal": 50,
+        "name": "magma_create_connection2",
+        "type": "magma_status_t",
+        "description": "Opens a connection to a device.",
+        "arguments": [
+          {
+            "name": "device",
+            "type": "magma_device_t",
+            "description": "An open device"
+          },
+          {
+            "name": "connection_out",
+            "type": "magma_connection_t*",
+            "description": "Returned connection."
           }
         ]
       }

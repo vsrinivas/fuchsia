@@ -7,9 +7,11 @@
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -18,6 +20,8 @@
 #include "garnet/lib/magma/src/magma_util/macros.h"
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
+
+static constexpr const char* kDevicePath = "/dev/class/gpu/000";
 
 VirtioMagma::VirtioMagma(sys::ComponentContext* context) : DeviceBase(context) {}
 
@@ -37,7 +41,6 @@ void VirtioMagma::Start(
   out_queue_.set_interrupt(
       fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioMagma::Interrupt));
 
-  static constexpr const char* kDevicePath = "/dev/class/gpu/000";
   device_fd_ = fbl::unique_fd(open(kDevicePath, O_RDONLY));
   if (!device_fd_.is_valid()) {
     FXL_LOG(ERROR) << "Failed to open device at " << kDevicePath << ": " << strerror(errno);
@@ -73,6 +76,23 @@ void VirtioMagma::NotifyQueue(uint16_t queue) {
   while (out_queue_.NextChain(&out_chain)) {
     VirtioMagmaGeneric::HandleCommand(std::move(out_chain));
   }
+}
+
+zx_status_t VirtioMagma::Handle_device_import(const virtio_magma_device_import_ctrl_t* request,
+                                              virtio_magma_device_import_resp_t* response) {
+  zx::channel server_handle, client_handle;
+  zx_status_t status = zx::channel::create(0u, &server_handle, &client_handle);
+  if (status != ZX_OK)
+    return status;
+  status = fdio_service_connect(kDevicePath, server_handle.release());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "fdio_service_connect failed - " << status;
+    return status;
+  }
+
+  auto modified = *request;
+  modified.device_channel = client_handle.release();
+  return VirtioMagmaGeneric::Handle_device_import(&modified, response);
 }
 
 zx_status_t VirtioMagma::Handle_query(const virtio_magma_query_ctrl_t* request,

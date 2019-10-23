@@ -11,6 +11,7 @@
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_connection_client.h"
+#include "platform_device_client.h"
 #include "platform_handle.h"
 #include "platform_port.h"
 #include "platform_semaphore.h"
@@ -18,6 +19,58 @@
 #include "platform_thread.h"
 #include "platform_trace.h"
 
+magma_status_t magma_device_import(uint32_t device_handle, magma_device_t* device) {
+  auto platform_device_client = magma::PlatformDeviceClient::Create(device_handle);
+  if (!platform_device_client) {
+    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+  }
+  *device = reinterpret_cast<magma_device_t>(platform_device_client.release());
+  return MAGMA_STATUS_OK;
+}
+
+void magma_device_release(magma_device_t device) {
+  delete reinterpret_cast<magma::PlatformDeviceClient*>(device);
+}
+
+magma_status_t magma_query2(magma_device_t device, uint64_t id, uint64_t* value_out) {
+  auto platform_device_client = reinterpret_cast<magma::PlatformDeviceClient*>(device);
+  if (!value_out)
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
+
+  if (!platform_device_client->Query(id, value_out))
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "magma::PlatformDeviceClient::Query failed");
+
+  DLOG("magma_query2 id %" PRIu64 " returned 0x%" PRIx64, id, *value_out);
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
+                                           uint32_t* handle_out) {
+  auto platform_device_client = reinterpret_cast<magma::PlatformDeviceClient*>(device);
+  if (!handle_out)
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad handle_out address");
+
+  if (!platform_device_client->QueryReturnsBuffer(id, handle_out))
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
+                    "magma::PlatformDeviceClient::QueryReturnsBuffer failed");
+
+  DLOG("magma_query_returns_buffer2 id %" PRIu64 " returned buffer 0x%x", id, *handle_out);
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_create_connection2(magma_device_t device, magma_connection_t* connection_out) {
+  auto platform_device_client = reinterpret_cast<magma::PlatformDeviceClient*>(device);
+
+  auto connection = platform_device_client->Connect();
+  if (!connection) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "couldn't connect");
+  }
+
+  *connection_out = connection.release();
+  return MAGMA_STATUS_OK;
+}
+
+// TODO(fxb/13095): Remove.
 magma_status_t magma_create_connection(int32_t file_descriptor,
                                        magma_connection_t* connection_out) {
   uint32_t primary_channel;
@@ -41,6 +94,7 @@ magma_status_t magma_get_error(magma_connection_t connection) {
   return magma::PlatformConnectionClient::cast(connection)->GetError();
 }
 
+// TODO(fxb/13095): Remove.
 magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out) {
   if (!value_out)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
@@ -52,6 +106,7 @@ magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out) {
   return MAGMA_STATUS_OK;
 }
 
+// TODO(fxb/13095): Remove.
 magma_status_t magma_query_returns_buffer(int fd, uint64_t id, uint32_t* result_out) {
   if (!result_out)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad result_out address");

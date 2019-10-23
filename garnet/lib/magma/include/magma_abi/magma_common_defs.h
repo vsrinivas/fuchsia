@@ -95,6 +95,8 @@ typedef uint32_t magma_cache_operation_t;
 
 typedef uint32_t magma_cache_policy_t;
 
+typedef uintptr_t magma_device_t;
+
 typedef uintptr_t magma_buffer_t;
 
 typedef uintptr_t magma_semaphore_t;

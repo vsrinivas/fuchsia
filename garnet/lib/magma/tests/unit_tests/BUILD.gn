@@ -97,8 +97,8 @@ source_set("magma_platform_tests") {
     "test_platform_trace.cc",
   ]
   deps = [
-    "$magma_build_root/src/magma_util/platform:client_connection",
     "$magma_build_root/src/magma_util/platform:connection",
+    "$magma_build_root/src/magma_util/platform:connection_client",
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:futex",
     "$magma_build_root/src/magma_util/platform:handle",

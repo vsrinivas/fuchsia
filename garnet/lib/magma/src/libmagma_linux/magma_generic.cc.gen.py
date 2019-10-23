@@ -138,6 +138,12 @@ def generate_unwrap(export, needs_connection):
         ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(_' + name + '_wrapped->Parent());\n'
         ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent().first;\n'
         have_fd = True
+    if type == 'magma_device_t':
+      ret += '    auto _' + name + '_wrapped = virtmagma_device_t::Get(' + name + ');\n'
+      ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
+      if not have_fd:
+        ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent().fd();\n'
+        have_fd = True
     sub = 'handle'
     if name[-len(sub):] == sub:
       ret += '    auto _' + name + '_wrapped = GlobalHandleTable().find(' + name + ');\n'
@@ -146,6 +152,10 @@ def generate_unwrap(export, needs_connection):
       ret += '    ' + name + ' = _' + name + '_wrapped->second->Object();\n'
       if not have_fd:
         ret += '    int32_t file_descriptor = _' + name + '_wrapped->second->Parent();\n'
+        have_fd = True
+    if type == 'magma_handle_t':
+      if not have_fd:
+        ret += '    int32_t file_descriptor = ' + name + ';\n'
         have_fd = True
   if not have_fd:
     sys.exit('error: could not retrieve virtio fd from export "' + export['name'] + '"')
@@ -166,6 +176,8 @@ def generate_wrap(export):
     if type == 'magma_semaphore_t*':
       ret += '    *' + name + ' = virtmagma_semaphore_t::Create(*' + name + ', _connection)->Wrap();\n'
       needs_connection = True
+    if type == 'magma_device_t*':
+      ret += '    *' + name + ' = virtmagma_device_t::Create(*' + name + ', file_descriptor)->Wrap();\n'
     sub = 'handle_out'
     if name[-len(sub):] == sub:
       ret += '    GlobalHandleTable()[*' + name + '] = virtmagma_handle_t::Create(*' + name + ', file_descriptor);\n'

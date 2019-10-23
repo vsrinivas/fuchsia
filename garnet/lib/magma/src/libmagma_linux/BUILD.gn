@@ -11,13 +11,16 @@ static_library("libmagma_linux") {
   ]
 
   deps = [
-    ":magma_generic",
+    ":magma_generic($shlib_toolchain)",
     "$magma_build_root/src/magma_util",
     "//garnet/lib/magma/include/virtio",
   ]
 
+  # Only generate a copy in the shlib toolchain, to avoid redundant work.
+  generic_path =
+      get_label_info(":magma_generic($shlib_toolchain)", "target_gen_dir")
   sources = [
-    "$target_gen_dir/magma_generic.cc",
+    "$generic_path/magma_generic.cc",
     "magma.cc",
     "virtmagma.h",
     "virtmagma_util.h",

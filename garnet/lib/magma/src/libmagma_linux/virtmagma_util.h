@@ -70,10 +70,32 @@ inline bool virtmagma_send_command(int32_t file_descriptor, void* request, size_
   return true;
 }
 
+class OwnedFd {
+ public:
+  OwnedFd(int fd) : fd_(fd) {}
+  ~OwnedFd() {
+    if (fd_ >= 0)
+      close(fd_);
+  }
+
+  OwnedFd(const OwnedFd&) = delete;
+  OwnedFd(OwnedFd&& other) {
+    fd_ = other.fd_;
+    other.fd_ = -1;
+  }
+
+  int fd() const { return fd_; }
+
+ private:
+  int fd_;
+};
+
 template <class T, class U, int magic>
 class VirtmagmaObject {
  public:
-  static VirtmagmaObject* Create(T object, U parent) { return new VirtmagmaObject(object, parent); }
+  static VirtmagmaObject* Create(T object, U parent) {
+    return new VirtmagmaObject(object, std::move(parent));
+  }
   static VirtmagmaObject* Get(T object) {
     auto p = reinterpret_cast<VirtmagmaObject*>(object);
     DASSERT(p->magic_ == magic);
@@ -85,7 +107,8 @@ class VirtmagmaObject {
   void Destroy() { delete this; }
 
  private:
-  VirtmagmaObject(T object, U parent) : object_{object}, parent_{parent}, magic_{magic} {}
+  VirtmagmaObject(T object, U parent)
+      : object_{object}, parent_{std::move(parent)}, magic_{magic} {}
   T object_;
   U parent_;
   int magic_;
@@ -96,6 +119,7 @@ typedef VirtmagmaObject<magma_connection_t, std::pair<int32_t, int32_t>, 0x1111>
 typedef VirtmagmaObject<magma_buffer_t, magma_connection_t, 0x2222> virtmagma_buffer_t;
 typedef VirtmagmaObject<magma_semaphore_t, magma_connection_t, 0x3333> virtmagma_semaphore_t;
 typedef VirtmagmaObject<uint32_t, int32_t, 0x4444> virtmagma_handle_t;
+typedef VirtmagmaObject<magma_device_t, OwnedFd, 0x5555> virtmagma_device_t;
 
 // TODO(MA-623): support an object that is a parent of magma_connection_t
 // This class is a temporary workaround to support magma APIs that do not

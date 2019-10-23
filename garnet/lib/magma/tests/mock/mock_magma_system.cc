@@ -22,6 +22,20 @@ class MockConnection : public magma_connection {
   uint32_t next_context_id_ = 1;
 };
 
+class MockDevice {};
+
+magma_status_t magma_device_import(uint32_t device_handle, magma_device_t* device_out) {
+  *device_out = reinterpret_cast<magma_device_t>(new MockDevice);
+  return MAGMA_STATUS_OK;
+}
+
+void magma_device_release(magma_device_t device) { delete reinterpret_cast<MockDevice*>(device); }
+
+magma_status_t magma_create_connection2(magma_device_t device, magma_connection_t* connection_out) {
+  *connection_out = new MockConnection();
+  return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_create_connection(int32_t fd, magma_connection_t* connection_out) {
   *connection_out = new MockConnection();
   return MAGMA_STATUS_OK;
@@ -51,8 +65,17 @@ magma_status_t magma_query(int32_t fd, uint64_t id, uint64_t* value_out) {
   return MAGMA_STATUS_INVALID_ARGS;
 }
 
+magma_status_t magma_query2(magma_device_t device, uint64_t id, uint64_t* value_out) {
+  return magma_query(-1, id, value_out);
+}
+
 magma_status_t magma_query_returns_buffer(int32_t file_descriptor, uint64_t id,
                                           uint32_t* handle_out) {
+  return MAGMA_STATUS_INVALID_ARGS;
+}
+
+magma_status_t magma_query_returns_buffer2(magma_device_t device, uint64_t id,
+                                           uint32_t* handle_out) {
   return MAGMA_STATUS_INVALID_ARGS;
 }
 

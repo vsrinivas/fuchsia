@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 ///
-/// \brief Performs a query and returns a result synchronously.
+/// \brief Performs a query and returns a result synchronously. TODO(fxb/13095): Remove
 /// \param file_descriptor An open device of class gpu.
 /// \param id Either MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from
 ///        MAGMA_QUERY_VENDOR_PARAM_0.
@@ -31,7 +31,7 @@ magma_status_t magma_query(
 
 ///
 /// \brief Performs a query for a large amount of data and puts that into a buffer. Returns
-///        synchronously
+///        synchronously.  TODO(fxb/13095): Remove
 /// \param file_descriptor An open device of class gpu.
 /// \param id A vendor-specific ID.
 /// \param handle_out Handle to the returned buffer.
@@ -42,7 +42,7 @@ magma_status_t magma_query_returns_buffer(
     magma_handle_t* handle_out);
 
 ///
-/// \brief Opens a connection to a device.
+/// \brief Opens a connection to a device.  TODO(fxb/13095): Remove
 /// \param file_descriptor An open device of class gpu.
 /// \param connection_out Returned connection.
 ///
@@ -452,6 +452,55 @@ magma_status_t magma_read_notification_channel(
 ///
 magma_status_t magma_initialize_tracing(
     magma_handle_t channel);
+
+///
+/// \brief Imports and takes ownership of a channel to a device.
+/// \param device_channel A channel connecting to a gpu class device.
+/// \param device_out Returned device.
+///
+magma_status_t magma_device_import(
+    magma_handle_t device_channel,
+    magma_device_t* device_out);
+
+///
+/// \brief Releases a handle to a device
+/// \param device An open device.
+///
+void magma_device_release(
+    magma_device_t device);
+
+///
+/// \brief Performs a query and returns a result synchronously.
+/// \param device An open device.
+/// \param id Either MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from
+///        MAGMA_QUERY_VENDOR_PARAM_0.
+/// \param value_out Returned value.
+///
+magma_status_t magma_query2(
+    magma_device_t device,
+    uint64_t id,
+    uint64_t* value_out);
+
+///
+/// \brief Performs a query for a large amount of data and puts that into a buffer. Returns
+///        synchronously
+/// \param device An open device.
+/// \param id A vendor-specific ID.
+/// \param handle_out Handle to the returned buffer.
+///
+magma_status_t magma_query_returns_buffer2(
+    magma_device_t device,
+    uint64_t id,
+    uint32_t* handle_out);
+
+///
+/// \brief Opens a connection to a device.
+/// \param device An open device
+/// \param connection_out Returned connection.
+///
+magma_status_t magma_create_connection2(
+    magma_device_t device,
+    magma_connection_t* connection_out);
 
 #if defined(__cplusplus)
 }
