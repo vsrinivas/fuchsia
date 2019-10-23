@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #include "board-info.h"
-#include "lib/fidl/cpp/message_part.h"
-#include "lib/fidl/llcpp/traits.h"
-#include "zircon/types.h"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -13,20 +10,25 @@
 #include <string.h>
 
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
+
+#include "lib/fidl/cpp/message_part.h"
+#include "lib/fidl/llcpp/traits.h"
+#include "zircon/types.h"
 #undef VMOID_INVALID
-#include <fbl/auto_call.h>
-#include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
-#include <gpt/gpt.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/status.h>
 
 #include <algorithm>
+
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
+#include <gpt/gpt.h>
 
 namespace {
 
@@ -188,4 +190,3 @@ bool ReadBoardInfo(const zx::channel& sysinfo, void* data, off_t offset, size_t*
 }
 
 size_t BoardInfoSize() { return sizeof(board_info_t); }
-

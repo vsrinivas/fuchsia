@@ -14,28 +14,26 @@
 //   dropping a marker into the FIFO so you can synchronize (c.f. the FLUSH
 //   subcommand of the MOTIONSENSE command).
 
-#include "dev.h"
-
-#include <ddk/debug.h>
-
-#include <chromiumos-platform-ec/ec_commands.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <hid/descriptor.h>
+
+#include <utility>
+
+#include <acpica/acpi.h>
+#include <chromiumos-platform-ec/ec_commands.h>
+#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <acpica/acpi.h>
-
-#include <utility>
+#include <hid/descriptor.h>
 
 #include "../../include/errors.h"
+#include "dev.h"
 
 AcpiCrOsEcMotionDevice::AcpiCrOsEcMotionDevice(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
                                                ACPI_HANDLE acpi_handle)
@@ -186,8 +184,7 @@ void AcpiCrOsEcMotionDevice::HidbusStop() {
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
-                                                        void* out_data_buffer,
-                                                        size_t data_size,
+                                                        void* out_data_buffer, size_t data_size,
                                                         size_t* out_data_actual) {
   zxlogf(TRACE, "acpi-cros-ec-motion: hid bus get descriptor\n");
 

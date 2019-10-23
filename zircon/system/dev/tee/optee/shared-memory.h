@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_SHARED_MEMORY_H_
+#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_SHARED_MEMORY_H_
+
+#include <lib/mmio/mmio.h>
+#include <lib/zx/bti.h>
 
 #include <climits>
 #include <functional>
@@ -12,8 +16,6 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/bti.h>
 #include <region-alloc/region-alloc.h>
 
 namespace optee {
@@ -206,3 +208,5 @@ class SharedMemoryManager {
 };
 
 }  // namespace optee
+
+#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_SHARED_MEMORY_H_

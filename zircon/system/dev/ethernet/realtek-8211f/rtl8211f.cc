@@ -4,15 +4,16 @@
 
 #include "rtl8211f.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/unique_ptr.h>
-#include <stdio.h>
-#include <string.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 #include "mdio-regs.h"
 

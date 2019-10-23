@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef CRYPTO_CIPHER_H_
+#define CRYPTO_CIPHER_H_
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <crypto/bytes.h>
-#include <fbl/macros.h>
-#include <zircon/types.h>
 #include <crypto/secret.h>
+#include <fbl/macros.h>
 
 // |crypto::Cipher| is used to encrypt and decrypt data.  Ciphers differ from AEADs in that they
 // require block-aligned lengths and do not check data integrity.  This implementation can be used
@@ -127,3 +128,5 @@ class __EXPORT Cipher final {
   uint64_t alignment_;
 };
 }  // namespace crypto
+
+#endif  // CRYPTO_CIPHER_H_

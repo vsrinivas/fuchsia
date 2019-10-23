@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef REGION_ALLOC_REGION_ALLOC_H_
+#define REGION_ALLOC_REGION_ALLOC_H_
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
 // RegionAllocator
 //
@@ -564,3 +566,5 @@ class RegionAllocator {
 #undef REGION_POOL_SLAB_SIZE
 
 #endif  // ifdef __cplusplus
+
+#endif  // REGION_ALLOC_REGION_ALLOC_H_

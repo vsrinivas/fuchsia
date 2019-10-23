@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <climits>
-#include <fbl/auto_call.h>
 #include <lib/fzl/pinned-vmo.h>
+
+#include <climits>
 #include <limits>
+
+#include <fbl/auto_call.h>
 
 namespace fzl {
 

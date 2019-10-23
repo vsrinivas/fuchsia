@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_PCI_AMLOGIC_PCIE_AML_PCIE_H_
+#define ZIRCON_SYSTEM_DEV_PCI_AMLOGIC_PCIE_AML_PCIE_H_
 
 #include <lib/mmio/mmio.h>
-#include <dev/pci/designware/dw-pcie.h>
-#include <fbl/unique_ptr.h>
 
 #include <utility>
+
+#include <dev/pci/designware/dw-pcie.h>
+#include <fbl/unique_ptr.h>
 
 namespace pcie {
 namespace aml {
@@ -46,3 +48,5 @@ class AmlPcie : public designware::DwPcie {
 
 }  // namespace aml
 }  // namespace pcie
+
+#endif  // ZIRCON_SYSTEM_DEV_PCI_AMLOGIC_PCIE_AML_PCIE_H_

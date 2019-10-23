@@ -5,16 +5,17 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_SCANNER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_SCANNER_H_
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <lib/zx/time.h>
+#include <zircon/types.h>
+
 #include <unordered_map>
 
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <lib/zx/time.h>
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/rust_utils.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/types.h>
 
 namespace wlan {
 

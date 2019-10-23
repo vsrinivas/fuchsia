@@ -227,7 +227,8 @@ TEST_F(ClientTest, Join) {
   // to SME.
   ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest(true)));
   ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto joins = device.GetServiceMsgs<wlan_mlme::JoinConfirm>(fuchsia::wlan::mlme::internal::kMLME_JoinConf_Ordinal);
+  auto joins = device.GetServiceMsgs<wlan_mlme::JoinConfirm>(
+      fuchsia::wlan::mlme::internal::kMLME_JoinConf_Ordinal);
   ASSERT_EQ(joins.size(), 1ULL);
   ASSERT_EQ(joins[0].body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
 }
@@ -298,7 +299,8 @@ TEST_F(ClientTest, Associate_Unprotected) {
   // to SME.
   ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest(false)));
   ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto joins = device.GetServiceMsgs<wlan_mlme::JoinConfirm>(fuchsia::wlan::mlme::internal::kMLME_JoinConf_Ordinal);
+  auto joins = device.GetServiceMsgs<wlan_mlme::JoinConfirm>(
+      fuchsia::wlan::mlme::internal::kMLME_JoinConf_Ordinal);
   ASSERT_EQ(joins.size(), 1ULL);
   ASSERT_EQ(joins[0].body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
 

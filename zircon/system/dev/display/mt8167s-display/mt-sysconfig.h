@@ -4,10 +4,6 @@
 
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_MT_SYSCONFIG_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_MT_SYSCONFIG_H_
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/device.h>
-#include <fbl/unique_ptr.h>
-#include <hwreg/mmio.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
@@ -15,6 +11,11 @@
 #include <zircon/compiler.h>
 
 #include <optional>
+
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <fbl/unique_ptr.h>
+#include <hwreg/mmio.h>
 
 #include "common.h"
 #include "registers-mutex.h"

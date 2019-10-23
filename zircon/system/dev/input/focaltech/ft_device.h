@@ -2,10 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_INPUT_FOCALTECH_FT_DEVICE_H_
+#define ZIRCON_SYSTEM_DEV_INPUT_FOCALTECH_FT_DEVICE_H_
+
+#include <lib/zx/interrupt.h>
+#include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <atomic>
-#include <threads.h>
 
 #include <ddk/device.h>
 #include <ddk/protocol/gpio.h>
@@ -19,10 +24,6 @@
 #include <hid/ft3x27.h>
 #include <hid/ft5726.h>
 #include <hid/ft6336.h>
-
-#include <lib/zx/interrupt.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 enum {
   FT_INT_PIN,
@@ -125,3 +126,5 @@ class FtDevice : public ddk::Device<FtDevice, ddk::UnbindableNew>,
   size_t descriptor_len_ = 0;
 };
 }  // namespace ft
+
+#endif  // ZIRCON_SYSTEM_DEV_INPUT_FOCALTECH_FT_DEVICE_H_

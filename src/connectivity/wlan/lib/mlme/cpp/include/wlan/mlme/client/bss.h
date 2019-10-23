@@ -5,11 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_BSS_H_
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <zircon/types.h>
+
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/element.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
@@ -17,7 +19,6 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/macaddr_map.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/types.h>
 
 namespace wlan {
 

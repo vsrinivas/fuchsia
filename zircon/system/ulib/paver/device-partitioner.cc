@@ -7,9 +7,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
-
-#include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
@@ -21,12 +18,14 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
+#include <libgen.h>
 #include <zircon/status.h>
 
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string_buffer.h>

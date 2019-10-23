@@ -69,8 +69,8 @@ class ManagedVfs : public Vfs {
   fbl::DoublyLinkedList<fbl::unique_ptr<Connection>> connections_ __TA_GUARDED(lock_);
 
   std::atomic_bool is_shutting_down_;
-  async::TaskMethod<ManagedVfs, &ManagedVfs::OnShutdownComplete> shutdown_task_
-      __TA_GUARDED(lock_) {this};
+  async::TaskMethod<ManagedVfs, &ManagedVfs::OnShutdownComplete> shutdown_task_ __TA_GUARDED(lock_){
+      this};
   ShutdownCallback shutdown_handler_ __TA_GUARDED(lock_);
 };
 

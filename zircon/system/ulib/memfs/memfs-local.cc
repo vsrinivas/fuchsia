@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
+#include <inttypes.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
-#include <fs/vfs.h>
-#include <lib/async/dispatcher.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
+
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
+#include <fs/vfs.h>
 
 #include "dnode.h"
 

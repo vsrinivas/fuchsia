@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
-#include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
-#include <zircon/types.h>
-
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -14,8 +9,13 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/types.h>
 
 #include <utility>
+
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 
 #include "xdc-init.h"
 

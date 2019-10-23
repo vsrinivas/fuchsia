@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
+#include "tas5720.h"
 
 #include <lib/device-protocol/i2c.h>
+#include <string.h>
 
 #include <fbl/algorithm.h>
-
-#include "tas5720.h"
 
 namespace audio {
 
@@ -72,7 +71,7 @@ zx_status_t Tas5720::Init(std::optional<uint8_t> slot) {
   WriteReg(kRegDigitalClipper2, 0xFF);                 // Disabled.
   WriteReg(kRegDigitalClipper1, 0xFC);                 // Disabled.
   ExitStandby();
-  SetGain(-20.f);                                      // Conservative default gain.
+  SetGain(-20.f);  // Conservative default gain.
   uint8_t val = 0;
   ReadReg(kRegFaultCfgErrorStatus, &val);
   if (val != 0x00) {

@@ -2,32 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
-#include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/usb/tester/c/fidl.h>
 #include <fuchsia/hardware/usb/fwloader/c/fidl.h>
+#include <fuchsia/hardware/usb/tester/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <zircon/hw/usb.h>
-#include <zircon/types.h>
-
-#include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <zircon/hw/usb.h>
+#include <zircon/types.h>
 
 #include <variant>
+
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 
 namespace {
 

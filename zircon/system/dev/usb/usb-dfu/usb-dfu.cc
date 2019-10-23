@@ -4,16 +4,17 @@
 
 #include "usb-dfu.h"
 
+#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
+#include <fuchsia/mem/c/fidl.h>
+#include <lib/zx/vmo.h>
+#include <zircon/hw/usb/dfu.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
-#include <fuchsia/mem/c/fidl.h>
-#include <lib/zx/vmo.h>
-#include <zircon/hw/usb/dfu.h>
 
 namespace {
 

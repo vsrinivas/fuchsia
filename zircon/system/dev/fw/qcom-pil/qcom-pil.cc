@@ -5,6 +5,7 @@
 #include "qcom-pil.h"
 
 #include <elf.h>
+#include <lib/mmio/mmio.h>
 
 #include <algorithm>
 #include <limits>
@@ -18,7 +19,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_ptr.h>
-#include <lib/mmio/mmio.h>
 #include <qcom/smc.h>
 
 namespace qcom_pil {
@@ -223,7 +223,8 @@ zx_status_t PilDevice::Bind() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, fw_.data(), metadata_size, &actual);
+  status =
+      device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, fw_.data(), metadata_size, &actual);
   if (status != ZX_OK || metadata_size != actual) {
     zxlogf(ERROR, "%s device_get_metadata failed %d\n", __func__, status);
     return status;

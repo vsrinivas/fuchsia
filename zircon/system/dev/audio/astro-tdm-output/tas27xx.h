@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_ASTRO_TDM_OUTPUT_TAS27XX_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_ASTRO_TDM_OUTPUT_TAS27XX_H_
+
+#include <lib/device-protocol/i2c-channel.h>
 
 #include <ddk/debug.h>
-#include <lib/device-protocol/i2c-channel.h>
 #include <fbl/unique_ptr.h>
 
 namespace audio {
@@ -63,3 +65,5 @@ class Tas27xx : public fbl::unique_ptr<Tas27xx> {
 };
 }  // namespace astro
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_ASTRO_TDM_OUTPUT_TAS27XX_H_

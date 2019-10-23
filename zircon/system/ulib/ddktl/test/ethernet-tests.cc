@@ -213,8 +213,8 @@ static bool test_ethernet_impl_protocol_client() {
   TestEthernetImplProtocol protocol_dev;
 
   ethernet_impl_protocol_t proto;
-  auto status = protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHERNET_IMPL,
-                                            reinterpret_cast<void*>(&proto));
+  auto status =
+      protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, reinterpret_cast<void*>(&proto));
   EXPECT_EQ(ZX_OK, status, "");
   // The client device to wrap the ops + device that represent the parent
   // device.

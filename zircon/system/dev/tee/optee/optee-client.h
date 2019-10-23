@@ -25,8 +25,8 @@
 namespace optee {
 
 class OpteeClient;
-using OpteeClientBase = ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable,
-                                    ddk::UnbindableNew>;
+using OpteeClientBase =
+    ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable, ddk::UnbindableNew>;
 using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 
 // The Optee driver allows for simultaneous access from different processes. The OpteeClient object

@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/io.h>
+#include <stdio.h>
+#include <zircon/syscalls.h>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
@@ -10,10 +13,6 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-test-utils/blobfs/blobfs.h>
-#include <lib/fdio/io.h>
-#include <zircon/syscalls.h>
-
-#include <stdio.h>
 
 namespace fs_test_utils {
 

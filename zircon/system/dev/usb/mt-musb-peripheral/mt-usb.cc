@@ -5,11 +5,13 @@
 #include "mt-usb.h"
 
 #include <assert.h>
+#include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -17,15 +19,13 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
-#include <lib/device-protocol/platform-device.h>
-#include <hw/reg.h>
-#include <soc/mt8167/mt8167-usb.h>
-#include <soc/mt8167/mt8167-usb-phy.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <hw/reg.h>
+#include <soc/mt8167/mt8167-usb-phy.h>
+#include <soc/mt8167/mt8167-usb.h>
 #include <usb/usb-request.h>
-#include <zircon/assert.h>
 
 namespace mt_usb {
 using namespace board_mt8167;  // Hardware registers.

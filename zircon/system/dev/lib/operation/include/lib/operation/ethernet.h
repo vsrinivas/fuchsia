@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_ETHERNET_H_
+#define ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_ETHERNET_H_
+
+#include <lib/operation/operation.h>
 
 #include <ddk/protocol/ethernet.h>
-#include <lib/operation/operation.h>
 
 namespace eth {
 
@@ -153,3 +155,5 @@ template <typename Storage = void>
 using OperationPool = operation::OperationPool<Operation<Storage>, OperationTraits, Storage>;
 
 }  // namespace eth
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_ETHERNET_H_

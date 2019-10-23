@@ -4,11 +4,12 @@
 
 #include "bma253.h"
 
+#include <endian.h>
+#include <lib/device-protocol/pdev.h>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/pdev.h>
-#include <endian.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 

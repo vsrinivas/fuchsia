@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/device/usb-peripheral.h>
+#include <zircon/hw/usb.h>
+#include <zircon/hw/usb/cdc.h>
+#include <zircon/listnode.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -25,10 +29,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
-#include <zircon/listnode.h>
 
 #include "usb-function.h"
 
@@ -137,22 +137,20 @@ zx_status_t UsbPeripheral::Init() {
   device_desc_.idProduct = config->pid;
 
   size_t max_str_len = strnlen(config->manufacturer, sizeof(config->manufacturer));
-  status = AllocStringDesc(fbl::String(
-      config->manufacturer, max_str_len), &device_desc_.iManufacturer);
+  status =
+      AllocStringDesc(fbl::String(config->manufacturer, max_str_len), &device_desc_.iManufacturer);
   if (status != ZX_OK) {
     return status;
   }
 
   max_str_len = strnlen(config->product, sizeof(config->product));
-  status = AllocStringDesc(fbl::String(
-      config->product, max_str_len), &device_desc_.iProduct);
+  status = AllocStringDesc(fbl::String(config->product, max_str_len), &device_desc_.iProduct);
   if (status != ZX_OK) {
     return status;
   }
 
   max_str_len = strnlen(config->serial, sizeof(config->serial));
-  status = AllocStringDesc(fbl::String(
-      config->serial, max_str_len), &device_desc_.iSerialNumber);
+  status = AllocStringDesc(fbl::String(config->serial, max_str_len), &device_desc_.iSerialNumber);
   if (status != ZX_OK) {
     return status;
   }
@@ -277,8 +275,7 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
   zxlogf(TRACE, "usb_device_function_registered functions_registered = true\n");
   functions_registered_ = true;
   if (listener_) {
-    peripheral::Events::Call::FunctionRegistered(
-        zx::unowned_channel(listener_.get()));
+    peripheral::Events::Call::FunctionRegistered(zx::unowned_channel(listener_.get()));
   }
   return DeviceStateChanged();
 }
@@ -793,18 +790,19 @@ zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
     device_desc_.idVendor = desc.idVendor;
     device_desc_.idProduct = desc.idProduct;
     device_desc_.bcdDevice = desc.bcdDevice;
-    zx_status_t status = AllocStringDesc(fbl::String(
-        desc.manufacturer.data(), desc.manufacturer.size()), &device_desc_.iManufacturer);
+    zx_status_t status =
+        AllocStringDesc(fbl::String(desc.manufacturer.data(), desc.manufacturer.size()),
+                        &device_desc_.iManufacturer);
     if (status != ZX_OK) {
       return status;
     }
-    status = AllocStringDesc(
-        fbl::String(desc.product.data(), desc.product.size()), &device_desc_.iProduct);
+    status = AllocStringDesc(fbl::String(desc.product.data(), desc.product.size()),
+                             &device_desc_.iProduct);
     if (status != ZX_OK) {
       return status;
     }
-    status = AllocStringDesc(
-        fbl::String(desc.serial.data(), desc.serial.size()), &device_desc_.iSerialNumber);
+    status = AllocStringDesc(fbl::String(desc.serial.data(), desc.serial.size()),
+                             &device_desc_.iSerialNumber);
     if (status != ZX_OK) {
       return status;
     }

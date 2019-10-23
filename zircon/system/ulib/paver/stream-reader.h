@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_PAVER_STREAM_READER_H_
+#define ZIRCON_SYSTEM_ULIB_PAVER_STREAM_READER_H_
 
-#include <fbl/unique_ptr.h>
 #include <fuchsia/paver/llcpp/fidl.h>
-#include <fvm/sparse-reader.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/unique_ptr.h>
+#include <fvm/sparse-reader.h>
 
 namespace paver {
 
@@ -38,3 +40,5 @@ class StreamReader : public fvm::ReaderInterface {
 };
 
 }  // namespace paver
+
+#endif  // ZIRCON_SYSTEM_ULIB_PAVER_STREAM_READER_H_

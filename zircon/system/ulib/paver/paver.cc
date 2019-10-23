@@ -432,7 +432,6 @@ void Paver::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
 
 void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
                           WriteDataFileCompleter::Sync completer) {
-
   // Use global devfs if one wasn't injected via set_devfs_root.
   if (!devfs_root_) {
     devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
@@ -796,14 +795,14 @@ void Paver::SetConfigurationActive(Configuration configuration,
 }
 
 void Paver::SetConfigurationUnbootable(Configuration configuration,
-                                        SetConfigurationUnbootableCompleter::Sync completer) {
+                                       SetConfigurationUnbootableCompleter::Sync completer) {
   if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
     completer.Reply(status);
     return;
   }
   auto data = abr_client_->Data();
 
-  abr::SlotData *slot;
+  abr::SlotData* slot;
   switch (configuration) {
     case Configuration::A:
       slot = &data.slots[0];
@@ -829,8 +828,7 @@ void Paver::SetConfigurationUnbootable(Configuration configuration,
   completer.Reply(ZX_OK);
 }
 
-void Paver::SetActiveConfigurationHealthy(
-    SetActiveConfigurationHealthyCompleter::Sync completer) {
+void Paver::SetActiveConfigurationHealthy(SetActiveConfigurationHealthyCompleter::Sync completer) {
   if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
     completer.Reply(status);
     return;
@@ -844,7 +842,7 @@ void Paver::SetActiveConfigurationHealthy(
     return;
   }
 
-  abr::SlotData *slot;
+  abr::SlotData* slot;
   switch (*config) {
     case Configuration::A:
       slot = &data.slots[0];

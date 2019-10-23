@@ -5,8 +5,13 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/operation/nand.h>
+#include <lib/sync/completion.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/boot/image.h>
+#include <zircon/hw/gpt.h>
+#include <zircon/types.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -15,15 +20,9 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
 #include <ddk/protocol/badblock.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <lib/operation/nand.h>
-#include <lib/sync/completion.h>
-#include <zircon/boot/image.h>
-#include <zircon/hw/gpt.h>
-#include <zircon/types.h>
 
 #include "nandpart-utils.h"
 

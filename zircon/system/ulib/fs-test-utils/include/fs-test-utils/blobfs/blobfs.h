@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_TEST_UTILS_BLOBFS_BLOBFS_H_
+#define FS_TEST_UTILS_BLOBFS_BLOBFS_H_
+
+#include <lib/fdio/io.h>
 
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fdio/io.h>
 
 namespace fs_test_utils {
 
@@ -44,3 +46,5 @@ bool GenerateRandomBlob(fbl::String mount_path, size_t size_data, fbl::unique_pt
 bool VerifyContents(int fd, const char* data, size_t size_data);
 
 }  // namespace fs_test_utils
+
+#endif  // FS_TEST_UTILS_BLOBFS_BLOBFS_H_

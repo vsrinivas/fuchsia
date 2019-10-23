@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_IMAGE_H_
+#define ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_IMAGE_H_
 
-#include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
-#include <zircon/types.h>
 #include <zircon/pixelformat.h>
+#include <zircon/types.h>
+
+#include <fbl/unique_ptr.h>
 
 #include "fuchsia/hardware/display/c/fidl.h"
 
@@ -63,3 +65,5 @@ class Image {
   uint32_t bg_color_;
   bool use_intel_y_tiling_;
 };
+
+#endif  // ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_IMAGE_H_

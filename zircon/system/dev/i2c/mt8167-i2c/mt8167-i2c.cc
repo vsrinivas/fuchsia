@@ -4,6 +4,11 @@
 
 #include "mt8167-i2c.h"
 
+#include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -14,10 +19,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <lib/device-protocol/pdev.h>
-#include <lib/device-protocol/platform-device.h>
-#include <zircon/syscalls/port.h>
-#include <zircon/types.h>
 
 //#define TEST_USB_REGS_READ
 

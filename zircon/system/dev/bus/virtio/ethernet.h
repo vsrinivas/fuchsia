@@ -2,23 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_ETHERNET_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_ETHERNET_H_
 
-#include "device.h"
-#include "ring.h"
-
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/net.h>
-#include <zircon/compiler.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
+
+#include "device.h"
+#include "ring.h"
 
 namespace virtio {
 
@@ -71,3 +72,5 @@ class EthernetDevice : public Device {
 };
 
 }  // namespace virtio
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_ETHERNET_H_

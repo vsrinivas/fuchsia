@@ -4,16 +4,18 @@
 
 #include "max98927.h"
 
+#include <endian.h>
+#include <fuchsia/hardware/audiocodec/c/fidl.h>
+#include <lib/device-protocol/i2c.h>
+#include <lib/fidl-utils/bind.h>
+#include <zircon/assert.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
-#include <endian.h>
 #include <fbl/alloc_checker.h>
-#include <fuchsia/hardware/audiocodec/c/fidl.h>
-#include <lib/fidl-utils/bind.h>
-#include <zircon/assert.h>
+
 #include "max98927-registers.h"
 
 namespace audio {

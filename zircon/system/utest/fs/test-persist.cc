@@ -11,9 +11,9 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>

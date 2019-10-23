@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UTEST_RUNTESTS_UTILS_RUNTESTS_UTILS_TEST_UTILS_H_
+#define ZIRCON_SYSTEM_UTEST_RUNTESTS_UTILS_RUNTESTS_UTILS_TEST_UTILS_H_
 
 #include <dirent.h>
 #include <errno.h>
@@ -139,3 +140,5 @@ bool GetOutputFileRelPath(const fbl::StringPiece& output_dir, const fbl::StringP
                           fbl::String* output_file_rel_path);
 
 }  // namespace runtests
+
+#endif  // ZIRCON_SYSTEM_UTEST_RUNTESTS_UTILS_RUNTESTS_UTILS_TEST_UTILS_H_

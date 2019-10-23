@@ -3,15 +3,11 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
-#include <fbl/auto_call.h>
-#include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
-#include <gpt/c/gpt.h>
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
@@ -19,16 +15,21 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
-#include <pretty/hexdump.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <storage-metrics/block-metrics.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
+#include <gpt/c/gpt.h>
+#include <pretty/hexdump.h>
+#include <storage-metrics/block-metrics.h>
 
 #define DEV_BLOCK "/dev/class/block"
 #define DEV_SKIP_BLOCK "/dev/class/skip-block"

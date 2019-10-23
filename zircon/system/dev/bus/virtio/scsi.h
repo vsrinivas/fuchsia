@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_SCSI_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_SCSI_H_
 
 #include <lib/scsi/scsilib_controller.h>
 #include <lib/sync/completion.h>
@@ -10,6 +11,7 @@
 #include <stdlib.h>
 #include <sys/uio.h>
 #include <zircon/compiler.h>
+
 #include <atomic>
 
 #include <fbl/auto_lock.h>
@@ -49,7 +51,7 @@ class ScsiDevice : public Device, public scsi::Controller {
   static void FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t target, uint16_t lun);
 
  private:
-  zx_status_t TargetMaxXferSize(uint8_t target, uint16_t lun, uint32_t &xfer_size_sectors);
+  zx_status_t TargetMaxXferSize(uint8_t target, uint16_t lun, uint32_t& xfer_size_sectors);
 
   zx_status_t ExecuteCommandSync(uint8_t target, uint16_t lun, struct iovec cdb,
                                  struct iovec data_out, struct iovec data_in) override;
@@ -96,3 +98,5 @@ class ScsiDevice : public Device, public scsi::Controller {
 };
 
 }  // namespace virtio
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_SCSI_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_HOST_FVM_INFO_H_
+#define FVM_HOST_FVM_INFO_H_
 
 #include <fbl/unique_fd.h>
 #include <fvm-host/file-wrapper.h>
@@ -68,3 +69,5 @@ class FvmInfo {
   uint32_t pslice_hint_;
   fbl::unique_ptr<uint8_t[]> metadata_;
 };
+
+#endif  // FVM_HOST_FVM_INFO_H_

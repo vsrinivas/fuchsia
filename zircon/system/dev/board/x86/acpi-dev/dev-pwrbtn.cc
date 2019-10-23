@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dev.h"
+#include <lib/zircon-internal/thread_annotations.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include <utility>
 
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
@@ -13,14 +19,8 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <hid/descriptor.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <zircon/syscalls.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
-#include <utility>
-
+#include "dev.h"
 #include "errors.h"
 
 class AcpiPwrbtnDevice;
@@ -181,8 +181,9 @@ void AcpiPwrbtnDevice::HidbusStop() {
   client_.clear();
 }
 
-zx_status_t AcpiPwrbtnDevice::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
-                                size_t data_size, size_t* out_data_actual) {
+zx_status_t AcpiPwrbtnDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                                  void* out_data_buffer, size_t data_size,
+                                                  size_t* out_data_actual) {
   zxlogf(TRACE, "acpi-pwrbtn: hid bus get descriptor\n");
 
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {

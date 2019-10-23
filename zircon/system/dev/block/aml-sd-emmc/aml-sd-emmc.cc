@@ -2,9 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "aml-sd-emmc.h"
+
+#include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/sync/completion.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/threads.h>
+#include <zircon/types.h>
 
 #include <bits/limits.h>
 #include <ddk/binding.h>
@@ -16,27 +24,18 @@
 #include <ddk/phys-iter.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sdmmc.h>
 #include <ddktl/protocol/composite.h>
-#include <lib/device-protocol/pdev.h>
-
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <hw/sdmmc.h>
-#include <lib/sync/completion.h>
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-#include <zircon/assert.h>
-#include <zircon/threads.h>
-#include <zircon/types.h>
-
 #include "aml-sd-emmc-regs.h"
-#include "aml-sd-emmc.h"
 
 // Limit maximum number of descriptors to 512 for now
 #define AML_DMA_DESC_MAX_COUNT 512
@@ -164,13 +163,11 @@ zx_status_t AmlSdEmmc::WaitForInterrupt() {
   return irq_.wait(&timestamp);
 }
 
-void AmlSdEmmc::OnIrqThreadExit() {
-}
+void AmlSdEmmc::OnIrqThreadExit() {}
 
 int AmlSdEmmc::IrqThread() {
-  auto on_thread_exit = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-    OnIrqThreadExit();
-  });
+  auto on_thread_exit =
+      fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS { OnIrqThreadExit(); });
   while (1) {
     zx_status_t status = WaitForInterrupt();
     if (status == ZX_ERR_CANCELED) {

@@ -316,9 +316,8 @@ int gpt_bind_thread(void* arg) {
   std::unique_ptr<ThreadArgs> thread_args(static_cast<ThreadArgs*>(arg));
   gptpart_device_t* first_dev = thread_args->first_device();
 
-  auto remove_first_dev = fbl::MakeAutoCall([&first_dev]() {
-    device_async_remove(first_dev->zxdev);
-  });
+  auto remove_first_dev =
+      fbl::MakeAutoCall([&first_dev]() { device_async_remove(first_dev->zxdev); });
 
   zx_device_t* parent = first_dev->parent;
 

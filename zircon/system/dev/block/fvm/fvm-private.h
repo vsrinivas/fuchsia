@@ -43,8 +43,8 @@ using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
 
 // Forward declaration
 class VPartitionManager;
-using ManagerDeviceType = ddk::Device<VPartitionManager, ddk::Messageable,
-                                      ddk::UnbindableDeprecated>;
+using ManagerDeviceType =
+    ddk::Device<VPartitionManager, ddk::Messageable, ddk::UnbindableDeprecated>;
 
 class VPartitionManager : public ManagerDeviceType {
  public:

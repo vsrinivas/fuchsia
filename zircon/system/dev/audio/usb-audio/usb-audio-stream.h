@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_H_
 
-#include <ddktl/device.h>
+#include <fuchsia/hardware/audio/c/fidl.h>
+#include <lib/zx/profile.h>
+#include <lib/zx/vmo.h>
+#include <zircon/listnode.h>
+
+#include <audio-proto/audio-proto.h>
 #include <ddktl/device-internal.h>
+#include <ddktl/device.h>
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/audio/c/fidl.h>
-#include <lib/zx/profile.h>
-#include <lib/zx/vmo.h>
 #include <usb/usb.h>
-#include <zircon/listnode.h>
-
-#include <audio-proto/audio-proto.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
 
 #include "debug-logging.h"
 
@@ -175,3 +176,5 @@ class UsbAudioStream : public UsbAudioStreamBase,
 
 }  // namespace usb
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_H_

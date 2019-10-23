@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_ROOT_MOCK_DEVICE_H_
+#define SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_ROOT_MOCK_DEVICE_H_
+
+#include <fuchsia/device/test/cpp/fidl.h>
+#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fidl/cpp/message.h>
+#include <lib/zx/channel.h>
 
 #include <memory>
 #include <string>
@@ -10,13 +16,9 @@
 
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fuchsia/device/test/cpp/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/fidl/cpp/message.h>
-#include <lib/zx/channel.h>
 
-#include "mock-device.h"
 #include "mock-device-hooks.h"
+#include "mock-device.h"
 
 namespace libdriver_integration_test {
 
@@ -57,3 +59,5 @@ class RootMockDevice {
 };
 
 }  // namespace libdriver_integration_test
+
+#endif  // SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_ROOT_MOCK_DEVICE_H_

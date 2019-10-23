@@ -5,8 +5,9 @@
 #ifndef FBL_UNIQUE_PTR_H_
 #define FBL_UNIQUE_PTR_H_
 
-#include <fbl/alloc_checker.h>
 #include <memory>
+
+#include <fbl/alloc_checker.h>
 
 namespace fbl {
 

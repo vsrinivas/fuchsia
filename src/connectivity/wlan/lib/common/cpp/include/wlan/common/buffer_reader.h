@@ -5,11 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BUFFER_READER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BUFFER_READER_H_
 
+#include <zircon/types.h>
+
 #include <optional>
 
 #include <fbl/span.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
 
 namespace wlan {
 

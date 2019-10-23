@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <unittest/unittest.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fbl/unique_ptr.h>
+#include <unittest/unittest.h>
 
 // Note: these tests focus on the added functionality of the owned VMO
 // mapper.  The core functionality is assumed to have already been tested by the

@@ -5,8 +5,16 @@
 #ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_SOCKET_H_
 #define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_SOCKET_H_
 
-#include "device.h"
-#include "ring.h"
+#include <fuchsia/hardware/vsock/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/timer.h>
+
+#include <utility>
 
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
@@ -15,17 +23,10 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/ref_counted.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/socket.h>
-#include <lib/zx/timer.h>
-#include <utility>
 #include <virtio/vsock.h>
 
-#include <fuchsia/hardware/vsock/c/fidl.h>
-#include <lib/zircon-internal/thread_annotations.h>
+#include "device.h"
+#include "ring.h"
 
 namespace virtio {
 

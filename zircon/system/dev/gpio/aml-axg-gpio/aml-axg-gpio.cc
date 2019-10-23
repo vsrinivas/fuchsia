@@ -5,6 +5,7 @@
 #include "aml-axg-gpio.h"
 
 #include <lib/device-protocol/platform-device.h>
+
 #include <cstdint>
 
 #include <ddk/binding.h>

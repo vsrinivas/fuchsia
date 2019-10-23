@@ -2,24 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs-management/fvm.h>
-
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <fbl/auto_call.h>
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
-#include <fs-management/fvm.h>
-#include <fs/client.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fvm/format.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -27,6 +15,8 @@
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
@@ -34,6 +24,14 @@
 #include <zircon/syscalls.h>
 
 #include <utility>
+
+#include <fbl/auto_call.h>
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
+#include <fs-management/fvm.h>
+#include <fs/client.h>
+#include <fvm/format.h>
 
 namespace {
 
@@ -53,14 +51,16 @@ bool IsPartition(const fbl::unique_fd& fd, const uint8_t* uniqueGUID, const uint
   if (typeGUID) {
     io_status =
         fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status, &guid);
-    if (io_status != ZX_OK || status != ZX_OK || memcmp(guid.value, typeGUID, BLOCK_GUID_LEN) != 0) {
+    if (io_status != ZX_OK || status != ZX_OK ||
+        memcmp(guid.value, typeGUID, BLOCK_GUID_LEN) != 0) {
       return false;
     }
   }
   if (uniqueGUID) {
     io_status =
         fuchsia_hardware_block_partition_PartitionGetInstanceGuid(channel->get(), &status, &guid);
-    if (io_status != ZX_OK || status != ZX_OK || memcmp(guid.value, uniqueGUID, BLOCK_GUID_LEN) != 0) {
+    if (io_status != ZX_OK || status != ZX_OK ||
+        memcmp(guid.value, uniqueGUID, BLOCK_GUID_LEN) != 0) {
       return false;
     }
   }

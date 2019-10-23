@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_CODEC_MAX98927_MAX98927_H_
+#define ZIRCON_SYSTEM_DEV_CODEC_MAX98927_MAX98927_H_
+
+#include <zircon/types.h>
 
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <zircon/types.h>
 #include <fbl/unique_ptr.h>
 
 namespace audio {
@@ -55,3 +57,5 @@ class Max98927Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_
 
 }  // namespace max98927
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_CODEC_MAX98927_MAX98927_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_USB_INCLUDE_USB_REQUEST_CPP_H_
+#define ZIRCON_SYSTEM_DEV_LIB_USB_INCLUDE_USB_REQUEST_CPP_H_
 
 #include <lib/fit/function.h>
 #include <lib/operation/operation.h>
@@ -458,3 +459,5 @@ template <typename Storage = void>
 using RequestList = operation::OperationList<Request<Storage>, OperationTraits, Storage>;
 
 }  // namespace usb
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_USB_INCLUDE_USB_REQUEST_CPP_H_

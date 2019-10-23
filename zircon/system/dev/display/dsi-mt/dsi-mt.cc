@@ -4,12 +4,13 @@
 
 #include "dsi-mt.h"
 
+#include <fuchsia/sysmem/c/fidl.h>
+
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
-#include <fuchsia/sysmem/c/fidl.h>
 
 #include "mt-dsi-reg.h"
 

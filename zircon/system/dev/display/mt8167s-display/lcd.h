@@ -5,12 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_LCD_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_LCD_H_
 
+#include <unistd.h>
+#include <zircon/compiler.h>
+
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/gpio.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
-#include <unistd.h>
-#include <zircon/compiler.h>
 
 namespace mt8167s_display {
 

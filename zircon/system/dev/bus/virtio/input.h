@@ -1,13 +1,14 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_INPUT_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_INPUT_H_
 
+#include <fuchsia/hardware/pty/c/fidl.h>
 #include <stdlib.h>
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/hidbus.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
 #include <hid/boot.h>
 #include <virtio/input.h>
 
@@ -75,3 +76,5 @@ class InputDevice : public Device {
 };
 
 }  // namespace virtio
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_INPUT_H_

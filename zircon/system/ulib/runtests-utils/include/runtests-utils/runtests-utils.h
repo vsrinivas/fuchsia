@@ -8,6 +8,8 @@
 #define RUNTESTS_UTILS_RUNTESTS_UTILS_H_
 
 #include <inttypes.h>
+#include <lib/zircon-internal/fnv1hash.h>
+#include <zircon/types.h>
 
 #include <string>
 #include <unordered_map>
@@ -19,8 +21,6 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/zircon-internal/fnv1hash.h>
-#include <zircon/types.h>
 
 namespace runtests {
 
@@ -38,8 +38,8 @@ enum LaunchStatus {
 
 // Represents a single dumpfile element.
 struct DumpFile {
-  std::string name; // Name of the dumpfile.
-  std::string file; // File name for the content.
+  std::string name;  // Name of the dumpfile.
+  std::string file;  // File name for the content.
 };
 
 // Represents the result of a single test run.
@@ -47,7 +47,8 @@ struct Result {
   fbl::String name;
   LaunchStatus launch_status;
   int64_t return_code;  // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
-  std::unordered_map<std::string, std::vector<DumpFile>> data_sinks; // Mapping from data sink name to list of files.
+  std::unordered_map<std::string, std::vector<DumpFile>>
+      data_sinks;  // Mapping from data sink name to list of files.
   int64_t duration_milliseconds;
 
   // Constructor really only needed until we have C++14, which will allow call-sites to use

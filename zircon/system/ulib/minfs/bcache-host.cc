@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/bcache.h>
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +14,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/trace.h>
+#include <minfs/bcache.h>
 #include <minfs/format.h>
 #include <storage/buffer/block-buffer.h>
 #include <storage/operation/operation.h>

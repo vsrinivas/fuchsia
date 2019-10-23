@@ -2,8 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "ram-nand.h"
+
+#include <fuchsia/hardware/nand/c/fidl.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/boot/image.h>
+#include <zircon/process.h>
 
 #include <atomic>
 #include <utility>
@@ -11,13 +17,7 @@
 #include <ddk/metadata/nand.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <zircon/boot/image.h>
-#include <zircon/process.h>
 #include <zxtest/zxtest.h>
-
-#include "ram-nand.h"
 
 namespace {
 

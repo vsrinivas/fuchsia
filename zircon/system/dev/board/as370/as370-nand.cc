@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/boot/image.h>
+#include <zircon/hw/gpt.h>
+
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
@@ -9,8 +12,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <soc/as370/as370-nand.h>
-#include <zircon/boot/image.h>
-#include <zircon/hw/gpt.h>
 
 #include "as370.h"
 
@@ -30,36 +31,30 @@ zx_status_t As370::NandInit() {
   };
 
   constexpr nand_config_t nand_config = {
-      .bad_block_config = {
-          .type = kSynaptics,
-          .synaptics = {
-              .table_start_block = 2044,
-              .table_end_block = 2047
-          }
-      },
+      .bad_block_config = {.type = kSynaptics,
+                           .synaptics = {.table_start_block = 2044, .table_end_block = 2047}},
       .extra_partition_config_count = 0,
-      .extra_partition_config = {}
-  };
+      .extra_partition_config = {}};
 
   constexpr zbi_partition_t kPartitions[] = {
       // The first nine blocks are only accessed with ECC disabled.
       // {{},                        {},    0,    0, 0, "block0"},
       // {{},                        {},    1,    8, 0, "prebootloader"},
-      {{},                        {},    9,   40, 0, "tzk_normal"},
-      {{},                        {},   41,   72, 0, "tzk_normalB"},
-      {GUID_BOOTLOADER_VALUE,     {},   73,   76, 0, "bl_normal"},
-      {GUID_BOOTLOADER_VALUE,     {},   77,   80, 0, "bl_normalB"},
-      {GUID_ZIRCON_A_VALUE,       {},   81,  144, 0, "boot"},
-      {GUID_ZIRCON_B_VALUE,       {},  145,  208, 0, "bootB"},
-      {GUID_SYSTEM_VALUE,         {},  209,  800, 0, "rootfs"},
-      {GUID_FVM_VALUE,            {},  801, 1923, 0, "cache"},
-      {GUID_ZIRCON_R_VALUE,       {}, 1924, 1975, 0, "recovery"},
-      {{},                        {}, 1976, 1979, 0, "fts" },
+      {{}, {}, 9, 40, 0, "tzk_normal"},
+      {{}, {}, 41, 72, 0, "tzk_normalB"},
+      {GUID_BOOTLOADER_VALUE, {}, 73, 76, 0, "bl_normal"},
+      {GUID_BOOTLOADER_VALUE, {}, 77, 80, 0, "bl_normalB"},
+      {GUID_ZIRCON_A_VALUE, {}, 81, 144, 0, "boot"},
+      {GUID_ZIRCON_B_VALUE, {}, 145, 208, 0, "bootB"},
+      {GUID_SYSTEM_VALUE, {}, 209, 800, 0, "rootfs"},
+      {GUID_FVM_VALUE, {}, 801, 1923, 0, "cache"},
+      {GUID_ZIRCON_R_VALUE, {}, 1924, 1975, 0, "recovery"},
+      {{}, {}, 1976, 1979, 0, "fts"},
       {GUID_FACTORY_CONFIG_VALUE, {}, 1980, 1991, 0, "factory_store"},
-      {{},                        {}, 1992, 1995, 0, "key_1st"},
-      {{},                        {}, 1996, 1999, 0, "key_2nd"},
-      {{},                        {}, 2000, 2019, 0, "fastboot_1st"},
-      {{},                        {}, 2020, 2039, 0, "fastboot_2nd"},
+      {{}, {}, 1992, 1995, 0, "key_1st"},
+      {{}, {}, 1996, 1999, 0, "key_2nd"},
+      {{}, {}, 2000, 2019, 0, "fastboot_1st"},
+      {{}, {}, 2020, 2039, 0, "fastboot_2nd"},
   };
 
   constexpr size_t kPartitionMapAlignment =
@@ -83,16 +78,12 @@ zx_status_t As370::NandInit() {
   memcpy(nand_partition_map->partitions, kPartitions, sizeof(kPartitions));
 
   const pbus_metadata_t nand_metadata[] = {
-      {
-          .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = &nand_config,
-          .data_size = sizeof(nand_config)
-      },
-      {
-          .type = DEVICE_METADATA_PARTITION_MAP,
-          .data_buffer = nand_partition_map.get(),
-          .data_size = kPartitionMapSize
-      },
+      {.type = DEVICE_METADATA_PRIVATE,
+       .data_buffer = &nand_config,
+       .data_size = sizeof(nand_config)},
+      {.type = DEVICE_METADATA_PARTITION_MAP,
+       .data_buffer = nand_partition_map.get(),
+       .data_size = kPartitionMapSize},
   };
 
   pbus_dev_t nand_dev = {};

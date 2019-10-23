@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_
+#define ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_
+#include <lib/fidl-utils/bind.h>
+#include <lib/fzl/vmo-mapper.h>
+
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fidl-utils/bind.h>
-#include <lib/fzl/vmo-mapper.h>
 #include <ramdevice-client/ramdisk.h>
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
@@ -59,3 +62,5 @@ class SkipBlockDevice {
   ramdevice_client::RamNand ram_nand_;
   fzl::VmoMapper mapper_;
 };
+
+#endif  // ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_

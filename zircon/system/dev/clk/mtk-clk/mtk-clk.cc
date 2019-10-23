@@ -306,17 +306,13 @@ zx_status_t MtkClk::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MtkClk::ClockImplSetInput(uint32_t id, uint32_t idx) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t MtkClk::ClockImplSetInput(uint32_t id, uint32_t idx) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t MtkClk::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MtkClk::ClockImplGetInput(uint32_t id, uint32_t* out) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t MtkClk::ClockImplGetInput(uint32_t id, uint32_t* out) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t MtkClk::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info) {
   if (clk >= fbl::count_of(clks)) {

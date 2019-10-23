@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "eisa_vid_lut.h"
 
 namespace {

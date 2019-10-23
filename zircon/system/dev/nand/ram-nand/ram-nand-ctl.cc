@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "ram-nand-ctl.h"
+
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
+#include <lib/zx/vmo.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/types.h>
 
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/zx/vmo.h>
-#include <zircon/types.h>
 
 #include "ram-nand.h"
-#include "ram-nand-ctl.h"
 
 namespace {
 

@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <lib/fzl/memory-probe.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/port.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls/iommu.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/function.h>
+#include <unittest/unittest.h>
 
 #include "test_thread.h"
 #include "userpager.h"

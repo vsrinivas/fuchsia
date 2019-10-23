@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_ASYNC_LOOP_OWNED_RPC_HANDLER_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_ASYNC_LOOP_OWNED_RPC_HANDLER_H_
+#ifndef SRC_DEVICES_COORDINATOR_ASYNC_LOOP_OWNED_RPC_HANDLER_H_
+#define SRC_DEVICES_COORDINATOR_ASYNC_LOOP_OWNED_RPC_HANDLER_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
@@ -75,4 +75,4 @@ class AsyncLoopOwnedRpcHandler {
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_ASYNC_LOOP_OWNED_RPC_HANDLER_H_
+#endif  // SRC_DEVICES_COORDINATOR_ASYNC_LOOP_OWNED_RPC_HANDLER_H_

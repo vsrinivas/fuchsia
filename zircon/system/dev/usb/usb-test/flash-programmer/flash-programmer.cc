@@ -4,15 +4,17 @@
 
 #include "flash-programmer.h"
 
+#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
+#include <fuchsia/mem/c/fidl.h>
+#include <lib/zx/vmo.h>
+
+#include <limits>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
-#include <fuchsia/mem/c/fidl.h>
-#include <lib/zx/vmo.h>
-#include <limits>
 
 #include "flash-programmer-hw.h"
 

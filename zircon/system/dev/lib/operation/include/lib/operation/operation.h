@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
+#define ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
+
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 #include <optional>
 #include <tuple>
@@ -14,8 +18,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
 
 namespace operation {
 
@@ -629,3 +631,5 @@ template <typename D, typename OperationTraits, typename Storage = void>
 using OperationList = BaseList<D, OperationTraits, void, Storage>;
 
 }  // namespace operation
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_

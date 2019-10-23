@@ -6,11 +6,12 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <regex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <regex>
 
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>

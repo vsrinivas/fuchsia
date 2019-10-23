@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_EDID_EDID_H_
+#define LIB_EDID_EDID_H_
 
-#include <fbl/unique_ptr.h>
-#include <hwreg/bitfields.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+
+#include <fbl/unique_ptr.h>
+#include <hwreg/bitfields.h>
+
 #include "lib/edid/timings.h"
 
 namespace edid {
@@ -445,3 +448,5 @@ class audio_data_block_iterator {
 };
 
 }  // namespace edid
+
+#endif  // LIB_EDID_EDID_H_

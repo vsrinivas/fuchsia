@@ -293,17 +293,13 @@ zx_status_t SynClk::ClockImplSetRate(uint32_t index, uint64_t hz) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplSetInput(uint32_t id, uint32_t idx) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t SynClk::ClockImplSetInput(uint32_t id, uint32_t idx) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t SynClk::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplGetInput(uint32_t id, uint32_t* out) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t SynClk::ClockImplGetInput(uint32_t id, uint32_t* out) { return ZX_ERR_NOT_SUPPORTED; }
 
 void SynClk::DdkUnbindNew(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&lock_);

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "tas57xx.h"
+
+#include <lib/device-protocol/i2c.h>
 #include <string.h>
 
 #include <ddk/protocol/i2c.h>
-#include <lib/device-protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-
-#include "tas57xx.h"
 
 namespace audio {
 namespace gauss {

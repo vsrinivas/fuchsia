@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_PDM_AUDIO_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_PDM_AUDIO_H_
 
 #include <assert.h>
 #include <lib/mmio/mmio.h>
-#include <fbl/unique_ptr.h>
-#include <soc/aml-common/aml-audio-regs.h>
 
 #include <utility>
+
+#include <fbl/unique_ptr.h>
+#include <soc/aml-common/aml-audio-regs.h>
 /*
     Presently assumes stereo input with both streams multiplexed on the same
     PDM input line. (TODO: support up to 8 channels to refactor gauss to use this)
@@ -110,3 +112,5 @@ class AmlPdmDevice {
   const ddk::MmioBuffer pdm_mmio_;
   const ddk::MmioBuffer audio_mmio_;
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_PDM_AUDIO_H_

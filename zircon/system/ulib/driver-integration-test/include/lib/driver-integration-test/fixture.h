@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_
+#define LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_
 
 #include <lib/devmgr-integration-test/fixture.h>
 
@@ -56,3 +57,5 @@ class IsolatedDevmgr {
 };
 
 }  // namespace driver_integration_test
+
+#endif  // LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_

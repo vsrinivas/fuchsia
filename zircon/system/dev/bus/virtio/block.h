@@ -4,19 +4,19 @@
 #ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BLOCK_H_
 #define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BLOCK_H_
 
-#include "device.h"
-#include "ring.h"
-
-#include <atomic>
+#include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <zircon/compiler.h>
-
-#include "backends/backend.h"
-#include <ddk/protocol/block.h>
-#include <virtio/block.h>
 #include <zircon/device/block.h>
 
-#include <lib/sync/completion.h>
+#include <atomic>
+
+#include <ddk/protocol/block.h>
+#include <virtio/block.h>
+
+#include "backends/backend.h"
+#include "device.h"
+#include "ring.h"
 
 namespace virtio {
 

@@ -33,8 +33,7 @@ namespace audio {
 namespace gauss {
 
 class TdmOutputStream;
-using TdmAudioStreamBase = ddk::Device<TdmOutputStream, ddk::Messageable,
-                                       ddk::UnbindableNew>;
+using TdmAudioStreamBase = ddk::Device<TdmOutputStream, ddk::Messageable, ddk::UnbindableNew>;
 
 class TdmOutputStream : public TdmAudioStreamBase,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_OUTPUT>,

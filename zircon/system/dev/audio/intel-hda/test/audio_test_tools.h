@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -48,3 +50,5 @@ StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* str
                                             audio_stream_string_id_t id);
 
 }  // namespace audio::intel_hda
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_

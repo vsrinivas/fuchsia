@@ -10,16 +10,18 @@
 #ifdef __Fuchsia__
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
+
 #include <fbl/auto_lock.h>
 #endif
+
+#include <lib/zx/channel.h>
+
+#include <utility>
 
 #include <fbl/alloc_checker.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fs/watcher.h>
-#include <lib/zx/channel.h>
-
-#include <utility>
 
 namespace fs {
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <tftp/tftp.h>
-#include <fbl/unique_ptr.h>
-
-#include "internal.h"
-
 #include <stdio.h>
 #include <string.h>
+
+#include <fbl/unique_ptr.h>
+#include <tftp/tftp.h>
+
+#include "internal.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   uint8_t sess_buf[sizeof(tftp_session)];

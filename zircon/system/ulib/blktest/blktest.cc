@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <climits>
 #include <errno.h>
 #include <fcntl.h>
-#include <limits>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,23 +16,21 @@
 #include <threads.h>
 #include <time.h>
 #include <unistd.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h>
 
+#include <climits>
+#include <limits>
+
+#include <blktest/blktest.h>
 #include <block-client/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/fifo.h>
-#include <lib/zx/vmo.h>
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
-#include <zircon/device/block.h>
-#include <zircon/syscalls.h>
-
-#include <blktest/blktest.h>
 
 namespace tests {
 

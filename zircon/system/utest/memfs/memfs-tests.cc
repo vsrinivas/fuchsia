@@ -5,24 +5,24 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/memfs/memfs.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
-
-#include <fbl/unique_ptr.h>
-#include <fbl/unique_fd.h>
-#include <fbl/vector.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/memfs/memfs.h>
-#include <unittest/unittest.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
+#include <unittest/unittest.h>
 
 namespace {
 

@@ -2,29 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
-#include <fuchsia/boot/c/fidl.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/resource.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/resource.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 
 #include "stress_test.h"
 

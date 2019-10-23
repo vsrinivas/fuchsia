@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_ETHERNET_ETHERNET_H_
+#define ZIRCON_SYSTEM_DEV_ETHERNET_ETHERNET_ETHERNET_H_
 
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
@@ -256,3 +257,5 @@ class EthDev : public EthDevType,
 };
 
 }  // namespace eth
+
+#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_ETHERNET_ETHERNET_H_

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_HOST_SPARSE_PAVER_H_
+#define FVM_HOST_SPARSE_PAVER_H_
 
 #include <fvm-host/file-wrapper.h>
 #include <fvm/sparse-reader.h>
 
 #include "format.h"
+#include "fvm-host/fvm-info.h"
 
 struct SparsePartitionInfo {
   fvm::partition_descriptor_t descriptor;
@@ -53,3 +55,5 @@ class SparsePaver {
   size_t disk_ptr_;                  // Marks the current offset within the target image.
   fbl::unique_ptr<uint8_t[]> data_;  // Buffer to hold data to be written to disk.
 };
+
+#endif  // FVM_HOST_SPARSE_PAVER_H_

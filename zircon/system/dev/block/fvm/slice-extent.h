@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BLOCK_FVM_SLICE_EXTENT_H_
+#define ZIRCON_SYSTEM_DEV_BLOCK_FVM_SLICE_EXTENT_H_
 
 #ifdef __cplusplus
 
@@ -87,3 +88,5 @@ class SliceExtent : public fbl::WAVLTreeContainable<fbl::unique_ptr<SliceExtent>
 }  // namespace fvm
 
 #endif  // __cplusplus
+
+#endif  // ZIRCON_SYSTEM_DEV_BLOCK_FVM_SLICE_EXTENT_H_

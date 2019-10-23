@@ -5,17 +5,19 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_SIMPLE_SIMPLE_DISPLAY_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_SIMPLE_SIMPLE_DISPLAY_H_
 
-#include <ddk/driver.h>
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
 
+#include <ddk/driver.h>
+
 #if __cplusplus
+
+#include <lib/mmio/mmio.h>
+#include <lib/zx/vmo.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
 #include <fbl/unique_ptr.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/vmo.h>
 
 class SimpleDisplay;
 using DeviceType = ddk::Device<SimpleDisplay, ddk::UnbindableNew>;

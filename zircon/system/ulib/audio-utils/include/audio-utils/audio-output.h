@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef AUDIO_UTILS_AUDIO_OUTPUT_H_
+#define AUDIO_UTILS_AUDIO_OUTPUT_H_
+
+#include <zircon/types.h>
 
 #include <audio-utils/audio-device-stream.h>
-#include <zircon/types.h>
 
 namespace audio {
 namespace utils {
@@ -29,3 +31,5 @@ class AudioOutput : public AudioDeviceStream {
 
 }  // namespace utils
 }  // namespace audio
+
+#endif  // AUDIO_UTILS_AUDIO_OUTPUT_H_

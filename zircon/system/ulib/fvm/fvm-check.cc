@@ -6,15 +6,15 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/status.h>
+
+#include <utility>
 
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fvm/format.h>
 #include <fvm/fvm-check.h>
-#include <zircon/status.h>
-
-#include <utility>
 
 namespace fvm {
 

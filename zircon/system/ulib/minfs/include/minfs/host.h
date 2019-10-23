@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef MINFS_HOST_H_
+#define MINFS_HOST_H_
 
 #ifdef __Fuchsia__
 #error Host-only Header
@@ -136,3 +137,5 @@ class DirWrapper {
   bool hostdir_;
   DIR* dir_;
 };
+
+#endif  // MINFS_HOST_H_

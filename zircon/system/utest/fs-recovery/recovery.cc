@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-
-#include <fs-management/fvm.h>
-#include <fs-management/mount.h>
-#include <fvm/format.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
+
+#include <fs-management/fvm.h>
+#include <fs-management/mount.h>
+#include <fvm/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 

@@ -6,10 +6,11 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MLME_H_
 
 #include <fuchsia/wlan/stats/cpp/fidl.h>
+#include <zircon/types.h>
+
 #include <wlan/common/bitfield.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/types.h>
 
 namespace wlan {
 

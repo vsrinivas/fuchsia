@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DRIVER_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DRIVER_H_
+#ifndef SRC_DEVICES_COORDINATOR_DRIVER_H_
+#define SRC_DEVICES_COORDINATOR_DRIVER_H_
 
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
@@ -46,4 +46,4 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func);
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DRIVER_H_
+#endif  // SRC_DEVICES_COORDINATOR_DRIVER_H_

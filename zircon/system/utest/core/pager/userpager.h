@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UTEST_CORE_PAGER_USERPAGER_H_
+#define ZIRCON_SYSTEM_UTEST_CORE_PAGER_USERPAGER_H_
 
-#include <fbl/function.h>
-#include <fbl/intrusive_double_list.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/port.h>
 #include <lib/zx/vmar.h>
@@ -13,6 +12,9 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <fbl/function.h>
+#include <fbl/intrusive_double_list.h>
 
 namespace pager_tests {
 
@@ -127,3 +129,5 @@ class UserPager {
 };
 
 }  // namespace pager_tests
+
+#endif  // ZIRCON_SYSTEM_UTEST_CORE_PAGER_USERPAGER_H_

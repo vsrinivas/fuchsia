@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/status.h>

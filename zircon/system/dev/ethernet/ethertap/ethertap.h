@@ -5,17 +5,18 @@
 #ifndef ZIRCON_SYSTEM_DEV_ETHERNET_ETHERTAP_ETHERTAP_H_
 #define ZIRCON_SYSTEM_DEV_ETHERNET_ETHERTAP_ETHERTAP_H_
 
+#include <fuchsia/hardware/ethertap/c/fidl.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
+#include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/ethertap/c/fidl.h>
-#include <lib/zx/socket.h>
-#include <lib/zx/channel.h>
-#include <threads.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace eth {
 

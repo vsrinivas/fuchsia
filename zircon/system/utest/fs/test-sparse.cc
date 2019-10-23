@@ -8,12 +8,12 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <minfs/format.h>
 #include <zircon/syscalls.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <minfs/format.h>
 #include <unittest/unittest.h>
 
 #include "filesystems.h"

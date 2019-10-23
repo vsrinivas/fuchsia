@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
+#include "libgpt-tests.h"
+
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/fdio.h>
-#include <ramdevice-client/ramdisk.h>
-#include <unittest/unittest.h>
 #include <zircon/assert.h>
 
-#include "libgpt-tests.h"
+#include <fbl/auto_call.h>
+#include <ramdevice-client/ramdisk.h>
+#include <unittest/unittest.h>
 
 // generate a random number between [1, max]
 uint64_t random_non_zero_length(uint64_t max) { return (rand() % max) + 1; }

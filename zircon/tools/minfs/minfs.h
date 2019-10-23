@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_TOOLS_MINFS_MINFS_H_
+#define ZIRCON_TOOLS_MINFS_MINFS_H_
 #include <utility>
 
 #include <fbl/unique_ptr.h>
@@ -71,3 +73,5 @@ class MinfsCreator : public FsCreator {
   // Each pair in the list represents a <source> path, and a <dest> path.
   fbl::Vector<std::pair<fbl::String, fbl::String>> file_list_;
 };
+
+#endif  // ZIRCON_TOOLS_MINFS_MINFS_H_

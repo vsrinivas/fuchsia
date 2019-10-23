@@ -5,11 +5,12 @@
 #ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_PROXY_IOSTATE_H_
 #define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_PROXY_IOSTATE_H_
 
+#include <lib/async/cpp/wait.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/zx/channel.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 

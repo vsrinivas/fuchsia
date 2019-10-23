@@ -4,21 +4,22 @@
 
 #include "usb-tester.h"
 
+#include <fuchsia/hardware/usb/tester/c/fidl.h>
+#include <lib/sync/completion.h>
+#include <stdlib.h>
+#include <string.h>
+#include <zircon/hw/usb.h>
+
+#include <optional>
+#include <utility>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/usb/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/usb/tester/c/fidl.h>
-#include <lib/sync/completion.h>
 #include <usb/usb-request.h>
-#include <zircon/hw/usb.h>
-
-#include <optional>
-#include <stdlib.h>
-#include <string.h>
-#include <utility>
 
 #include "usb-tester-hw.h"
 

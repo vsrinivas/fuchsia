@@ -5,16 +5,17 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_AML_DSI_HOST_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_AML_DSI_HOST_H_
 
+#include <unistd.h>
+#include <zircon/compiler.h>
+
+#include <optional>
+
 #include <ddk/protocol/dsiimpl.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
-#include <unistd.h>
-#include <zircon/compiler.h>
-
-#include <optional>
 
 #include "aml-mipi-phy.h"
 #include "common.h"

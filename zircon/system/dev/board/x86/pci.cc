@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
+#include "pci.h"
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
+
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 #include <acpica/acuuid.h>
@@ -10,14 +16,10 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <inttypes.h>
 #include <region-alloc/region-alloc.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "acpi-private.h"
 #include "methods.h"
-#include "pci.h"
 #include "pciroot.h"
 #include "resources.h"
 

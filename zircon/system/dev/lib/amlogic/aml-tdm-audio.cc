@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
 #include <limits>
-#include <soc/aml-common/aml-tdm-audio.h>
 #include <utility>
+
+#include <ddk/debug.h>
+#include <soc/aml-common/aml-tdm-audio.h>
 
 // static
 fbl::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,

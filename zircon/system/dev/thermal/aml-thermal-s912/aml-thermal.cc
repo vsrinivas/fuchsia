@@ -5,6 +5,7 @@
 #include "aml-thermal.h"
 
 #include <string.h>
+#include <zircon/syscalls/port.h>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
@@ -14,7 +15,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-thermal.h>
-#include <zircon/syscalls/port.h>
 
 namespace thermal {
 namespace {

@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <perftest/runner.h>
-
 #include <getopt.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <pthread.h>
 #include <regex.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
+#include <perftest/runner.h>
 #include <trace-engine/context.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <unittest/unittest.h>
-#include <zircon/assert.h>
-#include <zircon/syscalls.h>
 
 namespace perftest {
 namespace {

@@ -2,30 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_AML_RAWNAND_H_
+#define ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_AML_RAWNAND_H_
+
+#include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/time.h>
+#include <string.h>
+#include <unistd.h>
+#include <zircon/threads.h>
+#include <zircon/types.h>
+
+#include <memory>
+#include <utility>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/rawnand.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
-#include <lib/mmio/mmio.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/time.h>
-#include <memory>
 #include <soc/aml-common/aml-rawnand.h>
-#include <string.h>
-#include <unistd.h>
-#include <utility>
-#include <zircon/threads.h>
-#include <zircon/types.h>
 
 #include "onfi.h"
 
@@ -144,3 +147,5 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
 };
 
 }  // namespace amlrawnand
+
+#endif  // ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_AML_RAWNAND_H_

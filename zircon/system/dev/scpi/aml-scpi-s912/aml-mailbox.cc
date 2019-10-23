@@ -3,16 +3,19 @@
 // found in the LICENSE file.
 
 #include "aml-mailbox.h"
-#include "aml-mailbox-hw.h"
-#include <ddk/binding.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <ddk/binding.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
+
+#include "aml-mailbox-hw.h"
 
 namespace mailbox {
 

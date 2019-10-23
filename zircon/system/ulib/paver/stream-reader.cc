@@ -21,8 +21,8 @@ zx_status_t StreamReader::Create(zx::channel stream, fbl::unique_ptr<StreamReade
     ERROR("Unable to duplicate vmo.\n");
     return status;
   }
-  auto result = ::llcpp::fuchsia::paver::PayloadStream::Call::RegisterVmo(
-      zx::unowned(stream), std::move(dup));
+  auto result = ::llcpp::fuchsia::paver::PayloadStream::Call::RegisterVmo(zx::unowned(stream),
+                                                                          std::move(dup));
   status = result.ok() ? result.value().status : result.status();
   if (status != ZX_OK) {
     ERROR("Unable to register vmo: %d\n", status);

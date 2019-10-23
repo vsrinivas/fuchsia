@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <sys/stat.h>
 
+#include <utility>
+
 #include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
@@ -21,8 +23,6 @@
 #include <fs-test-utils/perftest.h>
 #include <perftest/perftest.h>
 #include <unittest/unittest.h>
-
-#include <utility>
 
 namespace {
 

@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DISPATCHER_POOL_DISPATCHER_THREAD_POOL_H_
+#define DISPATCHER_POOL_DISPATCHER_THREAD_POOL_H_
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 #include <lib/zx/port.h>
 #include <lib/zx/profile.h>
+#include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
+#include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
@@ -16,9 +20,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <threads.h>
-
-#include <dispatcher-pool/dispatcher-execution-domain.h>
 
 namespace dispatcher {
 
@@ -95,3 +96,5 @@ class ThreadPool : public fbl::RefCounted<ThreadPool>,
 };
 
 }  // namespace dispatcher
+
+#endif  // DISPATCHER_POOL_DISPATCHER_THREAD_POOL_H_

@@ -3,28 +3,29 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fbl/auto_call.h>
-#include <fbl/string_buffer.h>
-#include <fbl/vector.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/hardware/zxcrypt/c/fidl.h>
 #include <inttypes.h>
-#include <kms-stateless/kms-stateless.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/channel.h>
-#include <ramdevice-client/ramdisk.h>  // Why does wait_for_device_at() come from here?
 #include <unistd.h>
 #include <zircon/status.h>
-#include <zxcrypt/fdio-volume.h>
-#include <zxcrypt/volume.h>
 
 #include <utility>
+
+#include <fbl/auto_call.h>
+#include <fbl/string_buffer.h>
+#include <fbl/vector.h>
+#include <kms-stateless/kms-stateless.h>
+#include <ramdevice-client/ramdisk.h>  // Why does wait_for_device_at() come from here?
+#include <zxcrypt/fdio-volume.h>
+#include <zxcrypt/volume.h>
 
 #define ZXDEBUG 0
 

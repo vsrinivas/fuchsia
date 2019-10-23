@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/protocol/i2c.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
+#include "tas27xx.h"
 
 #include <utility>
 
-#include "tas27xx.h"
+#include <ddk/protocol/i2c.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 
 namespace audio {
 namespace astro {

@@ -30,8 +30,7 @@ namespace usb {
 static constexpr int USB_ENDPOINT_INVALID = -1;
 
 class UsbVideoStream;
-using UsbVideoStreamBase = ddk::Device<UsbVideoStream, ddk::Messageable,
-                                       ddk::UnbindableNew>;
+using UsbVideoStreamBase = ddk::Device<UsbVideoStream, ddk::Messageable, ddk::UnbindableNew>;
 
 class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
  public:

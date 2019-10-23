@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/test/c/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
@@ -12,13 +20,6 @@
 #include <fbl/mutex.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/device/test/c/fidl.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/socket.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 namespace {
 
@@ -55,8 +56,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
 };
 
 class TestRootDevice;
-using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable,
-                                       ddk::UnbindableDeprecated>;
+using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable, ddk::UnbindableDeprecated>;
 
 class TestRootDevice : public TestRootDeviceType {
  public:

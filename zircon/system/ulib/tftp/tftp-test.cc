@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <tftp/tftp.h>
-
 #include <arpa/inet.h>
 #include <assert.h>
 #include <stdint.h>
@@ -13,6 +11,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
+#include <tftp/tftp.h>
 #include <unittest/unittest.h>
 
 // For inspecting session state

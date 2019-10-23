@@ -14,8 +14,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/fidl.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/tee.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -32,7 +32,7 @@ class OpteeClient;
 
 class OpteeController;
 using OpteeControllerBase =
-  ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::UnbindableNew>;
+    ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::UnbindableNew>;
 class OpteeController : public OpteeControllerBase,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
                         public fuchsia_hardware_tee::DeviceConnector::Interface {
@@ -63,7 +63,8 @@ class OpteeController : public OpteeControllerBase,
   //                       support for the driver.
   //  * device_request:    The server end of a channel to the `fuchsia.tee.Device` protocol that
   //                       is requesting to be served.
-  void ConnectTee(zx::channel service_provider, zx::channel tee_request, ConnectTeeCompleter::Sync completer) override;
+  void ConnectTee(zx::channel service_provider, zx::channel tee_request,
+                  ConnectTeeCompleter::Sync completer) override;
 
   // Client FIDL commands
   fuchsia_tee::OsInfo GetOsInfo() const;

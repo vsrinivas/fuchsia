@@ -5,12 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_DDK_INTERFACE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_DDK_INTERFACE_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/pixelformat.h>
+
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/protocol/display/controller.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/pixelformat.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "adv7533.h"
 #include "hi3660-dsi.h"

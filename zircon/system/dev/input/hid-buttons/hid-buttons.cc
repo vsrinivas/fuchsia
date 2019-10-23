@@ -239,8 +239,8 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
   gpios_ = std::move(gpios);
   fbl::AllocChecker ac;
   fbl::AutoLock lock(&callbacks_lock_);
-  callbacks_ = fbl::Array(
-      new (&ac) std::vector<button_notify_callback_t>[BUTTON_TYPE_MAX], BUTTON_TYPE_MAX);
+  callbacks_ =
+      fbl::Array(new (&ac) std::vector<button_notify_callback_t>[BUTTON_TYPE_MAX], BUTTON_TYPE_MAX);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -491,7 +491,10 @@ void HidButtonsDevice::ButtonsUnregisterNotifyButton(button_type_t type,
   fbl::AutoLock lock(&callbacks_lock_);
   auto& callbacks = callbacks_[button_map_[type]];
   auto cb = std::find(callbacks.begin(), callbacks.end(), *callback);
-  if (cb != callbacks.end()) { callbacks.erase(cb); return; }
+  if (cb != callbacks.end()) {
+    callbacks.erase(cb);
+    return;
+  }
   zxlogf(ERROR, "%s could not erase %p callback for %u button\n", __FUNCTION__, callback, type);
 }
 

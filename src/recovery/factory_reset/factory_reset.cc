@@ -6,11 +6,7 @@
 
 #include <dirent.h>
 #include <errno.h>
-#include <fbl/string_buffer.h>
-#include <fbl/string_piece.h>
-#include <fbl/unique_ptr.h>
 #include <fcntl.h>
-#include <fs-management/mount.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
@@ -23,6 +19,11 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
+
+#include <fbl/string_buffer.h>
+#include <fbl/string_piece.h>
+#include <fbl/unique_ptr.h>
+#include <fs-management/mount.h>
 
 namespace factory_reset {
 

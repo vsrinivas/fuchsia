@@ -80,8 +80,7 @@ void USBVirtualBus::InitUMS(fbl::String* devpath) {
   ASSERT_NO_FATAL_FAILURES(SetupPeripheralDevice(device_desc, std::move(function_descs)));
 
   fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/block", O_RDONLY));
-  while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE,
-                              devpath) != ZX_ERR_STOP) {
+  while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
     continue;
   }
   *devpath = fbl::String::Concat({fbl::String("class/block/"), *devpath});
@@ -114,8 +113,7 @@ class BlockDeviceController {
 
     fbl::String devpath;
     while (fdio_watch_directory(openat(bus_->GetRootFd(), "class/usb-cache-test", O_RDONLY),
-                                WaitForAnyFile, ZX_TIME_INFINITE,
-                                &devpath) != ZX_ERR_STOP)
+                                WaitForAnyFile, ZX_TIME_INFINITE, &devpath) != ZX_ERR_STOP)
       continue;
 
     devpath = fbl::String::Concat({fbl::String("class/usb-cache-test/"), devpath});
@@ -321,4 +319,3 @@ TEST_F(UmsTest, BlkdevTest) {
 
 }  // namespace
 }  // namespace usb_virtual_bus
-

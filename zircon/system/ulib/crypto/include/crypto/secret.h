@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef CRYPTO_SECRET_H_
+#define CRYPTO_SECRET_H_
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <crypto/bytes.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
 
 // |crypto::Secret| is a small helper class that simply wraps a buffer.  It saves on some
 // boilerplate when allocating a buffer.  More importantly, when going out of scope, the destructor
@@ -49,3 +50,5 @@ class __EXPORT Secret final {
 };
 
 }  // namespace crypto
+
+#endif  // CRYPTO_SECRET_H_

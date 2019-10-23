@@ -1,12 +1,10 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
 
-#include "bridge.h"
-#include "config.h"
-#include "device.h"
-#include "root.h"
+#include <list>
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
@@ -14,7 +12,11 @@
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/vector.h>
-#include <list>
+
+#include "bridge.h"
+#include "config.h"
+#include "device.h"
+#include "root.h"
 
 namespace pci {
 
@@ -89,3 +91,5 @@ class Bus : public PciBusType, public BusLinkInterface {
 };
 
 }  // namespace pci
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_

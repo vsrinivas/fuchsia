@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <fbl/macros.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/unique_ptr.h>
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_PATH_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_PATH_H_
 
 #include <utility>
 
-#include "usb-audio.h"
+#include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
+#include <fbl/unique_ptr.h>
+
 #include "usb-audio-units.h"
+#include "usb-audio.h"
 
 namespace audio {
 namespace usb {
@@ -97,3 +98,5 @@ class AudioPath : public fbl::DoublyLinkedListable<fbl::unique_ptr<AudioPath>> {
 
 }  // namespace usb
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_PATH_H_

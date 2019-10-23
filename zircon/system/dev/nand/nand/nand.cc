@@ -4,19 +4,19 @@
 
 #include "nand.h"
 
+#include <lib/zx/time.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/threads.h>
+
 #include <algorithm>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zx/time.h>
-#include <zircon/assert.h>
-#include <zircon/status.h>
-#include <zircon/threads.h>
 
 // TODO: Investigate elimination of unmap.
 // This code does vx_vmar_map/unmap and copies data in/out of the

@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/alloc_checker.h>
+#include "usb-audio-path.h"
 
 #include <utility>
 
+#include <fbl/alloc_checker.h>
+
 #include "debug-logging.h"
-#include "usb-audio-path.h"
 
 namespace audio {
 namespace usb {

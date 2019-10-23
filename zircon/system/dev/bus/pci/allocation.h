@@ -1,17 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_ALLOCATION_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_ALLOCATION_H_
 
-#include "allocation.h"
-#include "ref_counted.h"
+#include <lib/zx/resource.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zx/resource.h>
 #include <region-alloc/region-alloc.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
+
+#include "allocation.h"
+#include "ref_counted.h"
 
 // PciAllocations and PciAllocators are concepts internal to UpstreamNodes which
 // track address space allocations across roots and bridges. PciAllocator is an
@@ -190,3 +193,5 @@ class PciRegionAllocator : public PciAllocator {
 };
 
 }  // namespace pci
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_ALLOCATION_H_

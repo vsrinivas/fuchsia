@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_METADATA_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_METADATA_H_
+#ifndef SRC_DEVICES_COORDINATOR_METADATA_H_
+#define SRC_DEVICES_COORDINATOR_METADATA_H_
 
 #include <stdint.h>
 
@@ -56,4 +56,4 @@ struct Metadata {
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_METADATA_H_
+#endif  // SRC_DEVICES_COORDINATOR_METADATA_H_

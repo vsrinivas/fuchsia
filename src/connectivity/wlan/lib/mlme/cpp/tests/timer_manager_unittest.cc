@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/timekeeper/test_clock.h>
+
+#include <gtest/gtest.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
 

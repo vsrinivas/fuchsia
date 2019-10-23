@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "fvm-host/fvm-info.h"
+
 #include "fvm-host/format.h"
 
 zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {

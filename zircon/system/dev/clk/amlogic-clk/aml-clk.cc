@@ -3,21 +3,24 @@
 // found in the LICENSE file.
 
 #include "aml-clk.h"
-#include "aml-axg-blocks.h"
-#include "aml-g12a-blocks.h"
-#include "aml-g12b-blocks.h"
-#include "aml-gxl-blocks.h"
+
+#include <fuchsia/hardware/clock/c/fidl.h>
+#include <lib/device-protocol/pdev.h>
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/pdev.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/clock/c/fidl.h>
-#include <string.h>
+
+#include "aml-axg-blocks.h"
+#include "aml-g12a-blocks.h"
+#include "aml-g12b-blocks.h"
+#include "aml-gxl-blocks.h"
 
 namespace amlogic_clock {
 
@@ -157,10 +160,7 @@ zx_status_t AmlClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) 
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-
-zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t AmlClock::ClockImplGetNumInputs(uint32_t id, uint32_t* out_num_inputs) {
   return ZX_ERR_NOT_SUPPORTED;

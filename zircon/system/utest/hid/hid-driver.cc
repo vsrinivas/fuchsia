@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <ddk/platform-defs.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/hidctl/c/fidl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
-#include <hid/boot.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <zircon/syscalls.h>
+
+#include <ddk/platform-defs.h>
+#include <fbl/unique_ptr.h>
+#include <hid/boot.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;

@@ -1,14 +1,16 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_BACKEND_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_BACKEND_H_
+
+#include <lib/device-protocol/pci.h>
+#include <lib/zx/handle.h>
 
 #include <ddk/protocol/pci.h>
-#include <lib/device-protocol/pci.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/virtio.h>
-#include <lib/zx/handle.h>
 
 // Each backend will implement their own method for initialization / binding
 // based on their own internal functionality. Since we will have different
@@ -71,3 +73,5 @@ class Backend {
 };
 
 }  // namespace virtio
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_BACKEND_H_

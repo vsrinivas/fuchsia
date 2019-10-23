@@ -316,12 +316,12 @@ zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
   // Add child client device and have it immediately start serving device_request
   //
   // What we really want here is named parameter passing to pass client_remote
-  zx_status_t status = client->DdkAdd("optee-client",                   // name
-                                      DEVICE_ADD_INSTANCE,              // flags
-                                      nullptr,                          // props
-                                      0,                                // prop_count
-                                      0,                                // proto_id
-                                      nullptr,                          // proxy_args
+  zx_status_t status = client->DdkAdd("optee-client",               // name
+                                      DEVICE_ADD_INSTANCE,          // flags
+                                      nullptr,                      // props
+                                      0,                            // prop_count
+                                      0,                            // proto_id
+                                      nullptr,                      // proxy_args
                                       tee_device_request.release()  // client_remote
   );
   if (status != ZX_OK) {
@@ -334,7 +334,9 @@ zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
   return ZX_OK;
 }
 
-void OpteeController::ConnectTee(zx::channel service_provider, zx::channel tee_request, fuchsia_hardware_tee::DeviceConnector::Interface::ConnectTeeCompleter::Sync completer) {
+void OpteeController::ConnectTee(
+    zx::channel service_provider, zx::channel tee_request,
+    fuchsia_hardware_tee::DeviceConnector::Interface::ConnectTeeCompleter::Sync completer) {
   TeeConnect(std::move(tee_request), std::move(service_provider));
 }
 

@@ -4,14 +4,15 @@
 
 #include "gtt.h"
 
-#include <ddk/protocol/pci.h>
-#include <fbl/algorithm.h>
 #include <lib/device-protocol/pci.h>
 #include <stdlib.h>
 
 #include <climits>
 #include <limits>
 #include <utility>
+
+#include <ddk/protocol/pci.h>
+#include <fbl/algorithm.h>
 
 #include "intel-i915.h"
 #include "macros.h"

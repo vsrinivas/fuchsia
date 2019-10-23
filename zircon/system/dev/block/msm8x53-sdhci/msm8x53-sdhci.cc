@@ -4,10 +4,11 @@
 
 #include "msm8x53-sdhci.h"
 
+#include <lib/device-protocol/pdev.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/pdev.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 

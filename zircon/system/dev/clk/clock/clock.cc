@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "clock.h"
+
+#include <zircon/types.h>
+
 #include <memory>
 
 #include <ddk/binding.h>
@@ -12,9 +16,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
-
-#include "clock.h"
 
 namespace clock {
 
@@ -33,17 +34,11 @@ zx_status_t ClockDevice::ClockQuerySupportedRate(uint64_t max_rate,
   return clock_.QuerySupportedRate(id_, max_rate, out_max_supported_rate);
 }
 
-zx_status_t ClockDevice::ClockSetInput(uint32_t idx) {
-  return clock_.SetInput(id_, idx);
-}
+zx_status_t ClockDevice::ClockSetInput(uint32_t idx) { return clock_.SetInput(id_, idx); }
 
-zx_status_t ClockDevice::ClockGetNumInputs(uint32_t* out) {
-  return clock_.GetNumInputs(id_, out);
-}
+zx_status_t ClockDevice::ClockGetNumInputs(uint32_t* out) { return clock_.GetNumInputs(id_, out); }
 
-zx_status_t ClockDevice::ClockGetInput(uint32_t* out) {
-  return clock_.GetInput(id_, out);
-}
+zx_status_t ClockDevice::ClockGetInput(uint32_t* out) { return clock_.GetInput(id_, out); }
 
 zx_status_t ClockDevice::ClockGetRate(uint64_t* out_current_rate) {
   return clock_.GetRate(id_, out_current_rate);

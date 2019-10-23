@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "scsi.h"
+
 #include <lib/fake_ddk/fake_ddk.h>
+
 #include <zxtest/zxtest.h>
 
 #include "backends/fake.h"
-#include "scsi.h"
 
 using Queue = virtio::ScsiDevice::Queue;
 

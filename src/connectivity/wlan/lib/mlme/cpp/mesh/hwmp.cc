@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/status.h>
+
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/parse_element.h>
@@ -9,7 +11,6 @@
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/mac_header_writer.h>
 #include <wlan/mlme/mesh/hwmp.h>
-#include <zircon/status.h>
 
 namespace wlan {
 

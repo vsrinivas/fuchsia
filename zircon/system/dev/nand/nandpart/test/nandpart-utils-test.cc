@@ -4,8 +4,9 @@
 
 #include "nandpart-utils.h"
 
-#include <fbl/unique_ptr.h>
 #include <zircon/types.h>
+
+#include <fbl/unique_ptr.h>
 #include <zxtest/zxtest.h>
 
 namespace nand {

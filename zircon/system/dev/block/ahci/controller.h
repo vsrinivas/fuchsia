@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BLOCK_AHCI_CONTROLLER_H_
+#define ZIRCON_SYSTEM_DEV_BLOCK_AHCI_CONTROLLER_H_
+
+#include <lib/sync/completion.h>
+#include <lib/zx/time.h>
+#include <zircon/types.h>
 
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/time.h>
-#include <zircon/types.h>
 
 #include "ahci.h"
 #include "bus.h"
@@ -109,3 +111,5 @@ class Controller {
 };
 
 }  // namespace ahci
+
+#endif  // ZIRCON_SYSTEM_DEV_BLOCK_AHCI_CONTROLLER_H_

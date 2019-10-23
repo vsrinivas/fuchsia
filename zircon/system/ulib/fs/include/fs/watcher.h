@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_WATCHER_H_
+#define FS_WATCHER_H_
 
 #ifndef __Fuchsia__
 #error "Fuchsia-only header"
 #endif
+
+#include <lib/zx/channel.h>
+#include <zircon/device/vfs.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
-#include <zircon/device/vfs.h>
-#include <lib/zx/channel.h>
 
 namespace fs {
 
@@ -48,3 +50,5 @@ class WatcherContainer {
 };
 
 }  // namespace fs
+
+#endif  // FS_WATCHER_H_

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_CONTROL_INTERFACE_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_CONTROL_INTERFACE_H_
+
+#include <zircon/hw/usb/audio.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/hw/usb/audio.h>
 
 #include "usb-audio-descriptors.h"
 #include "usb-audio-path.h"
@@ -83,3 +85,5 @@ class UsbAudioControlInterface {
 
 }  // namespace usb
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_CONTROL_INTERFACE_H_

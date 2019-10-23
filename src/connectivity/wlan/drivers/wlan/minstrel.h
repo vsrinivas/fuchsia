@@ -5,17 +5,18 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_MINSTREL_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_MINSTREL_H_
 
-#include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <lib/zx/time.h>
-#include <wlan/common/macaddr.h>
-#include <wlan/common/tx_vector.h>
-#include <wlan/mlme/client/station.h>
-#include <wlan/mlme/timer_manager.h>
 
 #include <array>
 #include <unordered_map>
 #include <unordered_set>
+
+#include <fbl/unique_ptr.h>
+#include <wlan/common/macaddr.h>
+#include <wlan/common/tx_vector.h>
+#include <wlan/mlme/client/station.h>
+#include <wlan/mlme/timer_manager.h>
 
 #include "probe_sequence.h"
 

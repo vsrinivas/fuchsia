@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
+#include "usb-audio-control-interface.h"
 
 #include <utility>
 
+#include <fbl/auto_call.h>
+
 #include "debug-logging.h"
-#include "usb-audio-control-interface.h"
 #include "usb-audio-device.h"
 #include "usb-audio-units.h"
 

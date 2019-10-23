@@ -4,12 +4,6 @@
 
 #include "sysdev.h"
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/platform-defs.h>
-#include <ddktl/device.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
@@ -17,6 +11,13 @@
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
+
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
+#include <ddktl/device.h>
+#include <fbl/unique_ptr.h>
 
 namespace {
 

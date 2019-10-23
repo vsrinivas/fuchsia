@@ -107,7 +107,8 @@ TEST_F(ChannelSchedulerTest, RequestOffChannelTimeChained) {
 }
 
 TEST_F(ChannelSchedulerTest, SetChannelSwitchesWhenOnChannel) {
-  chan_sched_.SetChannel(wlan_channel_t{.primary = 6, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
+  chan_sched_.SetChannel(
+      wlan_channel_t{.primary = 6, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
   EXPECT_TRUE(chan_sched_.OnChannel());
   EXPECT_EQ(6u, device_.GetChannelNumber());
 }
@@ -120,7 +121,8 @@ TEST_F(ChannelSchedulerTest, SetChannelDoesNotSwitchWhenOffChannel) {
   EXPECT_FALSE(chan_sched_.OnChannel());
 
   // Change the 'on' channel. Expect to stay off channel
-  chan_sched_.SetChannel(wlan_channel_t{.primary = 6, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
+  chan_sched_.SetChannel(
+      wlan_channel_t{.primary = 6, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0});
   EXPECT_FALSE(chan_sched_.OnChannel());
   EXPECT_EQ(7u, device_.GetChannelNumber());
 

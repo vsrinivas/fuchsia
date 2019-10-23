@@ -4,10 +4,13 @@
 
 #include "aml-gxl-gpio.h"
 
+#include <lib/device-protocol/platform-device.h>
+
+#include <utility>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/alloc_checker.h>
@@ -15,8 +18,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-
-#include <utility>
 
 #include "s912-blocks.h"
 

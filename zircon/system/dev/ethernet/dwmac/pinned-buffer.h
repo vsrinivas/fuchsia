@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_PINNED_BUFFER_H_
+#define ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_PINNED_BUFFER_H_
 
-#include <ddk/debug.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
-
 #include <zircon/types.h>
+
+#include <ddk/debug.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 class PinnedBuffer : public fbl::RefCounted<PinnedBuffer> {
  public:
@@ -34,3 +35,5 @@ class PinnedBuffer : public fbl::RefCounted<PinnedBuffer> {
 
   fbl::unique_ptr<zx_paddr_t[]> paddrs_;
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_PINNED_BUFFER_H_

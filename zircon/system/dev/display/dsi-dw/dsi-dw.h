@@ -5,13 +5,6 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DSI_DW_DSI_DW_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DSI_DW_DSI_DW_H_
 
-#include <ddk/driver.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/dsiimpl.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
@@ -21,6 +14,14 @@
 #include <zircon/compiler.h>
 
 #include <optional>
+
+#include <ddk/driver.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/dsiimpl.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
 
 #include "dw-mipi-dsi-reg.h"
 

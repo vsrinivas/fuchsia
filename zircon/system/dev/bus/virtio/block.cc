@@ -4,12 +4,7 @@
 
 #include "block.h"
 
-#include <ddk/debug.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
-#include <pretty/hexdump.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +12,12 @@
 #include <zircon/compiler.h>
 
 #include <utility>
+
+#include <ddk/debug.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <pretty/hexdump.h>
 
 #include "trace.h"
 

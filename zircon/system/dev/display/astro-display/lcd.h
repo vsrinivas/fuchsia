@@ -5,13 +5,14 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_LCD_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_LCD_H_
 
+#include <unistd.h>
+#include <zircon/compiler.h>
+
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
-#include <unistd.h>
-#include <zircon/compiler.h>
 
 namespace astro_display {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
+#include "vim.h"
 
 #include <assert.h>
 #include <limits.h>
@@ -12,6 +12,12 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
+
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -19,18 +25,10 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/scpi.h>
-#include <hw/reg.h>
-
-#include <soc/aml-s912/s912-hw.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/assert.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/threads.h>
-
-#include "vim.h"
+#include <hw/reg.h>
+#include <soc/aml-s912/s912-hw.h>
 
 namespace vim {
 

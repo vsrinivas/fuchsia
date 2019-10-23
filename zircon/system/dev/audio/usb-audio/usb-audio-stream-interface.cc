@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-audio-stream-interface.h"
+
+#include <utility>
+
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
-#include <utility>
-
 #include "debug-logging.h"
 #include "usb-audio-device.h"
 #include "usb-audio-path.h"
-#include "usb-audio-stream-interface.h"
 
 namespace audio {
 namespace usb {

@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs-management/mount.h>
-
 #include <errno.h>
 #include <fcntl.h>
-#include <new>
-#include <string.h>
-#include <unistd.h>
-
-#include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
-#include <lib/fdio/limits.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/channel.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <new>
+
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
+#include <fs-management/mount.h>
 
 namespace {
 

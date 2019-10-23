@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BLOCK_FVM_VPARTITION_H_
+#define ZIRCON_SYSTEM_DEV_BLOCK_FVM_VPARTITION_H_
+
+#include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/types.h>
 
 #include <cstdint>
 
@@ -14,8 +18,6 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 #include "slice-extent.h"
 
@@ -118,3 +120,5 @@ class VPartition : public PartitionDeviceType,
 };
 
 }  // namespace fvm
+
+#endif  // ZIRCON_SYSTEM_DEV_BLOCK_FVM_VPARTITION_H_

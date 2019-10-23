@@ -4,18 +4,18 @@
 
 #include "test/test-utils.h"
 
+#include <fuchsia/hardware/nand/c/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/vmo.h>
 #include <limits.h>
+#include <zircon/boot/image.h>
 
 #include <optional>
 
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/vmo.h>
-#include <zircon/boot/image.h>
 #include <zxtest/zxtest.h>
 
 #include "device-partitioner.h"

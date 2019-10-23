@@ -2,26 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_DWMAC_H_
+#define ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_DWMAC_H_
+
+#include <lib/device-protocol/pdev.h>
+#include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/vmo.h>
+#include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <atomic>
+#include <optional>
+
 #include <ddk/device.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
-#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/ethernet.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/ethernet/mac.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/interrupt.h>
-#include <lib/zx/vmo.h>
-#include <optional>
-#include <threads.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 #include "pinned-buffer.h"
 
@@ -195,3 +198,5 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::UnbindableNew>,
 };
 
 }  // namespace eth
+
+#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_DWMAC_H_

@@ -5,6 +5,12 @@
 #ifndef FBL_SLAB_ALLOCATOR_H_
 #define FBL_SLAB_ALLOCATOR_H_
 
+#include <zircon/compiler.h>
+
+#include <new>
+#include <type_traits>
+#include <utility>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/deleter.h>
@@ -14,10 +20,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_malloc.h>
 #include <fbl/unique_ptr.h>
-#include <new>
-#include <type_traits>
-#include <utility>
-#include <zircon/compiler.h>
 
 // Usage Notes:
 //

@@ -4,21 +4,22 @@
 
 #include "bt-hci-mediatek.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <endian.h>
 #include <lib/device-protocol/pdev.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
-#include <hw/sdio.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/time.h>
 #include <zircon/device/bt-hci.h>
 
 #include <algorithm>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
+#include <hw/sdio.h>
 
 namespace {
 

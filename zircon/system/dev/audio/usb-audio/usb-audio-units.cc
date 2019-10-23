@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <limits>
+#include "usb-audio-units.h"
+
 #include <math.h>
+
+#include <limits>
 #include <utility>
 
+#include <fbl/algorithm.h>
+
 #include "debug-logging.h"
-#include "usb-audio-units.h"
 
 namespace audio {
 namespace usb {

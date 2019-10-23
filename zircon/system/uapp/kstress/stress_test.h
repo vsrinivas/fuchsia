@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_KSTRESS_STRESS_TEST_H_
+#define ZIRCON_SYSTEM_UAPP_KSTRESS_STRESS_TEST_H_
 
 #include <stdarg.h>
 #include <stdio.h>
-
-#include <fbl/macros.h>
-#include <fbl/vector.h>
-#include <fbl/unique_ptr.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/macros.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 
 class StressTest {
  public:
@@ -81,3 +82,5 @@ class StressTest {
 
 // factories for local tests
 fbl::unique_ptr<StressTest> CreateVmStressTest();
+
+#endif  // ZIRCON_SYSTEM_UAPP_KSTRESS_STRESS_TEST_H_

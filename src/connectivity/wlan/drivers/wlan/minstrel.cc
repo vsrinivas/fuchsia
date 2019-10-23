@@ -136,7 +136,8 @@ zx::duration TxTimeHt(wlan_channel_bandwidth_t cbw, wlan_gi_t gi, uint8_t relati
 // SupportedMcsRx is 78 bit long in IEEE802.11-2016, Figure 9-334
 // In reality, devices implement MCS 0-31, sometimes 32, almost never beyond 32.
 void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
-                    wlan_channel_bandwidth_t cbw, wlan_gi_t gi, const SupportedMcsRxMcsHead& mcs_set) {
+                    wlan_channel_bandwidth_t cbw, wlan_gi_t gi,
+                    const SupportedMcsRxMcsHead& mcs_set) {
   size_t tx_stats_added = 0;
   for (uint8_t mcs_idx = 0; mcs_idx < kHtNumMcs; ++mcs_idx) {
     // Skip if this mcs is not supported
@@ -211,7 +212,8 @@ void AddHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, const HtCapa
 
   tx_stats_map->reserve(max_size);
 
-  AddSupportedHt(tx_stats_map, WLAN_CHANNEL_BANDWIDTH__20, WLAN_GI__800NS, ht_cap.mcs_set.rx_mcs_head);
+  AddSupportedHt(tx_stats_map, WLAN_CHANNEL_BANDWIDTH__20, WLAN_GI__800NS,
+                 ht_cap.mcs_set.rx_mcs_head);
   if (sgi_20) {
     AddSupportedHt(tx_stats_map, WLAN_CHANNEL_BANDWIDTH__20, WLAN_GI__400NS,
                    ht_cap.mcs_set.rx_mcs_head);

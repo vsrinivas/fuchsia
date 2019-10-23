@@ -4,12 +4,13 @@
 
 #include "rng.h"
 
-#include <ddk/debug.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <limits.h>
 
 #include <utility>
+
+#include <ddk/debug.h>
+#include <fbl/auto_lock.h>
 
 namespace virtio {
 

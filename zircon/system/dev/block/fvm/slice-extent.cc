@@ -4,8 +4,9 @@
 
 #include "slice-extent.h"
 
-#include <fbl/unique_ptr.h>
 #include <zircon/assert.h>
+
+#include <fbl/unique_ptr.h>
 
 namespace fvm {
 

@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef CRYPTO_AEAD_H_
+#define CRYPTO_AEAD_H_
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <crypto/bytes.h>
-#include <crypto/secret.h>
 #include <crypto/cipher.h>
+#include <crypto/secret.h>
 #include <fbl/macros.h>
-#include <zircon/types.h>
 
 // |crypto::AEAD| is an authenticated encryption and decryption cipher.  It differs from |Cipher| in
 // that it incurs additional overhead to store its authentication tag, but can verify data integrity
@@ -107,3 +108,5 @@ class __EXPORT AEAD final {
   size_t tag_len_;
 };
 }  // namespace crypto
+
+#endif  // CRYPTO_AEAD_H_

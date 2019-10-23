@@ -2,14 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits.h>
-#include <utility>
-
-#include <cobalt-client/cpp/collector-internal.h>
-#include <cobalt-client/cpp/types-internal.h>
-#include <fbl/algorithm.h>
-#include <fbl/type_info.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/cobalt/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -17,7 +9,15 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#include <limits.h>
 
+#include <utility>
+
+#include <cobalt-client/cpp/collector-internal.h>
+#include <cobalt-client/cpp/types-internal.h>
+#include <fbl/algorithm.h>
+#include <fbl/type_info.h>
+#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 namespace cobalt_client {
@@ -376,7 +376,8 @@ class CobaltLoggerTestBase {
   // and methods for setting them up.
   struct Context {
     Context() {
-      services.loop = std::move(std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread));
+      services.loop =
+          std::move(std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread));
     }
 
     struct ReturnValues {

@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_RESIZEABLE_VMO_MAPPER_H_
+#define LIB_FZL_RESIZEABLE_VMO_MAPPER_H_
 
-#include <fbl/macros.h>
-#include <fbl/unique_ptr.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/macros.h>
+#include <fbl/unique_ptr.h>
 
 namespace fzl {
 
@@ -86,3 +88,5 @@ class ResizeableVmoMapper : protected OwnedVmoMapper {
 };
 
 }  // namespace fzl
+
+#endif  // LIB_FZL_RESIZEABLE_VMO_MAPPER_H_

@@ -7,14 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
-
-#include <chromeos-disk-setup/chromeos-disk-setup.h>
-#include <gpt/cros.h>
-#include <gpt/gpt.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <chromeos-disk-setup/chromeos-disk-setup.h>
+#include <gpt/cros.h>
+#include <gpt/gpt.h>
 
 namespace chromeos_disk_setup {
 using gpt::GptDevice;

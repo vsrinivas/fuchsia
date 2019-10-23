@@ -4,16 +4,18 @@
 
 #include "alc5514.h"
 
+#include <endian.h>
+#include <lib/device-protocol/i2c.h>
+#include <sys/types.h>
+#include <zircon/assert.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
-#include <endian.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <sys/types.h>
-#include <zircon/assert.h>
+
 #include "alc5514-registers.h"
 
 namespace audio {

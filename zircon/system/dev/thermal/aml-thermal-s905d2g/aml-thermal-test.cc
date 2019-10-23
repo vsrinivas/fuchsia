@@ -4,6 +4,8 @@
 
 #include "aml-thermal.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/mmio/mmio.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -16,8 +18,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/mmio/mmio.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

@@ -10,8 +10,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
 #include <zircon/syscalls.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>

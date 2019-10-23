@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_HOST_CONTAINER_H_
+#define FVM_HOST_CONTAINER_H_
 
 #include <fcntl.h>
 #include <string.h>
@@ -260,3 +261,5 @@ class SparseContainer final : public Container {
   zx_status_t PartitionsIterator(UsedSize_f* used_size_f, uint64_t* out) const;
   void CheckValid() const;
 };
+
+#endif  // FVM_HOST_CONTAINER_H_

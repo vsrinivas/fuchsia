@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_NAND_H_
+#define ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_NAND_H_
+
+#include <lib/operation/operation.h>
 
 #include <ddk/protocol/nand.h>
-#include <lib/operation/operation.h>
 
 // namespace nand is used because this library will inevitably move to
 // dev/lib/nand. In an effort to reduce dependencies (make doesn't support
@@ -152,3 +154,5 @@ using BorrowedOperationQueue =
                                       Storage>;
 
 }  // namespace nand
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_NAND_H_

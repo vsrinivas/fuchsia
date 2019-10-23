@@ -2,26 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/kernel-mexec/kernel-mexec.h>
-
-#include <ddk/device.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/kernel-mexec/kernel-mexec.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <libzbi/zbi-cpp.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/limits.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+
+#include <ddk/device.h>
+#include <fbl/unique_ptr.h>
+#include <libzbi/zbi-cpp.h>
 
 namespace {
 

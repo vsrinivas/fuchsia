@@ -5,21 +5,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/compiler.h>
+#include <zircon/pixelformat.h>
+#include <zircon/types.h>
+
+#include <utility>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
-
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-
-#include <zircon/compiler.h>
-#include <zircon/pixelformat.h>
-#include <zircon/types.h>
-
-#include <utility>
 
 #include "backends/pci.h"
 #include "block.h"
@@ -34,8 +32,7 @@
 
 static bool gpu_disabled() {
   const char* flag = getenv("driver.virtio-gpu.disable");
-  return (flag != nullptr &&
-          (!strcmp(flag, "1") || !strcmp(flag, "true") || !strcmp(flag, "on")));
+  return (flag != nullptr && (!strcmp(flag, "1") || !strcmp(flag, "true") || !strcmp(flag, "on")));
 }
 
 static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {

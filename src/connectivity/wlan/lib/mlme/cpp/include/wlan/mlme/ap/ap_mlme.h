@@ -6,12 +6,13 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_AP_AP_MLME_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <zircon/types.h>
+
 #include <wlan/mlme/ap/beacon_sender.h>
 #include <wlan/mlme/ap/infra_bss.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/types.h>
 
 namespace wlan {
 

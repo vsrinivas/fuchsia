@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/block/volume.h>
-#include <fbl/unique_ptr.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
-#include <zxcrypt/ddk-volume.h>
-#include <zxcrypt/volume.h>
 
 #include <memory>
 #include <utility>
+
+#include <ddk/protocol/block.h>
+#include <ddk/protocol/block/volume.h>
+#include <fbl/unique_ptr.h>
+#include <zxcrypt/ddk-volume.h>
+#include <zxcrypt/volume.h>
 
 #define ZXDEBUG 0
 

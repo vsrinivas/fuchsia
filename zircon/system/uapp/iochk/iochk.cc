@@ -2,14 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
 #include <assert.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/zircon-internal/xorshiftrand.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/thread.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/device/block.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
+
+#include <atomic>
 #include <utility>
 
 #include <block-client/cpp/client.h>
@@ -18,18 +31,6 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/skipblock/c/fidl.h>
-#include <lib/fzl/fdio.h>
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/zx/fifo.h>
-#include <lib/zx/thread.h>
-#include <lib/zircon-internal/xorshiftrand.h>
-#include <zircon/assert.h>
-#include <zircon/device/block.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/threads.h>
 
 namespace {
 

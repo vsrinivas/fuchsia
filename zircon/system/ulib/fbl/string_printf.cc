@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string_printf.h>
-
-#include <array>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
-
 #include <zircon/assert.h>
+
+#include <array>
+
+#include <fbl/string_printf.h>
 #include <fbl/unique_ptr.h>
 
 namespace fbl {

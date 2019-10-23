@@ -2,7 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_INPUT_HIDCTL_HIDCTL_H_
+#define ZIRCON_SYSTEM_DEV_INPUT_HIDCTL_HIDCTL_H_
+
+#include <fuchsia/hardware/hidctl/c/fidl.h>
+#include <lib/zx/socket.h>
+#include <threads.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -10,12 +17,6 @@
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <threads.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
-#include <lib/zx/socket.h>
-
-#include <fuchsia/hardware/hidctl/c/fidl.h>
 
 namespace hidctl {
 
@@ -74,3 +75,5 @@ class HidDevice : public ddk::Device<HidDevice, ddk::UnbindableDeprecated>,
 };
 
 }  // namespace hidctl
+
+#endif  // ZIRCON_SYSTEM_DEV_INPUT_HIDCTL_HIDCTL_H_

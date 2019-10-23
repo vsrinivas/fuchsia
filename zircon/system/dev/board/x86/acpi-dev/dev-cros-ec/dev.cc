@@ -3,25 +3,24 @@
 // found in the LICENSE file.
 
 #include "dev.h"
-#include "../../include/dev.h"
 
-#include <ddk/debug.h>
-
-#include <chromiumos-platform-ec/ec_commands.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <utility>
+
+#include <acpica/acpi.h>
+#include <chromiumos-platform-ec/ec_commands.h>
+#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <stdlib.h>
-#include <stdio.h>
 
-#include <acpica/acpi.h>
-
-#include <utility>
-
+#include "../../include/dev.h"
 #include "../../include/errors.h"
 
 zx_status_t AcpiCrOsEc::Create(fbl::RefPtr<AcpiCrOsEc>* out) {

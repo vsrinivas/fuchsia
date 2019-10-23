@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/zircon-internal/debug.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
@@ -14,9 +17,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zircon-internal/debug.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
 
 // See note in //zircon/third_party/ulib/uboringssl/rules.mk
 #define BORINGSSL_NO_CXX

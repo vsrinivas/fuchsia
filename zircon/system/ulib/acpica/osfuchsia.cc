@@ -5,12 +5,17 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <limits.h>
-#include <new>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <threads.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+
+#include <new>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
@@ -21,10 +26,6 @@
 #include <fbl/unique_ptr.h>
 #include <hw/inout.h>
 #include <pci/pio.h>
-#include <zircon/assert.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"

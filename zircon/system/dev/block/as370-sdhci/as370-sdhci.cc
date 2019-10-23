@@ -4,10 +4,11 @@
 
 #include "as370-sdhci.h"
 
+#include <lib/device-protocol/pdev.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <lib/device-protocol/pdev.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
@@ -18,8 +19,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
-  }
-  else {
+  } else {
     pdev.ShowInfo();
   }
 
@@ -37,8 +37,8 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<As370Sdhci> device(
-      new (&ac) As370Sdhci(parent, *std::move(core_mmio), std::move(irq)));
+  fbl::unique_ptr<As370Sdhci> device(new (&ac)
+                                         As370Sdhci(parent, *std::move(core_mmio), std::move(irq)));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: As370Sdhci alloc failed\n", __FILE__);
     return ZX_ERR_NO_MEMORY;
@@ -58,9 +58,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t As370Sdhci::Init() {
-  return ZX_OK;
-}
+zx_status_t As370Sdhci::Init() { return ZX_OK; }
 
 zx_status_t As370Sdhci::SdhciGetInterrupt(zx::interrupt* out_irq) {
   out_irq->reset(irq_.release());
@@ -100,7 +98,6 @@ static constexpr zx_driver_ops_t as370_sdhci_driver_ops = []() -> zx_driver_ops_
 }();
 
 ZIRCON_DRIVER_BEGIN(as370_sdhci, as370_sdhci_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_SDHCI0),
-ZIRCON_DRIVER_END(as370_sdhci)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_SDHCI0), ZIRCON_DRIVER_END(as370_sdhci)

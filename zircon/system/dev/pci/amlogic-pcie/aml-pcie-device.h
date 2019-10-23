@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_PCI_AMLOGIC_PCIE_AML_PCIE_DEVICE_H_
+#define ZIRCON_SYSTEM_DEV_PCI_AMLOGIC_PCIE_AML_PCIE_DEVICE_H_
 
+#include <lib/device-protocol/platform-device.h>
+#include <lib/mmio/mmio.h>
 #include <zircon/types.h>
+
+#include <optional>
 
 #include <ddk/device.h>
 #include <ddk/protocol/clock.h>
 #include <ddk/protocol/gpio.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
-#include <lib/mmio/mmio.h>
 #include <dev/pci/designware/atu-cfg.h>
 #include <fbl/unique_ptr.h>
-
-#include <optional>
 
 #include "aml-pcie.h"
 
@@ -68,3 +69,5 @@ class AmlPcieDevice {
 
 }  // namespace aml
 }  // namespace pcie
+
+#endif  // ZIRCON_SYSTEM_DEV_PCI_AMLOGIC_PCIE_AML_PCIE_DEVICE_H_

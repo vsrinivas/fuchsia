@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GPT_GUID_H_
+#define GPT_GUID_H_
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 
 #include <array>
+
 #include <gpt/gpt.h>
-#include <zircon/compiler.h>
 
 namespace gpt {
 
@@ -78,3 +80,5 @@ class KnownGuid {
 };
 
 }  // namespace gpt
+
+#endif  // GPT_GUID_H_

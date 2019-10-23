@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_SPARSE_READER_H_
+#define FVM_SPARSE_READER_H_
 
 #include <assert.h>
 #include <errno.h>
@@ -18,11 +19,12 @@
 
 #include <memory>
 
-#include "fvm/fvm-sparse.h"
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <lz4/lz4frame.h>
+
+#include "fvm/fvm-sparse.h"
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
@@ -155,3 +157,5 @@ class SparseReader {
 };
 
 }  // namespace fvm
+
+#endif  // FVM_SPARSE_READER_H_

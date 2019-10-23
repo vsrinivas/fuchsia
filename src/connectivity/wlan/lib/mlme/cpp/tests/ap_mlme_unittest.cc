@@ -219,8 +219,8 @@ TEST_F(ApInfraBssTest, StartAp) {
   ctx.ap->HandleMlmeMsg(CreateStartRequest(true));
 
   ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto start_confs =
-      device.GetServiceMsgs<wlan_mlme::StartConfirm>(fuchsia::wlan::mlme::internal::kMLME_StartConf_Ordinal);
+  auto start_confs = device.GetServiceMsgs<wlan_mlme::StartConfirm>(
+      fuchsia::wlan::mlme::internal::kMLME_StartConf_Ordinal);
   ASSERT_EQ(start_confs.size(), 1ULL);
   ASSERT_EQ(start_confs[0].body()->result_code, wlan_mlme::StartResultCodes::SUCCESS);
 }
@@ -646,8 +646,8 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
 
   // Verify MLME-EAPOL.confirm message was sent.
   ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto msgs =
-      device.GetServiceMsgs<wlan_mlme::EapolConfirm>(fuchsia::wlan::mlme::internal::kMLME_EapolConf_Ordinal);
+  auto msgs = device.GetServiceMsgs<wlan_mlme::EapolConfirm>(
+      fuchsia::wlan::mlme::internal::kMLME_EapolConf_Ordinal);
   ASSERT_EQ(msgs.size(), 1ULL);
   EXPECT_EQ(msgs[0].body()->result_code, wlan_mlme::EapolResultCodes::SUCCESS);
 

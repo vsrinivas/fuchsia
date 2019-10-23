@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/fdio/io.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -13,7 +14,6 @@
 #include <fbl/unique_ptr.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 #include <fs-test-utils/blobfs/bloblist.h>
-#include <lib/fdio/io.h>
 #include <unittest/unittest.h>
 
 namespace fs_test_utils {

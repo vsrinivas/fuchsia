@@ -37,96 +37,94 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-constexpr fuchsia_hardware_nand_RamNandInfo
-    kNandInfo =
+constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
+    .vmo = ZX_HANDLE_INVALID,
+    .nand_info =
         {
-            .vmo = ZX_HANDLE_INVALID,
-            .nand_info =
+            .page_size = kPageSize,
+            .pages_per_block = kPagesPerBlock,
+            .num_blocks = kNumBlocks,
+            .ecc_bits = 8,
+            .oob_size = kOobSize,
+            .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
+            .partition_guid = {},
+        },
+    .partition_map =
+        {
+            .device_guid = {},
+            .partition_count = 6,
+            .partitions =
                 {
-                    .page_size = kPageSize,
-                    .pages_per_block = kPagesPerBlock,
-                    .num_blocks = kNumBlocks,
-                    .ecc_bits = 8,
-                    .oob_size = kOobSize,
-                    .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
-                    .partition_guid = {},
+                    {
+                        .type_guid = {},
+                        .unique_guid = {},
+                        .first_block = 0,
+                        .last_block = 3,
+                        .copy_count = 0,
+                        .copy_byte_offset = 0,
+                        .name = {},
+                        .hidden = true,
+                        .bbt = true,
+                    },
+                    {
+                        .type_guid = GUID_BOOTLOADER_VALUE,
+                        .unique_guid = {},
+                        .first_block = 4,
+                        .last_block = 7,
+                        .copy_count = 0,
+                        .copy_byte_offset = 0,
+                        .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
+                        .hidden = false,
+                        .bbt = false,
+                    },
+                    {
+                        .type_guid = GUID_ZIRCON_A_VALUE,
+                        .unique_guid = {},
+                        .first_block = 8,
+                        .last_block = 9,
+                        .copy_count = 0,
+                        .copy_byte_offset = 0,
+                        .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
+                        .hidden = false,
+                        .bbt = false,
+                    },
+                    {
+                        .type_guid = GUID_ZIRCON_B_VALUE,
+                        .unique_guid = {},
+                        .first_block = 10,
+                        .last_block = 11,
+                        .copy_count = 0,
+                        .copy_byte_offset = 0,
+                        .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
+                        .hidden = false,
+                        .bbt = false,
+                    },
+                    {
+                        .type_guid = GUID_ZIRCON_R_VALUE,
+                        .unique_guid = {},
+                        .first_block = 12,
+                        .last_block = 13,
+                        .copy_count = 0,
+                        .copy_byte_offset = 0,
+                        .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
+                        .hidden = false,
+                        .bbt = false,
+                    },
+                    {
+                        .type_guid = GUID_SYS_CONFIG_VALUE,
+                        .unique_guid = {},
+                        .first_block = 14,
+                        .last_block = 17,
+                        .copy_count = 0,
+                        .copy_byte_offset = 0,
+                        .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
+                        .hidden = false,
+                        .bbt = false,
+                    },
                 },
-            .partition_map =
-                {
-                    .device_guid = {},
-                    .partition_count = 6,
-                    .partitions =
-                        {
-                            {
-                                .type_guid = {},
-                                .unique_guid = {},
-                                .first_block = 0,
-                                .last_block = 3,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {},
-                                .hidden = true,
-                                .bbt = true,
-                            },
-                            {
-                                .type_guid = GUID_BOOTLOADER_VALUE,
-                                .unique_guid = {},
-                                .first_block = 4,
-                                .last_block = 7,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_ZIRCON_A_VALUE,
-                                .unique_guid = {},
-                                .first_block = 8,
-                                .last_block = 9,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_ZIRCON_B_VALUE,
-                                .unique_guid = {},
-                                .first_block = 10,
-                                .last_block = 11,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_ZIRCON_R_VALUE,
-                                .unique_guid = {},
-                                .first_block = 12,
-                                .last_block = 13,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_SYS_CONFIG_VALUE,
-                                .unique_guid = {},
-                                .first_block = 14,
-                                .last_block = 17,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                        },
-                },
-            .export_nand_config = true,
-            .export_partition_map = true,
+        },
+    .export_nand_config = true,
+    .export_partition_map = true,
 };
 
 class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
@@ -288,27 +286,23 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
   }
 
   void ValidateWrittenPages(uint32_t page, size_t num_pages) {
-    const uint8_t* start =
-        static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
+    const uint8_t* start = static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
     for (size_t i = 0; i < kPageSize * num_pages; i++) {
       ASSERT_EQ(start[i], 0x4a, "i = %zu", i);
     }
   }
 
   void ValidateUnwrittenPages(uint32_t page, size_t num_pages) {
-    const uint8_t* start =
-        static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
+    const uint8_t* start = static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
     for (size_t i = 0; i < kPageSize * num_pages; i++) {
       ASSERT_EQ(start[i], 0xff, "i = %zu", i);
     }
   }
 
   void WriteData(uint32_t page, size_t num_pages, uint8_t data) {
-    uint8_t* start =
-        static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
+    uint8_t* start = static_cast<uint8_t*>(device_->mapper().start()) + (page * kPageSize);
     memset(start, data, kPageSize * num_pages);
   }
-
 
   fbl::unique_ptr<SkipBlockDevice> device_;
 };
@@ -339,8 +333,8 @@ constexpr abr::Data kAbrData = {
 };
 
 void ComputeCrc(abr::Data* data) {
-  data->crc32 = htobe32(
-      crc32(0, reinterpret_cast<const uint8_t*>(data), offsetof(abr::Data, crc32)));
+  data->crc32 =
+      htobe32(crc32(0, reinterpret_cast<const uint8_t*>(data), offsetof(abr::Data, crc32)));
 }
 
 TEST_F(PaverServiceSkipBlockTest, InitializeAbr) {
@@ -643,7 +637,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
   WriteData(8 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
   auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::A,
-                                    ::llcpp::fuchsia::paver::Asset::KERNEL);
+                                   ::llcpp::fuchsia::paver::Asset::KERNEL);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
@@ -652,7 +646,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
   WriteData(10 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
   auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::B,
-                                    ::llcpp::fuchsia::paver::Asset::KERNEL);
+                                   ::llcpp::fuchsia::paver::Asset::KERNEL);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
@@ -661,7 +655,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
   WriteData(12 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
   auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
-                                    ::llcpp::fuchsia::paver::Asset::KERNEL);
+                                   ::llcpp::fuchsia::paver::Asset::KERNEL);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
@@ -670,7 +664,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
   WriteData(14 * kPagesPerBlock + 32, 32, 0x4a);
   auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::A,
-                                    ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+                                   ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -679,7 +673,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
   WriteData(14 * kPagesPerBlock + 64, 32, 0x4a);
   auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::B,
-                                    ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+                                   ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -688,7 +682,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
   WriteData(14 * kPagesPerBlock + 96, 32, 0x4a);
   auto result = client_->ReadAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
-                                    ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+                                   ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -711,7 +705,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   CreatePayload(4 * kPagesPerBlock, &payload);
   payload.size = 4 * kPagesPerBlock - 1;
   WriteData(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1, 0x4a);
-  WriteData(8 * kPagesPerBlock - 1 , 1, 0xff);
+  WriteData(8 * kPagesPerBlock - 1, 1, 0xff);
   auto result = client_->WriteBootloader(std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);

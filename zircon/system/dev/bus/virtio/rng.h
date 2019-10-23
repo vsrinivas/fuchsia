@@ -1,13 +1,16 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_RNG_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_RNG_H_
+
+#include <stdlib.h>
+#include <zircon/compiler.h>
+
+#include <ddk/io-buffer.h>
 
 #include "device.h"
 #include "ring.h"
-#include <ddk/io-buffer.h>
-#include <stdlib.h>
-#include <zircon/compiler.h>
 
 namespace virtio {
 
@@ -50,3 +53,5 @@ class RngDevice : public Device {
 };
 
 }  // namespace virtio
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_RNG_H_

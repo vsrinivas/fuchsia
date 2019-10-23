@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BOARD_X86_ACPI_DEV_DEV_CROS_EC_DEV_H_
+#define ZIRCON_SYSTEM_DEV_BOARD_X86_ACPI_DEV_DEV_CROS_EC_DEV_H_
+
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <acpica/acpi.h>
+#include <chromiumos-platform-ec/ec_commands.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
-#include <chromiumos-platform-ec/ec_commands.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 class AcpiCrOsEc : public fbl::RefCounted<AcpiCrOsEc> {
  public:
@@ -128,3 +130,5 @@ class AcpiCrOsEcMotionDevice
   fbl::unique_ptr<uint8_t[]> hid_descriptor_ = nullptr;
   size_t hid_descriptor_len_ = 0;
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_BOARD_X86_ACPI_DEV_DEV_CROS_EC_DEV_H_

@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dnode.h"
+
+#include <lib/memfs/cpp/vnode.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <fs/vfs.h>
+#include <utility>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <lib/memfs/cpp/vnode.h>
-
-#include <utility>
-
-#include "dnode.h"
+#include <fs/vfs.h>
 
 namespace memfs {
 

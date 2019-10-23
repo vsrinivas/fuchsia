@@ -4,10 +4,11 @@
 
 #include "ltr-578als.h"
 
+#include <endian.h>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <endian.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 
@@ -146,7 +147,7 @@ zx_status_t Ltr578Als::HidbusQuery(uint32_t options, hid_info_t* out_info) {
 }
 
 zx_status_t Ltr578Als::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
-                                size_t data_size, size_t* out_data_actual) {
+                                           size_t data_size, size_t* out_data_actual) {
   const uint8_t* desc;
   size_t desc_size = get_ltr_578als_report_desc(&desc);
 

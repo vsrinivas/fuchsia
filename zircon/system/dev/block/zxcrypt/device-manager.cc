@@ -4,6 +4,11 @@
 
 #include "device-manager.h"
 
+#include <fuchsia/hardware/zxcrypt/c/fidl.h>
+#include <threads.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
+
 #include <crypto/secret.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -15,10 +20,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/zxcrypt/c/fidl.h>
-#include <threads.h>
-#include <zircon/errors.h>
-#include <zircon/status.h>
 #include <zxcrypt/ddk-volume.h>
 #include <zxcrypt/volume.h>
 

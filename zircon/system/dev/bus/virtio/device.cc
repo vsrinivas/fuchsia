@@ -10,13 +10,13 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/status.h>
+
+#include <utility>
 
 #include <ddk/debug.h>
 #include <hw/inout.h>
 #include <pretty/hexdump.h>
-#include <zircon/status.h>
-
-#include <utility>
 
 #include "trace.h"
 

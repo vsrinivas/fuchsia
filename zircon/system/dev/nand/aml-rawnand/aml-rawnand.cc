@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "aml-rawnand.h"
+
 #include <assert.h>
+
 #include <fbl/algorithm.h>
 
 namespace amlrawnand {

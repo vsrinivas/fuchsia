@@ -16,11 +16,11 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <soc/as370/as370-reset.h>
-#include <soc/as370/as370-usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
+#include <soc/as370/as370-reset.h>
+#include <soc/as370/as370-usb.h>
 
 namespace as370_usb_phy {
 

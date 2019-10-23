@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef CRYPTO_BYTES_H_
+#define CRYPTO_BYTES_H_
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
 
 // |crypto::Bytes| is a small helper class that simply wraps a buffer.  It saves on some boilerplate
 // when allocating a buffer.  More importantly, when going out of scope, the destructor guarantees
@@ -61,3 +62,5 @@ class __EXPORT Bytes final {
 };
 
 }  // namespace crypto
+
+#endif  // CRYPTO_BYTES_H_

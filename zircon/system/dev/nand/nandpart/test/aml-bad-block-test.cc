@@ -4,6 +4,9 @@
 
 #include "aml-bad-block.h"
 
+#include <lib/zx/vmar.h>
+#include <zircon/types.h>
+
 #include <utility>
 
 #include <ddk/protocol/nand.h>
@@ -13,8 +16,6 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/zx/vmar.h>
-#include <zircon/types.h>
 #include <zxtest/zxtest.h>
 
 #include "bad-block.h"

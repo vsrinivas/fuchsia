@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_HOST_FILE_WRAPPER_H_
+#define FVM_HOST_FILE_WRAPPER_H_
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <zircon/types.h>
+
+#include <utility>
 
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <utility>
-#include <zircon/types.h>
 
 // Namespace these classes to prevent collisions with minfs's FileWrapper.
 namespace fvm::host {
@@ -82,3 +84,5 @@ class UniqueFdWrapper : public FileWrapper {
 };
 
 }  // namespace fvm::host
+
+#endif  // FVM_HOST_FILE_WRAPPER_H_

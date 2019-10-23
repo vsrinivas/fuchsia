@@ -4,18 +4,19 @@
 
 #include "mtk-thermal.h"
 
+#include <lib/device-protocol/pdev.h>
+#include <zircon/rights.h>
+#include <zircon/threads.h>
+
 #include <cmath>
 
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/clock.h>
-#include <lib/device-protocol/pdev.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <zircon/rights.h>
-#include <zircon/threads.h>
 
 namespace {
 

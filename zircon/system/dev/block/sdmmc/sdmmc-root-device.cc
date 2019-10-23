@@ -5,11 +5,11 @@
 #include "sdmmc-root-device.h"
 
 #include <inttypes.h>
+#include <zircon/threads.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/threads.h>
 
 namespace sdmmc {
 

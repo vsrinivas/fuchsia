@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm-host/fvm-info.h"
 #include "fvm-host/sparse-paver.h"
 
 zx_status_t SparsePaver::Create(fbl::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size,

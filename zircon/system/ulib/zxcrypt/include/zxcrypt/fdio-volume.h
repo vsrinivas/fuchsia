@@ -5,15 +5,16 @@
 #ifndef ZXCRYPT_FDIO_VOLUME_H_
 #define ZXCRYPT_FDIO_VOLUME_H_
 
+#include <lib/fdio/fdio.h>
+#include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
+
 #include <crypto/secret.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
-#include <lib/zx/channel.h>
 #include <zxcrypt/volume.h>
 
 namespace zxcrypt {

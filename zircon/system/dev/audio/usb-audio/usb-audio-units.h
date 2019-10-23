@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_UNITS_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_UNITS_H_
+
+#include <zircon/hw/usb/audio.h>
+
+#include <utility>
 
 #include <fbl/array.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/hw/usb/audio.h>
-
-#include <utility>
 
 #include "usb-audio-descriptors.h"
 
@@ -424,3 +426,5 @@ class ExtensionUnit : public AudioUnit {
 
 }  // namespace usb
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_UNITS_H_

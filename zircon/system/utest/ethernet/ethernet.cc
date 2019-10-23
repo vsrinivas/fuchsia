@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/protocol/ethernet.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/intrusive_single_list.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <fuchsia/hardware/ethertap/c/fidl.h>
-#include <functional>
+#include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -23,22 +19,26 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <unittest/unittest.h>
-#include <zircon/compiler.h>
-#include <zircon/device/ethernet.h>
-#include <zircon/status.h>
-#include <zircon/types.h>
-
-#include <errno.h>
-#include <fcntl.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
+#include <zircon/device/ethernet.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
+#include <functional>
 #include <utility>
+
+#include <ddk/protocol/ethernet.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
+#include <unittest/unittest.h>
 
 // Delay for data to work through the system. The test will pause this long, so it's best
 // to keep it fairly short. If it's too short, the test will occasionally be flaky,

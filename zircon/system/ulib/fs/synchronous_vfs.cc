@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/synchronous_vfs.h>
-
-#include <fbl/unique_ptr.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 
 #include <utility>
+
+#include <fbl/unique_ptr.h>
+#include <fs/synchronous_vfs.h>
 
 namespace fs {
 

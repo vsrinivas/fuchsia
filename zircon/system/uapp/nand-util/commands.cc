@@ -5,6 +5,7 @@
 #include "commands.h"
 
 #include <fcntl.h>
+#include <lib/cksum.h>
 #include <stdio.h>
 
 #include <new>
@@ -12,7 +13,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <lib/cksum.h>
 
 #include "aml.h"
 

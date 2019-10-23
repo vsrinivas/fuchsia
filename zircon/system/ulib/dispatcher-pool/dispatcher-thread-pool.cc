@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
+
+#include <utility>
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
-
-#include <utility>
 
 #include "debug-logging.h"
 

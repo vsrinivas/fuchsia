@@ -5,11 +5,12 @@
 #ifndef TRACE_READER_READER_INTERNAL_H_
 #define TRACE_READER_READER_INTERNAL_H_
 
+#include <zircon/assert.h>
+
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <trace-engine/buffer_internal.h>
 #include <trace-reader/reader.h>
-#include <zircon/assert.h>
 
 namespace trace {
 namespace internal {

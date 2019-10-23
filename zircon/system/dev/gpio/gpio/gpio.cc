@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gpio.h"
+
+#include <zircon/types.h>
+
 #include <memory>
 
 #include <ddk/binding.h>
@@ -12,9 +16,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
-
-#include "gpio.h"
 
 namespace gpio {
 

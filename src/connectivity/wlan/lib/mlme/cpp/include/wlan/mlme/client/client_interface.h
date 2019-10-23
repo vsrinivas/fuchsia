@@ -5,13 +5,14 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_INTERFACE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_CLIENT_INTERFACE_H_
 
-#include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
+#include <zircon/types.h>
+
+#include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <zircon/types.h>
 
 namespace wlan {
 

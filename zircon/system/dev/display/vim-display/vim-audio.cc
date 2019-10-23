@@ -4,14 +4,15 @@
 
 #include "vim-audio.h"
 
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <math.h>
 
 #include <limits>
 #include <new>
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 
 #include "hdmitx.h"
 #include "vim-display.h"

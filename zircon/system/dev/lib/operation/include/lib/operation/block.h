@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_
+#define ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_
+
+#include <lib/operation/operation.h>
 
 #include <ddk/protocol/block.h>
-#include <lib/operation/operation.h>
 
 namespace block {
 
@@ -150,3 +152,5 @@ using BorrowedOperationQueue =
                                       Storage>;
 
 }  // namespace block
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_

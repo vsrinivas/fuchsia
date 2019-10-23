@@ -5,6 +5,10 @@
 #include "cadence-hpnfc.h"
 
 #include <endian.h>
+#include <lib/device-protocol/pdev.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/time.h>
+#include <zircon/threads.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -14,10 +18,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/device-protocol/pdev.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/time.h>
-#include <zircon/threads.h>
 
 #include "cadence-hpnfc-reg.h"
 
@@ -619,6 +619,5 @@ static zx_driver_ops_t cadence_hpnfc_driver_ops = []() -> zx_driver_ops_t {
 }();
 
 ZIRCON_DRIVER_BEGIN(cadence_hpnfc, cadence_hpnfc_driver_ops, "zircon", "0.1", 2)
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CADENCE_HPNFC),
-ZIRCON_DRIVER_END(cadence_hpnfc)
+BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CADENCE_HPNFC), ZIRCON_DRIVER_END(cadence_hpnfc)

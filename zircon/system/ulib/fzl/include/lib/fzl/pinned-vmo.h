@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_PINNED_VMO_H_
+#define LIB_FZL_PINNED_VMO_H_
 
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
-#include <fbl/macros.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 namespace fzl {
 
@@ -57,3 +59,5 @@ class PinnedVmo {
 };
 
 }  // namespace fzl
+
+#endif  // LIB_FZL_PINNED_VMO_H_

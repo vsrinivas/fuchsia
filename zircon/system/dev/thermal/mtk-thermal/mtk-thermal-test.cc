@@ -4,11 +4,12 @@
 
 #include "mtk-thermal.h"
 
-#include <fbl/unique_ptr.h>
 #include <lib/mock-function/mock-function.h>
+#include <lib/zircon-internal/thread_annotations.h>
+
+#include <fbl/unique_ptr.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 namespace {
 

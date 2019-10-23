@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef CRYPTO_HMAC_H_
+#define CRYPTO_HMAC_H_
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <crypto/bytes.h>
 #include <crypto/digest.h>
-#include <fbl/macros.h>
-#include <zircon/types.h>
 #include <crypto/secret.h>
+#include <fbl/macros.h>
 
 // |crypto::hmac| is a block-sized hash-bashed message authentication code.
 namespace crypto {
@@ -63,3 +64,5 @@ class __EXPORT HMAC final {
 };
 
 }  // namespace crypto
+
+#endif  // CRYPTO_HMAC_H_

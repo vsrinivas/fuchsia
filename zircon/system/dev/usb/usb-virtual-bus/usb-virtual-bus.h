@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_USB_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
+#define ZIRCON_SYSTEM_DEV_USB_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
+
+#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <lib/sync/completion.h>
+#include <threads.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -12,11 +17,7 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
-#include <lib/sync/completion.h>
 #include <usb/request-cpp.h>
-
-#include <threads.h>
 
 #include "usb-virtual-device.h"
 #include "usb-virtual-host.h"
@@ -129,3 +130,5 @@ class UsbVirtualBus : public UsbVirtualBusType,
 };
 
 }  // namespace usb_virtual_bus
+
+#endif  // ZIRCON_SYSTEM_DEV_USB_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_

@@ -5,10 +5,16 @@
 #include "ethernet.h"
 
 #include <assert.h>
+#include <lib/operation/ethernet.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
+
+#include <utility>
 
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
@@ -18,15 +24,9 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/operation/ethernet.h>
 #include <pretty/hexdump.h>
 #include <virtio/net.h>
 #include <virtio/virtio.h>
-#include <zircon/assert.h>
-#include <zircon/status.h>
-#include <zircon/types.h>
-
-#include <utility>
 
 #include "ring.h"
 #include "trace.h"

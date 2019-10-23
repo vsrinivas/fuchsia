@@ -4,6 +4,13 @@
 
 #include "hidctl.h"
 
+#include <fuchsia/hardware/hidctl/c/fidl.h>
+#include <stdio.h>
+#include <string.h>
+#include <zircon/compiler.h>
+
+#include <utility>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -11,14 +18,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
-#include <zircon/compiler.h>
-
-#include <fuchsia/hardware/hidctl/c/fidl.h>
-
-#include <stdio.h>
-#include <string.h>
-
-#include <utility>
 
 namespace hidctl {
 

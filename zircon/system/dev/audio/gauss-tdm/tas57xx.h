@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TAS57XX_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TAS57XX_H_
 
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c.h>
@@ -39,3 +40,5 @@ class Tas57xx : public fbl::unique_ptr<Tas57xx> {
 };
 }  // namespace gauss
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TAS57XX_H_

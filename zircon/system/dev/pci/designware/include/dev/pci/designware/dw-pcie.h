@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE
 
-#pragma once
-
-#include <stdint.h>
+#ifndef ZIRCON_SYSTEM_DEV_PCI_DESIGNWARE_INCLUDE_DEV_PCI_DESIGNWARE_DW_PCIE_H_
+#define ZIRCON_SYSTEM_DEV_PCI_DESIGNWARE_INCLUDE_DEV_PCI_DESIGNWARE_DW_PCIE_H_
 
 #include <lib/mmio/mmio.h>
-#include <fbl/unique_ptr.h>
+#include <stdint.h>
 #include <zircon/types.h>
 
-#include <dev/pci/designware/atu-cfg.h>
-
 #include <utility>
+
+#include <dev/pci/designware/atu-cfg.h>
+#include <fbl/unique_ptr.h>
 
 namespace pcie {
 namespace designware {
@@ -45,3 +45,5 @@ class DwPcie {
 
 }  // namespace designware
 }  // namespace pcie
+
+#endif  // ZIRCON_SYSTEM_DEV_PCI_DESIGNWARE_INCLUDE_DEV_PCI_DESIGNWARE_DW_PCIE_H_

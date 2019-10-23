@@ -1,13 +1,14 @@
 #include "kms-stateless/kms-stateless.h"
 
+#include <fcntl.h>
+#include <lib/fdio/watcher.h>
+#include <stdint.h>
+#include <stdio.h>
+
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fcntl.h>
-#include <lib/fdio/watcher.h>
 #include <ramdevice-client/ramdisk.h>
-#include <stdint.h>
-#include <stdio.h>
 
 #include "keysafe/keysafe.h"
 #include "tee-client-api/tee_client_api.h"

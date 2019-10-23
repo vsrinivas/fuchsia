@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_SYNCHRONOUS_VFS_H_
+#define FS_SYNCHRONOUS_VFS_H_
 
 #ifndef __Fuchsia__
 #error "Fuchsia-only header"
 #endif
 
 #include <lib/async/cpp/task.h>
-#include <fbl/intrusive_double_list.h>
+
 #include <fbl/function.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
 #include <fs/connection.h>
 #include <fs/vfs.h>
@@ -54,3 +56,5 @@ class SynchronousVfs : public Vfs {
 };
 
 }  // namespace fs
+
+#endif  // FS_SYNCHRONOUS_VFS_H_

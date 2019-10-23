@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/array.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
+#include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <inttypes.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/exception.h>
@@ -18,6 +15,12 @@
 #include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+#include <unistd.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
@@ -25,19 +28,17 @@
 #include <zircon/threads.h>
 
 #include <array>
-#include <assert.h>
 #include <atomic>
-#include <errno.h>
-#include <fcntl.h>
-#include <getopt.h>
-#include <inttypes.h>
-#include <limits.h>
 #include <shared_mutex>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/array.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "stress_test.h"
 

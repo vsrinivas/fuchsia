@@ -5,12 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_GTT_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_GTT_H_
 
+#include <lib/zx/bti.h>
+#include <lib/zx/vmo.h>
+
 #include <ddk/protocol/display/controller.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hwreg/mmio.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/vmo.h>
 #include <region-alloc/region-alloc.h>
 
 namespace i915 {

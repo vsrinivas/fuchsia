@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_TEST_UTILS_BLOBFS_BLOBLIST_H_
+#define FS_TEST_UTILS_BLOBFS_BLOBLIST_H_
 
 #include <fcntl.h>
+#include <lib/fdio/io.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
@@ -15,8 +18,6 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-test-utils/blobfs/blobfs.h>
-#include <lib/fdio/io.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 namespace fs_test_utils {
 
@@ -152,3 +153,5 @@ class BlobList {
 };
 
 }  // namespace fs_test_utils
+
+#endif  // FS_TEST_UTILS_BLOBFS_BLOBLIST_H_

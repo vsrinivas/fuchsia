@@ -103,12 +103,11 @@ TEST_F(UsbQmiTest, RequestImei) {
   zx::channel channel_local, channel_remote;
   ASSERT_EQ(zx::channel::create(0, &channel_local, &channel_remote), ZX_OK);
   auto result = llcpp::fuchsia::hardware::telephony::transport::Qmi::Call::SetChannel(
-      qmi_fdio_caller_.channel(),
-      std::move(channel_remote));
+      qmi_fdio_caller_.channel(), std::move(channel_remote));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->result.is_err(), false);
   ASSERT_EQ(zx::port::create(0, &channel_port), ZX_OK);
-  channel_local.wait_async(channel_port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 
+  channel_local.wait_async(channel_port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                            ZX_WAIT_ASYNC_ONCE);
   // send QMI message requesting IMEI
   ASSERT_EQ(channel_local.write(0, kQmiImeiReq, sizeof(kQmiImeiReq), nullptr, 0), ZX_OK);

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdio.h>
+#include <string.h>
+#include <zircon/device/audio.h>
+
 #include <audio-utils/audio-output.h>
 #include <audio-utils/audio-stream.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <stdio.h>
-#include <string.h>
-#include <zircon/device/audio.h>
 
 namespace audio {
 namespace utils {

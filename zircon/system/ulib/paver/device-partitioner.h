@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_
+#define ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_
 
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
@@ -316,3 +317,5 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
   zx::channel svc_root_;
 };
 }  // namespace paver
+
+#endif  // ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_

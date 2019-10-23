@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_TDM_AUDIO_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_TDM_AUDIO_H_
 
 #include <assert.h>
 #include <lib/mmio/mmio.h>
-#include <fbl/unique_ptr.h>
-#include <soc/aml-common/aml-audio-regs.h>
 
 #include <utility>
+
+#include <fbl/unique_ptr.h>
+#include <soc/aml-common/aml-audio-regs.h>
 
 class AmlTdmDevice {
  public:
@@ -139,3 +141,5 @@ class AmlTdmDevice {
   /* Get the register block offset for our tdm block */
   zx_off_t GetTdmOffset(zx_off_t off) { return tdm_base_ + off; }
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_TDM_AUDIO_H_

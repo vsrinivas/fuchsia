@@ -4,17 +4,18 @@
 
 #include "aml-pcie-device.h"
 
-#include <ddk/debug.h>
-#include <ddk/platform-defs.h>
-#include <ddktl/protocol/composite.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
 #include <lib/zx/bti.h>
 #include <zircon/driver/binding.h>
 
 #include <memory>
 #include <optional>
 #include <utility>
+
+#include <ddk/debug.h>
+#include <ddk/platform-defs.h>
+#include <ddktl/protocol/composite.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 
 #include "aml-pcie-clk.h"
 #include "aml-pcie.h"
@@ -26,7 +27,7 @@ namespace {
 struct FreeDeleter {
   void operator()(void* ptr) const { ::free(ptr); }
 };
-}
+}  // namespace
 
 const size_t kElbMmio = 0;
 const size_t kCfgMmio = 1;

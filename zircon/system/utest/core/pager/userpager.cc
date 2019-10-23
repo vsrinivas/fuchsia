@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <fbl/algorithm.h>
-#include <fbl/array.h>
-#include <fbl/auto_call.h>
+#include "userpager.h"
+
 #include <lib/zx/vmar.h>
 #include <string.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include "userpager.h"
+#include <atomic>
+
+#include <fbl/algorithm.h>
+#include <fbl/array.h>
+#include <fbl/auto_call.h>
 
 namespace pager_tests {
 

@@ -5,12 +5,15 @@
 #include "socket.h"
 
 #include <assert.h>
+#include <fuchsia/hardware/vsock/c/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-#include <fuchsia/hardware/vsock/c/fidl.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
@@ -19,12 +22,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/async/cpp/task.h>
 #include <pretty/hexdump.h>
 #include <virtio/virtio.h>
-#include <zircon/assert.h>
-#include <zircon/status.h>
-#include <zircon/types.h>
 
 namespace virtio {
 

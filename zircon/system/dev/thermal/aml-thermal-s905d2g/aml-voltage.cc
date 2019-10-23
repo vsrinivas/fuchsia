@@ -246,7 +246,8 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
       }
     }
     // Update new duty cycle.
-    status = (*pwm)->Configure(voltage_table_info_.voltage_table[*current_voltage_index].duty_cycle);
+    status =
+        (*pwm)->Configure(voltage_table_info_.voltage_table[*current_voltage_index].duty_cycle);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-voltage: Failed to set new duty_cycle %d\n", status);
       return status;

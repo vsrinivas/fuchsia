@@ -5,12 +5,6 @@
 #include "simple-display.h"
 
 #include <assert.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
-#include <ddktl/protocol/display/controller.h>
-#include <hw/pci.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +16,13 @@
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/pci.h>
+#include <ddktl/protocol/display/controller.h>
+#include <hw/pci.h>
 
 // implement display controller protocol
 static constexpr uint64_t kDisplayId = 1;

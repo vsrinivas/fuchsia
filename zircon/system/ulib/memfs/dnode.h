@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_MEMFS_DNODE_H_
+#define ZIRCON_SYSTEM_ULIB_MEMFS_DNODE_H_
 
+#include <lib/fdio/vfs.h>
 #include <limits.h>
 #include <string.h>
 
-#include <fs/vfs.h>
-#include <fs/vnode.h>
-#include <lib/fdio/vfs.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fs/vfs.h>
+#include <fs/vnode.h>
 
 namespace memfs {
 
@@ -123,3 +124,5 @@ class Dnode {
 };
 
 }  // namespace memfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MEMFS_DNODE_H_

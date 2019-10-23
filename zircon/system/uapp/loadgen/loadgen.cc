@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits>
 #include <stdio.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
+
+#include <limits>
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/errors.h>
-#include <zircon/syscalls.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
-
-#include <utility>
 
 static constexpr uint32_t kDefaultNumThreads = 4;
 static constexpr float kDefaultMinWorkMsec = 5.0f;

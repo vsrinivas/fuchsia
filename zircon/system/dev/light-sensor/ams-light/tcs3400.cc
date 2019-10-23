@@ -35,7 +35,7 @@ constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 // packed structs because those pointers could be misaligned. The warning
 // however can appear on areas where we just copy the value of the pointer
 // instead of access it. These macros silence it by casting to a void* and back.
-#define UNALIGNED_U16_PTR(val) (uint16_t *)((void *)val)
+#define UNALIGNED_U16_PTR(val) (uint16_t*)((void*)val)
 
 // clang-format off
 // zx_port_packet::type

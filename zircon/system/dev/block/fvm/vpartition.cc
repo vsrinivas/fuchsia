@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "vpartition.h"
+
+#include <zircon/assert.h>
+
 #include <type_traits>
 #include <utility>
 
@@ -9,10 +13,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <zircon/assert.h>
 
 #include "fvm-private.h"
-#include "vpartition.h"
 
 namespace fvm {
 

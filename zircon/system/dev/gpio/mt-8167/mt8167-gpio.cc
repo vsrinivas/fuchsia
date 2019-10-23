@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 #include <threads.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -14,8 +16,6 @@
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <zircon/syscalls/port.h>
-#include <zircon/types.h>
 
 namespace gpio {
 

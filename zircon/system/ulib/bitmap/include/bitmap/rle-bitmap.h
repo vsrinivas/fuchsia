@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <bitmap/bitmap.h>
+#ifndef BITMAP_RLE_BITMAP_H_
+#define BITMAP_RLE_BITMAP_H_
 
 #include <stddef.h>
-
 #include <zircon/types.h>
+
+#include <bitmap/bitmap.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 
@@ -130,3 +130,5 @@ struct RleBitmapElement : public fbl::DoublyLinkedListable<RleBitmapElementPtr> 
 };
 
 }  // namespace bitmap
+
+#endif  // BITMAP_RLE_BITMAP_H_

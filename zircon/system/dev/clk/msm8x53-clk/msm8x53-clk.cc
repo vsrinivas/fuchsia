@@ -4,6 +4,9 @@
 
 #include "msm8x53-clk.h"
 
+#include <fuchsia/hardware/clock/c/fidl.h>
+#include <lib/device-protocol/pdev.h>
+
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/clockimpl.h>
@@ -14,9 +17,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/clock/c/fidl.h>
 #include <hwreg/bitfields.h>
-#include <lib/device-protocol/pdev.h>
 
 #include "msm8x53-clk-regs.h"
 

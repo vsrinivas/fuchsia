@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <runtests-utils/runtests-utils.h>
-
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -21,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
@@ -28,8 +27,7 @@
 #include <fbl/string_piece.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-
-#include <utility>
+#include <runtests-utils/runtests-utils.h>
 
 namespace runtests {
 
@@ -381,8 +379,8 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
         // This makes it possible for the infra to trust the summary.json.
         FILE* output_file = fopen(output_filename, "w");
         if (output_file == nullptr) {
-          fprintf(stderr, "Error: Could not create output file %s: %s\n",
-                  output_filename, strerror(errno));
+          fprintf(stderr, "Error: Could not create output file %s: %s\n", output_filename,
+                  strerror(errno));
           return false;
         }
         fclose(output_file);

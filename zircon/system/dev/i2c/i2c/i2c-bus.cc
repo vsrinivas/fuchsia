@@ -4,18 +4,18 @@
 
 #include "i2c-bus.h"
 
+#include <lib/device-protocol/i2c.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-
-#include <ddk/debug.h>
-#include <lib/device-protocol/i2c.h>
-#include <fbl/array.h>
-#include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
+
+#include <ddk/debug.h>
+#include <fbl/array.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 
 namespace i2c {
 

@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-audio-device.h"
+
+#include <string.h>
+
+#include <utility>
+
 #include <ddk/binding.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
-#include <string.h>
 
-#include <utility>
-
-#include "usb-audio.h"
-#include "usb-audio-device.h"
-#include "usb-audio-stream.h"
 #include "usb-audio-stream-interface.h"
+#include "usb-audio-stream.h"
+#include "usb-audio.h"
 #include "usb-midi-sink.h"
 #include "usb-midi-source.h"
 

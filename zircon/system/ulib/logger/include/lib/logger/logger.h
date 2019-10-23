@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_LOGGER_LOGGER_H_
+#define LIB_LOGGER_LOGGER_H_
+
+#include <lib/async/cpp/wait.h>
+#include <lib/fidl/cpp/message_buffer.h>
+#include <lib/syslog/wire_format.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
+#include <stdint.h>
+
+#include <utility>
 
 #include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/fidl/cpp/message_buffer.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/socket.h>
-#include <stdint.h>
-#include <lib/syslog/wire_format.h>
-
-#include <utility>
 
 namespace logger {
 
@@ -56,3 +58,5 @@ class LoggerImpl : public fbl::SinglyLinkedListable<fbl::unique_ptr<LoggerImpl>>
 };
 
 }  // namespace logger
+
+#endif  // LIB_LOGGER_LOGGER_H_

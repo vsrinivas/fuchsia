@@ -4,18 +4,18 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
+#include <lib/fzl/fdio.h>
+#include <lib/fzl/time.h>
+#include <lib/zx/time.h>
 #include <string.h>
+#include <zircon/assert.h>
 
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-test-utils/perftest.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fzl/fdio.h>
-#include <lib/fzl/time.h>
-#include <lib/zx/time.h>
-#include <zircon/assert.h>
 
 namespace fs_test_utils {
 namespace {

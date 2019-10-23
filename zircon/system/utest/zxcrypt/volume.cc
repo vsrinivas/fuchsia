@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <crypto/cipher.h>
-#include <crypto/secret.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
-#include <kms-stateless/kms-stateless.h>
 #include <lib/fzl/fdio.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <unittest/unittest.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-#include <zxcrypt/fdio-volume.h>
-#include <zxcrypt/volume.h>
 
 #include <memory>
 #include <utility>
+
+#include <crypto/cipher.h>
+#include <crypto/secret.h>
+#include <kms-stateless/kms-stateless.h>
+#include <unittest/unittest.h>
+#include <zxcrypt/fdio-volume.h>
+#include <zxcrypt/volume.h>
 
 #include "test-device.h"
 

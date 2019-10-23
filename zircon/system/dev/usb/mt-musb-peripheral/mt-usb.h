@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_USB_MT_MUSB_PERIPHERAL_MT_USB_H_
+#define ZIRCON_SYSTEM_DEV_USB_MT_MUSB_PERIPHERAL_MT_USB_H_
+
+#include <lib/device-protocol/pdev.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/interrupt.h>
+#include <threads.h>
+#include <zircon/hw/usb.h>
 
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
-#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/usb/dci.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zx/handle.h>
-#include <lib/zx/interrupt.h>
 #include <usb/request-cpp.h>
-#include <zircon/hw/usb.h>
-
-#include <threads.h>
 
 namespace mt_usb {
 
@@ -146,3 +147,5 @@ class MtUsb : public MtUsbType, public ddk::UsbDciProtocol<MtUsb, ddk::base_prot
 };
 
 }  // namespace mt_usb
+
+#endif  // ZIRCON_SYSTEM_DEV_USB_MT_MUSB_PERIPHERAL_MT_USB_H_

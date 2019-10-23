@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
 #include <errno.h>
-#include <fbl/unique_fd.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fvm/format.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include <crypto/bytes.h>
+#include <crypto/cipher.h>
+#include <fbl/unique_fd.h>
+#include <fvm/format.h>
+#include <unittest/unittest.h>
 #include <zxcrypt/volume.h>
 
 #include "test-device.h"

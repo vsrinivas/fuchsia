@@ -2,9 +2,10 @@
 #define KMS_STATELESS_KMS_STATELESS_H_
 
 #include <stdint.h>
+#include <zircon/types.h>
+
 #include <fbl/function.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/types.h>
 
 namespace kms_stateless {
 const size_t kExpectedKeyInfoSize = 32;

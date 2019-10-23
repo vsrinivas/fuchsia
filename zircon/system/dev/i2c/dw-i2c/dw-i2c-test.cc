@@ -4,11 +4,16 @@
 
 #include "dw-i2c.h"
 
+#include <lib/device-protocol/platform-device.h>
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -23,12 +28,7 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/sync/completion.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
-#include <zircon/assert.h>
-#include <zircon/process.h>
 #include <zxtest/zxtest.h>
 
 namespace dw_i2c {

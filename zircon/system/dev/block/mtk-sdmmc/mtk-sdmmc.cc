@@ -4,7 +4,12 @@
 
 #include "mtk-sdmmc.h"
 
+#include <lib/device-protocol/pdev.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <unistd.h>
+#include <zircon/device/block.h>
+
+#include <utility>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -12,16 +17,11 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/composite.h>
-#include <lib/device-protocol/pdev.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/sdio.h>
 #include <hw/sdmmc.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <zircon/device/block.h>
-
-#include <utility>
 
 #include "dma_descriptors.h"
 

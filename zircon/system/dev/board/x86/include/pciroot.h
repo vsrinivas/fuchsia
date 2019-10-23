@@ -1,10 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_PCIROOT_H_
+#define ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_PCIROOT_H_
+#include <string.h>
+
 #include <ddk/protocol/pciroot.h>
 #include <region-alloc/region-alloc.h>
-#include <string.h>
 
 __BEGIN_CDECLS
 
@@ -16,12 +18,14 @@ __END_CDECLS
 // still has kpci.c. In lieu of needlessly porting that, it's simpler to ifdef the
 // DDKTL usage away from it until we can remove it entirely.
 #ifdef __cplusplus
-#include "pci.h"
+#include <lib/zx/bti.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zx/bti.h>
+
+#include "pci.h"
 
 class Pciroot;
 using PcirootType = ddk::Device<Pciroot>;
@@ -85,3 +89,5 @@ class Pciroot : public PcirootType, public ddk::PcirootProtocol<Pciroot, ddk::ba
 };
 
 #endif
+
+#endif  // ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_PCIROOT_H_

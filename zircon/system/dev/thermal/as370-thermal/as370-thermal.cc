@@ -4,6 +4,9 @@
 
 #include "as370-thermal.h"
 
+#include <lib/device-protocol/pdev.h>
+#include <lib/zx/time.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -12,8 +15,6 @@
 #include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <lib/device-protocol/pdev.h>
-#include <lib/zx/time.h>
 
 #include "as370-thermal-reg.h"
 
@@ -269,4 +270,4 @@ ZIRCON_DRIVER_BEGIN(as370_thermal, as370_thermal_driver_ops, "zircon", "0.1", 3)
   BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
   BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_THERMAL),
 ZIRCON_DRIVER_END(as370_thermal)
-// clang-format on
+    // clang-format on

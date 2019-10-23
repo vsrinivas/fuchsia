@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FIDL_HELPER_H_
+#define ZIRCON_SYSTEM_DEV_LIB_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FIDL_HELPER_H_
 
-#include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/unique_ptr.h>
 
 namespace fake_ddk {
 
@@ -83,3 +85,5 @@ class FidlMessenger {
 };
 
 }  // namespace fake_ddk
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FIDL_HELPER_H_

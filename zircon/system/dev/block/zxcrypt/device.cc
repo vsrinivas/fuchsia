@@ -4,12 +4,6 @@
 
 #include "device.h"
 
-#include <ddk/debug.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <inttypes.h>
 #include <string.h>
 #include <zircon/errors.h>
@@ -17,6 +11,13 @@
 #include <zircon/syscalls/port.h>
 
 #include <utility>
+
+#include <ddk/debug.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 
 #include "debug.h"
 #include "device-info.h"

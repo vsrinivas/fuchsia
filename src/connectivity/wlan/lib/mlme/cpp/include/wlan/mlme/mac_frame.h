@@ -5,18 +5,19 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 
+#include <lib/fit/function.h>
+#include <lib/zx/time.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <cstdint>
 
 #include <fbl/unique_ptr.h>
-#include <lib/fit/function.h>
-#include <lib/zx/time.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/frame_validation.h>
 #include <wlan/mlme/packet.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace wlan {
 

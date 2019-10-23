@@ -5,11 +5,13 @@
 #ifndef FBL_INTRUSIVE_POINTER_TRAITS_H_
 #define FBL_INTRUSIVE_POINTER_TRAITS_H_
 
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
-#include <memory>
 #include <stdint.h>
 #include <zircon/compiler.h>
+
+#include <memory>
+
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 namespace fbl {
 namespace internal {
@@ -100,7 +102,9 @@ struct ContainerPtrTraits<::fbl::RefPtr<T>> {
   static inline T* GetRaw(const PtrType& ptr) { return ptr.get(); }
   static inline PtrType Copy(const RawPtrType& ptr) { return PtrType(ptr); }
 
-  static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT { return fbl::ExportToRawPtr(&ptr); }
+  static inline RawPtrType Leak(PtrType& ptr) __WARN_UNUSED_RESULT {
+    return fbl::ExportToRawPtr(&ptr);
+  }
 
   static inline PtrType Reclaim(RawPtrType ptr) { return ::fbl::ImportFromRawPtr(ptr); }
 };

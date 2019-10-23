@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "runtests-utils-test-utils.h"
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -21,7 +23,6 @@
 #include <unittest/unittest.h>
 
 #include "runtests-utils-test-globals.h"
-#include "runtests-utils-test-utils.h"
 
 namespace runtests {
 

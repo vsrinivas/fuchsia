@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/fzl/resizeable-vmo-mapper.h>
-#include <unittest/unittest.h>
+
+#include <utility>
 
 #include <fbl/algorithm.h>
-#include <utility>
+#include <unittest/unittest.h>
 
 // Note: these tests focus on the added functionality of the resizable VMO
 // mapper.  The core functionality is assumed to have already been tested by the

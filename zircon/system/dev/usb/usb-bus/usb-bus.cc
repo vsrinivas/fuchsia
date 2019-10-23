@@ -4,14 +4,14 @@
 
 #include "usb-bus.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "usb-device.h"
 

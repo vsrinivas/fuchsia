@@ -182,9 +182,8 @@ static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint3
     return status;
   }
 
-  auto result =
-      fuchsia_io::Directory::Call::Open(std::move(root_channel), flags, mode,
-                                        fidl::StringView(path), std::move(channel_server_end));
+  auto result = fuchsia_io::Directory::Call::Open(
+      std::move(root_channel), flags, mode, fidl::StringView(path), std::move(channel_server_end));
   status = result.status();
   if (status != ZX_OK) {
     zxlogf(ERROR, "optee::%s: could not call fuchsia.io.Directory/Open (status: %d)\n",
@@ -243,8 +242,8 @@ static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
     for (const auto& component : path) {
       zx::channel temporary_channel;
       static constexpr uint32_t kOpenMode = fuchsia_io::MODE_TYPE_DIRECTORY;
-      status = OpenObjectInDirectory(std::move(current_channel), kOpenFlags, kOpenMode, component.string(),
-                                     &temporary_channel);
+      status = OpenObjectInDirectory(std::move(current_channel), kOpenFlags, kOpenMode,
+                                     component.string(), &temporary_channel);
       if (status != ZX_OK) {
         return status;
       }
@@ -1003,8 +1002,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
       fuchsia_io::OPEN_RIGHT_READABLE | fuchsia_io::OPEN_RIGHT_WRITABLE |
       fuchsia_io::OPEN_FLAG_NOT_DIRECTORY | fuchsia_io::OPEN_FLAG_DESCRIBE;
   static constexpr uint32_t kOpenMode = fuchsia_io::MODE_TYPE_FILE;
-  status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kOpenFlags, kOpenMode, path.filename().string(),
-                                 &file_channel);
+  status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kOpenFlags, kOpenMode,
+                                 path.filename().string(), &file_channel);
   if (status == ZX_ERR_NOT_FOUND) {
     zxlogf(ERROR, "optee::%s: file not found (status: %d)\n", __FUNCTION__, status);
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
@@ -1312,8 +1311,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
         fuchsia_io::OPEN_RIGHT_READABLE | fuchsia_io::OPEN_FLAG_DESCRIBE;
     static constexpr uint32_t kCheckRenameMode =
         fuchsia_io::MODE_TYPE_FILE | fuchsia_io::MODE_TYPE_DIRECTORY;
-    status = OpenObjectInDirectory(zx::unowned_channel(new_storage_channel), kCheckRenameFlags, kCheckRenameMode,
-                                   new_name, &destination_channel);
+    status = OpenObjectInDirectory(zx::unowned_channel(new_storage_channel), kCheckRenameFlags,
+                                   kCheckRenameMode, new_name, &destination_channel);
     if (status == ZX_OK) {
       // The file exists but shouldn't be overwritten
       zxlogf(INFO,

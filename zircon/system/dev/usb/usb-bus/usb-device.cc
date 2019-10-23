@@ -4,6 +4,9 @@
 
 #include "usb-device.h"
 
+#include <fuchsia/hardware/usb/device/c/fidl.h>
+#include <zircon/hw/usb.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -11,9 +14,7 @@
 #include <ddk/protocol/usb/bus.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/usb/device/c/fidl.h>
 #include <utf_conversion/utf_conversion.h>
-#include <zircon/hw/usb.h>
 
 #include "usb-bus.h"
 
@@ -423,9 +424,8 @@ zx_status_t UsbDevice::UsbSetInterface(uint8_t interface_number, uint8_t alt_set
 
 uint8_t UsbDevice::UsbGetConfiguration() {
   fbl::AutoLock lock(&state_lock_);
-  auto* descriptor =
-      reinterpret_cast<usb_configuration_descriptor_t*>(
-          config_descs_[current_config_index_].data());
+  auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(
+      config_descs_[current_config_index_].data());
   return descriptor->bConfigurationValue;
 }
 
@@ -516,18 +516,16 @@ zx_status_t UsbDevice::UsbGetConfigurationDescriptor(uint8_t configuration, void
 
 size_t UsbDevice::UsbGetDescriptorsLength() {
   fbl::AutoLock lock(&state_lock_);
-  auto* config_desc =
-      reinterpret_cast<usb_configuration_descriptor_t*>(
-          config_descs_[current_config_index_].data());
+  auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(
+      config_descs_[current_config_index_].data());
   return le16toh(config_desc->wTotalLength);
 }
 
 void UsbDevice::UsbGetDescriptors(void* out_descs_buffer, size_t descs_size,
                                   size_t* out_descs_actual) {
   fbl::AutoLock lock(&state_lock_);
-  auto* config_desc =
-      reinterpret_cast<usb_configuration_descriptor_t*>(
-          config_descs_[current_config_index_].data());
+  auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(
+      config_descs_[current_config_index_].data());
   size_t length = le16toh(config_desc->wTotalLength);
   if (length > descs_size) {
     length = descs_size;
@@ -711,9 +709,8 @@ zx_status_t UsbDevice::MsgGetHubDeviceId(fidl_txn_t* txn) {
 zx_status_t UsbDevice::MsgGetConfiguration(fidl_txn_t* txn) {
   fbl::AutoLock lock(&state_lock_);
 
-  auto* descriptor =
-      reinterpret_cast<usb_configuration_descriptor_t*>(
-          config_descs_[current_config_index_].data());
+  auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(
+      config_descs_[current_config_index_].data());
   return fuchsia_hardware_usb_device_DeviceGetConfiguration_reply(txn,
                                                                   descriptor->bConfigurationValue);
 }
@@ -874,9 +871,8 @@ zx_status_t UsbDevice::Init() {
   current_config_index_ = static_cast<uint8_t>(configuration - 1);
 
   // set configuration
-  auto* config_desc =
-      reinterpret_cast<usb_configuration_descriptor_t*>(
-          config_descs_[current_config_index_].data());
+  auto* config_desc = reinterpret_cast<usb_configuration_descriptor_t*>(
+      config_descs_[current_config_index_].data());
   status =
       UsbControlOut(USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_SET_CONFIGURATION,
                     config_desc->bConfigurationValue, 0, ZX_TIME_INFINITE, nullptr, 0);
@@ -924,9 +920,8 @@ zx_status_t UsbDevice::Reinitialize() {
   }
   resetting_ = false;
 
-  auto* descriptor =
-      reinterpret_cast<usb_configuration_descriptor_t*>(
-          config_descs_[current_config_index_].data());
+  auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(
+      config_descs_[current_config_index_].data());
   auto status =
       UsbControlOut(USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE, USB_REQ_SET_CONFIGURATION,
                     descriptor->bConfigurationValue, 0, ZX_TIME_INFINITE, nullptr, 0);

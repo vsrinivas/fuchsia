@@ -2,18 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FZL_VMO_POOL_H_
+#define LIB_FZL_VMO_POOL_H_
+
+#include <lib/fzl/pinned-vmo.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/vmo.h>
+#include <zircon/types.h>
+
+#include <limits>
+#include <optional>
 
 #include <fbl/array.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/fzl/pinned-vmo.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/vmo.h>
-#include <limits>
-#include <optional>
-#include <zircon/types.h>
 
 namespace fzl {
 
@@ -184,3 +187,5 @@ class VmoPool {
 };
 
 }  // namespace fzl
+
+#endif  // LIB_FZL_VMO_POOL_H_
