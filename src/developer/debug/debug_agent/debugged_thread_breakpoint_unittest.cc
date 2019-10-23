@@ -19,11 +19,6 @@ namespace {
 
 class MockArchProvider : public arch::ArchProvider {
  public:
-  debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&,
-                                               uint32_t exception_type) override {
-    return exception_type_;
-  }
-
   zx_status_t ReadGeneralState(const zx::thread&, zx_thread_state_general_regs*) override {
     return ZX_OK;
   }
@@ -43,16 +38,26 @@ class MockArchProvider : public arch::ArchProvider {
 
   uint64_t* IPInRegs(zx_thread_state_general_regs* regs) override { return &exception_addr_; }
 
+  bool IsBreakpointInstruction(zx::process& process, uint64_t address) override {
+    for (uint64_t addr : breakpoints_) {
+      if (addr == address)
+        return true;
+    }
+
+    return false;
+  }
+
   uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) override {
     return exception_addr;
   }
 
   void set_exception_addr(uint64_t addr) { exception_addr_ = addr; }
-  void set_exception_type(debug_ipc::ExceptionType type) { exception_type_ = type; }
+
+  void AppendBreakpoint(uint64_t addr) { breakpoints_.push_back(addr); }
 
  private:
   uint64_t exception_addr_ = 0;
-  debug_ipc::ExceptionType exception_type_ = debug_ipc::ExceptionType::kLast;
+  std::vector<uint64_t> breakpoints_;
 };
 
 class TestProcess : public MockProcess {
@@ -89,6 +94,15 @@ class TestStreamBackend : public LocalStreamBackend {
 
  private:
   std::vector<debug_ipc::NotifyException> exceptions_;
+};
+
+class MockProcessDelegate : public Breakpoint::ProcessDelegate {
+ public:
+  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                 uint64_t address) override {
+    return ZX_OK;
+  }
+  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override {}
 };
 
 // Helpers -----------------------------------------------------------------------------------------
@@ -132,6 +146,17 @@ std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
   return {process, thread};
 }
 
+// If |thread| is null, it means a process-wide breakpoint.
+debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_koid_t thread_koid,
+                                                    uint64_t address) {
+  debug_ipc::ProcessBreakpointSettings location = {};
+  location.process_koid = process_koid;
+  location.thread_koid = thread_koid;
+  location.address = address;
+
+  return location;
+}
+
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(DebuggedThreadBreakpoint, NormalException) {
@@ -155,7 +180,6 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
   context.arch_provider->set_exception_addr(kAddress);
-  context.arch_provider->set_exception_type(debug_ipc::ExceptionType::kPageFault);
 
   // Trigger the exception.
   zx_exception_info exception_info = {};
@@ -171,6 +195,88 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
     EXPECT_EQ(context.backend->exceptions()[0].hit_breakpoints.size(), 0u);
 
     auto& thread_record = context.backend->exceptions()[0].thread;
+    EXPECT_EQ(thread_record.process_koid, proc_object->koid);
+    EXPECT_EQ(thread_record.thread_koid, thread_object->koid);
+    EXPECT_EQ(thread_record.state, debug_ipc::ThreadRecord::State::kBlocked);
+    EXPECT_EQ(thread_record.blocked_reason, debug_ipc::ThreadRecord::BlockedReason::kException);
+    EXPECT_EQ(thread_record.stack_amount, debug_ipc::ThreadRecord::StackAmount::kMinimal);
+  }
+}
+
+TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
+  TestContext context = CreateTestContext();
+
+  // Create a process from our mocked object hierarchy.
+  auto [proc_object, thread_object] =
+      GetProcessThread(*context.object_provider, "job121-p2", "second-thread");
+  TestProcess process(context.debug_agent.get(), proc_object->koid, proc_object->name,
+                      context.arch_provider, context.object_provider);
+
+  // Create the thread that will be on an exception.
+  DebuggedThread::CreateInfo create_info = {};
+  create_info.process = &process;
+  create_info.koid = thread_object->koid;
+  create_info.handle = thread_object->GetHandle();
+  create_info.arch_provider = context.arch_provider;
+  create_info.object_provider = context.object_provider;
+  DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
+
+  // Set the exception information the arch provider is going to return.
+  constexpr uint64_t kAddress = 0xdeadbeef;
+  context.arch_provider->set_exception_addr(kAddress);
+
+  // Trigger the exception.
+  zx_exception_info exception_info = {};
+  exception_info.pid = proc_object->koid;
+  exception_info.tid = thread_object->koid;
+  exception_info.type = ZX_EXCP_SW_BREAKPOINT;
+  thread.OnException(zx::exception(), exception_info);
+
+  // We should've received an exception notification.
+  ASSERT_EQ(context.backend->exceptions().size(), 1u);
+  {
+    auto& exception = context.backend->exceptions()[0];
+
+    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftware)
+        << debug_ipc::ExceptionTypeToString(exception.type);
+    EXPECT_EQ(exception.hit_breakpoints.size(), 0u);
+
+    auto& thread_record = exception.thread;
+    EXPECT_EQ(thread_record.process_koid, proc_object->koid);
+    EXPECT_EQ(thread_record.thread_koid, thread_object->koid);
+    EXPECT_EQ(thread_record.state, debug_ipc::ThreadRecord::State::kBlocked);
+    EXPECT_EQ(thread_record.blocked_reason, debug_ipc::ThreadRecord::BlockedReason::kException);
+    EXPECT_EQ(thread_record.stack_amount, debug_ipc::ThreadRecord::StackAmount::kMinimal);
+  }
+
+  // Add a breakpoint on that address.
+  constexpr uint32_t kBreakpointId = 1000;
+  MockProcessDelegate process_delegate;
+  auto breakpoint = std::make_unique<Breakpoint>(&process_delegate);
+  debug_ipc::BreakpointSettings settings = {};
+  settings.id = kBreakpointId;
+  settings.locations.push_back(CreateLocation(proc_object->koid, 0, kAddress));
+  breakpoint->SetSettings(debug_ipc::BreakpointType::kSoftware, settings);
+
+  process.AppendProcessBreakpoint(breakpoint.get(), kAddress);
+  context.arch_provider->AppendBreakpoint(kAddress);
+
+  // Throw the same breakpoint exception.
+  thread.OnException(zx::exception(), exception_info);
+
+  // We should've received an exception notification with hit breakpoints.
+  ASSERT_EQ(context.backend->exceptions().size(), 2u);
+  {
+    auto& exception = context.backend->exceptions()[1];
+
+    EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftware)
+        << debug_ipc::ExceptionTypeToString(exception.type);
+    ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
+    EXPECT_EQ(exception.hit_breakpoints[0].id, breakpoint->stats().id);
+
+    EXPECT_EQ(breakpoint->stats().hit_count, 1u);
+
+    auto& thread_record = exception.thread;
     EXPECT_EQ(thread_record.process_koid, proc_object->koid);
     EXPECT_EQ(thread_record.thread_koid, thread_object->koid);
     EXPECT_EQ(thread_record.state, debug_ipc::ThreadRecord::State::kBlocked);

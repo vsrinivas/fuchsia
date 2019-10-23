@@ -77,7 +77,7 @@ class ArchProvider {
   // This doesn't just check equality of kBreakInstruction which is guaranteed
   // to be used for our breakpoints, but also checks other encodings that may
   // have been written into the program.
-  bool IsBreakpointInstruction(zx::process& process, uint64_t address);
+  virtual bool IsBreakpointInstruction(zx::process& process, uint64_t address);
 
   // Converts the given register structure to a vector of debug_ipc registers.
   static void SaveGeneralRegs(const zx_thread_state_general_regs& input,
