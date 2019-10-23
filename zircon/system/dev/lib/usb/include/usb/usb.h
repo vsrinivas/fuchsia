@@ -191,9 +191,7 @@ class DescriptorList {
     iterator_impl(const usb_desc_iter_t& iter, const usb_descriptor_header_t* header)
         : iter_(iter), header_(header) {}
 
-    bool operator==(const iterator_impl& other) const {
-      return (other.header_ == header_);
-    }
+    bool operator==(const iterator_impl& other) const { return (other.header_ == header_); }
     bool operator!=(const iterator_impl& other) const { return !(*this == other); }
 
     iterator_impl operator++(int) {
@@ -291,13 +289,6 @@ class EndpointList {
 
 class Interface {
  public:
-  Interface() = delete;
-  Interface(Interface&&) = delete;
-  Interface(const Interface& interface) {
-    iter_ = interface.iter_;
-    descriptor_ = interface.descriptor_;
-  }
-
   DescriptorList GetDescriptorList() const;
   EndpointList GetEndpointList() const;
   const usb_interface_descriptor_t* descriptor() const { return descriptor_; }
