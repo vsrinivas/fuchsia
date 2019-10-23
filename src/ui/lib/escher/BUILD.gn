@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//src/graphics/lib/vulkan/layers.gni")
 
 declare_args() {
@@ -25,7 +26,7 @@ test_package("escher_tests") {
   tests = [
     {
       name = "escher_unittests"
-      environments = basic_envs
+      environments = basic_envs + magma_libvulkan_hardware_envs
     },
   ]
 

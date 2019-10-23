@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//src/graphics/lib/vulkan/layers.gni")
 
 group("ui") {
@@ -53,15 +54,15 @@ test_package("scenic_tests") {
     },
     {
       name = "gfx_pixeltests"
-      environments = [ nuc_env ]
+      environments = magma_libvulkan_hardware_envs
     },
     {
       name = "gfx_swapchain_tests"
-      environments = [ nuc_env ]
+      environments = magma_libvulkan_hardware_envs
     },
     {
       name = "gfx_unittests"
-      environments = basic_envs
+      environments = basic_envs + magma_libvulkan_hardware_envs
     },
     {
       name = "gfx_util_unittests"
@@ -69,7 +70,7 @@ test_package("scenic_tests") {
     },
     {
       name = "gfx_viewstate_apptests"
-      environments = [ nuc_env ]
+      environments = magma_libvulkan_hardware_envs
     },
     {
       name = "geometry_util_unittests"
