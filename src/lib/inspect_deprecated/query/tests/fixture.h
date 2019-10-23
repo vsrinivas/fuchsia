@@ -20,7 +20,10 @@ class TestFixture : public gtest::RealLoopFixture {
     ZX_ASSERT(promise_loop_.StartThread() == ZX_OK);
   }
 
-  ~TestFixture() override { promise_loop_.Quit(); }
+  ~TestFixture() override {
+    promise_loop_.Quit();
+    promise_loop_.JoinThreads();
+  }
 
   void SchedulePromise(fit::pending_task promise) { executor_.schedule_task(std::move(promise)); }
 
