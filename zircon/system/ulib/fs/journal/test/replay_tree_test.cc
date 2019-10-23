@@ -104,5 +104,24 @@ TEST(ReplayTreeTest, OverlappingDevOffsetTakesLatest) {
   ExpectOperationsEqual(operation_b, tree.begin()->second.container().operation);
 }
 
+// Vmo offset: Different
+// Dev offset: Overlapping
+// Result: Split prior operation
+TEST(ReplayTreeTest, NonContiguousVmoOffsetUpdateBreaksMergedOperations) {
+  ReplayTree tree;
+  storage::BufferedOperation o1 = MakeOperation(0, 0, 1);
+  storage::BufferedOperation o2 = MakeOperation(1, 1, 1);
+  storage::BufferedOperation o3 = MakeOperation(2, 0, 1);
+  tree.insert(o1);
+  tree.insert(o2);
+  tree.insert(o3);
+  ASSERT_EQ(2, tree.size());
+  auto iter = tree.begin();
+  ExpectOperationsEqual(o3, iter->second.container().operation);
+  iter++;
+  ExpectOperationsEqual(o2, iter->second.container().operation);
+  iter++;
+}
+
 }  // namespace
 }  // namespace fs

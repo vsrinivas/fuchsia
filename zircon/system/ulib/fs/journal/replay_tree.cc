@@ -40,8 +40,6 @@ zx_status_t RangeTraits::Update(const RangeContainer* other, uint64_t start, uin
         (other->operation.op.dev_offset - obj->operation.op.dev_offset)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    obj->operation.op.vmo_offset =
-        std::min(obj->operation.op.vmo_offset, other->operation.op.vmo_offset);
   }
   obj->Update(start, end);
   return ZX_OK;
