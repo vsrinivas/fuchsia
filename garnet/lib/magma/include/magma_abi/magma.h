@@ -414,9 +414,9 @@ magma_status_t magma_import_semaphore(
     magma_semaphore_t* semaphore_out);
 
 ///
-/// \brief Returns a uint32_t (zx_handle_t) that can be waited on to determine when the connection
-///        has data in the notification channel. This channel has the same lifetime as the
-///        connection and must not be closed by the client.
+/// \brief Returns a handle that can be waited on to determine when the connection has data in the
+///        notification channel. This channel has the same lifetime as the connection and must not
+///        be closed by the client.
 /// \param connection An open connection.
 ///
 magma_handle_t magma_get_notification_channel_handle(
