@@ -19,12 +19,13 @@
       },
       "members": [
         {
+          "xunion_ordinal": 910042901,
+          "reserved": false,
           "name": "Primitive",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "xunion_ordinal": 910042901,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 4,
@@ -36,12 +37,13 @@
           "offset": 8
         },
         {
+          "xunion_ordinal": 891204917,
+          "reserved": false,
           "name": "StringNeedsConstructor",
           "type": {
             "kind": "string",
             "nullable": false
           },
-          "xunion_ordinal": 891204917,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 5,
@@ -53,6 +55,8 @@
           "offset": 8
         },
         {
+          "xunion_ordinal": 1452916587,
+          "reserved": false,
           "name": "VectorStringAlsoNeedsConstructor",
           "type": {
             "kind": "vector",
@@ -62,7 +66,6 @@
             },
             "nullable": false
           },
-          "xunion_ordinal": 1452916587,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 6,
@@ -106,12 +109,13 @@
       },
       "members": [
         {
+          "xunion_ordinal": 1574011787,
+          "reserved": false,
           "name": "field_collision_tag",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "xunion_ordinal": 1574011787,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
             "line": 10,

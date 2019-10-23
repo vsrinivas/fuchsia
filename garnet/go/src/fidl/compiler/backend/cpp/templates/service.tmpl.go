@@ -13,6 +13,9 @@ class {{ .Name }};
 
 {{- define "ServiceDeclaration" }}
 #ifdef __Fuchsia__
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 class {{ .Name }} final {
  public:
   class Handler;
@@ -25,6 +28,7 @@ class {{ .Name }} final {
   explicit operator bool() const { return !!service_; }
 
   {{- range .Members }}
+  // Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "{{ .Name }}".
   ::fidl::MemberConnector<{{ .InterfaceType }}> {{ .MethodName }}() const {
     return ::fidl::MemberConnector<{{ .InterfaceType }}>(service_.get(), "{{ .Name }}");
   }
@@ -34,11 +38,19 @@ class {{ .Name }} final {
   std::unique_ptr<::fidl::ServiceConnector> service_;
 };
 
+// Facilitates member protocol registration for servers.
 class {{ .Name }}::Handler final {
  public:
+  // Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
 
   {{- range .Members }}
+  // Adds member "{{ .Name }}" to the service instance. |handler| is invoked when a connection
+  // is made to the member protocol.
+  //
+  // # Errors
+  //
+  // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
   zx_status_t add_{{ .Name }}(::fidl::InterfaceRequestHandler<{{ .InterfaceType }}> handler) {
     return service_->AddMember("{{ .Name }}", std::move(handler));
   }

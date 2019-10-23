@@ -1500,13 +1500,14 @@
       ],
       "members": [
         {
+          "xunion_ordinal": 1,
+          "reserved": false,
           "name": "response",
           "type": {
             "kind": "identifier",
             "identifier": "test.name/WithErrorSyntax_ResponseAsStruct_Response",
             "nullable": false
           },
-          "xunion_ordinal": 1,
           "location": {
             "filename": "generated",
             "line": 16,
@@ -1518,12 +1519,13 @@
           "offset": 8
         },
         {
+          "xunion_ordinal": 2,
+          "reserved": false,
           "name": "err",
           "type": {
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "xunion_ordinal": 2,
           "location": {
             "filename": "generated",
             "line": 17,
@@ -1573,13 +1575,14 @@
       ],
       "members": [
         {
+          "xunion_ordinal": 1,
+          "reserved": false,
           "name": "response",
           "type": {
             "kind": "identifier",
             "identifier": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
             "nullable": false
           },
-          "xunion_ordinal": 1,
           "location": {
             "filename": "generated",
             "line": 23,
@@ -1591,12 +1594,13 @@
           "offset": 4
         },
         {
+          "xunion_ordinal": 2,
+          "reserved": false,
           "name": "err",
           "type": {
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "xunion_ordinal": 2,
           "location": {
             "filename": "generated",
             "line": 24,
@@ -1646,13 +1650,14 @@
       ],
       "members": [
         {
+          "xunion_ordinal": 1,
+          "reserved": false,
           "name": "response",
           "type": {
             "kind": "identifier",
             "identifier": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
             "nullable": false
           },
-          "xunion_ordinal": 1,
           "location": {
             "filename": "generated",
             "line": 30,
@@ -1664,13 +1669,14 @@
           "offset": 4
         },
         {
+          "xunion_ordinal": 2,
+          "reserved": false,
           "name": "err",
           "type": {
             "kind": "identifier",
             "identifier": "test.name/ErrorEnun",
             "nullable": false
           },
-          "xunion_ordinal": 2,
           "location": {
             "filename": "generated",
             "line": 31,

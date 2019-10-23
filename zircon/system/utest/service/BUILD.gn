@@ -35,7 +35,7 @@ if (is_fuchsia) {
   source_set("fidl.service.test-llcpp") {
     testonly = true
     sources = [
-      "generated/fidl_llcpp_test.cc",
+      "generated/fidl_llcpp_test.test.cc",
     ]
     include_dirs = [ "generated" ]
     deps = [

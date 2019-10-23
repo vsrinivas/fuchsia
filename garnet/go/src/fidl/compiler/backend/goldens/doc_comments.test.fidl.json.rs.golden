@@ -474,3 +474,73 @@ impl InterfaceControlHandle {
 	}
 
 /* beginning of response types */
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ServiceMarker;
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceMarker for ServiceMarker {
+    type Proxy = ServiceProxy;
+    type Request = ServiceRequest;
+    const SERVICE_NAME: &'static str = "test.name.Service";
+}
+
+/// A request for one of the member protocols of Service.
+///
+/// service comment #1
+///
+/// service comment #3
+#[cfg(target_os = "fuchsia")]
+pub enum ServiceRequest {
+    /// service comment #1
+    ///
+    /// service comment #3
+    Interface(InterfaceRequestStream),
+}
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceRequest for ServiceRequest {
+    type Service = ServiceMarker;
+
+    fn dispatch(name: &str, channel: ::fuchsia_async::Channel) -> Self {
+        match name {
+            "interface" => Self::Interface(
+                <InterfaceRequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
+            ),
+            _ => panic!("no such member protocol name for service Service"),
+        }
+    }
+
+    fn member_names() -> &'static [&'static str] {
+        &[
+            "interface",
+        ]
+    }
+}
+/// service comment #1
+///
+/// service comment #3
+#[cfg(target_os = "fuchsia")]
+pub struct ServiceProxy(Box<dyn fidl::endpoints::MemberOpener>);
+
+#[cfg(target_os = "fuchsia")]
+impl fidl::endpoints::UnifiedServiceProxy for ServiceProxy {
+    type Service = ServiceMarker;
+
+    fn from_member_opener(opener: Box<dyn fidl::endpoints::MemberOpener>) -> Self {
+        Self(opener)
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+impl ServiceProxy {
+    /// member comment #1
+    ///
+    /// member comment #3
+    pub fn interface(&self) -> Result<InterfaceProxy, fidl::Error> {
+        let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
+        self.0.open_member("interface", server)?;
+        let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        Ok(InterfaceProxy::new(proxy))
+    }
+}

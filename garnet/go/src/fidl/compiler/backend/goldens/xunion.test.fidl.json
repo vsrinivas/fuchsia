@@ -297,12 +297,13 @@
       },
       "members": [
         {
+          "ordinal": 1026732503,
+          "reserved": false,
           "name": "i",
           "type": {
             "kind": "primitive",
             "subtype": "int64"
           },
-          "ordinal": 1026732503,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 4,
@@ -314,12 +315,13 @@
           "offset": 0
         },
         {
+          "ordinal": 1362546558,
+          "reserved": false,
           "name": "f",
           "type": {
             "kind": "primitive",
             "subtype": "float32"
           },
-          "ordinal": 1362546558,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 5,
@@ -364,12 +366,13 @@
       },
       "members": [
         {
+          "ordinal": 693944286,
+          "reserved": false,
           "name": "i",
           "type": {
             "kind": "primitive",
             "subtype": "int64"
           },
-          "ordinal": 693944286,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 11,
@@ -381,12 +384,13 @@
           "offset": 0
         },
         {
+          "ordinal": 473666119,
+          "reserved": false,
           "name": "s",
           "type": {
             "kind": "string",
             "nullable": false
           },
-          "ordinal": 473666119,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 13,
@@ -398,6 +402,8 @@
           "offset": 0
         },
         {
+          "ordinal": 1815655055,
+          "reserved": false,
           "name": "v",
           "type": {
             "kind": "vector",
@@ -407,7 +413,6 @@
             },
             "nullable": false
           },
-          "ordinal": 1815655055,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 14,
@@ -452,12 +457,13 @@
       },
       "members": [
         {
+          "ordinal": 1851697276,
+          "reserved": false,
           "name": "i",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "ordinal": 1851697276,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 20,
@@ -469,12 +475,13 @@
           "offset": 0
         },
         {
+          "ordinal": 855207063,
+          "reserved": false,
           "name": "f",
           "type": {
             "kind": "primitive",
             "subtype": "float32"
           },
-          "ordinal": 855207063,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 21,
@@ -486,12 +493,13 @@
           "offset": 0
         },
         {
+          "ordinal": 850602487,
+          "reserved": false,
           "name": "s",
           "type": {
             "kind": "string",
             "nullable": false
           },
-          "ordinal": 850602487,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 22,
@@ -536,13 +544,14 @@
       },
       "members": [
         {
+          "ordinal": 424858069,
+          "reserved": false,
           "name": "empty",
           "type": {
             "kind": "identifier",
             "identifier": "test.name/Empty",
             "nullable": false
           },
-          "ordinal": 424858069,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 31,
@@ -587,6 +596,8 @@
       },
       "members": [
         {
+          "ordinal": 2024555624,
+          "reserved": false,
           "name": "v",
           "type": {
             "kind": "vector",
@@ -597,7 +608,6 @@
             "maybe_element_count": 10,
             "nullable": false
           },
-          "ordinal": 2024555624,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
             "line": 35,

@@ -19,8 +19,7 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-#include "../generated/fidl_llcpp_test.h"
-#include "../generated/fidl_service_llcpp_test.h"
+#include "../generated/fidl_llcpp_test.test.h"
 
 namespace {
 

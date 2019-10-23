@@ -544,12 +544,13 @@
       },
       "members": [
         {
+          "xunion_ordinal": 551421578,
+          "reserved": false,
           "name": "variant",
           "type": {
             "kind": "primitive",
             "subtype": "uint32"
           },
-          "xunion_ordinal": 551421578,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union_sandwich.test.fidl",
             "line": 11,
@@ -593,6 +594,8 @@
       },
       "members": [
         {
+          "xunion_ordinal": 1305904317,
+          "reserved": false,
           "name": "variant",
           "type": {
             "kind": "array",
@@ -602,7 +605,6 @@
             },
             "element_count": 6
           },
-          "xunion_ordinal": 1305904317,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union_sandwich.test.fidl",
             "line": 21,
@@ -646,13 +648,14 @@
       },
       "members": [
         {
+          "xunion_ordinal": 711125680,
+          "reserved": false,
           "name": "variant",
           "type": {
             "kind": "identifier",
             "identifier": "test.fidl.unionsandwich/StructSize16Alignment8",
             "nullable": false
           },
-          "xunion_ordinal": 711125680,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union_sandwich.test.fidl",
             "line": 36,
@@ -696,6 +699,8 @@
       },
       "members": [
         {
+          "xunion_ordinal": 1000405696,
+          "reserved": false,
           "name": "variant",
           "type": {
             "kind": "array",
@@ -705,7 +710,6 @@
             },
             "element_count": 32
           },
-          "xunion_ordinal": 1000405696,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union_sandwich.test.fidl",
             "line": 46,

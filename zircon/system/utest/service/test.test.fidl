@@ -8,6 +8,7 @@ protocol Echo {
     EchoString(string? value) -> (string? response);
 };
 
+/// A service that provides multiple Echo implementations.
 service EchoService {
     Echo foo;
     Echo bar;

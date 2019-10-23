@@ -71,6 +71,7 @@ func newGenerator() *generator {
 		fragments.SendEventCFlavor,
 		fragments.SendEventCallerAllocate,
 		fragments.SendEventInPlace,
+		fragments.Service,
 		fragments.Struct,
 		fragments.SyncEventHandler,
 		fragments.SyncRequestManaged,

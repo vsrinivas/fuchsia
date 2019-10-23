@@ -52,3 +52,13 @@ protocol Interface {
     /// event comment #3
     -> OnEvent();
 };
+
+/// service comment #1
+///
+/// service comment #3
+service Service {
+    /// member comment #1
+    ///
+    /// member comment #3
+    Interface interface;
+};

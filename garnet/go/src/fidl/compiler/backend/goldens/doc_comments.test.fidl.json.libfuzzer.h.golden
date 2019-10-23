@@ -17,6 +17,7 @@ namespace fuzzing {
 using Union = ::test::name::Union;
 using Table = ::test::name::Table;
 using Struct = ::test::name::Struct;
+using Service = ::test::name::Service;
 
 
 template<>

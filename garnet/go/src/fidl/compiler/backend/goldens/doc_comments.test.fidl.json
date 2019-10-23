@@ -140,7 +140,43 @@
       ]
     }
   ],
-  "service_declarations": [],
+  "service_declarations": [
+    {
+      "name": "test.name/Service",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+        "line": 59,
+        "column": 9
+      },
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " service comment #1\n\n service comment #3\n"
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/Interface",
+            "nullable": false
+          },
+          "name": "interface",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+            "line": 63,
+            "column": 15
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " member comment #1\n\n member comment #3\n"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "struct_declarations": [
     {
       "name": "test.name/Struct",
@@ -295,12 +331,13 @@
       ],
       "members": [
         {
+          "xunion_ordinal": 1868605377,
+          "reserved": false,
           "name": "Field",
           "type": {
             "kind": "primitive",
             "subtype": "int32"
           },
-          "xunion_ordinal": 1868605377,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
             "line": 28,
@@ -349,11 +386,13 @@
     "test.name/Table",
     "test.name/Struct",
     "test.name/Interface",
+    "test.name/Service",
     "test.name/C"
   ],
   "declarations": {
     "test.name/C": "const",
     "test.name/Interface": "interface",
+    "test.name/Service": "service",
     "test.name/Struct": "struct",
     "test.name/Table": "table",
     "test.name/Union": "union"

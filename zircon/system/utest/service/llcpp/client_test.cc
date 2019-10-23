@@ -13,8 +13,7 @@
 #include <fs/synchronous_vfs.h>
 #include <zxtest/zxtest.h>
 
-#include "../generated/fidl_llcpp_test.h"
-#include "../generated/fidl_service_llcpp_test.h"
+#include "../generated/fidl_llcpp_test.test.h"
 
 namespace {
 
