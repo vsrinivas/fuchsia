@@ -70,7 +70,7 @@ zx_status_t Sherlock::ButtonsInit() {
         {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
         {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
         {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
-        {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
+        {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
     };
   // clang-format on
   static constexpr pbus_metadata_t available_buttons_metadata[] = {
