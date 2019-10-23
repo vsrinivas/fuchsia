@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_LIB_GFX_SWAPCHAIN_SWAPCHAIN_H_
 
 #include <lib/fit/function.h>
-#include <lib/zx/event.h>
 #include <lib/zx/time.h>
 
 #include <array>
@@ -45,9 +44,8 @@ class Swapchain {
   //   1. Invokes |draw_callback| to draw the frame.
   //   2. Eventually invokes FrameTimings::OnFrameFinishedRendering() and
   //      FrameTimings::OnFramePresented() on |frame_timings|.
-  //   3. Signals frame_retired when the frame is no longer presented.
   virtual bool DrawAndPresentFrame(const FrameTimingsPtr& frame, size_t swapchain_index,
-                                   const HardwareLayerAssignment& hla, zx::event frame_retired,
+                                   const HardwareLayerAssignment& hla,
                                    DrawCallback draw_callback) = 0;
 
   // If a swapchain subclass implements this interface has a display,

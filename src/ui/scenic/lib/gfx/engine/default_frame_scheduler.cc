@@ -184,10 +184,7 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   inspect_frame_number_.Set(frame_number_);
 
   // Render the frame.
-  zx::event unused_frame_retired;
-  FXL_CHECK(zx::event::create(0, &unused_frame_retired) == ZX_OK);
-  auto render_frame_result = frame_renderer_->RenderFrame(frame_timings, presentation_time,
-                                                          std::move(unused_frame_retired));
+  auto render_frame_result = frame_renderer_->RenderFrame(frame_timings, presentation_time);
   currently_rendering_ = render_frame_result == kRenderSuccess;
 
   // See SCN-1505 for details of measuring render time.

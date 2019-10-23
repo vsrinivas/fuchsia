@@ -107,8 +107,7 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Composit
   };
 }
 
-RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time presentation_time,
-                                      zx::event frame_retired) {
+RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time presentation_time) {
   uint64_t frame_number = timings->frame_number();
 
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
@@ -175,7 +174,7 @@ RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time p
     HardwareLayerAssignment& hla = hlas[i];
 
     success &= hla.swapchain->DrawAndPresentFrame(
-        timings, i, hla, is_last_hla ? std::move(frame_retired) : zx::event(0),
+        timings, i, hla,
         [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()}](
             zx::time target_presentation_time, const escher::ImagePtr& output_image,
             const HardwareLayerAssignment::Item hla_item,
