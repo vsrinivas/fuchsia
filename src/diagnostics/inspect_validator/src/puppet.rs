@@ -129,7 +129,7 @@ impl Connection {
 pub(crate) mod tests {
     use {
         super::*,
-        crate::create_node,
+        crate::{create_node, DiffType},
         //failure::format_err,
         fidl::endpoints::{create_proxy, RequestStream, ServerEnd},
         fidl_test_inspect_validate::*,
@@ -157,13 +157,13 @@ pub(crate) mod tests {
         let tree = puppet.read_data()?;
         assert_eq!(tree.to_string(), " root ->\n\n\n".to_string());
         let mut data = Data::new();
-        tree.compare(&data)?;
+        tree.compare(&data, DiffType::Full)?;
         let mut action = create_node!(parent: ROOT_ID, id: 1, name: "child");
         puppet.apply(&mut action).await?;
         data.apply(&action)?;
         let tree = data::Scanner::try_from(&puppet.vmo)?.data();
         assert_eq!(tree.to_string(), " root ->\n\n>  child ->\n\n\n\n".to_string());
-        tree.compare(&data)?;
+        tree.compare(&data, DiffType::Full)?;
         Ok(())
     }
 

@@ -14,6 +14,7 @@ use {
     failure::{bail, Error},
     fidl_test_inspect_validate as validate, fuchsia_async as fasync, fuchsia_syslog as syslog,
     log::*,
+    serde_derive::Serialize,
     std::str::FromStr,
 };
 
@@ -31,6 +32,10 @@ struct Opt {
     /// results will be printed as JSON.
     #[argh(option, long = "output", default = "OutputType::Json")]
     output: OutputType,
+
+    /// when trees differ, render 'full' text, 'diff' type difference, or 'both'.
+    #[argh(option, long = "difftype", default = "DiffType::Full")]
+    diff_type: DiffType,
 
     /// required arg(s): The URL(s) of the puppet(s).
     #[argh(option, long = "url")]
@@ -66,15 +71,39 @@ impl FromStr for OutputType {
     }
 }
 
+/// When reporting a discrepancy between local and remote Data trees, should the output include:
+/// - The full rendering of both trees?
+/// - The condensed diff between the trees? (This may still be quite large.)
+/// - Both full and condensed renderings?
+#[derive(Clone, Copy, Debug, Serialize)]
+pub enum DiffType {
+    Full,
+    Diff,
+    Both,
+}
+
+impl FromStr for DiffType {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<DiffType, Error> {
+        Ok(match s {
+            "full" => DiffType::Full,
+            "diff" => DiffType::Diff,
+            "both" => DiffType::Both,
+            _ => bail!("Diff type must be 'full' or 'diff' or 'both'"),
+        })
+    }
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     init_syslog();
     let mut results = results::Results::new();
-    let Opt { output, puppet_urls, version, .. } = argh::from_env();
+    let Opt { output, puppet_urls, version, diff_type, .. } = argh::from_env();
     if version {
         println!("Inspect Validator version 0.8. See README.md for more information.");
         return Ok(());
     }
+    results.diff_type = diff_type;
     run_all_puppets(puppet_urls, &mut results).await;
     match output {
         OutputType::Text => results.print_pretty_text(),

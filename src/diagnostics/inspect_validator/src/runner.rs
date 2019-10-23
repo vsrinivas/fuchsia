@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{data::Data, puppet, results, trials, validate},
+    super::{data::Data, puppet, results, trials, validate, DiffType},
     failure::{bail, Error},
 };
 
@@ -34,7 +34,7 @@ async fn run_trial(
     results: &mut results::Results,
 ) -> Result<(), Error> {
     let trial_name = format!("{}:{}", puppet.name(), trial.name);
-    try_compare(data, puppet, &trial_name, -1, None, -1)?;
+    try_compare(data, puppet, &trial_name, -1, None, -1, results.diff_type)?;
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
         run_actions(&mut step.actions, data, puppet, &trial.name, step_index, results).await?;
         if step.do_metrics {
@@ -94,6 +94,7 @@ async fn run_actions(
             step_index as i32,
             Some(action),
             action_number as i32,
+            results.diff_type,
         )?;
     }
     Ok(())
@@ -106,6 +107,7 @@ fn try_compare(
     step_index: i32,
     action: Option<&validate::Action>,
     action_number: i32,
+    diff_type: DiffType,
 ) -> Result<(), Error> {
     match puppet.read_data() {
         Err(e) => {
@@ -119,7 +121,7 @@ fn try_compare(
             );
         }
         Ok(puppet_data) => {
-            if let Err(e) = data.compare(&puppet_data) {
+            if let Err(e) = data.compare(&puppet_data, diff_type) {
                 bail!(
                     "Compare error in trial {}, step {}, action {} {:?}: {:?} ",
                     trial_name,

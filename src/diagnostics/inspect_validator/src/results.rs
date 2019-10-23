@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{metrics::Metrics, validate::*},
+    super::{metrics::Metrics, validate::*, DiffType},
     serde_derive::Serialize,
     std::collections::HashSet,
 };
@@ -14,6 +14,7 @@ pub struct Results {
     unimplemented: HashSet<String>,
     failed: bool,
     metrics: Vec<TrialMetrics>,
+    pub diff_type: DiffType,
 }
 
 trait Summary {
@@ -98,6 +99,7 @@ impl Results {
             metrics: Vec::new(),
             unimplemented: HashSet::new(),
             failed: false,
+            diff_type: DiffType::Full,
         }
     }
 

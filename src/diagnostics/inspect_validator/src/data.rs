@@ -6,7 +6,9 @@ use {
     super::{
         metrics::Metrics,
         validate::{self, Number, ROOT_ID},
+        DiffType,
     },
+    difference,
     failure::{bail, Error},
     fuchsia_inspect::{self, format::block::ArrayFormat},
     num_derive::{FromPrimitive, ToPrimitive},
@@ -661,19 +663,46 @@ impl Data {
     // ***** Here are the functions to compare two Data (by converting to a
     // ***** fully informative string).
 
+    fn diff_string(string1: &str, string2: &str) -> String {
+        let difference::Changeset { diffs, .. } =
+            difference::Changeset::new(string1, string2, "\n");
+        let mut strings = Vec::new();
+        for diff in diffs.iter() {
+            match diff {
+                difference::Difference::Same(lines) => strings.push(format!(
+                    "\nSame:{} lines",
+                    lines.split("\n").collect::<Vec<&str>>().len()
+                )),
+                difference::Difference::Rem(lines) => strings.push(format!("\nLocal: {}", lines)),
+                difference::Difference::Add(lines) => strings.push(format!("\nOther: {}", lines)),
+            }
+        }
+        strings.push("\n".to_owned());
+        strings.join("")
+    }
+
     /// Compares two in-memory Inspect trees, returning Ok(()) if they have the
     /// same data and an Err<> if they are different. The string in the Err<>
     /// may be very large.
-    pub fn compare(&self, other: &Data) -> Result<(), Error> {
-        if self.to_string() == other.to_string() {
+    pub fn compare(&self, other: &Data, diff_type: DiffType) -> Result<(), Error> {
+        let self_string = self.to_string();
+        let other_string = other.to_string();
+        if self_string == other_string {
             Ok(())
         } else {
-            // TODO(cphoenix): Use the difference crate to diff the strings.
-            bail!(
-                "Trees differ:\n-- LOCAL --\n{:?}\n-- OTHER --\n{:?}",
-                self.to_string(),
-                other.to_string()
-            );
+            let full_string = match diff_type {
+                DiffType::Diff => "".to_owned(),
+                DiffType::Full | DiffType::Both => {
+                    format!("-- LOCAL --\n{}\n-- OTHER --\n{}\n", self_string, other_string)
+                }
+            };
+            let diff_string = match diff_type {
+                DiffType::Full => "".to_owned(),
+                DiffType::Diff | DiffType::Both => {
+                    format!("-- DIFF --\n{}\n", Self::diff_string(&self_string, &other_string))
+                }
+            };
+            bail!("Trees differ:{}{}", full_string, diff_string);
         }
     }
 
@@ -1391,5 +1420,50 @@ mod tests {
         data.apply(&create_node!(parent: 0, id: 1, name: "first")).ok();
         assert!(data.apply(&delete_node!(id: 1)).is_ok());
         assert!(data.apply(&delete_node!(id: 1)).is_err());
+    }
+
+    #[test]
+    fn diff_modes_work() -> Result<(), Error> {
+        let mut local = Data::new();
+        let mut remote = Data::new();
+        local.apply(&create_node!(parent: 0, id: 1, name: "node"))?;
+        local.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "foo"))?;
+        remote.apply(&create_node!(parent: 0, id: 1, name: "node"))?;
+        remote.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "bar"))?;
+        let diff_string =
+            "-- DIFF --\\n\\nSame:3 lines\\nLocal: > >  prop1: \
+             String(\\\"foo\\\")\\nOther: > >  prop1: String(\\\"bar\\\")\\nSame:3 lines\\n\\n\"";
+        let full_string =
+            "-- LOCAL --\\n root ->\\n\\n>  node ->\\n> >  prop1: String(\\\"foo\\\")\
+             \\n\\n\\n\\n-- OTHER --\\n root ->\\n\\n>  node ->\\n> >  prop1: \
+             String(\\\"bar\\\")\\n\\n\\n\\n";
+        match local.compare(&mut remote, DiffType::Diff) {
+            Err(error) => {
+                let error_string = format!("{:?}", error);
+                assert!(error_string.contains(diff_string));
+                assert!(!error_string.contains(full_string));
+            }
+            _ => bail!("Didn't get failure"),
+        }
+        match local.compare(&mut remote, DiffType::Full) {
+            Err(error) => {
+                let error_string = format!("{:?}", error);
+                assert!(
+                    error_string.contains(full_string),
+                    format!("\n{}\n{}\n", error_string, full_string)
+                );
+                assert!(!error_string.contains(diff_string));
+            }
+            _ => bail!("Didn't get failure"),
+        }
+        match local.compare(&mut remote, DiffType::Both) {
+            Err(error) => {
+                let error_string = format!("{:?}", error);
+                assert!(error_string.contains(full_string), full_string);
+                assert!(error_string.contains(diff_string));
+            }
+            _ => bail!("Didn't get failure"),
+        }
+        Ok(())
     }
 }
