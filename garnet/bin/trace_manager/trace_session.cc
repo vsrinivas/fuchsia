@@ -77,12 +77,6 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   }
 }
 
-void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
-  if (!(state_ == State::kStarted || state_ == State::kStopping))
-    return;
-  FinishProvider(bundle);
-}
-
 void TraceSession::Stop(fit::closure done_callback, zx::duration timeout) {
   if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
@@ -98,22 +92,6 @@ void TraceSession::Stop(fit::closure done_callback, zx::duration timeout) {
 
   session_finalize_timeout_.PostDelayed(async_get_default_dispatcher(), timeout);
   FinishSessionIfEmpty();
-}
-
-void TraceSession::NotifyStarted() {
-  if (start_callback_) {
-    FXL_VLOG(1) << "Marking session as having started";
-    session_start_timeout_.Cancel();
-    auto start_callback = std::move(start_callback_);
-    start_callback();
-  }
-}
-
-void TraceSession::Abort() {
-  FXL_VLOG(1) << "Marking session as having aborted";
-  TransitionToState(State::kStopped);
-  tracees_.clear();
-  abort_handler_();
 }
 
 // Called when a provider reports that it has started.
@@ -150,6 +128,15 @@ void TraceSession::CheckAllProvidersStarted() {
   if (all_started) {
     FXL_VLOG(2) << "All providers reporting started";
     NotifyStarted();
+  }
+}
+
+void TraceSession::NotifyStarted() {
+  if (start_callback_) {
+    FXL_VLOG(1) << "Marking session as having started";
+    session_start_timeout_.Cancel();
+    auto start_callback = std::move(start_callback_);
+    start_callback();
   }
 }
 
@@ -215,6 +202,30 @@ void TraceSession::FinishSessionDueToTimeout() {
   }
 }
 
+void TraceSession::SessionStartTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                                       zx_status_t status) {
+  FXL_LOG(WARNING) << "Waiting for start timed out.";
+  NotifyStarted();
+}
+
+void TraceSession::SessionFinalizeTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                                          zx_status_t status) {
+  FinishSessionDueToTimeout();
+}
+
+void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
+  if (!(state_ == State::kStarted || state_ == State::kStopping))
+    return;
+  FinishProvider(bundle);
+}
+
+void TraceSession::Abort() {
+  FXL_VLOG(1) << "Marking session as having aborted";
+  TransitionToState(State::kStopped);
+  tracees_.clear();
+  abort_handler_();
+}
+
 void TraceSession::WriteTraceInfo() {
   auto status = WriteMagicNumberRecord();
   if (status != TransferStatus::kComplete) {
@@ -240,17 +251,6 @@ TransferStatus TraceSession::WriteMagicNumberRecord() {
 void TraceSession::TransitionToState(State new_state) {
   FXL_VLOG(2) << "Transitioning from " << state_ << " to " << new_state;
   state_ = new_state;
-}
-
-void TraceSession::SessionStartTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
-                                       zx_status_t status) {
-  FXL_LOG(WARNING) << "Waiting for start timed out.";
-  NotifyStarted();
-}
-
-void TraceSession::SessionFinalizeTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
-                                          zx_status_t status) {
-  FinishSessionDueToTimeout();
 }
 
 std::ostream& operator<<(std::ostream& out, TraceSession::State state) {

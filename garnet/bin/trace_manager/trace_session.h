@@ -74,21 +74,23 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
   friend std::ostream& operator<<(std::ostream& out, TraceSession::State state);
 
-  void NotifyStarted();
-  void Abort();
   void OnProviderStarted(TraceProviderBundle* bundle);
   void CheckAllProvidersStarted();
+  void NotifyStarted();
   void FinishProvider(TraceProviderBundle* bundle);
   void FinishSessionIfEmpty();
   void FinishSessionDueToTimeout();
-  TransferStatus WriteMagicNumberRecord();
-
-  void TransitionToState(State state);
 
   void SessionStartTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
                            zx_status_t status);
   void SessionFinalizeTimeout(async_dispatcher_t* dispatcher, async::TaskBase* task,
                               zx_status_t status);
+
+  void Abort();
+
+  TransferStatus WriteMagicNumberRecord();
+
+  void TransitionToState(State state);
 
   State state_ = State::kReady;
   zx::socket destination_;
