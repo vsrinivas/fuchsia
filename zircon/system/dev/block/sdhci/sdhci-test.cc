@@ -157,12 +157,6 @@ TEST_F(SdhciTest, HostInfo) {
   mock_sdhci_.ExpectGetQuirks(0);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
-  Capabilities1::Get()
-      .FromValue(0)
-      .set_sdr50_support(1)
-      .set_sdr104_support(1)
-      .set_use_tuning_for_sdr50(1)
-      .WriteTo(&mmio_);
   Capabilities0::Get()
       .FromValue(0)
       .set_base_clock_frequency(1)
@@ -176,8 +170,7 @@ TEST_F(SdhciTest, HostInfo) {
   sdmmc_host_info_t host_info = {};
   EXPECT_OK(dut_->SdmmcHostInfo(&host_info));
   EXPECT_EQ(host_info.caps, SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_SIXTY_FOUR_BIT |
-                                SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_AUTO_CMD12 |
-                                SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_SDR104);
+                                SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_AUTO_CMD12);
   EXPECT_EQ(host_info.prefs, 0);
 }
 
@@ -185,7 +178,6 @@ TEST_F(SdhciTest, HostInfoNoDma) {
   mock_sdhci_.ExpectGetQuirks(SDHCI_QUIRK_NO_DMA);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
-  Capabilities1::Get().FromValue(0).set_sdr50_support(1).set_ddr50_support(1).WriteTo(&mmio_);
   Capabilities0::Get()
       .FromValue(0)
       .set_base_clock_frequency(1)
@@ -198,9 +190,8 @@ TEST_F(SdhciTest, HostInfoNoDma) {
 
   sdmmc_host_info_t host_info = {};
   EXPECT_OK(dut_->SdmmcHostInfo(&host_info));
-  EXPECT_EQ(host_info.caps, SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 |
-                                SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_DDR50 |
-                                SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_NO_TUNING_SDR50);
+  EXPECT_EQ(host_info.caps,
+            SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_AUTO_CMD12);
   EXPECT_EQ(host_info.prefs, 0);
 }
 
@@ -208,14 +199,13 @@ TEST_F(SdhciTest, HostInfoNoTuning) {
   mock_sdhci_.ExpectGetQuirks(SDHCI_QUIRK_NON_STANDARD_TUNING);
   ASSERT_NO_FATAL_FAILURES(CreateDut());
 
-  Capabilities1::Get().FromValue(0).WriteTo(&mmio_);
   Capabilities0::Get().FromValue(0).set_base_clock_frequency(1).WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   sdmmc_host_info_t host_info = {};
   EXPECT_OK(dut_->SdmmcHostInfo(&host_info));
-  EXPECT_EQ(host_info.caps, SDMMC_HOST_CAP_AUTO_CMD12 | SDMMC_HOST_CAP_NO_TUNING_SDR50);
+  EXPECT_EQ(host_info.caps, SDMMC_HOST_CAP_AUTO_CMD12);
   EXPECT_EQ(host_info.prefs, SDMMC_HOST_PREFS_DISABLE_HS400 | SDMMC_HOST_PREFS_DISABLE_HS200);
 }
 

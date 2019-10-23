@@ -37,6 +37,11 @@ uint32_t SdioReadTupleBody(const uint8_t* tuple_body, size_t start, size_t numby
 
 inline bool SdioFnIdxValid(uint8_t fn_idx) { return (fn_idx < SDIO_MAX_FUNCS); }
 
+inline bool SdioIsUhsSupported(uint32_t hw_caps) {
+  return ((hw_caps & SDIO_CARD_UHS_SDR50) || (hw_caps & SDIO_CARD_UHS_SDR104) ||
+          (hw_caps & SDIO_CARD_UHS_DDR50));
+}
+
 inline uint8_t GetBits(uint32_t x, uint32_t mask, uint32_t loc) {
   return static_cast<uint8_t>((x & mask) >> loc);
 }
@@ -932,6 +937,10 @@ zx_status_t SdioControllerDevice::SwitchFreq(uint32_t new_freq) {
 }
 
 zx_status_t SdioControllerDevice::TrySwitchHs() {
+  if (!(hw_info_.caps & SDIO_CARD_HIGH_SPEED)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   zx_status_t st = ZX_OK;
   uint8_t speed = 0;
 
@@ -970,6 +979,10 @@ zx_status_t SdioControllerDevice::TrySwitchHs() {
 }
 
 zx_status_t SdioControllerDevice::TrySwitchUhs() {
+  if (!SdioIsUhsSupported(hw_info_.caps)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   zx_status_t st = ZX_OK;
   if ((st = SwitchBusWidth(SDIO_BW_4BIT)) != ZX_OK) {
     zxlogf(ERROR, "sdmmc_probe_sdio: Swtiching to 4-bit bus width failed, retcode = %d\n", st);
@@ -977,6 +990,7 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
   }
 
   uint8_t speed = 0;
+  uint32_t hw_caps = hw_info_.caps;
 
   uint32_t new_freq = SDIO_DEFAULT_FREQ;
   uint8_t select_speed = SDIO_BUS_SPEED_SDR50;
@@ -988,24 +1002,20 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
     return st;
   }
 
-  if ((sdmmc_.host_info().caps & SDMMC_HOST_CAP_SDR104) && (hw_info_.caps & SDIO_CARD_UHS_SDR104)) {
+  if (hw_caps & SDIO_CARD_UHS_SDR104) {
     select_speed = SDIO_BUS_SPEED_SDR104;
     timing = SDMMC_TIMING_SDR104;
     new_freq = SDIO_UHS_SDR104_MAX_FREQ;
-  } else if ((sdmmc_.host_info().caps & SDMMC_HOST_CAP_SDR50) &&
-             (hw_info_.caps & SDIO_CARD_UHS_SDR50)) {
+  } else if (hw_caps & SDIO_CARD_UHS_SDR50) {
     select_speed = SDIO_BUS_SPEED_SDR50;
     timing = SDMMC_TIMING_SDR50;
     new_freq = SDIO_UHS_SDR50_MAX_FREQ;
-  } else if ((sdmmc_.host_info().caps & SDMMC_HOST_CAP_DDR50) &&
-             (hw_info_.caps & SDIO_CARD_UHS_DDR50)) {
+  } else if (hw_caps & SDIO_CARD_UHS_DDR50) {
     select_speed = SDIO_BUS_SPEED_DDR50;
     timing = SDMMC_TIMING_DDR50;
     new_freq = SDIO_UHS_DDR50_MAX_FREQ;
   } else {
-    select_speed = SDIO_BUS_SPEED_SDR25;
-    timing = SDMMC_TIMING_SDR25;
-    new_freq = SDIO_UHS_SDR25_MAX_FREQ;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   UpdateBitsU8(&speed, SDIO_CIA_CCCR_BUS_SPEED_BSS_MASK, SDIO_CIA_CCCR_BUS_SPEED_BSS_LOC,
@@ -1027,10 +1037,7 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
     return st;
   }
 
-  // Only tune for SDR50 if the host requires it.
-  if (timing == SDMMC_TIMING_SDR104 ||
-      (timing == SDMMC_TIMING_SDR50 &&
-       !(sdmmc_.host_info().caps & SDMMC_HOST_CAP_NO_TUNING_SDR50))) {
+  if ((hw_caps & SDIO_CARD_UHS_SDR104) || (hw_caps & SDIO_CARD_UHS_SDR50)) {
     st = sdmmc_.host().PerformTuning(SD_SEND_TUNING_BLOCK);
     if (st != ZX_OK) {
       zxlogf(ERROR, "sdio: tuning failed %d\n", st);
@@ -1049,7 +1056,7 @@ zx_status_t SdioControllerDevice::Enable4BitBus() {
   uint8_t bus_ctrl_reg;
   if ((st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_BUS_INTF_CTRL_ADDR, 0, &bus_ctrl_reg)) !=
       ZX_OK) {
-    zxlogf(ERROR, "sdio: Error reading the current bus width\n");
+    zxlogf(INFO, "sdio: Error reading the current bus width\n");
     return st;
   }
   UpdateBitsU8(&bus_ctrl_reg, SDIO_CIA_CCCR_INTF_CTRL_BW_MASK, SDIO_CIA_CCCR_INTF_CTRL_BW_LOC,

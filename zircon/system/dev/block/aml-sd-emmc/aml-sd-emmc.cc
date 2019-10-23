@@ -916,8 +916,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
 }
 
 zx_status_t AmlSdEmmc::Init() {
-  dev_info_.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_SDR104 |
-                   SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_DDR50;
+  dev_info_.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330;
   if (board_config_.supports_dma) {
     dev_info_.caps |= SDMMC_HOST_CAP_ADMA2;
     zx_status_t status =
