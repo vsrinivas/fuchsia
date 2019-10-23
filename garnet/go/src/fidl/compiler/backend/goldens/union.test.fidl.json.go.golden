@@ -16,7 +16,7 @@ const (
 
 
 type Union struct {
-	I_unionTag `fidl:"u,24,8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionTag `fidl:"u,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Primitive int32  `fidl:"910042901"`
 	StringNeedsConstructor string  `fidl:"891204917,"`
 	VectorStringAlsoNeedsConstructor []string  `fidl:"1452916587,,"`
@@ -66,7 +66,7 @@ const (
 
 
 type FieldCollision struct {
-	I_fieldCollisionTag `fidl:"u,8,4" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_fieldCollisionTag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	FieldCollisionTag int32  `fidl:"1574011787"`
 }
 

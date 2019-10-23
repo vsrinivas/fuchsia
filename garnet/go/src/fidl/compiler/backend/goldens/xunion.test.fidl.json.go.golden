@@ -13,7 +13,7 @@ import (
 
 
 type Empty struct {
-	_ struct{} `fidl:"s,1,1" fidl_size_v1_no_ee:"1" fidl_alignment_v1_no_ee:"1"`
+	_ struct{} `fidl:"s,1,1" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v1_no_ee:"1" fidl_alignment_v1_no_ee:"1"`
 }
 
 var _mEmpty = _bindings.CreateLazyMarshaler(Empty{})
@@ -23,8 +23,8 @@ func (msg *Empty) Marshaler() _bindings.Marshaler {
 }
 
 type StructWithNullableXUnion struct {
-	_ struct{} `fidl:"s,24,8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	X1 *OlderSimpleUnion`fidl:"0" fidl_offset_v1_no_ee:"0"`
+	_ struct{} `fidl:"s,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	X1 *OlderSimpleUnion`fidl:"0" fidl_offset_v1:"0" fidl_offset_v1_no_ee:"0"`
 }
 
 var _mStructWithNullableXUnion = _bindings.CreateLazyMarshaler(StructWithNullableXUnion{})
@@ -41,7 +41,7 @@ const (
 
 
 type OlderSimpleUnion struct {
-	I_olderSimpleUnionTag `fidl:"x,24,8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_olderSimpleUnionTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I_unknownData []byte
 	I int64  `fidl:"1026732503"`
 	F float32  `fidl:"1362546558"`
@@ -95,7 +95,7 @@ const (
 
 
 type NewerSimpleUnion struct {
-	I_newerSimpleUnionTag `fidl:"x,24,8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_newerSimpleUnionTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I_unknownData []byte
 	I int64  `fidl:"693944286"`
 	S string  `fidl:"473666119,"`
@@ -162,7 +162,7 @@ const (
 
 
 type StrictSimpleXUnion struct {
-	I_strictSimpleXUnionTag `fidl:"x!,24,8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_strictSimpleXUnionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I int32  `fidl:"1851697276"`
 	F float32  `fidl:"855207063"`
 	S string  `fidl:"850602487,"`
@@ -218,7 +218,7 @@ const (
 
 
 type XUnionContainingEmptyStruct struct {
-	I_xUnionContainingEmptyStructTag `fidl:"x,24,8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_xUnionContainingEmptyStructTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I_unknownData []byte
 	Empty Empty  `fidl:"424858069"`
 }
@@ -255,7 +255,7 @@ const (
 
 
 type StrictBoundedXUnion struct {
-	I_strictBoundedXUnionTag `fidl:"x!,24,8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_strictBoundedXUnionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	V []uint8  `fidl:"2024555624,10"`
 }
 
@@ -287,8 +287,8 @@ const (
 )
 
 type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
-	_ struct{} `fidl:"s,24,0" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"0"`
-	Xu StrictBoundedXUnion`fidl:"0" fidl_offset_v1_no_ee:"16"`
+	_ struct{} `fidl:"s,24,0" fidl_size_v1:"24" fidl_alignment_v1:"0" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"0"`
+	Xu StrictBoundedXUnion`fidl:"0" fidl_offset_v1:"16" fidl_offset_v1_no_ee:"16"`
 }
 
 var _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{})
@@ -298,8 +298,8 @@ func (msg *testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse) Mar
 }
 
 type testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
-	_ struct{} `fidl:"s,24,0" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"0"`
-	Xu OlderSimpleUnion`fidl:"0" fidl_offset_v1_no_ee:"16"`
+	_ struct{} `fidl:"s,24,0" fidl_size_v1:"24" fidl_alignment_v1:"0" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"0"`
+	Xu OlderSimpleUnion`fidl:"0" fidl_offset_v1:"16" fidl_offset_v1_no_ee:"16"`
 }
 
 var _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{})
