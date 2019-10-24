@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/ping3"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.icmp.Provider"
+        ]
+    }
+}
