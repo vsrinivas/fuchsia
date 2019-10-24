@@ -71,6 +71,11 @@
             "package_name": "ct-logs"
         },
         {
+            "crate_name": "pretty",
+            "crate_type": "lib",
+            "package_name": "pretty"
+        },
+        {
             "crate_name": "data_encoding",
             "crate_type": "lib",
             "package_name": "data-encoding"
