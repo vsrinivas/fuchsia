@@ -83,21 +83,54 @@ impl Path {
         self.next < self.inner.len() && self.inner[self.next..end].find('/').is_none()
     }
 
-    /// Returns a reference to a portion of the string that names the next component.
+    /// Returns a reference to a portion of the string that names the next component, and move the
+    /// internal pointer to point to the next component.  See also [`peek()`].
+    ///
+    /// Also see [`next_with_ref()`] if you want to use `self` while holding a reference to the
+    /// returned name.
     pub fn next(&mut self) -> Option<&str> {
+        self.next_with_ref().1
+    }
+
+    /// Rust does not allow usage of `self` while the returned reference is alive, even when the
+    /// reference is actually shared.  See, for example,
+    ///
+    ///     https://internals.rust-lang.org/t/relaxing-the-borrow-checker-for-fn-mut-self-t/3256
+    ///
+    /// for additional details.  So if the caller wants to call any other methods on the `path`
+    /// after calling `next()` while still holding a reference to the returned name they can use
+    /// this method as a workaround.  When Rust is extended to cover this use case, `next_with_ref`
+    /// should be merged into [`next()`].
+    pub fn next_with_ref(&mut self) -> (&Self, Option<&str>) {
         match self.inner[self.next..].find('/') {
             Some(i) => {
                 let from = self.next;
                 self.next = self.next + i + 1;
-                Some(&self.inner[from..from + i])
+                (self, Some(&self.inner[from..from + i]))
             }
+            None => {
+                if self.next >= self.inner.len() {
+                    (self, None)
+                } else {
+                    let from = self.next;
+                    self.next = self.inner.len();
+                    (self, Some(&self.inner[from..]))
+                }
+            }
+        }
+    }
+
+    /// Returns a referenc to a position of the string that names the next component, without
+    /// moving the internal pointer.  So calling `peek()` multiple times in a row would return the
+    /// same result.  See also [`next()`].
+    pub fn peek(&self) -> Option<&str> {
+        match self.inner[self.next..].find('/') {
+            Some(i) => Some(&self.inner[self.next..self.next + i]),
             None => {
                 if self.next >= self.inner.len() {
                     None
                 } else {
-                    let from = self.next;
-                    self.next = self.inner.len();
-                    Some(&self.inner[from..])
+                    Some(&self.inner[self.next..])
                 }
             }
         }
@@ -154,6 +187,7 @@ mod tests {
                 assert!(path.is_empty());
                 assert!(!path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -168,6 +202,7 @@ mod tests {
                 assert!(path.is_empty());
                 assert!(path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -182,7 +217,10 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
                 assert!(path.is_single_component());
+                assert_eq!(path.peek(), Some("a"));
+                assert_eq!(path.peek(), Some("a"));
                 assert_eq!(path.next(), Some("a"));
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -197,7 +235,10 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
                 assert!(path.is_single_component());
+                assert_eq!(path.peek(), Some("some"));
+                assert_eq!(path.peek(), Some("some"));
                 assert_eq!(path.next(), Some("some"));
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -212,7 +253,10 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(path.is_dir());
                 assert!(path.is_single_component());
+                assert_eq!(path.peek(), Some("some"));
+                assert_eq!(path.peek(), Some("some"));
                 assert_eq!(path.next(), Some("some"));
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -227,8 +271,13 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.peek(), Some("a"));
+                assert_eq!(path.peek(), Some("a"));
                 assert_eq!(path.next(), Some("a"));
+                assert_eq!(path.peek(), Some("b"));
+                assert_eq!(path.peek(), Some("b"));
                 assert_eq!(path.next(), Some("b"));
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -243,8 +292,13 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.peek(), Some("some"));
+                assert_eq!(path.peek(), Some("some"));
                 assert_eq!(path.next(), Some("some"));
+                assert_eq!(path.peek(), Some("path"));
+                assert_eq!(path.peek(), Some("path"));
                 assert_eq!(path.next(), Some("path"));
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -259,8 +313,13 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.peek(), Some("some"));
+                assert_eq!(path.peek(), Some("some"));
                 assert_eq!(path.next(), Some("some"));
+                assert_eq!(path.peek(), Some("path"));
+                assert_eq!(path.peek(), Some("path"));
                 assert_eq!(path.next(), Some("path"));
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
             }
@@ -275,8 +334,14 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.peek(), Some("into"));
+                assert_eq!(path.peek(), Some("into"));
                 assert_eq!(path.next(), Some("into"));
+                assert_eq!(path.peek(), Some("string"));
+                assert_eq!(path.peek(), Some("string"));
                 assert_eq!(path.next(), Some("string"));
+                assert_eq!(path.peek(), Some("half"));
+                assert_eq!(path.peek(), Some("half"));
                 assert_eq!(path.into_string(), "half/way".to_string());
             }
         };
@@ -290,8 +355,14 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.peek(), Some("into"));
+                assert_eq!(path.peek(), Some("into"));
                 assert_eq!(path.next(), Some("into"));
+                assert_eq!(path.peek(), Some("string"));
+                assert_eq!(path.peek(), Some("string"));
                 assert_eq!(path.next(), Some("string"));
+                assert_eq!(path.peek(), Some("half"));
+                assert_eq!(path.peek(), Some("half"));
                 assert_eq!(path.into_string(), "half/way/".to_string());
             }
         };
@@ -305,8 +376,13 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.peek(), Some("into"));
+                assert_eq!(path.peek(), Some("into"));
                 assert_eq!(path.next(), Some("into"));
+                assert_eq!(path.peek(), Some("string"));
+                assert_eq!(path.peek(), Some("string"));
                 assert_eq!(path.next(), Some("string"));
+                assert_eq!(path.peek(), None);
                 assert_eq!(path.into_string(), "".to_string());
             }
         };
