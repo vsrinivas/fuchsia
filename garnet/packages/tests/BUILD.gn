@@ -174,13 +174,6 @@ group("fostr") {
   ]
 }
 
-group("iquery_golden_test") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/iquery/testing:iquery_golden_test",
-  ]
-}
-
 group("component_cpp") {
   testonly = true
   public_deps = [
@@ -466,7 +459,6 @@ group("inspect_tests") {
     ":inspect_health_unittests",
     ":inspect_query_unittests",
     ":inspect_unittests",
-    ":iquery_golden_test",
     ":libinspect_integration_tests",
     ":sys_inspect_cpp_tests",
   ]
