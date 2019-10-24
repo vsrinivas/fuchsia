@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-import("$zx_build/public/gn/test_shim.gni")
-
 zx_library("fake-mmio-reg") {
   sdk = "source"
   sdk_headers = [ "lib/fake-mmio-reg/fake-mmio-reg.h" ]

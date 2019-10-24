@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-
 zx_library("cobalt-client") {
   sdk = "source"
   sdk_headers = [
@@ -46,11 +44,12 @@ zx_library("cobalt-client") {
   ]
 }
 
-
 # This library may only be imported from tests.
 zx_library("in-memory-logger") {
   testonly = true
-  sources = [ "in-memory-logger.cc" ]
+  sources = [
+    "in-memory-logger.cc",
+  ]
   public_deps = [
     "$zx/system/fidl/fuchsia-cobalt:c.headers",
     "$zx/system/ulib/cobalt-client:headers",

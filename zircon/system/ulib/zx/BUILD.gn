@@ -4,8 +4,6 @@
 
 assert(is_fuchsia)
 
-import("$zx_build/public/gn/library_shim.gni")
-
 zx_library("zx") {
   sdk = "source"
   sdk_publishable = true

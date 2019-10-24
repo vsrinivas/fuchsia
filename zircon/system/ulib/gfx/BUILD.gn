@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/fuzzer.gni")
-import("$zx_build/public/gn/library_shim.gni")
 
 zx_library("gfx") {
   sdk = "source"

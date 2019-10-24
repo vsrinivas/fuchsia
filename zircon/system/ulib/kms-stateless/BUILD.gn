@@ -2,7 +2,6 @@ zx_library("kms-stateless") {
   sources = [
     "kms-stateless.cc",
   ]
-import("$zx_build/public/gn/library_shim.gni")
 
   deps = [
     "$zx/system/ulib/fbl",

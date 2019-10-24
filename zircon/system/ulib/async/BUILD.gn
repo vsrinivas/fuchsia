@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-
 assert(is_fuchsia)
 
 zx_library("async") {
@@ -54,11 +52,11 @@ zx_library("async-cpp") {
   ]
   sources = [
     "executor.cc",
+    "irq.cc",
     "receiver.cc",
     "task.cc",
     "trap.cc",
     "wait.cc",
-    "irq.cc",
   ]
   deps = [
     ":async",

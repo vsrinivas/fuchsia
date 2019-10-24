@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-import("$zx_build/public/gn/test_shim.gni")
-
 zx_library("journal") {
   host = true
   sources = []
@@ -15,11 +12,11 @@ zx_library("journal") {
       "background_executor.cc",
       "data_streamer.cc",
       "entry_view.cc",
-      "journal_writer.cc",
       "journal.cc",
+      "journal_writer.cc",
       "operation_tracker.cc",
-      "replay_tree.cc",
       "replay.cc",
+      "replay_tree.cc",
       "superblock.cc",
     ]
     public_deps = [

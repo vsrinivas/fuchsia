@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-
 zx_library("driver-integration-test") {
   sdk = "shared"
   sdk_headers = [ "lib/driver-integration-test/fixture.h" ]

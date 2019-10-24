@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-
 zx_library("fs-test-utils") {
   sdk = "source"
   sdk_headers = [
@@ -57,4 +55,3 @@ zx_library("fs-test-utils") {
     "$zx/system/ulib/zx",
   ]
 }
-

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-
 zx_library("hid") {
   sdk = "static"
   sdk_headers = [
@@ -30,7 +28,6 @@ zx_library("hid") {
     "bma253.c",
     "boot.c",
     "buttons.c",
-    "visalia-touch.c",
     "egalax.c",
     "eyoyo.c",
     "ft3x27.c",
@@ -42,6 +39,7 @@ zx_library("hid") {
     "ltr-578als.c",
     "paradise.c",
     "samsung.c",
+    "visalia-touch.c",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-input:c",

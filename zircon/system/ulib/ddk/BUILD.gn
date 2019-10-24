@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-import("$zx_build/public/gn/test_shim.gni")
-
 zx_library("ddk") {
   sdk = "static"
   sdk_publishable = false
@@ -49,9 +46,8 @@ zx_library("ddk") {
     "$zx/system/fidl/fuchsia-hardware-nand:c.headers",
 
     # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c.headers",
-
     "$zx/system/fidl/fuchsia-device:c.headers",
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c.headers",
 
     # TODO(BLD-353): Exporting this dependency causes problems in the legacy
     # build.  Instead, users of the ddk library that actually use this header

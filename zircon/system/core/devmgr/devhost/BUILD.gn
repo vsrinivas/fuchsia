@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-import("$zx_build/public/gn/source_set_shim.gni")
-import("$zx_build/public/gn/test_shim.gni")
-
 zx_executable("devhost") {
   sources = [
     "main.cc",
@@ -23,8 +19,8 @@ source_set("common") {
     "composite-device.cc",
     "connection-destroyer.cc",
     "core.cc",
-    "devhost.cc",
     "devhost-context.cc",
+    "devhost.cc",
     "device-controller-connection.cc",
     "proxy-iostate.cc",
     "rpc-server.cc",
@@ -63,9 +59,7 @@ source_set("common") {
     "../shared:env",
   ]
 
-  configs += [
-    "$zx_build/public/gn/config:static-libc++",
-  ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }
 
 # "$zx/system/ulib/driver" is an alias for this.

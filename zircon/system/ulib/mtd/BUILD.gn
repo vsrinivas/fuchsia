@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-
 # This library requires an environment with mtd/mtd-user.h and MTD support.
 
 zx_library("mtd") {

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-
 import("$zx_build/public/gn/config/levels.gni")
 
 zx_library("ngunwind") {
@@ -45,7 +43,6 @@ zx_library("ngunwind") {
     "ngunwind/fuchsia.h",
     "ngunwind/libunwind.h",
   ]
-
 
   configs += [ ":private_config" ]
   deps = [
@@ -125,7 +122,6 @@ zx_library("ngunwind") {
   }
 
   if (opt_level < 2) {
-
     # Force -O2 since the library doesn't build with -Og.
     configs -= [ "$zx_build/public/gn/config:opt_level" ]
     cflags = [ "-O2" ]
