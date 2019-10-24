@@ -18,6 +18,7 @@ use fuchsia_async::{self as fasync};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog as syslog;
 use fuchsia_zircon::{self as zx};
+use itertools::Itertools;
 use std::convert::TryInto;
 use std::io::Write;
 use std::str;
@@ -264,27 +265,33 @@ async fn do_show<T: Write>(
         }
 
         Show::Wans {} => {
-            let mut response = router_state.get_wans().await.context("error getting response")?;
-            response.sort_by_key(|a| {
-                if let Some(id) = a.element {
-                    u128::from_ne_bytes(id.uuid)
-                } else {
-                    0
-                }
-            });
+            let response = router_state
+                .get_wans()
+                .await
+                .context("error getting response")?
+                .into_iter()
+                .map(|mut l| {
+                    l.port_ids.as_mut().map(|x| x.sort());
+                    l
+                })
+                .sorted_by_key(|a| a.element.map_or(0, |id| u128::from_ne_bytes(id.uuid)))
+                .collect_vec();
             printer.println(format!("Response: {:?}", response));
             Ok(())
         }
 
         Show::Lans {} => {
-            let mut response = router_state.get_lans().await.context("error getting response")?;
-            response.sort_by_key(|a| {
-                if let Some(id) = a.element {
-                    u128::from_ne_bytes(id.uuid)
-                } else {
-                    0
-                }
-            });
+            let response = router_state
+                .get_lans()
+                .await
+                .context("error getting response")?
+                .into_iter()
+                .map(|mut l| {
+                    l.port_ids.as_mut().map(|x| x.sort());
+                    l
+                })
+                .sorted_by_key(|a| a.element.map_or(0, |id| u128::from_ne_bytes(id.uuid)))
+                .collect_vec();
             printer.println(format!("Response: {:?}", response));
             Ok(())
         }
@@ -478,9 +485,11 @@ async fn do_set<T: Write>(
                                 fidl_fuchsia_router_config::ConnectionParameters::L2tp(l2tp_config),
                             );
                         }
-                        _ => return Err(format_err!(
+                        _ => {
+                            return Err(format_err!(
                             "Please provide a valid connection type: direct, pppoe, pptp or l2tp"
-                        )),
+                        ))
+                        }
                     }
                 }
                 None => {

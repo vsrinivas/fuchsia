@@ -59,6 +59,7 @@ rustc_library("lib") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//third_party/rust_crates:eui48",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:structopt",

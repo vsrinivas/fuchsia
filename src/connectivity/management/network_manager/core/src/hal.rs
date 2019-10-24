@@ -14,7 +14,6 @@ use fidl_fuchsia_net_stack::{
 use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_netstack::{self as netstack, NetstackMarker, NetstackProxy};
 use fuchsia_component::client::connect_to_service;
-use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::net::IpAddr;
 
@@ -115,8 +114,6 @@ impl From<&ForwardingEntry> for Route {
 pub struct NetCfg {
     stack: StackProxy,
     netstack: NetstackProxy,
-    // id_in_use contains interface id's currently in use by the system
-    id_in_use: HashSet<StackPortId>,
 }
 
 #[derive(Debug)]
@@ -212,7 +209,7 @@ impl NetCfg {
             .context("network_manager failed to connect to netstack")?;
         let netstack = connect_to_service::<NetstackMarker>()
             .context("network_manager failed to connect to netstack")?;
-        Ok(NetCfg { stack, netstack, id_in_use: HashSet::new() })
+        Ok(NetCfg { stack, netstack })
     }
 
     /// Returns event streams for fuchsia.net.stack and fuchsia.netstack.
@@ -257,13 +254,20 @@ impl NetCfg {
 
     /// Creates a new interface, bridging the given ports.
     pub async fn create_bridge(&mut self, ports: Vec<PortId>) -> error::Result<Interface> {
-        let _br = self
+        let br = self
             .netstack
             .bridge_interfaces(&mut ports.into_iter().map(|id| StackPortId::from(id).to_u32()))
-            .await;
-        // Find out what was the interface created, as there is no indication from above API.
-        let ifs = self.stack.list_interfaces().await.map_err(|_| error::Hal::OperationFailed)?;
-        if let Some(i) = ifs.iter().find(|x| self.id_in_use.insert(StackPortId::from(x.id))) {
+            .await
+            .map_err(|e| {
+                error!("Failed creating bridge {:?}", e);
+                error::NetworkManager::HAL(error::Hal::OperationFailed)
+            })?;
+        if br.0.status != fidl_fuchsia_netstack::Status::Ok {
+            error!("Failed creating bridge {:?}", br.0);
+            return Err(error::NetworkManager::HAL(error::Hal::OperationFailed));
+        }
+        info!("bridge created {:?}", br.1);
+        if let Some(i) = self.get_interface(br.1.into()).await {
             Ok(i.into())
         } else {
             Err(error::NetworkManager::HAL(error::Hal::BridgeNotFound))
@@ -556,7 +560,7 @@ mod tests {
             fidl::endpoints::spawn_stream_handler(handle_list_interfaces).unwrap();
         let netstack: NetstackProxy =
             fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
-        let mut netcfg = NetCfg { stack, netstack, id_in_use: HashSet::new() };
+        let mut netcfg = NetCfg { stack, netstack };
         assert_eq!(
             netcfg.interfaces().await.unwrap(),
             // Should return only interfaces with a valid address.
