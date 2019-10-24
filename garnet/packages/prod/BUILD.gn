@@ -132,7 +132,6 @@ group("drivers") {
     "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:usb_video",
     "//garnet/packages/prod:virtual_audio_driver",
-    "//garnet/packages/prod:virtual_camera",
     "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan_drivers",
     "//src/camera/drivers",

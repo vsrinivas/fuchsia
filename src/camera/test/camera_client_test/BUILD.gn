@@ -46,7 +46,7 @@ test_package("camera_client_test") {
   tests = [
     {
       name = "camera_client_test"
-      environments = basic_envs
+      environments = [ sherlock_env ]
     },
   ]
 }

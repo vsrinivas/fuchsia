@@ -68,6 +68,10 @@ static void dump_device_info(const fuchsia::camera::DeviceInfo &device_info) {
 }
 
 zx_status_t Client::StartManager(int device_id) {
+  if (device_id < 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // Connect to Camera Manager:
   context_->svc()->Connect(manager().NewRequest());
 
@@ -81,6 +85,10 @@ zx_status_t Client::StartManager(int device_id) {
   std::cout << "Obtained " << devices.size() << " devices\n";
   for (const auto &device : devices) {
     dump_device_info(device);
+  }
+  if (static_cast<size_t>(device_id) >= devices.size()) {
+    FXL_LOG(ERROR) << "Device ID " << device_id << " does not exist.";
+    return ZX_ERR_NOT_FOUND;
   }
 
   return LoadVideoFormats(

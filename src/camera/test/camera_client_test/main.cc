@@ -52,10 +52,15 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
 
   camera::Client client;
 
+  zx_status_t status = ZX_OK;
   if (use_camera_manager) {
-    client.StartManager(atoi(source));
+    status = client.StartManager(atoi(source));
   } else {
-    client.StartDriver(source);
+    status = client.StartDriver(source);
+  }
+  if (status != ZX_OK) {
+    FXL_PLOG(ERROR, status) << "Failed to start client";
+    return status;
   }
 
   int frame_counter = 0;
@@ -63,7 +68,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
 
   static constexpr uint16_t kNumberOfBuffers = 8;
   fuchsia::sysmem::BufferCollectionInfo buffer_collection;
-  zx_status_t status = Gralloc(client.formats()[0], kNumberOfBuffers, &buffer_collection);
+  status = Gralloc(client.formats()[0], kNumberOfBuffers, &buffer_collection);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
     return status;
