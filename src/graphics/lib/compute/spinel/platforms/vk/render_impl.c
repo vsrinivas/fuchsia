@@ -32,10 +32,10 @@
 // Used to probe the type
 //
 
-struct spn_render_submit_ext_base
+struct spn_vk_render_submit_ext_base
 {
-  void *                       ext;
-  spn_render_submit_ext_type_e type;
+  void *                          ext;
+  spn_vk_render_submit_ext_type_e type;
 };
 
 //
@@ -77,66 +77,63 @@ spn_ri_complete(void * pfn_payload)
 }
 
 //
-// DEBUG: remove when bootstrapping is complete
-//
-
-static void
-spn_ri_debug_buffer_copy_buffer_to_buffer(
-  struct spn_render_submit_ext_vk_copy_buffer_to_buffer const * const ext,
-  VkDescriptorBufferInfo const * const                                src,
-  VkCommandBuffer                                                     cb)
-{
-  //
-  // copy the surface to a buffer
-  //
-  vk_barrier_compute_w_to_transfer_r(cb);
-
-  VkDeviceSize const ranges = MIN_MACRO(VkDeviceSize, src->range, ext->dst.range);
-  VkDeviceSize const size   = MIN_MACRO(VkDeviceSize, ranges, ext->dst_size);
-
-  VkBufferCopy const copy[] = {
-    { .srcOffset = src->offset, .dstOffset = ext->dst.offset, .size = size }
-  };
-
-  vkCmdCopyBuffer(cb, src->buffer, ext->dst.buffer, 1, copy);
-
-  //
-  // FIXME(allanmac): verify whether this is necessary with host
-  // coherent memory.
-  //
-  // NOTE(allanmac): this assumes we're copying to a mapped buffer
-  //
-  // make the copyback visible to the host
-  vk_barrier_transfer_w_to_host_r(cb);
-}
-
-static void
-spn_ri_debug_buffer_copy_buffer_to_image(
-  struct spn_render_submit_ext_vk_copy_buffer_to_image const * const ext,
-  VkDescriptorBufferInfo const * const                               src,
-  VkCommandBuffer                                                    cb)
-{
-  //
-  // copy the surface to an image
-  //
-  vk_barrier_compute_w_to_transfer_r(cb);
-
-  vkCmdCopyBufferToImage(cb,
-                         src->buffer,
-                         ext->dst,
-                         ext->dst_layout,
-                         ext->region_count,
-                         ext->regions);
-}
-
-//
 //
 //
 
 static spn_result_t
-spn_ri_submit_buffer(struct spn_device * const device, spn_render_submit_t const * const submit)
+spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const * const submit)
 {
-  struct spn_render_submit_ext_vk_buffer const * const ext = submit->ext;
+  //
+  // accumulate extensions
+  //
+  struct spn_vk_render_submit_ext_image_pre_barrier *         pre_barrier         = NULL;
+  struct spn_vk_render_submit_ext_image_pre_clear *           pre_clear           = NULL;
+  struct spn_vk_render_submit_ext_image_render *              render              = NULL;
+  struct spn_vk_render_submit_ext_image_post_copy_to_buffer * post_copy_to_buffer = NULL;
+  struct spn_vk_render_submit_ext_image_post_barrier *        post_barrier        = NULL;
+
+  void * ext_next = submit->ext;
+
+  while (ext_next != NULL)
+    {
+      struct spn_vk_render_submit_ext_base * const base = ext_next;
+
+      switch (base->type)
+        {
+          case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_BARRIER:
+            pre_barrier = ext_next;
+            break;
+
+          case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_CLEAR:
+            pre_clear = ext_next;
+            break;
+
+          case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_RENDER:
+            render = ext_next;
+            break;
+
+          case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_COPY_TO_BUFFER:
+            post_copy_to_buffer = ext_next;
+            break;
+
+          case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_BARRIER:
+            post_barrier = ext_next;
+            break;
+
+          default:
+            return SPN_ERROR_RENDER_EXTENSION_INVALID;
+        }
+
+      ext_next = base->ext;
+    }
+
+  //
+  // NOTE(allanmac): The RENDER extension must be in the chain.
+  //
+  if (render == NULL)
+    {
+      return SPN_ERROR_RENDER_EXTENSION_INVALID;
+    }
 
   //
   // acquire a dispatch
@@ -158,11 +155,124 @@ spn_ri_submit_buffer(struct spn_device * const device, spn_render_submit_t const
   VkCommandBuffer cb = spn_device_dispatch_get_cb(device, id);
 
   //
-  // clear the surface with white
+  // accumulate barrier state
   //
-  if (ext->clear)
+  // NOTE(allanmac): top-of-pipe and zeroes in the member are exactly
+  // what we want to start with.
+  //
+  // NOTE(allanmac): realize that all memory is visible -- image layout
+  // transitions and transfers are all we're concerned with.
+  //
+  VkPipelineStageFlags src_stage    = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+  VkImageMemoryBarrier imgbar       = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+  uint32_t             imgbar_count = 0;
+
+  //
+  // set imgbar defaults
+  //
+  // imgbar.srcAccessMask is 0
+  //
+  imgbar.oldLayout           = render->image_info.imageLayout;
+  imgbar.srcQueueFamilyIndex = device->environment->qfi;
+  imgbar.dstQueueFamilyIndex = device->environment->qfi;
+  imgbar.image               = render->image;
+
+  //
+  // NOTE(allanmac): Simplifying assumption below
+  //
+  imgbar.subresourceRange = (VkImageSubresourceRange){
+
+    .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+    .baseMipLevel   = 0,
+    .levelCount     = 1,
+    .baseArrayLayer = 0,
+    .layerCount     = 1
+  };
+
+  //
+  // set the submission callback and data
+  //
+  spn_device_dispatch_set_submitter(device, id, render->submitter_pfn, render->submitter_data);
+
+  //
+  // the extensions are always processed in this order:
+  //
+  //   PRE_BARRIER>PRE_CLEAR>RENDER>POST_COPY>POST_BARRIER
+  //
+
+  //
+  // layout transition or queue family ownership transfer?
+  //
+  if (pre_barrier != NULL)
     {
-      vkCmdFillBuffer(cb, ext->surface.buffer, ext->surface.offset, ext->surface.range, 0xFFFFFFFF);
+      //
+      // imgbar.srcAccessMask       -- use default
+      // imgbar.dstAccessMask       -- not set
+      // imgbar.dstQueueFamilyIndex -- use default
+      // imgbar.image               -- use default
+      //
+      uint32_t const src_qfi = (pre_barrier->src_qfi == VK_QUEUE_FAMILY_IGNORED)
+                                 ? device->environment->qfi
+                                 : pre_barrier->src_qfi;
+
+      imgbar.oldLayout           = pre_barrier->old_layout;
+      imgbar.newLayout           = render->image_info.imageLayout;
+      imgbar.srcQueueFamilyIndex = src_qfi;
+      imgbar.image               = render->image;
+
+      imgbar_count = 1;
+    }
+
+  //
+  // clear?
+  //
+  if (pre_clear != NULL)
+    {
+      //
+      // imgbar.srcAccessMask       -- use default
+      // imgbar.oldLayout           -- use default
+      // imgbar.srcQueueFamilyIndex -- use default
+      // imgbar.dstQueueFamilyIndex -- use default
+      // imgbar.image               -- use default
+      //
+      imgbar.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+      imgbar.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+      imgbar_count = 1;
+
+      vkCmdPipelineBarrier(cb,
+                           src_stage,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           0,
+                           0,
+                           NULL,
+                           0,
+                           NULL,
+                           imgbar_count,
+                           &imgbar);
+
+      vkCmdClearColorImage(cb,
+                           render->image,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           pre_clear->color,
+                           1,
+                           &imgbar.subresourceRange);
+
+      //
+      // post command -- transition to render layout
+      //
+      src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+      //
+      // imgbar.dstQueueFamilyIndex -- use default
+      // imgbar.image               -- use default
+      //
+      imgbar.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
+      imgbar.oldLayout           = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+      imgbar.newLayout           = render->image_info.imageLayout;
+      imgbar.srcQueueFamilyIndex = device->environment->qfi;
+
+      imgbar_count = 1;
     }
 
   //
@@ -194,7 +304,7 @@ spn_ri_submit_buffer(struct spn_device * const device, spn_render_submit_t const
   spn_vk_ds_acquire_surface(instance, device, &ds_surface);
 
   // copy the dbi structs
-  *spn_vk_ds_get_surface_surface(instance, ds_surface) = ext->surface;
+  *spn_vk_ds_get_surface_surface(instance, ds_surface) = render->image_info;
 
   // update ds
   spn_vk_ds_update_surface(instance, device->environment, ds_surface);
@@ -206,14 +316,12 @@ spn_ri_submit_buffer(struct spn_device * const device, spn_render_submit_t const
   // append push constants
   //
   struct spn_vk_push_render const push = {
-
     .tile_clip = {
       submit->tile_clip[0],
       submit->tile_clip[1],
       submit->tile_clip[2],
       submit->tile_clip[3],
     },
-    .surface_pitch = ext->surface_pitch
   };
 
   spn_vk_p_push_render(instance, cb, &push);
@@ -221,42 +329,130 @@ spn_ri_submit_buffer(struct spn_device * const device, spn_render_submit_t const
   //
   // PIPELINE: RENDER
   //
-  spn_vk_p_bind_render(instance, cb);
+  // - indirect dispatch the pipeline
+  // - shader only *writes* to surface
+  //
+  {
+    imgbar.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+
+    vkCmdPipelineBarrier(cb,
+                         src_stage,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                         0,
+                         0,
+                         NULL,
+                         0,
+                         NULL,
+                         imgbar_count,
+                         &imgbar);
+
+    spn_vk_p_bind_render(instance, cb);
+
+    spn_composition_pre_render_dispatch_indirect(submit->composition, cb);
+
+    //
+    // post render
+    //
+    src_stage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+    imgbar.srcAccessMask       = imgbar.dstAccessMask;
+    imgbar.dstAccessMask       = 0;
+    imgbar.oldLayout           = render->image_info.imageLayout;
+    imgbar.srcQueueFamilyIndex = device->environment->qfi;
+    imgbar.dstQueueFamilyIndex = device->environment->qfi;
+
+    imgbar_count = 0;
+  }
 
   //
-  // wait for buffer clear to finish writing before render writes
+  // copy?
   //
-  if (ext->clear)
+  if (post_copy_to_buffer != NULL)
     {
-      vk_barrier_transfer_w_to_compute_w(cb);
+      //
+      // imgbar.srcAccessMask       -- use default
+      // imgbar.oldLayout           -- use default
+      // imgbar.srcQueueFamilyIndex -- use default
+      // imgbar.dstQueueFamilyIndex -- use default
+      // imgbar.image               -- use default
+      //
+      imgbar.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+      imgbar.oldLayout     = render->image_info.imageLayout;
+      imgbar.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+      imgbar_count = 1;
+
+      vkCmdPipelineBarrier(cb,
+                           src_stage,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           0,
+                           0,
+                           NULL,
+                           0,
+                           NULL,
+                           imgbar_count,
+                           &imgbar);
+
+      vkCmdCopyImageToBuffer(cb,
+                             render->image,
+                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                             post_copy_to_buffer->dst,
+                             post_copy_to_buffer->region_count,
+                             post_copy_to_buffer->regions);
+
+      //
+      // post copy -- transition the image back to default
+      //
+      src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+      //
+      // imgbar.dstQueueFamilyIndex -- not set
+      // imgbar.image               -- use default
+      //
+      imgbar.srcAccessMask       = VK_ACCESS_TRANSFER_READ_BIT;
+      imgbar.dstAccessMask       = 0;
+      imgbar.oldLayout           = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+      imgbar.newLayout           = render->image_info.imageLayout;
+      imgbar.srcQueueFamilyIndex = device->environment->qfi;  // ignored
+
+      imgbar_count = 1;
     }
 
   //
-  // indirect dispatch the pipeline
+  // layout transition or queue family ownership transfer?
   //
-  spn_composition_pre_render_dispatch_indirect(submit->composition, cb);
-
-  //
-  // DEBUG: optionally copy the buffer -- remove when bootstrapping is complete
-  //
-  if (ext->ext != NULL)
+  if (post_barrier != NULL)
     {
-      struct spn_render_submit_ext_base const * const ext_base = ext->ext;
+      //
+      // imgbar.srcAccessMask       -- use default
+      // imgbar.dstAccessMask       -- use default
+      // imgbar.oldLayout           -- use default
+      // imgbar.srcQueueFamilyIndex -- use default
+      // imgbar.image               -- use default
+      //
+      uint32_t const dst_qfi = (post_barrier->dst_qfi == VK_QUEUE_FAMILY_IGNORED)
+                                 ? device->environment->qfi
+                                 : post_barrier->dst_qfi;
 
-      switch (ext_base->type)
-        {
-          case SPN_RENDER_SUBMIT_EXT_TYPE_VK_COPY_BUFFER_TO_BUFFER:
-            spn_ri_debug_buffer_copy_buffer_to_buffer(ext->ext, &ext->surface, cb);
-            break;
+      imgbar.newLayout           = post_barrier->new_layout;
+      imgbar.dstQueueFamilyIndex = dst_qfi;
 
-          case SPN_RENDER_SUBMIT_EXT_TYPE_VK_COPY_BUFFER_TO_IMAGE:
-            spn_ri_debug_buffer_copy_buffer_to_image(ext->ext, &ext->surface, cb);
-            break;
-
-          default:
-            break;
-        }
+      imgbar_count = 1;
     }
+
+  //
+  // final barrier
+  //
+  vkCmdPipelineBarrier(cb,
+                       src_stage,
+                       VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                       0,
+                       0,
+                       NULL,
+                       0,
+                       NULL,
+                       imgbar_count,
+                       &imgbar);
 
   //
   // set the completion payload
@@ -275,56 +471,6 @@ spn_ri_submit_buffer(struct spn_device * const device, spn_render_submit_t const
   // submit the dispatch
   //
   spn_device_dispatch_submit(device, id);
-
-  //
-  // FIXME(allanmac): the submit info dependencies will be narrowed
-  //
-#if 0
-  //
-  // boilerplate submit
-  //
-  struct VkSubmitInfo si;
-
-  struct VkSubmitInfo const * const ext_si = ext->si;
-
-  if (ext_si == NULL)
-    {
-      si.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-      si.pNext                = NULL;
-      si.waitSemaphoreCount   = 0;
-      si.pWaitSemaphores      = NULL;
-      si.pWaitDstStageMask    = NULL;
-      si.commandBufferCount   = 1;
-      si.pCommandBuffers      = &cb;
-      si.signalSemaphoreCount = 0;
-      si.pSignalSemaphores    = NULL;
-    }
-  else
-    {
-      //
-      // FIXME(allanmac): it's probably reasonable to assert some limit
-      // on the max number of command buffers we're willing to accept
-      // here... especially if VLA's are not allowed.
-      //
-      uint32_t const cb_count = ext_si->commandBufferCount + 1;
-
-      VkCommandBuffer cbs[cb_count];
-
-      memcpy(cbs, ext_si->pCommandBuffers, ext_si->commandBufferCount * sizeof(*cbs));
-
-      cbs[ext_si->commandBufferCount] = cb;
-
-      si.sType                = ext_si->sType;
-      si.pNext                = ext_si->pNext;
-      si.waitSemaphoreCount   = ext_si->waitSemaphoreCount;
-      si.pWaitSemaphores      = ext_si->pWaitSemaphores;
-      si.pWaitDstStageMask    = ext_si->pWaitDstStageMask;
-      si.commandBufferCount   = cb_count;
-      si.pCommandBuffers      = cbs;
-      si.signalSemaphoreCount = ext_si->signalSemaphoreCount;
-      si.pSignalSemaphores    = ext_si->pSignalSemaphores;
-    }
-#endif
 
   return SPN_SUCCESS;
 }
@@ -363,22 +509,14 @@ spn_render_impl(struct spn_device * const device, spn_render_submit_t const * co
   //
   // walk the extension chain
   //
-  struct spn_render_submit_ext_base const * const ext = submit->ext;
+  struct spn_vk_render_submit_ext_base const * const ext = submit->ext;
 
   if (ext == NULL)
     {
       return SPN_ERROR_RENDER_EXTENSION_INVALID;
     }
 
-  switch (ext->type)
-    {
-      case SPN_RENDER_SUBMIT_EXT_TYPE_VK_BUFFER:
-        return spn_ri_submit_buffer(device, submit);
-
-      case SPN_RENDER_SUBMIT_EXT_TYPE_VK_IMAGE:
-      default:
-        return SPN_ERROR_NOT_IMPLEMENTED;
-    }
+  return spn_ri_image_render(device, submit);
 }
 
 //

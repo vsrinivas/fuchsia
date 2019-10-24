@@ -57,7 +57,7 @@
   layout(set = _s_idx, binding = _b_idx, std430) buffer _##_name
 
 #define SPN_VK_GLSL_LAYOUT_IMAGE2D(_ds_id,_s_idx,_b_idx,_img_type,_name)    \
-  layout(set = _s_idx, binding = _b_idx, _img_type) uniform image2D _##_name
+  layout(set = _s_idx, binding = _b_idx, _img_type) uniform writeonly image2D _name
 
 #define SPN_VK_GLSL_BUFFER_INSTANCE(_name)                                  \
   _name

@@ -22,68 +22,155 @@ extern "C" {
 #endif
 
 //
-// VK RENDER EXTENSIONS
+// VULKAN TARGET REQUIREMENTS
 //
 
-typedef enum spn_render_submit_ext_type_e
+struct spn_vk_target_requirements
 {
-  SPN_RENDER_SUBMIT_EXT_TYPE_VK_IMAGE,
-  SPN_RENDER_SUBMIT_EXT_TYPE_VK_BUFFER,
-  SPN_RENDER_SUBMIT_EXT_TYPE_VK_COPY_BUFFER_TO_BUFFER,
-  SPN_RENDER_SUBMIT_EXT_TYPE_VK_COPY_BUFFER_TO_IMAGE,
-} spn_render_submit_ext_type_e;
+  uint32_t                   qci_count;
+  VkDeviceQueueCreateInfo *  qcis;
+  uint32_t                   ext_name_count;
+  char const **              ext_names;
+  VkPhysicalDeviceFeatures * pdf;
+};
 
 //
-// RENDER TO A VULKAN IMAGE
+// VULKAN CONTEXT CREATION
 //
 
-typedef struct spn_render_submit_ext_vk_image
+struct spn_vk_environment
 {
-  void *                       ext;
-  spn_render_submit_ext_type_e type;
-  VkDescriptorImageInfo        surface;
-  VkSubmitInfo const *         si;  // FIXME(allanmac): about to change
-} spn_render_submit_ext_vk_image_t;
+  VkDevice                         d;
+  VkAllocationCallbacks const *    ac;
+  VkPipelineCache                  pc;
+  VkPhysicalDevice                 pd;
+  VkPhysicalDeviceMemoryProperties pdmp; // FIXME(allanmac): get rid of this member
+  uint32_t                         qfi;  // FIXME(allanmac): get rid of this member
+};
 
-//
-// RENDER TO A VULKAN BUFFER
-//
-
-typedef struct spn_render_submit_ext_vk_buffer
+struct spn_vk_context_create_info
 {
-  void *                       ext;
-  spn_render_submit_ext_type_e type;
-  VkDescriptorBufferInfo       surface;
-  uint32_t                     surface_pitch;
-  VkBool32                     clear;
-  VkSubmitInfo const *         si;  // FIXME(allanmac): about to change
-} spn_render_submit_ext_vk_buffer_t;
+  //
+  // NOTE(allanmac): This interface is in flux.
+  //
+  // When Spinel constructs a target for a particular device, it also
+  // generates a custom HotSort target.  These will always be bundled
+  // together.
+  //
+  struct spn_vk_target const *     spinel;
+  struct hotsort_vk_target const * hotsort;
+  uint64_t                         block_pool_size;
+  uint32_t                         handle_count;
+};
 
 //
-// COPY THE VULKAN BUFFER TO A BUFFER AFTER RENDERING
+// VULKAN RENDER EXTENSIONS
+//
+//
+// These extensions can be chained in any order but will always be
+// executed in the following order:
+//
+//   PRE_BARRIER>PRE_CLEAR>RENDER>POST_COPY>POST_BARRIER
+//
+// Note that this is the same order as the enum.
+//
+// The pre/post barriers are used to declare an image layout transition
+// or a queue family ownership transfer.
 //
 
-typedef struct spn_render_submit_ext_vk_copy_buffer_to_buffer
+typedef enum spn_vk_render_submit_ext_type_e
 {
-  void *                       ext;
-  spn_render_submit_ext_type_e type;
-  VkDescriptorBufferInfo       dst;
-  VkDeviceSize                 dst_size;
-} spn_render_submit_ext_vk_copy_buffer_to_buffer_t;
+  SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_BARRIER,
+  SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_CLEAR,
+  SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_RENDER,
+  SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_COPY_TO_BUFFER,
+  SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_BARRIER
+} spn_vk_render_submit_ext_type_e;
 
 //
-// COPY THE VULKAN BUFFER TO AN IMAGE AFTER RENDERING
+// RENDER TO AN IMAGE
 //
+// The callback submits an executable command buffer with the
+// Spinel-managed queue and fence.
+//
+// The callback provides a Spinel client an opportunity to integrate
+// with a swapchain or include application-specific semaphores and
+// command buffers.
+//
+// The callback will be invoked after the spn_render() and before either
+// of the associated composition or styling are unsealed.
+//
+// The callback is guaranteed to be invoked once.
+//
+// NOTE(allanmac): Use of a callback will be unnecessary once timeline
+// semaphores are available and this interface will be replaced.
+//
+// FIXME(allanmac): We probably want to submit the layout transition
+// immediately after acquiring the image and not including it in the
+// executable command buffer submitted by the callback.
+//
+typedef void (*spn_vk_render_submit_ext_image_render_pfn_t)(VkQueue               queue,
+                                                            VkFence               fence,
+                                                            VkCommandBuffer const cb,
+                                                            void *                data);
 
-typedef struct spn_render_submit_ext_vk_copy_buffer_to_image
+typedef struct spn_vk_render_submit_ext_image_render
 {
-  void *                       ext;
-  spn_render_submit_ext_type_e type;
-  VkImage                      dst;
-  VkImageLayout                dst_layout;
-  uint32_t                     region_count;
-  const VkBufferImageCopy *    regions;
-} spn_render_submit_ext_vk_copy_buffer_to_image_t;
+  void *                                      ext;
+  spn_vk_render_submit_ext_type_e             type;
+  VkImage                                     image;
+  VkDescriptorImageInfo                       image_info;
+  spn_vk_render_submit_ext_image_render_pfn_t submitter_pfn;
+  void *                                      submitter_data;
+} spn_vk_render_submit_ext_image_render_t;
+
+//
+// PRE-RENDER IMAGE BARRIER
+//
+
+typedef struct spn_vk_render_submit_ext_image_pre_barrier
+{
+  void *                          ext;
+  spn_vk_render_submit_ext_type_e type;
+  VkImageLayout                   old_layout;
+  uint32_t                        src_qfi;  // queue family index
+} spn_vk_render_submit_ext_image_pre_barrier_t;
+
+//
+// PRE-RENDER IMAGE CLEAR
+//
+
+typedef struct spn_vk_render_submit_ext_image_pre_clear
+{
+  void *                          ext;
+  spn_vk_render_submit_ext_type_e type;
+  VkClearColorValue const *       color;
+} spn_vk_render_submit_ext_image_pre_clear_t;
+
+//
+// POST-RENDER IMAGE COPY TO A BUFFER
+//
+
+typedef struct spn_vk_render_submit_ext_image_post_copy_to_buffer
+{
+  void *                          ext;
+  spn_vk_render_submit_ext_type_e type;
+  VkBuffer                        dst;
+  uint32_t                        region_count;
+  const VkBufferImageCopy *       regions;
+} spn_vk_render_submit_ext_image_post_copy_to_buffer_t;
+
+//
+// POST-RENDER IMAGE BARRIER
+//
+
+typedef struct spn_vk_render_submit_ext_image_post_barrier
+{
+  void *                          ext;
+  spn_vk_render_submit_ext_type_e type;
+  VkImageLayout                   new_layout;
+  uint32_t                        dst_qfi;  // queue family index
+} spn_vk_render_submit_ext_image_post_barrier_t;
 
 //
 //

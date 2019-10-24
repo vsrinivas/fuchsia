@@ -41,7 +41,6 @@ extern "C" {
   SPN_RESULT(SPN_ERROR_RASTER_BUILDER_TOO_MANY_PATHS)                                              \
                                                                                                    \
   SPN_RESULT(SPN_ERROR_RENDER_EXTENSION_INVALID)                                                   \
-  SPN_RESULT(SPN_ERROR_RENDER_EXTENSION_VK_SUBMIT_INFO_WAIT_COUNT_EXCEEDED)                        \
                                                                                                    \
   SPN_RESULT(SPN_ERROR_LAYER_ID_INVALID)                                                           \
   SPN_RESULT(SPN_ERROR_LAYER_NOT_EMPTY)                                                            \

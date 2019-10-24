@@ -444,7 +444,7 @@
 #define SPN_VK_BINDING_STYLING        0
 
 #define SPN_VK_DS_STYLING()                                                                                             \
-    SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_STYLING, SPN_VK_BINDING_STYLING, SPN_VK_EXTENT_PHWN_PDRN, styling)
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_STYLING, SPN_VK_BINDING_STYLING, SPN_VK_EXTENT_PHWN_PDRN, styling)
 
 #define SPN_VK_GLSL_DS_STYLING(idx,mq_styling)                  \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_STYLING,idx,           \
@@ -458,28 +458,13 @@
 
 #define SPN_VK_BINDING_SURFACE        0 // STORAGE_IMAGE
 
-#ifdef SPN_DEVICE_RENDER_SURFACE_IS_IMAGE
-
 #define SPN_VK_DS_SURFACE()                                                                                     \
-    SPN_VK_DESC_TYPE_STORAGE_IMAGE(SPN_VK_DS_ID_SURFACE, SPN_VK_BINDING_SURFACE, SPN_VK_EXTENT_IMAGE, surface)
+  SPN_VK_DESC_TYPE_STORAGE_IMAGE(SPN_VK_DS_ID_SURFACE, SPN_VK_BINDING_SURFACE, SPN_VK_EXTENT_IMAGE, surface)
 
 #define SPN_VK_GLSL_DS_SURFACE(idx,mq_surface,surface_type)     \
   SPN_VK_GLSL_LAYOUT_IMAGE2D(SPN_VK_DS_ID_SURFACE,idx,          \
                              SPN_VK_BINDING_SURFACE,            \
                              surface_type,surface);
-#else
-
-#define SPN_VK_DS_SURFACE()                                                                                     \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_SURFACE, SPN_VK_BINDING_SURFACE, SPN_VK_EXTENT_PDRW, surface)
-
-#define SPN_VK_GLSL_DS_SURFACE(idx,mq_surface,surface_type)     \
-  SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_SURFACE,idx,           \
-                            SPN_VK_BINDING_SURFACE,             \
-                            surface) {                          \
-    mq_surface SPN_MEMBER_VARRAY_UNKNOWN(surface_type,surface); \
-  };
-
-#endif
 
 /////////////////////////////////////////////////////////////////
 //

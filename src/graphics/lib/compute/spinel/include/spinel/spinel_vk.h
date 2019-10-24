@@ -23,25 +23,6 @@ extern "C" {
 #endif
 
 //
-//
-//
-
-struct spn_vk_target;
-
-//
-// TARGET REQUIREMENTS: VULKAN
-//
-
-struct spn_vk_target_requirements
-{
-  uint32_t                   qci_count;
-  VkDeviceQueueCreateInfo *  qcis;
-  uint32_t                   ext_name_count;
-  char const **              ext_names;
-  VkPhysicalDeviceFeatures * pdf;
-};
-
-//
 // Yields the queues, extensions and features required by a Spinel
 // target.
 //
@@ -51,38 +32,15 @@ struct spn_vk_target_requirements
 // It is an error to provide a count that is too small.
 //
 
+struct spn_vk_target;
+
 spn_result_t
 spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
                                struct spn_vk_target_requirements * const requirements);
 
 //
-// CONTEXT CREATION: VULKAN
+// VULKAN CONTEXT CREATION
 //
-
-struct spn_vk_environment
-{
-  VkDevice                         d;
-  VkAllocationCallbacks const *    ac;
-  VkPipelineCache                  pc;
-  VkPhysicalDevice                 pd;
-  VkPhysicalDeviceMemoryProperties pdmp;
-  uint32_t                         qfi;  // queue family index
-};
-
-struct spn_vk_context_create_info
-{
-  //
-  // NOTE(allanmac): This interface is in flux.
-  //
-  // When Spinel constructs a target for a particular device, it also
-  // generates a custom HotSort target.  These will always be bundled
-  // together.
-  //
-  struct spn_vk_target const *     spinel;
-  struct hotsort_vk_target const * hotsort;
-  uint64_t                         block_pool_size;
-  uint32_t                         handle_count;
-};
 
 spn_result_t
 spn_vk_context_create(struct spn_vk_environment * const               environment,
@@ -90,7 +48,7 @@ spn_vk_context_create(struct spn_vk_environment * const               environmen
                       spn_context_t * const                           context);
 
 //
-// CONTEXT SCHEDULING
+// VULKAN CONTEXT SCHEDULING
 //
 
 spn_result_t

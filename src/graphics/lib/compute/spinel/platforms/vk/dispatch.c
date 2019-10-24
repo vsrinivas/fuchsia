@@ -13,25 +13,25 @@
 #include "queue_pool.h"
 
 //
-// NOTE: dispatch is reentrant but single-threaded (for now)
-//
+// NOTE: dispatch.c is reentrant but single-threaded (for now)
 //
 
-typedef uint8_t                 spn_dispatch_stage_id_t;
-typedef spn_dispatch_stage_id_t spn_dispatch_stage_wait_count_t;  // same size for now
+//
+// FOR DEBUG ONLY
+//
+// Track outstanding number of dispatches that are waiting on prior
+// dispatches to complete.
+//
 
-// clang-format off
-#define SPN_DISPATCH_STAGE_ID_BITS     (8 * sizeof(spn_dispatch_stage_id_t))
-#define SPN_DISPATCH_STAGE_ID_INVALID  BITS_TO_MASK_MACRO(SPN_DISPATCH_STAGE_ID_BITS)
-#define SPN_DISPATCH_STAGE_ID_COUNT    BITS_TO_MASK_MACRO(SPN_DISPATCH_STAGE_ID_BITS)
-// clang-format on
+#ifndef NDEBUG
+#define SPN_DISPATCH_TRACK_WAITING
+#endif
 
 //
 // NOTE:
 //
-// It's likely we'll want to support more than 254 outstanding dispatch
-// ids on some platforms -- primarily when we're running on an extremely
-// large GPU.
+// It's unlikely we'll want to support more than 254 outstanding
+// dispatch ids unless we're running on an extremely large GPU.
 //
 // Note that 255 in-flight or waiting dispatches represents a very large
 // amount of processing.
@@ -50,7 +50,30 @@ typedef spn_dispatch_stage_id_t spn_dispatch_stage_wait_count_t;  // same size f
 // option (1).
 //
 
+// clang-format off
+#define SPN_DISPATCH_ID_BITS (8 * sizeof(spn_dispatch_id_t))
 #define SPN_DISPATCH_ID_COUNT BITS_TO_MASK_MACRO(SPN_DISPATCH_STAGE_ID_BITS)
+// clang-format on
+
+//
+// The dispatch_stage_id_t may expand to a larger type and include a tag.
+//
+
+typedef uint8_t spn_dispatch_stage_id_t;
+
+// clang-format off
+#define SPN_DISPATCH_STAGE_ID_BITS     (8 * sizeof(spn_dispatch_stage_id_t))
+#define SPN_DISPATCH_STAGE_ID_INVALID  BITS_TO_MASK_MACRO(SPN_DISPATCH_STAGE_ID_BITS)
+#define SPN_DISPATCH_STAGE_ID_COUNT    BITS_TO_MASK_MACRO(SPN_DISPATCH_STAGE_ID_BITS)
+// clang-format on
+
+//
+// Type determined by max number of dispatches that can be waited upon.
+//
+// This may vary by stage in a future implementation.
+//
+
+typedef spn_dispatch_id_t spn_dispatch_stage_wait_count_t;  // same size for now
 
 //
 // The completion payload size limit is currently 48 bytes.
@@ -64,35 +87,11 @@ typedef spn_dispatch_stage_id_t spn_dispatch_stage_wait_count_t;  // same size f
 // clang-format on
 
 //
-//
-//
-
-#ifndef NDEBUG
-#define SPN_DISPATCH_TRACK_WAITING
-#endif
-
-//
-//
-//
-
-struct spn_dispatch_completion
-{
-  spn_dispatch_completion_pfn_t pfn;
-  uint64_t                      payload[SPN_DISPATCH_COMPLETION_PAYLOAD_QWORDS];
-};
-
-//
-//
-//
-
-struct spn_dispatch_flush
-{
-  void * arg;
-};
-
-//
 // NOTE: We're forever limiting the signalling bitmap to a massive 1024
 // dispatch ids per stage.
+//
+// If the stage id is  8 bits, spn_dispatch_signal is  9 dwords (36 bytes).
+// If the stage id is 10 bits, spn_dispatch_signal is 33 dwords (132 bytes).
 //
 
 // clang-format off
@@ -107,6 +106,36 @@ struct spn_dispatch_signal
 };
 
 //
+// The arg is an spn_[path|raster]_builder_impl pointer.
+//
+
+struct spn_dispatch_flush
+{
+  void * arg;
+};
+
+//
+// When a dispatch completes, it may invoke a completion routine to
+// reclaim resources and/or dispatch more work.
+//
+
+struct spn_dispatch_completion
+{
+  spn_dispatch_completion_pfn_t pfn;
+  uint64_t                      payload[SPN_DISPATCH_COMPLETION_PAYLOAD_QWORDS];
+};
+
+//
+//
+//
+
+struct spn_dispatch_submitter
+{
+  spn_dispatch_submitter_pfn_t pfn;
+  void *                       data;
+};
+
+//
 //
 //
 
@@ -117,17 +146,19 @@ struct spn_dispatch
   VkCommandBuffer                 cbs[SPN_DISPATCH_ID_COUNT];
   VkFence                         fences[SPN_DISPATCH_ID_COUNT];
   struct spn_dispatch_signal      signals[SPN_DISPATCH_ID_COUNT];
-  struct spn_dispatch_completion  completions[SPN_DISPATCH_ID_COUNT];
   struct spn_dispatch_flush       flushes[SPN_DISPATCH_ID_COUNT];
+  struct spn_dispatch_submitter   submitters[SPN_DISPATCH_ID_COUNT];
+  struct spn_dispatch_completion  completions[SPN_DISPATCH_ID_COUNT];
   spn_dispatch_stage_wait_count_t wait_counts[SPN_DISPATCH_ID_COUNT];
 
-  struct
+  struct spn_dispatch_id_count
   {
     uint32_t available;
     uint32_t executing;
     uint32_t complete;
+
 #ifdef SPN_DISPATCH_TRACK_WAITING
-    uint32_t waiting;  // NOTE(allanmac): we don't need to record this
+    uint32_t waiting;  // NOTE(allanmac): debug only
 #endif
   } counts;
 
@@ -164,10 +195,10 @@ spn_device_dispatch_create(struct spn_device * const device)
   // create command pool
   //
   VkCommandPoolCreateInfo const cpci = {
-
     //
-    // FIXME(allanmac): I don't think we are actually TRANSIENT -- the
-    // command buffers can stick around for a while.
+    // FIXME(allanmac): I don't think we are actually TRANSIENT so I'm
+    // not indicating so with a flag.  The command buffers can be held
+    // for a while before being submitted.
     //
     .sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
     .pNext            = NULL,
@@ -272,6 +303,23 @@ spn_device_dispatch_dispose(struct spn_device * const device)
 //
 
 static void
+spn_device_dispatch_submitter_default(VkQueue               queue,
+                                      VkFence               fence,
+                                      VkCommandBuffer const cb,
+                                      void *                data)
+{
+  struct VkSubmitInfo const si = { .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                   .commandBufferCount = 1,
+                                   .pCommandBuffers    = &cb };
+
+  vk(QueueSubmit(queue, 1, &si, fence));
+}
+
+//
+//
+//
+
+static void
 spn_device_dispatch_signal_waiters_dword(struct spn_device * const   device,
                                          struct spn_dispatch * const dispatch,
                                          uint32_t const              bitmap_base,
@@ -286,11 +334,11 @@ spn_device_dispatch_signal_waiters_dword(struct spn_device * const   device,
       // mask off lsb
       bitmap_dword &= ~mask;
 
-      // which dispatch?
-      uint32_t const idx = bitmap_base + lsb;
+      // which dispatch id?
+      spn_dispatch_id_t const id = bitmap_base + lsb;
 
       // submit command buffer?
-      spn_dispatch_stage_wait_count_t const wait_count = --dispatch->wait_counts[idx];
+      spn_dispatch_stage_wait_count_t const wait_count = --dispatch->wait_counts[id];
 
       if (wait_count == 0)
         {
@@ -299,22 +347,13 @@ spn_device_dispatch_signal_waiters_dword(struct spn_device * const   device,
           dispatch->counts.waiting -= 1;
 #endif
           // push to executing -- coerce to possibly narrower integer type
-          dispatch->indices.executing[dispatch->counts.executing++] = idx;
+          dispatch->indices.executing[dispatch->counts.executing++] = id;
 
-          struct VkSubmitInfo const si = {
-
-            .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .pNext                = NULL,
-            .waitSemaphoreCount   = 0,
-            .pWaitSemaphores      = 0,
-            .pWaitDstStageMask    = NULL,
-            .commandBufferCount   = 1,
-            .pCommandBuffers      = dispatch->cbs + idx,
-            .signalSemaphoreCount = 0,
-            .pSignalSemaphores    = NULL
-          };
-
-          vk(QueueSubmit(spn_device_queue_next(device), 1, &si, dispatch->fences[idx]));
+          // submit!
+          dispatch->submitters[id].pfn(spn_device_queue_next(device),
+                                       dispatch->fences[id],
+                                       dispatch->cbs[id],
+                                       dispatch->submitters[id].data);
         }
     }
   while (bitmap_dword != 0);
@@ -598,11 +637,16 @@ spn_device_dispatch_acquire(struct spn_device * const  device,
   // NULL the completion pfn
   dispatch->completions[*id].pfn = NULL;
 
-  // NULL the flush pfn -- not necessary
-  // dispatch->flushes[*id].arg = NULL;
+  // set up default pfn/data
+  dispatch->submitters[*id] =
+    (struct spn_dispatch_submitter){ .pfn = spn_device_dispatch_submitter_default, .data = NULL };
 
   return SPN_SUCCESS;
 }
+
+//
+//
+//
 
 VkCommandBuffer
 spn_device_dispatch_get_cb(struct spn_device * const device, spn_dispatch_id_t const id)
@@ -622,6 +666,21 @@ spn_device_dispatch_get_cb(struct spn_device * const device, spn_dispatch_id_t c
   vk(BeginCommandBuffer(cb, &cbbi));
 
   return cb;
+}
+
+void
+spn_device_dispatch_set_submitter(struct spn_device * const          device,
+                                  spn_dispatch_id_t const            id,
+                                  spn_dispatch_submitter_pfn_t const submitter_pfn,
+                                  void *                             submitter_data)
+{
+  struct spn_dispatch * const dispatch = device->dispatch;
+
+  // save pfn and data
+  struct spn_dispatch_submitter * const submitter = dispatch->submitters + id;
+
+  submitter->pfn  = submitter_pfn;
+  submitter->data = submitter_data;
 }
 
 void *
@@ -679,20 +738,11 @@ spn_device_dispatch_submit(struct spn_device * const device, spn_dispatch_id_t c
       // push to executing
       dispatch->indices.executing[dispatch->counts.executing++] = id;
 
-      struct VkSubmitInfo const si = {
-
-        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pNext                = NULL,
-        .waitSemaphoreCount   = 0,
-        .pWaitSemaphores      = 0,
-        .pWaitDstStageMask    = NULL,
-        .commandBufferCount   = 1,
-        .pCommandBuffers      = dispatch->cbs + id,
-        .signalSemaphoreCount = 0,
-        .pSignalSemaphores    = NULL
-      };
-
-      vk(QueueSubmit(spn_device_queue_next(device), 1, &si, dispatch->fences[id]));
+      // submit!
+      dispatch->submitters[id].pfn(spn_device_queue_next(device),
+                                   dispatch->fences[id],
+                                   dispatch->cbs[id],
+                                   dispatch->submitters[id].data);
     }
 #ifdef SPN_DISPATCH_TRACK_WAITING
   else

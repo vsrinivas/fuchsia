@@ -155,27 +155,23 @@
 // KERNEL: RENDER
 //
 
+#define SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2                      SPN_DEVICE_SUBGROUP_SIZE_LOG2
+#define SPN_DEVICE_RENDER_WORKGROUP_SIZE                          ((1 << SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2) * 1)
+
 #define SPN_DEVICE_RENDER_LGF_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_TTCKS_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_COVERAGE_USE_SHUFFLE
 
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT
-// #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16   // compute capability: 5.3, 6.0, 6.2, 7.x
-// #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16X2 // compute capability: 5.3, 6.0, 6.2, 7.x
-
-#define SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2                      SPN_DEVICE_SUBGROUP_SIZE_LOG2
-#define SPN_DEVICE_RENDER_WORKGROUP_SIZE                          ((1 << SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2) * 1)
-
-#define SPN_DEVICE_RENDER_STORAGE_STYLING                         readonly buffer // could also be a uniform
-
-#ifdef SPN_DEVICE_RENDER_SURFACE_IS_IMAGE
-#define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
-#define SPN_DEVICE_RENDER_COLOR_ACC_PACK(rgba)                    rgba
+#if 1
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT                   // nvidia default
 #else
-#define SPN_DEVICE_RENDER_SURFACE_TYPE                            uint
-#define SPN_DEVICE_RENDER_COLOR_ACC_PACK(rgba)                    packUnorm4x8(rgba.bgra)
+ // we will generate a new target for architectures that support fp16
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16                    // compute capability: 5.3, 6.0, 6.2, 7.x
 #endif
+
+// expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent
+#define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
 
 //
 // KERNEL: PATHS RECLAIM

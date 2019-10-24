@@ -235,19 +235,33 @@ typedef enum spn_dispatch_stage_e
 //
 //
 
+typedef uint8_t spn_dispatch_id_t;
+
+//
+//
+// Use a pfn to submit the command buffer to a queue and signal a fence.
+//
+// NOTE(allanmac): this is only really used by the RENDER stage so it
+// reinforces the idea of having per-stage dispatch id pools.
+//
+// All internal submissions use the default pfn.
+//
+
+typedef void (*spn_dispatch_submitter_pfn_t)(VkQueue               queue,
+                                             VkFence               fence,
+                                             VkCommandBuffer const cb,
+                                             void *                data);
+//
+// Callback for submissions completion
+//
+
 typedef void (*spn_dispatch_completion_pfn_t)(void * payload);
 
 //
-//
+// Supply a flushing function
 //
 
 typedef spn_result_t (*spn_dispatch_flush_pfn_t)(void * arg);
-
-//
-//
-//
-
-typedef uint8_t spn_dispatch_id_t;
 
 //
 //
@@ -274,6 +288,12 @@ spn_device_dispatch_acquire(struct spn_device * const  device,
 
 VkCommandBuffer
 spn_device_dispatch_get_cb(struct spn_device * const device, spn_dispatch_id_t const id);
+
+void
+spn_device_dispatch_set_submitter(struct spn_device * const          device,
+                                  spn_dispatch_id_t const            id,
+                                  spn_dispatch_submitter_pfn_t const submitter_pfn,
+                                  void *                             submitter_data);
 
 void *
 spn_device_dispatch_set_completion(struct spn_device * const           device,

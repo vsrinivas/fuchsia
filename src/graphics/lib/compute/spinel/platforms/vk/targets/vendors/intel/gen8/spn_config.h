@@ -158,26 +158,21 @@
 // KERNEL: RENDER
 //
 
+#define SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2                      SPN_DEVICE_INTEL_SIMD8_LOG2
+#define SPN_DEVICE_RENDER_WORKGROUP_SIZE                          ((1 << SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2) * 1)
+
 #define SPN_DEVICE_RENDER_LGF_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_TTCKS_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
 
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT
-// #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16    // test once compiler supports VK_KHR_shader_float16_int8
-// #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16X2  // test once compiler supports VK_KHR_shader_float16_int8
-
-#define SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2                      SPN_DEVICE_INTEL_SIMD8_LOG2
-#define SPN_DEVICE_RENDER_WORKGROUP_SIZE                          ((1 << SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2) * 1)
-
-#define SPN_DEVICE_RENDER_STORAGE_STYLING                         readonly buffer // could also be a uniform
-
-#ifdef SPN_DEVICE_RENDER_SURFACE_IS_IMAGE
-#define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
-#define SPN_DEVICE_RENDER_COLOR_ACC_PACK(rgba)                    rgba
+#if 1
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT                   // temporarily enabled
 #else
-#define SPN_DEVICE_RENDER_SURFACE_TYPE                            uint
-#define SPN_DEVICE_RENDER_COLOR_ACC_PACK(rgba)                    packUnorm4x8(rgba.bgra)
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16                    // GEN8+ supports fp16x2
 #endif
+
+// expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent
+#define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
 
 //
 // KERNEL: PATHS RECLAIM

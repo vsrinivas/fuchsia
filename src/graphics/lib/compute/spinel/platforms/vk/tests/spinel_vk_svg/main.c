@@ -11,6 +11,7 @@
 #include "common/vk/assert.h"
 #include "common/vk/cache.h"
 #include "common/vk/debug.h"
+#include "common/vk/find_mem_type_idx.h"
 #include "common/vk/find_validation_layer.h"
 #include "ext/color/color.h"
 #include "ext/transform_stack/transform_stack.h"
@@ -33,6 +34,22 @@
 #endif
 
 //
+// BGRA temporarily disabled because Intel doesn't support STORAGE_IMAGE_BIT.
+//
+// As soon as the issue is resolved we will remove the redundant format.
+//
+
+// clang-format off
+#if 0
+#define SPN_DEMO_VK_FORMAT          VK_FORMAT_B8G8R8A8_UNORM
+#define SPN_DEMO_VK_FORMAT_IS_BGRA  1
+#else
+#define SPN_DEMO_VK_FORMAT          VK_FORMAT_R8G8B8A8_UNORM
+#define SPN_DEMO_VK_FORMAT_IS_BGRA  0
+#endif
+// clang-format on
+
+//
 // Define a platform-specific prefix
 //
 
@@ -47,19 +64,23 @@
 //
 
 // clang-format off
-#define SPN_BUFFER_SURFACE_WIDTH  1024
-#define SPN_BUFFER_SURFACE_HEIGHT 1024
-#define SPN_BUFFER_SURFACE_PIXELS (SPN_BUFFER_SURFACE_WIDTH * SPN_BUFFER_SURFACE_HEIGHT)
-#define SPN_BUFFER_SURFACE_SIZE   (SPN_BUFFER_SURFACE_PIXELS * 4 * sizeof(uint8_t))
+#define SPN_DEMO_SURFACE_WIDTH  1024
+#define SPN_DEMO_SURFACE_HEIGHT 1024
+#define SPN_DEMO_SURFACE_PIXELS (SPN_DEMO_SURFACE_WIDTH * SPN_DEMO_SURFACE_HEIGHT)
+#define SPN_DEMO_SURFACE_SIZE   (SPN_DEMO_SURFACE_PIXELS * 4 * sizeof(uint8_t))
 
-#define SPN_DEMO_TIMEOUT          (1000UL * 1000UL * 1000UL * 10UL)
+#define SPN_DEMO_TIMEOUT        (1000UL * 1000UL * 1000UL * 10UL)
 // clang-format on
 
 //
 //
 //
 
-#define SPN_DEMO_LION_CUB_CHECKSUM 0x77725D21
+// clang-format off
+#define SPN_DEMO_LION_CUB_CHECKSUM_AMD    0x1897BC4F
+#define SPN_DEMO_LION_CUB_CHECKSUM_INTEL  0x1894B54C
+#define SPN_DEMO_LION_CUB_CHECKSUM_NVIDIA 0x16DA05CE
+// clang-format on
 
 //
 // FIXME(allanmac): Styling opcodes will be buried later
@@ -145,18 +166,25 @@ lion_cub_styling(spn_styling_t              styling,
 //
 //
 
-struct spn_main_bgra
+struct spn_color
 {
+#if SPN_DEMO_VK_FORMAT_IS_BGRA
   uint8_t b;
   uint8_t g;
   uint8_t r;
   uint8_t a;
+#else
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+  uint8_t a;
+#endif
 };
 
-void
-spn_buffer_to_ppm(struct spn_main_bgra * bgra,
-                  uint32_t const         surface_width,
-                  uint32_t const         surface_height)
+static void
+spn_buffer_to_ppm(struct spn_color const * const color,
+                  uint32_t const                 surface_width,
+                  uint32_t const                 surface_height)
 {
   FILE * file = fopen("/tmp/surface.ppm", "wb");
 
@@ -164,10 +192,8 @@ spn_buffer_to_ppm(struct spn_main_bgra * bgra,
 
   for (uint32_t ii = 0; ii < surface_width * surface_height; ii++)
     {
-      struct spn_main_bgra const bgr = bgra[ii];
-
-      // swizzle
-      uint8_t rgb[3] = { bgr.r, bgr.g, bgr.b };
+      // PPM requires triples in R,G,B order
+      uint8_t rgb[3] = { color[ii].r, color[ii].g, color[ii].b };
 
       fwrite(rgb, 1, 3, file);  // RGB
     }
@@ -179,7 +205,7 @@ spn_buffer_to_ppm(struct spn_main_bgra * bgra,
 //
 //
 
-uint32_t
+static uint32_t
 spn_buffer_checksum(uint32_t * buffer, uint32_t const surface_width, uint32_t const surface_height)
 {
   uint32_t checksum = 0;
@@ -194,6 +220,20 @@ spn_buffer_checksum(uint32_t * buffer, uint32_t const surface_width, uint32_t co
     }
 
   return checksum;
+}
+
+//
+//
+//
+
+static void
+spn_render_submitter(VkQueue queue, VkFence fence, VkCommandBuffer const cb, void * data)
+{
+  struct VkSubmitInfo const si = { .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                   .commandBufferCount = 1,
+                                   .pCommandBuffers    = &cb };
+
+  vk(QueueSubmit(queue, 1, &si, fence));
 }
 
 //
@@ -482,18 +522,6 @@ main(int argc, char const * argv[])
   //
   // create device perm allocators
   //
-  struct spn_allocator_device_perm perm_device_local;
-
-  {
-    VkMemoryPropertyFlags const mpf = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-    VkBufferUsageFlags const buf = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-                                   VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    spn_allocator_device_perm_create(&perm_device_local, &environment, mpf, buf, 0, NULL);
-  }
-
   struct spn_allocator_device_perm perm_host_visible;
 
   {
@@ -501,11 +529,10 @@ main(int argc, char const * argv[])
                                       VK_MEMORY_PROPERTY_HOST_CACHED_BIT |   //
                                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;  //
 
-    VkBufferUsageFlags const buf = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-                                   VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    VkBufferUsageFlags const bufb = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
+                                    VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    spn_allocator_device_perm_create(&perm_host_visible, &environment, mpf, buf, 0, NULL);
+    spn_allocator_device_perm_create(&perm_host_visible, &environment, mpf, bufb, 0, NULL);
   }
 
   //
@@ -515,8 +542,9 @@ main(int argc, char const * argv[])
   {
     struct
     {
-      VkDescriptorBufferInfo dbi;
-      VkDeviceMemory         dm;
+      VkImage               image;
+      VkDeviceMemory        dm;
+      VkDescriptorImageInfo image_info;
     } d;
     struct
     {
@@ -526,18 +554,119 @@ main(int argc, char const * argv[])
     } h;
   } surface;
 
-  VkDeviceSize const surface_size = SPN_BUFFER_SURFACE_SIZE;
+  //
+  // create the image
+  //
+  VkBufferUsageFlagBits const bufb = VK_IMAGE_USAGE_STORAGE_BIT |       //
+                                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT |  //
+                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-  spn_allocator_device_perm_alloc(&perm_device_local,
-                                  &environment,
-                                  surface_size,
-                                  0,
-                                  &surface.d.dbi,
-                                  &surface.d.dm);
+  VkImageCreateInfo const ici = {
+    .sType     = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+    .pNext     = NULL,
+    .flags     = 0,
+    .imageType = VK_IMAGE_TYPE_2D,
+    .format    = SPN_DEMO_VK_FORMAT,
+    .extent    = { .width = SPN_DEMO_SURFACE_WIDTH, .height = SPN_DEMO_SURFACE_HEIGHT, .depth = 1 },
+    .mipLevels = 1,
 
-  spn_allocator_device_perm_alloc(&perm_host_visible,
+    .arrayLayers           = 1,
+    .samples               = VK_SAMPLE_COUNT_1_BIT,
+    .tiling                = VK_IMAGE_TILING_OPTIMAL,
+    .usage                 = bufb,
+    .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
+    .queueFamilyIndexCount = 0,
+    .pQueueFamilyIndices   = NULL,
+    .initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED
+  };
+
+  vk(CreateImage(environment.d, &ici, environment.ac, &surface.d.image));
+
+  //
+  // allocate
+  //
+  VkMemoryRequirements image_mr;
+
+  vkGetImageMemoryRequirements(environment.d, surface.d.image, &image_mr);
+
+  struct VkMemoryAllocateInfo const mai = {
+
+    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .pNext           = NULL,
+    .allocationSize  = image_mr.size,
+    .memoryTypeIndex = vk_find_mem_type_idx(&environment.pdmp,
+                                            image_mr.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+  };
+
+  vk(AllocateMemory(environment.d, &mai, environment.ac, &surface.d.dm));
+
+  vk(BindImageMemory(environment.d, surface.d.image, surface.d.dm, 0));
+
+  //
+  // create the VkDescriptorImageInfo sampler
+  //
+  VkSamplerCreateInfo const sci = {
+
+    .sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+    .pNext                   = NULL,
+    .flags                   = 0,
+    .magFilter               = VK_FILTER_LINEAR,
+    .minFilter               = VK_FILTER_LINEAR,
+    .mipmapMode              = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+    .addressModeU            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .addressModeV            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .addressModeW            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .mipLodBias              = 0.0f,
+    .anisotropyEnable        = false,
+    .maxAnisotropy           = 0.0f,
+    .compareEnable           = false,
+    .compareOp               = VK_COMPARE_OP_ALWAYS,
+    .minLod                  = 0.0f,
+    .maxLod                  = 0.0f,
+    .borderColor             = VK_BORDER_COLOR_INT_OPAQUE_WHITE,
+    .unnormalizedCoordinates = VK_TRUE
+  };
+
+  vk(CreateSampler(environment.d, &sci, environment.ac, &surface.d.image_info.sampler));
+
+  //
+  // create the VkDescriptorImageInfo image view
+  //
+  VkImageViewCreateInfo const ivci = {
+
+    .sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+    .pNext    = NULL,
+    .flags    = 0,
+    .image    = surface.d.image,
+    .viewType = VK_IMAGE_VIEW_TYPE_2D,
+    .format   = ici.format,
+
+    .components = { .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .a = VK_COMPONENT_SWIZZLE_IDENTITY },
+
+    .subresourceRange = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+                          .baseMipLevel   = 0,
+                          .levelCount     = 1,
+                          .baseArrayLayer = 0,
+                          .layerCount     = 1 }
+  };
+
+  vk(CreateImageView(environment.d, &ivci, environment.ac, &surface.d.image_info.imageView));
+
+  //
+  // set the VkDescriptorImageInfo image layout
+  //
+  surface.d.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+  //
+  // allocate mapped host buffer
+  //
+  spn_allocator_device_perm_alloc(&perm_host_visible,  //
                                   &environment,
-                                  surface_size,
+                                  image_mr.size,
                                   0,
                                   &surface.h.dbi,
                                   &surface.h.dm);
@@ -588,7 +717,7 @@ main(int argc, char const * argv[])
 
   spn(composition_create(context, &composition));
 
-  uint32_t const clip[4] = { 0, 0, SPN_BUFFER_SURFACE_WIDTH, SPN_BUFFER_SURFACE_HEIGHT };
+  uint32_t const clip[4] = { 0, 0, SPN_DEMO_SURFACE_WIDTH, SPN_DEMO_SURFACE_HEIGHT };
 
   spn(composition_set_clip(composition, clip));
 
@@ -605,6 +734,69 @@ main(int argc, char const * argv[])
   spn(styling_create(context, &styling, layer_count, 16384));  // 4K layers, 16K cmds
 
   //
+  // set up rendering extensions
+  //
+  VkBufferImageCopy const bic = {
+
+    .bufferOffset      = 0,
+    .bufferRowLength   = SPN_DEMO_SURFACE_WIDTH,
+    .bufferImageHeight = SPN_DEMO_SURFACE_HEIGHT,
+    .imageSubresource  = { .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+                          .mipLevel       = 0,
+                          .baseArrayLayer = 0,
+                          .layerCount     = 1 },
+
+    .imageOffset = { .x = 0, .y = 0, .z = 0 },
+    .imageExtent = { .width  = SPN_DEMO_SURFACE_WIDTH,
+                     .height = SPN_DEMO_SURFACE_HEIGHT,
+                     .depth  = 1 }
+  };
+
+  spn_vk_render_submit_ext_image_post_copy_to_buffer_t rs_image_post_copy_to_buffer = {
+
+    .ext          = NULL,
+    .type         = SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_COPY_TO_BUFFER,
+    .dst          = surface.h.dbi.buffer,
+    .region_count = 1,
+    .regions      = &bic
+  };
+
+  VkClearColorValue const ccv = { .float32 = { 1.0f, 1.0f, 1.0f, 1.0f } };
+
+  spn_vk_render_submit_ext_image_pre_clear_t rs_pre_image_clear = {
+
+    .ext   = NULL,
+    .type  = SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_CLEAR,
+    .color = &ccv,
+  };
+
+  spn_vk_render_submit_ext_image_pre_barrier_t rs_image_pre_barrier = {
+
+    .ext        = NULL,
+    .type       = SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_BARRIER,
+    .old_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+    .src_qfi    = VK_QUEUE_FAMILY_IGNORED,
+  };
+
+  spn_vk_render_submit_ext_image_render_t rs_image_render = {
+
+    .ext            = NULL,
+    .type           = SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_RENDER,
+    .image          = surface.d.image,
+    .image_info     = surface.d.image_info,
+    .submitter_pfn  = spn_render_submitter,
+    .submitter_data = NULL
+  };
+
+  spn_render_submit_t const rs = {
+
+    .ext         = &rs_image_render,
+    .styling     = styling,
+    .composition = composition,
+    .tile_clip   = { 0, 0, UINT32_MAX, UINT32_MAX }
+  };
+
+  //
   // loop over the entire pipeline
   //
   uint32_t const loop_count = 100 /*60 * 60 * 1*/ /*262144*/;
@@ -615,7 +807,7 @@ main(int argc, char const * argv[])
       // spn_context_status(context);
 
       //
-      // continusouly rotate around the center of the screen
+      // continuously rotate around the center of the screen
       //
 #if 0
       uint32_t const steps = 60;
@@ -717,33 +909,27 @@ main(int argc, char const * argv[])
       //
       // render
       //
-      bool const is_last_loop = (ii + 1 == loop_count);
 
-      spn_render_submit_ext_vk_copy_buffer_to_buffer_t rs_copy_buffer_to_buffer = {
+      bool const is_first_loop = (ii == 0);
+      bool const is_last_loop  = (ii + 1 == loop_count);
 
-        .ext      = NULL,
-        .type     = SPN_RENDER_SUBMIT_EXT_TYPE_VK_COPY_BUFFER_TO_BUFFER,
-        .dst      = surface.h.dbi,
-        .dst_size = SPN_BUFFER_SURFACE_SIZE
-      };
+      // reset
+      rs_image_render.ext = NULL;
 
-      spn_render_submit_ext_vk_buffer_t rs_buffer = {
+      if (is_first_loop)
+        {
+          // pre-render transition and clear
+          rs_image_pre_barrier.ext = rs_image_render.ext;
+          rs_pre_image_clear.ext   = &rs_image_pre_barrier;
+          rs_image_render.ext      = &rs_pre_image_clear;
+        }
 
-        .ext           = is_last_loop ? &rs_copy_buffer_to_buffer : NULL,
-        .type          = SPN_RENDER_SUBMIT_EXT_TYPE_VK_BUFFER,
-        .surface       = surface.d.dbi,
-        .surface_pitch = SPN_BUFFER_SURFACE_WIDTH,
-        .clear         = is_last_loop ? VK_TRUE : VK_FALSE,
-        .si            = NULL
-      };
-
-      spn_render_submit_t const rs = {
-
-        .ext         = &rs_buffer,
-        .styling     = styling,
-        .composition = composition,
-        .tile_clip   = { 0, 0, UINT32_MAX, UINT32_MAX }
-      };
+      // last?
+      if (is_last_loop)
+        {
+          rs_image_post_copy_to_buffer.ext = rs_image_render.ext;
+          rs_image_render.ext              = &rs_image_post_copy_to_buffer;
+        }
 
       spn(render(context, &rs));
       // spn_context_status(context);
@@ -797,21 +983,38 @@ main(int argc, char const * argv[])
   //
   // save buffer as PPM
   //
-  spn_buffer_to_ppm(surface.h.map, SPN_BUFFER_SURFACE_WIDTH, SPN_BUFFER_SURFACE_HEIGHT);
+  spn_buffer_to_ppm(surface.h.map, SPN_DEMO_SURFACE_WIDTH, SPN_DEMO_SURFACE_HEIGHT);
 
   //
   // checksum the buffer
   //
-  uint32_t const checksum = spn_buffer_checksum(surface.h.map,             //
-                                                SPN_BUFFER_SURFACE_WIDTH,  //
-                                                SPN_BUFFER_SURFACE_HEIGHT);
+  uint32_t const checksum = spn_buffer_checksum(surface.h.map,           //
+                                                SPN_DEMO_SURFACE_WIDTH,  //
+                                                SPN_DEMO_SURFACE_HEIGHT);
 
-  if (checksum != SPN_DEMO_LION_CUB_CHECKSUM)
+  uint32_t checksum_good = 0;
+
+  switch (vendor_id)
+    {
+    case 0x1002:
+      checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_AMD;
+      break;
+
+    case 0x8086:
+      checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_INTEL;
+      break;
+
+    case 0x10DE:
+      checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_NVIDIA;
+      break;
+    }
+
+  if (checksum != checksum_good)
     {
       fprintf(stderr,
               "Image checksum failure: 0x%08X != 0x%08X\n",
               checksum,
-              SPN_DEMO_LION_CUB_CHECKSUM);
+              checksum_good);
 
       return EXIT_FAILURE;
     }
@@ -835,16 +1038,25 @@ main(int argc, char const * argv[])
   spn(context_release(context));
 
   //
-  // free surfaces
+  // - destroy/free sampler, imageview, image, device memory
+  //
+  vkDestroySampler(environment.d, surface.d.image_info.sampler, environment.ac);
+
+  vkDestroyImageView(environment.d, surface.d.image_info.imageView, environment.ac);
+
+  vkDestroyImage(environment.d, surface.d.image, environment.ac);
+
+  vkFreeMemory(environment.d, surface.d.dm, environment.ac);
+
+  //
+  // free mapped buffer
   //
   spn_allocator_device_perm_free(&perm_host_visible, &environment, &surface.h.dbi, surface.h.dm);
-  spn_allocator_device_perm_free(&perm_device_local, &environment, &surface.d.dbi, surface.d.dm);
 
   //
   // dispose of allocators
   //
   spn_allocator_device_perm_dispose(&perm_host_visible, &environment);
-  spn_allocator_device_perm_dispose(&perm_device_local, &environment);
 
   //
   // dispose of Vulkan resources

@@ -226,7 +226,7 @@ SPN_VK_DS_EXPAND()
 
 #define SPN_VK_DS_GET_PROTO_STORAGE_IMAGE(ds_id_, d_id_)                                           \
   VkDescriptorImageInfo * SPN_VK_DS_GET_FUNC(ds_id_, d_id_)(struct spn_vk * const instance,        \
-                                                            SPN_VK_DS_TYPE(ds_id_) const ds);
+                                                            SPN_VK_DS_TYPE(ds_id_) const ds)
 
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
 #define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_id_x_, d_ext_, d_id_)                            \

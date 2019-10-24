@@ -154,28 +154,22 @@
 // KERNEL: RENDER
 //
 
-#define SPN_DEVICE_RENDER_LGF_USE_SHUFFLE
-#define SPN_DEVICE_RENDER_TTCKS_USE_SHUFFLE
-// #define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
-#define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHARED
-#define SPN_DEVICE_RENDER_COVERAGE_USE_SHUFFLE
-
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT
-// #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16                 // GCN3/4 supports single rate fp16 <-- reenable once glslangValidator is updated
-// #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16X2               // GCN5   supports double-rate fp16
-
 #define SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2                      SPN_DEVICE_SUBGROUP_SIZE_LOG2
 #define SPN_DEVICE_RENDER_WORKGROUP_SIZE                          ((1 << SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2) * 1)
 
-#define SPN_DEVICE_RENDER_STORAGE_STYLING                         readonly buffer // could also be a uniform
+#define SPN_DEVICE_RENDER_LGF_USE_SHUFFLE
+#define SPN_DEVICE_RENDER_TTCKS_USE_SHUFFLE
+#define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
+#define SPN_DEVICE_RENDER_COVERAGE_USE_SHUFFLE
 
-#ifdef SPN_DEVICE_RENDER_SURFACE_IS_IMAGE
-#define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
-#define SPN_DEVICE_RENDER_COLOR_ACC_PACK(rgba)                    rgba
+#if 1
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT                   // temporarily enabled
 #else
-#define SPN_DEVICE_RENDER_SURFACE_TYPE                            uint
-#define SPN_DEVICE_RENDER_COLOR_ACC_PACK(rgba)                    packUnorm4x8(rgba.bgra)
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16                    // GCN3/4:fp16, GCN5:fp16x2
 #endif
+
+// expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent
+#define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
 
 //
 // KERNEL: PATHS RECLAIM
