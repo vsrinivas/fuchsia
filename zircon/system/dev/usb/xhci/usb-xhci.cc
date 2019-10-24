@@ -4,27 +4,26 @@
 
 #include "usb-xhci.h"
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <lib/device-protocol/pci.h>
-
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
-#include <hw/arch_ops.h>
-#include <hw/reg.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <memory>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/platform-defs.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <hw/arch_ops.h>
+#include <hw/reg.h>
 
 #include "xdc.h"
 #include "xhci-device-manager.h"
@@ -211,7 +210,13 @@ int UsbXhci::CompleterThread(void* arg) {
   // priorities so that realtime transactions use the completer which ends
   // up getting realtime latency guarantees.
   if (completer->high_priority) {
-    zx_object_set_profile(zx_thread_self(), xhci->profile_handle.get(), 0);
+    if (xhci->profile_handle.is_valid()) {
+      zx_object_set_profile(zx_thread_self(), xhci->profile_handle.get(), 0);
+    } else {
+      zxlogf(WARN,
+             "No scheduler profile available to apply to the high priority XHCI completer.  "
+             "Service will be best effort.\n");
+    }
   }
 
   while (1) {
@@ -294,7 +299,8 @@ zx_status_t UsbXhci::FinishBind() {
   status = device_get_profile(zxdev_, /*HIGH_PRIORITY*/ 24, "zircon/system/dev/usb/xhci/usb-xhci",
                               xhci_->profile_handle.reset_and_get_address());
   if (status != ZX_OK) {
-    return status;
+    zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)\n",
+           status);
   }
 
   thrd_t thread;
