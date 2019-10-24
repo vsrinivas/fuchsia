@@ -371,6 +371,7 @@ type Union struct {
 	MaxHandles      int                       `json:"max_handles"`
 	MaxOutOfLine    int                       `json:"max_out_of_line"`
 	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
+	TypeShapeV1     TypeShape                 `json:"type_shape_v1"`
 	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
 }
 
@@ -395,6 +396,7 @@ type XUnion struct {
 	MaxOutOfLine    int                       `json:"max_out_of_line"`
 	Strictness      `json:"strict"`
 	TypeShapeOld    TypeShape `json:"type_shape_old"`
+	TypeShapeV1     TypeShape `json:"type_shape_v1"`
 	TypeShapeV1NoEE TypeShape `json:"type_shape_v1_no_ee"`
 }
 
@@ -419,6 +421,7 @@ type Table struct {
 	MaxHandles      int                       `json:"max_handles"`
 	MaxOutOfLine    int                       `json:"max_out_of_line"`
 	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
+	TypeShapeV1     TypeShape                 `json:"type_shape_v1"`
 	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
 }
 
@@ -444,6 +447,7 @@ type Struct struct {
 	MaxOutOfLine    int                       `json:"max_out_of_line"`
 	HasPadding      bool                      `json:"has_padding"`
 	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
+	TypeShapeV1     TypeShape                 `json:"type_shape_v1"`
 	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
 }
 
@@ -457,6 +461,7 @@ type StructMember struct {
 	MaxHandles        int        `json:"max_handles"`
 	MaxOutOfLine      int        `json:"max_out_of_line"`
 	FieldShapeOld     FieldShape `json:"field_shape_old"`
+	FieldShapeV1      FieldShape `json:"field_shape_v1"`
 	FieldShapeV1NoEE  FieldShape `json:"field_shape_v1_no_ee"`
 }
 
@@ -538,6 +543,7 @@ type Method struct {
 	Request                 []Parameter `json:"maybe_request,omitempty"`
 	RequestSize             int         `json:"maybe_request_size,omitempty"`
 	RequestTypeShapeOld     TypeShape   `json:"maybe_request_type_shape_old,omitempty"`
+	RequestTypeShapeV1      TypeShape   `json:"maybe_request_type_shape_v1,omitempty"`
 	RequestTypeShapeV1NoEE  TypeShape   `json:"maybe_request_type_shape_v1_no_ee,omitempty"`
 	RequestPadding          bool        `json:"maybe_request_has_padding,omitempty"`
 	RequestFlexible         bool        `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
@@ -545,6 +551,7 @@ type Method struct {
 	Response                []Parameter `json:"maybe_response,omitempty"`
 	ResponseSize            int         `json:"maybe_response_size,omitempty"`
 	ResponseTypeShapeOld    TypeShape   `json:"maybe_response_type_shape_old,omitempty"`
+	ResponseTypeShapeV1     TypeShape   `json:"maybe_response_type_shape_v1,omitempty"`
 	ResponseTypeShapeV1NoEE TypeShape   `json:"maybe_response_type_shape_v1_no_ee,omitempty"`
 	ResponsePadding         bool        `json:"maybe_response_has_padding,omitempty"`
 	ResponseFlexible        bool        `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
@@ -564,6 +571,7 @@ type Parameter struct {
 	MaxHandles       int        `json:"max_handles"`
 	MaxOutOfLine     int        `json:"max_out_of_line"`
 	FieldShapeOld    FieldShape `json:"field_shape_old"`
+	FieldShapeV1     FieldShape `json:"field_shape_v1"`
 	FieldShapeV1NoEE FieldShape `json:"field_shape_v1_no_ee"`
 }
 
