@@ -97,6 +97,10 @@ TEST(LineInput, CursorCommands) {
   EXPECT_EQ(0u, input.pos());
   EXPECT_FALSE(input.OnInputStr("\x1b[F"));  // End.
   EXPECT_EQ(4u, input.pos());
+  EXPECT_FALSE(input.OnInputStr("\x1b[1~"));  // Home. Alternate.
+  EXPECT_EQ(0u, input.pos());
+  EXPECT_FALSE(input.OnInputStr("\x1b[4~"));  // End. Alternate.
+  EXPECT_EQ(4u, input.pos());
 
   // Backspace.
   EXPECT_FALSE(input.OnInput(127));  // Backspace.

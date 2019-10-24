@@ -214,6 +214,10 @@ void LineInputBase::HandleEscapedInput(char c) {
         return;  // Wait for another character.
       if (escape_sequence_[1] == '3' && escape_sequence_[2] == '~')
         HandleDelete();
+      else if (escape_sequence_[1] == '1' && escape_sequence_[2] == '~')
+        MoveHome();
+      else if (escape_sequence_[1] == '4' && escape_sequence_[2] == '~')
+        MoveEnd();
     } else {
       // Two-character '[' sequence.
       switch (escape_sequence_[1]) {
