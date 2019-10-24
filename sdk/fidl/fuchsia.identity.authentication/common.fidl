@@ -1,0 +1,137 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.identity.authentication;
+
+/// The maxium size of the prekey material in bytes.
+const uint32 PREKEY_MATERIAL_MAX_SIZE = 32;
+
+/// The maxium size of enrollment data in bytes.
+const uint32 ENROLLMENT_DATA_MAX_SIZE = 256;
+
+/// Specifies the reason that a fuchsia.identity.authentication method failed.
+enum Error {
+    /// Some other problem occurred that cannot be classified using one of the
+    /// more specific statuses. Retry is optional.
+    UNKNOWN = 1;
+
+    /// An internal error occurred. This usually indicates a bug within the
+    /// component implementing the authentication mechanism. Retry is optional.
+    INTERNAL = 2;
+
+    /// The requested operation is not supported. This generally indicates that
+    /// implementation of a new feature is not yet complete. The request should
+    /// not be retried.
+    UNSUPPORTED_OPERATION = 3;
+
+    /// An invalid or non-functional `AuthenticationContextProvider` was
+    /// provided. Retrying is unlikely to correct this error.
+    INVALID_AUTH_CONTEXT = 4;
+
+    /// The request was malformed in some way, such as supplying duplicate
+    /// enrollment entries. The request should not be retried.
+    INVALID_REQUEST = 5;
+
+    /// Data supplied with the request was malformed in some way, such as
+    /// supplying corrupted enrollment data. The request should not be retried.
+    INVALID_DATA_FORMAT = 6;
+
+    /// A local resource error occurred such as I/O, FIDL, or memory allocation
+    /// failure. Retry, after a delay, is recommended.
+    RESOURCE = 7;
+
+    /// An interactive authentication operation was cancelled by the user.
+    ABORTED = 8;
+
+    // This enumeration may expand to include additional statuses in the future.
+    // Examples are likely to include: MECHANISM_NOT_FOUND,
+    // MECHANISM_NOT_AVAILABLE.
+};
+
+/// The maximum number of active enrollments per authentication mechanism and
+/// account.
+const uint32 MAX_ENROLLMENTS = 16;
+
+/// Enrollments allow some authentication mechanisms to produce authentication
+/// events. An enrollment must first be created in order to be authenticated
+/// against. Both creation and authentication may involve user interaction.
+/// An enrollment is typically tied to a user controlled authentication factor,
+/// such as a fingerprint, a password or a security key.
+[MaxHandles = "0"]
+struct Enrollment {
+    /// A unique identifier associated with the enrollment.
+    EnrollmentId id;
+
+    /// Data associated with the enrollment.
+    EnrollmentData data;
+
+    // TODO(dnordstrom): We might want to version label all persistent data in
+    // the future.
+};
+
+/// A unique identifier for an `Enrollment` within an account and an
+/// authentication mechanism.
+using EnrollmentId = uint64;
+
+/// Arbitrary opaque data associated with an authentication enrollment, created
+/// and subsequently read by the authentication mechanism that produced the
+/// enrollment. It is meaningful only to the authenticator, and opaque to its
+/// clients.
+using EnrollmentData = bytes:ENROLLMENT_DATA_MAX_SIZE;
+
+/// Pseudo-random data associated with an enrollment of an authentication
+/// mechanism capable of storage unlock. It is reproduced only upon
+/// successful authentication against that enrollment.
+// TODO(before-submit): Possibly `Secret` or `EnrollmentSecret`?
+using PrekeyMaterial = bytes:PREKEY_MATERIAL_MAX_SIZE;
+
+/// An authentication event is a statement which an authentication mechanism
+/// makes about the presence and/or engagement of an account owner, and thus
+/// affecting the entity's authentication state. The effect of an event depends
+/// on the properties of the authentication mechanism which created it.
+
+/// A positive authentication event may contribute to an increase in
+/// authentication state.
+[MaxHandles = "0"]
+struct PositiveEvent {
+
+    /// The time on `ZX_CLOCK_UTC` when the event completed.
+    zx.time timestamp;
+
+    // TODO(dnordstrom): Add fields for account, confidence, range, engagement
+    // and mobility.
+};
+
+/// A negative authentication event may contribute to a decrease in
+/// authentication state.
+[MaxHandles = "0"]
+struct NegativeEvent {
+    /// The time on `ZX_CLOCK_UTC` when the event completed.
+    zx.time timestamp;
+
+    // TODO(dnordstrom): Add fields for account, range and disengagement.
+};
+
+/// A attempted authentication event may contribute to an increase in
+/// authentication state if and only if the pre-key material is correct.
+/// Otherwise, it does not affect the authentication state.
+[MaxHandles = "0"]
+struct AttemptedEvent {
+    /// The time on `ZX_CLOCK_UTC` when the event completed.
+    zx.time timestamp;
+
+    /// The id of the enrollment used to produce this attempt.
+    EnrollmentId enrollment_id;
+
+    /// Enrollment data which should should replace the old enrollment data upon
+    /// successful authentication. This field is only populated if a
+    /// change in enrollment data is required.
+    EnrollmentData updated_enrollment_data;
+
+    /// Pre-key material produced during the authentication attempt.
+    PrekeyMaterial prekey_material;
+
+    // TODO(dnordstrom): Add fields for account, confidence, range, engagement
+    // and mobility (or a shared type with PositiveEvent).
+};
