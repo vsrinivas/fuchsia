@@ -23,6 +23,9 @@ rustc_test("bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
@@ -35,13 +38,6 @@ test_package("kms_test_client_pkg") {
   tests = [
     {
       name = "kms_test_client"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Astro"
-          }
-        },
-      ]
     },
   ]
 }

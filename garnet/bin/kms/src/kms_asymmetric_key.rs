@@ -5,8 +5,8 @@
 use crate::common::{self as common, KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::{AsymmetricProviderKey, CryptoProvider};
 use fidl_fuchsia_kms::{
-    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, Error, KeyOrigin, PublicKey, Signature,
-    MAX_DATA_SIZE,
+    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, Error, KeyOrigin, KeyProvider, PublicKey,
+    Signature, MAX_DATA_SIZE,
 };
 use fidl_fuchsia_mem::Buffer;
 
@@ -40,8 +40,8 @@ impl KmsKey for KmsAsymmetricKey {
         KeyType::AsymmetricPrivateKey
     }
 
-    fn get_provider_name(&self) -> &str {
-        self.provider_key.get_provider_name()
+    fn get_key_provider(&self) -> KeyProvider {
+        self.provider_key.get_key_provider()
     }
 
     fn get_key_data(&self) -> Vec<u8> {
@@ -201,6 +201,14 @@ impl KmsAsymmetricKey {
                     responder.send(&mut Err(Error::KeyNotFound))
                 } else {
                     responder.send(&mut Ok(origin))
+                }
+            }
+            AsymmetricPrivateKeyRequest::GetKeyProvider { responder } => {
+                let provider_name = self.get_key_provider();
+                if self.is_deleted() {
+                    responder.send(&mut Err(Error::KeyNotFound))
+                } else {
+                    responder.send(&mut Ok(provider_name))
                 }
             }
         }

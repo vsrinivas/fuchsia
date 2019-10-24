@@ -8,13 +8,16 @@ use failure::{self, format_err, ResultExt};
 use fidl::{self, endpoints::ServerEnd};
 use fidl_fuchsia_kms::{
     AsymmetricKeyAlgorithm, AsymmetricPrivateKeyProxy, Error, KeyManagerMarker, KeyManagerProxy,
-    KeyOrigin,
+    KeyOrigin, KeyProvider,
 };
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use log::info;
+use serde_derive::{Deserialize, Serialize};
+use serde_json;
+use std::fs;
 
 use mundane::hash::*;
 use mundane::public::ec::ecdsa::EcdsaHash;
@@ -24,6 +27,7 @@ use mundane::public::*;
 extern crate fuchsia_syslog as syslog;
 
 static TEST_KEY_NAME: &str = "test-key";
+static CONFIG_PATH: &str = "/config/data/crypto_provider_config.json";
 
 fn map_err_to_string<T>(result: Result<Result<T, Error>, fidl::Error>) -> Result<T, String> {
     match result {
@@ -43,6 +47,22 @@ async fn test() -> Result<(), failure::Error> {
     Ok(())
 }
 
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Config<'a> {
+    pub crypto_provider: &'a str,
+}
+
+fn get_provider_from_config() -> Result<KeyProvider, failure::Error> {
+    let json = fs::read_to_string(CONFIG_PATH)?;
+    let config: Config = serde_json::from_str(&json)?;
+    match config.crypto_provider {
+        "OpteeProvider" => Ok(KeyProvider::OpteeProvider),
+        "SoftwareProvider" => Ok(KeyProvider::SoftwareProvider),
+        "SoftwareAsymmetricOnlyProvider" => Ok(KeyProvider::SoftwareAsymmetricOnlyProvider),
+        _ => Err(format_err!("Unsupported provider {:?}", config.crypto_provider)),
+    }
+}
+
 async fn test_asymmetric_key(algorithm: AsymmetricKeyAlgorithm) -> Result<(), failure::Error> {
     info!("Begin asymmetric key tests for algorithm: {:?}", algorithm);
     let key_manager = connect_to_service::<KeyManagerMarker>()
@@ -60,6 +80,12 @@ async fn test_asymmetric_key(algorithm: AsymmetricKeyAlgorithm) -> Result<(), fa
         assert_eq!(key_algorithm, algorithm, "Key algorithm mismatch!");
         let key_origin = get_asymmetric_key_origin(&asymmetric_key_proxy).await?;
         assert_eq!(key_origin, KeyOrigin::Generated, "Key origin mismatch!");
+        let provider = get_asymmetric_key_provider(&asymmetric_key_proxy).await?;
+        assert_eq!(
+            provider,
+            get_provider_from_config().unwrap_or(KeyProvider::SoftwareProvider),
+            "Using the wrong crypto provider."
+        );
 
         public_key
     };
@@ -356,6 +382,14 @@ async fn get_asymmetric_key_origin(
 ) -> Result<KeyOrigin, failure::Error> {
     let result = key.get_key_origin().await;
     map_err_to_string(result).map_err(|err| format_err!("Error getting key origin: {:?}", err))
+}
+
+async fn get_asymmetric_key_provider(
+    key: &AsymmetricPrivateKeyProxy,
+) -> Result<KeyProvider, failure::Error> {
+    let result = key.get_key_provider().await;
+    map_err_to_string(result)
+        .map_err(|err| format_err!("Error getting crypto provider name: {:?}", err))
 }
 
 async fn import_asymmetric_key<'a>(

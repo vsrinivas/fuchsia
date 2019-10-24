@@ -79,3 +79,13 @@ config_data("optee_provider_config") {
     "crypto_provider_config.json",
   ]
 }
+
+config_data("optee_provider_test_config") {
+  sources = [
+    "config/optee_provider_config.json",
+  ]
+  for_pkg = "kms_test_client_pkg"
+  outputs = [
+    "crypto_provider_config.json",
+  ]
+}
