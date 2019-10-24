@@ -27,7 +27,7 @@ Randomization.
 
 For address spaces that use ASLR this controls the number of bits of entropy in
 the randomization. Higher entropy results in a sparser address space and uses
-more memory for page tables. Valid values range from 0-36, with default being 36.
+more memory for page tables. Valid values range from 0-36, with default being 30.
 
 ## bootsvc.next=\<bootfs path\>
 

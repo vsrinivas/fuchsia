@@ -48,6 +48,10 @@ struct VmAspaceListGlobal {};
 static DECLARE_MUTEX(VmAspaceListGlobal) aspace_list_lock;
 static fbl::DoublyLinkedList<VmAspace*> aspaces TA_GUARDED(aspace_list_lock);
 
+// This is the default bits of entropy that will be used for ASLR if it is enabled. If this is
+// changed then the constant in the kernel_cmdline.md should also be updated.
+static constexpr uint32_t kDefaultASLREntropy = 30;
+
 // Called once at boot to initialize the singleton kernel address
 // space. Thread safety analysis is disabled since we don't need to
 // lock yet.
@@ -635,7 +639,8 @@ void VmAspace::InitializeAslr() {
 
   if (aslr_enabled_) {
     aslr_entropy_bits_ =
-        fbl::min(static_cast<uint8_t>(gCmdline.GetUInt32("aslr.entropy_bits", 36)), (uint8_t)36);
+        fbl::min(static_cast<uint8_t>(gCmdline.GetUInt32("aslr.entropy_bits", kDefaultASLREntropy)),
+                 (uint8_t)36);
     aslr_compact_entropy_bits_ = 8;
   }
 
