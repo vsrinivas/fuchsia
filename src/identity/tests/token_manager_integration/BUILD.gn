@@ -28,12 +28,12 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/test_runner/cpp/reporting",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/callback",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
   ]

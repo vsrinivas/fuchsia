@@ -4,12 +4,12 @@
 
 #include "src/developer/tracing/lib/test_utils/run_program.h"
 
-#include <lib/fsl/types/type_converters.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"

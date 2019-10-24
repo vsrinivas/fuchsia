@@ -32,7 +32,6 @@ executable("a11y_manager_apptests") {
     "app_unittest.cc",
   ]
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.accessibility",
@@ -41,6 +40,7 @@ executable("a11y_manager_apptests") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/ui/a11y/bin/a11y_manager:lib",

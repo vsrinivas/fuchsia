@@ -31,7 +31,7 @@ source_set("model") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",

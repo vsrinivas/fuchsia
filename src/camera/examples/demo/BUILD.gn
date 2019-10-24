@@ -14,14 +14,14 @@ executable("demo_bin") {
   ]
 
   deps = [
-    "./stream_provider",
-    "./text_node",
-    "//garnet/public/lib/fsl",
+    "stream_provider",
+    "text_node",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/ui/scenic/cpp",
     "//src/ui/lib/glm_workaround",
@@ -49,6 +49,6 @@ package("${demo_name}") {
 
 group("demo") {
   public_deps = [
-    ":${demo_name}"
+    ":${demo_name}",
   ]
 }

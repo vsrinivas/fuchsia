@@ -9,8 +9,8 @@ source_set("module_manifest_source") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 }

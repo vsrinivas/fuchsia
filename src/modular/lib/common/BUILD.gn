@@ -16,7 +16,7 @@ source_set("async_holder") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 }

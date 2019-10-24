@@ -7,7 +7,7 @@
 #include <lib/async/default.h>
 #include <zircon/types.h>
 
-#include "garnet/public/lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/util/unwrap.h"

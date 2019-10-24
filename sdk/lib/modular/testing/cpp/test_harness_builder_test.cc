@@ -4,7 +4,6 @@
 
 #include <fuchsia/modular/test/harness/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/fsl/vmo/strings.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -13,6 +12,7 @@
 #include <rapidjson/document.h>
 
 #include "gmock/gmock.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 

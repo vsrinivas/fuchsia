@@ -13,8 +13,8 @@ source_set("display") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.ui.display",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",

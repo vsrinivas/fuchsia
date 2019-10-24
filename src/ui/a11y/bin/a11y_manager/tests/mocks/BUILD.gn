@@ -24,10 +24,10 @@ source_set("mocks") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]

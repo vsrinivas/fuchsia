@@ -72,9 +72,9 @@ executable("test_story_shell_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",

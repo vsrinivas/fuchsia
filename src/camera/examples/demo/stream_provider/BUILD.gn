@@ -6,9 +6,7 @@ group("stream_provider") {
   public_deps = [
     ":stream_provider_lib",
   ]
-  public_configs = [
-    ":stream_provider_config",
-  ]
+  public_configs = [ ":stream_provider_config" ]
 }
 
 source_set("stream_provider_lib") {
@@ -21,7 +19,6 @@ source_set("stream_provider_lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.camera",
@@ -30,6 +27,7 @@ source_set("stream_provider_lib") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/camera/test/isp_tester:fuchsia.camera.test",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/ui/scenic/cpp",
     "//src/ui/lib/glm_workaround",
@@ -37,9 +35,7 @@ source_set("stream_provider_lib") {
     "//zircon/system/fidl/fuchsia-hardware-camera",
   ]
 
-  configs += [
-    ":stream_provider_config",
-  ]
+  configs += [ ":stream_provider_config" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
@@ -50,7 +46,5 @@ source_set("stream_provider_lib") {
 config("stream_provider_config") {
   visibility = [ ":*" ]
 
-  include_dirs = [
-    "//src/camera/examples/demo/stream_provider/include",
-  ]
+  include_dirs = [ "//src/camera/examples/demo/stream_provider/include" ]
 }

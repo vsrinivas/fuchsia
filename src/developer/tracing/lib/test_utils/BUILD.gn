@@ -22,7 +22,7 @@ source_set("test_utils") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
   ]
 }
 

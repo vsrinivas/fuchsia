@@ -52,7 +52,6 @@ source_set("lib") {
   ]
   public_configs = [ ":linux_runner_net_config" ]
   public_deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
@@ -60,6 +59,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.wayland",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/virtualization",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/virtualization/lib/grpc",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",

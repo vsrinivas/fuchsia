@@ -61,7 +61,7 @@ source_set("graph") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/util",
     "//zircon/system/fidl/fuchsia-scheduler",
@@ -79,8 +79,8 @@ test("tests") {
 
   deps = [
     ":graph",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
   ]

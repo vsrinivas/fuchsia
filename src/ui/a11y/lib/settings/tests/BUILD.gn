@@ -19,7 +19,6 @@ executable("settings_manager_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//garnet/public/lib/syslog/cpp",
@@ -29,6 +28,7 @@ executable("settings_manager_tests") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/settings",
     "//src/ui/a11y/lib/settings/tests/mocks",

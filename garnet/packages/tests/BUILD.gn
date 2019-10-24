@@ -591,7 +591,7 @@ group("syslog") {
 group("fsl") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/fsl:fsl_tests",
+    "//src/lib/fsl:fsl_tests",
   ]
 }
 

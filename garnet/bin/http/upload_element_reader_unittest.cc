@@ -8,8 +8,8 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/public/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace http {
 

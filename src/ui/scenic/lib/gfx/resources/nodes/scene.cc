@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 
-#include "garnet/public/lib/fsl/handles/object_info.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"

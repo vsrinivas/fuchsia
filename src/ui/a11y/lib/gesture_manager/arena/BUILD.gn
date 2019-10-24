@@ -15,9 +15,9 @@ source_set("gesture_arena") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
   ]
