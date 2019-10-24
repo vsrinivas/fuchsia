@@ -19,3 +19,15 @@ rustc_binary("echo_test_client") {
     "//third_party/rust_crates:futures-preview",
   ]
 }
+
+rustc_binary("echo_test_realm") {
+  edition = "2018"
+  source_root = "echo_test_realm.rs"
+}
+
+group("all_bins") {
+  public_deps = [
+    ":echo_test_client",
+    ":echo_test_realm",
+  ]
+}

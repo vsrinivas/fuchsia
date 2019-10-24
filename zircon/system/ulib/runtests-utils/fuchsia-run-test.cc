@@ -51,13 +51,15 @@ namespace {
 // component url as its parameter.
 constexpr char kRunTestComponentPath[] = "/bin/run-test-component";
 
+// Path to helper binary which can run test as a v2 component. This binary takes
+// component url as its parameter.
+constexpr char kRunTestSuitePath[] = "/bin/run-test-suite";
+
 // Defines if binary at `kRunTestComponentPath` is valid.
-enum RunTestComponentStatus { NOT_CHECKED, PRESENT, NOT_PRESENT };
+enum ComponentTestRunnerStatus { NOT_CHECKED, PRESENT, NOT_PRESENT };
 
-RunTestComponentStatus run_test_component_status = RunTestComponentStatus::NOT_CHECKED;
-
-const int kNumberOfTriesForRunTestComponent = 20;
-const int kSleepSecForRunTestComponent = 20;
+const int kNumberOfTriesForComponentTestRunner = 20;
+const int kSleepSecForComponentTestRunner = 20;
 
 fbl::String DirectoryName(const fbl::String& path) {
   char* cpath = strndup(path.data(), path.length());
@@ -191,8 +193,8 @@ zx_status_t OpenAndReplaceExecutable(const char* path, zx::vmo* vmo) {
 
 }  // namespace
 
-void TestFileComponentInfo(const fbl::String& path, fbl::String* component_url_out,
-                           fbl::String* cmx_file_path_out) {
+void TestFileComponentInfo(const fbl::String& path, ComponentInfo* v1_info_out,
+                           ComponentInfo* v2_info_out) {
   if (strncmp(path.c_str(), kPkgPrefix, strlen(kPkgPrefix)) != 0) {
     return;
   }
@@ -218,10 +220,17 @@ void TestFileComponentInfo(const fbl::String& path, fbl::String* component_url_o
   }
   const fbl::String package_name_str(package_name, i);
   const auto test_file_name = BaseName(path);
-  *cmx_file_path_out =
-      fbl::StringPrintf("%s/meta/%s.cmx", folder_path.c_str(), test_file_name.c_str());
-  *component_url_out = fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx",
-                                         package_name_str.c_str(), test_file_name.c_str());
+  *v1_info_out = {
+      .component_url = fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx",
+                                         package_name_str.c_str(), test_file_name.c_str()),
+      .manifest_path =
+          fbl::StringPrintf("%s/meta/%s.cmx", folder_path.c_str(), test_file_name.c_str())};
+  *v2_info_out = {
+      .component_url = fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cm",
+                                         package_name_str.c_str(), test_file_name.c_str()),
+      .manifest_path =
+          fbl::StringPrintf("%s/meta/%s.cm", folder_path.c_str(), test_file_name.c_str())};
+  ;
 }
 
 /// tries to open `path` as executable and returns status.
@@ -239,20 +248,85 @@ static zx_status_t executable_status(const char* path) {
   return status;
 }
 
-static RunTestComponentStatus CheckRunTestComponent() {
+static ComponentTestRunnerStatus CheckComponentTestRunner(const char* component_runner_path) {
   zx_status_t status = -1;
-  for (int i = 0; i < kNumberOfTriesForRunTestComponent; i++) {
-    status = executable_status(kRunTestComponentPath);
+  for (int i = 0; i < kNumberOfTriesForComponentTestRunner; i++) {
+    status = executable_status(component_runner_path);
     if (status == ZX_OK) {
-      return RunTestComponentStatus::PRESENT;
+      return ComponentTestRunnerStatus::PRESENT;
     }
-    sleep(kSleepSecForRunTestComponent);
+    sleep(kSleepSecForComponentTestRunner);
   }
 
-  fprintf(stderr, "WARNING: Cannot find '%s': %s", kRunTestComponentPath,
+  fprintf(stderr, "WARNING: Cannot find '%s': %s", component_runner_path,
           zx_status_get_string(status));
 
-  return RunTestComponentStatus::NOT_PRESENT;
+  return ComponentTestRunnerStatus::NOT_PRESENT;
+}
+
+// If test is a component, this function will find appropriate component executor and modify launch
+// arguments.
+// Retuns:
+// |true|: if test is not a component, or if test is a component and it can find correct component
+// executor.
+// |false|: if setup fails.
+bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_component_url,
+                           fbl::String* out_component_executor) {
+  static ComponentTestRunnerStatus run_test_component_status =
+      ComponentTestRunnerStatus::NOT_CHECKED;
+  static ComponentTestRunnerStatus run_test_suite_status = ComponentTestRunnerStatus::NOT_CHECKED;
+
+  // Values used when running the test as a component.
+  ComponentInfo v1_info, v2_info;
+  const char* test_path = argv[0];
+
+  TestFileComponentInfo(test_path, &v1_info, &v2_info);
+  // If we get a non empty |cmx_file_path|, check that it exists, and if
+  // present launch the test as component using generated |component_url|.
+  if (v1_info.manifest_path == "") {
+    // test is not a component.
+    return true;
+  }
+
+  struct stat s;
+
+  const char* component_executor = "";
+  ComponentTestRunnerStatus* component_executor_status = nullptr;
+  fbl::String component_url;
+
+  // cmx file is present
+  if (stat(v1_info.manifest_path.c_str(), &s) == 0) {
+    component_executor = kRunTestComponentPath;
+    component_executor_status = &run_test_component_status;
+    component_url = v1_info.component_url;
+  } else if (stat(v2_info.manifest_path.c_str(), &s) == 0) {
+    // cm file is present
+    component_executor = kRunTestSuitePath;
+    component_url = v2_info.component_url;
+    component_executor_status = &run_test_suite_status;
+  } else {
+    // Can't find either cmx or cm file, this test is not a component.
+    return true;
+  }
+
+  // make sure component_executor is present.
+  if (*component_executor_status == ComponentTestRunnerStatus::NOT_CHECKED) {
+    // this functions is only called once per component runner.
+    *component_executor_status = CheckComponentTestRunner(component_executor);
+  }
+
+  if (*component_executor_status == ComponentTestRunnerStatus::PRESENT) {
+    *out_component_executor = component_executor;
+    *out_component_url = std::move(component_url);
+  } else {
+    fprintf(stderr,
+            "FAILURE: Cannot find '%s', cannot run %s as component."
+            "binary.",
+            component_executor, test_path);
+    return false;
+  }
+
+  return true;
 }
 
 std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_dir,
@@ -265,37 +339,22 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
     argc++;
   }
 
-  // Values used when running the test as a component.
-  const char* component_launch_args[argc + 2];
-  fbl::String component_url;
-  fbl::String cmx_file_path;
-
   const char* path = argv[0];
+  fbl::String component_url;
+  fbl::String component_executor;
 
-  TestFileComponentInfo(path, &component_url, &cmx_file_path);
-  struct stat s;
-  // If we get a non empty |cmx_file_path|, check that it exists, and if
-  // present launch the test as component using generated |component_url|.
-  if (cmx_file_path != "" && stat(cmx_file_path.c_str(), &s) == 0) {
-    // make sure run-test-component is present.
-    if (run_test_component_status == RunTestComponentStatus::NOT_CHECKED) {
-      run_test_component_status = CheckRunTestComponent();
-    }
+  if (!SetUpForTestComponent(argv, argc, &component_url, &component_executor)) {
+    return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0, 0);
+  }
 
-    if (run_test_component_status == RunTestComponentStatus::PRESENT) {
-      component_launch_args[0] = kRunTestComponentPath;
-      component_launch_args[1] = component_url.c_str();
-      for (size_t i = 1; i <= argc; i++) {
-        component_launch_args[1 + i] = argv[i];
-      }
-      args = component_launch_args;
-    } else {
-      fprintf(stderr,
-              "FAILURE: Cannot find '%s', cannot run %s as component."
-              "binary.",
-              kRunTestComponentPath, path);
-      return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0, 0);
+  const char* component_launch_args[argc + 2];
+  if (component_url.length() > 0) {
+    component_launch_args[0] = component_executor.c_str();
+    component_launch_args[1] = component_url.c_str();
+    for (size_t i = 1; i <= argc; i++) {
+      component_launch_args[1 + i] = argv[i];
     }
+    args = component_launch_args;
   }
 
   // Truncate the name on the left so the more important stuff on the right part of the path stays

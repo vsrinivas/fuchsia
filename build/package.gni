@@ -758,13 +758,14 @@ template("package") {
       dest_name = get_path_info(dest, "name")
       not_needed([ "dest_name" ])
 
-      # Check that all tests are components with cmx files at the expected path.
+      # Check that all tests are components with cmx/cm files at the expected path.
       if (!pkg.deprecated_system_image && !bootfs_only && !is_disabled &&
           (!defined(require_bare_tests_allowlist) ||
            !require_bare_tests_allowlist)) {
         require_bare_tests_allowlist = true
         foreach(meta, pkg.meta) {
-          if (get_path_info(meta.dest, "extension") == "cmx") {
+          extension = get_path_info(meta.dest, "extension")
+          if (extension == "cmx" || extension == "cm") {
             meta_name = get_path_info(meta.dest, "name")
             if (dest_name == meta_name) {
               require_bare_tests_allowlist = false

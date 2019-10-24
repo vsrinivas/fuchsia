@@ -2,16 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_
-#define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_
+#ifndef RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_
+#define RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_
 
 #include <stdio.h>
+
 #include <memory>
 
 #include <fbl/string.h>
 #include <runtests-utils/runtests-utils.h>
 
 namespace runtests {
+
+struct ComponentInfo {
+  fbl::String component_url;
+  fbl::String manifest_path;
+};
 
 // If tests are in this path, they can run as a component if corresponding cmx
 // file is present.
@@ -31,8 +37,8 @@ constexpr char kPkgPrefix[] = "/pkgfs/packages/";
 // Code which uses this url:
 // https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/appmgr/root_loader.cc
 //
-void TestFileComponentInfo(const fbl::String& path, fbl::String* component_url_out,
-                           fbl::String* cmx_file_path_out);
+void TestFileComponentInfo(const fbl::String& path, ComponentInfo* v1_info_out,
+                           ComponentInfo* v2_info_out);
 
 // Invokes a Fuchsia test binary and writes its output to a file.
 //
@@ -46,4 +52,4 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
 
 }  // namespace runtests
 
-#endif  // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_
+#endif  // RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_

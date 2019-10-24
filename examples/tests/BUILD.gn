@@ -135,12 +135,13 @@ group("all_bins") {
     ":passing-test-example",
     ":run-closes-channel-example",
     ":run-hangs-example",
-    "rust:echo_test_client",
+    "rust:all_bins",
     "//examples/components/routing/echo_server",
   ]
 }
 
 package("example-tests") {
+  testonly = true
   deps = [
     ":all_bins",
   ]
@@ -180,6 +181,12 @@ package("example-tests") {
     },
     {
       name = "echo_server"
+    },
+  ]
+
+  tests = [
+    {
+      name = "echo_test_realm"
     },
   ]
 
@@ -240,6 +247,7 @@ package("example-tests") {
 }
 
 group("tests") {
+  testonly = true
   deps = [
     ":example-tests",
   ]

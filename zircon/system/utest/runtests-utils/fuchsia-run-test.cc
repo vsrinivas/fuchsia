@@ -30,99 +30,160 @@ namespace {
 
 bool TestFileComponentInfoTest() {
   BEGIN_TEST;
-  fbl::String component_url;
-  fbl::String cmx_file_path;
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  ComponentInfo v1_info, v2_info;
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/system/test", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/system/test", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/foo", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/foo/", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/foo", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/foo/bar", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/foo/", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/foo/bar/", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("", component_url.c_str());
-  EXPECT_STR_EQ("", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/foo/bar", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/pname/foo/bar/", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/bar.cmx", component_url.c_str());
-  EXPECT_STR_EQ("/pkgfs/packages/pname/meta/bar.cmx", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/foo/bar/", &v1_info, &v2_info);
+  EXPECT_STR_EQ("", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/pname/foo/bar/test_file", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/test_file.cmx", component_url.c_str());
-  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/meta/test_file.cmx", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/pname/foo/bar/", &v1_info, &v2_info);
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/bar.cmx", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/meta/bar.cmx", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/bar.cm", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/meta/bar.cm", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/pname/foo/bar/test/file", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/file.cmx", component_url.c_str());
-  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/bar/meta/file.cmx", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/pname/foo/bar/test_file", &v1_info, &v2_info);
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/test_file.cmx",
+                v1_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/meta/test_file.cmx", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/test_file.cm", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/meta/test_file.cm", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/pname/foo/bar/test/file/", &component_url, &cmx_file_path);
-  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/file.cmx", component_url.c_str());
-  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/bar/meta/file.cmx", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/pname/foo/bar/test/file", &v1_info, &v2_info);
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/file.cmx", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/bar/meta/file.cmx", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/file.cm", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/bar/meta/file.cm", v2_info.manifest_path.c_str());
 
-  component_url = "";
-  cmx_file_path = "";
-  TestFileComponentInfo("/pkgfs/packages/pname/0/test/disabled/test_name", &component_url,
-                        &cmx_file_path);
-  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/test_name.cmx", component_url.c_str());
-  EXPECT_STR_EQ("/pkgfs/packages/pname/0/meta/test_name.cmx", cmx_file_path.c_str());
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/pname/foo/bar/test/file/", &v1_info, &v2_info);
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/file.cmx", v1_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/bar/meta/file.cmx", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/file.cm", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/foo/bar/meta/file.cm", v2_info.manifest_path.c_str());
+
+  v1_info.component_url = "";
+  v1_info.manifest_path = "";
+  v2_info.component_url = "";
+  v2_info.manifest_path = "";
+  TestFileComponentInfo("/pkgfs/packages/pname/0/test/disabled/test_name", &v1_info, &v2_info);
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/test_name.cmx",
+                v1_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/0/meta/test_name.cmx", v1_info.manifest_path.c_str());
+  EXPECT_STR_EQ("fuchsia-pkg://fuchsia.com/pname#meta/test_name.cm", v2_info.component_url.c_str());
+  EXPECT_STR_EQ("/pkgfs/packages/pname/0/meta/test_name.cm", v2_info.manifest_path.c_str());
 
   END_TEST;
 }
