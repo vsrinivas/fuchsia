@@ -7,9 +7,10 @@
 use {
     fidl_fuchsia_io::{
         MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK,
-        OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     libc::{S_IRUSR, S_IWUSR},
@@ -71,6 +72,8 @@ pub fn new_connection_validate_flags(
 
     let allowed_flags = OPEN_FLAG_NODE_REFERENCE
         | OPEN_FLAG_DESCRIBE
+        | OPEN_FLAG_CREATE
+        | OPEN_FLAG_CREATE_IF_ABSENT
         | if readable { OPEN_RIGHT_READABLE } else { 0 }
         | if writable { OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE } else { 0 };
 
@@ -112,9 +115,9 @@ mod tests {
     use {
         fidl_fuchsia_io::{
             MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND,
-            OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-            OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
+            OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_zircon::Status,
     };
@@ -208,6 +211,38 @@ mod tests {
             true,
             true,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE
+        );
+    }
+
+    #[test]
+    fn new_connection_validate_flags_create() {
+        ncvf_ok!(
+            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE,
+            0,
+            true,
+            false,
+            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE
+        );
+        ncvf_ok!(
+            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
+            0,
+            true,
+            false,
+            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
+        );
+        ncvf_ok!(
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+            0,
+            false,
+            true,
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE
+        );
+        ncvf_ok!(
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
+            0,
+            false,
+            true,
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
         );
     }
 

@@ -63,12 +63,13 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
 
     let allowed_flags = OPEN_FLAG_NODE_REFERENCE
         | OPEN_FLAG_DESCRIBE
+        | OPEN_FLAG_CREATE
+        | OPEN_FLAG_CREATE_IF_ABSENT
         | OPEN_FLAG_DIRECTORY
         | OPEN_RIGHT_READABLE
         | OPEN_RIGHT_WRITABLE;
 
-    let prohibited_flags =
-        OPEN_FLAG_APPEND | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_TRUNCATE;
+    let prohibited_flags = OPEN_FLAG_APPEND | OPEN_FLAG_TRUNCATE;
 
     // Pseudo directories do not allow mounting at this point.
     if flags & OPEN_RIGHT_ADMIN != 0 {
@@ -148,10 +149,10 @@ mod tests {
 
     use {
         fidl_fuchsia_io::{
-            MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SOCKET, OPEN_FLAG_CREATE,
-            OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-            OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
-            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND,
+            OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
+            OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_zircon::Status,
     };
@@ -241,7 +242,23 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_create() {
-        ncvf_err!(OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE, 0, Status::INVALID_ARGS);
+        ncvf_ok!(OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE, 0, OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE);
+        ncvf_ok!(
+            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
+            0,
+            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
+        );
+        ncvf_ok!(OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE, 0, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE);
+        ncvf_ok!(
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
+            0,
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
+        );
+    }
+
+    #[test]
+    fn new_connection_validate_flags_append() {
+        ncvf_err!(OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND, 0, Status::INVALID_ARGS);
     }
 
     #[test]
