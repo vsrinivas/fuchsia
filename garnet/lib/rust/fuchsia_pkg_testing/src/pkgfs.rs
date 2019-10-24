@@ -14,7 +14,10 @@ use {
     fuchsia_zircon as zx,
     fuchsia_zircon::Task,
     openat::Dir,
-    std::{ffi::CString, fs::File},
+    std::{
+        ffi::{CStr, CString},
+        fs::File,
+    },
     tempfile::TempDir,
 };
 
@@ -28,23 +31,45 @@ pub struct TestPkgFs {
     index: TempDir,
     proxy: DirectoryProxy,
     process: ProcessKillGuard,
+    system_image_merkle: Option<String>,
 }
 
 impl TestPkgFs {
     /// Start a pkgfs server.
+    pub fn start() -> Result<Self, Error> {
+        Self::start_with_index(None)
+    }
+
+    /// Start a pkgfs server.
     ///
     /// If index is Some, uses that as a dynamic index, otherwise uses an empty tempdir.
-    pub fn start(index: impl Into<Option<TempDir>>) -> Result<Self, Error> {
+    pub fn start_with_index(index: impl Into<Option<TempDir>>) -> Result<Self, Error> {
         let blobfs = TestBlobFs::start()?;
 
+        TestPkgFs::start_with_blobfs_helper(index, blobfs, Option::<String>::None)
+    }
+
+    /// Starts a package server backed by the provided blobfs.
+    ///
+    /// If system_image_merkle is Some, uses that as the starting system_image package.
+    pub fn start_with_blobfs(
+        blobfs: TestBlobFs,
+        system_image_merkle: Option<impl Into<String>>,
+    ) -> Result<Self, Error> {
+        TestPkgFs::start_with_blobfs_helper(None, blobfs, system_image_merkle)
+    }
+
+    fn start_with_blobfs_helper(
+        index: impl Into<Option<TempDir>>,
+        blobfs: TestBlobFs,
+        system_image_merkle: Option<impl Into<String>>,
+    ) -> Result<Self, Error> {
         let index = match index.into() {
             Some(index) => index,
             None => TempDir::new().context("creating tempdir to use as dynamic package index")?,
         };
-        TestPkgFs::start_with_blobfs(index, blobfs)
-    }
+        let system_image_merkle = system_image_merkle.map(|m| m.into());
 
-    fn start_with_blobfs(index: TempDir, blobfs: TestBlobFs) -> Result<Self, Error> {
         let (connection, server_end) = zx::Channel::create()?;
         fdio::service_connect(index.path().to_str().expect("path is utf8"), server_end)
             .context("connecting to tempdir")?;
@@ -52,15 +77,22 @@ impl TestPkgFs {
         let pkgfs_root_handle_info = HandleInfo::new(HandleType::User0, 0);
         let (proxy, pkgfs_root_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
 
+        let pkgsvr_bin = CString::new("/pkg/bin/pkgsvr").unwrap();
+        let blob_flag = CString::new("-blob=/b").unwrap();
+        let index_flag = CString::new("-index=/i").unwrap();
+        let system_image_flag =
+            system_image_merkle.as_ref().map(|s| CString::new(s.clone()).unwrap());
+
+        let mut argv: Vec<&CStr> = vec![&pkgsvr_bin, &blob_flag, &index_flag];
+        if let Some(system_image_flag) = system_image_flag.as_ref() {
+            argv.push(system_image_flag)
+        }
+
         let process = fdio::spawn_etc(
             &fuchsia_runtime::job_default(),
             SpawnOptions::CLONE_ALL,
-            &CString::new("/pkg/bin/pkgsvr").unwrap(),
-            &[
-                &CString::new("pkgsvr").unwrap(),
-                &CString::new("-blob=/b").unwrap(),
-                &CString::new("-index=/i").unwrap(),
-            ],
+            &pkgsvr_bin,
+            &argv,
             None,
             &mut [
                 SpawnAction::add_handle(
@@ -76,7 +108,7 @@ impl TestPkgFs {
         )
         .map_err(|(status, _)| status)
         .context("spawning 'pkgsvr'")?;
-        Ok(TestPkgFs { blobfs, index, proxy, process: process.into() })
+        Ok(TestPkgFs { blobfs, index, proxy, process: process.into(), system_image_merkle })
     }
 
     /// Returns a new connection to the pkgfs root directory.
@@ -108,7 +140,7 @@ impl TestPkgFs {
     pub fn restart(self) -> Result<Self, Error> {
         self.process.kill().context("killing pkgfs")?;
         drop(self.proxy);
-        TestPkgFs::start_with_blobfs(self.index, self.blobfs)
+        TestPkgFs::start_with_blobfs_helper(self.index, self.blobfs, self.system_image_merkle)
     }
 
     /// Shuts down the pkgfs server and all the backing infrastructure.
@@ -137,7 +169,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_pkgfs() -> Result<(), Error> {
-        let pkgfs = TestPkgFs::start(None).context("starting pkgfs")?;
+        let pkgfs = TestPkgFs::start().context("starting pkgfs")?;
         let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
         let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
@@ -232,7 +264,7 @@ mod tests {
     async fn test_pkgfs_with_index() -> Result<(), Error> {
         let index = TempDir::new().expect("create tempdir");
         let index_path = index.path().to_owned();
-        let pkgfs = TestPkgFs::start(index).context("starting pkgfs")?;
+        let pkgfs = TestPkgFs::start_with_index(index).context("starting pkgfs")?;
         let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
         let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
@@ -314,5 +346,52 @@ mod tests {
         pkgfs.stop().await?;
 
         Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_pkgfs_with_system_image() {
+        let pkg = PackageBuilder::new("example")
+            .add_resource_at("a/b", "Hello world!\n".as_bytes())
+            .build()
+            .await
+            .expect("build package");
+
+        let system_image_package = crate::package::PackageBuilder::new("system_image")
+            .add_resource_at(
+                "data/static_packages",
+                format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
+            )
+            .build()
+            .await
+            .unwrap();
+
+        let blobfs = TestBlobFs::start().unwrap();
+        system_image_package.write_to_blobfs(&blobfs);
+        pkg.write_to_blobfs(&blobfs);
+
+        let pkgfs = TestPkgFs::start_with_blobfs(
+            blobfs,
+            Some(system_image_package.meta_far_merkle_root().to_string()),
+        )
+        .expect("starting pkgfs");
+        let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+        let mut file_contents = String::new();
+        d.open_file("packages/example/0/a/b")
+            .expect("read package file1")
+            .read_to_string(&mut file_contents)
+            .expect("read package file2");
+        assert_eq!(&file_contents, "Hello world!\n");
+
+        let mut file_contents = String::new();
+        d.open_file(format!("versions/{}/a/b", pkg.meta_far_merkle_root()))
+            .expect("read package file3")
+            .read_to_string(&mut file_contents)
+            .expect("read package file4");
+        assert_eq!(&file_contents, "Hello world!\n");
+
+        drop(d);
+
+        pkgfs.stop().await.expect("shutting down pkgfs");
     }
 }

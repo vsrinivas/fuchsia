@@ -119,11 +119,11 @@ struct TestEnv<P = TestPkgFs> {
 
 impl TestEnv<TestPkgFs> {
     fn new() -> Self {
-        Self::new_with_pkg_fs(TestPkgFs::start(None).expect("pkgfs to start"))
+        Self::new_with_pkg_fs(TestPkgFs::start().expect("pkgfs to start"))
     }
 
     fn new_with_mounts(mounts: Mounts) -> Self {
-        Self::new_with_pkg_fs_and_mounts(TestPkgFs::start(None).expect("pkgfs to start"), mounts)
+        Self::new_with_pkg_fs_and_mounts(TestPkgFs::start().expect("pkgfs to start"), mounts)
     }
 
     async fn stop(self) {

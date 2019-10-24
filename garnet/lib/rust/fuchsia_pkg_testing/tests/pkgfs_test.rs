@@ -18,7 +18,7 @@ fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_short_write() -> Result<(), Error> {
-    let pkgfs = TestPkgFs::start(None).context("starting pkgfs")?;
+    let pkgfs = TestPkgFs::start().context("starting pkgfs")?;
     let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
     let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
@@ -134,7 +134,7 @@ async fn test_pkgfs_short_write() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_install() -> Result<(), Error> {
-    let pkgfs = TestPkgFs::start(None).context("starting pkgfs")?;
+    let pkgfs = TestPkgFs::start().context("starting pkgfs")?;
     let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
     let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
@@ -328,7 +328,7 @@ async fn test_pkgfs_restart_install() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_install_already_done() -> Result<(), Error> {
-    let pkgfs = TestPkgFs::start(None).context("starting pkgfs")?;
+    let pkgfs = TestPkgFs::start().context("starting pkgfs")?;
     let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
     let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
@@ -481,7 +481,7 @@ async fn test_pkgfs_restart_install_already_done() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_install_failed_meta_far() -> Result<(), Error> {
-    let pkgfs = TestPkgFs::start(None).context("starting pkgfs")?;
+    let pkgfs = TestPkgFs::start().context("starting pkgfs")?;
     let blobfs_root_dir = pkgfs.blobfs().as_dir()?;
     let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
 
