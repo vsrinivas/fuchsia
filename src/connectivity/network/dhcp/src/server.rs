@@ -3,11 +3,8 @@
 // found in the LICENSE file.
 
 use crate::configuration::{ClientConfig, ServerConfig};
-use crate::protocol::{
-    self, ConfigOption, Message, MessageType, MessageTypeError, OpCode, OptionCode,
-};
+use crate::protocol::{DhcpOption, Message, MessageType, OpCode, ProtocolError};
 use crate::stash::Stash;
-use byteorder::{BigEndian, ByteOrder};
 use failure::{Error, Fail, ResultExt};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use fuchsia_zircon::Status;
@@ -92,7 +89,7 @@ pub enum ServerError {
     NoRequestedAddrForDecline,
 
     #[fail(display = "client request error: {}", _0)]
-    ClientMessageError(MessageTypeError),
+    ClientMessageError(ProtocolError),
 
     #[fail(display = "error manipulating server cache: {}", _0)]
     ServerCacheUpdateFailure(StashError),
@@ -273,16 +270,9 @@ where
                 return Ok(config.client_addr);
             }
         }
-        if let Some(opt) = client.get_config_option(OptionCode::RequestedIpAddr) {
-            if opt.value.len() >= 4 {
-                let requested_addr = protocol::ip_addr_from_buf_at(&opt.value, 0).ok_or(
-                    ServerError::BadRequestedIpv4Addr(
-                        "out of range indexing on opt.value".to_owned(),
-                    ),
-                )?;
-                if self.pool.addr_is_available(requested_addr) {
-                    return Ok(requested_addr);
-                }
+        if let Some(requested_addr) = get_requested_ip_addr(&client) {
+            if self.pool.addr_is_available(requested_addr) {
+                return Ok(requested_addr);
             }
         }
         self.pool.get_next_available_addr().map_err(AddressPoolError::into)
@@ -292,7 +282,7 @@ where
         &mut self,
         client_addr: Ipv4Addr,
         client_mac: MacAddr,
-        client_opts: Vec<ConfigOption>,
+        client_opts: Vec<DhcpOption>,
         client_config: &ClientConfig,
     ) -> Result<(), Error> {
         let config = CachedConfig {
@@ -525,10 +515,10 @@ pub type CachedClients = HashMap<MacAddr, CachedConfig>;
 /// A client's `MacAddr` maps to the `CachedConfig`: this mapping
 /// is stored in the `Server`s `CachedClients` instance at runtime, and in
 /// `fuchsia.stash` persistent storage.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct CachedConfig {
     client_addr: Ipv4Addr,
-    options: Vec<ConfigOption>,
+    options: Vec<DhcpOption>,
     expiration: i64,
 }
 
@@ -666,58 +656,24 @@ fn add_required_options(
     msg_type: MessageType,
 ) {
     msg.options.clear();
-    let mut lease = vec![0; 4];
-    BigEndian::write_u32(&mut lease, client_config.lease_time_s);
-    msg.options.push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: lease });
-    msg.options.push(ConfigOption {
-        code: OptionCode::SubnetMask,
-        value: config.subnet_mask.octets().to_vec(),
-    });
-    msg.options
-        .push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![msg_type.into()] });
-    msg.options.push(ConfigOption {
-        code: OptionCode::ServerId,
-        value: config.server_ip.octets().to_vec(),
-    });
+    msg.options.push(DhcpOption::IpAddressLeaseTime(client_config.lease_time_s));
+    msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(config.subnet_mask.octets())));
+    msg.options.push(DhcpOption::DhcpMessageType(msg_type));
+    msg.options.push(DhcpOption::ServerIdentifier(Ipv4Addr::from(config.server_ip.octets())));
 }
 
 fn add_recommended_options(msg: &mut Message, config: &ServerConfig) {
-    msg.options
-        .push(ConfigOption { code: OptionCode::Router, value: ip_vec_to_bytes(&config.routers) });
-    msg.options.push(ConfigOption {
-        code: OptionCode::NameServer,
-        value: ip_vec_to_bytes(&config.name_servers),
-    });
-    let mut renewal_time = vec![0, 0, 0, 0];
-    BigEndian::write_u32(&mut renewal_time, config.default_lease_time / 2);
-    msg.options.push(ConfigOption { code: OptionCode::RenewalTime, value: renewal_time });
-    let mut rebinding_time = vec![0, 0, 0, 0];
-    BigEndian::write_u32(&mut rebinding_time, config.default_lease_time / 4);
-    msg.options.push(ConfigOption { code: OptionCode::RebindingTime, value: rebinding_time });
+    msg.options.push(DhcpOption::Router(config.routers.clone()));
+    msg.options.push(DhcpOption::DomainNameServer(config.name_servers.clone()));
+    msg.options.push(DhcpOption::RenewalTimeValue(config.default_lease_time / 2));
+    msg.options.push(DhcpOption::RebindingTimeValue((3 * config.default_lease_time) / 4));
 }
 
 fn add_inform_ack_options(msg: &mut Message, config: &ServerConfig) {
-    msg.options.push(ConfigOption {
-        code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPACK.into()],
-    });
-    msg.options.push(ConfigOption {
-        code: OptionCode::ServerId,
-        value: config.server_ip.octets().to_vec(),
-    });
-    msg.options
-        .push(ConfigOption { code: OptionCode::Router, value: ip_vec_to_bytes(&config.routers) });
-    msg.options.push(ConfigOption {
-        code: OptionCode::NameServer,
-        value: ip_vec_to_bytes(&config.name_servers),
-    });
-}
-
-fn ip_vec_to_bytes<'a, T>(ips: T) -> Vec<u8>
-where
-    T: IntoIterator<Item = &'a Ipv4Addr>,
-{
-    ips.into_iter().flat_map(|ip| ip.octets().to_vec()).collect()
+    msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
+    msg.options.push(DhcpOption::ServerIdentifier(config.server_ip));
+    msg.options.push(DhcpOption::Router(config.routers.clone()));
+    msg.options.push(DhcpOption::DomainNameServer(config.name_servers.clone()));
 }
 
 fn is_recipient(server_ip: Ipv4Addr, req: &Message) -> bool {
@@ -761,17 +717,9 @@ fn build_nak(req: Message, config: &ServerConfig, error: String) -> (Message, Op
     nak.siaddr = Ipv4Addr::UNSPECIFIED;
 
     nak.options.clear();
-    let mut lease = vec![0; 4];
-    BigEndian::write_u32(&mut lease, config.default_lease_time);
-    nak.options.push(ConfigOption {
-        code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPNAK.into()],
-    });
-    nak.options.push(ConfigOption {
-        code: OptionCode::ServerId,
-        value: config.server_ip.octets().to_vec(),
-    });
-    nak.options.push(ConfigOption { code: OptionCode::Message, value: error.into_bytes() });
+    nak.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPNAK));
+    nak.options.push(DhcpOption::ServerIdentifier(config.server_ip));
+    nak.options.push(DhcpOption::Message(error));
 
     // https://tools.ietf.org/html/rfc2131#section-4.3.2
     // Page 31, Paragraph 2-3.
@@ -803,25 +751,41 @@ fn get_client_state(msg: &Message) -> Result<ClientState, ()> {
 }
 
 fn get_requested_ip_addr(req: &Message) -> Option<Ipv4Addr> {
-    let req_ip_opt = req.options.iter().find(|opt| opt.code == OptionCode::RequestedIpAddr)?;
-    let raw_ip = BigEndian::read_u32(&req_ip_opt.value);
-    Some(Ipv4Addr::from(raw_ip))
+    req.options
+        .iter()
+        .filter_map(
+            |opt| {
+                if let DhcpOption::RequestedIpAddress(addr) = opt {
+                    Some(*addr)
+                } else {
+                    None
+                }
+            },
+        )
+        .next()
 }
 
 fn get_server_id_from(req: &Message) -> Option<Ipv4Addr> {
-    let server_id_opt = req.options.iter().find(|opt| opt.code == OptionCode::ServerId)?;
-    let raw_server_id = BigEndian::read_u32(&server_id_opt.value);
-    Some(Ipv4Addr::from(raw_server_id))
+    req.options
+        .iter()
+        .filter_map(
+            |opt| {
+                if let DhcpOption::ServerIdentifier(addr) = opt {
+                    Some(*addr)
+                } else {
+                    None
+                }
+            },
+        )
+        .next()
 }
 
 #[cfg(test)]
 pub mod tests {
 
     use super::*;
-    use crate::configuration::SubnetMask;
-    use crate::protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
+    use crate::protocol::{DhcpOption, Message, MessageType, OpCode, OptionCode};
     use rand::Rng;
-    use std::convert::TryFrom;
     use std::net::Ipv4Addr;
 
     pub fn random_ipv4_generator() -> Ipv4Addr {
@@ -875,10 +839,7 @@ pub mod tests {
         let mut disc = Message::new();
         disc.xid = rand::thread_rng().gen();
         disc.chaddr = random_mac_generator();
-        disc.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDISCOVER.into()],
-        });
+        disc.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
         disc
     }
 
@@ -892,35 +853,17 @@ pub mod tests {
         offer.op = OpCode::BOOTREPLY;
         offer.xid = disc.xid;
         offer.chaddr = disc.chaddr;
-        offer
-            .options
-            .push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: vec![0, 0, 0, 100] });
-        offer.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: SubnetMask::try_from(24).unwrap().octets().to_vec(),
-        });
-        offer.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPOFFER.into()],
-        });
-        offer.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: server.config.server_ip.octets().to_vec(),
-        });
-        offer.options.push(ConfigOption {
-            code: OptionCode::Router,
-            value: server.config.routers.first().unwrap().octets().to_vec(),
-        });
-        offer.options.push(ConfigOption {
-            code: OptionCode::NameServer,
-            value: vec![8, 8, 8, 8, 8, 8, 4, 4],
-        });
-        offer
-            .options
-            .push(ConfigOption { code: OptionCode::RenewalTime, value: vec![0, 0, 0, 50] });
-        offer
-            .options
-            .push(ConfigOption { code: OptionCode::RebindingTime, value: vec![0, 0, 0, 25] });
+        offer.options.push(DhcpOption::IpAddressLeaseTime(100));
+        offer.options.push(DhcpOption::SubnetMask(Ipv4Addr::new(255, 255, 255, 0)));
+        offer.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPOFFER));
+        offer.options.push(DhcpOption::ServerIdentifier(server.config.server_ip));
+        offer.options.push(DhcpOption::Router(server.config.routers.clone()));
+        offer.options.push(DhcpOption::DomainNameServer(vec![
+            Ipv4Addr::new(8, 8, 8, 8),
+            Ipv4Addr::new(8, 8, 4, 4),
+        ]));
+        offer.options.push(DhcpOption::RenewalTimeValue(50));
+        offer.options.push(DhcpOption::RebindingTimeValue(75));
         offer
     }
 
@@ -928,10 +871,7 @@ pub mod tests {
         let mut req = Message::new();
         req.xid = rand::thread_rng().gen();
         req.chaddr = random_mac_generator();
-        req.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPREQUEST.into()],
-        });
+        req.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPREQUEST));
         req
     }
 
@@ -940,10 +880,7 @@ pub mod tests {
         F: Fn() -> i64,
     {
         let mut req = new_test_request();
-        req.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: server.config.server_ip.octets().to_vec(),
-        });
+        req.options.push(DhcpOption::ServerIdentifier(server.config.server_ip));
         req
     }
 
@@ -955,31 +892,17 @@ pub mod tests {
         ack.op = OpCode::BOOTREPLY;
         ack.xid = req.xid;
         ack.chaddr = req.chaddr;
-        ack.options
-            .push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: vec![0, 0, 0, 100] });
-        ack.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: SubnetMask::try_from(24).unwrap().octets().to_vec(),
-        });
-        ack.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPACK.into()],
-        });
-        ack.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: server.config.server_ip.octets().to_vec(),
-        });
-        ack.options.push(ConfigOption {
-            code: OptionCode::Router,
-            value: server.config.routers.first().unwrap().octets().to_vec(),
-        });
-        ack.options.push(ConfigOption {
-            code: OptionCode::NameServer,
-            value: vec![8, 8, 8, 8, 8, 8, 4, 4],
-        });
-        ack.options.push(ConfigOption { code: OptionCode::RenewalTime, value: vec![0, 0, 0, 50] });
-        ack.options
-            .push(ConfigOption { code: OptionCode::RebindingTime, value: vec![0, 0, 0, 25] });
+        ack.options.push(DhcpOption::IpAddressLeaseTime(100));
+        ack.options.push(DhcpOption::SubnetMask(Ipv4Addr::new(255, 255, 255, 0)));
+        ack.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
+        ack.options.push(DhcpOption::ServerIdentifier(server.config.server_ip));
+        ack.options.push(DhcpOption::Router(server.config.routers.clone()));
+        ack.options.push(DhcpOption::DomainNameServer(vec![
+            Ipv4Addr::new(8, 8, 8, 8),
+            Ipv4Addr::new(8, 8, 4, 4),
+        ]));
+        ack.options.push(DhcpOption::RenewalTimeValue(50));
+        ack.options.push(DhcpOption::RebindingTimeValue(75));
         ack
     }
 
@@ -991,15 +914,9 @@ pub mod tests {
         nak.op = OpCode::BOOTREPLY;
         nak.xid = req.xid;
         nak.chaddr = req.chaddr;
-        nak.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPNAK.into()],
-        });
-        nak.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: server.config.server_ip.octets().to_vec(),
-        });
-        nak.options.push(ConfigOption { code: OptionCode::Message, value: error.into_bytes() });
+        nak.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPNAK));
+        nak.options.push(DhcpOption::ServerIdentifier(server.config.server_ip));
+        nak.options.push(DhcpOption::Message(error));
         nak
     }
 
@@ -1007,10 +924,7 @@ pub mod tests {
         let mut release = Message::new();
         release.xid = rand::thread_rng().gen();
         release.chaddr = random_mac_generator();
-        release.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPRELEASE.into()],
-        });
+        release.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPRELEASE));
         release
     }
 
@@ -1018,10 +932,7 @@ pub mod tests {
         let mut inform = Message::new();
         inform.xid = rand::thread_rng().gen();
         inform.chaddr = random_mac_generator();
-        inform.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPINFORM.into()],
-        });
+        inform.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPINFORM));
         inform
     }
 
@@ -1033,22 +944,13 @@ pub mod tests {
         ack.op = OpCode::BOOTREPLY;
         ack.xid = req.xid;
         ack.chaddr = req.chaddr;
-        ack.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPACK.into()],
-        });
-        ack.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: server.config.server_ip.octets().to_vec(),
-        });
-        ack.options.push(ConfigOption {
-            code: OptionCode::Router,
-            value: server.config.routers.first().unwrap().octets().to_vec(),
-        });
-        ack.options.push(ConfigOption {
-            code: OptionCode::NameServer,
-            value: vec![8, 8, 8, 8, 8, 8, 4, 4],
-        });
+        ack.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
+        ack.options.push(DhcpOption::ServerIdentifier(server.config.server_ip));
+        ack.options.push(DhcpOption::Router(server.config.routers.clone()));
+        ack.options.push(DhcpOption::DomainNameServer(vec![
+            Ipv4Addr::new(8, 8, 8, 8),
+            Ipv4Addr::new(8, 8, 4, 4),
+        ]));
         ack
     }
 
@@ -1059,14 +961,8 @@ pub mod tests {
         let mut decline = Message::new();
         decline.xid = rand::thread_rng().gen();
         decline.chaddr = random_mac_generator();
-        decline.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDECLINE.into()],
-        });
-        decline.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: server.config.server_ip.octets().to_vec(),
-        });
+        decline.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDECLINE));
+        decline.options.push(DhcpOption::ServerIdentifier(server.config.server_ip));
         decline
     }
 
@@ -1367,10 +1263,7 @@ pub mod tests {
         server.pool.allocated_addrs.insert(bound_client_ip);
         server.pool.available_addrs.insert(requested_ip);
 
-        disc.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: requested_ip.octets().to_vec(),
-        });
+        disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
         server.cache.insert(
             disc.chaddr,
@@ -1397,10 +1290,7 @@ pub mod tests {
         server.pool.allocated_addrs.insert(requested_ip);
         server.pool.available_addrs.insert(free_ip);
 
-        disc.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: requested_ip.octets().to_vec(),
-        });
+        disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
         server.cache.insert(
             disc.chaddr,
@@ -1429,10 +1319,7 @@ pub mod tests {
 
         // Update discover message to request for a specific ip
         // which is available in server pool.
-        disc.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: requested_ip.octets().to_vec(),
-        });
+        disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
         let response = server.dispatch(disc).unwrap();
 
@@ -1452,40 +1339,11 @@ pub mod tests {
         server.pool.allocated_addrs.insert(requested_ip);
         server.pool.available_addrs.insert(free_ip_1);
 
-        disc.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: requested_ip.octets().to_vec(),
-        });
+        disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
         let response = server.dispatch(disc).unwrap();
 
         assert_eq!(extract_message(response).yiaddr, free_ip_1);
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_expired_client_binding_returns_next_addr_for_bad_requested_addr(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server(server_time_provider).await?;
-        let mut disc = new_test_discover();
-
-        let bound_client_ip = random_ipv4_generator();
-        let free_ip = random_ipv4_generator();
-
-        server.pool.available_addrs.insert(free_ip);
-
-        // Update `discover` to have bad requested ip.
-        disc.options
-            .push(ConfigOption { code: OptionCode::RequestedIpAddr, value: vec![100, 200, 1] });
-
-        server.cache.insert(
-            disc.chaddr,
-            CachedConfig { client_addr: bound_client_ip, options: vec![], expiration: 0 },
-        );
-
-        let response = server.dispatch(disc).unwrap();
-
-        assert_eq!(extract_message(response).yiaddr, free_ip);
         Ok(())
     }
 
@@ -1499,10 +1357,7 @@ pub mod tests {
 
         server.pool.allocated_addrs.insert(requested_ip);
 
-        disc.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: requested_ip.octets().to_vec(),
-        });
+        disc.options.push(DhcpOption::RequestedIpAddress(requested_ip));
 
         assert_eq!(
             server.dispatch(disc),
@@ -1531,10 +1386,7 @@ pub mod tests {
         // Construct a simple offer sent by client.
         let mut client_offer = Message::new();
         client_offer.op = OpCode::BOOTREQUEST;
-        client_offer.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPOFFER.into()],
-        });
+        client_offer.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPOFFER));
 
         assert_eq!(
             server.dispatch(client_offer),
@@ -1550,10 +1402,7 @@ pub mod tests {
         // Construct a simple ack sent by client.
         let mut client_ack = Message::new();
         client_ack.op = OpCode::BOOTREQUEST;
-        client_ack.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPACK.into()],
-        });
+        client_ack.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
 
         assert_eq!(
             server.dispatch(client_ack),
@@ -1569,10 +1418,7 @@ pub mod tests {
         // Construct a simple nak sent by client.
         let mut client_nak = Message::new();
         client_nak.op = OpCode::BOOTREQUEST;
-        client_nak.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPNAK.into()],
-        });
+        client_nak.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPNAK));
 
         assert_eq!(
             server.dispatch(client_nak),
@@ -1643,10 +1489,7 @@ pub mod tests {
 
         // Update request to have a server ip different from actual server ip.
         req.options.remove(1);
-        req.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: random_ipv4_generator().octets().to_vec(),
-        });
+        req.options.push(DhcpOption::ServerIdentifier(random_ipv4_generator()));
 
         assert_eq!(
             server.dispatch(req),
@@ -1753,10 +1596,7 @@ pub mod tests {
         server.pool.allocated_addrs.insert(init_reboot_client_ip);
 
         // Update request to have the test requested ip.
-        req.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: init_reboot_client_ip.octets().to_vec(),
-        });
+        req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
 
         server.cache.insert(
             req.chaddr,
@@ -1786,10 +1626,7 @@ pub mod tests {
         let mut req = new_test_request();
 
         // Update request to have requested ip not on same subnet as server.
-        req.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: random_ipv4_generator().octets().to_vec(),
-        });
+        req.options.push(DhcpOption::RequestedIpAddress(random_ipv4_generator()));
 
         // The returned nak should be from this recipient server.
         let expected_nak =
@@ -1810,10 +1647,7 @@ pub mod tests {
 
         // Update request to have requested ip not on same subnet as server,
         // to ensure we get a nak.
-        req.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: random_ipv4_generator().octets().to_vec(),
-        });
+        req.options.push(DhcpOption::RequestedIpAddress(random_ipv4_generator()));
 
         let response = server.dispatch(req).unwrap();
 
@@ -1830,10 +1664,7 @@ pub mod tests {
         let client_mac = req.chaddr;
 
         // Update requested ip and server ip to be on the same subnet.
-        req.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: Ipv4Addr::new(192, 165, 30, 45).octets().to_vec(),
-        });
+        req.options.push(DhcpOption::RequestedIpAddress(Ipv4Addr::new(192, 165, 30, 45)));
         server.config.server_ip = Ipv4Addr::new(192, 165, 30, 1);
 
         assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
@@ -1848,10 +1679,7 @@ pub mod tests {
 
         // Update requested ip and server ip to be on the same subnet.
         let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
-        req.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: init_reboot_client_ip.octets().to_vec(),
-        });
+        req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
         server.config.server_ip = Ipv4Addr::new(192, 165, 25, 1);
 
         let server_cached_ip = Ipv4Addr::new(192, 165, 25, 10);
@@ -1881,10 +1709,7 @@ pub mod tests {
         let mut req = new_test_request();
 
         let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
-        req.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: init_reboot_client_ip.octets().to_vec(),
-        });
+        req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
         server.config.server_ip = Ipv4Addr::new(192, 165, 25, 1);
 
         server.pool.allocated_addrs.insert(init_reboot_client_ip);
@@ -1911,10 +1736,7 @@ pub mod tests {
         let mut req = new_test_request();
 
         let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
-        req.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: init_reboot_client_ip.octets().to_vec(),
-        });
+        req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
         server.config.server_ip = Ipv4Addr::new(192, 165, 25, 1);
 
         server.cache.insert(
@@ -2072,10 +1894,7 @@ pub mod tests {
 
         // Selecting state request must have server id and ciaddr populated.
         req.ciaddr = random_ipv4_generator();
-        req.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: random_ipv4_generator().octets().to_vec(),
-        });
+        req.options.push(DhcpOption::ServerIdentifier(random_ipv4_generator()));
 
         assert_eq!(get_client_state(&req), Ok(ClientState::Selecting));
         Ok(())
@@ -2086,10 +1905,7 @@ pub mod tests {
         let mut req = new_test_request();
 
         // Init reboot state request must have requested ip populated.
-        req.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: random_ipv4_generator().octets().to_vec(),
-        });
+        req.options.push(DhcpOption::RequestedIpAddress(random_ipv4_generator()));
 
         assert_eq!(get_client_state(&req), Ok(ClientState::InitReboot));
         Ok(())
@@ -2123,43 +1939,8 @@ pub mod tests {
 
         assert_eq!(
             server.dispatch(msg),
-            Err(ServerError::ClientMessageError(MessageTypeError::MissingOption))
-        );
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_client_msg_missing_message_type_value_returns_error(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server(server_time_provider).await?;
-        let mut msg = new_test_request();
-        msg.options.clear();
-
-        msg.options.push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![] });
-
-        assert_eq!(
-            server.dispatch(msg),
-            Err(ServerError::ClientMessageError(MessageTypeError::MissingValue))
-        );
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_client_msg_with_unknown_type_returns_error() -> Result<(), Error> {
-        let mut server = new_test_minimal_server(server_time_provider).await?;
-        let mut msg = new_test_request();
-        msg.options.clear();
-
-        let invalid_message_type = 123;
-        msg.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![invalid_message_type],
-        });
-
-        assert_eq!(
-            server.dispatch(msg),
-            Err(ServerError::ClientMessageError(MessageTypeError::UnknownType(
-                invalid_message_type
+            Err(ServerError::ClientMessageError(ProtocolError::MissingOption(
+                OptionCode::DhcpMessageType
             )))
         );
         Ok(())
@@ -2326,9 +2107,9 @@ pub mod tests {
         release.ciaddr = release_ip;
 
         let test_client_config =
-            CachedConfig { client_addr: release_ip, options: vec![], expiration: std::i64::MAX };
+            || CachedConfig { client_addr: release_ip, options: vec![], expiration: std::i64::MAX };
 
-        server.cache.insert(client_mac, test_client_config.clone());
+        server.cache.insert(client_mac, test_client_config());
 
         assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
 
@@ -2337,7 +2118,7 @@ pub mod tests {
         assert!(server.cache.contains_key(&client_mac), "client config not retained");
         assert_eq!(
             server.cache.get(&client_mac).unwrap(),
-            &test_client_config,
+            &test_client_config(),
             "retained client config changed"
         );
         Ok(())
@@ -2392,10 +2173,7 @@ pub mod tests {
         let declined_ip = random_ipv4_generator();
         let client_mac = decline.chaddr;
 
-        decline.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: declined_ip.octets().to_vec(),
-        });
+        decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         server.pool.allocated_addrs.insert(declined_ip);
 
@@ -2421,10 +2199,7 @@ pub mod tests {
         let declined_ip = random_ipv4_generator();
         let client_mac = decline.chaddr;
 
-        decline.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: declined_ip.octets().to_vec(),
-        });
+        decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         // Even though declined client ip does not match client binding,
         // the server must update its address pool and mark declined ip as
@@ -2462,10 +2237,7 @@ pub mod tests {
         let declined_ip = random_ipv4_generator();
         let client_mac = decline.chaddr;
 
-        decline.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: declined_ip.octets().to_vec(),
-        });
+        decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         server.pool.available_addrs.insert(declined_ip);
 
@@ -2491,10 +2263,7 @@ pub mod tests {
         let declined_ip = random_ipv4_generator();
         let client_mac = decline.chaddr;
 
-        decline.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: declined_ip.octets().to_vec(),
-        });
+        decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         // Server contains client bindings which reflect a different address
         // than the one being declined.
@@ -2523,10 +2292,7 @@ pub mod tests {
 
         let declined_ip = random_ipv4_generator();
 
-        decline.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: declined_ip.octets().to_vec(),
-        });
+        decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         server.pool.available_addrs.insert(declined_ip);
 
@@ -2548,18 +2314,12 @@ pub mod tests {
 
         // Updating decline request to have wrong server ip.
         decline.options.remove(1);
-        decline.options.push(ConfigOption {
-            code: OptionCode::ServerId,
-            value: Ipv4Addr::new(1, 2, 3, 4).octets().to_vec(),
-        });
+        decline.options.push(DhcpOption::ServerIdentifier(Ipv4Addr::new(1, 2, 3, 4)));
 
         let declined_ip = random_ipv4_generator();
         let client_mac = decline.chaddr;
 
-        decline.options.push(ConfigOption {
-            code: OptionCode::RequestedIpAddr,
-            value: declined_ip.octets().to_vec(),
-        });
+        decline.options.push(DhcpOption::RequestedIpAddress(declined_ip));
 
         server.pool.allocated_addrs.insert(declined_ip);
         server.cache.insert(
@@ -2590,24 +2350,27 @@ pub mod tests {
         let mut disc = new_test_discover();
         let client_mac = disc.chaddr;
 
-        let client_requested_time: u8 = 20;
+        let client_requested_time: u32 = 20;
 
-        disc.options.push(ConfigOption {
-            code: OptionCode::IpAddrLeaseTime,
-            value: vec![0, 0, 0, client_requested_time],
-        });
+        disc.options.push(DhcpOption::IpAddressLeaseTime(client_requested_time));
 
         let mut server = new_test_minimal_server(server_time_provider).await?;
         server.pool.available_addrs.insert(random_ipv4_generator());
 
         let response = server.dispatch(disc).unwrap();
         assert_eq!(
-            BigEndian::read_u32(
-                &extract_message(response)
-                    .get_config_option(OptionCode::IpAddrLeaseTime)
-                    .unwrap()
-                    .value
-            ),
+            extract_message(response)
+                .options
+                .iter()
+                .filter_map(|opt| {
+                    if let DhcpOption::IpAddressLeaseTime(v) = opt {
+                        Some(*v)
+                    } else {
+                        None
+                    }
+                })
+                .next()
+                .unwrap(),
             client_requested_time as u32
         );
 
@@ -2623,13 +2386,10 @@ pub mod tests {
         let mut disc = new_test_discover();
         let client_mac = disc.chaddr;
 
-        let client_requested_time: u8 = 20;
+        let client_requested_time: u32 = 20;
         let server_max_lease_time: u32 = 10;
 
-        disc.options.push(ConfigOption {
-            code: OptionCode::IpAddrLeaseTime,
-            value: vec![0, 0, 0, client_requested_time],
-        });
+        disc.options.push(DhcpOption::IpAddressLeaseTime(client_requested_time));
 
         let mut server = new_test_minimal_server(server_time_provider).await?;
         server.pool.available_addrs.insert(Ipv4Addr::new(195, 168, 1, 45));
@@ -2637,12 +2397,18 @@ pub mod tests {
 
         let response = server.dispatch(disc).unwrap();
         assert_eq!(
-            BigEndian::read_u32(
-                &extract_message(response)
-                    .get_config_option(OptionCode::IpAddrLeaseTime)
-                    .unwrap()
-                    .value
-            ),
+            extract_message(response)
+                .options
+                .iter()
+                .filter_map(|opt| {
+                    if let DhcpOption::IpAddressLeaseTime(v) = opt {
+                        Some(*v)
+                    } else {
+                        None
+                    }
+                })
+                .next()
+                .unwrap(),
             server_max_lease_time
         );
 

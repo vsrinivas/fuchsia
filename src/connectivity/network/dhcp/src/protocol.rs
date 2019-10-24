@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::configuration::RequestedConfig;
-use byteorder::{BigEndian, ByteOrder};
+use failure::Fail;
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use num_derive::FromPrimitive;
 use serde_derive::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
@@ -46,12 +46,34 @@ const ONE_BYTE_LEN: usize = 8;
 const TWO_BYTE_LEN: usize = 16;
 const THREE_BYTE_LEN: usize = 24;
 
+#[derive(Debug, Fail, PartialEq)]
+pub enum ProtocolError {
+    #[fail(display = "invalid buffer length: {}", _0)]
+    InvalidBufferLength(usize),
+    #[fail(display = "invalid message type: {}", _0)]
+    InvalidMessageType(u8),
+    #[fail(display = "invalid netbios over tcpip node type: {}", _0)]
+    InvalidNodeType(u8),
+    #[fail(display = "invalid bootp op code: {}", _0)]
+    InvalidOpCode(u8),
+    #[fail(display = "invalid option code: {}", _0)]
+    InvalidOptionCode(u8),
+    #[fail(display = "invalid option overload: {}", _0)]
+    InvalidOverload(u8),
+    #[fail(display = "missing opcode")]
+    MissingOpCode,
+    #[fail(display = "missing expected option: {}", _0)]
+    MissingOption(OptionCode),
+    #[fail(display = "invalid utf-8 after buffer index: {}", _0)]
+    Utf8(usize),
+}
+
 /// A DHCP protocol message as defined in RFC 2131.
 ///
 /// All fields in `Message` follow the naming conventions outlined in the RFC.
 /// Note that `Message` does not expose `htype`, `hlen`, or `hops` fields, as
 /// these fields are effectively constants.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Message {
     pub op: OpCode,
     pub xid: u32,
@@ -72,24 +94,7 @@ pub struct Message {
     pub sname: String,
     /// `file` should not exceed 128 characters.
     pub file: String,
-    pub options: Vec<ConfigOption>,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum MessageTypeError {
-    MissingOption,
-    MissingValue,
-    UnknownType(u8),
-}
-
-impl fmt::Display for MessageTypeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::MissingOption => write!(f, "required message type option is missing"),
-            Self::MissingValue => write!(f, "required message type value is missing"),
-            Self::UnknownType(typ) => write!(f, "unknown message type {}", typ),
-        }
-    }
+    pub options: Vec<DhcpOption>,
 }
 
 impl Message {
@@ -116,45 +121,58 @@ impl Message {
     /// protocol as defined RFC 2131. Returns `None` if the buffer is malformed.
     /// Any malformed configuration options will be skipped over, leaving only
     /// well formed `ConfigOption`s in the final `Message`.
-    pub fn from_buffer(buf: &[u8]) -> Option<Self> {
+    pub fn from_buffer(buf: &[u8]) -> Result<Self, ProtocolError> {
         if buf.len() < OPTIONS_START_IDX {
-            return None;
+            return Err(ProtocolError::InvalidBufferLength(buf.len()));
         }
         let (buf, options) = buf.split_at(OPTIONS_START_IDX);
 
         let mut msg = Message::new();
-        let op = buf.get(OP_IDX)?;
-        msg.op = OpCode::try_from(*op).ok()?;
-        msg.xid = BigEndian::read_u32(&buf[XID_IDX..SECS_IDX]);
-        msg.secs = BigEndian::read_u16(&buf[SECS_IDX..FLAGS_IDX]);
+        let op = buf.get(OP_IDX).ok_or(ProtocolError::MissingOpCode)?;
+        msg.op = OpCode::try_from(*op)?;
+        msg.xid = u32::from_be_bytes(
+            <[u8; 4]>::try_from(
+                buf.get(XID_IDX..SECS_IDX).ok_or(ProtocolError::InvalidBufferLength(buf.len()))?,
+            )
+            .map_err(|std::array::TryFromSliceError { .. }| {
+                ProtocolError::InvalidBufferLength(buf.len())
+            })?,
+        );
+        msg.secs = u16::from_be_bytes(
+            <[u8; 2]>::try_from(
+                buf.get(SECS_IDX..FLAGS_IDX)
+                    .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?,
+            )
+            .map_err(|std::array::TryFromSliceError { .. }| {
+                ProtocolError::InvalidBufferLength(buf.len())
+            })?,
+        );
         msg.bdcast_flag = buf[FLAGS_IDX] > 0;
-        // The conditional earlier in this function ensures that buf is long enough
-        // for the following 4 calls to always succeed.
-        msg.ciaddr = ip_addr_from_buf_at(buf, CIADDR_IDX).expect("out of range indexing on buf");
-        msg.yiaddr = ip_addr_from_buf_at(buf, YIADDR_IDX).expect("out of range indexing on buf");
-        msg.siaddr = ip_addr_from_buf_at(buf, SIADDR_IDX).expect("out of range indexing on buf");
-        msg.giaddr = ip_addr_from_buf_at(buf, GIADDR_IDX).expect("out of range indexing on buf");
+        msg.ciaddr = ip_addr_from_buf_at(buf, CIADDR_IDX)?;
+        msg.yiaddr = ip_addr_from_buf_at(buf, YIADDR_IDX)?;
+        msg.siaddr = ip_addr_from_buf_at(buf, SIADDR_IDX)?;
+        msg.giaddr = ip_addr_from_buf_at(buf, GIADDR_IDX)?;
         copy_buf_into_mac_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut msg.chaddr);
         msg.sname = buf_to_msg_string(&buf[SNAME_IDX..FILE_IDX])?;
         msg.file = buf_to_msg_string(&buf[FILE_IDX..])?;
         if options.len() >= MAGIC_COOKIE.len() {
             let (magic_cookie, options) = options.split_at(MAGIC_COOKIE.len());
             if magic_cookie == MAGIC_COOKIE {
-                msg.options.extend(OptionBuffer::new(options).into_iter().filter_map(|o| match o {
-                    Ok(o) => Some(o),
+                msg.options.extend(OptionBuffer::new(options).into_iter().filter_map(|v| match v {
+                    Ok(v) => Some(v),
                     Err(e) => {
-                        log::warn!("unable to deserialize option: {}", e);
+                        log::warn!("failed to parse option buffer: {}", e);
                         None
                     }
                 }))
             }
         }
 
-        Some(msg)
+        Ok(msg)
     }
 
     /// Consumes the calling `Message` to serialize it into a buffer of bytes.
-    pub fn serialize(&self) -> Vec<u8> {
+    pub fn serialize(self) -> Vec<u8> {
         let mut buffer = Vec::with_capacity(OPTIONS_START_IDX);
         buffer.push(self.op.into());
         buffer.push(ETHERNET_HTYPE);
@@ -185,43 +203,38 @@ impl Message {
         buffer
     }
 
-    fn serialize_options(&self) -> Vec<u8> {
+    fn serialize_options(self) -> Vec<u8> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(&MAGIC_COOKIE);
-        for option in &self.options {
+        for option in self.options.into_iter() {
             option.serialize_to(&mut bytes);
         }
         bytes.push(OptionCode::End.into());
         bytes
     }
 
-    /// Returns a reference to the `Message`'s `ConfigOption` with `code`, or `None`
-    /// if `Message` does not have the specified `ConfigOption`.
-    pub fn get_config_option(&self, code: OptionCode) -> Option<&ConfigOption> {
-        // There should generally be few (~0 - 10) options attached to a message
-        // so the linear search should not be unreasonably costly.
-        for opt in &self.options {
-            if opt.code == code {
-                return Some(opt);
-            }
-        }
-        None
-    }
-
     /// Returns the value's DHCP `MessageType` or appropriate `MessageTypeError` in case of failure.
-    pub fn get_dhcp_type(&self) -> Result<MessageType, MessageTypeError> {
-        let type_option = self
-            .get_config_option(OptionCode::DhcpMessageType)
-            .ok_or(MessageTypeError::MissingOption)?;
-        let type_value = type_option.value.get(0).ok_or(MessageTypeError::MissingValue)?;
-        MessageType::try_from(*type_value).map_err(MessageTypeError::UnknownType)
+    pub fn get_dhcp_type(&self) -> Result<MessageType, ProtocolError> {
+        self.options
+            .iter()
+            .filter_map(|opt| match opt {
+                DhcpOption::DhcpMessageType(v) => Some(*v),
+                _ => None,
+            })
+            .next()
+            .ok_or(ProtocolError::MissingOption(OptionCode::DhcpMessageType))
     }
 
     pub fn parse_to_config(&self) -> RequestedConfig {
         RequestedConfig {
             lease_time_s: self
-                .get_config_option(OptionCode::IpAddrLeaseTime)
-                .map(|t| BigEndian::read_u32(&t.value)),
+                .options
+                .iter()
+                .filter_map(|opt| match opt {
+                    DhcpOption::IpAddressLeaseTime(v) => Some(*v),
+                    _ => None,
+                })
+                .next(),
         }
     }
 }
@@ -249,32 +262,10 @@ impl Into<u8> for OpCode {
 }
 
 impl TryFrom<u8> for OpCode {
-    type Error = u8;
+    type Error = ProtocolError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(n)
-    }
-}
-
-/// A vendor extension/configuration option for DHCP protocol messages.
-///
-/// `ConfigOption`s can be fixed or variable length per RFC 1533. When
-/// `value` is left empty, the `ConfigOption` will be treated as a fixed
-/// length field.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct ConfigOption {
-    pub code: OptionCode,
-    pub value: Vec<u8>,
-}
-
-impl ConfigOption {
-    fn serialize_to(&self, output: &mut Vec<u8>) {
-        output.push(self.code.into());
-        let len = self.value.len() as u8;
-        if len > 0 {
-            output.push(len);
-        }
-        output.extend(&self.value);
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(ProtocolError::InvalidOpCode(n))
     }
 }
 
@@ -284,21 +275,84 @@ impl ConfigOption {
 /// RFC 1533. Note that not all options defined in the RFC are represented
 /// here; options which are not in this type are not currently supported. Supported
 /// options appear in this type in the order in which they are defined in the RFC.
-#[derive(FromPrimitive, Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Deserialize, Eq, FromPrimitive, Hash, PartialEq, Serialize)]
 #[repr(u8)]
 pub enum OptionCode {
     Pad = 0,
     SubnetMask = 1,
+    TimeOffset = 2,
     Router = 3,
+    TimeServer = 4,
     NameServer = 5,
+    DomainNameServer = 6,
+    LogServer = 7,
+    CookieServer = 8,
+    LprServer = 9,
+    ImpressServer = 10,
+    ResourceLocationServer = 11,
+    HostName = 12,
+    BootFileSize = 13,
+    MeritDumpFile = 14,
+    DomainName = 15,
+    SwapServer = 16,
+    RootPath = 17,
+    ExtensionsPath = 18,
+    IpForwarding = 19,
+    NonLocalSourceRouting = 20,
+    PolicyFilter = 21,
+    MaxDatagramReassemblySize = 22,
+    DefaultIpTtl = 23,
+    PathMtuAgingTimeout = 24,
+    PathMtuPlateauTable = 25,
+    InterfaceMtu = 26,
+    AllSubnetsLocal = 27,
+    BroadcastAddress = 28,
+    PerformMaskDiscovery = 29,
+    MaskSupplier = 30,
+    PerformRouterDiscovery = 31,
+    RouterSolicitationAddress = 32,
+    StaticRoute = 33,
+    TrailerEncapsulation = 34,
+    ArpCacheTimeout = 35,
+    EthernetEncapsulation = 36,
+    TcpDefaultTtl = 37,
+    TcpKeepaliveInterval = 38,
+    TcpKeepaliveGarbage = 39,
+    NetworkInformationServiceDomain = 40,
+    NetworkInformationServers = 41,
+    NetworkTimeProtocolServers = 42,
+    VendorSpecificInformation = 43,
+    NetBiosOverTcpipNameServer = 44,
+    NetBiosOverTcpipDatagramDistributionServer = 45,
+    NetBiosOverTcpipNodeType = 46,
+    NetBiosOverTcpipScope = 47,
+    XWindowSystemFontServer = 48,
+    XWindowSystemDisplayManager = 49,
     RequestedIpAddr = 50,
     IpAddrLeaseTime = 51,
+    OptionOverload = 52,
     DhcpMessageType = 53,
-    ServerId = 54,
+    ServerIdentifier = 54,
     ParameterRequestList = 55,
     Message = 56,
+    MaxDhcpMessageSize = 57,
     RenewalTime = 58,
     RebindingTime = 59,
+    VendorClassIdentifier = 60,
+    ClientIdentifier = 61,
+    NetworkInformationServicePlusDomain = 64,
+    NetworkInformationServicePlusServers = 65,
+    TftpServerName = 66,
+    BootfileName = 67,
+    MobileIpHomeAgent = 68,
+    SmtpServer = 69,
+    Pop3Server = 70,
+    NntpServer = 71,
+    DefaultWwwServer = 72,
+    DefaultFingerServer = 73,
+    DefaultIrcServer = 74,
+    StreetTalkServer = 75,
+    StreetTalkDirectoryAssistanceServer = 76,
     End = 255,
 }
 
@@ -309,10 +363,798 @@ impl Into<u8> for OptionCode {
 }
 
 impl TryFrom<u8> for OptionCode {
-    type Error = u8;
+    type Error = ProtocolError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(n)
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(ProtocolError::InvalidOptionCode(n))
+    }
+}
+
+impl fmt::Display for OptionCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self, f)
+    }
+}
+
+/// A DHCP Option as defined in RFC 2132.
+/// DHCP Options provide a mechanism for transmitting configuration parameters
+/// between the Server and Client and vice-versa. DHCP Options also include
+/// some control and meta information needed for the operation of the DHCP
+/// protocol but which could not be included in the DHCP header because of
+/// the backwards compatibility requirement with the older BOOTP protocol.
+#[derive(Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub enum DhcpOption {
+    Pad(),
+    End(),
+    SubnetMask(Ipv4Addr),
+    TimeOffset(i32),
+    Router(Vec<Ipv4Addr>),
+    TimeServer(Vec<Ipv4Addr>),
+    NameServer(Vec<Ipv4Addr>),
+    DomainNameServer(Vec<Ipv4Addr>),
+    LogServer(Vec<Ipv4Addr>),
+    CookieServer(Vec<Ipv4Addr>),
+    LprServer(Vec<Ipv4Addr>),
+    ImpressServer(Vec<Ipv4Addr>),
+    ResourceLocationServer(Vec<Ipv4Addr>),
+    HostName(String),
+    BootFileSize(u16),
+    MeritDumpFile(String),
+    DomainName(String),
+    SwapServer(Ipv4Addr),
+    RootPath(String),
+    ExtensionsPath(String),
+    IpForwarding(bool),
+    NonLocalSourceRouting(bool),
+    PolicyFilter(Vec<Ipv4Addr>),
+    MaxDatagramReassemblySize(u16),
+    DefaultIpTtl(u8),
+    PathMtuAgingTimeout(u32),
+    PathMtuPlateauTable(Vec<u16>),
+    InterfaceMtu(u16),
+    AllSubnetsLocal(bool),
+    BroadcastAddress(Ipv4Addr),
+    PerformMaskDiscovery(bool),
+    MaskSupplier(bool),
+    PerformRouterDiscovery(bool),
+    RouterSolicitationAddress(Ipv4Addr),
+    StaticRoute(Vec<Ipv4Addr>),
+    TrailerEncapsulation(bool),
+    ArpCacheTimeout(u32),
+    EthernetEncapsulation(bool),
+    TcpDefaultTtl(u8),
+    TcpKeepaliveInterval(u32),
+    TcpKeepaliveGarbage(bool),
+    NetworkInformationServiceDomain(String),
+    NetworkInformationServers(Vec<Ipv4Addr>),
+    NetworkTimeProtocolServers(Vec<Ipv4Addr>),
+    VendorSpecificInformation(Vec<u8>),
+    NetBiosOverTcpipNameServer(Vec<Ipv4Addr>),
+    NetBiosOverTcpipDatagramDistributionServer(Vec<Ipv4Addr>),
+    NetBiosOverTcpipNodeType(NodeType),
+    NetBiosOverTcpipScope(String),
+    XWindowSystemFontServer(Vec<Ipv4Addr>),
+    XWindowSystemDisplayManager(Vec<Ipv4Addr>),
+    NetworkInformationServicePlusDomain(String),
+    NetworkInformationServicePlusServers(Vec<Ipv4Addr>),
+    MobileIpHomeAgent(Vec<Ipv4Addr>),
+    SmtpServer(Vec<Ipv4Addr>),
+    Pop3Server(Vec<Ipv4Addr>),
+    NntpServer(Vec<Ipv4Addr>),
+    DefaultWwwServer(Vec<Ipv4Addr>),
+    DefaultFingerServer(Vec<Ipv4Addr>),
+    DefaultIrcServer(Vec<Ipv4Addr>),
+    StreetTalkServer(Vec<Ipv4Addr>),
+    StreetTalkDirectoryAssistanceServer(Vec<Ipv4Addr>),
+    RequestedIpAddress(Ipv4Addr),
+    IpAddressLeaseTime(u32),
+    OptionOverload(Overload),
+    TftpServerName(String),
+    BootfileName(String),
+    DhcpMessageType(MessageType),
+    ServerIdentifier(Ipv4Addr),
+    ParameterRequestList(Vec<OptionCode>),
+    Message(String),
+    MaxDhcpMessageSize(u16),
+    RenewalTimeValue(u32),
+    RebindingTimeValue(u32),
+    VendorClassIdentifier(Vec<u8>),
+    ClientIdentifier(Vec<u8>),
+}
+
+struct AddressBuffer<'a> {
+    buffer: &'a [u8],
+}
+
+impl<'a> TryInto<Vec<Ipv4Addr>> for AddressBuffer<'a> {
+    type Error = ProtocolError;
+
+    fn try_into(self) -> Result<Vec<Ipv4Addr>, Self::Error> {
+        self.buffer.chunks_exact(4).try_fold(Vec::new(), |mut addrs, chunk| {
+            let bytes = <[u8; 4]>::try_from(chunk)
+                .map_err(|_infallible| ProtocolError::InvalidBufferLength(self.buffer.len()))?;
+            addrs.push(Ipv4Addr::from(bytes));
+            Ok(addrs)
+        })
+    }
+}
+
+fn slice_buffer(buf: &[u8], upper_bound: usize) -> Result<&[u8], ProtocolError> {
+    buf.get(..upper_bound).ok_or(ProtocolError::InvalidBufferLength(buf.len()))
+}
+
+impl DhcpOption {
+    fn from_raw_parts(code: OptionCode, val: Vec<u8>) -> Result<Self, ProtocolError> {
+        match code {
+            OptionCode::Pad => Ok(DhcpOption::Pad()),
+            OptionCode::End => Ok(DhcpOption::End()),
+            OptionCode::SubnetMask => {
+                let bytes = <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?;
+                Ok(DhcpOption::SubnetMask(Ipv4Addr::from(bytes)))
+            }
+            OptionCode::TimeOffset => Ok(DhcpOption::TimeOffset(i32::from_be_bytes(
+                <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?,
+            ))),
+            OptionCode::Router => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::Router(addrs))
+            }
+            OptionCode::TimeServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::TimeServer(addrs))
+            }
+            OptionCode::NameServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::NameServer(addrs))
+            }
+            OptionCode::DomainNameServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::DomainNameServer(addrs))
+            }
+            OptionCode::LogServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::LogServer(addrs))
+            }
+            OptionCode::CookieServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::CookieServer(addrs))
+            }
+            OptionCode::LprServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::LprServer(addrs))
+            }
+            OptionCode::ImpressServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::ImpressServer(addrs))
+            }
+            OptionCode::ResourceLocationServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::ResourceLocationServer(addrs))
+            }
+            OptionCode::HostName => {
+                let name = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::HostName(name))
+            }
+            OptionCode::BootFileSize => Ok(DhcpOption::BootFileSize(u16::from_be_bytes(
+                <[u8; 2]>::try_from(slice_buffer(&val, 2)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?,
+            ))),
+            OptionCode::MeritDumpFile => {
+                let path = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::MeritDumpFile(path))
+            }
+            OptionCode::DomainName => {
+                let name = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::DomainName(name))
+            }
+            OptionCode::SwapServer => {
+                let bytes = <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?;
+                Ok(DhcpOption::SwapServer(Ipv4Addr::from(bytes)))
+            }
+            OptionCode::RootPath => {
+                let path = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::RootPath(path))
+            }
+            OptionCode::ExtensionsPath => {
+                let path = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::ExtensionsPath(path))
+            }
+            OptionCode::IpForwarding => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::IpForwarding(flag))
+            }
+            OptionCode::NonLocalSourceRouting => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::NonLocalSourceRouting(flag))
+            }
+            OptionCode::PolicyFilter => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::PolicyFilter(addrs))
+            }
+            OptionCode::MaxDatagramReassemblySize => Ok(DhcpOption::MaxDatagramReassemblySize(
+                u16::from_be_bytes(<[u8; 2]>::try_from(slice_buffer(&val, 2)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?),
+            )),
+            OptionCode::DefaultIpTtl => Ok(DhcpOption::DefaultIpTtl(
+                *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
+            )),
+            OptionCode::PathMtuAgingTimeout => Ok(DhcpOption::PathMtuAgingTimeout(
+                u32::from_be_bytes(<[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?),
+            )),
+            OptionCode::PathMtuPlateauTable => {
+                let mtus = val.chunks_exact(2).try_fold(Vec::new(), |mut mtus, chunk| {
+                    let mtu = u16::from_be_bytes(chunk.try_into().map_err(
+                        |std::array::TryFromSliceError { .. }| {
+                            ProtocolError::InvalidBufferLength(val.len())
+                        },
+                    )?);
+                    mtus.push(mtu);
+                    Ok(mtus)
+                })?;
+                Ok(DhcpOption::PathMtuPlateauTable(mtus))
+            }
+            OptionCode::InterfaceMtu => Ok(DhcpOption::InterfaceMtu(u16::from_be_bytes(
+                <[u8; 2]>::try_from(slice_buffer(&val, 2)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?,
+            ))),
+            OptionCode::AllSubnetsLocal => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::AllSubnetsLocal(flag))
+            }
+            OptionCode::BroadcastAddress => {
+                let bytes = <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?;
+                Ok(DhcpOption::BroadcastAddress(Ipv4Addr::from(bytes)))
+            }
+            OptionCode::PerformMaskDiscovery => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::PerformMaskDiscovery(flag))
+            }
+            OptionCode::MaskSupplier => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::MaskSupplier(flag))
+            }
+            OptionCode::PerformRouterDiscovery => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::PerformRouterDiscovery(flag))
+            }
+            OptionCode::RouterSolicitationAddress => {
+                let bytes = <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?;
+                Ok(DhcpOption::RouterSolicitationAddress(Ipv4Addr::from(bytes)))
+            }
+            OptionCode::StaticRoute => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::StaticRoute(addrs))
+            }
+            OptionCode::TrailerEncapsulation => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::TrailerEncapsulation(flag))
+            }
+            OptionCode::ArpCacheTimeout => Ok(DhcpOption::ArpCacheTimeout(u32::from_be_bytes(
+                <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?,
+            ))),
+            OptionCode::EthernetEncapsulation => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::EthernetEncapsulation(flag))
+            }
+            OptionCode::TcpDefaultTtl => Ok(DhcpOption::TcpDefaultTtl(
+                *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
+            )),
+            OptionCode::TcpKeepaliveInterval => Ok(DhcpOption::TcpKeepaliveInterval(
+                u32::from_be_bytes(<[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?),
+            )),
+            OptionCode::TcpKeepaliveGarbage => {
+                let flag =
+                    val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?.eq(&1u8);
+                Ok(DhcpOption::TcpKeepaliveGarbage(flag))
+            }
+            OptionCode::NetworkInformationServiceDomain => {
+                let name = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::NetworkInformationServiceDomain(name))
+            }
+            OptionCode::NetworkInformationServers => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::NetworkInformationServers(addrs))
+            }
+            OptionCode::NetworkTimeProtocolServers => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::NetworkTimeProtocolServers(addrs))
+            }
+            OptionCode::VendorSpecificInformation => Ok(DhcpOption::VendorSpecificInformation(val)),
+            OptionCode::NetBiosOverTcpipNameServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::NetBiosOverTcpipNameServer(addrs))
+            }
+            OptionCode::NetBiosOverTcpipDatagramDistributionServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::NetBiosOverTcpipDatagramDistributionServer(addrs))
+            }
+            OptionCode::NetBiosOverTcpipNodeType => {
+                Ok(DhcpOption::NetBiosOverTcpipNodeType(NodeType::try_from(
+                    *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
+                )?))
+            }
+            OptionCode::NetBiosOverTcpipScope => {
+                let scope = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::NetBiosOverTcpipScope(scope))
+            }
+            OptionCode::XWindowSystemFontServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::XWindowSystemFontServer(addrs))
+            }
+            OptionCode::XWindowSystemDisplayManager => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::XWindowSystemDisplayManager(addrs))
+            }
+            OptionCode::NetworkInformationServicePlusDomain => {
+                let name = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::NetworkInformationServicePlusDomain(name))
+            }
+            OptionCode::NetworkInformationServicePlusServers => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::NetworkInformationServicePlusServers(addrs))
+            }
+            OptionCode::MobileIpHomeAgent => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::MobileIpHomeAgent(addrs))
+            }
+            OptionCode::SmtpServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::SmtpServer(addrs))
+            }
+            OptionCode::Pop3Server => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::Pop3Server(addrs))
+            }
+            OptionCode::NntpServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::NntpServer(addrs))
+            }
+            OptionCode::DefaultWwwServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::DefaultWwwServer(addrs))
+            }
+            OptionCode::DefaultFingerServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::DefaultFingerServer(addrs))
+            }
+            OptionCode::DefaultIrcServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::DefaultIrcServer(addrs))
+            }
+            OptionCode::StreetTalkServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::StreetTalkServer(addrs))
+            }
+            OptionCode::StreetTalkDirectoryAssistanceServer => {
+                let addrs = AddressBuffer { buffer: &val }.try_into()?;
+                Ok(DhcpOption::StreetTalkDirectoryAssistanceServer(addrs))
+            }
+            OptionCode::RequestedIpAddr => {
+                let bytes = <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?;
+                Ok(DhcpOption::RequestedIpAddress(Ipv4Addr::from(bytes)))
+            }
+            OptionCode::IpAddrLeaseTime => Ok(DhcpOption::IpAddressLeaseTime(u32::from_be_bytes(
+                <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?,
+            ))),
+            OptionCode::OptionOverload => {
+                let overload = Overload::try_from(
+                    *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
+                )?;
+                Ok(DhcpOption::OptionOverload(overload))
+            }
+            OptionCode::TftpServerName => {
+                let name = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::TftpServerName(name))
+            }
+            OptionCode::BootfileName => {
+                let name = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::BootfileName(name))
+            }
+            OptionCode::DhcpMessageType => {
+                let message_type = MessageType::try_from(
+                    *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
+                )?;
+                Ok(DhcpOption::DhcpMessageType(message_type))
+            }
+            OptionCode::ServerIdentifier => {
+                let bytes = <[u8; 4]>::try_from(slice_buffer(&val, 4)?)
+                    .map_err(|_| ProtocolError::InvalidBufferLength(val.len()))?;
+                Ok(DhcpOption::ServerIdentifier(Ipv4Addr::from(bytes)))
+            }
+            OptionCode::ParameterRequestList => {
+                let reqs = val.into_iter().try_fold(Vec::new(), |mut reqs, code| {
+                    let code = OptionCode::try_from(code)?;
+                    reqs.push(code);
+                    Ok(reqs)
+                })?;
+                Ok(DhcpOption::ParameterRequestList(reqs))
+            }
+            OptionCode::Message => {
+                let message = String::from_utf8(val)
+                    .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))?;
+                Ok(DhcpOption::Message(message))
+            }
+            OptionCode::MaxDhcpMessageSize => Ok(DhcpOption::MaxDhcpMessageSize(
+                u16::from_be_bytes(<[u8; 2]>::try_from(slice_buffer(&val, 2)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?),
+            )),
+            OptionCode::RenewalTime => Ok(DhcpOption::RenewalTimeValue(u32::from_be_bytes(
+                <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?,
+            ))),
+            OptionCode::RebindingTime => Ok(DhcpOption::RebindingTimeValue(u32::from_be_bytes(
+                <[u8; 4]>::try_from(slice_buffer(&val, 4)?).map_err(
+                    |std::array::TryFromSliceError { .. }| {
+                        ProtocolError::InvalidBufferLength(val.len())
+                    },
+                )?,
+            ))),
+            OptionCode::VendorClassIdentifier => Ok(DhcpOption::VendorClassIdentifier(val)),
+            OptionCode::ClientIdentifier => Ok(DhcpOption::ClientIdentifier(val)),
+        }
+    }
+
+    fn serialize_to(self, buf: &mut Vec<u8>) {
+        match self {
+            DhcpOption::Pad() => {
+                buf.push(OptionCode::Pad.into());
+            }
+            DhcpOption::End() => {
+                buf.push(OptionCode::End.into());
+            }
+            DhcpOption::SubnetMask(v) => serialize_address(OptionCode::SubnetMask, v, buf),
+            DhcpOption::TimeOffset(v) => {
+                let size = std::mem::size_of::<i32>();
+                buf.push(OptionCode::TimeOffset.into());
+                buf.push(size as u8);
+                buf.extend_from_slice(&v.to_be_bytes());
+            }
+            DhcpOption::Router(v) => serialize_addresses(OptionCode::Router, &v, buf),
+            DhcpOption::TimeServer(v) => serialize_addresses(OptionCode::TimeServer, &v, buf),
+            DhcpOption::NameServer(v) => serialize_addresses(OptionCode::NameServer, &v, buf),
+            DhcpOption::DomainNameServer(v) => {
+                serialize_addresses(OptionCode::DomainNameServer, &v, buf)
+            }
+            DhcpOption::LogServer(v) => serialize_addresses(OptionCode::LogServer, &v, buf),
+            DhcpOption::CookieServer(v) => serialize_addresses(OptionCode::CookieServer, &v, buf),
+            DhcpOption::LprServer(v) => serialize_addresses(OptionCode::LprServer, &v, buf),
+            DhcpOption::ImpressServer(v) => serialize_addresses(OptionCode::ImpressServer, &v, buf),
+            DhcpOption::ResourceLocationServer(v) => {
+                serialize_addresses(OptionCode::ResourceLocationServer, &v, buf)
+            }
+            DhcpOption::HostName(v) => serialize_string(OptionCode::HostName, &v, buf),
+            DhcpOption::BootFileSize(v) => serialize_u16(OptionCode::BootFileSize, v, buf),
+            DhcpOption::MeritDumpFile(v) => serialize_string(OptionCode::MeritDumpFile, &v, buf),
+            DhcpOption::DomainName(v) => serialize_string(OptionCode::DomainName, &v, buf),
+            DhcpOption::SwapServer(v) => serialize_address(OptionCode::SwapServer, v, buf),
+            DhcpOption::RootPath(v) => serialize_string(OptionCode::RootPath, &v, buf),
+            DhcpOption::ExtensionsPath(v) => serialize_string(OptionCode::ExtensionsPath, &v, buf),
+            DhcpOption::IpForwarding(v) => serialize_flag(OptionCode::IpForwarding, v, buf),
+            DhcpOption::NonLocalSourceRouting(v) => {
+                serialize_flag(OptionCode::NonLocalSourceRouting, v, buf)
+            }
+            DhcpOption::PolicyFilter(v) => serialize_addresses(OptionCode::PolicyFilter, &v, buf),
+            DhcpOption::MaxDatagramReassemblySize(v) => {
+                serialize_u16(OptionCode::MaxDatagramReassemblySize, v, buf)
+            }
+            DhcpOption::DefaultIpTtl(v) => serialize_u8(OptionCode::DefaultIpTtl, v, buf),
+            DhcpOption::PathMtuAgingTimeout(v) => {
+                serialize_u32(OptionCode::PathMtuAgingTimeout, v, buf)
+            }
+            DhcpOption::PathMtuPlateauTable(v) => {
+                let size = std::mem::size_of_val(&v);
+                buf.push(OptionCode::PathMtuPlateauTable.into());
+                buf.push(size as u8);
+                for mtu in v {
+                    buf.extend_from_slice(&mtu.to_be_bytes())
+                }
+            }
+            DhcpOption::InterfaceMtu(v) => serialize_u16(OptionCode::InterfaceMtu, v, buf),
+            DhcpOption::AllSubnetsLocal(v) => serialize_flag(OptionCode::AllSubnetsLocal, v, buf),
+            DhcpOption::BroadcastAddress(v) => {
+                serialize_address(OptionCode::BroadcastAddress, v, buf)
+            }
+            DhcpOption::PerformMaskDiscovery(v) => {
+                serialize_flag(OptionCode::PerformMaskDiscovery, v, buf)
+            }
+            DhcpOption::MaskSupplier(v) => serialize_flag(OptionCode::MaskSupplier, v, buf),
+            DhcpOption::PerformRouterDiscovery(v) => {
+                serialize_flag(OptionCode::PerformRouterDiscovery, v, buf)
+            }
+            DhcpOption::RouterSolicitationAddress(v) => {
+                serialize_address(OptionCode::RouterSolicitationAddress, v, buf)
+            }
+            DhcpOption::StaticRoute(v) => serialize_addresses(OptionCode::StaticRoute, &v, buf),
+            DhcpOption::TrailerEncapsulation(v) => {
+                serialize_flag(OptionCode::TrailerEncapsulation, v, buf)
+            }
+            DhcpOption::ArpCacheTimeout(v) => serialize_u32(OptionCode::ArpCacheTimeout, v, buf),
+            DhcpOption::EthernetEncapsulation(v) => {
+                serialize_flag(OptionCode::EthernetEncapsulation, v, buf)
+            }
+            DhcpOption::TcpDefaultTtl(v) => serialize_u8(OptionCode::TcpDefaultTtl, v, buf),
+            DhcpOption::TcpKeepaliveInterval(v) => {
+                serialize_u32(OptionCode::TcpKeepaliveInterval, v, buf)
+            }
+            DhcpOption::TcpKeepaliveGarbage(v) => {
+                serialize_flag(OptionCode::TcpKeepaliveGarbage, v, buf)
+            }
+            DhcpOption::NetworkInformationServiceDomain(v) => {
+                serialize_string(OptionCode::NetworkInformationServiceDomain, &v, buf)
+            }
+            DhcpOption::NetworkInformationServers(v) => {
+                serialize_addresses(OptionCode::NetworkInformationServers, &v, buf)
+            }
+            DhcpOption::NetworkTimeProtocolServers(v) => {
+                serialize_addresses(OptionCode::NetworkTimeProtocolServers, &v, buf)
+            }
+            DhcpOption::VendorSpecificInformation(v) => {
+                serialize_bytes(OptionCode::VendorSpecificInformation, &v, buf)
+            }
+            DhcpOption::NetBiosOverTcpipNameServer(v) => {
+                serialize_addresses(OptionCode::NetBiosOverTcpipNameServer, &v, buf)
+            }
+            DhcpOption::NetBiosOverTcpipDatagramDistributionServer(v) => {
+                serialize_addresses(OptionCode::NetBiosOverTcpipDatagramDistributionServer, &v, buf)
+            }
+            DhcpOption::NetBiosOverTcpipNodeType(v) => {
+                serialize_enum(OptionCode::NetBiosOverTcpipNodeType, v, buf)
+            }
+            DhcpOption::NetBiosOverTcpipScope(v) => {
+                serialize_string(OptionCode::NetBiosOverTcpipScope, &v, buf)
+            }
+            DhcpOption::XWindowSystemFontServer(v) => {
+                serialize_addresses(OptionCode::XWindowSystemFontServer, &v, buf)
+            }
+            DhcpOption::XWindowSystemDisplayManager(v) => {
+                serialize_addresses(OptionCode::XWindowSystemDisplayManager, &v, buf)
+            }
+            DhcpOption::NetworkInformationServicePlusDomain(v) => {
+                serialize_string(OptionCode::NetworkInformationServicePlusDomain, &v, buf)
+            }
+            DhcpOption::NetworkInformationServicePlusServers(v) => {
+                serialize_addresses(OptionCode::NetworkInformationServicePlusServers, &v, buf)
+            }
+            DhcpOption::MobileIpHomeAgent(v) => {
+                serialize_addresses(OptionCode::MobileIpHomeAgent, &v, buf)
+            }
+            DhcpOption::SmtpServer(v) => serialize_addresses(OptionCode::SmtpServer, &v, buf),
+            DhcpOption::Pop3Server(v) => serialize_addresses(OptionCode::Pop3Server, &v, buf),
+            DhcpOption::NntpServer(v) => serialize_addresses(OptionCode::NntpServer, &v, buf),
+            DhcpOption::DefaultWwwServer(v) => {
+                serialize_addresses(OptionCode::DefaultWwwServer, &v, buf)
+            }
+            DhcpOption::DefaultFingerServer(v) => {
+                serialize_addresses(OptionCode::DefaultFingerServer, &v, buf)
+            }
+            DhcpOption::DefaultIrcServer(v) => {
+                serialize_addresses(OptionCode::DefaultIrcServer, &v, buf)
+            }
+            DhcpOption::StreetTalkServer(v) => {
+                serialize_addresses(OptionCode::StreetTalkServer, &v, buf)
+            }
+            DhcpOption::StreetTalkDirectoryAssistanceServer(v) => {
+                serialize_addresses(OptionCode::StreetTalkDirectoryAssistanceServer, &v, buf)
+            }
+            DhcpOption::RequestedIpAddress(v) => {
+                serialize_address(OptionCode::RequestedIpAddr, v, buf)
+            }
+            DhcpOption::IpAddressLeaseTime(v) => serialize_u32(OptionCode::IpAddrLeaseTime, v, buf),
+            DhcpOption::OptionOverload(v) => serialize_enum(OptionCode::OptionOverload, v, buf),
+            DhcpOption::TftpServerName(v) => serialize_string(OptionCode::TftpServerName, &v, buf),
+            DhcpOption::BootfileName(v) => serialize_string(OptionCode::BootfileName, &v, buf),
+            DhcpOption::DhcpMessageType(v) => serialize_enum(OptionCode::DhcpMessageType, v, buf),
+            DhcpOption::ServerIdentifier(v) => {
+                serialize_address(OptionCode::ServerIdentifier, v, buf)
+            }
+            DhcpOption::ParameterRequestList(v) => {
+                let size = std::mem::size_of_val(&v);
+                buf.push(OptionCode::ParameterRequestList.into());
+                buf.push(size as u8);
+                buf.extend(v.into_iter().map(|code| code as u8));
+            }
+            DhcpOption::Message(v) => serialize_string(OptionCode::Message, &v, buf),
+            DhcpOption::MaxDhcpMessageSize(v) => {
+                serialize_u16(OptionCode::MaxDhcpMessageSize, v, buf)
+            }
+            DhcpOption::RenewalTimeValue(v) => serialize_u32(OptionCode::RenewalTime, v, buf),
+            DhcpOption::RebindingTimeValue(v) => serialize_u32(OptionCode::RebindingTime, v, buf),
+            DhcpOption::VendorClassIdentifier(v) => {
+                serialize_bytes(OptionCode::VendorClassIdentifier, &v, buf)
+            }
+            DhcpOption::ClientIdentifier(v) => {
+                serialize_bytes(OptionCode::ClientIdentifier, &v, buf)
+            }
+        }
+    }
+}
+
+fn serialize_address(code: OptionCode, addr: Ipv4Addr, buf: &mut Vec<u8>) {
+    serialize_addresses(code, &[addr], buf);
+}
+
+fn serialize_addresses(code: OptionCode, addrs: &[Ipv4Addr], buf: &mut Vec<u8>) {
+    let size = std::mem::size_of_val(addrs);
+    buf.push(code.into());
+    buf.push(size as u8);
+    for addr in addrs {
+        buf.extend_from_slice(&addr.octets());
+    }
+}
+
+fn serialize_string(code: OptionCode, string: &str, buf: &mut Vec<u8>) {
+    let size = string.len();
+    buf.push(code.into());
+    buf.push(size as u8);
+    buf.extend_from_slice(string.as_bytes());
+}
+
+fn serialize_flag(code: OptionCode, flag: bool, buf: &mut Vec<u8>) {
+    let size = std::mem::size_of::<bool>();
+    buf.push(code.into());
+    buf.push(size as u8);
+    buf.push(flag as u8);
+}
+
+fn serialize_u16(code: OptionCode, v: u16, buf: &mut Vec<u8>) {
+    let size = std::mem::size_of::<u16>();
+    buf.push(code.into());
+    buf.push(size as u8);
+    buf.extend_from_slice(&v.to_be_bytes());
+}
+
+fn serialize_u8(code: OptionCode, v: u8, buf: &mut Vec<u8>) {
+    let size = std::mem::size_of::<u8>();
+    buf.push(code.into());
+    buf.push(size as u8);
+    buf.push(v);
+}
+
+fn serialize_u32(code: OptionCode, v: u32, buf: &mut Vec<u8>) {
+    let size = std::mem::size_of::<u32>();
+    buf.push(code.into());
+    buf.push(size as u8);
+    buf.extend_from_slice(&v.to_be_bytes());
+}
+
+fn serialize_bytes(code: OptionCode, v: &[u8], buf: &mut Vec<u8>) {
+    let size = std::mem::size_of_val(v);
+    buf.push(code.into());
+    buf.push(size as u8);
+    buf.extend_from_slice(v);
+}
+
+fn serialize_enum<T: Into<u8>>(code: OptionCode, v: T, buf: &mut Vec<u8>) {
+    let size = std::mem::size_of::<T>();
+    buf.push(code.into());
+    buf.push(size as u8);
+    buf.push(v.into());
+}
+
+/// A NetBIOS over TCP/IP Node Type.
+///
+/// This enum and the values of its variants corresponds to the DHCP option defined
+/// in: https://tools.ietf.org/html/rfc2132#section-8.7
+#[derive(Clone, Copy, Debug, Deserialize, Eq, FromPrimitive, Hash, PartialEq, Serialize)]
+#[repr(u8)]
+pub enum NodeType {
+    BNode = 0x1,
+    PNode = 0x2,
+    MNode = 0x4,
+    HNode = 0x8,
+}
+
+impl TryFrom<u8> for NodeType {
+    type Error = ProtocolError;
+
+    fn try_from(n: u8) -> Result<Self, Self::Error> {
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(ProtocolError::InvalidNodeType(n))
+    }
+}
+
+impl Into<u8> for NodeType {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
+/// The DHCP message fields to use for storing additional options.
+///
+/// A DHCP client can indicate that it wants to use the File or SName fields of
+/// the DHCP header to store DHCP options. This enum and its variant values correspond
+/// to the DHCP option defined in: https://tools.ietf.org/html/rfc2132#section-9.3
+#[derive(Clone, Copy, Debug, Deserialize, Eq, FromPrimitive, Hash, PartialEq, Serialize)]
+#[repr(u8)]
+pub enum Overload {
+    File = 1,
+    SName = 2,
+    Both = 3,
+}
+
+impl Into<u8> for Overload {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
+impl TryFrom<u8> for Overload {
+    type Error = ProtocolError;
+
+    fn try_from(n: u8) -> Result<Self, Self::Error> {
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(ProtocolError::InvalidOverload(n))
     }
 }
 
@@ -320,7 +1162,7 @@ impl TryFrom<u8> for OptionCode {
 ///
 /// This enum corresponds to the DHCP Message Type option values
 /// defined in section 9.4 of RFC 1533.
-#[derive(FromPrimitive, Copy, Clone, Debug, PartialEq)]
+#[derive(FromPrimitive, Copy, Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[repr(u8)]
 pub enum MessageType {
     DHCPDISCOVER = 1,
@@ -353,10 +1195,10 @@ impl fmt::Display for MessageType {
 }
 
 impl TryFrom<u8> for MessageType {
-    type Error = u8;
+    type Error = ProtocolError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(n)
+        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(ProtocolError::InvalidMessageType(n))
     }
 }
 
@@ -373,7 +1215,7 @@ impl<'a> OptionBuffer<'a> {
 }
 
 impl<'a> Iterator for OptionBuffer<'a> {
-    type Item = Result<ConfigOption, <OptionCode as TryFrom<u8>>::Error>;
+    type Item = Result<DhcpOption, ProtocolError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -396,7 +1238,12 @@ impl<'a> Iterator for OptionBuffer<'a> {
                         })
                     }?;
                     self.buf = buf;
-                    break Some(code.map(|code| ConfigOption { code, value: val.to_vec() }));
+                    match code {
+                        Ok(c) => break Some(DhcpOption::from_raw_parts(c, val.to_vec())),
+                        Err(e) => {
+                            break Some(Err(e));
+                        }
+                    }
                 }
             }
         }
@@ -404,19 +1251,23 @@ impl<'a> Iterator for OptionBuffer<'a> {
 }
 
 // Returns an Ipv4Addr when given a byte buffer in network order whose len >= start + 4.
-pub fn ip_addr_from_buf_at(buf: &[u8], start: usize) -> Option<Ipv4Addr> {
-    if buf.len() < start + 4 {
-        return None;
-    }
-    Some(Ipv4Addr::new(buf[start], buf[start + 1], buf[start + 2], buf[start + 3]))
+pub fn ip_addr_from_buf_at(buf: &[u8], start: usize) -> Result<Ipv4Addr, ProtocolError> {
+    let buf = buf.get(start..start + 4).ok_or(ProtocolError::InvalidBufferLength(buf.len()))?;
+    let buf: [u8; 4] = buf.try_into().map_err(|std::array::TryFromSliceError { .. }| {
+        ProtocolError::InvalidBufferLength(buf.len())
+    })?;
+    Ok(buf.into())
 }
 
 fn copy_buf_into_mac_addr(buf: &[u8], addr: &mut MacAddr) {
     addr.octets.as_mut().copy_from_slice(buf)
 }
 
-fn buf_to_msg_string(buf: &[u8]) -> Option<String> {
-    std::str::from_utf8(buf).ok().map(|s| s.trim_end_matches('\x00').to_string())
+fn buf_to_msg_string(buf: &[u8]) -> Result<String, ProtocolError> {
+    Ok(std::str::from_utf8(buf)
+        .map_err(|e| ProtocolError::Utf8(e.valid_up_to()))?
+        .trim_end_matches('\x00')
+        .to_string())
 }
 
 fn trunc_string_to_n_and_push(s: &str, n: usize, buffer: &mut Vec<u8>) {
@@ -452,10 +1303,7 @@ mod tests {
     #[test]
     fn test_serialize_returns_correct_bytes() {
         let mut msg = new_test_msg();
-        msg.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: DEFAULT_SUBNET_MASK.to_vec(),
-        });
+        msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)));
 
         let bytes = msg.serialize();
 
@@ -515,7 +1363,7 @@ mod tests {
 
         assert_eq!(
             Message::from_buffer(&buf),
-            Some(Message {
+            Ok(Message {
                 op: OpCode::BOOTREQUEST,
                 xid: 42,
                 secs: 1024,
@@ -528,14 +1376,8 @@ mod tests {
                 sname: "relay.example.com".to_string(),
                 file: "boot.img".to_string(),
                 options: vec![
-                    ConfigOption {
-                        code: OptionCode::SubnetMask,
-                        value: DEFAULT_SUBNET_MASK.to_vec()
-                    },
-                    ConfigOption {
-                        code: OptionCode::ServerId,
-                        value: vec![0xAA, 0xBB, 0xCC, 0xDD]
-                    }
+                    DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)),
+                    DhcpOption::ServerIdentifier(Ipv4Addr::from([0xAA, 0xBB, 0xCC, 0xDD])),
                 ],
             })
         );
@@ -543,51 +1385,50 @@ mod tests {
 
     #[test]
     fn test_serialize_then_deserialize_with_single_option_is_equal_to_starting_value() {
-        let mut msg = new_test_msg();
-        msg.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: DEFAULT_SUBNET_MASK.to_vec(),
-        });
+        let msg = || {
+            let mut msg = new_test_msg();
+            msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)));
+            msg
+        };
 
-        assert_eq!(Message::from_buffer(&msg.serialize()), Some(msg));
+        assert_eq!(Message::from_buffer(&msg().serialize()), Ok(msg()));
     }
 
     #[test]
     fn test_serialize_then_deserialize_with_no_options_is_equal_to_starting_value() {
         let msg = new_test_msg();
 
-        assert_eq!(Message::from_buffer(&msg.serialize()), Some(msg));
+        assert_eq!(Message::from_buffer(&msg.serialize()), Ok(new_test_msg()));
     }
 
     #[test]
     fn test_serialize_then_deserialize_with_many_options_is_equal_to_starting_value() {
-        let mut msg = new_test_msg();
-        msg.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: DEFAULT_SUBNET_MASK.to_vec(),
-        });
-        msg.options.push(ConfigOption { code: OptionCode::NameServer, value: vec![8, 8, 8, 8] });
-        msg.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDISCOVER.into()],
-        });
+        let msg = || {
+            let mut msg = new_test_msg();
+            msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)));
+            msg.options.push(DhcpOption::NameServer(vec![Ipv4Addr::from([8, 8, 8, 8])]));
+            msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
+            msg
+        };
 
-        assert_eq!(Message::from_buffer(&msg.serialize()), Some(msg));
+        assert_eq!(Message::from_buffer(&msg().serialize()), Ok(msg()));
     }
 
     #[test]
     fn test_message_from_too_short_buffer_returns_none() {
         let buf = vec![0u8, 0u8, 0u8];
 
-        assert_eq!(Message::from_buffer(&buf), None);
+        assert_eq!(
+            Message::from_buffer(&buf),
+            Err(ProtocolError::InvalidBufferLength(buf.len()).into())
+        );
     }
 
     #[test]
     fn test_serialize_with_valid_option_returns_correct_bytes() {
-        let opt =
-            ConfigOption { code: OptionCode::SubnetMask, value: DEFAULT_SUBNET_MASK.to_vec() };
-        let mut bytes = Vec::new();
-        opt.serialize_to(&mut bytes);
+        let opt = DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK));
+        let mut bytes = Vec::with_capacity(6);
+        let () = opt.serialize_to(&mut bytes);
         assert_eq!(bytes.len(), 6);
         assert_eq!(bytes[0], 1);
         assert_eq!(bytes[1], 4);
@@ -599,22 +1440,25 @@ mod tests {
 
     #[test]
     fn test_serialize_with_fixed_len_option_returns_correct_bytes() {
-        let opt = ConfigOption { code: OptionCode::End, value: vec![] };
-        let mut bytes = Vec::new();
-        opt.serialize_to(&mut bytes);
+        let opt = DhcpOption::End();
+        let mut bytes = Vec::with_capacity(1);
+        let () = opt.serialize_to(&mut bytes);
         assert_eq!(bytes.len(), 1);
         assert_eq!(bytes[0], 255);
     }
 
     #[test]
-    fn test_option_from_valid_buffer_has_correct_values() {
+    fn test_option_from_valid_buffer_has_correct_value() {
         let buf = vec![1, 4, 255, 255, 255, 0];
         let mut buf = OptionBuffer { buf: &buf };
         let result = buf.next();
-        let opt = result.unwrap().unwrap();
-        let code: u8 = opt.code.into();
-        assert_eq!(code, 1);
-        assert_eq!(opt.value, DEFAULT_SUBNET_MASK.to_vec());
+        let opt = result.unwrap();
+        let val = match &opt {
+            Ok(DhcpOption::SubnetMask(val)) => Some(*val),
+            _ => None,
+        }
+        .unwrap();
+        assert_eq!(val, Ipv4Addr::from(DEFAULT_SUBNET_MASK));
     }
 
     #[test]
@@ -626,11 +1470,11 @@ mod tests {
     }
 
     #[test]
-    fn test_option_from_buffer_with_invalid_code_returns_error() {
-        let buf = vec![72, 2, 1, 2];
+    fn test_option_from_buffer_with_invalid_code_returns_err() {
+        let buf = vec![254, 2, 1, 2];
         let mut buf = OptionBuffer { buf: &buf };
         let result = buf.next();
-        assert_eq!(result, Some(Err(72)));
+        assert_eq!(result, Some(Err(ProtocolError::InvalidOptionCode(254).into())));
     }
 
     #[test]
@@ -644,10 +1488,7 @@ mod tests {
     #[test]
     fn test_get_dhcp_type_with_dhcp_type_option_returns_value() {
         let mut msg = Message::new();
-        msg.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDISCOVER.into()],
-        });
+        msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
 
         assert_eq!(msg.get_dhcp_type(), Ok(MessageType::DHCPDISCOVER));
     }
@@ -656,53 +1497,30 @@ mod tests {
     fn test_get_dhcp_type_without_dhcp_type_option_returns_err() {
         let msg = Message::new();
 
-        assert_eq!(msg.get_dhcp_type(), Err(MessageTypeError::MissingOption));
-    }
-
-    #[test]
-    fn test_get_dhcp_type_without_dhcp_type_option_value_returns_err() {
-        let mut msg = Message::new();
-        msg.options.push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![] });
-
-        assert_eq!(msg.get_dhcp_type(), Err(MessageTypeError::MissingValue));
-    }
-
-    #[test]
-    fn test_get_dhcp_type_with_invalid_dhcp_type_value_returns_err() {
-        let mut msg = Message::new();
-
-        let invalid_message_type_value = 224;
-        msg.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![invalid_message_type_value],
-        });
-
         assert_eq!(
             msg.get_dhcp_type(),
-            Err(MessageTypeError::UnknownType(invalid_message_type_value))
+            Err(ProtocolError::MissingOption(OptionCode::DhcpMessageType).into())
         );
     }
 
     #[test]
     fn test_buf_into_options_with_invalid_option_parses_other_valid_options() {
-        let mut msg = Message::new();
-        msg.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: DEFAULT_SUBNET_MASK.to_vec(),
-        });
-        msg.options.push(ConfigOption { code: OptionCode::Router, value: vec![192, 168, 1, 1] });
-        msg.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![MessageType::DHCPDISCOVER.into()],
-        });
+        let msg = || {
+            let mut msg = Message::new();
+            msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)));
+            msg.options.push(DhcpOption::Router(vec![Ipv4Addr::from([192, 168, 1, 1])]));
+            msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
+            msg
+        };
 
-        let mut buf = msg.serialize();
+        let mut buf = msg().serialize();
         // introduce invalid option code in first option
         buf[OPTIONS_START_IDX + 4] = 99;
         let result = Message::from_buffer(&buf).unwrap();
 
         // Expect that everything but the invalid option deserializes.
-        msg.options.remove(0);
-        assert_eq!(msg, result);
+        let mut expected_msg = msg();
+        expected_msg.options.remove(0);
+        assert_eq!(expected_msg, result);
     }
 }

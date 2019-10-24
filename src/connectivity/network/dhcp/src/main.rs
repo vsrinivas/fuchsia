@@ -111,9 +111,7 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
         let (received, mut sender) =
             sock.recv_from(&mut buf).await.context("failed to read from socket")?;
         fx_log_info!("received message from: {}", sender);
-        let msg = Message::from_buffer(&buf[..received]).ok_or_else(|| {
-            failure::format_err!("unable to parse buffer {:#x?}", &buf[..received])
-        })?;
+        let msg = Message::from_buffer(&buf[..received])?;
         fx_log_info!("parsed message: {:?}", msg);
 
         // This call should not block because the server is single-threaded.

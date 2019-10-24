@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::{BigEndian, ByteOrder};
 use failure::Fail;
 use serde::de::{self, Visitor};
 use serde_derive::{Deserialize, Serialize};
@@ -135,7 +134,7 @@ impl SubnetMask {
     /// Returns the Network address resulting from masking `target` with the `SubnetMask`.
     pub fn apply_to(&self, target: Ipv4Addr) -> Ipv4Addr {
         let subnet_mask_bits = self.to_u32();
-        let target_bits = BigEndian::read_u32(&target.octets());
+        let target_bits = u32::from_be_bytes(target.octets());
         Ipv4Addr::from(target_bits & subnet_mask_bits)
     }
 }

@@ -20,7 +20,6 @@ rustc_library("lib") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
