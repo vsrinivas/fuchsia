@@ -34,7 +34,7 @@ class FakeOwner : public VideoDecoder::Owner {
   }
 
   DosRegisterIo* dosbus() override { return dosbus_; }
-  zx_handle_t bti() override { return ZX_HANDLE_INVALID; }
+  zx::unowned_bti bti() override { return zx::unowned_bti(); }
   DeviceType device_type() override { return DeviceType::kGXM; }
   FirmwareBlob* firmware_blob() override { return &blob_; }
   std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer, uint32_t offset,
@@ -57,6 +57,10 @@ class FakeOwner : public VideoDecoder::Owner {
     }
     return ZX_OK;
   }
+  fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override {
+    return sysmem_sync_ptr_;
+  }
+
   bool IsDecoderCurrent(VideoDecoder* decoder) override { return true; }
   zx_status_t SetProtected(ProtectableHardwareUnit unit, bool protect) override {
     have_set_protected_ = true;
@@ -70,6 +74,7 @@ class FakeOwner : public VideoDecoder::Owner {
   FakeDecoderCore core_;
   uint64_t phys_map_start_ = 0x1000;
   FirmwareBlob blob_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_sync_ptr_;
   bool have_set_protected_ = false;
 };
 

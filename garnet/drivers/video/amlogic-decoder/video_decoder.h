@@ -92,7 +92,7 @@ class VideoDecoder {
     };
 
     virtual __WARN_UNUSED_RESULT DosRegisterIo* dosbus() = 0;
-    virtual __WARN_UNUSED_RESULT zx_handle_t bti() = 0;
+    virtual __WARN_UNUSED_RESULT zx::unowned_bti bti() = 0;
     virtual __WARN_UNUSED_RESULT DeviceType device_type() = 0;
     virtual __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() = 0;
     virtual __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(
@@ -101,7 +101,11 @@ class VideoDecoder {
     virtual __WARN_UNUSED_RESULT DecoderCore* core() = 0;
     virtual __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                                               uint32_t alignement_log2,
-                                                              uint32_t flags, const char* name) = 0;
+
+                                                                  uint32_t flags, const char* name) = 0;
+    [[nodiscard]]
+    virtual fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() = 0;
+
     virtual __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) = 0;
     // Sets whether a particular hardware unit can read/write protected or
     // unprotected memory.
@@ -109,7 +113,9 @@ class VideoDecoder {
                                                           bool protect) = 0;
   };
 
-  explicit VideoDecoder(Owner* owner) : owner_(owner) { pts_manager_ = std::make_unique<PtsManager>(); }
+  explicit VideoDecoder(Owner* owner, bool is_secure) : owner_(owner), is_secure_(is_secure) {
+    pts_manager_ = std::make_unique<PtsManager>();
+  }
 
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
   virtual __WARN_UNUSED_RESULT zx_status_t InitializeHardware() { return ZX_ERR_NOT_SUPPORTED; }
@@ -148,7 +154,8 @@ class VideoDecoder {
  protected:
   std::unique_ptr<PtsManager> pts_manager_;
   uint64_t next_non_codec_buffer_lifetime_ordinal_ = 0;
-  Owner* owner_ = {};
+  Owner* owner_ = nullptr;
+  bool is_secure_ = false;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_DECODER_H_

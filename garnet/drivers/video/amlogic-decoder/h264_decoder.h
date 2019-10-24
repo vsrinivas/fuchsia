@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "internal_buffer.h"
 #include "registers.h"
 #include "video_decoder.h"
 
@@ -23,7 +24,7 @@ class H264Decoder : public VideoDecoder {
     kWaitingForNewFrames,
   };
 
-  explicit H264Decoder(Owner* owner) : VideoDecoder(owner) {}
+  explicit H264Decoder(Owner* owner, bool is_secure) : VideoDecoder(owner, is_secure) {}
 
   ~H264Decoder() override;
 
@@ -57,7 +58,7 @@ class H264Decoder : public VideoDecoder {
 
   io_buffer_t codec_data_ = {};
   io_buffer_t sei_data_buffer_ = {};
-  io_buffer_t reference_mv_buffer_ = {};
+  std::optional<InternalBuffer> reference_mv_buffer_;
   io_buffer_t secondary_firmware_ = {};
   // All H264Decoder errors require creating a new H264Decoder to recover.
   bool fatal_error_ = false;

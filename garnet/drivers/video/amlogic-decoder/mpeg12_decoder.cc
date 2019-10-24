@@ -98,7 +98,7 @@ zx_status_t Mpeg12Decoder::Initialize() {
 
   enum { kWorkspaceSize = 2 * (1 << 16) };  // 128 kB
 
-  status = io_buffer_init(&workspace_buffer_, owner_->bti(), kWorkspaceSize,
+  status = io_buffer_init(&workspace_buffer_, owner_->bti()->get(), kWorkspaceSize,
                           IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make workspace buffer");
@@ -210,7 +210,8 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
     size_t buffer_size = kMaxWidth * kMaxHeight * 3 / 2;
     auto frame = std::make_unique<VideoFrame>();
     zx_status_t status =
-        io_buffer_init(&frame->buffer, owner_->bti(), buffer_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        io_buffer_init(&frame->buffer, owner_->bti()->get(), buffer_size,
+        IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to make frame: %d\n", status);
       return status;

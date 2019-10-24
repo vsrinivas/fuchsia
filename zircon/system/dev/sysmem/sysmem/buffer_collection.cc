@@ -27,9 +27,12 @@ const uint32_t kMaxClientVmoRights =
     ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_WAIT |
     // ZX_RIGHTS_IO:
     ZX_RIGHT_READ | ZX_RIGHT_WRITE |
-    // We intentionally omit ZX_RIGHTS_PROPERTY (ZX_RIGHT_GET_PROPERTY |
-    // ZX_RIGHT_SET_PROPERTY), at least for now.
-    //
+    // ZX_RIGHTS_PROPERTY allows a participant to set ZX_PROP_NAME for easier
+    // memory metrics.  Nothing prevents participants from figting over the
+    // name, though the kernel should make each set/get atomic with respect to
+    // other set/get.  This relies on ZX_RIGHTS_PROPERTY not implying anything
+    // that could be used as an attack vector between processes sharing a VMO.
+    ZX_RIGHTS_PROPERTY |
     // We intentionally omit ZX_RIGHT_EXECUTE (indefinitely) and ZX_RIGHT_SIGNAL
     // (at least for now).
     //

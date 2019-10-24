@@ -36,7 +36,7 @@ class DecoderCore {
  public:
   class Owner {
    public:
-    virtual __WARN_UNUSED_RESULT zx_handle_t bti() = 0;
+    virtual __WARN_UNUSED_RESULT zx::unowned_bti bti() = 0;
     virtual __WARN_UNUSED_RESULT MmioRegisters* mmio() = 0;
     virtual void UngateClocks() = 0;
     virtual void GateClocks() = 0;

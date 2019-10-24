@@ -20,7 +20,7 @@ zx_status_t Vdec1::LoadFirmware(const uint8_t* data, uint32_t size) {
   const uint32_t kFirmwareSize = 4 * 4096;
   // Most buffers should be 64-kbyte aligned.
   const uint32_t kBufferAlignShift = 16;
-  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, owner_->bti(), kFirmwareSize,
+  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, owner_->bti()->get(), kFirmwareSize,
                                               kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make firmware buffer");

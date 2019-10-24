@@ -40,15 +40,15 @@
 
 // TODO(35200):
 //
-// (AllocateStreamBuffer() moved to InternalBuffer.)
-// (VideoDecoder::Owner::ProtectableHardwareUnit::kParser pays attention to is_secure.)
-//
-// (Fine as io_buffer_t for now:
-//  search_pattern_ - HW only reads this
-//  parser_input_ - not used when secure)
-//
 // AllocateIoBuffer() - only used by VP9 - switch to InternalBuffer when we do zero copy on input
 // for VP9.
+//
+// (AllocateStreamBuffer() has been moved to InternalBuffer.)
+// (VideoDecoder::Owner::ProtectableHardwareUnit::kParser pays attention to is_secure.)
+//
+// (Fine as io_buffer_t, at least for now (for both h264 and VP9):
+//  search_pattern_ - HW only reads this
+//  parser_input_ - not used when secure)
 
 // These match the regions exported when the bus device was added.
 enum MmioRegion {
@@ -191,8 +191,8 @@ zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t si
   // is_writable is always true because we either need to write into this buffer using the CPU, or
   // using the parser - either way we'll be writing.
   auto create_result = InternalBuffer::Create(
-      &sysmem_sync_ptr_, &bti_, size, is_secure, /*is_writable=*/true,
-      /*is_mapping_needed=*/!use_parser);
+      "AMLStreamBuffer", &sysmem_sync_ptr_, zx::unowned_bti(bti_), size,
+      is_secure, /*is_writable=*/true, /*is_mapping_needed=*/!use_parser);
   if (!create_result.is_ok()) {
     DECODE_ERROR("Failed to make video fifo: %d", create_result.error());
     return create_result.error();
@@ -277,6 +277,10 @@ zx_status_t AmlogicVideo::AllocateIoBuffer(io_buffer_t* buffer, size_t size,
   SetIoBufferName(buffer, name);
 
   return ZX_OK;
+}
+
+fuchsia::sysmem::AllocatorSyncPtr& AmlogicVideo::SysmemAllocatorSyncPtr() {
+  return sysmem_sync_ptr_;
 }
 
 // This parser handles MPEG elementary streams.

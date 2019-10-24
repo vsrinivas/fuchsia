@@ -11,17 +11,16 @@
 #include <threads.h>
 
 fit::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
-    fuchsia::sysmem::AllocatorSyncPtr* sysmem, zx::bti* bti, size_t size, bool is_secure,
-    bool is_writable, bool is_mapping_needed) {
+    const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
+    size_t size, bool is_secure, bool is_writable, bool is_mapping_needed) {
   ZX_DEBUG_ASSERT(sysmem);
   ZX_DEBUG_ASSERT(*sysmem);
-  ZX_DEBUG_ASSERT(bti);
   ZX_DEBUG_ASSERT(*bti);
   ZX_DEBUG_ASSERT(size);
   ZX_DEBUG_ASSERT(size % ZX_PAGE_SIZE == 0);
   ZX_DEBUG_ASSERT(!is_mapping_needed || !is_secure);
   InternalBuffer local_result(size, is_secure, is_writable, is_mapping_needed);
-  zx_status_t status = local_result.Init(sysmem, bti);
+  zx_status_t status = local_result.Init(name, sysmem, bti);
   if (status != ZX_OK) {
     LOG(ERROR, "Init() failed - status: %d", status);
     return fit::error(status);
@@ -127,7 +126,8 @@ InternalBuffer::InternalBuffer(size_t size, bool is_secure, bool is_writable,
   ZX_DEBUG_ASSERT(!is_mapping_needed_ || !is_secure_);
 }
 
-zx_status_t InternalBuffer::Init(fuchsia::sysmem::AllocatorSyncPtr* sysmem, zx::bti* bti) {
+zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem,
+                                 const zx::unowned_bti& bti) {
   ZX_DEBUG_ASSERT(!is_moved_out_);
   // Init() should only be called on newly-constructed instances using a constructor other than the
   // move constructor.
@@ -198,6 +198,12 @@ zx_status_t InternalBuffer::Init(fuchsia::sysmem::AllocatorSyncPtr* sysmem, zx::
   ZX_DEBUG_ASSERT(out_buffer_collection_info.buffers[0].vmo_usable_start % ZX_PAGE_SIZE == 0);
   zx::vmo vmo = std::move(out_buffer_collection_info.buffers[0].vmo);
 
+  status = vmo.set_property(ZX_PROP_NAME, name, strlen(name));
+  if (status != ZX_OK) {
+    LOG(ERROR, "vmo_.set_property(ZX_PROP_NAME) failed - status: %d", status);
+    return status;
+  }
+
   uintptr_t virt_base = 0;
   if (is_mapping_needed_) {
     zx_vm_option_t map_options = ZX_VM_PERM_READ;
@@ -223,7 +229,7 @@ zx_status_t InternalBuffer::Init(fuchsia::sysmem::AllocatorSyncPtr* sysmem, zx::
   status = bti->pin(pin_options, vmo, out_buffer_collection_info.buffers[0].vmo_usable_start, size_,
                     &phys_base, 1, &pin);
   if (status != ZX_OK) {
-    LOG(ERROR, "bti->pin() failed - status: %d", status);
+    LOG(ERROR, "BTI pin() failed - status: %d", status);
     return status;
   }
 

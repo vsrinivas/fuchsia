@@ -141,7 +141,7 @@ Vp9Decoder::WorkingBuffer::~WorkingBuffer() { io_buffer_release(&buffer_); }
 uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(io_buffer_phys(&buffer_)); }
 
 Vp9Decoder::Vp9Decoder(Owner* owner, InputType input_type)
-    : VideoDecoder(owner), input_type_(input_type) {
+    : VideoDecoder(owner, /*is_secure=*/false), input_type_(input_type) {
   InitializeLoopFilterData();
 }
 
@@ -436,7 +436,7 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
     ZX_DEBUG_ASSERT(frames[i].codec_buffer_spec.data().is_vmo());
     ZX_DEBUG_ASSERT(frames[i].codec_buffer_spec.data().vmo().has_vmo_handle());
     zx_status_t status = io_buffer_init_vmo(
-        &video_frame->buffer, owner_->bti(),
+        &video_frame->buffer, owner_->bti()->get(),
         frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n", status);
@@ -748,7 +748,7 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
       (io_buffer_size(&current_frame_->compressed_data, 0) != frame_buffer_size)) {
     if (io_buffer_is_valid(&current_frame_->compressed_data))
       io_buffer_release(&current_frame_->compressed_data);
-    zx_status_t status = io_buffer_init(&current_frame_->compressed_data, owner_->bti(),
+    zx_status_t status = io_buffer_init(&current_frame_->compressed_data, owner_->bti()->get(),
                                         frame_buffer_size, IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Couldn't allocate compressed frame data: %d\n", status);
@@ -1067,8 +1067,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     uint32_t frame_vmo_bytes = coded_height * stride * 3 / 2;
     if (initialize_frames_handler_) {
       ::zx::bti duplicated_bti;
-      zx_status_t dup_result =
-          ::zx::unowned_bti(owner_->bti())->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
+      zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
       if (dup_result != ZX_OK) {
         DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
         return false;
@@ -1094,8 +1093,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       std::vector<CodecFrame> frames;
       for (uint32_t i = 0; i < frames_.size(); i++) {
         ::zx::vmo frame_vmo;
-        zx_status_t vmo_create_result = zx_vmo_create_contiguous(owner_->bti(), frame_vmo_bytes, 0,
-                                                                 frame_vmo.reset_and_get_address());
+        zx_status_t vmo_create_result = zx_vmo_create_contiguous(
+            owner_->bti()->get(), frame_vmo_bytes, 0, frame_vmo.reset_and_get_address());
         if (vmo_create_result != ZX_OK) {
           DECODE_ERROR("zx_vmo_create_contiguous failed - status: %d\n", vmo_create_result);
           return false;
@@ -1165,7 +1164,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     constexpr uint32_t kLcuMvBytes = 0x240;
     constexpr uint32_t kLcuCount = 4096 * 2048 / (64 * 32);
     zx_status_t status =
-        io_buffer_init_aligned(&current_mpred_buffer_->mv_mpred_buffer, owner_->bti(),
+        io_buffer_init_aligned(&current_mpred_buffer_->mv_mpred_buffer, owner_->bti()->get(),
                                kLcuCount * kLcuMvBytes, 16, IO_BUFFER_CONTIG | IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Alloc buffer error: %d\n", status);

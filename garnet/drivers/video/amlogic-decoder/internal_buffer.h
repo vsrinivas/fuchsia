@@ -15,6 +15,9 @@
 class InternalBuffer {
  public:
   using ErrorHandler = fit::callback<void(zx_status_t status)>;
+  // |name| is borrowed during the call - not retained.  Copied into ZX_PROP_NAME of the allocated
+  // vmo.
+  //
   // |sysmem| is borrowed during the call - not retained.
   //
   // |bti| is borrowed during the call - not retained.
@@ -29,8 +32,8 @@ class InternalBuffer {
   // |is_mapping_needed| if a mapping to the allocated buffer is needed.  This must be false if
   // is_secure.
   static fit::result<InternalBuffer, zx_status_t> Create(
-      fuchsia::sysmem::AllocatorSyncPtr* sysmem, zx::bti* bti, size_t size, bool is_secure,
-      bool is_writable, bool is_mapping_needed);
+      const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
+      size_t size, bool is_secure, bool is_writable, bool is_mapping_needed);
 
   ~InternalBuffer();
 
@@ -57,7 +60,8 @@ class InternalBuffer {
   InternalBuffer(size_t size, bool is_secure, bool is_writable, bool is_mapping_needed);
 
   InternalBuffer(size_t size);
-  zx_status_t Init(fuchsia::sysmem::AllocatorSyncPtr* sysmem, zx::bti* bti);
+  zx_status_t Init(const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem,
+                   const zx::unowned_bti& bti);
   void DeInit();
 
   size_t size_{};

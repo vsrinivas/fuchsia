@@ -44,7 +44,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   // VideoDecoder::Owner implementation.
   __WARN_UNUSED_RESULT DosRegisterIo* dosbus() override { return dosbus_.get(); }
-  __WARN_UNUSED_RESULT zx_handle_t bti() override { return bti_.get(); }
+  __WARN_UNUSED_RESULT zx::unowned_bti bti() override { return zx::unowned_bti(bti_); }
   __WARN_UNUSED_RESULT DeviceType device_type() override { return device_type_; }
   __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() override { return firmware_.get(); }
   __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
@@ -56,6 +56,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                                     uint32_t alignment_log2, uint32_t flags,
                                                     const char* name) override;
+  [[nodiscard]]
+  fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override;
+
   __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override
       __TA_NO_THREAD_SAFETY_ANALYSIS {
     assert(decoder);

@@ -169,7 +169,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  auto decoder = std::make_unique<H264Decoder>(video_);
+  auto decoder = std::make_unique<H264Decoder>(video_, /*is_secure=*/false);
   decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
     // The Codec interface requires that emitted frames are cache clean
     // at least for now.  We invalidate without skipping over stride-width

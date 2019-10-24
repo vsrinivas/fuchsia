@@ -22,7 +22,7 @@ zx_status_t HevcDec::LoadFirmware(const uint8_t* data, uint32_t size) {
   const uint32_t kFirmwareSize = 4 * 4096;
   // Most buffers should be 64-kbyte aligned.
   const uint32_t kBufferAlignShift = 16;
-  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, owner_->bti(), kFirmwareSize,
+  zx_status_t status = io_buffer_init_aligned(&firmware_buffer, owner_->bti()->get(), kFirmwareSize,
                                               kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make firmware buffer");
@@ -275,7 +275,8 @@ uint32_t HevcDec::GetReadOffset() {
 
 zx_status_t HevcDec::InitializeInputContext(InputContext* context) {
   constexpr uint32_t kInputContextSize = 4096;
-  zx_status_t status = io_buffer_init_aligned(&context->buffer, owner_->bti(), kInputContextSize, 0,
+  zx_status_t status = io_buffer_init_aligned(&context->buffer, owner_->bti()->get(),
+                                              kInputContextSize, 0,
                                               IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to allocate input context, status %d\n", status);

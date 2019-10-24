@@ -17,7 +17,7 @@
 
 class Mpeg12Decoder : public VideoDecoder {
  public:
-  explicit Mpeg12Decoder(Owner* owner) : VideoDecoder(owner) {}
+  explicit Mpeg12Decoder(Owner* owner) : VideoDecoder(owner, /*is_secure=*/false) {}
 
   ~Mpeg12Decoder() override;
 

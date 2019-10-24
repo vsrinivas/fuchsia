@@ -66,7 +66,8 @@ class TestH264 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()), false);
+      video->SetDefaultInstance(
+          std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false), /*hevc=*/false);
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
@@ -137,7 +138,8 @@ class TestH264 {
     ASSERT_NE(nullptr, bear_h264);
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()), false);
+      video->SetDefaultInstance(
+          std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false), /*hevc=*/false);
     }
     status = video->InitializeStreamBuffer(/*use_parser=*/false, PAGE_SIZE, /*is_secure=*/false);
     video->InitializeInterrupts();
@@ -208,7 +210,8 @@ class TestH264 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get()), false);
+      video->SetDefaultInstance(
+          std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false), /*hevc=*/false);
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);

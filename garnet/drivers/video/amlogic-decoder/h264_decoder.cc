@@ -22,6 +22,7 @@
 // reference_mv_buffer_ - optionally secure
 // codec_data_ - optionally secure
 // sei_data_buffer_ - optionally secure
+// InputContext::buffer - optionally secure
 //
 // (Fine as io_bufer_t for now:
 //    * loading firmware can use clear memory, since those are just reads by the HW, and we can only
@@ -215,10 +216,10 @@ H264Decoder::~H264Decoder() {
   owner_->core()->StopDecoding();
   owner_->core()->WaitForIdle();
   BarrierBeforeRelease();
-  io_buffer_release(&reference_mv_buffer_);
   io_buffer_release(&codec_data_);
   io_buffer_release(&sei_data_buffer_);
   io_buffer_release(&secondary_firmware_);
+  // ~reference_mv_buffer_
 }
 
 zx_status_t H264Decoder::ResetHardware() {
@@ -255,8 +256,9 @@ zx_status_t H264Decoder::LoadSecondaryFirmware(const uint8_t* data, uint32_t fir
   constexpr uint32_t kSecondaryFirmwareBufferSize = kSecondaryFirmwareSize * 5;
   {
     zx_status_t status =
-        io_buffer_init_aligned(&secondary_firmware_, owner_->bti(), kSecondaryFirmwareBufferSize,
-                               kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        io_buffer_init_aligned(&secondary_firmware_, owner_->bti()->get(),
+                               kSecondaryFirmwareBufferSize, kBufferAlignShift,
+                               IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to make second firmware buffer: %d", status);
       return status;
@@ -314,8 +316,8 @@ zx_status_t H264Decoder::Initialize() {
   AvScratch0::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   const uint32_t kCodecDataSize = 0x1ee000;
-  status = io_buffer_init_aligned(&codec_data_, owner_->bti(), kCodecDataSize, kBufferAlignShift,
-                                  IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  status = io_buffer_init_aligned(&codec_data_, owner_->bti()->get(), kCodecDataSize,
+                                  kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make codec data buffer: %d\n", status);
     return status;
@@ -356,8 +358,8 @@ zx_status_t H264Decoder::Initialize() {
       .set_disable_fast_poc(0)
       .WriteTo(owner_->dosbus());
 
-  status = io_buffer_init_aligned(&sei_data_buffer_, owner_->bti(), 8 * 1024, kBufferAlignShift,
-                                  IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  status = io_buffer_init_aligned(&sei_data_buffer_, owner_->bti()->get(), 8 * 1024,
+                                  kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make sei data buffer: %d", status);
     return status;
@@ -405,8 +407,8 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t cod
     assert(frames[i].codec_buffer_spec.data().is_vmo());
     assert(frames[i].codec_buffer_spec.data().vmo().has_vmo_handle());
     zx_status_t status = io_buffer_init_vmo(
-        &frame->buffer, owner_->bti(), frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(),
-        0, IO_BUFFER_RW);
+        &frame->buffer, owner_->bti()->get(),
+        frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n", status);
       OnFatalError();
@@ -472,8 +474,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t coded_w
   std::vector<CodecFrame> frames;
   if (initialize_frames_handler_) {
     ::zx::bti duplicated_bti;
-    zx_status_t dup_result =
-        ::zx::unowned_bti(owner_->bti())->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
+    zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
     if (dup_result != ZX_OK) {
       DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
       return dup_result;
@@ -493,8 +494,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t coded_w
       // each frame VMO is actually physically contiguous.  So create with
       // zx_vmo_create_contiguous() here.
       ::zx::vmo frame_vmo;
-      zx_status_t vmo_create_result = zx_vmo_create_contiguous(owner_->bti(), frame_vmo_bytes, 0,
-                                                               frame_vmo.reset_and_get_address());
+      zx_status_t vmo_create_result = zx_vmo_create_contiguous(
+          owner_->bti()->get(), frame_vmo_bytes, 0, frame_vmo.reset_and_get_address());
       if (vmo_create_result != ZX_OK) {
         DECODE_ERROR("H264Decoder::InitializeFrames() failed - status: %d\n", vmo_create_result);
         return vmo_create_result;
@@ -553,8 +554,8 @@ zx_status_t H264Decoder::InitializeStream() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   state_ = DecoderState::kWaitingForNewFrames;
   BarrierBeforeRelease();  // For reference_mv_buffer_
-  if (io_buffer_is_valid(&reference_mv_buffer_))
-    io_buffer_release(&reference_mv_buffer_);
+  // Ensure empty; may or may not be set at this point.
+  reference_mv_buffer_.reset();
   // StreamInfo AKA AvScratch1.
   auto stream_info = StreamInfo::Get().ReadFrom(owner_->dosbus());
   // SequenceInfo AKA AvScratch2.
@@ -589,25 +590,29 @@ zx_status_t H264Decoder::InitializeStream() {
   // hardware happens to round up as well.
   uint32_t mv_buffer_size =
       fbl::round_up(mb_height, 4u) * fbl::round_up(mb_width, 4u) * mb_mv_byte * max_reference_size;
+  uint32_t mv_buffer_alloc_size = fbl::round_up(mv_buffer_size, ZX_PAGE_SIZE);
 
-  zx_status_t status = io_buffer_init(&reference_mv_buffer_, owner_->bti(), mv_buffer_size,
-                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Couldn't allocate reference mv buffer\n");
-    return status;
+  auto create_result = InternalBuffer::Create(
+      "H264ReferenceMvs", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), mv_buffer_alloc_size,
+      is_secure_, /*is_writable=*/true, /*is_mapping_needed*/false);
+  if (!create_result.is_ok()) {
+    LOG(ERROR, "Couldn't allocate reference mv buffer - status: %d", create_result.error());
+    return create_result.error();
   }
-  SetIoBufferName(&reference_mv_buffer_, "H264ReferenceMvs");
-  io_buffer_cache_flush(&reference_mv_buffer_, 0, io_buffer_size(&reference_mv_buffer_, 0));
+  reference_mv_buffer_.emplace(create_result.take_value());
+
+  // sysmem ensure that newly allocated buffers are zeroed and flushed to RAM and fenced, to the
+  // degree possible. 
 
   BarrierAfterFlush();
   AvScratch1::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&reference_mv_buffer_)))
+      .FromValue(truncate_to_32(reference_mv_buffer_->phys_base()))
       .WriteTo(owner_->dosbus());
   // In the linux driver AvScratch3 is used to communicate about the display
   // canvas.
   AvScratch3::Get().FromValue(0).WriteTo(owner_->dosbus());
   AvScratch4::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&reference_mv_buffer_)) + mv_buffer_size)
+      .FromValue(truncate_to_32(reference_mv_buffer_->phys_base() + mv_buffer_size))
       .WriteTo(owner_->dosbus());
 
   auto crop_info = CropInfo::Get().ReadFrom(owner_->dosbus());
@@ -666,8 +671,8 @@ zx_status_t H264Decoder::InitializeStream() {
   // decode to proceed without tending to leave the decoder idle for long if the
   // client immediately releases each frame (just barely enough to decode as
   // long as the client never camps on even one frame).
-  status = InitializeFrames(kActualDPBSize, coded_width, coded_height, display_width,
-                            display_height, has_sar, sar_width, sar_height);
+  zx_status_t status = InitializeFrames(kActualDPBSize, coded_width, coded_height, display_width,
+                                        display_height, has_sar, sar_width, sar_height);
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
       DECODE_ERROR("InitializeFrames() failed: status: %d\n", status);
