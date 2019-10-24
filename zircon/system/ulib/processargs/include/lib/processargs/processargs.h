@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <stdalign.h>
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>
 #include <zircon/types.h>
-#include <stdalign.h>
 
 __BEGIN_CDECLS
 
@@ -28,6 +28,13 @@ zx_status_t processargs_message_size(zx_handle_t channel, uint32_t* nbytes, uint
 zx_status_t processargs_read(zx_handle_t bootstrap, void* buffer, uint32_t nbytes,
                              zx_handle_t handles[], uint32_t nhandles, zx_proc_args_t** pargs,
                              uint32_t** handle_info);
+
+// Extract known handle types from the handles.
+// Extracted handles are reset (ZX_HANDLE_INVALID into handles and 0 into
+// handle_info)
+void processargs_extract_handles(uint32_t nhandles, zx_handle_t handles[], uint32_t handle_info[],
+                                 zx_handle_t* process_self, zx_handle_t* job_default,
+                                 zx_handle_t* vmar_root_self, zx_handle_t* thread_self);
 
 // This assumes processargs_read has already succeeded on the same
 // buffer.  It unpacks the argument and environment strings into arrays

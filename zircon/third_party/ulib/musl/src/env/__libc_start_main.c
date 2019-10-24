@@ -94,7 +94,7 @@ static void start_main(const struct start_params* p) {
 }
 
 NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
-                                                int (*main)(int, char**, char**)) {
+                                                        int (*main)(int, char**, char**)) {
   // Initialize stack-protector canary value first thing.  Do the setjmp
   // manglers in the same call to avoid the overhead of two system calls.
   // That means we need a temporary buffer on the stack, which we then
@@ -127,51 +127,9 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
     status = processargs_read(bootstrap, buffer, p.nbytes, handles, p.nhandles, &p.procargs,
                               &p.handle_info);
   }
-
-  // Find the handles we're interested in among what we were given.
   zx_handle_t main_thread_handle = ZX_HANDLE_INVALID;
-  for (uint32_t i = 0; i < p.nhandles; ++i) {
-    switch (PA_HND_TYPE(p.handle_info[i])) {
-      case PA_PROC_SELF:
-        // The handle will have been installed already by dynamic
-        // linker startup, but now we have another one.  They
-        // should of course be handles to the same process, but
-        // just for cleanliness switch to the "main" one.
-        if (__zircon_process_self != ZX_HANDLE_INVALID)
-          _zx_handle_close(__zircon_process_self);
-        __zircon_process_self = handles[i];
-        handles[i] = ZX_HANDLE_INVALID;
-        p.handle_info[i] = 0;
-        break;
-
-      case PA_JOB_DEFAULT:
-        // The default job provided to the process to use for
-        // creation of additional processes.  It may or may not
-        // be the job this process is a child of.  It may not
-        // be provided at all.
-        if (__zircon_job_default != ZX_HANDLE_INVALID)
-          _zx_handle_close(__zircon_job_default);
-        __zircon_job_default = handles[i];
-        handles[i] = ZX_HANDLE_INVALID;
-        p.handle_info[i] = 0;
-        break;
-
-      case PA_VMAR_ROOT:
-        // As above for PROC_SELF
-        if (__zircon_vmar_root_self != ZX_HANDLE_INVALID)
-          _zx_handle_close(__zircon_vmar_root_self);
-        __zircon_vmar_root_self = handles[i];
-        handles[i] = ZX_HANDLE_INVALID;
-        p.handle_info[i] = 0;
-        break;
-
-      case PA_THREAD_SELF:
-        main_thread_handle = handles[i];
-        handles[i] = ZX_HANDLE_INVALID;
-        p.handle_info[i] = 0;
-        break;
-    }
-  }
+  processargs_extract_handles(p.nhandles, handles, p.handle_info, &__zircon_process_self,
+                              &__zircon_job_default, &__zircon_vmar_root_self, &main_thread_handle);
 
   atomic_store(&libc.thread_count, 1);
 

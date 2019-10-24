@@ -55,6 +55,54 @@ zx_status_t processargs_read(zx_handle_t bootstrap, void* buffer, uint32_t nbyte
   return ZX_OK;
 }
 
+void processargs_extract_handles(uint32_t nhandles, zx_handle_t handles[], uint32_t handle_info[],
+                                 zx_handle_t* process_self, zx_handle_t* job_default,
+                                 zx_handle_t* vmar_root_self, zx_handle_t* thread_self) {
+  // Find the handles we're interested in among what we were given.
+  for (uint32_t i = 0; i < nhandles; ++i) {
+    switch (PA_HND_TYPE(handle_info[i])) {
+      case PA_PROC_SELF:
+        // The handle will have been installed already by dynamic
+        // linker startup, but now we have another one.  They
+        // should of course be handles to the same process, but
+        // just for cleanliness switch to the "main" one.
+        if (*process_self != ZX_HANDLE_INVALID)
+          _zx_handle_close(*process_self);
+        *process_self = handles[i];
+        handles[i] = ZX_HANDLE_INVALID;
+        handle_info[i] = 0;
+        break;
+
+      case PA_JOB_DEFAULT:
+        // The default job provided to the process to use for
+        // creation of additional processes.  It may or may not
+        // be the job this process is a child of.  It may not
+        // be provided at all.
+        if (*job_default != ZX_HANDLE_INVALID)
+          _zx_handle_close(*job_default);
+        *job_default = handles[i];
+        handles[i] = ZX_HANDLE_INVALID;
+        handle_info[i] = 0;
+        break;
+
+      case PA_VMAR_ROOT:
+        // As above for PROC_SELF
+        if (*vmar_root_self != ZX_HANDLE_INVALID)
+          _zx_handle_close(*vmar_root_self);
+        *vmar_root_self = handles[i];
+        handles[i] = ZX_HANDLE_INVALID;
+        handle_info[i] = 0;
+        break;
+
+      case PA_THREAD_SELF:
+        *thread_self = handles[i];
+        handles[i] = ZX_HANDLE_INVALID;
+        handle_info[i] = 0;
+        break;
+    }
+  }
+}
+
 static zx_status_t unpack_strings(char* buffer, uint32_t bytes, char* result[], uint32_t off,
                                   uint32_t num) {
   char* p = &buffer[off];
