@@ -19,7 +19,8 @@ const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 
 View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
            fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
-           std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter)
+           std::string debug_name, std::shared_ptr<ErrorReporter> error_reporter,
+           EventReporter* event_reporter)
     : Resource(session, session->id(), id, View::kTypeInfo),
       link_(std::move(link)),
       control_ref_(std::move(control_ref)),
@@ -28,6 +29,7 @@ View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
       error_reporter_(std::move(error_reporter)),
       event_reporter_(event_reporter),
       gfx_session_(session),
+      debug_name_(debug_name),
       weak_factory_(this) {
   FXL_DCHECK(error_reporter_);
   FXL_DCHECK(event_reporter_);

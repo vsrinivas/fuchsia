@@ -19,11 +19,12 @@ const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kNode | ResourceTy
                                                 "ViewHolder"};
 
 ViewHolder::ViewHolder(Session* session, SessionId session_id, ResourceId node_id,
-                       ViewLinker::ExportLink link)
+                       ViewLinker::ExportLink link, std::string debug_name)
     : Node(session, session_id, node_id, ViewHolder::kTypeInfo),
       link_(std::move(link)),
       view_holder_koid_(link_.endpoint_id()),
       gfx_session_(session),
+      debug_name_(debug_name),
       weak_factory_(this) {
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());

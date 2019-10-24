@@ -53,7 +53,8 @@ class View final : public Resource {
   // must be maintained.  However, it would be better to pass strong pointers.
   View(Session* session, ResourceId id, ViewLinker::ImportLink link,
        fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
-       std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter);
+       std::string debug_name, std::shared_ptr<ErrorReporter> error_reporter,
+       EventReporter* event_reporter);
 
   ~View() override;
 
@@ -67,6 +68,9 @@ class View final : public Resource {
   ViewHolder* view_holder() const { return view_holder_; }
   // Paired |ViewNode| used to attach this View and its children to the scene
   // graph.
+
+  std::string debug_name() { return debug_name_; }
+
   ViewNode* GetViewNode() const { return node_.get(); }
 
   // Connection management.  Call once the View is created to initiate the link
@@ -133,6 +137,8 @@ class View final : public Resource {
   EventReporter* const event_reporter_;
 
   Session* gfx_session_ = nullptr;
+
+  std::string debug_name_;
 
   fxl::WeakPtrFactory<View> weak_factory_;  // must be last
 };

@@ -20,6 +20,7 @@
 namespace scenic_impl {
 namespace gfx {
 
+using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 using ViewLinker = ObjectLinker<ViewHolder, View>;
 
 // The public |ViewHolder| resource implemented as a Node. The |ViewHolder|
@@ -32,7 +33,7 @@ class ViewHolder final : public Node {
   static const ResourceTypeInfo kTypeInfo;
 
   ViewHolder(Session* session, SessionId session_id, ResourceId node_id,
-             ViewLinker::ExportLink link);
+             ViewLinker::ExportLink link, std::string debug_name);
   ~ViewHolder() override;
 
   fxl::WeakPtr<ViewHolder> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -47,6 +48,8 @@ class ViewHolder final : public Node {
   // link to its partner View.
   void Connect();
   bool connected() const { return link_.initialized(); }
+
+  std::string debug_name() { return debug_name_; }
 
   // Paired View on the other side of the link.  This should be nullptr
   // iff. connected() is false.
@@ -108,6 +111,7 @@ class ViewHolder final : public Node {
   async::Wait render_waiter_;
 
   Session* gfx_session_ = nullptr;
+  std::string debug_name_;
 
   fxl::WeakPtrFactory<ViewHolder> weak_factory_;  // must be last
 };

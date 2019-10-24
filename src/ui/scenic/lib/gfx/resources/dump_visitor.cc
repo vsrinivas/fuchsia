@@ -95,6 +95,7 @@ void DumpVisitor::Visit(ImagePipeBase* r) {
 void DumpVisitor::Visit(View* r) {
   ViewHolder* vh = r->view_holder();
   WriteProperty("view") << r->global_id() << "->" << (vh ? vh->global_id() : GlobalId());
+  WriteProperty("debug_name") << r->debug_name();
   WriteProperty("view_ref_koid") << r->view_ref_koid();
   VisitResource(r);
 }
@@ -112,6 +113,7 @@ void DumpVisitor::Visit(ViewHolder* r) {
   BeginItem("ViewHolder", r);
   View* v = r->view();
   WriteProperty("view_holder") << r->global_id() << "->" << (v ? v->global_id() : GlobalId());
+  WriteProperty("debug_name") << r->debug_name();
   WriteProperty("focus_change") << r->GetViewProperties().focus_change;
   VisitNode(r);
   EndItem();

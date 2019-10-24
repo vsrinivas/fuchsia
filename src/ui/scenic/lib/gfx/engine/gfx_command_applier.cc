@@ -1404,8 +1404,8 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
 
   // Create a View: Link was successful, view ref is valid.
   return fxl::MakeRefCounted<View>(session, id, std::move(link), std::move(control_ref),
-                                   std::move(view_ref), session->shared_error_reporter(),
-                                   session->event_reporter());
+                                   std::move(view_ref), *args.debug_name,
+                                   session->shared_error_reporter(), session->event_reporter());
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
@@ -1424,8 +1424,8 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
 
   // Create a View: Link was successful, view ref is valid.
   return fxl::MakeRefCounted<View>(session, id, std::move(link), std::move(args.control_ref),
-                                   std::move(args.view_ref), session->shared_error_reporter(),
-                                   session->event_reporter());
+                                   std::move(args.view_ref), *args.debug_name,
+                                   session->shared_error_reporter(), session->event_reporter());
 }
 
 ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
@@ -1436,7 +1436,8 @@ ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
 
   // Create a ViewHolder if the Link was successfully registered.
   if (link.valid()) {
-    return fxl::MakeRefCounted<ViewHolder>(session, session->id(), id, std::move(link));
+    return fxl::MakeRefCounted<ViewHolder>(session, session->id(), id, std::move(link),
+                                           *args.debug_name);
   }
   return nullptr;
 }

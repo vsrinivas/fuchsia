@@ -19,8 +19,6 @@ namespace test {
 // execute Vulkan commands.
 //
 // All three factory methods can be called with a null ResourceManager.
-//
-// AllocateImage is currently unimplemented.
 class FakeGpuAllocator : public GpuAllocator {
  public:
   FakeGpuAllocator();
