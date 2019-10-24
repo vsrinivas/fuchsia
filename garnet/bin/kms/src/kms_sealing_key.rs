@@ -4,7 +4,7 @@
 
 use crate::common::{self as common, DataRequest, KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::{CryptoProvider, SealingProviderKey};
-use fidl_fuchsia_kms::{Error, KeyProvider};
+use fidl_fuchsia_kms::Error;
 use fidl_fuchsia_mem::Buffer;
 use log::error;
 
@@ -52,8 +52,8 @@ impl KmsKey for KmsSealingKey {
         KeyType::SealingKey
     }
 
-    fn get_key_provider(&self) -> KeyProvider {
-        self.provider_key.get_key_provider()
+    fn get_provider_name(&self) -> &str {
+        self.provider_key.get_provider_name()
     }
 
     fn get_key_data(&self) -> Vec<u8> {

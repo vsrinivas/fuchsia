@@ -6,7 +6,7 @@ use crate::common::ASYMMETRIC_KEY_ALGORITHMS;
 use crate::crypto_provider::{
     AsymmetricProviderKey, CryptoProvider, CryptoProviderError, ProviderKey, SealingProviderKey,
 };
-use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, KeyProvider};
+use fidl_fuchsia_kms::AsymmetricKeyAlgorithm;
 use std::sync::{Arc, Mutex};
 
 /// A mock crypto provider implementation.
@@ -29,8 +29,8 @@ impl CryptoProvider for MockProvider {
         // The mock provider supported all asymmetric algorithms.
         ASYMMETRIC_KEY_ALGORITHMS
     }
-    fn get_name(&self) -> KeyProvider {
-        KeyProvider::MockProvider
+    fn get_name(&self) -> &'static str {
+        "MockProvider"
     }
     fn box_clone(&self) -> Box<dyn CryptoProvider> {
         Box::new(MockProvider {
@@ -205,7 +205,7 @@ impl ProviderKey for MockAsymmetricKey {
     fn get_key_data(&self) -> Vec<u8> {
         self.key_data.to_vec()
     }
-    fn get_key_provider(&self) -> KeyProvider {
+    fn get_provider_name(&self) -> &'static str {
         MockProvider::new().get_name()
     }
 }
@@ -238,7 +238,7 @@ impl ProviderKey for MockSealingKey {
     fn get_key_data(&self) -> Vec<u8> {
         self.key_data.to_vec()
     }
-    fn get_key_provider(&self) -> KeyProvider {
+    fn get_provider_name(&self) -> &'static str {
         MockProvider::new().get_name()
     }
 }

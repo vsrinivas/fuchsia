@@ -11,9 +11,6 @@
       }
     },
     "sandbox": {
-        "features": [
-            "config-data"
-        ],
         "services": [
             "fuchsia.kms.KeyManager"
         ]

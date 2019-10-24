@@ -12,7 +12,7 @@ const uint32 MAX_DATA_SIZE = 65536;
 enum Error {
     /// Internal unexpected error.
     INTERNAL_ERROR = 1;
-    /// When trying to create/import a new key but a key with the same name already exists.
+    /// When trying to create/import a new key however another key with the same name already exists.
     KEY_ALREADY_EXISTS = 2;
     /// When the key you are trying to use is not found.
     KEY_NOT_FOUND = 3;
@@ -39,18 +39,6 @@ enum KeyOrigin {
     GENERATED = 1;
     /// The key was imported.
     IMPORTED = 2;
-};
-
-enum KeyProvider {
-    /// A mock provider only used for unit testing.
-    MOCK_PROVIDER = 1;
-    /// A software provider that uses rust AesGcm trait for symmetric key operation and mundane for
-    /// asymmetric key operation.
-    SOFTWARE_PROVIDER = 2;
-    /// A software provider that only supports mundane-based asymmetric key operation.
-    SOFTWARE_ASYMMETRIC_ONLY_PROVIDER = 3;
-    /// A crypto provider based on Keysafe Trusted App in OPTEE.
-    OPTEE_PROVIDER = 4;
 };
 
 struct Signature {
@@ -126,9 +114,6 @@ protocol KeyManager {
 protocol Key {
     /// Get the key origin (generated/imported).
     GetKeyOrigin() -> (KeyOrigin key_origin) error Error;
-
-    /// Get the name for the crypto provider backing up the key.
-    GetKeyProvider() -> (KeyProvider key_provider) error Error;
 };
 
 protocol AsymmetricPrivateKey {

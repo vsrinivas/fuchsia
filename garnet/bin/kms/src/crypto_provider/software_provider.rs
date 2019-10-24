@@ -8,7 +8,7 @@ use crate::crypto_provider::{
 };
 use bincode;
 use crypto::{aead::AeadDecryptor, aead::AeadEncryptor, aes::KeySize, aes_gcm::AesGcm};
-use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, KeyProvider};
+use fidl_fuchsia_kms::AsymmetricKeyAlgorithm;
 use mundane;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
@@ -71,7 +71,7 @@ impl ProviderKey for SoftwareSealingKey {
     fn get_key_data(&self) -> Vec<u8> {
         self.key_data.clone()
     }
-    fn get_key_provider(&self) -> KeyProvider {
+    fn get_provider_name(&self) -> &'static str {
         (SoftwareProvider::new()).get_name()
     }
 }
@@ -121,7 +121,7 @@ impl ProviderKey for SoftwareAsymmetricPrivateKey {
     fn get_key_data(&self) -> Vec<u8> {
         self.mundane_key.get_key_data()
     }
-    fn get_key_provider(&self) -> KeyProvider {
+    fn get_provider_name(&self) -> &'static str {
         SoftwareProvider::new().get_name()
     }
 }
@@ -145,8 +145,8 @@ impl CryptoProvider for SoftwareProvider {
         self.mundane_provider.supported_asymmetric_algorithms()
     }
 
-    fn get_name(&self) -> KeyProvider {
-        KeyProvider::SoftwareProvider
+    fn get_name(&self) -> &'static str {
+        "SoftwareProvider"
     }
     fn box_clone(&self) -> Box<dyn CryptoProvider> {
         Box::new(SoftwareProvider::new())

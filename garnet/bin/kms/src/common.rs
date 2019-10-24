@@ -6,9 +6,7 @@ use std::fmt;
 use std::str;
 
 use crate::crypto_provider::CryptoProvider;
-use fidl_fuchsia_kms::{
-    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, Error, KeyOrigin, KeyProvider,
-};
+use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, Error, KeyOrigin};
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_zircon as zx;
 use log::error;
@@ -72,8 +70,8 @@ pub trait KmsKey: Send + fmt::Debug {
     fn handle_request(&self, req: KeyRequestType) -> Result<(), fidl::Error>;
     /// The the type for the current key.
     fn get_key_type(&self) -> KeyType;
-    /// Get the crypto provider for the key.
-    fn get_key_provider(&self) -> KeyProvider;
+    /// Get the provider's name.
+    fn get_provider_name(&self) -> &str;
     /// Get the key data.
     fn get_key_data(&self) -> Vec<u8>;
 }

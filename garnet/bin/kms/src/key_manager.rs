@@ -13,7 +13,7 @@ use failure::{self, err_msg};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_kms::{
     AsymmetricKeyAlgorithm, AsymmetricPrivateKeyMarker, Error, KeyManagerRequest, KeyOrigin,
-    KeyProvider, MAX_DATA_SIZE,
+    MAX_DATA_SIZE,
 };
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_async as fasync;
@@ -27,7 +27,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex, RwLock};
 
-const DEFAULT_PROVIDER: KeyProvider = KeyProvider::SoftwareProvider;
+const DEFAULT_PROVIDER_NAME: &str = "SoftwareProvider";
 const KEY_FOLDER: &str = "/data/kms";
 const USER_KEY_SUBFOLDER: &str = "user";
 const INTERNAL_KEY_SUBFOLDER: &str = "internal";
@@ -37,7 +37,7 @@ struct KeyAttributesJson {
     pub key_algorithm: u32,
     pub key_type: KeyType,
     pub key_origin: u32,
-    pub key_provider: u32,
+    pub provider_name: String,
     pub key_data: Vec<u8>,
 }
 
@@ -59,10 +59,10 @@ pub struct KeyManager {
     /// them in memory to be consistent.
     internal_key_map: Arc<Mutex<HashMap<String, Arc<Mutex<dyn KmsKey>>>>>,
     /// All the available crypto providers.
-    crypto_provider_map: RwLock<HashMap<KeyProvider, Box<dyn CryptoProvider>>>,
+    crypto_provider_map: RwLock<HashMap<&'static str, Box<dyn CryptoProvider>>>,
     /// The path to the key folder to store key data and attributes.
     key_folder: String,
-    provider: KeyProvider,
+    provider_name: String,
 }
 
 impl KeyManager {
@@ -72,7 +72,7 @@ impl KeyManager {
             internal_key_map: Arc::new(Mutex::new(HashMap::new())),
             crypto_provider_map: RwLock::new(HashMap::new()),
             key_folder: KEY_FOLDER.to_string(),
-            provider: DEFAULT_PROVIDER,
+            provider_name: DEFAULT_PROVIDER_NAME.to_string(),
         };
 
         key_manager.add_provider(Box::new(SoftwareProvider::new()));
@@ -81,11 +81,11 @@ impl KeyManager {
         key_manager
     }
 
-    pub fn set_provider(&mut self, crypto_provider: KeyProvider) -> Result<(), failure::Error> {
-        if !self.crypto_provider_map.read().unwrap().contains_key(&crypto_provider) {
+    pub fn set_provider(&mut self, provider_name: &str) -> Result<(), failure::Error> {
+        if !self.crypto_provider_map.read().unwrap().contains_key(provider_name) {
             return Err(err_msg("Invalid crypto provider name"));
         }
-        self.provider = crypto_provider;
+        self.provider_name = provider_name.to_string();
         Ok(())
     }
 
@@ -98,7 +98,7 @@ impl KeyManager {
     pub fn handle_request(&self, req: KeyManagerRequest) -> Result<(), fidl::Error> {
         match req {
             KeyManagerRequest::GenerateAsymmetricKey { key_name, key, responder } => {
-                self.with_provider(self.provider, |provider| {
+                self.with_provider(&self.provider_name, |provider| {
                     // Default algorithm for asymmetric key is ECDSA-SHA512-P521.
                     responder.send(&mut self.generate_asymmetric_key_and_bind(
                         &key_name,
@@ -113,7 +113,7 @@ impl KeyManager {
                 key_algorithm,
                 key,
                 responder,
-            } => self.with_provider(self.provider, |provider| {
+            } => self.with_provider(&self.provider_name, |provider| {
                 responder.send(&mut self.generate_asymmetric_key_and_bind(
                     &key_name,
                     key,
@@ -130,7 +130,7 @@ impl KeyManager {
                 key_algorithm,
                 key,
                 responder,
-            } => self.with_provider(self.provider, |provider| {
+            } => self.with_provider(&self.provider_name, |provider| {
                 responder.send(&mut self.import_asymmetric_private_key_and_bind(
                     &data,
                     &key_name,
@@ -140,11 +140,11 @@ impl KeyManager {
                 ))
             }),
             KeyManagerRequest::SealData { plain_text, responder } => self
-                .with_provider(self.provider, |provider| {
+                .with_provider(&self.provider_name, |provider| {
                     responder.send(&mut self.seal_data(plain_text, provider.unwrap()))
                 }),
             KeyManagerRequest::UnsealData { cipher_text, responder } => self
-                .with_provider(self.provider, |provider| {
+                .with_provider(&self.provider_name, |provider| {
                     responder.send(&mut self.unseal_data(cipher_text, provider.unwrap()))
                 }),
             KeyManagerRequest::DeleteKey { key_name, responder } => {
@@ -325,7 +325,7 @@ impl KeyManager {
                 Some(new_key.get_key_algorithm()),
                 new_key.get_key_type(),
                 new_key.get_key_origin(),
-                new_key.get_key_provider(),
+                new_key.get_provider_name(),
                 &new_key.get_key_data(),
                 true,
             )?;
@@ -518,7 +518,7 @@ impl KeyManager {
                             None,
                             new_key.get_key_type(),
                             KeyOrigin::Generated,
-                            new_key.get_key_provider(),
+                            new_key.get_provider_name(),
                             &new_key.get_key_data(),
                             false,
                         )?;
@@ -598,7 +598,7 @@ impl KeyManager {
         asymmetric_key_algorithm: Option<AsymmetricKeyAlgorithm>,
         key_type: KeyType,
         key_origin: KeyOrigin,
-        key_provider: KeyProvider,
+        provider_name: &str,
         key_data: &[u8],
         is_user_key: bool,
     ) -> Result<(), Error> {
@@ -610,7 +610,7 @@ impl KeyManager {
             key_algorithm: key_algorithm_num,
             key_type,
             key_origin: key_origin.into_primitive(),
-            key_provider: key_provider.into_primitive(),
+            provider_name: provider_name.to_string(),
             key_data: key_data.to_vec(),
         };
         let key_attributes_string = serde_json::to_string(&key_attributes)
@@ -627,7 +627,7 @@ impl KeyManager {
     fn read_key_attributes_from_file<'a>(
         &self,
         key_name: &str,
-        provider_map: &'a HashMap<KeyProvider, Box<dyn CryptoProvider>>,
+        provider_map: &'a HashMap<&'static str, Box<dyn CryptoProvider>>,
         is_user_key: bool,
     ) -> Result<KeyAttributes<'a>, Error> {
         // Read the key attributes from file and parse it.
@@ -652,12 +652,8 @@ impl KeyManager {
             Error::InternalError,
             "Failed to parse key attributes: {:?}, the stored key data is corrupted!"
         ))?;
-        let key_provider = KeyProvider::from_primitive(key_attributes_json.key_provider)
-            .ok_or_else(debug_err_fn_no_argument!(
-                Error::InternalError,
-                "Failed to convert key_provider! The stored key data is corrupted!"
-            ))?;
-        let provider = provider_map.get(&key_provider).ok_or_else(debug_err_fn_no_argument!(
+        let provider_name: &str = &key_attributes_json.provider_name;
+        let provider = provider_map.get(provider_name).ok_or_else(debug_err_fn_no_argument!(
             Error::InternalError,
             "Failed to find provider! The stored key data is corrupted!"
         ))?;
@@ -697,15 +693,15 @@ impl KeyManager {
     /// would be hold to prevent modification to the map.
     pub fn with_provider<O, F: FnOnce(Option<&dyn CryptoProvider>) -> O>(
         &self,
-        name: KeyProvider,
+        name: &str,
         f: F,
     ) -> O {
-        f(self.crypto_provider_map.read().unwrap().get(&name).map(|provider| provider.as_ref()))
+        f(self.crypto_provider_map.read().unwrap().get(name).map(|provider| provider.as_ref()))
     }
 
     pub fn add_provider(&mut self, provider: Box<dyn CryptoProvider>) {
         let provider_map = &mut self.crypto_provider_map.write().unwrap();
-        if provider_map.contains_key(&provider.get_name()) {
+        if provider_map.contains_key(provider.get_name()) {
             panic!("Two providers should not have the same name!");
         }
         provider_map.insert(provider.get_name(), provider);
@@ -771,7 +767,7 @@ mod tests {
         assert_eq!(key_algorithm, key.get_key_algorithm());
         assert_eq!(test_output_data, key.get_key_data());
         assert_eq!(KeyOrigin::Generated, key.get_key_origin());
-        assert_eq!(mock_provider.get_name(), key.get_key_provider());
+        assert_eq!(mock_provider.get_name(), key.get_provider_name());
         assert_eq!(mock_provider.get_called_key_name(), TEST_KEY_NAME);
     }
 
@@ -867,7 +863,7 @@ mod tests {
         assert_eq!(test_output_data, key.get_key_data());
         assert_eq!(key_algorithm, key.get_key_algorithm());
         assert_eq!(KeyOrigin::Imported, key.get_key_origin());
-        assert_eq!(mock_provider.get_name(), key.get_key_provider());
+        assert_eq!(mock_provider.get_name(), key.get_provider_name());
         assert_eq!(mock_provider.get_called_key_data(), test_input_data);
         assert_eq!(mock_provider.get_called_key_name(), TEST_KEY_NAME);
     }
@@ -1083,7 +1079,7 @@ mod tests {
     #[test]
     fn test_get_default_provider() {
         let key_manager = KeyManager::new();
-        key_manager.with_provider(DEFAULT_PROVIDER, |provider| {
+        key_manager.with_provider(DEFAULT_PROVIDER_NAME, |provider| {
             assert_eq!(false, provider.is_none());
         });
     }

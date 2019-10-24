@@ -5,7 +5,7 @@
 use crate::crypto_provider::{
     AsymmetricProviderKey, CryptoProvider, CryptoProviderError, ProviderKey, SealingProviderKey,
 };
-use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, KeyProvider};
+use fidl_fuchsia_kms::AsymmetricKeyAlgorithm;
 use mundane::hash::*;
 use mundane::public::ec::ecdsa::EcdsaHash;
 use mundane::public::ec::*;
@@ -39,8 +39,8 @@ impl CryptoProvider for MundaneSoftwareProvider {
             AsymmetricKeyAlgorithm::RsaSsaPkcs1Sha5124096,
         ]
     }
-    fn get_name(&self) -> KeyProvider {
-        KeyProvider::SoftwareAsymmetricOnlyProvider
+    fn get_name(&self) -> &'static str {
+        "MundaneSoftwareProvider"
     }
     fn box_clone(&self) -> Box<dyn CryptoProvider> {
         Box::new(MundaneSoftwareProvider {})
@@ -244,8 +244,8 @@ impl ProviderKey for MundaneAsymmetricPrivateKey {
     fn get_key_data(&self) -> Vec<u8> {
         self.key_data.clone()
     }
-    /// Get the crypto provider for the key.
-    fn get_key_provider(&self) -> KeyProvider {
+    /// Get the crypto provider name for the key.
+    fn get_provider_name(&self) -> &'static str {
         (MundaneSoftwareProvider {}).get_name()
     }
 }
