@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/crashpad_agent/privacy_settings_ptr.h"
 
+#include <fuchsia/settings/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/settings/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -13,7 +14,6 @@
 #include <memory>
 #include <optional>
 
-#include "fuchsia/settings/cpp/fidl.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/lib/fxl/logging.h"

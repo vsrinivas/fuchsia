@@ -6,6 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <fuchsia/settings/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
@@ -29,6 +30,7 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
+#include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
 #include "src/lib/files/directory.h"
@@ -51,6 +53,7 @@ using fuchsia::feedback::GenericCrashReport;
 using fuchsia::feedback::NativeCrashReport;
 using fuchsia::feedback::RuntimeCrashReport;
 using fuchsia::feedback::SpecificCrashReport;
+using fuchsia::settings::PrivacySettings;
 using inspect::testing::ChildrenMatch;
 using inspect::testing::NameMatches;
 using inspect::testing::NodeMatches;
@@ -82,11 +85,22 @@ constexpr char kProgramName[] = "crashing_program";
 constexpr char kSingleAttachmentKey[] = "attachment.key";
 constexpr char kSingleAttachmentValue[] = "attachment.value";
 
+constexpr bool kUserOptInDataSharing = true;
+constexpr bool kUserOptOutDataSharing = false;
+
 Attachment BuildAttachment(const std::string& key, const std::string& value) {
   Attachment attachment;
   attachment.key = key;
   FXL_CHECK(fsl::VmoFromString(value, &attachment.value));
   return attachment;
+}
+
+PrivacySettings MakePrivacySettings(const std::optional<bool> user_data_sharing_consent) {
+  PrivacySettings settings;
+  if (user_data_sharing_consent.has_value()) {
+    settings.set_user_data_sharing_consent(user_data_sharing_consent.value());
+  }
+  return settings;
 }
 
 // Unit-tests the implementation of the fuchsia.feedback.CrashReporter FIDL interface.
@@ -136,13 +150,21 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
         std::make_unique<StubCrashServer>(upload_attempt_results));
   }
 
-  // Sets up the underlying stub feedback data provider and registers it in the
+  // Sets up the underlying feedback data provider and registers it in the
   // |service_directory_provider_|.
   void SetUpFeedbackDataProvider(std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider) {
     feedback_data_provider_ = std::move(feedback_data_provider);
     if (feedback_data_provider_) {
       FXL_CHECK(service_directory_provider_.AddService(feedback_data_provider_->GetHandler()) ==
                 ZX_OK);
+    }
+  }
+
+  // Sets up the underlying privacy settings and registers it in the |service_directory_provider_|.
+  void SetUpPrivacySettings(std::unique_ptr<FakePrivacySettings> privacy_settings) {
+    privacy_settings_ = std::move(privacy_settings);
+    if (privacy_settings_) {
+      FXL_CHECK(service_directory_provider_.AddService(privacy_settings_->GetHandler()) == ZX_OK);
     }
   }
 
@@ -176,7 +198,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     }
   }
 
-  // Checks that on the stub crash server the annotations received match the concatenation of:
+  // Checks that on the crash server the annotations received match the concatenation of:
   //   * |expected_extra_annotations|
   //   * feedback_data_provider_->annotations()
   //   * default annotations
@@ -184,7 +206,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   // In case of duplicate keys, the value from |expected_extra_annotations| is picked.
   void CheckAnnotationsOnServer(
       const std::map<std::string, testing::Matcher<std::string>>& expected_extra_annotations = {}) {
-    FXL_CHECK(crash_server_);
+    ASSERT_TRUE(crash_server_);
 
     std::map<std::string, testing::Matcher<std::string>> expected_annotations = {
         {"product", "Fuchsia"},
@@ -210,13 +232,13 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     }
   }
 
-  // Checks that on the stub crash server the keys for the attachments received match the
+  // Checks that on the crash server the keys for the attachments received match the
   // concatenation of:
   //   * |expected_extra_attachment_keys|
   //   * feedback_data_provider_->attachment_bundle_key()
   void CheckAttachmentsOnServer(
       const std::vector<std::string>& expected_extra_attachment_keys = {}) {
-    FXL_CHECK(crash_server_);
+    ASSERT_TRUE(crash_server_);
 
     std::vector<std::string> expected_attachment_keys = expected_extra_attachment_keys;
     if (feedback_data_provider_ && feedback_data_provider_->has_attachment_bundle_key()) {
@@ -227,6 +249,14 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     for (const auto& key : expected_attachment_keys) {
       EXPECT_THAT(crash_server_->latest_attachment_keys(), testing::Contains(key));
     }
+  }
+
+  // Checks that the crash server is still expecting at least one more request.
+  //
+  // This is useful to check that an upload request hasn't been made as we are using a strict stub.
+  void CheckServerStillExpectRequests() {
+    ASSERT_TRUE(crash_server_);
+    EXPECT_TRUE(crash_server_->ExpectRequest());
   }
 
   // Files one crash report.
@@ -330,6 +360,17 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     return FileOneCrashReport(std::move(report));
   }
 
+  void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
+    ASSERT_TRUE(privacy_settings_);
+
+    fit::result<void, fuchsia::settings::Error> set_result;
+    privacy_settings_->Set(MakePrivacySettings(user_data_sharing_consent),
+                           [&set_result](fit::result<void, fuchsia::settings::Error> result) {
+                             set_result = std::move(result);
+                           });
+    EXPECT_TRUE(set_result.is_ok());
+  }
+
   inspect::Hierarchy InspectTree() {
     auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
     FXL_CHECK(result.is_ok());
@@ -371,6 +412,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
  private:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
+  std::unique_ptr<FakePrivacySettings> privacy_settings_;
   StubCrashServer* crash_server_;
   std::string attachments_dir_;
   std::unique_ptr<inspect::Inspector> inspector_;
@@ -512,6 +554,74 @@ TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
     out_result = std::move(result);
   });
   ASSERT_TRUE(out_result.is_error());
+}
+
+TEST_F(CrashpadAgentTest, Upload_OnUserAlreadyOptedInDataSharing) {
+  SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
+  SetPrivacySettings(kUserOptInDataSharing);
+  SetUpAgent(
+      Config{/*crashpad_database=*/
+             {
+                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
+             },
+             /*crash_server=*/
+             {
+                 /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
+                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+             }},
+      std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
+  ASSERT_TRUE(FileOneCrashReport().is_ok());
+  CheckAttachmentsInDatabase();
+  CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer();
+}
+
+TEST_F(CrashpadAgentTest, Archive_OnUserAlreadyOptedOutDataSharing) {
+  SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
+  SetPrivacySettings(kUserOptOutDataSharing);
+  SetUpAgent(
+      Config{/*crashpad_database=*/
+             {
+                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
+             },
+             /*crash_server=*/
+             {
+                 /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
+                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+             }},
+      std::make_unique<StubCrashServer>(std::vector<bool>({})));
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
+  ASSERT_TRUE(FileOneCrashReport().is_ok());
+  CheckAttachmentsInDatabase();
+}
+
+TEST_F(CrashpadAgentTest, Upload_OnceUserOptInDataSharing) {
+  SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
+  SetUpAgent(
+      Config{/*crashpad_database=*/
+             {
+                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
+             },
+             /*crash_server=*/
+             {
+                 /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
+                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+             }},
+      std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+
+  ASSERT_TRUE(FileOneCrashReport().is_ok());
+  CheckAttachmentsInDatabase();
+  CheckServerStillExpectRequests();
+
+  SetPrivacySettings(kUserOptInDataSharing);
+  ASSERT_TRUE(RunLoopUntilIdle());
+
+  CheckAnnotationsOnServer();
+  CheckAttachmentsOnServer();
 }
 
 TEST_F(CrashpadAgentTest, Succeed_OnConcurrentReports) {

@@ -112,7 +112,8 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
       config_(std::move(config)),
       queue_(std::move(queue)),
       crash_server_(std::move(crash_server)),
-      inspect_manager_(inspect_manager) {
+      inspect_manager_(inspect_manager),
+      privacy_settings_watcher_(services_, &settings_) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(services_);
   FXL_DCHECK(queue_);
@@ -121,8 +122,11 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
     FXL_DCHECK(crash_server_);
   }
 
-  // TODO(fxb/6360): use PrivacySettingsWatcher if upload_policy is READ_FROM_PRIVACY_SETTINGS.
-  settings_.set_upload_policy(config_.crash_server.upload_policy);
+  const auto& upload_policy = config_.crash_server.upload_policy;
+  settings_.set_upload_policy(upload_policy);
+  if (upload_policy == CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS) {
+    privacy_settings_watcher_.StartWatching();
+  }
 
   queue_->WatchSettings(&settings_);
 
@@ -173,4 +177,5 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
 
   executor_.schedule_task(std::move(promise));
 }
+
 }  // namespace feedback

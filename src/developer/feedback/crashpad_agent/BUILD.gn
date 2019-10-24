@@ -132,11 +132,25 @@ source_set("constants") {
   visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
 }
 
+config_data("production_config") {
+  for_pkg = "crashpad_agent"
+
+  sources = [
+    "configs/production.json",
+  ]
+
+  outputs = [
+    "override_config.json",
+  ]
+}
+
 config_data("upload_to_prod_server_config") {
   for_pkg = "crashpad_agent"
+
   sources = [
     "configs/upload_to_prod_server.json",
   ]
+
   outputs = [
     "override_config.json",
   ]

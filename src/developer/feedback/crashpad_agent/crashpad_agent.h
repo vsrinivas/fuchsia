@@ -19,6 +19,7 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/developer/feedback/crashpad_agent/privacy_settings_ptr.h"
 #include "src/developer/feedback/crashpad_agent/queue.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/macros.h"
@@ -55,10 +56,11 @@ class CrashpadAgent : public fuchsia::feedback::CrashReporter {
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config config_;
-  Settings settings_;
   const std::unique_ptr<Queue> queue_;
   const std::unique_ptr<CrashServer> crash_server_;
   InspectManager* inspect_manager_;
+  Settings settings_;
+  PrivacySettingsWatcher privacy_settings_watcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };

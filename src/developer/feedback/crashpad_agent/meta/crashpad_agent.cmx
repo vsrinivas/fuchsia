@@ -16,7 +16,8 @@
             "fuchsia.feedback.DataProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider"
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.settings.Privacy"
         ]
     }
 }

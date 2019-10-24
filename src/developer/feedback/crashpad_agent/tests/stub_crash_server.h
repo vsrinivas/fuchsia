@@ -29,6 +29,9 @@ class StubCrashServer : public CrashServer {
                    const std::map<std::string, crashpad::FileReader*>& attachments,
                    std::string* server_report_id) override;
 
+  // Whether the crash server expects at least one more call to MakeRequest().
+  bool ExpectRequest() { return next_return_value_ != request_return_values_.cend(); }
+
   // Returns the annotations that were passed to the latest MakeRequest() call.
   const std::map<std::string, std::string>& latest_annotations() { return latest_annotations_; }
 

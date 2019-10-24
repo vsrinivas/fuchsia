@@ -14,11 +14,11 @@ const char kStubCrashServerUrl[] = "localhost:1234";
 const char kStubServerReportId[] = "server-report-id";
 
 StubCrashServer::~StubCrashServer() {
-  FXL_CHECK(next_return_value_ == request_return_values_.end())
-      << fxl::StringPrintf("expected %ld more calls to MakeRequest() (%ld/%lu calls made)",
-                           std::distance(next_return_value_, request_return_values_.cend()),
-                           std::distance(request_return_values_.cbegin(), next_return_value_),
-                           request_return_values_.size());
+  FXL_CHECK(!ExpectRequest()) << fxl::StringPrintf(
+      "expected %ld more calls to MakeRequest() (%ld/%lu calls made)",
+      std::distance(next_return_value_, request_return_values_.cend()),
+      std::distance(request_return_values_.cbegin(), next_return_value_),
+      request_return_values_.size());
 }
 
 bool StubCrashServer::MakeRequest(const std::map<std::string, std::string>& annotations,
@@ -30,9 +30,9 @@ bool StubCrashServer::MakeRequest(const std::map<std::string, std::string>& anno
     latest_attachment_keys_.push_back(key);
   }
 
-  FXL_CHECK(next_return_value_ != request_return_values_.cend())
-      << fxl::StringPrintf("no more calls to MakeRequest() expected (%lu/%lu calls made)",
-                           request_return_values_.size(), request_return_values_.size());
+  FXL_CHECK(ExpectRequest()) << fxl::StringPrintf(
+      "no more calls to MakeRequest() expected (%lu/%lu calls made)", request_return_values_.size(),
+      request_return_values_.size());
   if (*next_return_value_) {
     *server_report_id = kStubServerReportId;
   }
