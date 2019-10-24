@@ -228,21 +228,6 @@ executable("data_provider_unittest") {
   ]
 }
 
-executable("inspect_exe") {
-  testonly = true
-
-  sources = [
-    "inspect_exe.cc",
-  ]
-
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//src/lib/inspect_deprecated:component",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-  ]
-}
-
 executable("kernel_log_ptr_integration_test") {
   testonly = true
 
@@ -337,6 +322,21 @@ executable("feedback_agent_integration_test_valid_override_config") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("inspect_exe") {
+  testonly = true
+
+  sources = [
+    "inspect_exe.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
