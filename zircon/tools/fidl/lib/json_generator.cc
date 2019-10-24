@@ -640,11 +640,13 @@ void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Object& o
   }
 
   GenerateObjectMember(prefix + "type_shape_old", TypeShape(object, WireFormat::kOld));
+  GenerateObjectMember(prefix + "type_shape_v1", TypeShape(object, WireFormat::kV1NoEe));
   GenerateObjectMember(prefix + "type_shape_v1_no_ee", TypeShape(object, WireFormat::kV1NoEe));
 }
 
 void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member) {
   GenerateObjectMember("field_shape_old", FieldShape(struct_member, WireFormat::kOld));
+  GenerateObjectMember("field_shape_v1", FieldShape(struct_member, WireFormat::kV1NoEe));
   GenerateObjectMember("field_shape_v1_no_ee", FieldShape(struct_member, WireFormat::kV1NoEe));
 }
 

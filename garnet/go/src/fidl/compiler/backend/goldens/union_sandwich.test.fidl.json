@@ -37,6 +37,10 @@
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 4
@@ -61,6 +65,10 @@
           "max_handles": 0,
           "field_shape_old": {
             "offset": 4,
+            "padding": 0
+          },
+          "field_shape_v1": {
+            "offset": 8,
             "padding": 0
           },
           "field_shape_v1_no_ee": {
@@ -88,6 +96,10 @@
             "offset": 12,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 32,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 32,
             "padding": 4
@@ -106,6 +118,15 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
         "has_flexible_envelope": false
       },
       "type_shape_v1_no_ee": {
@@ -147,6 +168,10 @@
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 4
@@ -171,6 +196,10 @@
           "max_handles": 0,
           "field_shape_old": {
             "offset": 4,
+            "padding": 0
+          },
+          "field_shape_v1": {
+            "offset": 8,
             "padding": 0
           },
           "field_shape_v1_no_ee": {
@@ -198,6 +227,10 @@
             "offset": 16,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 32,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 32,
             "padding": 4
@@ -215,6 +248,15 @@
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
         "has_padding": true,
         "has_flexible_envelope": false
       },
@@ -257,6 +299,10 @@
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -282,6 +328,10 @@
             "offset": 8,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 8,
             "padding": 0
@@ -294,6 +344,15 @@
       "max_handles": 0,
       "has_padding": false,
       "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 0,
@@ -341,6 +400,10 @@
             "offset": 0,
             "padding": 4
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 4
@@ -364,6 +427,10 @@
           "offset": 8,
           "max_handles": 0,
           "field_shape_old": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v1": {
             "offset": 8,
             "padding": 0
           },
@@ -392,6 +459,10 @@
             "offset": 32,
             "padding": 4
           },
+          "field_shape_v1": {
+            "offset": 32,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 32,
             "padding": 4
@@ -409,6 +480,15 @@
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 16,
         "has_padding": true,
         "has_flexible_envelope": false
       },
@@ -451,6 +531,10 @@
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 4
@@ -475,6 +559,10 @@
           "max_handles": 0,
           "field_shape_old": {
             "offset": 4,
+            "padding": 0
+          },
+          "field_shape_v1": {
+            "offset": 8,
             "padding": 0
           },
           "field_shape_v1_no_ee": {
@@ -502,6 +590,10 @@
             "offset": 40,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 32,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 32,
             "padding": 4
@@ -520,6 +612,15 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 32,
+        "has_padding": true,
         "has_flexible_envelope": false
       },
       "type_shape_v1_no_ee": {
@@ -573,6 +674,15 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
         "has_flexible_envelope": false
       },
       "type_shape_v1_no_ee": {
@@ -629,6 +739,15 @@
         "has_padding": true,
         "has_flexible_envelope": false
       },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
@@ -677,6 +796,15 @@
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 16,
         "has_padding": true,
         "has_flexible_envelope": false
       },
@@ -732,6 +860,15 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 32,
+        "has_padding": true,
         "has_flexible_envelope": false
       },
       "type_shape_v1_no_ee": {

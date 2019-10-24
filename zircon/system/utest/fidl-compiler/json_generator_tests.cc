@@ -113,6 +113,10 @@ struct Simple {
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -138,6 +142,10 @@ struct Simple {
             "offset": 1,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 1,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 1,
             "padding": 0
@@ -150,6 +158,15 @@ struct Simple {
       "max_handles": 0,
       "has_padding": false,
       "type_shape_old": {
+        "inline_size": 2,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 2,
         "alignment": 1,
         "depth": 0,
@@ -250,6 +267,10 @@ protocol EmptyProtocol {
                 "offset": 16,
                 "padding": 7
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 7
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 7
@@ -261,6 +282,15 @@ protocol EmptyProtocol {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -314,6 +344,10 @@ protocol EmptyProtocol {
                 "offset": 16,
                 "padding": 7
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 7
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 7
@@ -325,6 +359,15 @@ protocol EmptyProtocol {
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
           "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -376,6 +419,10 @@ protocol EmptyProtocol {
                 "offset": 16,
                 "padding": 7
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 7
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 7
@@ -387,6 +434,15 @@ protocol EmptyProtocol {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -427,6 +483,10 @@ protocol EmptyProtocol {
                 "offset": 16,
                 "padding": 7
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 7
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 7
@@ -438,6 +498,15 @@ protocol EmptyProtocol {
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
           "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -477,6 +546,15 @@ protocol EmptyProtocol {
       "max_handles": 0,
       "has_padding": false,
       "type_shape_old": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 1,
         "alignment": 1,
         "depth": 0,
@@ -600,6 +678,10 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -612,6 +694,15 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
       "max_handles": 0,
       "has_padding": false,
       "type_shape_old": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 4,
         "alignment": 4,
         "depth": 0,
@@ -742,6 +833,15 @@ table Simple {
         "has_padding": true,
         "has_flexible_envelope": true
       },
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
       "type_shape_v1_no_ee": {
         "inline_size": 16,
         "alignment": 8,
@@ -842,6 +942,10 @@ union ExplicitPizzaOrPasta {
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -854,6 +958,15 @@ union ExplicitPizzaOrPasta {
       "max_handles": 0,
       "has_padding": true,
       "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 2,
@@ -902,6 +1015,10 @@ union ExplicitPizzaOrPasta {
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -914,6 +1031,15 @@ union ExplicitPizzaOrPasta {
       "max_handles": 0,
       "has_padding": true,
       "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 16,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 1,
@@ -995,6 +1121,15 @@ union ExplicitPizzaOrPasta {
         "has_padding": true,
         "has_flexible_envelope": false
       },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
@@ -1060,6 +1195,15 @@ union ExplicitPizzaOrPasta {
         "inline_size": 24,
         "alignment": 8,
         "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 3,
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
@@ -1200,6 +1344,15 @@ strict xunion ExplicitStrictFoo {
         "has_padding": true,
         "has_flexible_envelope": true
       },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
@@ -1261,6 +1414,15 @@ strict xunion ExplicitStrictFoo {
       "max_handles": 0,
       "strict": true,
       "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
         "depth": 2,
@@ -1338,6 +1500,15 @@ strict xunion ExplicitStrictFoo {
         "has_padding": true,
         "has_flexible_envelope": true
       },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
@@ -1399,6 +1570,15 @@ strict xunion ExplicitStrictFoo {
       "max_handles": 0,
       "strict": true,
       "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
         "depth": 2,
@@ -1510,6 +1690,10 @@ protocol Protocol {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -1521,6 +1705,15 @@ protocol Protocol {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
             "depth": 2,
@@ -1561,6 +1754,10 @@ protocol Protocol {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -1572,6 +1769,15 @@ protocol Protocol {
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": true,
           "maybe_response_type_shape_old": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
+          "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
             "depth": 2,
@@ -1623,6 +1829,10 @@ protocol Protocol {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -1634,6 +1844,15 @@ protocol Protocol {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": true,
           "maybe_request_type_shape_old": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
             "depth": 2,
@@ -1674,6 +1893,10 @@ protocol Protocol {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -1685,6 +1908,15 @@ protocol Protocol {
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
           "maybe_response_type_shape_old": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 2,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
             "depth": 2,
@@ -1771,6 +2003,15 @@ protocol Protocol {
         "has_padding": true,
         "has_flexible_envelope": true
       },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
@@ -1832,6 +2073,15 @@ protocol Protocol {
       "max_handles": 0,
       "strict": true,
       "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
         "depth": 2,
@@ -1942,6 +2192,10 @@ protocol sub {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -1953,6 +2207,15 @@ protocol sub {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
             "depth": 1,
@@ -1992,6 +2255,10 @@ protocol sub {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -2003,6 +2270,15 @@ protocol sub {
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
           "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -2063,6 +2339,10 @@ protocol sub {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -2074,6 +2354,15 @@ protocol sub {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
             "depth": 1,
@@ -2113,6 +2402,10 @@ protocol sub {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -2124,6 +2417,15 @@ protocol sub {
           "maybe_response_has_padding": false,
           "experimental_maybe_response_has_flexible_envelope": false,
           "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -2240,6 +2542,10 @@ protocol Child {
                 "offset": 16,
                 "padding": 4
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 4
@@ -2251,6 +2557,15 @@ protocol Child {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -2313,6 +2628,10 @@ protocol Child {
                 "offset": 16,
                 "padding": 4
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 4
@@ -2324,6 +2643,15 @@ protocol Child {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -2376,6 +2704,10 @@ protocol Child {
                 "offset": 16,
                 "padding": 4
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 4
@@ -2387,6 +2719,15 @@ protocol Child {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -2491,6 +2832,10 @@ protocol Example {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -2502,6 +2847,15 @@ protocol Example {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
             "depth": 1,
@@ -2542,6 +2896,10 @@ protocol Example {
                 "offset": 16,
                 "padding": 0
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 0
@@ -2558,6 +2916,15 @@ protocol Example {
             "depth": 0,
             "max_handles": 0,
             "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 8,
             "has_padding": true,
             "has_flexible_envelope": false
           },
@@ -2606,6 +2973,10 @@ protocol Example {
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -2618,6 +2989,15 @@ protocol Example {
       "max_handles": 0,
       "has_padding": false,
       "type_shape_old": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 8,
         "alignment": 8,
         "depth": 0,
@@ -2701,6 +3081,15 @@ protocol Example {
         "depth": 0,
         "max_handles": 0,
         "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
         "has_padding": true,
         "has_flexible_envelope": false
       },
@@ -2789,6 +3178,10 @@ struct ByteAndBytes {
             "offset": 0,
             "padding": 7
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 7
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 7
@@ -2815,6 +3208,10 @@ struct ByteAndBytes {
           "offset": 8,
           "max_handles": 0,
           "field_shape_old": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v1": {
             "offset": 8,
             "padding": 0
           },
@@ -2848,6 +3245,10 @@ struct ByteAndBytes {
             "offset": 24,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 24,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 24,
             "padding": 0
@@ -2878,6 +3279,10 @@ struct ByteAndBytes {
             "offset": 40,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 40,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 40,
             "padding": 0
@@ -2890,6 +3295,15 @@ struct ByteAndBytes {
       "max_handles": 0,
       "has_padding": true,
       "type_shape_old": {
+        "inline_size": 56,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 56,
         "alignment": 8,
         "depth": 1,
@@ -3610,6 +4024,10 @@ struct Struct {
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -3640,6 +4058,10 @@ struct Struct {
           "offset": 8,
           "max_handles": 0,
           "field_shape_old": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v1": {
             "offset": 8,
             "padding": 0
           },
@@ -3676,6 +4098,10 @@ struct Struct {
             "offset": 24,
             "padding": 3
           },
+          "field_shape_v1": {
+            "offset": 24,
+            "padding": 3
+          },
           "field_shape_v1_no_ee": {
             "offset": 24,
             "padding": 3
@@ -3703,6 +4129,10 @@ struct Struct {
           "offset": 28,
           "max_handles": 0,
           "field_shape_old": {
+            "offset": 28,
+            "padding": 0
+          },
+          "field_shape_v1": {
             "offset": 28,
             "padding": 0
           },
@@ -3736,6 +4166,10 @@ struct Struct {
             "offset": 32,
             "padding": 4
           },
+          "field_shape_v1": {
+            "offset": 32,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 32,
             "padding": 4
@@ -3748,6 +4182,15 @@ struct Struct {
       "max_handles": 0,
       "has_padding": true,
       "type_shape_old": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 40,
         "alignment": 8,
         "depth": 1,
@@ -3914,6 +4357,10 @@ struct Baz {
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -3926,6 +4373,15 @@ struct Baz {
       "max_handles": 0,
       "has_padding": false,
       "type_shape_old": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 4,
         "alignment": 4,
         "depth": 0,
@@ -4065,6 +4521,15 @@ protocol Top {
             "has_padding": false,
             "has_flexible_envelope": false
           },
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 16,
             "alignment": 8,
@@ -4097,6 +4562,10 @@ protocol Top {
                 "offset": 16,
                 "padding": 4
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 4
@@ -4108,6 +4577,15 @@ protocol Top {
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
           "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -4246,6 +4724,15 @@ protocol Top {
             "has_padding": false,
             "has_flexible_envelope": false
           },
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 16,
             "alignment": 8,
@@ -4278,6 +4765,10 @@ protocol Top {
                 "offset": 16,
                 "padding": 4
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 4
@@ -4289,6 +4780,15 @@ protocol Top {
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
           "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -4594,6 +5094,10 @@ xunion ExampleXUnion {
                 "offset": 16,
                 "padding": 7
               },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 7
+              },
               "field_shape_v1_no_ee": {
                 "offset": 16,
                 "padding": 7
@@ -4605,6 +5109,15 @@ xunion ExampleXUnion {
           "maybe_request_has_padding": true,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
             "depth": 0,
@@ -4671,6 +5184,10 @@ xunion ExampleXUnion {
             "offset": 0,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 0
@@ -4683,6 +5200,15 @@ xunion ExampleXUnion {
       "max_handles": 0,
       "has_padding": false,
       "type_shape_old": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 4,
         "alignment": 4,
         "depth": 0,
@@ -4756,6 +5282,15 @@ xunion ExampleXUnion {
         "has_padding": true,
         "has_flexible_envelope": true
       },
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
       "type_shape_v1_no_ee": {
         "inline_size": 16,
         "alignment": 8,
@@ -4820,6 +5355,15 @@ xunion ExampleXUnion {
         "has_padding": false,
         "has_flexible_envelope": false
       },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
@@ -4877,6 +5421,15 @@ xunion ExampleXUnion {
       "max_handles": 0,
       "strict": false,
       "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
         "depth": 1,
@@ -5041,6 +5594,10 @@ struct ExampleOfUseOfAliases {
             "offset": 0,
             "padding": 4
           },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 0,
             "padding": 4
@@ -5075,6 +5632,10 @@ struct ExampleOfUseOfAliases {
           "offset": 8,
           "max_handles": 0,
           "field_shape_old": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v1": {
             "offset": 8,
             "padding": 0
           },
@@ -5115,6 +5676,10 @@ struct ExampleOfUseOfAliases {
             "offset": 24,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 24,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 24,
             "padding": 0
@@ -5146,6 +5711,10 @@ struct ExampleOfUseOfAliases {
           "offset": 40,
           "max_handles": 0,
           "field_shape_old": {
+            "offset": 40,
+            "padding": 0
+          },
+          "field_shape_v1": {
             "offset": 40,
             "padding": 0
           },
@@ -5185,6 +5754,10 @@ struct ExampleOfUseOfAliases {
             "offset": 56,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 56,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 56,
             "padding": 0
@@ -5217,6 +5790,10 @@ struct ExampleOfUseOfAliases {
           "offset": 72,
           "max_handles": 0,
           "field_shape_old": {
+            "offset": 72,
+            "padding": 0
+          },
+          "field_shape_v1": {
             "offset": 72,
             "padding": 0
           },
@@ -5258,6 +5835,10 @@ struct ExampleOfUseOfAliases {
             "offset": 88,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 88,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 88,
             "padding": 0
@@ -5286,6 +5867,10 @@ struct ExampleOfUseOfAliases {
           "offset": 104,
           "max_handles": 1,
           "field_shape_old": {
+            "offset": 104,
+            "padding": 0
+          },
+          "field_shape_v1": {
             "offset": 104,
             "padding": 0
           },
@@ -5320,6 +5905,10 @@ struct ExampleOfUseOfAliases {
             "offset": 108,
             "padding": 0
           },
+          "field_shape_v1": {
+            "offset": 108,
+            "padding": 0
+          },
           "field_shape_v1_no_ee": {
             "offset": 108,
             "padding": 0
@@ -5351,6 +5940,10 @@ struct ExampleOfUseOfAliases {
             "offset": 112,
             "padding": 4
           },
+          "field_shape_v1": {
+            "offset": 112,
+            "padding": 4
+          },
           "field_shape_v1_no_ee": {
             "offset": 112,
             "padding": 4
@@ -5363,6 +5956,15 @@ struct ExampleOfUseOfAliases {
       "max_handles": 3,
       "has_padding": true,
       "type_shape_old": {
+        "inline_size": 120,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 3,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v1": {
         "inline_size": 120,
         "alignment": 8,
         "depth": 2,
