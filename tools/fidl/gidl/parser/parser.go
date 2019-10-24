@@ -165,7 +165,7 @@ var sections = map[string]sectionMetadata{
 		setter: func(name string, body body, all *ir.All) {
 			for wf, b := range body.Bytes {
 				encodeSuccess := ir.EncodeSuccess{
-					Name:              name,
+					Name:              ir.TestCaseName(name, wf),
 					WireFormat:        wf,
 					Value:             body.Value,
 					Bytes:             b,
@@ -174,7 +174,7 @@ var sections = map[string]sectionMetadata{
 				}
 				all.EncodeSuccess = append(all.EncodeSuccess, encodeSuccess)
 				decodeSuccess := ir.DecodeSuccess{
-					Name:              name,
+					Name:              ir.TestCaseName(name, wf),
 					WireFormat:        wf,
 					Value:             body.Value,
 					Bytes:             b,
@@ -191,7 +191,7 @@ var sections = map[string]sectionMetadata{
 		setter: func(name string, body body, all *ir.All) {
 			for wf, b := range body.Bytes {
 				result := ir.EncodeSuccess{
-					Name:              name,
+					Name:              ir.TestCaseName(name, wf),
 					WireFormat:        wf,
 					Value:             body.Value,
 					Bytes:             b,
@@ -207,7 +207,7 @@ var sections = map[string]sectionMetadata{
 		setter: func(name string, body body, all *ir.All) {
 			for wf, b := range body.Bytes {
 				result := ir.DecodeSuccess{
-					Name:              name,
+					Name:              ir.TestCaseName(name, wf),
 					WireFormat:        wf,
 					Value:             body.Value,
 					Bytes:             b,
@@ -221,9 +221,11 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]bool{isValue: true, isErr: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
+			// TODO(fxb/39579): Generate a test case for each wire format.
+			wf := ir.DefaultWireFormat
 			result := ir.EncodeFailure{
-				Name:              name,
-				WireFormat:        ir.FidlWireFormat,
+				Name:              ir.TestCaseName(name, wf),
+				WireFormat:        wf,
 				Value:             body.Value,
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
@@ -238,7 +240,7 @@ var sections = map[string]sectionMetadata{
 		setter: func(name string, body body, all *ir.All) {
 			for wf, b := range body.Bytes {
 				result := ir.DecodeFailure{
-					Name:              name,
+					Name:              ir.TestCaseName(name, wf),
 					WireFormat:        wf,
 					Type:              body.Type,
 					Bytes:             b,
@@ -518,7 +520,7 @@ func (p *Parser) parseByteSection() (map[ir.WireFormat][]byte, error) {
 	if p.peekTokenKind(tLsquare) {
 		if b, err := p.parseByteList(); err == nil {
 			return map[ir.WireFormat][]byte{
-				ir.FidlWireFormat: b,
+				ir.DefaultWireFormat: b,
 			}, nil
 		} else {
 			return nil, err

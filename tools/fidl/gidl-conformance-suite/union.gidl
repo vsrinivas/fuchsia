@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 success("UnionWithBoundString") {
-	value = UnionWithBoundStringStruct {
+    value = UnionWithBoundStringStruct {
         v: UnionWithBoundString {
-            boundFiveStr: "abcd",
+                boundFiveStr: "abcd",
         },
-	},
-	bytes = [
+    },
+    bytes = [
         tag 8:num(0),
         // envelope for string:
         size 8:num(4),
         ptr 8:num(-1),
         data 4:raw('a', 'b', 'c', 'd',), 4:padding,
-	],
+    ],
 }
 
 encode_failure("UnionWithBoundString_ExceedsBounds") {
@@ -24,4 +24,29 @@ encode_failure("UnionWithBoundString_ExceedsBounds") {
         },
 	},
 	err = STRING_TOO_LONG,
+}
+
+success("UnionMigration_SingleVariant") {
+    value = SingleVariantUnionStruct {
+        u: SingleVariantUnion {
+            x: 42,
+        },
+    },
+    bytes = {
+        old = [
+            tag 4:num(0), x 4:num(42)
+        ],
+        v1 = [
+            // primary object
+            // TOOD(fxb/39578) Change ordinal to 8:num(1) and remove padding.
+            ordinal 4:num(1), 4:padding,
+            num_bytes 4:num(8), num_handles 4:num(0),
+            present 8:raw(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
+
+            // secondary object 1
+            x 4:num(42), 4:padding,
+        ],
+    },
+    // TODO(mkember, bprosnitz): Add languages here as they gain support.
+    bindings_allowlist = [go],
 }

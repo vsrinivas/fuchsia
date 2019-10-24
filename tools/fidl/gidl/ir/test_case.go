@@ -56,13 +56,14 @@ type WireFormat uint
 
 const (
 	_ WireFormat = iota
-	FidlWireFormat
-	TestWireFormat
+	OldWireFormat
+	V1WireFormat
+	DefaultWireFormat = OldWireFormat
 )
 
 var wireFormats = map[string]WireFormat{
-	"fidl": FidlWireFormat,
-	"test": TestWireFormat,
+	"old": OldWireFormat,
+	"v1":  V1WireFormat,
 }
 
 func (input WireFormat) String() string {
@@ -72,6 +73,13 @@ func (input WireFormat) String() string {
 		}
 	}
 	panic(fmt.Sprintf("wire format %d not found", input))
+}
+
+func TestCaseName(name string, wf WireFormat) string {
+	if wf == DefaultWireFormat {
+		return name
+	}
+	return fmt.Sprintf("%s_%s", name, wf)
 }
 
 func ParseWireFormat(str string) (WireFormat, error) {

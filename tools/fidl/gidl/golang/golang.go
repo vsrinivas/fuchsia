@@ -34,6 +34,7 @@ func TestAllEncodeSuccessCases(t *testing.T) {
 {{ .ValueBuild }}
 encodeSuccessCase{
 	name: {{ .Name }},
+	context: {{ .Context }},
 	input: &{{ .Value }},
 	bytes: {{ .Bytes }},
 }.check(t)
@@ -47,6 +48,7 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 	{{ .ValueBuild }}
 	decodeSuccessCase{
 		name: {{ .Name }},
+		context: {{ .Context }},
 		input: &{{ .Value }},
 		bytes: {{ .Bytes }},
 	}.check(t)
@@ -60,6 +62,7 @@ func TestAllEncodeFailureCases(t *testing.T) {
 {{ .ValueBuild }}
 encodeFailureCase{
 	name: {{ .Name }},
+	context: {{ .Context }},
 	input: &{{ .Value }},
 	code: {{ .ErrorCode }},
 }.check(t)
@@ -72,6 +75,7 @@ func TestAllDecodeFailureCases(t *testing.T) {
 {
 decodeFailureCase{
 	name: {{ .Name }},
+	context: {{ .Context }},
 	valTyp: reflect.TypeOf((*{{ .ValueType }})(nil)),
 	bytes: {{ .Bytes }},
 	code: {{ .ErrorCode }},
@@ -89,19 +93,19 @@ type tmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, ValueBuild, Value, Bytes string
+	Name, Context, ValueBuild, Value, Bytes string
 }
 
 type decodeSuccessCase struct {
-	Name, ValueBuild, Value, Bytes string
+	Name, Context, ValueBuild, Value, Bytes string
 }
 
 type encodeFailureCase struct {
-	Name, ValueBuild, Value, ErrorCode string
+	Name, Context, ValueBuild, Value, ErrorCode string
 }
 
 type decodeFailureCase struct {
-	Name, ValueType, Bytes, ErrorCode string
+	Name, Context, ValueType, Bytes, ErrorCode string
 }
 
 // Generate generates Go tests.
@@ -131,6 +135,23 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	return tmpl.Execute(wr, input)
 }
 
+func marshalerContext(wireFormat gidlir.WireFormat) string {
+	switch wireFormat {
+	case gidlir.OldWireFormat:
+		return `fidl.MarshalerContext{
+			DecodeUnionsFromXUnionBytes: false,
+			EncodeUnionsAsXUnionBytes:   false,
+		}`
+	case gidlir.V1WireFormat:
+		return `fidl.MarshalerContext{
+			DecodeUnionsFromXUnionBytes: true,
+			EncodeUnionsAsXUnionBytes:   true,
+		}`
+	default:
+		panic(fmt.Sprintf("unexpected wire format %v", wireFormat))
+	}
+}
+
 func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.Root) ([]encodeSuccessCase, error) {
 	var encodeSuccessCases []encodeSuccessCase
 	for _, encodeSuccess := range gidlEncodeSuccesses {
@@ -147,6 +168,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 
 		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
 			Name:       strconv.Quote(encodeSuccess.Name),
+			Context:    marshalerContext(encodeSuccess.WireFormat),
 			ValueBuild: valueBuilder.String(),
 			Value:      valueBuilder.lastVar,
 			Bytes:      bytesBuilder(encodeSuccess.Bytes),
@@ -171,6 +193,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 
 		decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 			Name:       strconv.Quote(decodeSuccess.Name),
+			Context:    marshalerContext(decodeSuccess.WireFormat),
 			ValueBuild: valueBuilder.String(),
 			Value:      valueBuilder.lastVar,
 			Bytes:      bytesBuilder(decodeSuccess.Bytes),
@@ -200,6 +223,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 
 		encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 			Name:       strconv.Quote(encodeFailure.Name),
+			Context:    marshalerContext(encodeFailure.WireFormat),
 			ValueBuild: valueBuilder.String(),
 			Value:      valueBuilder.lastVar,
 			ErrorCode:  code,
@@ -218,6 +242,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 
 		decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 			Name:      strconv.Quote(decodeFailure.Name),
+			Context:   marshalerContext(decodeFailure.WireFormat),
 			ValueType: goType(decodeFailure.Type),
 			Bytes:     bytesBuilder(decodeFailure.Bytes),
 			ErrorCode: code,

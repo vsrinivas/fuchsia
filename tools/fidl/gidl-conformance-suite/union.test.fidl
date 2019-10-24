@@ -4,11 +4,18 @@
 
 library conformance;
 
-
 union UnionWithBoundString {
     string:5 boundFiveStr;
 };
 
 struct UnionWithBoundStringStruct {
     UnionWithBoundString v;
+};
+
+union SingleVariantUnion {
+    1: uint32 x;
+};
+
+struct SingleVariantUnionStruct {
+    SingleVariantUnion u;
 };
