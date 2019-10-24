@@ -22,6 +22,11 @@ class RangeContainer {
   uint64_t Start() const { return operation.op.dev_offset; }
   uint64_t End() const { return operation.op.dev_offset + operation.op.length; }
   void Update(uint64_t start, uint64_t end) {
+    // update is called during range merges and splits. during these operations, vmo_offset stays a
+    // constant distance away from dev_offset. calculate the movement of dev_offset in this
+    // operation and move vmo_offset accordingly.
+    int64_t diff = static_cast<int64_t>(start) - static_cast<int64_t>(operation.op.dev_offset);
+    operation.op.vmo_offset += diff;
     operation.op.dev_offset = start;
     operation.op.length = end - start;
   }
