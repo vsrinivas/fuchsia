@@ -32,7 +32,7 @@ class DecoderInstance {
   // running and decoding from the buffer.
   std::unique_ptr<VideoDecoder> decoder_;
   std::unique_ptr<InputContext> input_context_;
-  DecoderCore* core_;
+  DecoderCore* core_ = nullptr;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_INSTANCE_H_

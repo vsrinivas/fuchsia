@@ -151,6 +151,8 @@ class VideoDecoder {
 
   __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }
 
+  bool is_secure() const { return is_secure_; }
+
  protected:
   std::unique_ptr<PtsManager> pts_manager_;
   uint64_t next_non_codec_buffer_lifetime_ordinal_ = 0;

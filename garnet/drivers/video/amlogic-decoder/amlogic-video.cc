@@ -589,7 +589,8 @@ void AmlogicVideo::SwapOutCurrentInstance() {
   // restore.
   if (!current_instance_->input_context()) {
     current_instance_->InitializeInputContext();
-    if (core_->InitializeInputContext(current_instance_->input_context()) != ZX_OK) {
+    if (core_->InitializeInputContext(
+        current_instance_->input_context(), current_instance_->decoder()->is_secure()) != ZX_OK) {
       // TODO: exit cleanly
       exit(-1);
     }

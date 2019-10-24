@@ -8,6 +8,7 @@
 #include <ddk/io-buffer.h>
 #include <lib/zx/handle.h>
 
+#include "internal_buffer.h"
 #include "memory_barriers.h"
 #include "registers.h"
 
@@ -22,10 +23,10 @@ struct MmioRegisters {
 struct InputContext {
   ~InputContext() {
     BarrierBeforeRelease();
-    io_buffer_release(&buffer);
+    // ~buffer
   }
 
-  io_buffer_t buffer = {};
+  std::optional<InternalBuffer> buffer;
 
   uint32_t processed_video = 0;
 };
@@ -36,11 +37,21 @@ class DecoderCore {
  public:
   class Owner {
    public:
-    virtual __WARN_UNUSED_RESULT zx::unowned_bti bti() = 0;
-    virtual __WARN_UNUSED_RESULT MmioRegisters* mmio() = 0;
+    [[nodiscard]]
+    virtual zx::unowned_bti bti() = 0;
+
+    [[nodiscard]]
+    virtual MmioRegisters* mmio() = 0;
+
     virtual void UngateClocks() = 0;
+
     virtual void GateClocks() = 0;
-    virtual __WARN_UNUSED_RESULT DeviceType device_type() = 0;
+
+    [[nodiscard]]
+    virtual DeviceType device_type() = 0;
+
+    [[nodiscard]]
+    virtual fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() = 0;
   };
 
   virtual ~DecoderCore() {}
@@ -63,7 +74,8 @@ class DecoderCore {
   virtual __WARN_UNUSED_RESULT uint32_t GetStreamInputOffset() = 0;
   virtual __WARN_UNUSED_RESULT uint32_t GetReadOffset() = 0;
 
-  virtual __WARN_UNUSED_RESULT zx_status_t InitializeInputContext(InputContext* context) {
+  virtual __WARN_UNUSED_RESULT zx_status_t InitializeInputContext(
+      InputContext* context, bool is_secure) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual void SaveInputContext(InputContext* context) {}

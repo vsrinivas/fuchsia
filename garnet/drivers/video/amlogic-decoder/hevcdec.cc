@@ -273,23 +273,24 @@ uint32_t HevcDec::GetReadOffset() {
   return read_ptr - buffer_start;
 }
 
-zx_status_t HevcDec::InitializeInputContext(InputContext* context) {
+zx_status_t HevcDec::InitializeInputContext(InputContext* context, bool is_secure) {
   constexpr uint32_t kInputContextSize = 4096;
-  zx_status_t status = io_buffer_init_aligned(&context->buffer, owner_->bti()->get(),
-                                              kInputContextSize, 0,
-                                              IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to allocate input context, status %d\n", status);
-    return status;
+  auto create_result = InternalBuffer::Create(
+      "HevcDecInputCtx", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kInputContextSize,
+      is_secure, /*is_writable=*/true, /*is_mapping_needed_=*/false);
+  if (!create_result.is_ok()) {
+    LOG(ERROR, "Failed to allocate input context - status: %d", create_result.error());
+    return create_result.error();
   }
-  io_buffer_cache_flush(&context->buffer, 0, kInputContextSize);
-  BarrierAfterFlush();
-  return status;
+  // Sysmem has already written zeroes, flushed the zeroes, fenced the flush, to the extent
+  // possible.
+  context->buffer.emplace(create_result.take_value());
+  return ZX_OK;
 }
 
 void HevcDec::SaveInputContext(InputContext* context) {
   HevcStreamSwapAddr::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&context->buffer)))
+      .FromValue(truncate_to_32(context->buffer->phys_base()))
       .WriteTo(mmio()->dosbus);
   HevcStreamSwapCtrl::Get().FromValue(0).set_enable(true).set_save(true).WriteTo(mmio()->dosbus);
   bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
@@ -312,7 +313,7 @@ void HevcDec::RestoreInputContext(InputContext* context) {
       .set_stream_fetch_enable(true)
       .WriteTo(mmio()->dosbus);
   HevcStreamSwapAddr::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&context->buffer)))
+      .FromValue(truncate_to_32(context->buffer->phys_base()))
       .WriteTo(mmio()->dosbus);
   HevcStreamSwapCtrl::Get().FromValue(0).set_enable(true).WriteTo(mmio()->dosbus);
   bool finished = SpinWaitForRegister(std::chrono::milliseconds(100), [this]() {
