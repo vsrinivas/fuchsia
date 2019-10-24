@@ -297,7 +297,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
 
     // If frequency is too high to be characterized in this buffer, skip it. Per Nyquist limit,
     // buffer length must be at least 2x the frequency we want to measure.
-    if (frequency_to_measure * 2 > num_src_frames) {
+    if (frequency_to_measure * 2 >= num_src_frames) {
       if (freq_idx < FrequencySet::kFirstOutBandRefFreqIdx) {
         level_db[freq_idx] = -INFINITY;
         phase_rad[freq_idx] = -INFINITY;
@@ -367,7 +367,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
                      &phase_rad[freq_idx]);
 
     // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
-    if (frequency_to_measure * 2 > num_dest_frames) {
+    if (frequency_to_measure * 2 >= num_dest_frames) {
       // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
       auto magn_total = std::sqrt(magn_signal * magn_signal + magn_other * magn_other);
       sinad_db[freq_idx] = -Gain::DoubleToDb(magn_total);
@@ -1415,7 +1415,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
 
     auto frequency_to_measure = FrequencySet::kReferenceFreqs[freq_idx];
     // If frequency is too high to be characterized in this buffer length, skip it.
-    if (frequency_to_measure * 2 > num_src_frames) {
+    if (frequency_to_measure * 2 >= num_src_frames) {
       if (freq_idx < FrequencySet::kFirstOutBandRefFreqIdx) {
         level_db[freq_idx] = -INFINITY;
         phase_rad[freq_idx] = -INFINITY;
@@ -1434,7 +1434,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
                      &phase_rad[freq_idx]);
 
     // Convert Frequency Response and Signal-to-Noise-And-Distortion (SINAD) to decibels.
-    if (frequency_to_measure * 2 > num_dest_frames) {
+    if (frequency_to_measure * 2 >= num_dest_frames) {
       // This out-of-band frequency should have been entirely rejected -- capture total magnitude.
       auto magn_total = std::sqrt(magn_signal * magn_signal + magn_other * magn_other);
       sinad_db[freq_idx] = -Gain::DoubleToDb(magn_total);

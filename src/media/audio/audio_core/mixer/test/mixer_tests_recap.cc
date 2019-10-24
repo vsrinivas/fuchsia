@@ -570,6 +570,11 @@ void MixerTestsRecap::PrintOutOfBandRejectionSummary() {
     } else {
       printf("                    ");
     }
+
+    if (AudioResult::kPrevSinadPointMicro[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("    %6.2lf  (%6.2lf)", AudioResult::SinadPointMicro[freq],
+             AudioResult::kPrevSinadPointMicro[freq]);
+    }
   }
 
   printf("\n\n   Linear resampler\n             ");
@@ -603,6 +608,11 @@ void MixerTestsRecap::PrintOutOfBandRejectionSummary() {
     } else {
       printf("                    ");
     }
+
+    if (AudioResult::kPrevSinadLinearMicro[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("    %6.2lf  (%6.2lf)", AudioResult::SinadLinearMicro[freq],
+             AudioResult::kPrevSinadLinearMicro[freq]);
+    }
   }
 
   printf("\n\n   Windowed Sinc resampler\n             ");
@@ -610,6 +620,7 @@ void MixerTestsRecap::PrintOutOfBandRejectionSummary() {
   printf("         191999->48k");
   printf("          96k->48k  ");
   printf("         88.2k->48k ");
+  printf("          Micro-SRC ");
 
   for (auto idx = begin_idx; idx < end_idx; ++idx) {
     uint32_t freq = idx;
@@ -634,6 +645,11 @@ void MixerTestsRecap::PrintOutOfBandRejectionSummary() {
              AudioResult::kPrevSinadSincDown2[freq]);
     } else {
       printf("                    ");
+    }
+
+    if (AudioResult::kPrevSinadSincMicro[freq] != -std::numeric_limits<double>::infinity()) {
+      printf("    %6.2lf  (%6.2lf)", AudioResult::SinadSincMicro[freq],
+             AudioResult::kPrevSinadSincMicro[freq]);
     }
   }
 

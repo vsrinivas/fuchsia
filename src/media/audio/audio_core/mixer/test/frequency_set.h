@@ -60,7 +60,7 @@ class FrequencySet {
 
   // A subset of these frequencies are within the guaranteed in-band range, wrt output frequency.
   // In other words, [39] translates into 24kHz, and these tests assume a 48kHz output frequency.
-  static constexpr uint32_t kFirstOutBandRefFreqIdx = 40;
+  static constexpr uint32_t kFirstOutBandRefFreqIdx = 39;
   static constexpr uint32_t kFirstInBandRefFreqIdx = 0;
 
   // Each val represents a standard frequency within the broad set.
