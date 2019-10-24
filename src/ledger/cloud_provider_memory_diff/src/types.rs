@@ -139,11 +139,15 @@ pub enum PageState {
     AtCommit(CommitId),
 }
 
-impl From<cloud::PageState> for PageState {
-    fn from(base: cloud::PageState) -> Self {
+impl TryFrom<cloud::PageState> for PageState {
+    type Error = ClientError;
+    fn try_from(base: cloud::PageState) -> Result<PageState, Self::Error> {
         match base {
-            cloud::PageState::EmptyPage(_) => PageState::EmptyPage,
-            cloud::PageState::AtCommit(commit_id) => PageState::AtCommit(CommitId(commit_id)),
+            cloud::PageState::EmptyPage(_) => Ok(PageState::EmptyPage),
+            cloud::PageState::AtCommit(commit_id) => Ok(PageState::AtCommit(CommitId(commit_id))),
+            cloud::PageState::__UnknownVariant { .. } => {
+                Err(client_error(Status::ArgumentError).with_explanation("unknown enum value"))
+            }
         }
     }
 }
@@ -161,7 +165,7 @@ impl TryFrom<cloud::Diff> for Diff {
     type Error = ClientError;
     fn try_from(x: cloud::Diff) -> Result<Diff, Self::Error> {
         Ok(Diff {
-            base_state: x.base_state.require("diff base state")?.into(),
+            base_state: x.base_state.require("diff base state")?.try_into()?,
             changes: x
                 .changes
                 .require("diff changes")?

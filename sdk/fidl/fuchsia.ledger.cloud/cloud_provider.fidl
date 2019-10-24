@@ -133,7 +133,7 @@ table Commit {
 };
 
 /// Specification of a page state used as base for a diff.
-union PageState {
+xunion PageState {
     /// The state is the empty page.
     EmptyPage empty_page;
     /// The state is the content of a page at the commit with the given
