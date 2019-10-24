@@ -15,23 +15,34 @@ use crate::{
     assert_close, assert_event, assert_get_token, assert_get_token_err, assert_link,
     assert_link_err, assert_read, assert_read_dirents, assert_rename, assert_rename_err,
     assert_unlink, assert_unlink_err, assert_watch, assert_watcher_one_message_watched_events,
-    assert_write, open_as_file_assert_err, open_get_directory_proxy_assert_ok,
-    open_get_file_proxy_assert_ok, open_get_proxy_assert,
+    assert_write, open_as_directory_assert_err, open_as_file_assert_err,
+    open_get_directory_proxy_assert_ok, open_get_file_proxy_assert_ok, open_get_proxy_assert,
 };
 
 use crate::{
-    directory::test_utils::{run_server_client, test_server_client, DirentsSameInodeBuilder},
-    file::{pcb::asynchronous::read_only_static, vmo::asynchronous::test_utils::simple_read_write},
+    directory::{
+        mutable::simple::tree_constructor,
+        test_utils::{run_server_client, test_server_client, DirentsSameInodeBuilder},
+    },
+    file::{
+        pcb::asynchronous::{read_only, read_only_static},
+        vmo::asynchronous::test_utils::simple_read_write,
+    },
     registry::token_registry,
 };
 
 use {
     fidl_fuchsia_io::{
-        DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING,
-        WATCH_MASK_REMOVED,
+        DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED,
+        WATCH_MASK_EXISTING, WATCH_MASK_REMOVED,
     },
+    futures::future,
     proc_macro_hack::proc_macro_hack,
+    std::sync::{
+        atomic::{AtomicU8, Ordering},
+        Arc,
+    },
 };
 
 // Create level import of this macro does not affect nested modules.  And as attributes can
@@ -809,4 +820,255 @@ fn can_not_hardlink_directories() {
     })
     .token_registry(token_registry::Simple::new())
     .run();
+}
+
+#[test]
+fn create_file() {
+    let count = Arc::new(AtomicU8::new(0));
+
+    let constructor = tree_constructor(move |_parent, name| {
+        let index = count.fetch_add(1, Ordering::Relaxed);
+        let content = format!("{} - {}", name, index).into_bytes();
+        Ok(read_only(move || future::ready(Ok(content.clone()))))
+    });
+
+    let root = mut_pseudo_directory! {
+        "etc" => mut_pseudo_directory! {},
+        "tmp" => mut_pseudo_directory! {},
+    };
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
+        async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let create_flags = flags | OPEN_FLAG_CREATE;
+
+            open_as_file_assert_content!(&proxy, create_flags, "etc/fstab", "fstab - 0");
+
+            let etc = open_get_directory_proxy_assert_ok!(&proxy, flags, "etc");
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"fstab");
+
+                assert_read_dirents!(etc, 1000, expected.into_vec());
+            }
+
+            assert_close!(proxy);
+        }
+    })
+    .entry_constructor(constructor)
+    .run();
+}
+
+#[test]
+fn create_directory() {
+    let constructor = tree_constructor(|_parent, _name| panic!("No files should be created"));
+
+    let root = mut_pseudo_directory! {
+        "tmp" => mut_pseudo_directory! {},
+    };
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
+        async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let create_directory_flags = flags | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE;
+
+            let etc = open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "etc");
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(DIRENT_TYPE_DIRECTORY, b"tmp");
+
+                assert_read_dirents!(proxy, 1000, expected.into_vec());
+            }
+
+            assert_close!(etc);
+            assert_close!(proxy);
+        }
+    })
+    .entry_constructor(constructor)
+    .run();
+}
+
+#[test]
+fn create_two_levels_deep() {
+    let count = Arc::new(AtomicU8::new(0));
+
+    let constructor = tree_constructor(move |_parent, name| {
+        let index = count.fetch_add(1, Ordering::Relaxed);
+        let content = format!("{} - {}", name, index).into_bytes();
+        Ok(read_only(move || future::ready(Ok(content.clone()))))
+    });
+
+    let root = mut_pseudo_directory! {
+        "tmp" => mut_pseudo_directory! {},
+    };
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
+        async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let create_directory_flags = flags | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE;
+            let create_flags = flags | OPEN_FLAG_CREATE;
+
+            let etc = open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "etc");
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(DIRENT_TYPE_DIRECTORY, b"tmp");
+
+                assert_read_dirents!(proxy, 1000, expected.into_vec());
+            }
+
+            open_as_file_assert_content!(&proxy, create_flags, "etc/fstab", "fstab - 0");
+            open_as_file_assert_content!(&proxy, create_flags, "etc/passwd", "passwd - 1");
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"fstab")
+                    .add(DIRENT_TYPE_FILE, b"passwd");
+
+                assert_read_dirents!(etc, 1000, expected.into_vec());
+            }
+
+            assert_close!(etc);
+            assert_close!(proxy);
+        }
+    })
+    .entry_constructor(constructor)
+    .run();
+}
+
+#[test]
+fn can_not_create_nested() {
+    // This tree constructor does not allow creation of non-leaf entries. Only the very last path
+    // component might be created.
+    let constructor = tree_constructor(|_parent, _name| panic!("No files should be created"));
+
+    let root = mut_pseudo_directory! {};
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
+        async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let create_flags = flags | OPEN_FLAG_CREATE;
+
+            open_as_file_assert_err!(&proxy, create_flags, "etc/fstab", Status::NOT_FOUND);
+            open_as_directory_assert_err!(&proxy, create_flags, "tmp/log", Status::NOT_FOUND);
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".");
+
+                assert_read_dirents!(proxy, 1000, expected.into_vec());
+            }
+
+            assert_close!(proxy);
+        }
+    })
+    .entry_constructor(constructor)
+    .run();
+}
+
+#[test]
+fn can_create_nested() {
+    // This tree constructor allows creation of non-leaf entries. Any intermediately missing path
+    // components are created as mutable directories.
+    let constructor = mocks::PermissiveTreeConstructor::new();
+
+    let root = mut_pseudo_directory! {};
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
+        async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let create_flags = flags | OPEN_FLAG_CREATE;
+            let create_directory_flags = flags | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE;
+
+            open_as_file_assert_content!(&proxy, create_flags, "etc/passwd", "passwd - 0");
+            let log =
+                open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "tmp/log");
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(DIRENT_TYPE_DIRECTORY, b"tmp");
+
+                assert_read_dirents!(proxy, 1000, expected.into_vec());
+            }
+
+            open_as_file_assert_content!(&log, create_flags, "apache/access.log", "access.log - 1");
+
+            assert_close!(log);
+            assert_close!(proxy);
+        }
+    })
+    .entry_constructor(constructor)
+    .run();
+}
+
+#[cfg(test)]
+mod mocks {
+    use crate::{
+        directory::{
+            entry::DirectoryEntry,
+            mutable::{
+                entry_constructor::{EntryConstructor, NewEntryType},
+                simple,
+            },
+        },
+        file::pcb::asynchronous::read_only,
+        path::Path,
+    };
+
+    use {
+        fuchsia_zircon::Status,
+        futures::future,
+        std::sync::{
+            atomic::{AtomicU8, Ordering},
+            Arc,
+        },
+    };
+
+    pub(super) struct PermissiveTreeConstructor {
+        file_index: Arc<AtomicU8>,
+    }
+
+    impl PermissiveTreeConstructor {
+        pub(super) fn new() -> Arc<PermissiveTreeConstructor> {
+            Arc::new(PermissiveTreeConstructor { file_index: Arc::new(AtomicU8::new(0)) })
+        }
+    }
+
+    impl EntryConstructor for PermissiveTreeConstructor {
+        fn create_entry(
+            self: Arc<Self>,
+            _parent: Arc<dyn DirectoryEntry>,
+            mut what: NewEntryType,
+            name: &str,
+            path: &Path,
+        ) -> Result<Arc<dyn DirectoryEntry>, Status> {
+            if !path.is_empty() {
+                what = NewEntryType::Directory;
+            }
+
+            let entry = match what {
+                NewEntryType::Directory => simple() as Arc<dyn DirectoryEntry>,
+                NewEntryType::File => {
+                    let index = self.file_index.fetch_add(1, Ordering::Relaxed);
+                    let content = format!("{} - {}", name, index).into_bytes();
+                    read_only(move || future::ready(Ok(content.clone())))
+                }
+            };
+
+            Ok(entry)
+        }
+    }
 }

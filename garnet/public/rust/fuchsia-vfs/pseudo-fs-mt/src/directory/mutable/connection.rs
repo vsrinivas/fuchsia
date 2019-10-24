@@ -14,6 +14,7 @@ use crate::{
         },
         entry::DirectoryEntry,
         entry_container,
+        mutable::entry_constructor::NewEntryType,
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -136,19 +137,25 @@ where
     }
 
     fn entry_not_found(
-        _scope: ExecutionScope,
-        _parent: Arc<dyn DirectoryEntry>,
+        scope: ExecutionScope,
+        parent: Arc<dyn DirectoryEntry>,
         flags: u32,
-        _mode: u32,
-        _name: &str,
-        _path: &Path,
+        mode: u32,
+        name: &str,
+        path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, Status> {
         if flags & OPEN_FLAG_CREATE == 0 {
             return Err(Status::NOT_FOUND);
         }
 
-        // TODO
-        Err(Status::NOT_SUPPORTED)
+        let type_ = NewEntryType::from_flags_and_mode(flags, mode, path.is_dir())?;
+
+        let entry_constructor = match scope.entry_constructor() {
+            None => return Err(Status::NOT_SUPPORTED),
+            Some(constructor) => constructor,
+        };
+
+        entry_constructor.create_entry(parent, type_, name, path)
     }
 
     fn handle_request(
