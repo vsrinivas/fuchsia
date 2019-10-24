@@ -77,7 +77,7 @@ TEST_F(TestHarnessLauncherTest, DISABLED_CanLaunchTestHarness) {
 
 // Test that TestHarnessLauncher will destroy the modular_test_harness.cmx
 // component before the destructor returns.
-TEST_F(TestHarnessLauncherTest, CleanupInDestructor) {
+TEST_F(TestHarnessLauncherTest, DISABLED_CleanupInDestructor) {
   // Test that modular_test_harness.cmx is not running.
   {
     modular_testing::TestHarnessLauncher launcher(GetTestHarnessLauncher());
