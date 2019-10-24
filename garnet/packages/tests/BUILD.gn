@@ -115,6 +115,7 @@ group("fidl_compatibility_test_server_go") {
   testonly = true
   public_deps = [
     "//garnet/bin/fidl_compatibility_test/golang:fidl_compatibility_test_server_go",
+    "//garnet/bin/fidl_compatibility_test/golang:fidl_compatibility_test_server_go_write_xunion",
   ]
 }
 
@@ -1099,6 +1100,7 @@ group("fidl_compatibility_test_server_cpp") {
   testonly = true
   public_deps = [
     "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_cpp",
+    "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_cpp_write_xunion",
   ]
 }
 

@@ -7,6 +7,55 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+template("hlcpp_compatibility_test_server") {
+  not_needed(invoker, "*")
+
+  executable_name = target_name
+  executable_target_name = target_name + "_bin"
+  package_target_name = "fidl_" + target_name
+
+  executable(executable_target_name) {
+    output_name = executable_name
+
+    sources = [
+      "compatibility_test_server_cpp.cc",
+    ]
+
+    deps = [
+      "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
+      "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
+      "//sdk/lib/fidl/cpp",
+      "//sdk/lib/sys/cpp",
+      "//src/lib/fxl",
+      "//zircon/public/lib/async-default",
+      "//zircon/public/lib/async-loop-cpp",
+      "//zircon/public/lib/async-loop-default",
+    ]
+
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+  }
+
+  package(package_target_name) {
+    deps = [
+      ":" + executable_target_name,
+    ]
+
+    meta = [
+      {
+        # Always use the same source CMX.
+        path = "meta/fidl_compatibility_test_server_cpp.cmx"
+        dest = package_target_name + ".cmx"
+      },
+    ]
+
+    testonly = true
+
+    binary = executable_name
+  }
+}
+
 executable("fidl_compatibility_test_executable") {
   output_name = "fidl_compatibility_test"
 
@@ -31,23 +80,11 @@ executable("fidl_compatibility_test_executable") {
   ]
 }
 
-executable("compatibility_test_server_cpp_bin") {
-  output_name = "compatibility_test_server_cpp"
+hlcpp_compatibility_test_server("compatibility_test_server_cpp") {
+}
 
-  sources = [
-    "compatibility_test_server_cpp.cc",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
-    "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-  ]
+hlcpp_compatibility_test_server("compatibility_test_server_cpp_write_xunion") {
+  configs = [ "//sdk/lib/fidl/cpp:write_unions_as_xunions" ]
 }
 
 executable("compatibility_test_server_llcpp_bin") {
@@ -93,23 +130,6 @@ copy("run_fidl_compatibility_test_garnet_sh") {
   outputs = [
     "${root_build_dir}/run_fidl_compatibility_test_garnet.sh",
   ]
-}
-
-package("fidl_compatibility_test_server_cpp") {
-  deps = [
-    ":compatibility_test_server_cpp_bin",
-  ]
-
-  meta = [
-    {
-      path = "meta/fidl_compatibility_test_server_cpp.cmx"
-      dest = "fidl_compatibility_test_server_cpp.cmx"
-    },
-  ]
-
-  testonly = true
-
-  binary = "compatibility_test_server_cpp"
 }
 
 package("fidl_compatibility_test_server_llcpp") {
