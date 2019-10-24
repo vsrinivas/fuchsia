@@ -20,9 +20,7 @@ import (
 )
 
 // #cgo CFLAGS: -D_GNU_SOURCE
-// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
 // #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include/
-// #include <lib/zxs/protocol.h>
 // #include <netinet/in.h>
 import "C"
 
@@ -44,25 +42,6 @@ func copyAsBytes(b []byte, val interface{}) int {
 		Len:  l,
 		Cap:  l,
 	})))
-}
-
-func (v *C.struct_fdio_socket_msg) Unmarshal(data []byte) error {
-	const size = C.sizeof_struct_fdio_socket_msg
-
-	if n := copy((*[size]byte)(unsafe.Pointer(v))[:], data); n < size {
-		return fmt.Errorf("short %T: %d/%d", v, n, size)
-	}
-	return nil
-}
-
-func (v *C.struct_fdio_socket_msg) MarshalTo(data []byte) (int, error) {
-	const size = C.sizeof_struct_fdio_socket_msg
-
-	n := copy(data, (*[size]byte)(unsafe.Pointer(v))[:])
-	if n < size {
-		return 0, fmt.Errorf("short %T: %d/%d", v, n, size)
-	}
-	return n, nil
 }
 
 func (v *C.struct_ip_mreq) Unmarshal(data []byte) error {

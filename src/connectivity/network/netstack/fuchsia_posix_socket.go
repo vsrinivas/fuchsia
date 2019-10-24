@@ -17,6 +17,7 @@ import (
 	"syscall/zx/fidl"
 	"syscall/zx/mxnet"
 	"syscall/zx/zxwait"
+	"unsafe"
 
 	"syslog"
 
@@ -204,8 +205,8 @@ func (ios *endpoint) loopWrite() {
 		if ios.transProto != tcp.ProtocolNumber {
 			const size = C.sizeof_struct_fdio_socket_msg
 			var fdioSocketMsg C.struct_fdio_socket_msg
-			if err := fdioSocketMsg.Unmarshal(v[:size]); err != nil {
-				syslog.Errorf("malformed datagram: %s", err)
+			if n := copy((*[size]byte)(unsafe.Pointer(&fdioSocketMsg))[:], v); n != size {
+				syslog.Errorf("truncated datagram: %d/%d", n, size)
 				closeFn()
 				return
 			}
@@ -433,17 +434,11 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}) {
 		}
 
 		if ios.transProto != tcp.ProtocolNumber {
-			const size = C.sizeof_struct_fdio_socket_msg
-			out := make([]byte, size+len(v))
 			var fdioSocketMsg C.struct_fdio_socket_msg
 			fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(ios.netProto, sender))
-			if _, err := fdioSocketMsg.MarshalTo(out[:size]); err != nil {
-				panic(err)
-			}
-			if n := copy(out[size:], v); n < len(v) {
-				panic(fmt.Sprintf("copied %d/%d bytes", n, len(v)))
-			}
-			v = out
+
+			const size = C.sizeof_struct_fdio_socket_msg
+			v = append((*[size]byte)(unsafe.Pointer(&fdioSocketMsg))[:], v...)
 		}
 
 		for {
