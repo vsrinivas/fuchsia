@@ -10,11 +10,22 @@
 
 TEST(ButtonCheckerTest, CheckMuteState) {
   auto checker = ButtonChecker::Create();
-  if (!checker) {
-    std::cerr << "ButtonChecker not created. Board may lack input devices." << std::endl;
-    // This is not a failure, but the test cannot meaningfully continue.
-  } else {
-    // TODO(37896): Not exactly the same as zxtest's ASSERT_NO_DEATH.
-    ASSERT_NO_FATAL_FAILURE( checker->GetMuteState() );
+  ASSERT_NE(checker, nullptr) << "ButtonChecker not created. This test should only be run in "
+                                 "environments with mute buttons.";
+  auto state = checker->GetMuteState();
+  ASSERT_FALSE(HasFatalFailure());
+  switch (state) {
+    case ButtonChecker::ButtonState::DOWN:
+      std::cerr << "Device Muted" << std::endl;
+      break;
+    case ButtonChecker::ButtonState::UP:
+      std::cerr << "Device Unmuted" << std::endl;
+      break;
+    case ButtonChecker::ButtonState::UNKNOWN:
+      std::cerr << "Device Mute State Unknown" << std::endl;
+      break;
+    default:
+      ADD_FAILURE() << "Unexpected Mute State " << static_cast<uint32_t>(state);
   }
+  std::cerr.flush();
 }

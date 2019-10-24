@@ -68,7 +68,7 @@ ButtonChecker::ButtonState ButtonChecker::GetMuteState() {
       FXL_LOG(ERROR) << "Failed to extract HID field value";
       return ButtonState::UNKNOWN;
     }
-    ButtonState state_for_device = field_value == 0.0 ? ButtonState::DOWN : ButtonState::UP;
+    ButtonState state_for_device = field_value > 0 ? ButtonState::DOWN : ButtonState::UP;
 
     // Make sure that devices don't have conflicting states.
     if (state != ButtonState::UNKNOWN && state != state_for_device) {

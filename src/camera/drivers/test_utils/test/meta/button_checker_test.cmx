@@ -1,12 +1,16 @@
 {
   "program": {
-    "binary": "test/test_utils_test"
+    "binary": "test/button_checker_test"
   },
   "sandbox": {
+    "dev": [
+      "class/input"
+    ],
     "features": [
       "deprecated-ambient-replace-as-executable"
     ],
     "services": [
+      "fuchsia.hardware.input",
       "fuchsia.logger.LogSink",
       "fuchsia.process.Launcher"
     ]
