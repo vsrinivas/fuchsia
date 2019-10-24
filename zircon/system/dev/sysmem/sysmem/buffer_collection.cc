@@ -9,8 +9,6 @@
 
 #include "logical_buffer_collection.h"
 
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
-
 namespace {
 
 namespace {

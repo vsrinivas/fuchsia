@@ -162,8 +162,6 @@ const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
     {"fuchsia.hardware.cpu.insntrace", "Controller_ReleaseThreadBuffer_Result"},
     {"fuchsia.hardware.cpu.insntrace", "Controller_Terminate_Result"},
     {"fuchsia.io", "NodeInfo"},
-    {"fuchsia.sysmem", "SecureMem_GetPhysicalSecureHeaps_Result"},
-    {"fuchsia.sysmem", "SecureMem_SetPhysicalSecureHeaps_Result"},
 }};
 
 bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error_reporter) {

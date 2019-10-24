@@ -24,10 +24,6 @@ using zx;
 /// TEE, as the plumbing goes from the bootloader to the TEE.  However, this
 /// protocol intentionally doesn't care which heaps are dynamically-allocated
 /// and which are fixed-location.
-///
-// Needs Layout = "Simple" because used with "FIDL Simple C Bindings" (by
-// sysmem; the server end uses llcpp).
-[Layout = "Simple"]
 protocol SecureMem {
     /// Gets the physical address and length of any secure heap whose physical
     /// range is configured via the TEE.

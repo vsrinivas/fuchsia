@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_BUFFER_COLLECTION_H_
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fidl-async-2/fidl_server.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/fidl-async-2/simple_binding.h>
@@ -15,9 +16,6 @@
 
 #include "logging.h"
 
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;
-
 class LogicalBufferCollection;
 class BufferCollection
     : public FidlServer<BufferCollection,
@@ -25,8 +23,9 @@ class BufferCollection
                                       fuchsia_sysmem_BufferCollection_dispatch>,
                         vLog> {
  public:
-  using Constraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                 &fuchsia_sysmem_BufferCollectionConstraintsTable>;
+  using Constraints =
+      FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionConstraintsTable>;
 
   ~BufferCollection();
 
@@ -50,8 +49,9 @@ class BufferCollection
   // LogicalBufferCollection uses these:
   //
 
-  using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                          &fuchsia_sysmem_BufferCollectionInfo_2Table>;
+  using BufferCollectionInfo =
+      FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
+                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionInfo_2Table>;
 
   void OnBuffersAllocated();
 

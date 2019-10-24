@@ -5,9 +5,11 @@
 #include "device.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
 #include <zircon/device/sysmem.h>
@@ -412,7 +414,7 @@ zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
     // At this point secure_allocators_ has only the secure heaps that are configured via sysmem
     // (not those configured via the TEE), and the memory for these is not yet protected.  Tell the
     // TEE about these.
-    fuchsia_sysmem_PhysicalSecureHeaps sysmem_configured_heaps = {};
+    ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps sysmem_configured_heaps;
     for (const auto& [heap_type, allocator] : secure_allocators_) {
       uint64_t base;
       uint64_t size;
@@ -422,30 +424,27 @@ zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
       LOG(TRACE,
           "allocator->GetPhysicalMemoryInfo() heap_type: %08lx base: %016" PRIx64
           " size: %016" PRIx64,
-          heap_type, base, size);
+          static_cast<uint64_t>(heap_type), base, size);
 
-      fuchsia_sysmem_PhysicalSecureHeap& heap =
+      ::llcpp::fuchsia::sysmem::PhysicalSecureHeap& heap =
           sysmem_configured_heaps.heaps[sysmem_configured_heaps.heaps_count];
-      heap.heap = heap_type;
+      heap.heap = static_cast<::llcpp::fuchsia::sysmem::HeapType>(heap_type);
       heap.physical_address = base;
       heap.size_bytes = size;
       ++sysmem_configured_heaps.heaps_count;
     }
-    fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_Result set_result = {};
-    status = fuchsia_sysmem_SecureMemSetPhysicalSecureHeaps(secure_mem_->channel(),
-                                                            &sysmem_configured_heaps, &set_result);
+    auto set_result = ::llcpp::fuchsia::sysmem::SecureMem::Call::SetPhysicalSecureHeaps(
+        zx::unowned_channel(secure_mem_->channel()), std::move(sysmem_configured_heaps));
     // For now the FIDL IPC failing is fatal.  Among the reasons is without that
     // call succeeding, we haven't told the HW to secure/protect the physical
     // range.
     // For now it could return an error on sherlock if the bootloader is old, so
     // in that case just don't mark the allocators as ready.
-    ZX_ASSERT(status == ZX_OK);
-    if (set_result.tag == fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTag_err) {
-      LOG(ERROR, "Got secure memory allocation error %d", set_result.err);
+    ZX_ASSERT(set_result.ok());
+    if (set_result->result.is_err()) {
+      LOG(ERROR, "Got secure memory allocation error %d", set_result->result.err());
       return;
     }
-
-    ZX_ASSERT(set_result.tag == fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTag_response);
 
     for (const auto& [heap_type, allocator] : secure_allocators_) {
       // The TEE has now told the HW about this heap's physical range being secure/protected.
@@ -453,16 +452,18 @@ zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
     }
 
     // Now we get the secure heaps that are configured via the TEE.
-    fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_Result get_result = {};
-    status = fuchsia_sysmem_SecureMemGetPhysicalSecureHeaps(secure_mem_->channel(), &get_result);
+    auto get_result = ::llcpp::fuchsia::sysmem::SecureMem::Call::GetPhysicalSecureHeaps(
+        zx::unowned_channel(secure_mem_->channel()));
     // For now this is fatal, since this case is very unexpected, and in this case rebooting is the
     // most plausible way to get back to a working state anyway.
-    ZX_ASSERT(status == ZX_OK);
-    ZX_ASSERT(get_result.tag == fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTag_response);
-    const fuchsia_sysmem_PhysicalSecureHeaps& tee_configured_heaps = get_result.response.heaps;
+    ZX_ASSERT(get_result.ok());
+    ZX_ASSERT(get_result->result.is_response());
+    const ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps& tee_configured_heaps =
+        get_result->result.response().heaps;
 
     for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps_count; ++heap_index) {
-      const fuchsia_sysmem_PhysicalSecureHeap& heap = tee_configured_heaps.heaps[heap_index];
+      const ::llcpp::fuchsia::sysmem::PhysicalSecureHeap& heap =
+          tee_configured_heaps.heaps[heap_index];
       constexpr bool kIsCpuAccessible = false;
       constexpr bool kIsReady = true;
       auto secure_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
@@ -472,11 +473,12 @@ zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
       ZX_ASSERT(status == ZX_OK);
       LOG(TRACE,
           "created secure allocator: heap_type: %08lx base: %016" PRIx64 " size: %016" PRIx64,
-          heap.heap, heap.physical_address, heap.size_bytes);
-      ZX_ASSERT(secure_allocators_.find(heap.heap) == secure_allocators_.end());
-      secure_allocators_[heap.heap] = secure_allocator.get();
-      ZX_ASSERT(allocators_.find(heap.heap) == allocators_.end());
-      allocators_[heap.heap] = std::move(secure_allocator);
+          static_cast<uint64_t>(heap.heap), heap.physical_address, heap.size_bytes);
+      auto heap_type = static_cast<fuchsia_sysmem_HeapType>(heap.heap);
+      ZX_ASSERT(secure_allocators_.find(heap_type) == secure_allocators_.end());
+      secure_allocators_[heap_type] = secure_allocator.get();
+      ZX_ASSERT(allocators_.find(heap_type) == allocators_.end());
+      allocators_[heap_type] = std::move(secure_allocator);
     }
 
     LOG(TRACE, "sysmem RegisterSecureMem() done (async)");

@@ -2272,7 +2272,6 @@ extern "C" const fidl_type_t fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRespo
 // TEE, as the plumbing goes from the bootloader to the TEE.  However, this
 // protocol intentionally doesn't care which heaps are dynamically-allocated
 // and which are fixed-location.
-//
 class SecureMem final {
   SecureMem() = delete;
  public:

@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/zx/channel.h>
 
@@ -18,21 +19,20 @@
 
 #include "device.h"
 
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
-extern const fidl_type_t fuchsia_sysmem_ImageFormatConstraintsTable;
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;
-
 class BufferCollectionToken;
 class BufferCollection;
 class MemoryAllocator;
 class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> {
  public:
-  using Constraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                 &fuchsia_sysmem_BufferCollectionConstraintsTable>;
-  using ImageFormatConstraints = FidlStruct<fuchsia_sysmem_ImageFormatConstraints,
-                                            &fuchsia_sysmem_ImageFormatConstraintsTable>;
-  using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                                          &fuchsia_sysmem_BufferCollectionInfo_2Table>;
+  using Constraints =
+      FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionConstraintsTable>;
+  using ImageFormatConstraints =
+      FidlStruct<fuchsia_sysmem_ImageFormatConstraints,
+                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_ImageFormatConstraintsTable>;
+  using BufferCollectionInfo =
+      FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
+                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionInfo_2Table>;
 
   ~LogicalBufferCollection();
 

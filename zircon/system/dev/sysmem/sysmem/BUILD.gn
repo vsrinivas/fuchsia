@@ -22,6 +22,7 @@ zx_driver("sysmem") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
