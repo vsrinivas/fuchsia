@@ -7,10 +7,12 @@
 #include <lib/fzl/fdio.h>
 #include <sys/stat.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <thread>
 
+#include <blobfs/common.h>
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
 
@@ -18,6 +20,7 @@
 
 namespace {
 
+using fs::FilesystemTest;
 using fs::RamDisk;
 
 // This is work in progress!. See ZX-4203 for context.
@@ -36,84 +39,89 @@ static bool MakeBlobUnverified(fs_test_utils::BlobInfo* info, fbl::unique_fd* ou
     return true;
 }
 
-static bool TestHugeBlobRandom(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
+*/
 
-    // This blob is extremely large, and will remain large
-    // on disk. It is not easily compressible.
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(
-            MOUNT_PATH, 2 * blobfs::WriteBufferSize() * kBlobfsBlockSize(), &info));
+void RunHugeBlobRandomTest(FilesystemTest* test) {
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
 
-    fbl::unique_fd fd;
-    ASSERT_TRUE(MakeBlob(info.get(), &fd));
-    ASSERT_EQ(close(fd.release()), 0);
+  // This blob is extremely large, and will remain large on disk.
+  // It is not easily compressible.
+  size_t kMaxSize = 1 << 25;  // 32 MB.
+  size_t file_size = std::min(kMaxSize, 2 * blobfs::WriteBufferSize() * blobfs::kBlobfsBlockSize);
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, file_size, &info));
 
-    // We can re-open and verify the Blob as read-only
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_TRUE(fd, "Failed to-reopen blob");
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0);
+  fbl::unique_fd fd;
+  ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-    // We cannot re-open the blob as writable
-    fd.reset(open(info->path, O_RDWR | O_CREAT));
-    ASSERT_FALSE(fd, "Shouldn't be able to re-create blob that exists");
-    fd.reset(open(info->path, O_RDWR));
-    ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
-    fd.reset(open(info->path, O_WRONLY));
-    ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
+  // We can re-open and verify the Blob as read-only.
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd, "Failed to-reopen blob");
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
 
-    // Force decompression by remounting, re-accessing blob.
-    ASSERT_TRUE(blobfsTest->Remount());
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_TRUE(fd, "Failed to-reopen blob");
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0);
+  // We cannot re-open the blob as writable.
+  fd.reset(open(info->path, O_RDWR | O_CREAT));
+  ASSERT_FALSE(fd, "Shouldn't be able to re-create blob that exists");
+  fd.reset(open(info->path, O_RDWR));
+  ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
+  fd.reset(open(info->path, O_WRONLY));
+  ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
 
-    ASSERT_EQ(unlink(info->path), 0);
-    END_HELPER;
+  // Force decompression by remounting, re-accessing blob.
+  ASSERT_NO_FAILURES(test->Remount());
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd, "Failed to-reopen blob");
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+
+  ASSERT_EQ(0, unlink(info->path));
 }
 
-static bool TestHugeBlobCompressible(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
+TEST_F(BlobfsTest, HugeBlobRandom) { RunHugeBlobRandomTest(this); }
 
-    // This blob is extremely large, and will remain large
-    // on disk, even though is very compressible.
-    ASSERT_TRUE(fs_test_utils::GenerateBlob([](char* data, size_t length) {
+TEST_F(BlobfsTestWithFvm, HugeBlobRandom) { RunHugeBlobRandomTest(this); }
+
+void RunHugeBlobCompressibleTest(FilesystemTest* test) {
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+
+  // This blob is extremely large, and will remain large on disk, even though
+  // it is very compressible.
+  size_t kMaxSize = 1 << 25;  // 32 MB.
+  size_t file_size = std::min(kMaxSize, 2 * blobfs::WriteBufferSize() * blobfs::kBlobfsBlockSize);
+  ASSERT_TRUE(fs_test_utils::GenerateBlob(
+      [](char* data, size_t length) {
         fs_test_utils::RandomFill(data, length / 2);
-        data = reinterpret_cast<char*>(reinterpret_cast<uintptr_t>(data) + length / 2);
+        data += length / 2;
         memset(data, 'a', length / 2);
-    }, MOUNT_PATH, 2 * blobfs::WriteBufferSize() * kBlobfsBlockSize, &info));
+      },
+      kMountPath, file_size, &info));
 
-    fbl::unique_fd fd;
-    ASSERT_TRUE(MakeBlob(info.get(), &fd));
-    ASSERT_EQ(close(fd.release()), 0);
+  fbl::unique_fd fd;
+  ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-    // We can re-open and verify the Blob as read-only
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_TRUE(fd, "Failed to-reopen blob");
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0);
+  // We can re-open and verify the Blob as read-only.
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd, "Failed to-reopen blob");
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
 
-    // We cannot re-open the blob as writable
-    fd.reset(open(info->path, O_RDWR | O_CREAT));
-    ASSERT_FALSE(fd, "Shouldn't be able to re-create blob that exists");
-    fd.reset(open(info->path, O_RDWR));
-    ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
-    fd.reset(open(info->path, O_WRONLY));
-    ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
+  // We cannot re-open the blob as writable.
+  fd.reset(open(info->path, O_RDWR | O_CREAT));
+  ASSERT_FALSE(fd, "Shouldn't be able to re-create blob that exists");
+  fd.reset(open(info->path, O_RDWR));
+  ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
+  fd.reset(open(info->path, O_WRONLY));
+  ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
 
-    // Force decompression by remounting, re-accessing blob.
-    ASSERT_TRUE(blobfsTest->Remount());
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_TRUE(fd, "Failed to-reopen blob");
-    ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0);
-
-    ASSERT_EQ(unlink(info->path), 0);
-    END_HELPER;
+  // Force decompression by remounting, re-accessing blob.
+  ASSERT_NO_FAILURES(test->Remount());
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd, "Failed to-reopen blob");
+  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
 }
+
+TEST_F(BlobfsTest, HugeBlobCompressible) { RunHugeBlobCompressibleTest(this); }
+
+TEST_F(BlobfsTestWithFvm, HugeBlobCompressible) { RunHugeBlobCompressibleTest(this); }
+
+/*
 
 static bool CreateUmountRemountLarge(BlobfsTest* blobfsTest) {
     BEGIN_HELPER;
@@ -241,143 +249,141 @@ static bool CreateUmountRemountLargeMultithreaded(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
-static bool NoSpace(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fbl::unique_ptr<fs_test_utils::BlobInfo> last_info = nullptr;
+*/
 
-    // Keep generating blobs until we run out of space
-    size_t count = 0;
-    while (true) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 17, &info));
+void RunNoSpaceTest() {
+  std::unique_ptr<fs_test_utils::BlobInfo> last_info = nullptr;
 
-        fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-        ASSERT_TRUE(fd, "Failed to create blob");
-        int r = ftruncate(fd.get(), info->size_data);
-        if (r < 0) {
-            ASSERT_EQ(errno, ENOSPC, "Blobfs expected to run out of space");
-            // We ran out of space, as expected. Can we allocate if we
-            // unlink a previously allocated blob of the desired size?
-            ASSERT_EQ(unlink(last_info->path), 0, "Unlinking old blob");
-            ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0, "Re-init after unlink");
+  // Keep generating blobs until we run out of space.
+  size_t count = 0;
+  while (true) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
 
-            // Yay! allocated successfully.
-            ASSERT_EQ(close(fd.release()), 0);
-            break;
-        }
-        ASSERT_EQ(fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
-                  "Failed to write Data");
-        ASSERT_EQ(close(fd.release()), 0);
-        last_info = std::move(info);
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd, "Failed to create blob");
+    int r = ftruncate(fd.get(), info->size_data);
+    if (r < 0) {
+      ASSERT_EQ(errno, ENOSPC, "Blobfs expected to run out of space");
+      // We ran out of space, as expected. Can we allocate if we
+      // unlink a previously allocated blob of the desired size?
+      ASSERT_EQ(unlink(last_info->path), 0, "Unlinking old blob");
+      ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0, "Re-init after unlink");
 
-        if (++count % 50 == 0) {
-            printf("Allocated %lu blobs\n", count);
-        }
+      // Yay! allocated successfully.
+      break;
     }
+    ASSERT_EQ(fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
+              "Failed to write Data");
+    last_info = std::move(info);
 
-    END_HELPER;
+    if (++count % 50 == 0) {
+      printf("Allocated %lu blobs\n", count);
+    }
+  }
 }
+
+TEST_F(BlobfsTest, NoSpace) { RunNoSpaceTest(); }
+
+TEST_F(BlobfsTestWithFvm, NoSpace) { RunNoSpaceTest(); }
 
 // The following test attempts to fragment the underlying blobfs partition
-// assuming a trivial linear allocator. A more intelligent allocator
-// may require modifications to this test.
-static bool TestFragmentation(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    // Keep generating blobs until we run out of space, in a pattern of
-    // large, small, large, small, large.
-    //
-    // At the end of  the test, we'll free the small blobs, and observe
-    // if it is possible to allocate a larger blob. With a simple allocator
-    // and no defragmentation, this would result in a NO_SPACE error.
-    constexpr size_t kSmallSize = (1 << 16);
-    constexpr size_t kLargeSize = (1 << 17);
+// assuming a trivial linear allocator. A more intelligent allocator may require
+// modifications to this test.
+void RunFragmentationTest(FilesystemTest* test) {
+  // Keep generating blobs until we run out of space, in a pattern of large,
+  // small, large, small, large.
+  //
+  // At the end of  the test, we'll free the small blobs, and observe if it is
+  // possible to allocate a larger blob. With a simple allocator and no
+  // defragmentation, this would result in a NO_SPACE error.
+  constexpr size_t kSmallSize = (1 << 16);
+  constexpr size_t kLargeSize = (1 << 17);
 
-    fbl::Vector<fbl::String> small_blobs;
+  fbl::Vector<fbl::String> small_blobs;
 
-    bool do_small_blob = true;
-    size_t count = 0;
-    while (true) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH,
-                                                      do_small_blob ? kSmallSize : kLargeSize,
-                                                      &info));
-        fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-        ASSERT_TRUE(fd, "Failed to create blob");
-        int r = ftruncate(fd.get(), info->size_data);
-        if (r < 0) {
-            ASSERT_EQ(ENOSPC, errno, "Blobfs expected to run out of space");
-            break;
-        }
-        ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data),
-                  "Failed to write Data");
-        ASSERT_EQ(0, close(fd.release()));
-        if (do_small_blob) {
-            small_blobs.push_back(fbl::String(info->path));
-        }
-
-        do_small_blob = !do_small_blob;
-
-        if (++count % 50 == 0) {
-            printf("Allocated %lu blobs\n", count);
-        }
-    }
-
-    // We have filled up the disk with both small and large blobs.
-    // Observe that we cannot add another large blob.
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, kLargeSize, &info));
-
-    // Calculate actual number of blocks required to store the blob (including the merkle tree).
-    blobfs::Inode large_inode;
-    large_inode.blob_size = kLargeSize;
-    size_t kLargeBlocks = blobfs::MerkleTreeBlocks(large_inode)
-                          + blobfs::BlobDataBlocks(large_inode);
-
-    // We shouldn't have space (before we try allocating) ...
-    BlobfsUsage usage;
-    ASSERT_TRUE(blobfsTest->CheckInfo(&usage));
-    ASSERT_LT(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
-
-    // ... and we don't have space (as we try allocating).
+  bool do_small_blob = true;
+  size_t count = 0;
+  while (true) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath,
+                                                  do_small_blob ? kSmallSize : kLargeSize, &info));
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd);
-    ASSERT_EQ(-1, ftruncate(fd.get(), info->size_data));
-    ASSERT_EQ(ENOSPC, errno, "Blobfs expected to be out of space");
-
-    // Unlink all small blobs -- except for the last one, since
-    // we may have free trailing space at the end.
-    for (size_t i = 0; i < small_blobs.size() - 1; i++) {
-        ASSERT_EQ(0, unlink(small_blobs[i].c_str()), "Unlinking old blob");
+    ASSERT_TRUE(fd, "Failed to create blob");
+    if (ftruncate(fd.get(), info->size_data) < 0) {
+      ASSERT_EQ(ENOSPC, errno, "Blobfs expected to run out of space");
+      break;
+    }
+    ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data),
+              "Failed to write Data");
+    if (do_small_blob) {
+      small_blobs.push_back(fbl::String(info->path));
     }
 
-    // This asserts an assumption of our test: Freeing these blobs
-    // should provde enough space.
-    ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
+    do_small_blob = !do_small_blob;
 
-    // Validate that we have enough space (before we try allocating)...
-    ASSERT_TRUE(blobfsTest->CheckInfo(&usage));
-    ASSERT_GE(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
+    if (++count % 50 == 0) {
+      printf("Allocated %lu blobs\n", count);
+    }
+  }
 
-    // Now that blobfs supports extents, verify that we can still allocate
-    // a large blob, even if it is fragmented.
-    ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
+  // We have filled up the disk with both small and large blobs.
+  // Observe that we cannot add another large blob.
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, kLargeSize, &info));
 
-    // Sanity check that we can write and read the fragmented blob.
-    ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data));
-    fbl::unique_ptr<char[]> buf(new char[info->size_data]);
-    ASSERT_EQ(0, lseek(fd.get(), 0, SEEK_SET));
-    ASSERT_EQ(0, fs_test_utils::StreamAll(read, fd.get(), buf.get(), info->size_data));
-    ASSERT_EQ(0, memcmp(info->data.get(), buf.get(), info->size_data));
-    ASSERT_EQ(0, close(fd.release()));
+  // Calculate actual number of blocks required to store the blob (including the merkle tree).
+  blobfs::Inode large_inode;
+  large_inode.blob_size = kLargeSize;
+  size_t kLargeBlocks = blobfs::MerkleTreeBlocks(large_inode) + blobfs::BlobDataBlocks(large_inode);
 
-    // Sanity check that we can re-open and unlink the fragmented blob.
-    fd.reset(open(info->path, O_RDONLY));
-    ASSERT_TRUE(fd);
-    ASSERT_EQ(0, unlink(info->path));
-    ASSERT_EQ(0, close(fd.release()));
+  // We shouldn't have space (before we try allocating) ...
+  fuchsia_io_FilesystemInfo usage;
+  ASSERT_NO_FAILURES(test->GetFsInfo(&usage));
+  ASSERT_LT(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
 
-    END_HELPER;
+  // ... and we don't have space (as we try allocating).
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(-1, ftruncate(fd.get(), info->size_data));
+  ASSERT_EQ(ENOSPC, errno, "Blobfs expected to be out of space");
+
+  // Unlink all small blobs -- except for the last one, since we may have free
+  // trailing space at the end.
+  for (size_t i = 0; i < small_blobs.size() - 1; i++) {
+    ASSERT_EQ(0, unlink(small_blobs[i].c_str()), "Unlinking old blob");
+  }
+
+  // This asserts an assumption of our test: Freeing these blobs should provide
+  // enough space.
+  ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
+
+  // Validate that we have enough space (before we try allocating)...
+  ASSERT_NO_FAILURES(test->GetFsInfo(&usage));
+  ASSERT_GE(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
+
+  // Now that blobfs supports extents, verify that we can still allocate a large
+  // blob, even if it is fragmented.
+  ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
+
+  // Sanity check that we can write and read the fragmented blob.
+  ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data));
+  std::unique_ptr<char[]> buf(new char[info->size_data]);
+  ASSERT_EQ(0, lseek(fd.get(), 0, SEEK_SET));
+  ASSERT_EQ(0, fs_test_utils::StreamAll(read, fd.get(), buf.get(), info->size_data));
+  ASSERT_BYTES_EQ(info->data.get(), buf.get(), info->size_data);
+
+  // Sanity check that we can re-open and unlink the fragmented blob.
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(0, unlink(info->path));
 }
+
+TEST_F(BlobfsTest, Fragmentation) { RunFragmentationTest(this); }
+
+TEST_F(BlobfsTestWithFvm, Fragmentation) { RunFragmentationTest(this); }
+
+/*
 
 typedef struct reopen_data {
     char path[PATH_MAX];
@@ -454,51 +460,37 @@ static bool CreateWriteReopen(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
-static bool TestCreateFailure(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(FsTestType::kNormal);
-    blobfsTest.SetStdio(false);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+*/
 
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, blobfs::kBlobfsBlockSize, &info));
+void RunCreateFailureTest(const RamDisk* disk, FilesystemTest* test) {
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
 
-    size_t blocks = 0;
+  // Attempt to create a blob, failing after each written block until the operations succeeds.
+  // After each failure, check for disk consistency.
+  fbl::unique_fd fd;
+  for (uint32_t blocks = 0; !fd; blocks++) {
+    ASSERT_OK(disk->SleepAfter(blocks));
 
-    // Attempt to create a blob, failing after each written block until the operations succeeds.
-    // After each failure, check for disk consistency.
-    while (true) {
-        ASSERT_TRUE(blobfsTest.ToggleSleep(blocks));
-        unittest_set_output_function(silent_printf, nullptr);
-        fbl::unique_fd fd;
+    // Blob creation may or may not succeed - as long as fsck passes, it doesn't matter.
+    MakeBlob(info.get(), &fd);
+    ASSERT_NO_FAILURES();
 
-        // Blob creation may or may not succeed - as long as fsck passes, it doesn't matter.
-        MakeBlob(info.get(), &fd);
-        current_test_info->all_ok = true;
+    // Resolve all transactions before waking the ramdisk.
+    syncfs(fd.get());
+    ASSERT_OK(disk->WakeUp());
 
-        // Resolve all transactions before waking the ramdisk.
-        syncfs(fd.get());
-        unittest_restore_output_function();
-        ASSERT_TRUE(blobfsTest.ToggleSleep());
+    // Remount to check fsck results.
+    ASSERT_NO_FAILURES(test->Remount());
 
-        // Force remount so journal will replay.
-        ASSERT_TRUE(blobfsTest.ForceRemount());
-
-        // Remount again to check fsck results.
-        ASSERT_TRUE(blobfsTest.Remount());
-
-        // Once file creation is successful, break out of the loop.
-        fd.reset(open(info->path, O_RDONLY));
-        if (fd) break;
-
-        blocks++;
-    }
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "Unmounting Blobfs");
-    END_TEST;
+    // Once file creation is successful, break out of the loop.
+    fd.reset(open(info->path, O_RDONLY));
+  }
 }
 
-*/
+TEST_F(BlobfsTest, CreateFailure) { RunCreateFailureTest(environment_->ramdisk(), this); }
+
+TEST_F(BlobfsTestWithFvm, CreateFailure) { RunCreateFailureTest(environment_->ramdisk(), this); }
 
 // Creates a new blob but (mostly) without complaining about failures.
 void RelaxedMakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd) {
@@ -635,14 +627,9 @@ TEST_F(LargeBlobTest, UseSecondBitmap) {
 /*
 
 BEGIN_TEST_CASE(blobfs_tests)
-RUN_TESTS(LARGE, TestHugeBlobRandom)
-RUN_TESTS(LARGE, TestHugeBlobCompressible)
 RUN_TESTS(LARGE, CreateUmountRemountLarge)
 RUN_TESTS(LARGE, CreateUmountRemountLargeMultithreaded)
-RUN_TESTS(LARGE, NoSpace)
-RUN_TESTS(LARGE, TestFragmentation)
 RUN_TESTS(LARGE, CreateWriteReopen)
-RUN_TEST_MEDIUM(TestCreateFailure)
 END_TEST_CASE(blobfs_tests)
 
 */
