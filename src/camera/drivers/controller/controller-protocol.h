@@ -13,8 +13,10 @@
 #include <ddktl/protocol/isp.h>
 
 #include "configs/sherlock/internal-config.h"
+#include "isp_stream_protocol.h"
 #include "memory_allocation.h"
 #include "stream_protocol.h"
+
 namespace camera {
 
 namespace {

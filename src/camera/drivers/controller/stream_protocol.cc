@@ -8,11 +8,12 @@
 
 #include "src/lib/fxl/logging.h"
 
-camera::StreamImpl::StreamImpl(async_dispatcher_t* dispatcher)
+camera::StreamImpl::StreamImpl(async_dispatcher_t* dispatcher,
+                               std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol)
     : dispatcher_(dispatcher),
       binding_(this),
       callbacks_{FrameReady, this},
-      protocol_{&protocol_ops_, nullptr} {}
+      isp_stream_protocol_(std::move(isp_stream_protocol)) {}
 
 camera::StreamImpl::~StreamImpl() { Shutdown(ZX_OK); }
 
@@ -55,71 +56,33 @@ void camera::StreamImpl::Shutdown(zx_status_t status) {
     binding_.Close(status);
   }
 
-  // Stop the ISP stream if it is started.
+  // Stop streaming ISP
   if (started_) {
-    zx_status_t status = protocol_.ops->stop(protocol_.ctx);
-    if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status);
-    }
-    started_ = false;
-  }
-
-  // Release any client-leaked buffers.
-  for (auto id : held_buffers_) {
-    zx_status_t status = protocol_.ops->release_frame(protocol_.ctx, id);
-    if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status);
-    }
-  }
-  held_buffers_.clear();
-}
-
-void camera::StreamImpl::Start() {
-  if (started_) {
-    FXL_LOG(ERROR) << "It is invalid to call Start on a Stream that is already started";
-    Shutdown(ZX_ERR_BAD_STATE);
-    return;
-  }
-  started_ = true;
-
-  zx_status_t status = protocol_.ops->start(protocol_.ctx);
-  if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status);
-    Shutdown(ZX_ERR_INTERNAL);
-    return;
+    isp_stream_protocol_->Stop();
   }
 }
 
 void camera::StreamImpl::Stop() {
   if (!started_) {
-    FXL_LOG(ERROR) << "It is invalid to call Stop on a Stream that is already stopped";
     Shutdown(ZX_ERR_BAD_STATE);
     return;
   }
-  started_ = false;
 
-  zx_status_t status = protocol_.ops->stop(protocol_.ctx);
-  if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status);
-    Shutdown(ZX_ERR_INTERNAL);
+  isp_stream_protocol_->Stop();
+  started_ = false;
+}
+
+void camera::StreamImpl::Start() {
+  if (started_) {
+    Shutdown(ZX_ERR_BAD_STATE);
     return;
   }
+  isp_stream_protocol_->Start();
+  started_ = true;
 }
 
 void camera::StreamImpl::ReleaseFrame(uint32_t buffer_id) {
-  auto it = held_buffers_.find(buffer_id);
-  if (it == held_buffers_.end()) {
-    FXL_LOG(ERROR) << "Client attempted to release unowned buffer " << buffer_id;
-    Shutdown(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  zx_status_t status = protocol_.ops->release_frame(protocol_.ctx, buffer_id);
-  if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status);
-    Shutdown(ZX_ERR_INTERNAL);
-  }
-  held_buffers_.erase(it);
+  isp_stream_protocol_->ReleaseFrame(buffer_id);
 }
 
 void camera::StreamImpl::AcknowledgeFrameError() {

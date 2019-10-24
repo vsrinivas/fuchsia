@@ -17,12 +17,15 @@
 #include <ddktl/protocol/isp.h>
 #include <fbl/mutex.h>
 
+#include "isp_stream_protocol.h"
+
 namespace camera {
 
 // Server-side implementation of a stream.
 class StreamImpl : public fuchsia::camera2::Stream {
  public:
-  StreamImpl(async_dispatcher_t* dispatcher);
+  StreamImpl(async_dispatcher_t* dispatcher,
+             std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol);
   ~StreamImpl();
 
   // Returns this instance's callback parameter for use with the Stream banjo interface.
@@ -30,7 +33,7 @@ class StreamImpl : public fuchsia::camera2::Stream {
 
   // Returns a pointer to this instance's protocol parameter, to be populated via the Stream banjo
   // interface.
-  output_stream_protocol_t* Protocol() { return &protocol_; }
+  output_stream_protocol_t* Protocol() { return isp_stream_protocol_->protocol(); }
 
   // Binds a channel to the stream.
   // Args:
@@ -66,11 +69,9 @@ class StreamImpl : public fuchsia::camera2::Stream {
   fidl::Binding<fuchsia::camera2::Stream> binding_;
   fit::function<void(void)> disconnect_handler_;
   output_stream_callback_t callbacks_;
-  output_stream_protocol_t protocol_;
-  output_stream_protocol_ops_t protocol_ops_;
-
   fbl::Mutex event_queue_lock_;
   std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
+  std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol_;
 };
 
 }  // namespace camera

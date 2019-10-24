@@ -12,8 +12,8 @@ group("camera") {
   deps = [
     "calibration",
     "camera_manager2",
-    "image_writer",
     "drivers",
+    "image_writer",
     "stream_utils",
   ]
 }
@@ -34,8 +34,8 @@ group("tests") {
 test_package("camera_full_test") {
   deps = [
     "//src/camera/calibration/blc/test:blc_test",
-    "//src/camera/image_writer/test:image_writer_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
+    "//src/camera/drivers/controller/test:controller-allocator-test",
     "//src/camera/drivers/controller/test:controller-protocol-test",
     "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
@@ -47,6 +47,7 @@ test_package("camera_full_test") {
     "//src/camera/drivers/sensors/mock-sensor:mock-sensor-integration-test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
     "//src/camera/drivers/virtual_camera/test:virtual_camera_test",
+    "//src/camera/image_writer/test:image_writer_test",
   ]
 
   tests = [
@@ -68,6 +69,11 @@ test_package("camera_full_test") {
     {
       name = "controller-test"
       manifest = "drivers/controller/test/meta/controller-test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "controller-allocator-test"
+      manifest = "drivers/controller/test/meta/controller-allocator-test.cmx"
       environments = basic_envs
     },
     {
@@ -131,8 +137,8 @@ test_package("camera_full_on_device_test") {
   deps = [
     "//src/camera/drivers/isp/mali-009/test:mali_009_test",
     "//src/camera/examples/demo/test",
-    "//src/camera/test/camera_streaming_test",
     "//src/camera/stream_utils/test:stream_utils_test",
+    "//src/camera/test/camera_streaming_test",
   ]
 
   tests = [
