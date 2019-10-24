@@ -7,27 +7,27 @@ use std::cmp::Ordering;
 use crate::{point::Point, GRID_LIMIT, PIXEL_WIDTH};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Edge<T> {
+pub struct Segment<T> {
     pub p0: Point<T>,
     pub p1: Point<T>,
 }
 
-impl<T> Edge<T> {
+impl<T> Segment<T> {
     pub fn new(p0: Point<T>, p1: Point<T>) -> Self {
         Self { p0, p1 }
     }
 }
 
-impl Edge<f32> {
-    fn to_subpixel(&self) -> Edge<i32> {
-        Edge { p0: self.p0.to_subpixel(), p1: self.p1.to_subpixel() }
+impl Segment<f32> {
+    fn to_subpixel(&self) -> Segment<i32> {
+        Segment { p0: self.p0.to_subpixel(), p1: self.p1.to_subpixel() }
     }
 
-    pub fn to_sp_edges(&self) -> Option<SubPixelEdges> {
+    pub fn to_sp_segments(&self) -> Option<SubPixelSegments> {
         let aligned = self.to_subpixel();
 
         if aligned.is_horizontal() {
-            // Skip horizontal edges
+            // Skip horizontal segments.
             return None;
         }
 
@@ -52,14 +52,14 @@ impl Edge<f32> {
 
         let slope = (aligned.p1.y - aligned.p0.y) as f32 / (aligned.p1.x - aligned.p0.x) as f32;
 
-        Some(SubPixelEdges {
+        Some(SubPixelSegments {
             start: aligned.p0,
             start_f: Point::new(aligned.p0.x as f32, aligned.p0.y as f32),
             current: aligned.p0,
             end: aligned.p1,
             is_done: false,
             axes,
-            direction: (direction_x, direction_y),
+            direction: Point::new(direction_x, direction_y),
             cached_x: None,
             cached_y: None,
             slope,
@@ -68,7 +68,7 @@ impl Edge<f32> {
     }
 }
 
-impl Edge<i32> {
+impl Segment<i32> {
     pub fn border(&self) -> Point<i32> {
         Point::new(self.p0.x.min(self.p1.x), self.p0.y.min(self.p1.y)).border()
     }
@@ -99,74 +99,61 @@ impl Edge<i32> {
     }
 }
 
-pub struct SubPixelEdges {
+pub struct SubPixelSegments {
     start: Point<i32>,
     start_f: Point<f32>,
     current: Point<i32>,
     end: Point<i32>,
     is_done: bool,
     axes: Point<i32>,
-    direction: (i32, i32),
+    direction: Point<i32>,
     cached_x: Option<Point<i32>>,
     cached_y: Option<Point<i32>>,
     slope: f32,
     slope_recip: f32,
 }
 
-impl SubPixelEdges {
+macro_rules! intersection {
+    ( @new, $slf:expr, x, $v:expr ) => (Some(Point::new($slf.axes.x, $v)));
+    ( @new, $slf:expr, y, $v:expr ) => (Some(Point::new($v, $slf.axes.y)));
+
+    ( $slf:expr, $cache:ident, $slope:ident, $x:ident, $y:ident ) => {{
+        if $slf.$cache.is_some() {
+            return $slf.$cache;
+        }
+
+        $slf.axes.$x += $slf.direction.$x;
+        let x0 = $slf.start_f.$x;
+        let y0 = $slf.start_f.$y;
+        let v = ($slf.$slope * ($slf.axes.$x as f32 - x0) + y0 + 0.5).floor();
+
+        if !v.is_finite() {
+            return None;
+        }
+
+        let v = v as i32;
+
+        if !(-GRID_LIMIT <= v && v <= GRID_LIMIT) {
+            return None;
+        }
+
+        $slf.$cache = intersection!(@new, $slf, $x, v);
+        $slf.$cache
+    }}
+}
+
+impl SubPixelSegments {
     fn next_x_intersection(&mut self) -> Option<Point<i32>> {
-        if self.cached_x.is_some() {
-            return self.cached_x;
-        }
-
-        self.axes.x += self.direction.0;
-        let x0 = self.start_f.x;
-        let y0 = self.start_f.y;
-        let y = (self.slope * (self.axes.x as f32 - x0) + y0 + 0.5).floor();
-
-        if !y.is_finite() {
-            return None;
-        }
-
-        let y = y as i32;
-
-        if !(-GRID_LIMIT <= y && y <= GRID_LIMIT) {
-            return None;
-        }
-
-        let point = Some(Point::new(self.axes.x, y));
-        self.cached_x = point;
-        point
+        intersection!(self, cached_x, slope, x, y)
     }
 
     fn next_y_intersection(&mut self) -> Option<Point<i32>> {
-        if self.cached_y.is_some() {
-            return self.cached_y;
-        }
-
-        self.axes.y += self.direction.1;
-        let x0 = self.start_f.x;
-        let y0 = self.start_f.y;
-        let x = (self.slope_recip * (self.axes.y as f32 - y0) + x0 + 0.5).floor();
-
-        if !x.is_finite() {
-            return None;
-        }
-
-        let x = x as i32;
-
-        if !(-GRID_LIMIT <= x && x <= GRID_LIMIT) {
-            return None;
-        }
-
-        let point = Some(Point::new(x, self.axes.y));
-        self.cached_y = point;
-        point
+        intersection!(self, cached_y, slope_recip, y, x)
     }
 }
 
-impl Iterator for SubPixelEdges {
-    type Item = Edge<i32>;
+impl Iterator for SubPixelSegments {
+    type Item = Segment<i32>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start == self.end {
@@ -202,21 +189,21 @@ impl Iterator for SubPixelEdges {
                 self.cached_y = None;
                 y
             }
-            (None, None) => panic!("path exceeds grid limit (-32,768 to 32,768)"),
+            (None, None) => panic!("path exceeds grid limit (-{0} to {0})", GRID_LIMIT),
         };
 
         if self.current.manhattan_distance(self.end) < self.current.manhattan_distance(next) {
             self.is_done = true;
             return if self.current != self.end {
-                Some(Edge::new(self.current, self.end))
+                Some(Segment::new(self.current, self.end))
             } else {
                 None
             };
         }
 
-        let edge = Some(Edge::new(self.current, next));
+        let segment = Some(Segment::new(self.current, next));
         self.current = next;
-        edge
+        segment
     }
 }
 
@@ -225,11 +212,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn empty_edge() {
+    fn empty_segment() {
         let p0 = Point::new(0.5, 0.5);
         let p1 = p0;
 
-        assert!(Edge::new(p0, p1).to_sp_edges().is_none());
+        assert!(Segment::new(p0, p1).to_sp_segments().is_none());
     }
 
     #[test]
@@ -237,7 +224,7 @@ mod tests {
         let p0 = Point::new(0.5, 0.5);
         let p1 = Point::new(3.5, 0.5);
 
-        assert!(Edge::new(p0, p1).to_sp_edges().is_none());
+        assert!(Segment::new(p0, p1).to_sp_segments().is_none());
     }
 
     #[test]
@@ -246,10 +233,10 @@ mod tests {
         let p1 = Point::new(0.5, -0.5);
 
         assert_eq!(
-            Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
+            Segment::new(p0, p1).to_sp_segments().unwrap().collect::<Vec<_>>(),
             vec![
-                Edge::new(Point::new(8, 8), Point::new(8, 0)),
-                Edge::new(Point::new(8, 0), Point::new(8, -8)),
+                Segment::new(Point::new(8, 8), Point::new(8, 0)),
+                Segment::new(Point::new(8, 0), Point::new(8, -8)),
             ],
         );
     }
@@ -260,12 +247,12 @@ mod tests {
         let p1 = Point::new(0.5, -2.5);
 
         assert_eq!(
-            Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
+            Segment::new(p0, p1).to_sp_segments().unwrap().collect::<Vec<_>>(),
             vec![
-                Edge::new(Point::new(8, 8), Point::new(8, 0)),
-                Edge::new(Point::new(8, 0), Point::new(8, -16)),
-                Edge::new(Point::new(8, -16), Point::new(8, -32)),
-                Edge::new(Point::new(8, -32), Point::new(8, -40)),
+                Segment::new(Point::new(8, 8), Point::new(8, 0)),
+                Segment::new(Point::new(8, 0), Point::new(8, -16)),
+                Segment::new(Point::new(8, -16), Point::new(8, -32)),
+                Segment::new(Point::new(8, -32), Point::new(8, -40)),
             ],
         );
     }
@@ -276,12 +263,12 @@ mod tests {
         let p1 = Point::new(-2.5, -2.5);
 
         assert_eq!(
-            Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
+            Segment::new(p0, p1).to_sp_segments().unwrap().collect::<Vec<_>>(),
             vec![
-                Edge::new(Point::new(8, 8), Point::new(0, 0)),
-                Edge::new(Point::new(0, 0), Point::new(-16, -16)),
-                Edge::new(Point::new(-16, -16), Point::new(-32, -32)),
-                Edge::new(Point::new(-32, -32), Point::new(-40, -40)),
+                Segment::new(Point::new(8, 8), Point::new(0, 0)),
+                Segment::new(Point::new(0, 0), Point::new(-16, -16)),
+                Segment::new(Point::new(-16, -16), Point::new(-32, -32)),
+                Segment::new(Point::new(-32, -32), Point::new(-40, -40)),
             ],
         );
     }
@@ -292,15 +279,15 @@ mod tests {
         let p1 = Point::new(-2.25, -2.75);
 
         assert_eq!(
-            Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
+            Segment::new(p0, p1).to_sp_segments().unwrap().collect::<Vec<_>>(),
             vec![
-                Edge::new(Point::new(12, 4), Point::new(8, 0)),
-                Edge::new(Point::new(8, 0), Point::new(0, -8)),
-                Edge::new(Point::new(0, -8), Point::new(-8, -16)),
-                Edge::new(Point::new(-8, -16), Point::new(-16, -24)),
-                Edge::new(Point::new(-16, -24), Point::new(-24, -32)),
-                Edge::new(Point::new(-24, -32), Point::new(-32, -40)),
-                Edge::new(Point::new(-32, -40), Point::new(-36, -44)),
+                Segment::new(Point::new(12, 4), Point::new(8, 0)),
+                Segment::new(Point::new(8, 0), Point::new(0, -8)),
+                Segment::new(Point::new(0, -8), Point::new(-8, -16)),
+                Segment::new(Point::new(-8, -16), Point::new(-16, -24)),
+                Segment::new(Point::new(-16, -24), Point::new(-24, -32)),
+                Segment::new(Point::new(-24, -32), Point::new(-32, -40)),
+                Segment::new(Point::new(-32, -40), Point::new(-36, -44)),
             ],
         );
     }
@@ -313,8 +300,8 @@ mod tests {
             let p1 = Point::new(angle.cos() * RADIUS, angle.sin() * RADIUS);
 
             assert_eq!(
-                match Edge::new(p0, p1).to_sp_edges() {
-                    Some(edges) => edges.collect::<Vec<_>>().len(),
+                match Segment::new(p0, p1).to_sp_segments() {
+                    Some(segments) => segments.collect::<Vec<_>>().len(),
                     None => 0,
                 },
                 intersections,
@@ -342,61 +329,61 @@ mod tests {
     }
 
     #[test]
-    fn horizontal_edge() {
-        let edge = Edge::new(Point::new(1, 1), Point::new(3, 1));
+    fn horizontal_segment() {
+        let segment = Segment::new(Point::new(1, 1), Point::new(3, 1));
 
-        assert_eq!(edge.double_signed_area(), 0);
-        assert_eq!(edge.cover(), 0);
+        assert_eq!(segment.double_signed_area(), 0);
+        assert_eq!(segment.cover(), 0);
     }
 
     #[test]
-    fn vertical_edge() {
-        let edge = Edge::new(Point::new(1, 1), Point::new(1, 3));
+    fn vertical_segment() {
+        let segment = Segment::new(Point::new(1, 1), Point::new(1, 3));
 
-        assert_eq!(edge.double_signed_area(), 60);
-        assert_eq!(edge.cover(), 2);
+        assert_eq!(segment.double_signed_area(), 60);
+        assert_eq!(segment.cover(), 2);
     }
 
     #[test]
-    fn vertical_edge_negative() {
-        let edge =
-            Edge::new(Point::new(1 - 16 * 5, 1 - 16 * 5), Point::new(1 - 16 * 5, 3 - 16 * 5));
+    fn vertical_segment_negative() {
+        let segment =
+            Segment::new(Point::new(1 - 16 * 5, 1 - 16 * 5), Point::new(1 - 16 * 5, 3 - 16 * 5));
 
-        assert_eq!(edge.double_signed_area(), 60);
-        assert_eq!(edge.cover(), 2);
+        assert_eq!(segment.double_signed_area(), 60);
+        assert_eq!(segment.cover(), 2);
     }
 
     #[test]
-    fn slanted_edge() {
-        let edge = Edge::new(Point::new(1, 1), Point::new(3, 3));
+    fn slanted_segment() {
+        let segment = Segment::new(Point::new(1, 1), Point::new(3, 3));
 
-        assert_eq!(edge.double_signed_area(), 56);
-        assert_eq!(edge.cover(), 2);
+        assert_eq!(segment.double_signed_area(), 56);
+        assert_eq!(segment.cover(), 2);
     }
 
     #[test]
-    fn slanted_edge_flipped() {
-        let edge = Edge::new(Point::new(3, 3), Point::new(1, 1));
+    fn slanted_segment_flipped() {
+        let segment = Segment::new(Point::new(3, 3), Point::new(1, 1));
 
-        assert_eq!(edge.double_signed_area(), -56);
-        assert_eq!(edge.cover(), -2);
+        assert_eq!(segment.double_signed_area(), -56);
+        assert_eq!(segment.cover(), -2);
     }
 
     #[test]
-    fn slanted_edge_negative() {
-        let edge =
-            Edge::new(Point::new(1 - 16 * 5, 1 - 16 * 5), Point::new(3 - 16 * 5, 3 - 16 * 5));
+    fn slanted_segment_negative() {
+        let segment =
+            Segment::new(Point::new(1 - 16 * 5, 1 - 16 * 5), Point::new(3 - 16 * 5, 3 - 16 * 5));
 
-        assert_eq!(edge.double_signed_area(), 56);
-        assert_eq!(edge.cover(), 2);
+        assert_eq!(segment.double_signed_area(), 56);
+        assert_eq!(segment.cover(), 2);
     }
 
     #[test]
-    fn slanted_edge_flipped_negative() {
-        let edge =
-            Edge::new(Point::new(3 - 16 * 5, 3 - 16 * 5), Point::new(1 - 16 * 5, 1 - 16 * 5));
+    fn slanted_segment_flipped_negative() {
+        let segment =
+            Segment::new(Point::new(3 - 16 * 5, 3 - 16 * 5), Point::new(1 - 16 * 5, 1 - 16 * 5));
 
-        assert_eq!(edge.double_signed_area(), -56);
-        assert_eq!(edge.cover(), -2);
+        assert_eq!(segment.double_signed_area(), -56);
+        assert_eq!(segment.cover(), -2);
     }
 }

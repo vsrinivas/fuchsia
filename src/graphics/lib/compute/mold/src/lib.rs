@@ -2,18 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod edge;
 mod painter;
 mod path;
 mod point;
 mod raster;
+mod segment;
 pub mod tile;
 
 // Must be power of 2.
 const PIXEL_WIDTH: i32 = 16;
-// Basically log2(PIXEL_WIDTH).
-const PIXEL_SHIFT: i32 = 4;
-const GRID_LIMIT: i32 = 32_768 * PIXEL_WIDTH;
+const PIXEL_MASK: i32 = PIXEL_WIDTH - 1;
+// Basically `PIXEL_WIDTH.log2()`.
+const PIXEL_SHIFT: i32 = PIXEL_WIDTH.trailing_zeros() as i32;
+// `f32` provides integer precision for +/- 16,777,216 values. Halving the value by 2 double the
+// precision. In order for `f32` to accommodate `PIXEL_WIDTH` sub-pixels, the value needs to be
+// divided by `PIXEL_WIDTH`. Anything beyond these values will not be able to take advantage of the
+// full accuracy of the sub-pixel representation and does not make sense.
+//
+// `GRID_LIMIT * PIXEL_WIDTH` must not exceed `i32::max_value()`.
+const GRID_LIMIT: i32 = 16_777_216 / PIXEL_WIDTH;
 
 pub use painter::{ColorBuffer, PixelFormat};
 pub use path::Path;

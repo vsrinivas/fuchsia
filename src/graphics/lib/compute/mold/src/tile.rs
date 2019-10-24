@@ -14,10 +14,10 @@ use std::{
 use fuchsia_trace::{self, duration};
 
 use crate::{
-    edge::Edge,
     painter::{Context, Painter},
     point::Point,
-    raster::{Raster, RasterEdges},
+    raster::{Raster, RasterSegment},
+    segment::Segment,
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
 
@@ -87,7 +87,7 @@ ops! {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum LayerNode {
     Layer(u32, Point<i32>),
-    Edges(Point<i32>, Range<usize>),
+    Segments(Point<i32>, Range<usize>),
 }
 
 #[derive(Clone, Debug)]
@@ -108,21 +108,21 @@ impl Tile {
         self.needs_render = true;
     }
 
-    pub fn push_edge(&mut self, start_point: Point<i32>, edge_range: Range<usize>) {
+    pub fn push_segment(&mut self, start_point: Point<i32>, segment_range: Range<usize>) {
         if let Some(LayerNode::Layer(..)) = self.layers.last() {
-            self.layers.push(LayerNode::Edges(start_point, edge_range));
+            self.layers.push(LayerNode::Segments(start_point, segment_range));
             return;
         }
 
         let old_range = match self.layers.last_mut() {
-            Some(LayerNode::Edges(_, range)) => range,
-            _ => panic!("Tile::new_layer should be called before Tile::push_edge"),
+            Some(LayerNode::Segments(_, range)) => range,
+            _ => panic!("Tile::new_layer should be called before Tile::push_segment"),
         };
 
-        if old_range.end == edge_range.start {
-            old_range.end = edge_range.end;
+        if old_range.end == segment_range.start {
+            old_range.end = segment_range.end;
         } else {
-            self.layers.push(LayerNode::Edges(start_point, edge_range));
+            self.layers.push(LayerNode::Segments(start_point, segment_range));
         }
     }
 
@@ -144,26 +144,26 @@ impl Tiles {
         &mut self.tiles[i + j * self.width]
     }
 
-    fn print_edge(
+    fn print_segment(
         &mut self,
         height: usize,
-        edge: &Edge<i32>,
-        edge_range: Range<usize>,
+        segment: &Segment<i32>,
+        segment_range: Range<usize>,
         raster: &Raster,
         is_partial: bool,
     ) {
-        let p0 = edge.p0;
-        let edge = edge.translate(Point::new(
+        let p0 = segment.p0;
+        let segment = segment.translate(Point::new(
             raster.translation().x * PIXEL_WIDTH,
             raster.translation().y * PIXEL_WIDTH,
         ));
-        let (i, j) = edge_tile(&edge);
+        let (i, j) = segment_tile(&segment);
         let i = i.max(0);
 
         if 0 <= j && (j as usize) < height {
             raster.tile_contour().for_each_tile_from(self, i as usize, j as usize, |tile| {
                 if !is_partial || tile.needs_render {
-                    tile.push_edge(p0, edge_range.clone());
+                    tile.push_segment(p0, segment_range.clone());
                 }
             });
         }
@@ -184,11 +184,11 @@ impl IndexMut<usize> for Tiles {
     }
 }
 
-fn edge_tile(edge: &Edge<i32>) -> (i32, i32) {
-    let mut p0 = edge.p0;
+fn segment_tile(segment: &Segment<i32>) -> (i32, i32) {
+    let mut p0 = segment.p0;
     p0.x >>= PIXEL_SHIFT;
     p0.y >>= PIXEL_SHIFT;
-    let mut p1 = edge.p1;
+    let mut p1 = segment.p1;
     p1.x >>= PIXEL_SHIFT;
     p1.y >>= PIXEL_SHIFT;
 
@@ -226,8 +226,8 @@ impl TileContourBuilder {
         TileContour::Maxed
     }
 
-    pub fn enclose(&mut self, edge: &Edge<i32>) -> Option<(i32, i32)> {
-        let (i, j) = edge_tile(edge);
+    pub fn enclose(&mut self, segment: &Segment<i32>) -> Option<(i32, i32)> {
+        let (i, j) = segment_tile(segment);
 
         self.tiles.insert((j, i));
         Some((i, j))
@@ -404,13 +404,13 @@ impl TileContour {
 pub struct Layer {
     raster: Raster,
     ops: Vec<TileOp>,
-    new_edges: Cell<bool>,
+    new_segments: Cell<bool>,
     is_partial: Cell<bool>,
 }
 
 impl Layer {
     pub fn new(raster: Raster, ops: Vec<TileOp>) -> Self {
-        Self { raster, ops, new_edges: Cell::new(true), is_partial: Cell::new(false) }
+        Self { raster, ops, new_segments: Cell::new(true), is_partial: Cell::new(false) }
     }
 }
 
@@ -424,8 +424,8 @@ impl<'m> Layers<'m> {
         Self { layers }
     }
 
-    pub fn edges(&self, id: &u32) -> Option<&RasterEdges> {
-        self.layers.get(id).map(|layer| layer.raster.edges())
+    pub fn segments(&self, id: &u32) -> Option<&RasterSegment> {
+        self.layers.get(id).map(|layer| layer.raster.segments())
     }
 
     pub fn ops(&self, id: &u32) -> Option<&[TileOp]> {
@@ -435,7 +435,7 @@ impl<'m> Layers<'m> {
 
 // This is safe as long as:
 //   1. The `Rc` in `Layer.raster` is not cloned.
-//   2. The `Cell` in the `Layer.new_edges` is not mutated.
+//   2. The `Cell` in the `Layer.new_segments` is not mutated.
 //
 // The interface above is made to ensure these requirements. The reference to the `HashMap` is
 // mutable in oder to guarantee unique access without having to move th whole `HashMap` in and out
@@ -525,18 +525,18 @@ impl Map {
             }
         });
 
-        let mut edges = raster.edges().iter();
-        let mut prev_index = edges.index();
+        let mut segments = raster.segments().iter();
+        let mut prev_index = segments.index();
 
-        while let Some(edge) = edges.next() {
-            tiles.print_edge(
+        while let Some(segment) = segments.next() {
+            tiles.print_segment(
                 height,
-                &edge,
-                prev_index..edges.index(),
+                &segment,
+                prev_index..segments.index(),
                 &raster,
                 layer.is_partial.get(),
             );
-            prev_index = edges.index();
+            prev_index = segments.index();
         }
     }
 
@@ -544,7 +544,7 @@ impl Map {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Map::reprint_all");
         for layer in self.layers.values() {
-            if layer.new_edges.get() {
+            if layer.new_segments.get() {
                 let raster = layer.raster.clone();
                 raster
                     .tile_contour()
@@ -557,7 +557,7 @@ impl Map {
                 for node in &tile.layers {
                     if let LayerNode::Layer(id, _) = node {
                         if let Some(layer) = self.layers.get(id) {
-                            if !layer.new_edges.get() {
+                            if !layer.new_segments.get() {
                                 layer.is_partial.set(true);
                             }
                         }
@@ -570,10 +570,10 @@ impl Map {
         }
 
         for (id, layer) in &self.layers {
-            if layer.new_edges.get() || layer.is_partial.get() {
+            if layer.new_segments.get() || layer.is_partial.get() {
                 Self::print_changes(&mut self.tiles, self.height, *id, layer);
 
-                layer.new_edges.set(false);
+                layer.new_segments.set(false);
                 layer.is_partial.set(false);
             }
         }
@@ -676,20 +676,20 @@ mod tests {
         let map = Map::new(TILE_SIZE * 5, TILE_SIZE * 3);
         let mut tile_contour_builder = TileContourBuilder::new();
 
-        let edge = Edge::new(
+        let segment = Segment::new(
             Point::new(TILE_SIZE as f32 * 3.0, TILE_SIZE as f32 * 3.0),
             Point::new(0.0, 0.0),
         );
-        for edge in edge.to_sp_edges().unwrap() {
-            tile_contour_builder.enclose(&edge);
+        for segment in segment.to_sp_segments().unwrap() {
+            tile_contour_builder.enclose(&segment);
         }
 
-        let edge = Edge::new(
+        let segment = Segment::new(
             Point::new(TILE_SIZE as f32 * 5.0, TILE_SIZE as f32 * 3.0),
             Point::new(TILE_SIZE as f32 * 2.0, 0.0),
         );
-        for edge in edge.to_sp_edges().unwrap() {
-            tile_contour_builder.enclose(&edge);
+        for segment in segment.to_sp_segments().unwrap() {
+            tile_contour_builder.enclose(&segment);
         }
 
         (map, tile_contour_builder.build())
@@ -754,8 +754,8 @@ mod tests {
         map.print(id, Layer::new(raster, vec![TileOp::CoverWipNonZero]));
     }
 
-    fn edges(raster: &Raster, range: Range<usize>) -> LayerNode {
-        let mut edges = raster.edges().iter();
+    fn segments(raster: &Raster, range: Range<usize>) -> LayerNode {
+        let mut segments = raster.segments().iter();
         let mut i = 0;
 
         let mut point = None;
@@ -763,9 +763,9 @@ mod tests {
         let mut end = None;
 
         loop {
-            let index = edges.index();
+            let index = segments.index();
 
-            if let Some(current_point) = edges.next().map(|edge| edge.p0) {
+            if let Some(current_point) = segments.next().map(|segment| segment.p0) {
                 if i == range.start {
                     start = Some(index);
                     point = Some(current_point);
@@ -782,14 +782,14 @@ mod tests {
         }
 
         if i == range.end {
-            end = Some(edges.index());
+            end = Some(segments.index());
         }
 
-        LayerNode::Edges(point.unwrap(), start.unwrap()..end.unwrap())
+        LayerNode::Segments(point.unwrap(), start.unwrap()..end.unwrap())
     }
 
     #[test]
-    fn tile_edges_and_rasters() {
+    fn tile_segments_and_rasters() {
         let mut map = Map::new(TILE_SIZE * 3, TILE_SIZE * 3);
 
         let mut path = Path::new();
@@ -807,36 +807,36 @@ mod tests {
 
         assert_eq!(
             map.tiles[0].layers,
-            vec![LayerNode::Layer(0, Point::new(0, 0)), edges(&raster, 0..HALF)],
+            vec![LayerNode::Layer(0, Point::new(0, 0)), segments(&raster, 0..HALF)],
         );
         assert_eq!(
             map.tiles[1].layers,
             vec![
                 LayerNode::Layer(0, Point::new(0, 0)),
-                edges(&raster, 0..HALF),
-                edges(&raster, HALF * 3..HALF * 4)
+                segments(&raster, 0..HALF),
+                segments(&raster, HALF * 3..HALF * 4)
             ]
         );
         assert_eq!(map.tiles[2].layers, vec![]);
         assert_eq!(
             map.tiles[3].layers,
-            vec![LayerNode::Layer(0, Point::new(0, 0)), edges(&raster, HALF..HALF * 2)]
+            vec![LayerNode::Layer(0, Point::new(0, 0)), segments(&raster, HALF..HALF * 2)]
         );
         assert_eq!(
             map.tiles[4].layers,
             vec![
                 LayerNode::Layer(0, Point::new(0, 0)),
-                edges(&raster, HALF..HALF * 3),
+                segments(&raster, HALF..HALF * 3),
                 LayerNode::Layer(1, Point::new(TILE_SIZE as i32, TILE_SIZE as i32)),
-                edges(&translated, 0..HALF),
+                segments(&translated, 0..HALF),
             ]
         );
         assert_eq!(
             map.tiles[5].layers,
             vec![
                 LayerNode::Layer(1, Point::new(TILE_SIZE as i32, TILE_SIZE as i32)),
-                edges(&translated, 0..HALF),
-                edges(&translated, HALF * 3..HALF * 4),
+                segments(&translated, 0..HALF),
+                segments(&translated, HALF * 3..HALF * 4),
             ]
         );
         assert_eq!(map.tiles[6].layers, vec![]);
@@ -844,14 +844,14 @@ mod tests {
             map.tiles[7].layers,
             vec![
                 LayerNode::Layer(1, Point::new(TILE_SIZE as i32, TILE_SIZE as i32)),
-                edges(&translated, HALF..HALF * 2)
+                segments(&translated, HALF..HALF * 2)
             ]
         );
         assert_eq!(
             map.tiles[8].layers,
             vec![
                 LayerNode::Layer(1, Point::new(TILE_SIZE as i32, TILE_SIZE as i32)),
-                edges(&translated, HALF..HALF * 3)
+                segments(&translated, HALF..HALF * 3)
             ]
         );
     }
@@ -873,8 +873,8 @@ mod tests {
             map.tiles[0].layers,
             vec![
                 LayerNode::Layer(0, Point::new(0, 0)),
-                edges(&raster, 0..HALF),
-                edges(&raster, HALF * 3..HALF * 4),
+                segments(&raster, 0..HALF),
+                segments(&raster, HALF * 3..HALF * 4),
             ],
         );
     }
@@ -923,7 +923,7 @@ mod tests {
             vec![
                 LayerNode::Layer(0, Point::new(0, 0)),
                 LayerNode::Layer(1, Point::new(TILE_SIZE as i32, TILE_SIZE as i32)),
-                edges(&raster, 0..HALF),
+                segments(&raster, 0..HALF),
             ],
         );
     }
@@ -982,7 +982,7 @@ mod tests {
             vec![
                 LayerNode::Layer(0, Point::new(0, 0)),
                 LayerNode::Layer(1, Point::new(0, 0)),
-                edges(&raster, 0..TILE_SIZE),
+                segments(&raster, 0..TILE_SIZE),
             ],
         );
 
@@ -1005,7 +1005,7 @@ mod tests {
             vec![
                 LayerNode::Layer(0, Point::new(0, 0)),
                 LayerNode::Layer(1, Point::new(0, 0)),
-                edges(&raster, 0..TILE_SIZE),
+                segments(&raster, 0..TILE_SIZE),
             ],
         );
 

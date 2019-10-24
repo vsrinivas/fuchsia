@@ -332,7 +332,7 @@ impl Styling {
                         if parent.is_some() {
                             let raster =
                                 cached_unions.entry((*range_lo, *range_hi)).or_insert_with(|| {
-                                    Raster::union_without_edges(
+                                    Raster::union_without_segments(
                                         (*range_lo..=*range_hi)
                                             .flat_map(|layer_id| layers.get(&layer_id)),
                                     )

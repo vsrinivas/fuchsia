@@ -8,9 +8,9 @@ use std::mem;
 use fuchsia_trace::duration;
 
 use crate::{
-    edge::Edge,
     point::Point,
-    raster::{RasterEdges, RasterEdgesIter},
+    raster::{RasterSegment, RasterSegmentsIter},
+    segment::Segment,
     tile::{LayerNode, Layers, Tile, TileOp, TILE_SIZE},
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
@@ -79,27 +79,27 @@ pub struct Painter {
 }
 
 #[derive(Clone, Debug)]
-struct Edges<'t> {
+struct Segments<'t> {
     tile: &'t Tile,
-    edges: &'t RasterEdges,
+    segments: &'t RasterSegment,
     index: usize,
-    inner_edges: Option<RasterEdgesIter<'t>>,
+    inner_segments: Option<RasterSegmentsIter<'t>>,
     pub translation: Point<i32>,
 }
 
-impl<'t> Iterator for Edges<'t> {
-    type Item = Edge<i32>;
+impl<'t> Iterator for Segments<'t> {
+    type Item = Segment<i32>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(edges) = self.inner_edges.as_mut() {
-            if let Some(edge) = edges.next() {
-                return Some(edge);
+        if let Some(segments) = self.inner_segments.as_mut() {
+            if let Some(segment) = segments.next() {
+                return Some(segment);
             }
         }
 
-        if let Some(LayerNode::Edges(start_point, range)) = self.tile.layers.get(self.index) {
+        if let Some(LayerNode::Segments(start_point, range)) = self.tile.layers.get(self.index) {
             self.index += 1;
-            self.inner_edges = Some(self.edges.from(*start_point, range.clone()));
+            self.inner_segments = Some(self.segments.from(*start_point, range.clone()));
 
             return self.next();
         }
@@ -164,8 +164,8 @@ impl Painter {
         &mut self.cells[i + j * (TILE_SIZE + 1)]
     }
 
-    fn cover_line(&mut self, edge: &Edge<i32>) {
-        let border = edge.border();
+    fn cover_line(&mut self, segment: &Segment<i32>) {
+        let border = segment.border();
 
         let i = border.x >> PIXEL_SHIFT;
         let j = border.y >> PIXEL_SHIFT;
@@ -174,12 +174,12 @@ impl Painter {
             if i >= 0 {
                 let mut cell = self.cell_mut(i as usize + 1, j as usize);
 
-                cell.area += edge.double_signed_area();
-                cell.cover += edge.cover();
+                cell.area += segment.double_signed_area();
+                cell.cover += segment.cover();
             } else {
                 let mut cell = self.cell_mut(0, j as usize);
 
-                cell.cover += edge.cover();
+                cell.cover += segment.cover();
             }
         }
     }
@@ -235,7 +235,7 @@ impl Painter {
 
     fn cover_wip(
         &mut self,
-        edges: impl Iterator<Item = Edge<i32>> + Clone,
+        segments: impl Iterator<Item = Segment<i32>> + Clone,
         translation: Point<i32>,
         tile_i: usize,
         tile_j: usize,
@@ -250,12 +250,11 @@ impl Painter {
             self.cells[i] = Cell::default();
         }
 
-        for edge in edges {
-            let edge = Edge::new(
-                Point::new(edge.p0.x + delta.x, edge.p0.y + delta.y),
-                Point::new(edge.p1.x + delta.x, edge.p1.y + delta.y),
-            );
-            self.cover_line(&edge);
+        for segment in segments {
+            self.cover_line(&Segment::new(
+                Point::new(segment.p0.x + delta.x, segment.p0.y + delta.y),
+                Point::new(segment.p1.x + delta.x, segment.p1.y + delta.y),
+            ));
         }
         self.accumulate(fill_rule);
     }
@@ -387,7 +386,7 @@ impl Painter {
     fn process_layer<'a, 'b, B: ColorBuffer>(
         &'a mut self,
         context: &'b Context<B>,
-    ) -> Option<(Edges<'b>, &'b [TileOp])> {
+    ) -> Option<(Segments<'b>, &'b [TileOp])> {
         let tile = &context.tile;
 
         if let Some(layer) = tile.layers.get(self.layer_index) {
@@ -403,11 +402,11 @@ impl Painter {
                 .map(|(i, _)| i)
                 .unwrap_or_else(|| tile.layers.len() - self.layer_index);
 
-            let (edges, translation, ops) = match layer {
+            let (segments, translation, ops) = match layer {
                 LayerNode::Layer(id, translation) => {
                     let layers = &context.layers;
-                    if let (Some(edges), Some(ops)) = (layers.edges(id), layers.ops(id)) {
-                        (edges, *translation, ops)
+                    if let (Some(segments), Some(ops)) = (layers.segments(id), layers.ops(id)) {
+                        (segments, *translation, ops)
                     } else {
                         // Skip Layers that are not present in the Map anymore.
                         self.layer_index += next_index;
@@ -415,16 +414,21 @@ impl Painter {
                     }
                 }
                 _ => panic!(
-                    "self.layer_index must not point at a Layer::Edges before \
+                    "self.layer_index must not point at a Layer::Segments before \
                      Painter::process_layer"
                 ),
             };
 
-            let edges =
-                Edges { tile, edges, index: self.layer_index, inner_edges: None, translation };
+            let segments = Segments {
+                tile,
+                segments,
+                index: self.layer_index,
+                inner_segments: None,
+                translation,
+            };
 
             self.layer_index += next_index;
-            return Some((edges, &ops));
+            return Some((segments, &ops));
         }
 
         None
@@ -474,22 +478,22 @@ impl Painter {
             "j" => context.tile.tile_j as u64
         );
 
-        while let Some((edges, ops)) = self.process_layer(&context) {
+        while let Some((segments, ops)) = self.process_layer(&context) {
             for op in ops {
                 #[cfg(feature = "tracing")]
                 duration!("gfx:mold", "Painter::execute_op", "op" => op.name());
                 match op {
                     TileOp::CoverWipZero => self.cover_wip_zero(),
                     TileOp::CoverWipNonZero => self.cover_wip(
-                        edges.clone(),
-                        edges.translation,
+                        segments.clone(),
+                        segments.translation,
                         context.tile.tile_i,
                         context.tile.tile_j,
                         FillRule::NonZero,
                     ),
                     TileOp::CoverWipEvenOdd => self.cover_wip(
-                        edges.clone(),
-                        edges.translation,
+                        segments.clone(),
+                        segments.translation,
                         context.tile.tile_i,
                         context.tile.tile_j,
                         FillRule::EvenOdd,
@@ -558,7 +562,7 @@ mod tests {
     fn get_cover(width: usize, height: usize, raster: &Raster, fill_rule: FillRule) -> Vec<u8> {
         let mut painter = Painter::new();
 
-        painter.cover_wip(raster.edges().iter(), Point::new(0, 0), 0, 0, fill_rule);
+        painter.cover_wip(raster.segments().iter(), Point::new(0, 0), 0, 0, fill_rule);
 
         let mut cover = Vec::with_capacity(width * height);
 

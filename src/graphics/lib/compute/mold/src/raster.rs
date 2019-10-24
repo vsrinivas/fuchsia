@@ -13,9 +13,9 @@ use std::{
 use fuchsia_trace::duration;
 
 use crate::{
-    edge::Edge,
     path::Path,
     point::Point,
+    segment::Segment,
     tile::{TileContour, TileContourBuilder},
 };
 
@@ -55,68 +55,72 @@ const RASTER_COMMAND_MASK: u8 = 0b1000000;
 const RASTER_COMMAND_MOVE: u8 = 0b0000000;
 const RASTER_COMMAND_SEGMENT: u8 = 0b1000000;
 
-pub struct RasterEdges {
+pub struct RasterSegment {
     commands: Vec<u8>,
 }
 
-impl RasterEdges {
+impl RasterSegment {
     pub fn new() -> Self {
         Self { commands: vec![] }
     }
 
-    pub fn iter(&self) -> RasterEdgesIter {
-        RasterEdgesIter { commands: &self.commands, index: 0, end_point: None }
+    pub fn iter(&self) -> RasterSegmentsIter {
+        RasterSegmentsIter { commands: &self.commands, index: 0, end_point: None }
     }
 
-    pub fn from(&self, start_point: Point<i32>, range: Range<usize>) -> RasterEdgesIter {
-        RasterEdgesIter { commands: &self.commands[range], index: 0, end_point: Some(start_point) }
+    pub fn from(&self, start_point: Point<i32>, range: Range<usize>) -> RasterSegmentsIter {
+        RasterSegmentsIter {
+            commands: &self.commands[range],
+            index: 0,
+            end_point: Some(start_point),
+        }
     }
 }
 
-impl FromIterator<Edge<i32>> for RasterEdges {
-    fn from_iter<T: IntoIterator<Item = Edge<i32>>>(iter: T) -> Self {
+impl FromIterator<Segment<i32>> for RasterSegment {
+    fn from_iter<T: IntoIterator<Item = Segment<i32>>>(iter: T) -> Self {
         let mut commands = vec![];
         let mut end_point = None;
 
-        for edge in iter {
-            if end_point != Some(edge.p0) {
+        for segment in iter {
+            if end_point != Some(segment.p0) {
                 commands.push(RASTER_COMMAND_MOVE);
 
-                commands.extend(&edge.p0.x.to_be_bytes());
-                commands.extend(&edge.p0.y.to_be_bytes());
+                commands.extend(&segment.p0.x.to_be_bytes());
+                commands.extend(&segment.p0.y.to_be_bytes());
             }
 
-            let diff = CompactDiff::new(edge.p1.x - edge.p0.x, edge.p1.y - edge.p0.y);
+            let diff = CompactDiff::new(segment.p1.x - segment.p0.x, segment.p1.y - segment.p0.y);
             commands.extend(&diff.value.to_be_bytes());
 
-            end_point = Some(edge.p1);
+            end_point = Some(segment.p1);
         }
 
         Self { commands }
     }
 }
 
-impl fmt::Debug for RasterEdges {
+impl fmt::Debug for RasterSegment {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct RasterEdgesIter<'c> {
+pub struct RasterSegmentsIter<'c> {
     commands: &'c [u8],
     index: usize,
     end_point: Option<Point<i32>>,
 }
 
-impl RasterEdgesIter<'_> {
+impl RasterSegmentsIter<'_> {
     pub fn index(&self) -> usize {
         self.index
     }
 }
 
-impl Iterator for RasterEdgesIter<'_> {
-    type Item = Edge<i32>;
+impl Iterator for RasterSegmentsIter<'_> {
+    type Item = Segment<i32>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(command) = self.commands.get(self.index) {
@@ -152,7 +156,7 @@ impl Iterator for RasterEdgesIter<'_> {
                     self.end_point =
                         Some(Point::new(start_point.x + diff.dx(), start_point.y + diff.dy()));
 
-                    Some(Edge::new(start_point, self.end_point.unwrap()))
+                    Some(Segment::new(start_point, self.end_point.unwrap()))
                 }
                 _ => unreachable!(),
             }
@@ -165,7 +169,7 @@ impl Iterator for RasterEdgesIter<'_> {
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct RasterInner {
-    edges: RasterEdges,
+    segments: RasterSegment,
     tile_contour: TileContour,
 }
 
@@ -189,50 +193,54 @@ pub struct Raster {
 }
 
 impl Raster {
-    fn rasterize(edges: impl Iterator<Item = Edge<i32>>) -> RasterEdges {
+    fn rasterize(segments: impl Iterator<Item = Segment<i32>>) -> RasterSegment {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Raster::rasterize");
-        edges.collect()
+        segments.collect()
     }
 
-    fn build_contour(edges: &RasterEdges) -> TileContour {
+    fn build_contour(segments: &RasterSegment) -> TileContour {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Raster::tile_contour");
         let mut tile_contour_builder = TileContourBuilder::new();
 
-        for edge in edges.iter() {
-            tile_contour_builder.enclose(&edge);
+        for segment in segments.iter() {
+            tile_contour_builder.enclose(&segment);
         }
 
         tile_contour_builder.build()
     }
 
-    fn from_edges(edges: impl Iterator<Item = Edge<i32>>) -> Self {
-        let edges = Self::rasterize(edges);
-        let tile_contour = Self::build_contour(&edges);
+    fn from_segments(segments: impl Iterator<Item = Segment<i32>>) -> Self {
+        let segments = Self::rasterize(segments);
+        let tile_contour = Self::build_contour(&segments);
 
         Self {
-            inner: Rc::new(RasterInner { edges, tile_contour }),
+            inner: Rc::new(RasterInner { segments, tile_contour }),
             translation: Point::new(0, 0),
             translated_tile_contour: None,
         }
     }
 
     pub fn new(path: &Path) -> Self {
-        Self::from_edges(path.edges().flat_map(|edge| edge.to_sp_edges()).flatten())
+        Self::from_segments(path.segments().flat_map(|segment| segment.to_sp_segments()).flatten())
     }
 
     pub fn with_transform(path: &Path, transform: &[f32; 9]) -> Self {
-        Self::from_edges(path.transformed(transform).flat_map(|edge| edge.to_sp_edges()).flatten())
+        Self::from_segments(
+            path.transformed(transform).flat_map(|segment| segment.to_sp_segments()).flatten(),
+        )
     }
 
     pub fn empty() -> Self {
-        Self::from_edges(iter::empty())
+        Self::from_segments(iter::empty())
     }
 
     pub(crate) fn maxed() -> Self {
-        let inner =
-            RasterInner { edges: RasterEdges::new(), tile_contour: TileContourBuilder::maxed() };
+        let inner = RasterInner {
+            segments: RasterSegment::new(),
+            tile_contour: TileContourBuilder::maxed(),
+        };
 
         Self { inner: Rc::new(inner), translation: Point::new(0, 0), translated_tile_contour: None }
     }
@@ -241,12 +249,12 @@ impl Raster {
     where
         I: IntoIterator<Item = &'a Path>,
     {
-        Self::from_edges(
+        Self::from_segments(
             paths
                 .into_iter()
-                .map(Path::edges)
+                .map(Path::segments)
                 .flatten()
-                .flat_map(|edge| edge.to_sp_edges())
+                .flat_map(|segment| segment.to_sp_segments())
                 .flatten(),
         )
     }
@@ -255,12 +263,12 @@ impl Raster {
     where
         I: IntoIterator<Item = (&'a Path, &'a [f32; 9])>,
     {
-        Self::from_edges(
+        Self::from_segments(
             paths
                 .into_iter()
                 .map(|(path, transform)| path.transformed(transform))
                 .flatten()
-                .flat_map(|edge| edge.to_sp_edges())
+                .flat_map(|segment| segment.to_sp_segments())
                 .flatten(),
         )
     }
@@ -281,9 +289,11 @@ impl Raster {
     }
 
     pub fn union<'r>(rasters: impl Iterator<Item = &'r Self> + Clone) -> Self {
-        let edges = rasters
+        let segments = rasters
             .clone()
-            .map(|raster| raster.edges().iter().map(move |edge| edge.translate(raster.translation)))
+            .map(|raster| {
+                raster.segments().iter().map(move |segment| segment.translate(raster.translation))
+            })
             .flatten()
             .collect();
         let tile_contour = rasters.fold(TileContourBuilder::empty(), |tile_contour, raster| {
@@ -291,26 +301,26 @@ impl Raster {
         });
 
         Self {
-            inner: Rc::new(RasterInner { edges, tile_contour }),
+            inner: Rc::new(RasterInner { segments, tile_contour }),
             translation: Point::new(0, 0),
             translated_tile_contour: None,
         }
     }
 
-    pub fn union_without_edges<'r>(rasters: impl Iterator<Item = &'r Self>) -> Self {
+    pub fn union_without_segments<'r>(rasters: impl Iterator<Item = &'r Self>) -> Self {
         let tile_contour = rasters.fold(TileContourBuilder::empty(), |tile_contour, raster| {
             tile_contour.union(raster.tile_contour())
         });
 
         Self {
-            inner: Rc::new(RasterInner { edges: RasterEdges::new(), tile_contour }),
+            inner: Rc::new(RasterInner { segments: RasterSegment::new(), tile_contour }),
             translation: Point::new(0, 0),
             translated_tile_contour: None,
         }
     }
 
-    pub(crate) fn edges(&self) -> &RasterEdges {
-        &self.inner.edges
+    pub(crate) fn segments(&self) -> &RasterSegment {
+        &self.inner.segments
     }
 
     pub(crate) fn tile_contour(&self) -> &TileContour {
@@ -336,52 +346,52 @@ mod tests {
 
     use crate::PIXEL_WIDTH;
 
-    fn to_and_fro(edges: &[Edge<i32>]) -> Vec<Edge<i32>> {
-        edges.into_iter().cloned().collect::<RasterEdges>().iter().collect()
+    fn to_and_fro(segments: &[Segment<i32>]) -> Vec<Segment<i32>> {
+        segments.into_iter().cloned().collect::<RasterSegment>().iter().collect()
     }
 
     #[test]
-    fn raster_edges_one_edge_all_end_point_combinations() {
+    fn raster_segments_one_segment_all_end_point_combinations() {
         for x in -PIXEL_WIDTH..=PIXEL_WIDTH {
             for y in -PIXEL_WIDTH..=PIXEL_WIDTH {
-                let edges = vec![Edge::new(Point::new(0, 0), Point::new(x, y))];
+                let segments = vec![Segment::new(Point::new(0, 0), Point::new(x, y))];
 
-                assert_eq!(to_and_fro(&edges), edges);
+                assert_eq!(to_and_fro(&segments), segments);
             }
         }
     }
 
     #[test]
-    fn raster_edges_one_edge_negative() {
-        let edges = vec![Edge::new(Point::new(0, 0), Point::new(-PIXEL_WIDTH, -PIXEL_WIDTH))];
+    fn raster_segments_one_segment_negative() {
+        let segments = vec![Segment::new(Point::new(0, 0), Point::new(-PIXEL_WIDTH, -PIXEL_WIDTH))];
 
-        assert_eq!(to_and_fro(&edges), edges);
+        assert_eq!(to_and_fro(&segments), segments);
     }
 
     #[test]
-    fn raster_edges_two_edges_common() {
-        let edges = vec![
-            Edge::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
-            Edge::new(
+    fn raster_segments_two_segments_common() {
+        let segments = vec![
+            Segment::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
+            Segment::new(
                 Point::new(PIXEL_WIDTH, PIXEL_WIDTH),
                 Point::new(PIXEL_WIDTH * 2, PIXEL_WIDTH * 2),
             ),
         ];
 
-        assert_eq!(to_and_fro(&edges), edges);
+        assert_eq!(to_and_fro(&segments), segments);
     }
 
     #[test]
-    fn raster_edges_two_edges_different() {
-        let edges = vec![
-            Edge::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
-            Edge::new(
+    fn raster_segments_two_segments_different() {
+        let segments = vec![
+            Segment::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
+            Segment::new(
                 Point::new(PIXEL_WIDTH * 5, PIXEL_WIDTH * 5),
                 Point::new(PIXEL_WIDTH * 6, PIXEL_WIDTH * 6),
             ),
         ];
 
-        assert_eq!(to_and_fro(&edges), edges);
+        assert_eq!(to_and_fro(&segments), segments);
     }
 
     #[test]
@@ -400,9 +410,9 @@ mod tests {
 
         let union = Raster::union([Raster::new(&path1), Raster::new(&path2)].into_iter());
 
-        assert_eq!(union.inner.edges.iter().collect::<Vec<_>>(), vec![
-            Edge::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
-            Edge::new(
+        assert_eq!(union.inner.segments.iter().collect::<Vec<_>>(), vec![
+            Segment::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
+            Segment::new(
                 Point::new(PIXEL_WIDTH, PIXEL_WIDTH),
                 Point::new(PIXEL_WIDTH * 2, PIXEL_WIDTH * 2),
             ),
@@ -411,7 +421,7 @@ mod tests {
     }
 
     #[test]
-    fn raster_union_without_edges() {
+    fn raster_union_without_segments() {
         let mut path1 = Path::new();
         path1.line(
             Point::new(0.0, 0.0),
@@ -424,12 +434,12 @@ mod tests {
             Point::new(2.0, 2.0),
         );
 
-        let union = Raster::union_without_edges([
+        let union = Raster::union_without_segments([
             Raster::new(&path1),
             Raster::new(&path2),
         ].into_iter());
 
-        assert_eq!(union.inner.edges.iter().collect::<Vec<_>>(), vec![]);
+        assert_eq!(union.inner.segments.iter().collect::<Vec<_>>(), vec![]);
         assert_eq!(union.inner.tile_contour.tiles(), vec![(0, 0)]);
     }
 }
