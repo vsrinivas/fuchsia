@@ -4,7 +4,7 @@
 
 use {
     crate::amber_connector::AmberConnect,
-    crate::cache::PackageCache,
+    crate::cache::{BlobFetcher, PackageCache},
     crate::font_package_manager::FontPackageManager,
     crate::repository_manager::RepositoryManager,
     crate::rewrite_manager::RewriteManager,
@@ -27,6 +27,7 @@ pub async fn run_resolver_service<A>(
     rewrites: Arc<RwLock<RewriteManager>>,
     repo_manager: Arc<RwLock<RepositoryManager<A>>>,
     cache: PackageCache,
+    blob_fetcher: BlobFetcher,
     mut stream: PackageResolverRequestStream,
 ) -> Result<(), Error>
 where
@@ -41,9 +42,17 @@ where
             responder,
         } = event;
 
-        let status =
-            resolve(&rewrites, &repo_manager, &cache, package_url, selectors, update_policy, dir)
-                .await;
+        let status = resolve(
+            &rewrites,
+            &repo_manager,
+            &cache,
+            &blob_fetcher,
+            package_url,
+            selectors,
+            update_policy,
+            dir,
+        )
+        .await;
 
         responder.send(Status::from(status).into_raw())?;
     }
@@ -59,6 +68,7 @@ async fn resolve<'a, A>(
     rewrites: &'a Arc<RwLock<RewriteManager>>,
     repo_manager: &'a Arc<RwLock<RepositoryManager<A>>>,
     cache: &'a PackageCache,
+    blob_fetcher: &'a BlobFetcher,
     pkg_url: String,
     selectors: Vec<String>,
     _update_policy: UpdatePolicy,
@@ -82,7 +92,7 @@ where
         fx_log_warn!("resolve does not support selectors yet");
     }
 
-    let fut = repo_manager.read().get_package(&url, cache);
+    let fut = repo_manager.read().get_package(&url, cache, blob_fetcher);
     let merkle = fut.await?;
 
     fx_log_info!(
@@ -104,6 +114,7 @@ pub async fn run_font_resolver_service<A>(
     rewrites: Arc<RwLock<RewriteManager>>,
     repo_manager: Arc<RwLock<RepositoryManager<A>>>,
     cache: PackageCache,
+    blob_fetcher: BlobFetcher,
     mut stream: FontResolverRequestStream,
 ) -> Result<(), Error>
 where
@@ -122,6 +133,7 @@ where
             &rewrites,
             &repo_manager,
             &cache,
+            &blob_fetcher,
             package_url,
             update_policy,
             directory_request,
@@ -139,6 +151,7 @@ async fn resolve_font<'a, A>(
     rewrites: &'a Arc<RwLock<RewriteManager>>,
     repo_manager: &'a Arc<RwLock<RepositoryManager<A>>>,
     cache: &'a PackageCache,
+    blob_fetcher: &'a BlobFetcher,
     package_url: String,
     update_policy: UpdatePolicy,
     directory_request: ServerEnd<DirectoryMarker>,
@@ -157,6 +170,7 @@ where
                     &rewrites,
                     &repo_manager,
                     &cache,
+                    &blob_fetcher,
                     package_url,
                     vec![],
                     update_policy,
@@ -236,6 +250,7 @@ mod tests {
         repo_manager: Arc<RwLock<RepositoryManager<MockAmberConnector>>>,
         font_package_manager: Arc<FontPackageManager>,
         cache: PackageCache,
+        blob_fetcher: BlobFetcher,
         pkgfs: Arc<TempDir>,
     }
 
@@ -318,6 +333,7 @@ mod tests {
                 &self.rewrite_manager,
                 &self.repo_manager,
                 &self.cache,
+                &self.blob_fetcher,
                 url.to_string(),
                 selectors,
                 update_policy,
@@ -343,6 +359,7 @@ mod tests {
                 &self.rewrite_manager,
                 &self.repo_manager,
                 &self.cache,
+                &self.blob_fetcher,
                 url.to_string(),
                 update_policy,
                 dir_server_end,
@@ -460,6 +477,10 @@ mod tests {
 
             let cache = PackageCache::new(cache_proxy, pkgfs_install, pkgfs_needs);
 
+            // Make a no-op blob_fetcher that always fails.
+            let (_blob_fetch_processor, blob_fetcher) =
+                crate::queue::work_queue(1, |_blob_id, _context| future::ready(Ok(())));
+
             let dynamic_rule_config = make_rule_config(self.dynamic_rewrite_rules);
             let rewrite_manager = RewriteManagerBuilder::new(Some(&dynamic_rule_config))
                 .unwrap()
@@ -496,6 +517,7 @@ mod tests {
                 font_package_manager: Arc::new(font_package_manager),
                 pkgfs: self.pkgfs,
                 cache,
+                blob_fetcher,
             }
         }
     }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::queue,
     failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_amber::OpenedRepositoryProxy,
@@ -18,11 +19,14 @@ use {
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
         prelude::*,
+        stream::FuturesUnordered,
     },
     hyper::{body::Payload, Body, Request, StatusCode},
-    std::{convert::TryInto, num::TryFromIntError},
+    std::{convert::TryInto, hash::Hash, num::TryFromIntError, sync::Arc},
     url::Url,
 };
+
+pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
 
 /// Provides access to the package cache components.
 #[derive(Clone)]
@@ -50,8 +54,11 @@ impl PackageCache {
         selectors: &Vec<String>,
         dir_request: ServerEnd<DirectoryMarker>,
     ) -> Result<(), PackageOpenError> {
-        let fut = self.cache
-            .open(&mut merkle.into(), &mut selectors.iter().map(|s| s.as_str()), dir_request);
+        let fut = self.cache.open(
+            &mut merkle.into(),
+            &mut selectors.iter().map(|s| s.as_str()),
+            dir_request,
+        );
         match Status::from_raw(fut.await?) {
             Status::OK => Ok(()),
             Status::NOT_FOUND => Err(PackageOpenError::NotFound),
@@ -264,7 +271,7 @@ impl From<FuchsiaIoError> for ListNeedsError {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum BlobKind {
     Package,
     Data,
@@ -285,6 +292,7 @@ pub async fn cache_package<'a>(
     config: &'a RepositoryConfig,
     url: &'a PkgUrl,
     cache: &'a PackageCache,
+    blob_fetcher: &'a BlobFetcher,
 ) -> Result<BlobId, CacheError> {
     let (merkle, size) = merkle_for_url(&repo, url).await.map_err(CacheError::MerkleFor)?;
 
@@ -306,27 +314,40 @@ pub async fn cache_package<'a>(
         return Ok(merkle);
     }
 
-    let client = fuchsia_hyper::new_https_client();
+    let mirrors = config.mirrors().to_vec().into();
 
     // Fetch the meta.far.
-    fetch_blob(&client, config.mirrors(), merkle, BlobKind::Package, Some(size), cache).await?;
+    blob_fetcher
+        .push(
+            merkle,
+            FetchBlobContext {
+                blob_kind: BlobKind::Package,
+                mirrors: Arc::clone(&mirrors),
+                expected_len: Some(size),
+            },
+        )
+        .await
+        .expect("processor exists")?;
 
     cache
         .list_needs(merkle)
         .err_into::<CacheError>()
         .try_for_each(|needs| {
-            // TODO clients simultaneously resolving the same package or resolving packages with shared
-            // blobs may result in fetching the same blob more than once. Consider having a global
-            // queue of package resolve requests and blob fetch requests that can deduplicate requests
-            // and impose global concurrency limits.
-
-            // Fetch the blobs, performing up to 1 concurrent blob fetches per package.
+            // Fetch the blobs with some amount of concurrency.
             fx_log_info!("Fetching blobs: {:#?}", needs);
-            futures::stream::iter(needs)
-                .map(|need| {
-                    fetch_blob(&client, config.mirrors(), need, BlobKind::Data, None, cache)
-                })
-                .buffer_unordered(1)
+            blob_fetcher
+                .push_all(needs.into_iter().map(|need| {
+                    (
+                        need,
+                        FetchBlobContext {
+                            blob_kind: BlobKind::Data,
+                            mirrors: Arc::clone(&mirrors),
+                            expected_len: None,
+                        },
+                    )
+                }))
+                .collect::<FuturesUnordered<_>>()
+                .map(|res| res.expect("processor exists"))
                 .try_collect::<()>()
                 .err_into()
         })
@@ -347,7 +368,7 @@ pub enum CacheError {
     ListNeeds(#[cause] ListNeedsError),
 
     #[fail(display = "while fetching blobs for package: {}", _0)]
-    Fetch(#[cause] FetchError),
+    Fetch(Arc<FetchError>),
 }
 
 impl From<ListNeedsError> for CacheError {
@@ -362,8 +383,8 @@ impl From<fidl::Error> for CacheError {
     }
 }
 
-impl From<FetchError> for CacheError {
-    fn from(x: FetchError) -> Self {
+impl From<Arc<FetchError>> for CacheError {
+    fn from(x: Arc<FetchError>) -> Self {
         Self::Fetch(x)
     }
 }
@@ -464,6 +485,74 @@ pub enum MerkleForError {
 
     #[fail(display = "amber returned a blob size that was too large: {}", _0)]
     BlobTooLarge(#[cause] TryFromIntError),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FetchBlobContext {
+    blob_kind: BlobKind,
+    mirrors: Arc<[MirrorConfig]>,
+    expected_len: Option<u64>,
+}
+
+impl queue::TryMerge for FetchBlobContext {
+    fn try_merge(&mut self, other: Self) -> Result<(), Self> {
+        // Unmergeable if both contain different expected lengths. One of these instances will
+        // fail, but we can't know which one here.
+        let expected_len = match (self.expected_len, other.expected_len) {
+            (Some(x), None) | (None, Some(x)) => Some(x),
+            (None, None) => None,
+            (Some(x), Some(y)) if x == y => Some(x),
+            _ => return Err(other),
+        };
+
+        // Installing a blob as a package will fulfill any pending needs of that blob as a data
+        // blob as well, so upgrade Data to Package.
+        let blob_kind =
+            if self.blob_kind == BlobKind::Package || other.blob_kind == BlobKind::Package {
+                BlobKind::Package
+            } else {
+                BlobKind::Data
+            };
+
+        // For now, don't attempt to merge mirrors, but do merge these contexts if the mirrors are
+        // equivalent.
+        if self.mirrors != other.mirrors {
+            return Err(other);
+        }
+
+        // Contexts are mergeable, apply the merged state.
+        self.expected_len = expected_len;
+        self.blob_kind = blob_kind;
+        Ok(())
+    }
+}
+
+pub fn make_blob_fetch_queue(
+    cache: PackageCache,
+    max_concurrency: usize,
+) -> (impl Future<Output = ()>, BlobFetcher) {
+    let http_client = Arc::new(fuchsia_hyper::new_https_client());
+
+    let (blob_fetch_queue, blob_fetcher) =
+        queue::work_queue(max_concurrency, move |merkle, context: FetchBlobContext| {
+            let http_client = Arc::clone(&http_client);
+            let cache = cache.clone();
+
+            async move {
+                fetch_blob(
+                    &*http_client,
+                    &context.mirrors,
+                    merkle,
+                    context.blob_kind,
+                    context.expected_len,
+                    &cache,
+                )
+                .map_err(Arc::new)
+                .await
+            }
+        });
+
+    (blob_fetch_queue.into_future(), blob_fetcher)
 }
 
 async fn fetch_blob(

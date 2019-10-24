@@ -5,7 +5,7 @@
 use {
     crate::{
         amber_connector::AmberConnect,
-        cache::PackageCache,
+        cache::{BlobFetcher, PackageCache},
         experiment::{Experiment, Experiments},
     },
     failure::Fail,
@@ -160,12 +160,13 @@ impl<A: AmberConnect> RepositoryManager<A> {
         &self,
         url: &'a PkgUrl,
         cache: &'a PackageCache,
+        blob_fetcher: &'a BlobFetcher,
     ) -> impl Future<Output = Result<BlobId, Status>> + 'a {
         let res = self.connect_to_repo(url.repo());
         let experiments = self.experiments.clone();
         async move {
             let (repo, config) = res?;
-            get_package(experiments, repo, &*config, url, cache).await.map_err(|e| {
+            get_package(experiments, repo, &*config, url, cache, blob_fetcher).await.map_err(|e| {
                 fx_log_err!("while fetching package: {:?}", e);
                 e
             })
@@ -244,6 +245,7 @@ async fn get_package<'a>(
     config: &'a RepositoryConfig,
     url: &'a PkgUrl,
     cache: &'a PackageCache,
+    blob_fetcher: &'a BlobFetcher,
 ) -> Result<BlobId, Status> {
     // While the fuchsia-pkg:// spec doesn't require a package name, we do.
     let name = url.name().ok_or_else(|| {
@@ -252,7 +254,7 @@ async fn get_package<'a>(
     })?;
 
     if experiments.get(Experiment::DownloadBlob) {
-        crate::cache::cache_package(repo, config, url, cache).await.map_err(|e| {
+        crate::cache::cache_package(repo, config, url, cache, blob_fetcher).await.map_err(|e| {
             fx_log_err!("error caching package: {}", e);
             e.to_resolve_status()
         })
@@ -1105,30 +1107,33 @@ mod tests {
         let invalid_static2_url = RepoUrl::parse("fuchsia-pkg://a.invalid-static2").unwrap();
         let invalid_static2_config = RepositoryConfigBuilder::new(invalid_static2_url).build();
 
-        let invalid_static3_url = RepoUrl::parse("fuchsia-pkg://a.invalid-static3.example.com").unwrap();
+        let invalid_static3_url =
+            RepoUrl::parse("fuchsia-pkg://a.invalid-static3.example.com").unwrap();
         let invalid_static3_config = RepositoryConfigBuilder::new(invalid_static3_url).build();
 
         let valid_dynamic_url = RepoUrl::parse("fuchsia-pkg://a.valid3.fuchsia.com").unwrap();
         let valid_dynamic_config = RepositoryConfigBuilder::new(valid_dynamic_url).build();
 
-        let invalid_dynamic_url = RepoUrl::parse("fuchsia-pkg://a.invalid-dynamic.fuchsia.com").unwrap();
+        let invalid_dynamic_url =
+            RepoUrl::parse("fuchsia-pkg://a.invalid-dynamic.fuchsia.com").unwrap();
         let invalid_dynamic_config = RepositoryConfigBuilder::new(invalid_dynamic_url).build();
 
-        let static_dir = create_dir(vec![
-            ("config", RepositoryConfigs::Version1(vec![
-                 valid_static1_config.clone(),
-                 valid_static2_config.clone(),
-                 valid_static3_config.clone(),
-                 invalid_static1_config,
-                 invalid_static2_config,
-                 invalid_static3_config,
-            ])),
-        ]);
+        let static_dir = create_dir(vec![(
+            "config",
+            RepositoryConfigs::Version1(vec![
+                valid_static1_config.clone(),
+                valid_static2_config.clone(),
+                valid_static3_config.clone(),
+                invalid_static1_config,
+                invalid_static2_config,
+                invalid_static3_config,
+            ]),
+        )]);
 
-        let dynamic_dir =
-            create_dir(vec![
-                       ("config", RepositoryConfigs::Version1(vec![valid_dynamic_config.clone(),
-                                                                   invalid_dynamic_config]))]);
+        let dynamic_dir = create_dir(vec![(
+            "config",
+            RepositoryConfigs::Version1(vec![valid_dynamic_config.clone(), invalid_dynamic_config]),
+        )]);
         let dynamic_configs_path = dynamic_dir.path().join("config");
 
         let repomgr =
@@ -1138,11 +1143,20 @@ mod tests {
                 .unwrap()
                 .build();
 
-        assert_eq!(repomgr.get_repo_for_channel("valid1").map(|r| &**r), Some(&valid_static1_config));
-        assert_eq!(repomgr.get_repo_for_channel("valid2").map(|r| &**r), Some(&valid_static2_config));
+        assert_eq!(
+            repomgr.get_repo_for_channel("valid1").map(|r| &**r),
+            Some(&valid_static1_config)
+        );
+        assert_eq!(
+            repomgr.get_repo_for_channel("valid2").map(|r| &**r),
+            Some(&valid_static2_config)
+        );
 
         // Dynamic repos for a valid config overload the static config.
-        assert_eq!(repomgr.get_repo_for_channel("valid3").map(|r| &**r), Some(&valid_dynamic_config));
+        assert_eq!(
+            repomgr.get_repo_for_channel("valid3").map(|r| &**r),
+            Some(&valid_dynamic_config)
+        );
 
         // Ignore repos that have a url that aren't `abc.${channel}.fuchsia.com`.
         assert_eq!(repomgr.get_repo_for_channel("invalid-static1"), None);

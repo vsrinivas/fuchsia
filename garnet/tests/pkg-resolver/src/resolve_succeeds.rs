@@ -12,16 +12,17 @@ use {
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{serve::UriPathHandler, RepositoryBuilder, VerificationError},
     futures::{
-        channel::oneshot,
+        channel::{mpsc, oneshot},
         future::{ready, BoxFuture},
     },
-    hyper::{header::CONTENT_LENGTH, Body, Response},
+    hyper::{Body, Response},
     matches::assert_matches,
     parking_lot::Mutex,
     std::{
+        collections::HashSet,
         fs::File,
         io::{self, Read},
-        path::Path,
+        path::{Path, PathBuf},
         sync::Arc,
     },
 };
@@ -446,17 +447,18 @@ impl OneShotSenderWrapper {
     }
 }
 
-struct BlockGetRequestOnceUriPathHandler {
+/// Blocks sending a response body (but not headers) for a single path once until unblocked by a test.
+struct BlockResponseBodyOnceUriPathHandler {
     unblocking_closure_sender: OneShotSenderWrapper,
     path_to_block: String,
 }
 
-impl BlockGetRequestOnceUriPathHandler {
+impl BlockResponseBodyOnceUriPathHandler {
     pub fn new_path_handler_and_channels(
         path_to_block: String,
     ) -> (Self, oneshot::Receiver<Box<dyn FnOnce() + Send>>) {
         let (unblocking_closure_sender, unblocking_closure_receiver) = oneshot::channel();
-        let blocking_uri_path_handler = BlockGetRequestOnceUriPathHandler {
+        let blocking_uri_path_handler = BlockResponseBodyOnceUriPathHandler {
             unblocking_closure_sender: OneShotSenderWrapper {
                 sender: Mutex::new(Some(unblocking_closure_sender)),
             },
@@ -466,7 +468,7 @@ impl BlockGetRequestOnceUriPathHandler {
     }
 }
 
-impl UriPathHandler for BlockGetRequestOnceUriPathHandler {
+impl UriPathHandler for BlockResponseBodyOnceUriPathHandler {
     fn handle(&self, uri_path: &Path, mut response: Response<Body>) -> BoxFuture<Response<Body>> {
         // Only block requests for the duplicate blob
         let duplicate_blob_uri = Path::new(&self.path_to_block);
@@ -480,7 +482,6 @@ impl UriPathHandler for BlockGetRequestOnceUriPathHandler {
             let (mut sender, new_body) = Body::channel();
             let old_body = std::mem::replace(response.body_mut(), new_body);
             let contents = body_to_bytes(old_body).await;
-            response.headers_mut().insert(CONTENT_LENGTH, contents.len().into());
 
             // Send a closure to the test that will unblock when executed
             self.unblocking_closure_sender
@@ -513,7 +514,7 @@ async fn test_concurrent_blob_writes() {
 
     // Create the path handler and the channel to communicate with it
     let (blocking_uri_path_handler, unblocking_closure_receiver) =
-        BlockGetRequestOnceUriPathHandler::new_path_handler_and_channels(format!(
+        BlockResponseBodyOnceUriPathHandler::new_path_handler_and_channels(format!(
             "/blobs/{}",
             duplicate_blob_merkle
         ));
@@ -560,6 +561,9 @@ async fn test_concurrent_blob_writes() {
     // What happens if we try and write to the duplicate blob again, by trying to resolve package 2?
     // Right now, it doesn't fail so we must check that verify_contents of package 2 produces an error.
     // TODO(36718) concurrent writes should cause resolve_package to fail
+    // TODO(39488) pkgfs assumes the blob is present and doesn't tell the package resolver to fetch
+    // it, so it never hooks up to the pending future to resolve that blob, resolving an incomplete
+    // package.
     let package2_dir = resolve_package(&resolver_proxy_2, &"fuchsia-pkg://test/package2")
         .await
         .expect("package to resolve");
@@ -572,5 +576,165 @@ async fn test_concurrent_blob_writes() {
     unblocking_closure();
     let package1_dir = package1_resolution_fut.await.expect("package to resolve");
     pkg1.verify_contents(&package1_dir).await.expect("correct package contents");
+    env.stop().await;
+}
+
+/// A response that is waiting to be sent.
+struct BlockedResponse {
+    path: PathBuf,
+    unblocker: oneshot::Sender<()>,
+}
+
+impl BlockedResponse {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn unblock(self) {
+        self.unblocker.send(()).expect("request to still be pending")
+    }
+}
+
+/// Blocks sending response headers and bodies for a set of paths until unblocked by a test.
+struct BlockResponseUriPathHandler {
+    paths_to_block: HashSet<PathBuf>,
+    blocked_responses: mpsc::UnboundedSender<BlockedResponse>,
+}
+
+impl BlockResponseUriPathHandler {
+    fn new(paths_to_block: HashSet<PathBuf>) -> (Self, mpsc::UnboundedReceiver<BlockedResponse>) {
+        let (sender, receiver) = mpsc::unbounded();
+
+        (Self { paths_to_block, blocked_responses: sender }, receiver)
+    }
+}
+
+impl UriPathHandler for BlockResponseUriPathHandler {
+    fn handle(&self, path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        // Only block paths that were requested to be blocked
+        if !self.paths_to_block.contains(path) {
+            return async move { response }.boxed();
+        }
+
+        // Return a future that notifies the test that the request was blocked and wait for it to
+        // unblock the response
+        let path = path.to_owned();
+        let mut blocked_responses = self.blocked_responses.clone();
+        async move {
+            let (unblocker, waiter) = oneshot::channel();
+            blocked_responses
+                .send(BlockedResponse { path, unblocker })
+                .await
+                .expect("receiver to still exist");
+            waiter.await.expect("request to be unblocked");
+            response
+        }
+            .boxed()
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn download_blob_experiment_dedups_concurrent_content_blob_fetches() {
+    let env = TestEnv::new();
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+
+    // Make a few test packages with no more than 6 blobs.  There is no guarantee what order the
+    // package resolver will fetch blobs in other than it will fetch one of the meta FARs first and
+    // it will fetch a meta FAR before fetching any unique content blobs for that package.
+    //
+    // Note that this test depends on the fact that the global queue has a concurrency limit of 5.
+    // A concurrency limit less than 4 would cause this test to hang as it needs to be able to wait
+    // for a unique blob request to come in for each package, and ordering of blob requests is not
+    // guaranteed.
+    let pkg1 = PackageBuilder::new("package1")
+        .add_resource_at("data/unique1", "package1unique1".as_bytes())
+        .add_resource_at("data/shared1", "shared1".as_bytes())
+        .add_resource_at("data/shared2", "shared2".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    let pkg2 = PackageBuilder::new("package2")
+        .add_resource_at("data/unique1", "package2unique1".as_bytes())
+        .add_resource_at("data/shared1", "shared1".as_bytes())
+        .add_resource_at("data/shared2", "shared2".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    // Create the request handler to block all content blobs until we are ready to unblock them.
+    let content_blob_paths = {
+        let pkg1_meta_contents = pkg1.meta_contents().expect("meta/contents to parse");
+        let pkg2_meta_contents = pkg2.meta_contents().expect("meta/contents to parse");
+
+        pkg1_meta_contents
+            .contents()
+            .values()
+            .chain(pkg2_meta_contents.contents().values())
+            .map(|blob| format!("/blobs/{}", blob).into())
+            .collect::<HashSet<_>>()
+    };
+    let (request_handler, mut incoming_requests) =
+        BlockResponseUriPathHandler::new(content_blob_paths.iter().cloned().collect());
+
+    // Serve and register the repo with our request handler that blocks headers for content blobs.
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg1)
+            .add_package(&pkg2)
+            .build()
+            .await
+            .expect("repo to build"),
+    );
+    let served_repository = repo
+        .build_server()
+        .uri_path_override_handler(request_handler)
+        .start()
+        .expect("repo to serve");
+
+    let repo_url = "fuchsia-pkg://test".parse().unwrap();
+    let repo_config = served_repository.make_repo_config(repo_url);
+    env.proxies.repo_manager.add(repo_config.into()).await.expect("repo to configure");
+
+    // Start resolving both packages using distinct proxies, which should block waiting for the
+    // meta FAR responses.
+    let pkg1_fut = {
+        let proxy = env
+            .env
+            .connect_to_service::<PackageResolverMarker>()
+            .expect("connect to package resolver");
+        resolve_package(&proxy, "fuchsia-pkg://test/package1")
+    };
+    let pkg2_fut = {
+        let proxy = env
+            .env
+            .connect_to_service::<PackageResolverMarker>()
+            .expect("connect to package resolver");
+        resolve_package(&proxy, "fuchsia-pkg://test/package2")
+    };
+
+    // Wait for all content blob requests to come in so that this test can be sure that pkgfs has
+    // imported both packages and that the package resolver has not truncated any content blobs
+    // yet (which would trigger 39488, the pkgfs blob presence bug).
+    let mut expected_requests = content_blob_paths.clone();
+    let mut blocked_requests = vec![];
+    while !expected_requests.is_empty() {
+        let req = incoming_requests.next().await.expect("more incoming requests");
+        // Panic if the blob request wasn't expected or has already happened and was not de-duped
+        // as expected.
+        assert!(expected_requests.remove(req.path()));
+        blocked_requests.push(req);
+    }
+
+    // Unblock all content blobs, and verify both packages resolve without error.
+    for req in blocked_requests {
+        req.unblock();
+    }
+
+    let pkg1_dir = pkg1_fut.await.expect("package 1 to resolve");
+    let pkg2_dir = pkg2_fut.await.expect("package 2 to resolve");
+
+    pkg1.verify_contents(&pkg1_dir).await.expect("correct package contents");
+    pkg2.verify_contents(&pkg2_dir).await.expect("correct package contents");
+
     env.stop().await;
 }

@@ -11,7 +11,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
-    futures::{StreamExt, TryFutureExt},
+    futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
     std::{io, sync::Arc},
     sysconfig_client,
@@ -31,7 +31,6 @@ mod rewrite_service;
 #[cfg(test)]
 mod test_util;
 
-#[allow(dead_code)]
 mod queue;
 
 use crate::amber_connector::AmberConnector;
@@ -44,6 +43,7 @@ use crate::rewrite_manager::{RewriteManager, RewriteManagerBuilder};
 use crate::rewrite_service::RewriteService;
 
 const SERVER_THREADS: usize = 2;
+const MAX_CONCURRENT_BLOB_FETCHES: usize = 5;
 
 const STATIC_REPO_DIR: &str = "/config/data/repositories";
 const DYNAMIC_REPO_PATH: &str = "/data/repositories.json";
@@ -84,18 +84,26 @@ fn main() -> Result<(), Error> {
         config.disable_dynamic_configuration(),
     )));
 
+    let mut futures = FuturesUnordered::new();
+
+    let (blob_fetch_queue, blob_fetcher) =
+        crate::cache::make_blob_fetch_queue(cache.clone(), MAX_CONCURRENT_BLOB_FETCHES);
+    futures.push(blob_fetch_queue.boxed());
+
     let resolver_cb = {
         // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
         // from which to make new clones.
         let repo_manager = Arc::clone(&repo_manager);
         let rewrite_manager = Arc::clone(&rewrite_manager);
         let cache = cache.clone();
+        let blob_fetcher = blob_fetcher.clone();
         move |stream| {
             fasync::spawn(
                 resolver_service::run_resolver_service(
                     Arc::clone(&rewrite_manager),
                     Arc::clone(&repo_manager),
                     cache.clone(),
+                    blob_fetcher.clone(),
                     stream,
                 )
                 .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
@@ -114,6 +122,7 @@ fn main() -> Result<(), Error> {
                     Arc::clone(&rewrite_manager),
                     Arc::clone(&repo_manager),
                     cache.clone(),
+                    blob_fetcher.clone(),
                     stream,
                 )
                 .unwrap_or_else(|e| fx_log_err!("Failed to spawn font_resolver_service {:?}", e)),
@@ -163,7 +172,9 @@ fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    let () = executor.run(fs.collect(), SERVER_THREADS);
+    futures.push(fs.collect().boxed());
+
+    let () = executor.run(futures.collect(), SERVER_THREADS);
 
     Ok(())
 }

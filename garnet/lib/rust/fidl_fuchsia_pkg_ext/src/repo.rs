@@ -26,7 +26,7 @@ pub enum RepositoryBlobKey {
 }
 
 /// Convenience wrapper for the FIDL MirrorConfig type
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MirrorConfig {
     mirror_url: String,
     subscribe: bool,

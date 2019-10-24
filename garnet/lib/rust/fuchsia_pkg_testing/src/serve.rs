@@ -16,7 +16,7 @@ use {
         prelude::*,
         task::SpawnExt,
     },
-    hyper::{service::service_fn, Body, Method, Request, Response, Server, StatusCode},
+    hyper::{header, service::service_fn, Body, Method, Request, Response, Server, StatusCode},
     std::{
         net::{Ipv4Addr, SocketAddr},
         path::{Path, PathBuf},
@@ -169,7 +169,11 @@ impl ServedRepository {
         Ok(uri_path_override_handler
             .handle(
                 uri_path,
-                Response::builder().status(StatusCode::OK).body(Body::from(data)).unwrap(),
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header(header::CONTENT_LENGTH, data.len())
+                    .body(Body::from(data))
+                    .unwrap(),
             )
             .await)
     }
