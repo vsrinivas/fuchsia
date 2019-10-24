@@ -39,6 +39,7 @@ json5 = "0.2.4"
 lazy_static = "1"
 libc = "0.2"
 log = { version = "0.4.4", features = ["std"] }
+maplit = "1.0"
 matches = "0.1.8"
 memchr = "2.0"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
@@ -99,7 +100,6 @@ hyper-rustls = { version = "0.17.1", default-features = false }
 id_tree = "1.5"
 itoa = "0.4"
 lipsum = "0.6.0"
-maplit = "1.0"
 net2 = "0.2"
 num-derive = "0.2.4"
 num-bigint = { version = "0.2", features = ["rand"] }
