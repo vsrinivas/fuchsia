@@ -44,6 +44,7 @@ class EndpointImpl : public data::Consumer {
     config.tap_cfg.mtu = config_.mtu;
     fuchsia::hardware::ethernet::MacAddress mac;
     config.tap_cfg.mac.Clone(&mac);
+    config.tap_cfg.options = fuchsia::hardware::ethertap::OPT_REPORT_PARAM;
     config.devfs_root = context.ConnectDevfs();
     ethertap_ = EthertapClient::Create(std::move(config));
     if (!ethertap_) {
