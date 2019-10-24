@@ -1,8 +1,11 @@
-# Scenic Screenshot Tool
+# Scenic Snapshot Tool
 
 This directory contains gltf_export, a simple tool for capturing a snapshot
-of the composition being rendered.
+of the composition being rendered. Snapshots are saved to the human-readable
+glTF scene file format, and can then be uploaded into a glTF viewer to be
+visualized in 3D.
 
 ## USAGE
 
-    gltf_export > /tmp/scene.gltf
+    (host) $ fx shell gltf_export > [FILE NAME].gltf
+
