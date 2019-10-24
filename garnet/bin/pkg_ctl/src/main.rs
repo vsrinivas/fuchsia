@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::{Command, RepoCommand, RuleCommand, RuleConfigInputType},
+    crate::args::{Command, ExperimentCommand, RepoCommand, RuleCommand, RuleConfigInputType},
     failure::{self, format_err, Fail, ResultExt},
     fidl_fuchsia_pkg::{
-        PackageCacheMarker, PackageResolverMarker, RepositoryManagerMarker, RepositoryManagerProxy,
-        UpdatePolicy,
+        PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker,
+        RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
     },
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
@@ -191,6 +191,21 @@ fn main() -> Result<(), failure::Error> {
                             }
                         })
                         .await?;
+                    }
+                }
+
+                Ok(())
+            }
+            Command::Experiment(cmd) => {
+                let admin = connect_to_service::<PackageResolverAdminMarker>()
+                    .context("Failed to connect to package resolver admin service")?;
+
+                match cmd {
+                    ExperimentCommand::Enable(experiment) => {
+                        admin.set_experiment_state(experiment, true).await?;
+                    }
+                    ExperimentCommand::Disable(experiment) => {
+                        admin.set_experiment_state(experiment, false).await?;
                     }
                 }
 

@@ -6,7 +6,8 @@
 use {
     failure::Error,
     fidl_fuchsia_pkg::{
-        PackageCacheRequestStream, PackageResolverRequestStream, RepositoryIteratorRequest,
+        ExperimentToggle as Experiment, PackageCacheRequestStream, PackageResolverAdminRequest,
+        PackageResolverAdminRequestStream, PackageResolverRequestStream, RepositoryIteratorRequest,
         RepositoryManagerRequest, RepositoryManagerRequestStream,
     },
     fidl_fuchsia_pkg_ext::{
@@ -40,6 +41,7 @@ struct TestEnv {
     repository_manager: Arc<MockRepositoryManagerService>,
     package_cache: Arc<MockPackageCacheService>,
     package_resolver: Arc<MockPackageResolverService>,
+    package_resolver_admin: Arc<MockPackageResolverAdminService>,
     rewrite_engine: Arc<MockRewriteEngineService>,
     update_manager: Arc<MockUpdateManagerService>,
     space_manager: Arc<MockSpaceManagerService>,
@@ -63,6 +65,17 @@ impl TestEnv {
                 package_resolver_clone
                     .run_service(stream)
                     .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
+            )
+        });
+
+        let package_resolver_admin = Arc::new(MockPackageResolverAdminService::new());
+        let package_resolver_admin_clone = package_resolver_admin.clone();
+        fs.add_fidl_service(move |stream: PackageResolverAdminRequestStream| {
+            let package_resolver_admin_clone = package_resolver_admin_clone.clone();
+            fasync::spawn(
+                package_resolver_admin_clone
+                    .run_service(stream)
+                    .unwrap_or_else(|e| panic!("error running resolver admin service: {:?}", e)),
             )
         });
 
@@ -136,6 +149,7 @@ impl TestEnv {
             repository_manager,
             package_cache,
             package_resolver,
+            package_resolver_admin,
             rewrite_engine,
             update_manager,
             space_manager,
@@ -174,6 +188,7 @@ impl TestEnv {
     ) {
         assert_eq!(*self.package_cache.call_count.lock(), 0);
         assert_eq!(*self.package_resolver.call_count.lock(), 0);
+        assert_eq!(self.package_resolver_admin.take_event(), None);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
         assert_eq!(*self.repository_manager.captured_args.lock(), expected_args);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
@@ -186,6 +201,7 @@ impl TestEnv {
     ) {
         assert_eq!(*self.package_cache.call_count.lock(), 0);
         assert_eq!(*self.package_resolver.call_count.lock(), 0);
+        assert_eq!(self.package_resolver_admin.take_event(), None);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.update_manager.captured_args.lock(), expected_args);
@@ -195,10 +211,21 @@ impl TestEnv {
     fn assert_only_space_manager_called(&self) {
         assert_eq!(*self.package_cache.call_count.lock(), 0);
         assert_eq!(*self.package_resolver.call_count.lock(), 0);
+        assert_eq!(self.package_resolver_admin.take_event(), None);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 1);
+    }
+
+    fn assert_only_package_resolver_admin_called_with(&self, event: ExperimentEvent) {
+        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(*self.package_resolver.call_count.lock(), 0);
+        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
+        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
+        assert_eq!(*self.space_manager.call_count.lock(), 0);
+        assert_eq!(self.package_resolver_admin.take_event(), Some(event));
     }
 }
 
@@ -284,6 +311,49 @@ impl MockPackageResolverService {
     ) -> Result<(), Error> {
         while let Some(_req) = stream.try_next().await? {
             *self.call_count.lock() += 1;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum ExperimentEvent {
+    Enable(Experiment),
+    Disable(Experiment),
+}
+
+struct MockPackageResolverAdminService {
+    event: Mutex<Option<ExperimentEvent>>,
+}
+
+impl MockPackageResolverAdminService {
+    fn new() -> Self {
+        Self { event: Mutex::new(None) }
+    }
+    fn take_event(&self) -> Option<ExperimentEvent> {
+        self.event.lock().take()
+    }
+    async fn run_service(
+        self: Arc<Self>,
+        mut stream: PackageResolverAdminRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                PackageResolverAdminRequest::SetExperimentState {
+                    experiment_id,
+                    state,
+                    responder,
+                } => {
+                    let event = if state {
+                        ExperimentEvent::Enable(experiment_id)
+                    } else {
+                        ExperimentEvent::Disable(experiment_id)
+                    };
+                    let prev = self.event.lock().replace(event);
+                    assert_eq!(prev, None);
+                    responder.send().expect("pkgctl to wait for response");
+                }
+            }
         }
         Ok(())
     }
@@ -577,4 +647,22 @@ async fn test_gc_fail() {
     let output = env.run_pkgctl(vec!["gc"]).await;
     assert!(!output.exit_status.success());
     env.assert_only_space_manager_called();
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_experiment_enable() {
+    let env = TestEnv::new();
+    env.run_pkgctl(vec!["experiment", "enable", "lightbulb"]).await.ok().unwrap();
+    env.assert_only_package_resolver_admin_called_with(ExperimentEvent::Enable(
+        Experiment::Lightbulb,
+    ));
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_experiment_disable() {
+    let env = TestEnv::new();
+    env.run_pkgctl(vec!["experiment", "disable", "lightbulb"]).await.ok().unwrap();
+    env.assert_only_package_resolver_admin_called_with(ExperimentEvent::Disable(
+        Experiment::Lightbulb,
+    ));
 }

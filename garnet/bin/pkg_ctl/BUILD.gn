@@ -26,6 +26,7 @@ rustc_binary("bin") {
     "//src/sys/lib/fuchsia_url_rewrite",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde_json",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

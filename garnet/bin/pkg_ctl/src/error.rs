@@ -25,6 +25,9 @@ pub enum Error {
 
     #[fail(display = "{}", _0)]
     BlobId(#[cause] BlobIdParseError),
+
+    #[fail(display = "invalid experiment id {}", _0)]
+    ExperimentId(String),
 }
 
 impl From<serde_json::Error> for Error {

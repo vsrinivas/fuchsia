@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::Error, fidl_fuchsia_pkg_ext::BlobId, fuchsia_url_rewrite::RuleConfig, serde_json,
-    std::path::PathBuf,
+    crate::error::Error, fidl_fuchsia_pkg::ExperimentToggle as Experiment,
+    fidl_fuchsia_pkg_ext::BlobId, fuchsia_url_rewrite::RuleConfig, serde_json, std::path::PathBuf,
 };
 
 const HELP: &str = "\
@@ -20,6 +20,7 @@ SUBCOMMANDS:
     repo       repo subcommands
     resolve    resolve a package
     rule       manage URL rewrite rules
+    experiment manage runtime experiment states
     update     check for a system update and apply it if available
     gc         trigger garbage collection of package cache
 ";
@@ -143,6 +144,51 @@ ARGS:
     <config>    JSON encoded rewrite rule config
 ";
 
+const HELP_EXPERIMENT: &str = "\
+manage runtime experiment states
+experiments may be added or removed over time and should not be considered to be stable.
+
+USAGE:
+    pkgctl experiment <SUBCOMMAND>
+
+SUBCOMMANDS:
+    enable     enables the given experiment
+    disable    disables the given experiment
+";
+
+// known_experiments can't be defined as a const &str as concat! needs all inputs to be literals.
+macro_rules! known_experiments {
+    () => {
+        "
+EXPERIMENTS:
+    lightbulb     no-op experiment
+    download-blob pkg-resolver drives package installation and blob downloading
+"
+    };
+}
+
+const HELP_EXPERIMENT_ENABLE: &str = concat!(
+    "\
+USAGE:
+    pkgctl experiment enable <experiment>
+
+ARGS:
+    <experiment> The experiment to enable
+",
+    known_experiments!()
+);
+
+const HELP_EXPERIMENT_DISABLE: &str = concat!(
+    "\
+USAGE:
+    pkgctl experiment disable <experiment>
+
+ARGS:
+    <experiment> The experiment to disable
+",
+    known_experiments!()
+);
+
 const HELP_UPDATE: &str = "\
 The update command performs a system update check and triggers an OTA if present.
 
@@ -167,6 +213,7 @@ pub enum Command {
     Open { meta_far_blob_id: BlobId, selectors: Vec<String> },
     Repo(RepoCommand),
     Rule(RuleCommand),
+    Experiment(ExperimentCommand),
     Update,
     Gc,
 }
@@ -184,6 +231,12 @@ pub enum RuleCommand {
     List,
     Clear,
     Replace { input_type: RuleConfigInputType },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ExperimentCommand {
+    Enable(Experiment),
+    Disable(Experiment),
 }
 
 #[derive(Debug, PartialEq)]
@@ -207,6 +260,12 @@ impl From<RuleCommand> for Command {
 impl From<RuleConfigInputType> for Command {
     fn from(rule: RuleConfigInputType) -> Command {
         Command::Rule(RuleCommand::Replace { input_type: rule })
+    }
+}
+
+impl From<ExperimentCommand> for Command {
+    fn from(experiment: ExperimentCommand) -> Command {
+        Command::Experiment(experiment)
     }
 }
 
@@ -251,6 +310,12 @@ where
                         Some("json") => done!(HELP_RULE_REPLACE_JSON),
                         Some(arg) => unrecognized!(arg),
                     },
+                    Some(arg) => unrecognized!(arg),
+                },
+                Some("experiment") => match iter.next() {
+                    None => HELP_EXPERIMENT,
+                    Some("enable") => done!(HELP_EXPERIMENT_ENABLE),
+                    Some("disable") => done!(HELP_EXPERIMENT_DISABLE),
                     Some(arg) => unrecognized!(arg),
                 },
                 Some("open") => done!(HELP_OPEN),
@@ -309,6 +374,22 @@ where
             },
             Some(arg) => unrecognized!(arg),
         },
+        "experiment" => match iter.next() {
+            None => Err(Error::MissingCommand),
+            Some("enable") => {
+                let experiment = parse_experiment_id(
+                    iter.next().ok_or_else(|| Error::MissingArgument("experiment"))?,
+                )?;
+                done!(Ok(ExperimentCommand::Enable(experiment).into()))
+            }
+            Some("disable") => {
+                let experiment = parse_experiment_id(
+                    iter.next().ok_or_else(|| Error::MissingArgument("experiment"))?,
+                )?;
+                done!(Ok(ExperimentCommand::Disable(experiment).into()))
+            }
+            Some(arg) => unrecognized!(arg),
+        },
         "update" => match iter.next() {
             None => Ok(Command::Update),
             Some(arg) => unrecognized!(arg),
@@ -321,9 +402,17 @@ where
     }
 }
 
+fn parse_experiment_id(experiment: &str) -> Result<Experiment, Error> {
+    match experiment {
+        "lightbulb" => Ok(Experiment::Lightbulb),
+        "download-blob" => Ok(Experiment::DownloadBlob),
+        experiment => Err(Error::ExperimentId(experiment.to_owned())),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, matches::assert_matches};
 
     const REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
     const CONFIG_JSON: &str = r#"{"version": "1", "content": []}"#;
@@ -344,7 +433,8 @@ mod tests {
         }
 
         // note, specifically leaving out "open" and "resolve" since they accept arbitrary
-        // selectors.
+        // selectors and "experiment enable/disable" since they return different errors on
+        // unexpected experiment IDs.
         let cases: &[&[&str]] = &[
             &[],
             &["help"],
@@ -357,6 +447,9 @@ mod tests {
             &["help", "rule", "replace"],
             &["help", "rule", "replace", "file"],
             &["help", "rule", "replace", "json"],
+            &["help", "experiment"],
+            &["help", "experiment", "enable"],
+            &["help", "experiment", "disable"],
             &["help", "open"],
             &["help", "update"],
             &["help", "gc"],
@@ -373,6 +466,7 @@ mod tests {
             &["rule", "replace", "file", "foo"],
             &["rule", "replace", "json", CONFIG_JSON],
             &["rule"],
+            &["experiment"],
             &["update"],
             &["gc"],
         ];
@@ -410,6 +504,9 @@ mod tests {
         check(&["help", "rule", "replace"], HELP_RULE_REPLACE);
         check(&["help", "rule", "replace", "file"], HELP_RULE_REPLACE_FILE);
         check(&["help", "rule", "replace", "json"], HELP_RULE_REPLACE_JSON);
+        check(&["help", "experiment"], HELP_EXPERIMENT);
+        check(&["help", "experiment", "enable"], HELP_EXPERIMENT_ENABLE);
+        check(&["help", "experiment", "disable"], HELP_EXPERIMENT_DISABLE);
     }
 
     #[test]
@@ -507,6 +604,32 @@ mod tests {
             RuleCommand::Replace {
                 input_type: RuleConfigInputType::Json { config: RuleConfig::Version1(vec![]) },
             },
+        );
+    }
+
+    #[test]
+    fn test_experiment_ok() {
+        assert_matches!(
+            parse_args(["experiment", "enable", "lightbulb"].iter().cloned()),
+            Ok(Command::Experiment(ExperimentCommand::Enable(Experiment::Lightbulb)))
+        );
+
+        assert_matches!(
+            parse_args(["experiment", "disable", "lightbulb"].iter().cloned()),
+            Ok(Command::Experiment(ExperimentCommand::Disable(Experiment::Lightbulb)))
+        );
+    }
+
+    #[test]
+    fn test_experiment_unknown() {
+        assert_matches!(
+            parse_args(["experiment", "enable", "unknown"].iter().cloned()),
+            Err(Error::ExperimentId(id)) if id == "unknown"
+        );
+
+        assert_matches!(
+            parse_args(["experiment", "disable", "unknown"].iter().cloned()),
+            Err(Error::ExperimentId(id)) if id == "unknown"
         );
     }
 
