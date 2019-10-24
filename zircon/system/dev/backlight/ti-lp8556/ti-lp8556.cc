@@ -39,20 +39,40 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   brightness = fbl::min(brightness, 1.0);
 
   if (brightness != brightness_) {
+    uint16_t brightness_reg_value = static_cast<uint16_t>(brightness * kBrightnessRegMaxValue);
+
+    // LSB should be updated before MSB. Writing to MSB triggers the brightness change.
     uint8_t buf[2];
-    buf[0] = kBacklightControlReg;
-    buf[1] = static_cast<uint8_t>(brightness * kMaxBrightnessRegValue);
+    buf[0] = kBacklightBrightnessLsbReg;
+    buf[1] = static_cast<uint8_t>(brightness_reg_value & kBrightnessLsbMask);
     zx_status_t status = i2c_.WriteSync(buf, sizeof(buf));
     if (status != ZX_OK) {
-      LOG_ERROR("Failed to set brightness register\n");
+      LOG_ERROR("Failed to set brightness LSB register\n");
       return status;
     }
 
-    uint16_t sticky_reg_value = static_cast<uint16_t>(brightness * kAOBrightnessStickyMaxValue);
-    sticky_reg_value &= kAOBrightnessStickyMask;
+    uint8_t msb_reg_value;
+    status = i2c_.ReadSync(kBacklightBrightnessMsbReg, &msb_reg_value, 1);
+    if (status != ZX_OK) {
+      LOG_ERROR("Failed to get brightness MSB register\n");
+      return status;
+    }
+
+    // The low 4-bits contain the brightness MSB. Keep the remaining bits unchanged.
+    msb_reg_value &= static_cast<uint8_t>(~kBrightnessMsbByteMask);
+    msb_reg_value |=
+        (static_cast<uint8_t>((brightness_reg_value & kBrightnessMsbMask) >> kBrightnessMsbShift));
+
+    buf[0] = kBacklightBrightnessMsbReg;
+    buf[1] = msb_reg_value;
+    status = i2c_.WriteSync(buf, sizeof(buf));
+    if (status != ZX_OK) {
+      LOG_ERROR("Failed to set brightness MSB register\n");
+      return status;
+    }
 
     auto persistent_brightness = BrightnessStickyReg::Get().ReadFrom(&mmio_);
-    persistent_brightness.set_brightness(sticky_reg_value);
+    persistent_brightness.set_brightness(brightness_reg_value & kBrightnessRegMask);
     persistent_brightness.set_is_valid(1);
     persistent_brightness.WriteTo(&mmio_);
   }

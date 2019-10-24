@@ -53,14 +53,19 @@ class Lp8556DeviceTest : public zxtest::Test {
 
   void VerifySetBrightness(bool power, double brightness) {
     if (brightness != dev_->GetDeviceBrightness()) {
+      uint16_t brightness_reg_value = static_cast<uint16_t>(brightness * kBrightnessRegMaxValue);
+      mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg,
+                                 static_cast<uint8_t>(brightness_reg_value & kBrightnessLsbMask)});
+      // An I2C bus read is a write of the address followed by a read of the data.
+      mock_i2c_.ExpectWrite({kBacklightBrightnessMsbReg}).ExpectReadStop({0});
       mock_i2c_.ExpectWriteStop(
-          {kBacklightControlReg, static_cast<uint8_t>(brightness * kMaxBrightnessRegValue)});
-
-      uint16_t sticky_reg_value = static_cast<uint16_t>(brightness * kAOBrightnessStickyMaxValue);
-      sticky_reg_value &= kAOBrightnessStickyMask;
+          {kBacklightBrightnessMsbReg,
+           static_cast<uint8_t>(
+               ((brightness_reg_value & kBrightnessMsbMask) >> kBrightnessMsbShift) &
+               kBrightnessMsbByteMask)});
 
       auto sticky_reg = BrightnessStickyReg::Get().FromValue(0);
-      sticky_reg.set_brightness(sticky_reg_value);
+      sticky_reg.set_brightness(brightness_reg_value & kBrightnessRegMask);
       sticky_reg.set_is_valid(1);
 
       mock_regs_[BrightnessStickyReg::Get().addr()].ExpectWrite(sticky_reg.reg_value());

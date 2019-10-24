@@ -23,20 +23,23 @@ namespace ti {
 #define LOG_SPEW(fmt, ...) zxlogf(SPEW, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define LOG_TRACE zxlogf(INFO, "[%s %d]\n", __func__, __LINE__)
 
-constexpr uint8_t kBacklightControlReg = 0x0;
+constexpr uint8_t kBacklightBrightnessLsbReg = 0x10;
+constexpr uint8_t kBacklightBrightnessMsbReg = 0x11;
 constexpr uint8_t kDeviceControlReg = 0x1;
 constexpr uint8_t kCfg2Reg = 0xA2;
+constexpr uint32_t kAOBrightnessStickyReg = (0x04e << 2);
 
 constexpr uint8_t kBacklightOn = 0x85;
 constexpr uint8_t kBacklightOff = 0x84;
 constexpr uint8_t kCfg2Default = 0x30;
 
-constexpr uint8_t kMaxBrightnessRegValue = 0xFF;
+constexpr uint16_t kBrightnessRegMask = 0xFFF;
+constexpr uint16_t kBrightnessRegMaxValue = kBrightnessRegMask;
 
-constexpr uint32_t kAOBrightnessStickyReg = (0x04e << 2);
-constexpr uint16_t kAOBrightnessStickyBits = 12;
-constexpr uint16_t kAOBrightnessStickyMask = ((0x1 << kAOBrightnessStickyBits) - 1);
-constexpr uint16_t kAOBrightnessStickyMaxValue = kAOBrightnessStickyMask;
+constexpr uint16_t kBrightnessMsbShift = 8;
+constexpr uint16_t kBrightnessLsbMask = 0xFF;
+constexpr uint8_t kBrightnessMsbByteMask = 0xF;
+constexpr uint16_t kBrightnessMsbMask = (kBrightnessMsbByteMask << kBrightnessMsbShift);
 
 class Lp8556Device;
 using DeviceType = ddk::Device<Lp8556Device, ddk::UnbindableNew, ddk::Messageable>;
@@ -65,10 +68,12 @@ class Lp8556Device : public DeviceType,
 
     if (persistent_brightness.is_valid()) {
       double brightness =
-          static_cast<double>(persistent_brightness.brightness()) / kAOBrightnessStickyMaxValue;
+          static_cast<double>(persistent_brightness.brightness()) / kBrightnessRegMaxValue;
 
       if (SetBacklightState(brightness > 0, brightness) != ZX_OK) {
-        LOG_ERROR("Could not set sticky brightness value: %f\n", brightness);
+        LOG_ERROR("Could not set persistent brightness value: %f\n", brightness);
+      } else {
+        LOG_INFO("Successfully set persistent brightness value: %f\n", brightness);
       }
     }
 
