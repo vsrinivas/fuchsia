@@ -31,7 +31,7 @@ use crate::wire::icmp::mld::{
     IcmpMldv1MessageType, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
     MulticastListenerReport,
 };
-use crate::wire::icmp::{IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
+use crate::wire::icmp::{mld::MldPacket, IcmpPacketBuilder, IcmpUnusedCode};
 use crate::wire::ipv6::ext_hdrs::{
     ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData,
 };
@@ -76,18 +76,12 @@ pub(crate) trait MldContext:
 /// [`MldContext`], and it can also be mocked for use in testing.
 pub(crate) trait MldHandler: IpDeviceIdContext {
     /// Receive an MLD packet.
-    ///
-    /// # Panics
-    ///
-    /// `receive_mld_packet` panics if `packet` is not one of
-    /// `MulticastListenerQuery`, `MulticastListenerReport`, or
-    /// `MulticastListenerDone`.
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
         device: Self::DeviceId,
         src_ip: Ipv6Addr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
-        packet: Icmpv6Packet<B>,
+        packet: MldPacket<B>,
     );
 }
 
@@ -97,25 +91,22 @@ impl<C: MldContext> MldHandler for C {
         device: Self::DeviceId,
         _src_ip: Ipv6Addr,
         _dst_ip: SpecifiedAddr<Ipv6Addr>,
-        packet: Icmpv6Packet<B>,
+        packet: MldPacket<B>,
     ) {
         if let Err(e) = match packet {
-            Icmpv6Packet::MulticastListenerQuery(msg) => {
+            MldPacket::MulticastListenerQuery(msg) => {
                 let now = self.now();
                 let max_response_delay: Duration = msg.body().max_response_delay();
                 handle_mld_message(self, device, msg.body(), |rng, state| {
                     state.query_received(rng, max_response_delay, now)
                 })
             }
-            Icmpv6Packet::MulticastListenerReport(msg) => {
+            MldPacket::MulticastListenerReport(msg) => {
                 handle_mld_message(self, device, msg.body(), |_, state| state.report_received())
             }
-            Icmpv6Packet::MulticastListenerDone(_) => {
+            MldPacket::MulticastListenerDone(_) => {
                 debug!("Hosts are not interested in Done messages");
                 return;
-            }
-            _ => {
-                unreachable!("It is not an MLD packet");
             }
         } {
             error!("Error occurred when handling MLD message: {}", e);

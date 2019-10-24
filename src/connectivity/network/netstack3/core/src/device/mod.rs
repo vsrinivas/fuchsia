@@ -30,7 +30,7 @@ use crate::device::ethernet::{
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::NdpPacketHandler;
-use crate::wire::icmp::Icmpv6Packet;
+use crate::wire::icmp::ndp::NdpPacket;
 use crate::{BufferDispatcher, Context, EventDispatcher, Instant, StackState};
 
 /// An execution context which provides a `DeviceId` type for various device
@@ -1230,7 +1230,7 @@ impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Context<D> {
         device: DeviceId,
         src_ip: Ipv6Addr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
-        packet: Icmpv6Packet<B>,
+        packet: NdpPacket<B>,
     ) {
         trace!("device::receive_ndp_packet");
 

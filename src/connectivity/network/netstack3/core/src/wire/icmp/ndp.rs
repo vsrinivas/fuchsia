@@ -7,9 +7,18 @@
 use net_types::ip::{Ipv6, Ipv6Addr};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
+use crate::wire::icmp::{IcmpIpExt, IcmpPacket, IcmpUnusedCode};
 use crate::wire::{U16, U32};
 
-use super::{IcmpIpExt, IcmpUnusedCode};
+/// An ICMPv6 packet with an NDP message.
+#[allow(missing_docs)]
+pub(crate) enum NdpPacket<B: ByteSlice> {
+    RouterSolicitation(IcmpPacket<Ipv6, B, RouterSolicitation>),
+    RouterAdvertisement(IcmpPacket<Ipv6, B, RouterAdvertisement>),
+    NeighborSolicitation(IcmpPacket<Ipv6, B, NeighborSolicitation>),
+    NeighborAdvertisement(IcmpPacket<Ipv6, B, NeighborAdvertisement>),
+    Redirect(IcmpPacket<Ipv6, B, Redirect>),
+}
 
 pub(crate) type Options<B> = crate::wire::records::options::Options<B, options::NdpOptionsImpl>;
 pub(crate) type OptionsSerializer<'a, I> = crate::wire::records::options::OptionsSerializer<

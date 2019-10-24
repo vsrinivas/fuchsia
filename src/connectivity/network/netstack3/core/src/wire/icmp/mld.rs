@@ -19,8 +19,16 @@ use packet::serialize::InnerPacketBuilder;
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::wire::icmp::{IcmpIpExt, IcmpMessage, IcmpUnusedCode, MessageBody};
+use crate::wire::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody};
 use crate::wire::U16;
+
+/// An ICMPv6 packet with an MLD message.
+#[allow(missing_docs)]
+pub(crate) enum MldPacket<B: ByteSlice> {
+    MulticastListenerQuery(IcmpPacket<Ipv6, B, MulticastListenerQuery>),
+    MulticastListenerReport(IcmpPacket<Ipv6, B, MulticastListenerReport>),
+    MulticastListenerDone(IcmpPacket<Ipv6, B, MulticastListenerDone>),
+}
 
 /// Multicast Listener Query V1 Message.
 #[repr(C)]

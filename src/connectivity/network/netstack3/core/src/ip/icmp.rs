@@ -644,18 +644,12 @@ pub(crate) fn receive_icmpv6_packet<
                 ctx, src_ip, dst_ip, id, seq, buffer,
             );
         }
-        Icmpv6Packet::RouterSolicitation(_)
-        | Icmpv6Packet::RouterAdvertisement(_)
-        | Icmpv6Packet::NeighborSolicitation(_)
-        | Icmpv6Packet::NeighborAdvertisement(_)
-        | Icmpv6Packet::Redirect(_) => {
-            ctx.receive_ndp_packet(
-                device.expect("received NDP packet from localhost"),
-                src_ip,
-                dst_ip,
-                packet,
-            );
-        }
+        Icmpv6Packet::Ndp(packet) => ctx.receive_ndp_packet(
+            device.expect("received NDP packet from localhost"),
+            src_ip,
+            dst_ip,
+            packet,
+        ),
         Icmpv6Packet::PacketTooBig(packet_too_big) => {
             ctx.increment_counter("receive_icmpv6_packet::packet_too_big");
             trace!("receive_icmpv6_packet: Received a Packet Too Big message");
@@ -669,17 +663,15 @@ pub(crate) fn receive_icmpv6_packet<
             // must not happen).
             ctx.update_pmtu_if_less(dst_ip.get(), src_ip, packet_too_big.message().mtu());
         }
-        Icmpv6Packet::MulticastListenerQuery(_)
-        | Icmpv6Packet::MulticastListenerReport(_)
-        | Icmpv6Packet::MulticastListenerDone(_) => {
-            ctx.receive_mld_packet(
-                device.expect("MLD messages must come from a device"),
-                src_ip,
-                dst_ip,
-                packet,
-            );
-        }
-        _ => log_unimplemented!(
+        Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(
+            device.expect("MLD messages must come from a device"),
+            src_ip,
+            dst_ip,
+            packet,
+        ),
+        Icmpv6Packet::DestUnreachable(_)
+        | Icmpv6Packet::TimeExceeded(_)
+        | Icmpv6Packet::ParameterProblem(_) => log_unimplemented!(
             (),
             "ip::icmp::receive_icmpv6_packet: Not implemented for this packet type"
         ),
