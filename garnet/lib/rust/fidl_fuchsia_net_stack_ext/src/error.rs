@@ -6,6 +6,13 @@ use failure::ResultExt;
 
 use fidl_fuchsia_net_stack as fidl_net_stack;
 
+#[macro_export]
+macro_rules! exec_fidl {
+    ($method:expr, $context:expr) => {
+        $method.await.squash_result().context($context)
+    };
+}
+
 /// Newtype wrapper of `fidl_fuchsia_net_stack::Error` so that external traits
 /// (`failure::Fail` in particular) can be implemented for it.
 pub struct NetstackError(fidl_net_stack::Error);

@@ -11,7 +11,7 @@ use fidl_fuchsia_net_filter::{FilterMarker, FilterProxy};
 use fidl_fuchsia_net_stack::{
     self as netstack, InterfaceInfo, LogMarker, LogProxy, StackMarker, StackProxy,
 };
-use fidl_fuchsia_net_stack_ext::{self as pretty, FidlReturn};
+use fidl_fuchsia_net_stack_ext::{self as pretty, exec_fidl as stack_fidl, FidlReturn};
 use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
@@ -27,12 +27,6 @@ use std::str::FromStr;
 mod opts;
 
 use crate::opts::*;
-
-macro_rules! stack_fidl {
-    ($method:expr, $context:expr) => {
-        $method.await.squash_result().context($context)
-    };
-}
 
 macro_rules! filter_fidl {
     ($method:expr, $context:expr) => {

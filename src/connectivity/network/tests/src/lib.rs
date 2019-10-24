@@ -7,15 +7,41 @@
 use failure::ResultExt;
 use std::convert::TryInto;
 
-use fidl_fuchsia_net_stack_ext::FidlReturn;
+use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
 
 type Result = std::result::Result<(), failure::Error>;
 
-fn connect_to_service<S: fidl::endpoints::ServiceMarker>(
+// TODO(gongt) Use an attribute macro to reduce the boilerplate of running the
+// same test for both N2 and N3.
+/// Abstraction for a Fuchsia component which offers network stack services.
+trait Netstack {
+    const URL: &'static str;
+    const ARGS: &'static [&'static str];
+}
+
+/// Uninstantiable type that represents Netstack2's implementation of a
+/// network stack.
+enum Netstack2 {}
+
+impl Netstack for Netstack2 {
+    const URL: &'static str = fuchsia_component::fuchsia_single_component_package_url!("netstack");
+    const ARGS: &'static [&'static str] = &["--sniff", "verbosity=debug"];
+}
+
+/// Uninstantiable type that represents Netstack3's implementation of a
+/// network stack.
+enum Netstack3 {}
+
+impl Netstack for Netstack3 {
+    const URL: &'static str = fuchsia_component::fuchsia_single_component_package_url!("netstack3");
+    const ARGS: &'static [&'static str] = &[];
+}
+
+fn connect_to_service<S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService>(
     managed_environment: &fidl_fuchsia_netemul_environment::ManagedEnvironmentProxy,
 ) -> std::result::Result<S::Proxy, failure::Error> {
     let (proxy, server) = fuchsia_zircon::Channel::create()?;
-    let () = managed_environment.connect_to_service(S::NAME, server)?;
+    let () = managed_environment.connect_to_service(S::SERVICE_NAME, server)?;
     let proxy = fuchsia_async::Channel::from_channel(proxy)?;
     Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
 }
@@ -64,7 +90,7 @@ async fn create_endpoint(
     Ok(endpoint)
 }
 
-fn create_netstack_environment(
+fn create_netstack_environment<N: Netstack>(
     sandbox: &fidl_fuchsia_netemul_sandbox::SandboxProxy,
     name: String,
 ) -> std::result::Result<fidl_fuchsia_netemul_environment::ManagedEnvironmentProxy, failure::Error>
@@ -79,9 +105,9 @@ fn create_netstack_environment(
             fidl_fuchsia_netemul_environment::EnvironmentOptions {
                 name: Some(name),
                 services: Some([
-                    <fidl_fuchsia_net_stack::StackMarker as fidl::endpoints::ServiceMarker>::NAME,
-                    <fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::ServiceMarker>::NAME,
-                    <fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::ServiceMarker>::NAME,
+                    <fidl_fuchsia_net_stack::StackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                    <fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                    <fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                 ]
                     // TODO(tamird): use into_iter after
                     // https://github.com/rust-lang/rust/issues/25725.
@@ -90,9 +116,9 @@ fn create_netstack_environment(
                     .map(str::to_string)
                     .map(|name| fidl_fuchsia_netemul_environment::LaunchService {
                         name,
-                        url: fuchsia_component::fuchsia_single_component_package_url!("netstack").to_string(),
+                        url: N::URL.to_string(),
                         arguments: Some(
-                            ["--sniff", "--verbosity=debug"]
+                            N::ARGS
                                 // TODO(tamird): use into_iter after
                                 // https://github.com/rust-lang/rust/issues/25725.
                                 .iter()
@@ -102,7 +128,7 @@ fn create_netstack_environment(
                         ),
                     }).chain(Some(
                     fidl_fuchsia_netemul_environment::LaunchService {
-                        name: <fidl_fuchsia_stash::StoreMarker as fidl::endpoints::ServiceMarker>::NAME.to_string(),
+                        name: <fidl_fuchsia_stash::StoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME.to_string(),
                         url: fuchsia_component::fuchsia_single_component_package_url!("stash").to_string(),
                         arguments: None,
                     }
@@ -122,14 +148,15 @@ fn create_netstack_environment(
     Ok(client)
 }
 
-async fn with_netstack_and_device<F, T, S>(name: &'static str, async_fn: T) -> Result
+async fn with_netstack_and_device<F, T, N, S>(name: &'static str, async_fn: T) -> Result
 where
     F: futures::Future<Output = Result>,
     T: FnOnce(
         S::Proxy,
         fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
     ) -> F,
-    S: fidl::endpoints::ServiceMarker,
+    N: Netstack,
+    S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
 {
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
@@ -141,7 +168,7 @@ where
     let endpoint =
         create_endpoint(name, &endpoint_manager).await.context("failed to create endpoint")?;
     let device = endpoint.get_ethernet_device().await.context("failed to get ethernet device")?;
-    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
+    let managed_environment = create_netstack_environment::<N>(&sandbox, name.to_string())
         .context("failed to create netstack environment")?;
     let netstack_proxy =
         connect_to_service::<S>(&managed_environment).context("failed to connect to netstack")?;
@@ -182,9 +209,9 @@ async fn inspect_objects() -> Result {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn add_ethernet_device() -> Result {
-    let name = stringify!(add_ethernet_device);
+    let name = "add_ethernet_device";
 
-    with_netstack_and_device::<_, _, fidl_fuchsia_netstack::NetstackMarker>(
+    with_netstack_and_device::<_, _, Netstack2, fidl_fuchsia_netstack::NetstackMarker>(
         name,
         |netstack, device| {
             async move {
@@ -220,48 +247,57 @@ async fn add_ethernet_device() -> Result {
     .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn add_ethernet_interface() -> Result {
-    let name = stringify!(add_ethernet_interface);
-
-    with_netstack_and_device::<_, _, fidl_fuchsia_net_stack::StackMarker>(name, |stack, device| {
-        async move {
-            let id = stack
-                .add_ethernet_interface(name, device)
-                .await
-                .squash_result()
-                .context("failed to add ethernet interface")?;
-            let interface = stack
-                .list_interfaces()
-                .await
-                .context("failed to list interfaces")?
-                .into_iter()
-                .find(|interface| interface.id == id)
-                .ok_or(failure::err_msg("failed to find added ethernet interface"))?;
-            assert_eq!(
-                interface.properties.features
-                    & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
-                0
-            );
-            assert_eq!(
-                interface.properties.physical_status,
-                fidl_fuchsia_net_stack::PhysicalStatus::Down
-            );
-            Ok(())
-        }
-    })
+async fn add_ethernet_interface<N: Netstack>(name: &'static str) -> Result {
+    with_netstack_and_device::<_, _, N, fidl_fuchsia_net_stack::StackMarker>(
+        name,
+        |stack, device| {
+            async move {
+                let id = exec_fidl!(
+                    stack.add_ethernet_interface(name, device),
+                    "failed to add ethernet interface"
+                )?;
+                let interface = stack
+                    .list_interfaces()
+                    .await
+                    .context("failed to list interfaces")?
+                    .into_iter()
+                    .find(|interface| interface.id == id)
+                    .ok_or(failure::err_msg("failed to find added ethernet interface"))?;
+                assert_eq!(
+                    interface.properties.features
+                        & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
+                    0
+                );
+                assert_eq!(
+                    interface.properties.physical_status,
+                    fidl_fuchsia_net_stack::PhysicalStatus::Down
+                );
+                Ok(())
+            }
+        },
+    )
     .await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn add_ethernet_interface_n2() -> Result {
+    add_ethernet_interface::<Netstack2>("add_ethernet_interface_n2").await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn add_ethernet_interface_n3() -> Result {
+    add_ethernet_interface::<Netstack3>("add_ethernet_interface_n3").await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn add_del_interface_address() -> Result {
-    let name = stringify!(add_del_interface_address);
+    let name = "add_del_interface_address";
 
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
     >()
     .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
+    let managed_environment = create_netstack_environment::<Netstack2>(&sandbox, name.to_string())
         .context("failed to create netstack environment")?;
     let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
         .context("failed to connect to netstack")?;
@@ -285,11 +321,8 @@ async fn add_del_interface_address() -> Result {
         .await
         .context("failed to call add interface address")?;
     assert_eq!(res, Ok(()));
-    let loopback = stack
-        .get_interface_info(loopback.id)
-        .await
-        .squash_result()
-        .context("failed to get loopback interface")?;
+    let loopback =
+        exec_fidl!(stack.get_interface_info(loopback.id), "failed to get loopback interface")?;
 
     assert!(
         loopback.properties.addresses.iter().find(|addr| *addr == &interface_address).is_some(),
@@ -303,11 +336,8 @@ async fn add_del_interface_address() -> Result {
         .await
         .context("failed to call del interface address")?;
     assert_eq!(res, Ok(()));
-    let loopback = stack
-        .get_interface_info(loopback.id)
-        .await
-        .squash_result()
-        .context("failed to get loopback interface")?;
+    let loopback =
+        exec_fidl!(stack.get_interface_info(loopback.id), "failed to get loopback interface")?;
 
     assert!(
         loopback.properties.addresses.iter().find(|addr| *addr == &interface_address).is_none(),
@@ -321,13 +351,13 @@ async fn add_del_interface_address() -> Result {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn add_remove_interface_address_errors() -> Result {
-    let name = stringify!(add_remove_interface_address_errors);
+    let name = "add_remove_interface_address_errors";
 
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
     >()
     .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
+    let managed_environment = create_netstack_environment::<Netstack2>(&sandbox, name.to_string())
         .context("failed to create netstack environment")?;
     let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
         .context("failed to connect to stack")?;
@@ -397,15 +427,12 @@ async fn add_remove_interface_address_errors() -> Result {
     Ok(())
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn get_interface_info_not_found() -> Result {
-    let name = stringify!(get_interface_info_not_found);
-
+async fn get_interface_info_not_found<N: Netstack>(name: &'static str) -> Result {
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
     >()
     .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
+    let managed_environment = create_netstack_environment::<N>(&sandbox, name.to_string())
         .context("failed to create netstack environment")?;
     let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
         .context("failed to connect to netstack")?;
@@ -418,14 +445,24 @@ async fn get_interface_info_not_found() -> Result {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn get_interface_info_not_found_n2() -> Result {
+    get_interface_info_not_found::<Netstack2>("get_interface_info_not_found_n2").await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_interface_info_not_found_n3() -> Result {
+    get_interface_info_not_found::<Netstack3>("get_interface_info_not_found_n3").await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn disable_interface_loopback() -> Result {
-    let name = stringify!(disable_interface_loopback);
+    let name = "disable_interface_loopback";
 
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
     >()
     .context("failed to connect to sandbox")?;
-    let managed_environment = create_netstack_environment(&sandbox, name.to_string())
+    let managed_environment = create_netstack_environment::<Netstack2>(&sandbox, name.to_string())
         .context("failed to create netstack environment")?;
     let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
         .context("failed to connect to netstack")?;
@@ -441,16 +478,8 @@ async fn disable_interface_loopback() -> Result {
         localhost.properties.administrative_status,
         fidl_fuchsia_net_stack::AdministrativeStatus::Enabled
     );
-    let () = stack
-        .disable_interface(localhost.id)
-        .await
-        .squash_result()
-        .context("failed to disable interface")?;
-    let info = stack
-        .get_interface_info(localhost.id)
-        .await
-        .squash_result()
-        .context("failed to get interface info")?;
+    let () = exec_fidl!(stack.disable_interface(localhost.id), "failed to disable interface")?;
+    let info = exec_fidl!(stack.get_interface_info(localhost.id), "failed to get interface info")?;
     assert_eq!(
         info.properties.administrative_status,
         fidl_fuchsia_net_stack::AdministrativeStatus::Disabled
@@ -461,7 +490,7 @@ async fn disable_interface_loopback() -> Result {
 // TODO(tamird): could this be done with a single stack and bridged interfaces?
 #[fuchsia_async::run_singlethreaded(test)]
 async fn acquire_dhcp() -> Result {
-    let name = stringify!(acquire_dhcp);
+    let name = "acquire_dhcp";
 
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
@@ -470,8 +499,9 @@ async fn acquire_dhcp() -> Result {
     let network_context = get_network_context(&sandbox).context("failed to get network context")?;
     let endpoint_manager =
         get_endpoint_manager(&network_context).context("failed to get endpoint manager")?;
-    let server_environment = create_netstack_environment(&sandbox, format!("{}_server", name))
-        .context("failed to create server environment")?;
+    let server_environment =
+        create_netstack_environment::<Netstack2>(&sandbox, format!("{}_server", name))
+            .context("failed to create server environment")?;
     let server_endpoint_name = "server";
     let server_endpoint = create_endpoint(server_endpoint_name, &endpoint_manager)
         .await
@@ -485,13 +515,12 @@ async fn acquire_dhcp() -> Result {
         let server_stack =
             connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&server_environment)
                 .context("failed to connect to server stack")?;
-        let id = server_stack
-            .add_ethernet_interface(name, server_device)
-            .await
-            .squash_result()
-            .context("failed to add server ethernet interface")?;
-        let () = server_stack
-            .add_interface_address(
+        let id = exec_fidl!(
+            server_stack.add_ethernet_interface(name, server_device),
+            "failed to add server ethernet interface"
+        )?;
+        let () = exec_fidl!(
+            server_stack.add_interface_address(
                 id,
                 &mut fidl_fuchsia_net_stack::InterfaceAddress {
                     ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
@@ -499,15 +528,11 @@ async fn acquire_dhcp() -> Result {
                     }),
                     prefix_len: 24,
                 },
-            )
-            .await
-            .squash_result()
-            .context("failed to add interface address")?;
-        let () = server_stack
-            .enable_interface(id)
-            .await
-            .squash_result()
-            .context("failed to enable server interface")?;
+            ),
+            "failed to add interface address"
+        )?;
+        let () =
+            exec_fidl!(server_stack.enable_interface(id), "failed to enable server interface")?;
     }
     let launcher = {
         let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_sys::LauncherMarker>()
@@ -521,8 +546,9 @@ async fn acquire_dhcp() -> Result {
         None,
     )
     .context("failed to start dhcpd")?;
-    let client_environment = create_netstack_environment(&sandbox, format!("{}_client", name))
-        .context("failed to create client environment")?;
+    let client_environment =
+        create_netstack_environment::<Netstack2>(&sandbox, format!("{}_client", name))
+            .context("failed to create client environment")?;
     let client_endpoint_name = "client";
     let client_endpoint = create_endpoint(client_endpoint_name, &endpoint_manager)
         .await
@@ -573,16 +599,12 @@ async fn acquire_dhcp() -> Result {
         let client_stack =
             connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&client_environment)
                 .context("failed to connect to client stack")?;
-        let id = client_stack
-            .add_ethernet_interface(name, client_device)
-            .await
-            .squash_result()
-            .context("failed to add client ethernet interface")?;
-        let () = client_stack
-            .enable_interface(id)
-            .await
-            .squash_result()
-            .context("failed to enable client interface")?;
+        let id = exec_fidl!(
+            client_stack.add_ethernet_interface(name, client_device),
+            "failed to add client ethernet interface"
+        )?;
+        let () =
+            exec_fidl!(client_stack.enable_interface(id), "failed to enable client interface")?;
         let client_netstack =
             connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&client_environment)
                 .context("failed to connect to client netstack")?;
