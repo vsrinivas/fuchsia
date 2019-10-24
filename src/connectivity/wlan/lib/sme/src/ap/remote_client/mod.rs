@@ -7,6 +7,7 @@ use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use log::error;
 use std::boxed::Box;
 use std::collections::HashMap;
+use wlan_common::mac::Aid;
 use wlan_rsn::{
     key::exchange::Key,
     rsna::{SecAssocStatus, SecAssocUpdate, UpdateSink},
@@ -22,18 +23,73 @@ use crate::{
     timer::EventId,
     MacAddr, MlmeRequest,
 };
+use fuchsia_zircon as zx;
+
+mod state;
 
 #[derive(Debug)]
 pub struct RemoteClient {
     pub addr: MacAddr,
+    association_timeout: zx::Duration,
+
+    // TODO(tonyy): Remove these fields when they get moved into the state.
     pub aid: AssociationId,
     pub authenticator: Option<Box<dyn Authenticator>>,
     key_exchange_timeout: Option<EventId>,
 }
 
 impl RemoteClient {
-    fn new(addr: MacAddr, aid: AssociationId, authenticator: Option<Box<dyn Authenticator>>) -> Self {
-        RemoteClient { addr, aid, authenticator, key_exchange_timeout: None }
+    fn new(
+        addr: MacAddr,
+        aid: AssociationId,
+        authenticator: Option<Box<dyn Authenticator>>,
+        association_timeout: zx::Duration,
+    ) -> Self {
+        RemoteClient { addr, aid, authenticator, key_exchange_timeout: None, association_timeout }
+    }
+
+    pub fn send_authenticate_resp(
+        &mut self,
+        ctx: &mut Context,
+        result_code: fidl_mlme::AuthenticateResultCodes,
+    ) {
+        ctx.mlme_sink.send(MlmeRequest::AuthResponse(fidl_mlme::AuthenticateResponse {
+            peer_sta_address: self.addr.clone(),
+            result_code,
+        }))
+    }
+
+    pub fn send_associate_resp(
+        &mut self,
+        ctx: &mut Context,
+        result_code: fidl_mlme::AssociateResultCodes,
+        aid: Aid,
+    ) {
+        ctx.mlme_sink.send(MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            peer_sta_address: self.addr.clone(),
+            result_code,
+            association_id: aid,
+        }))
+    }
+
+    pub fn send_deauthenticate_req(
+        &mut self,
+        ctx: &mut Context,
+        reason_code: fidl_mlme::ReasonCode,
+    ) {
+        ctx.mlme_sink.send(MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
+            peer_sta_address: self.addr.clone(),
+            reason_code,
+        }))
+    }
+
+    pub fn schedule_at(
+        &mut self,
+        ctx: &mut Context,
+        deadline: zx::Time,
+        event: ClientEvent,
+    ) -> EventId {
+        ctx.timer.schedule_at(deadline, Event::Client { addr: self.addr.clone(), event })
     }
 
     pub fn handle_timeout(&mut self, event_id: EventId, event: ClientEvent, ctx: &mut Context) {
@@ -182,7 +238,8 @@ impl Map {
         ensure!(self.get_client(&addr).is_none(), "client already exists in map");
 
         let aid = self.aid_map.assign_aid()?;
-        let remote_client = RemoteClient::new(addr, aid, authenticator);
+        let remote_client =
+            RemoteClient::new(addr, aid, authenticator, zx::Duration::from_seconds(0));
         self.clients.insert(addr, remote_client);
         Ok(aid)
     }
@@ -398,7 +455,12 @@ mod tests {
         let mock_on_eapol_frame = Arc::new(Mutex::new(UpdateSink::default()));
         let authenticator =
             MockAuthenticator::new(mock_initiate.clone(), mock_on_eapol_frame.clone());
-        let remote_client = RemoteClient::new(CLIENT_ADDR, AID, Some(Box::new(authenticator)));
+        let remote_client = RemoteClient::new(
+            CLIENT_ADDR,
+            AID,
+            Some(Box::new(authenticator)),
+            zx::Duration::from_seconds(0),
+        );
         (remote_client, MockAuthenticatorController { mock_initiate, mock_on_eapol_frame })
     }
 

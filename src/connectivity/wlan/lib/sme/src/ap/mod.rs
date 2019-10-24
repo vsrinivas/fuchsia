@@ -72,7 +72,7 @@ enum State {
 }
 
 #[derive(Clone)]
-struct RsnCfg {
+pub struct RsnCfg {
     psk: psk::Psk,
     rsne: Rsne,
 }
