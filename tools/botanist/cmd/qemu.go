@@ -22,6 +22,9 @@ const qemuBinPrefix = "qemu-system"
 // QEMUCommand is a Command implementation for running the testing workflow on an emulated
 // target within QEMU.
 type QEMUCommand struct {
+	// QEMUType is the type of QEMU emulator to target, either QEMU or AEMU.
+	qemuType string
+
 	// ImageManifest is the path an image manifest specifying a QEMU kernel, a zircon
 	// kernel, and block image to back QEMU storage.
 	imageManifest string
@@ -63,6 +66,7 @@ func (*QEMUCommand) Synopsis() string {
 
 func (cmd *QEMUCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.imageManifest, "images", "", "path to an image manifest")
+	f.StringVar(&cmd.qemuType, "type", "", "type of QEMU to use")
 	f.StringVar(&cmd.qemuBinDir, "qemu-dir", "", "")
 	f.StringVar(&cmd.minFSImage, "minfs", "", "path to minFS image")
 	f.StringVar(&cmd.minFSBlkDevPCIAddr, "pci-addr", "06.0", "minFS block device PCI address")
