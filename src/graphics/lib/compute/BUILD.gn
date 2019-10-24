@@ -14,6 +14,7 @@ group("compute") {
     "hotsort",
     "mold",
     "spinel",
+    "spinel-mold",
     "spinel-rs",
     "spinel/platforms/vk",
     "tests/vk/vk_subgroup_info",  # TODO: Not a test, move to tools/
@@ -45,6 +46,7 @@ group("tests") {
   public_deps = [
     ":graphics_compute_unittests",
     "mold:mold-tests",
+    "spinel-mold:spinel-mold-tests",
     "spinel-rs:spinel-rs-tests",
   ]
 
@@ -86,6 +88,7 @@ group("all_tests") {
 graphics_compute_unittests_package("graphics_compute_unittests") {
   deps = [
     "common:common_unittests",
+    "spinel-mold:mold_c_unittests",
     "tests:common_unittests",
   ]
 }

@@ -15,6 +15,7 @@ const PIXEL_WIDTH: i32 = 16;
 const PIXEL_SHIFT: i32 = 4;
 const GRID_LIMIT: i32 = 32_768 * PIXEL_WIDTH;
 
+pub use painter::{ColorBuffer, PixelFormat};
 pub use path::Path;
 pub use point::Point;
-pub use raster::Raster;
+pub use raster::{Raster, RasterInner};

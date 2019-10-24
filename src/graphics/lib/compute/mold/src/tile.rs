@@ -218,6 +218,10 @@ impl TileContourBuilder {
         Self { tiles: HashSet::new() }
     }
 
+    pub fn empty() -> TileContour {
+        TileContour::Tiles(vec![])
+    }
+
     pub fn maxed() -> TileContour {
         TileContour::Maxed
     }
@@ -362,6 +366,7 @@ impl TileContour {
                 let mut tiles: Vec<_> =
                     tiles.iter().cloned().chain(other_tiles.iter().cloned()).collect();
                 tiles.sort();
+                tiles.dedup();
 
                 Self::Tiles(tiles)
             }
@@ -383,6 +388,14 @@ impl TileContour {
                 tile_contour_builder.build()
             }
             Self::Maxed => self.clone(),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn tiles(&self) -> Vec<(i32, i32)> {
+        match self {
+            Self::Tiles(tiles) => tiles.clone(),
+            Self::Maxed => vec![],
         }
     }
 }
@@ -464,6 +477,14 @@ impl Map {
             width,
             height,
         }
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
     }
 
     pub fn global(&mut self, id: u32, ops: Vec<TileOp>) {
@@ -579,14 +600,8 @@ impl Map {
                     let tile = &tiles[index];
 
                     if tile.needs_render {
-                        let context = Context {
-                            tile,
-                            index,
-                            width,
-                            height,
-                            layers,
-                            buffer: buffer.clone(),
-                        };
+                        let context =
+                            Context { tile, index, width, height, layers, buffer: buffer.clone() };
 
                         s.spawn(move |_| {
                             PAINTER.with(|painter| {

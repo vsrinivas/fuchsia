@@ -11,13 +11,15 @@ rustc_library("mold") {
   with_unit_tests = true
   version = "0.1.0"
   edition = "2018"
-  features = [
-    "tracing",
-  ]
   deps = [
-    "//garnet/public/rust/fuchsia-trace",
     "//third_party/rust_crates:rayon",
   ]
+  if (is_fuchsia) {
+    features = [
+      "tracing",
+    ]
+    deps += [ "//garnet/public/rust/fuchsia-trace" ]
+  }
 }
 
 unittest_package("mold-tests") {

@@ -169,6 +169,17 @@ pub struct RasterInner {
     tile_contour: TileContour,
 }
 
+impl RasterInner {
+    #[doc(hidden)]
+    pub fn translated(inner: &Rc<RasterInner>, translation: Point<i32>) -> Raster {
+        Raster {
+            inner: Rc::clone(inner),
+            translation,
+            translated_tile_contour: Some(inner.tile_contour.translated(translation)),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Raster {
     #[doc(hidden)]
@@ -269,22 +280,30 @@ impl Raster {
         }
     }
 
-    pub fn union(&self, other: &Self) -> Self {
-        #[cfg(feature = "tracing")]
-        duration!("gfx", "Raster::union");
-        let inner = &self.inner;
-        let other_inner = &other.inner;
-
-        let edges = inner
-            .edges
-            .iter()
-            .map(|edge| edge.translate(self.translation))
-            .chain(other_inner.edges.iter().map(|edge| edge.translate(other.translation)))
+    pub fn union<'r>(rasters: impl Iterator<Item = &'r Self> + Clone) -> Self {
+        let edges = rasters
+            .clone()
+            .map(|raster| raster.edges().iter().map(move |edge| edge.translate(raster.translation)))
+            .flatten()
             .collect();
-        let tile_contour = inner.tile_contour.union(&other_inner.tile_contour);
+        let tile_contour = rasters.fold(TileContourBuilder::empty(), |tile_contour, raster| {
+            tile_contour.union(raster.tile_contour())
+        });
 
         Self {
             inner: Rc::new(RasterInner { edges, tile_contour }),
+            translation: Point::new(0, 0),
+            translated_tile_contour: None,
+        }
+    }
+
+    pub fn union_without_edges<'r>(rasters: impl Iterator<Item = &'r Self>) -> Self {
+        let tile_contour = rasters.fold(TileContourBuilder::empty(), |tile_contour, raster| {
+            tile_contour.union(raster.tile_contour())
+        });
+
+        Self {
+            inner: Rc::new(RasterInner { edges: RasterEdges::new(), tile_contour }),
             translation: Point::new(0, 0),
             translated_tile_contour: None,
         }
@@ -363,5 +382,54 @@ mod tests {
         ];
 
         assert_eq!(to_and_fro(&edges), edges);
+    }
+
+    #[test]
+    fn raster_union() {
+        let mut path1 = Path::new();
+        path1.line(
+            Point::new(0.0, 0.0),
+            Point::new(1.0, 1.0),
+        );
+
+        let mut path2 = Path::new();
+        path2.line(
+            Point::new(1.0, 1.0),
+            Point::new(2.0, 2.0),
+        );
+
+        let union = Raster::union([Raster::new(&path1), Raster::new(&path2)].into_iter());
+
+        assert_eq!(union.inner.edges.iter().collect::<Vec<_>>(), vec![
+            Edge::new(Point::new(0, 0), Point::new(PIXEL_WIDTH, PIXEL_WIDTH)),
+            Edge::new(
+                Point::new(PIXEL_WIDTH, PIXEL_WIDTH),
+                Point::new(PIXEL_WIDTH * 2, PIXEL_WIDTH * 2),
+            ),
+        ]);
+        assert_eq!(union.inner.tile_contour.tiles(), vec![(0, 0)]);
+    }
+
+    #[test]
+    fn raster_union_without_edges() {
+        let mut path1 = Path::new();
+        path1.line(
+            Point::new(0.0, 0.0),
+            Point::new(1.0, 1.0),
+        );
+
+        let mut path2 = Path::new();
+        path2.line(
+            Point::new(1.0, 1.0),
+            Point::new(2.0, 2.0),
+        );
+
+        let union = Raster::union_without_edges([
+            Raster::new(&path1),
+            Raster::new(&path2),
+        ].into_iter());
+
+        assert_eq!(union.inner.edges.iter().collect::<Vec<_>>(), vec![]);
+        assert_eq!(union.inner.tile_contour.tiles(), vec![(0, 0)]);
     }
 }

@@ -5,8 +5,30 @@
 import("../gn/build_rules.gni")
 
 config("spinel_public_config") {
-  # The sources and clients use 'spinel_xxx.h' to include the headers.
-  include_dirs = [ "include/spinel" ]
+  include_dirs = [ "include" ]
+  # The clients should use spinel/spinel_xxx.h, but some still use spinel_xxx.h
+  # directly.
+  include_dirs += [ "include/spinel" ]  # TO BE REMOVED.
+}
+
+source_set("spinel_headers") {
+  public = [
+    "include/spinel/spinel.h",
+    "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_result.h",
+    "include/spinel/spinel_types.h",
+    "include/spinel/spinel_vk.h",
+    "include/spinel/spinel_vk_types.h",
+  ]
+  sources = [
+    "include/spinel/spinel.h",
+    "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_result.h",
+    "include/spinel/spinel_types.h",
+    "include/spinel/spinel_vk.h",
+    "include/spinel/spinel_vk_types.h",
+  ]
+  public_configs = [ ":spinel_public_config" ]
 }
 
 source_set("spinel") {
@@ -14,6 +36,8 @@ source_set("spinel") {
     "platforms/vk",
     "platforms/vk/tests",
   ]
+  # The source files include "spinel_xxx.h" directly.
+  include_dirs = [ "include/spinel" ]
   public = [
     "include/spinel/spinel.h",
     "include/spinel/spinel_assert.h",
@@ -33,10 +57,6 @@ source_set("spinel") {
     "context.h",
     "core.h",
     "core_c.h",
-    "include/spinel/spinel.h",
-    "include/spinel/spinel_assert.h",
-    "include/spinel/spinel_result.h",
-    "include/spinel/spinel_types.h",
     "path_builder.c",
     "path_builder.h",
     "raster_builder.c",
@@ -54,7 +74,9 @@ source_set("spinel") {
   deps = [
     "${graphics_compute_dir}/common",
   ]
-  public_configs = [ ":spinel_public_config" ]
+  public_deps = [
+    ":spinel_headers",
+  ]
 }
 
 # This group provides a target that tests can link against.

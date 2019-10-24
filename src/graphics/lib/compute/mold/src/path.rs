@@ -155,8 +155,27 @@ impl Path {
         self.commands.push(PathCommand::Quad([p0, p1, p2]));
     }
 
+    pub fn rat_quad(
+        &mut self,
+        p0: (Point<f32>, f32),
+        p1: (Point<f32>, f32),
+        p2: (Point<f32>, f32),
+    ) {
+        self.commands.push(PathCommand::RatQuad([p0, p1, p2]));
+    }
+
     pub fn cubic(&mut self, p0: Point<f32>, p1: Point<f32>, p2: Point<f32>, p3: Point<f32>) {
         self.commands.push(PathCommand::Cubic([p0, p1, p2, p3]));
+    }
+
+    pub fn rat_cubic(
+        &mut self,
+        p0: (Point<f32>, f32),
+        p1: (Point<f32>, f32),
+        p2: (Point<f32>, f32),
+        p3: (Point<f32>, f32),
+    ) {
+        self.commands.push(PathCommand::RatCubic([p0, p1, p2, p3]));
     }
 
     pub fn close(&mut self) {
@@ -186,14 +205,6 @@ impl Path {
 
 fn lerp(t: f32, a: f32, b: f32) -> f32 {
     a * (1.0 - t) + b * t
-}
-
-fn max(a: f32, b: f32) -> f32 {
-    if a > b {
-        a
-    } else {
-        b
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -348,14 +359,12 @@ impl Edges<'_> {
             points[0],
             points[3],
             |edges| {
-                let deviation_x = max(
-                    (points[0].x + points[2].x - 2.0 * points[1].x).abs(),
-                    (points[1].x + points[3].x - 2.0 * points[2].x).abs(),
-                );
-                let deviation_y = max(
-                    (points[0].y + points[2].y - 2.0 * points[1].y).abs(),
-                    (points[1].y + points[3].y - 2.0 * points[2].y).abs(),
-                );
+                let deviation_x = (points[0].x + points[2].x - 2.0 * points[1].x)
+                    .abs()
+                    .max((points[1].x + points[3].x - 2.0 * points[2].x).abs());
+                let deviation_y = (points[0].y + points[2].y - 2.0 * points[1].y)
+                    .abs()
+                    .max((points[1].y + points[3].y - 2.0 * points[2].y).abs());
                 let deviation_squared = deviation_x * deviation_x + deviation_y * deviation_y;
 
                 if deviation_squared < PIXEL_ACCURACY {
@@ -402,9 +411,9 @@ impl Edges<'_> {
             p3,
             |edges| {
                 let deviation_x =
-                    max((p0.x + p2.x - 2.0 * p1.x).abs(), (p1.x + p3.x - 2.0 * p2.x).abs());
+                    (p0.x + p2.x - 2.0 * p1.x).abs().max((p1.x + p3.x - 2.0 * p2.x).abs());
                 let deviation_y =
-                    max((p0.y + p2.y - 2.0 * p1.y).abs(), (p1.y + p3.y - 2.0 * p2.y).abs());
+                    (p0.y + p2.y - 2.0 * p1.y).abs().max((p1.y + p3.y - 2.0 * p2.y).abs());
                 let deviation_squared = deviation_x * deviation_x + deviation_y * deviation_y;
 
                 if deviation_squared < PIXEL_ACCURACY {
@@ -504,6 +513,68 @@ impl Iterator for Edges<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn path_interface() {
+        let mut path = Path::new();
+
+        path.line(
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+        );
+        assert_eq!(path.commands.last(), Some(&PathCommand::Line([
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+        ])));
+
+        path.quad(
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+        );
+        assert_eq!(path.commands.last(), Some(&PathCommand::Quad([
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+        ])));
+
+        path.rat_quad(
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+        );
+        assert_eq!(path.commands.last(), Some(&PathCommand::RatQuad([
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+        ])));
+
+        path.cubic(
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+        );
+        assert_eq!(path.commands.last(), Some(&PathCommand::Cubic([
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+            Point::new(1.0, 1.0),
+        ])));
+
+        path.rat_cubic(
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+        );
+        assert_eq!(path.commands.last(), Some(&PathCommand::RatCubic([
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+            (Point::new(1.0, 1.0), 1.0),
+        ])));
+    }
 
     #[test]
     fn close_open_path() {
