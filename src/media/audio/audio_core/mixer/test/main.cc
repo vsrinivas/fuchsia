@@ -25,11 +25,14 @@ int main(int argc, char** argv) {
   media::audio::Logging::Init(fxl::LOG_INFO);
 #endif
 
-  // --full     Display results for the full frequency spectrum.
-  // --dump     Display results in importable format.
-  //            This flag is used when updating AudioResult kPrev arrays.
+  // --full     Measure across the full frequency spectrum; display full results in tabular format.
+  // --no-recap Do not display summary fidelity results.
+  // --dump     Display full-spectrum results in importable format.
+  //            (This flag is used when updating AudioResult kPrev arrays.)
   // --profile  Profile the performance of Mix() across numerous configurations.
+  //
   bool show_full_frequency_set = command_line.HasOption("full");
+  bool display_summary_results = !command_line.HasOption("no-recap");
   bool dump_threshold_values = command_line.HasOption("dump");
   bool do_performance_profiling = command_line.HasOption("profile");
 
@@ -39,8 +42,9 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   int result = RUN_ALL_TESTS();
 
-  media::audio::test::MixerTestsRecap::PrintFidelityResultsSummary();
-
+  if (display_summary_results) {
+    media::audio::test::MixerTestsRecap::PrintFidelityResultsSummary();
+  }
   if (dump_threshold_values) {
     media::audio::test::AudioResult::DumpThresholdValues();
   }
