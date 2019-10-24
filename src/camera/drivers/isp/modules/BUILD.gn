@@ -8,7 +8,6 @@ source_set("modules") {
     "dma-format.cc",
     "dma-mgr.cc",
     "sensor.cc",
-    "stats-mgr.cc",
   ]
 
   deps = [

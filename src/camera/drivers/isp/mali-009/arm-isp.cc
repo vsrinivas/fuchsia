@@ -301,9 +301,9 @@ zx_status_t ArmIspDevice::IspContextInit() {
   // This is being written to the local_config_buffer_
   IspLoadSeq_settings_context();
 
-  statsMgr_ = camera::StatsManager::Create(isp_mmio_.View(0), isp_mmio_local_, camera_sensor_);
-  if (statsMgr_ == nullptr) {
-    zxlogf(ERROR, "%s: Unable to start StatsManager \n", __func__);
+  sensor_module_ = camera::Sensor::Create(isp_mmio_.View(0), isp_mmio_local_, camera_sensor_);
+  if (sensor_module_ == nullptr) {
+    zxlogf(ERROR, "%s: Unable to start Sensor \n", __func__);
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -682,7 +682,7 @@ zx_status_t ArmIspDevice::StartStreaming() {
     return status;
   }
 
-  statsMgr_->SensorStartStreaming();
+  sensor_module_->StartStreaming();
   streaming_ = true;
   return ZX_OK;
 }
@@ -691,7 +691,7 @@ zx_status_t ArmIspDevice::StopStreaming() {
   if (!streaming_) {
     return ZX_OK;
   }
-  statsMgr_->SensorStopStreaming();
+  sensor_module_->StopStreaming();
   zx_status_t status = SetPort(kSafeStop);
   if (status != ZX_OK) {
     return status;

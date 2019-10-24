@@ -28,7 +28,7 @@
 
 #include "../modules/dma-mgr.h"
 #include "../modules/gamma-rgb-registers.h"
-#include "../modules/stats-mgr.h"
+#include "../modules/sensor.h"
 #include "arm-isp-test.h"
 #include "global_regs.h"
 #include "pingpong_regs.h"
@@ -191,7 +191,7 @@ class ArmIspDevice : public IspDeviceType,
 
   ddk::CameraSensorProtocolClient camera_sensor_;
 
-  fbl::unique_ptr<camera::StatsManager> statsMgr_;
+  fbl::unique_ptr<camera::Sensor> sensor_module_;
   fbl::unique_ptr<camera::DmaManager> full_resolution_dma_;
   fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
   bool streaming_ = false;
