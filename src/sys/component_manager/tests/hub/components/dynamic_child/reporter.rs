@@ -199,11 +199,6 @@ async fn main() -> Result<(), Error> {
         .expect_breakpoint(fhub::EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
         .await?;
     testing.report_directory_contents("/hub/deleting").await?;
-
-    // TODO(xbhatnag): The integration test task terminates before this resume_breakpoint
-    // call. This causes a ClientChannelClosed error here, despite the test succeeding. One way to
-    // fix this is to make Breakpoint::resume behave as a barrier, preventing the integration
-    // test from continuing until the component has also resumed.
     testing.resume_breakpoint().await?;
 
     Ok(())

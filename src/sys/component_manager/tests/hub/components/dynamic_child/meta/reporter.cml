@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/hub_collection_realm"
+        "binary": "bin/dynamic_child_reporter"
     },
     "use": [
         {

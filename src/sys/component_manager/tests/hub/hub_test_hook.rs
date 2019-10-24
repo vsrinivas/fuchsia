@@ -31,13 +31,22 @@ fn get_or_insert_channel<'a>(
 // HubTestCapability every time a connection is requested to connect to the
 // 'fuchsia.sys.HubReport' framework capability.
 pub struct HubTestHook {
-    observers: Arc<Mutex<HashMap<String, HubReportChannel>>>
+    observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
+
+    // Block on this receiver to know when the component has stopped.
+    component_stop_rx: Mutex<mpsc::Receiver<()>>,
+
+    // This sender is cloned to each HubTestCapability
+    component_stop_tx: mpsc::Sender<()>,
 }
 
 impl HubTestHook {
     pub fn new() -> Self {
+        let (tx, rx) = mpsc::channel(0);
         HubTestHook {
-            observers: Arc::new(Mutex::new(HashMap::new()))
+            observers: Arc::new(Mutex::new(HashMap::new())),
+            component_stop_rx: Mutex::new(rx),
+            component_stop_tx: tx,
         }
     }
 
@@ -71,11 +80,19 @@ impl HubTestHook {
             (None, FrameworkCapabilityDecl::LegacyService(source_path))
                 if *source_path == *HUB_REPORT_SERVICE =>
             {
-                return Ok(Some(Box::new(HubTestCapability::new(self.observers.clone()))
-                    as Box<dyn FrameworkCapability>))
+                return Ok(Some(Box::new(HubTestCapability::new(
+                    self.observers.clone(),
+                    self.component_stop_tx.clone(),
+                )) as Box<dyn FrameworkCapability>));
             }
             (c, _) => return Ok(c),
         };
+    }
+
+    /// Wait for a component connected to the HubReport service to stop
+    pub async fn wait_for_component_stop(&self) {
+        let mut component_stop_rx = self.component_stop_rx.lock().await;
+        component_stop_rx.next().await.expect("component stop channel has been closed");
     }
 }
 
@@ -113,11 +130,17 @@ pub struct HubReportChannel {
 pub struct HubTestCapability {
     // Path to directory listing.
     observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
+
+    // Sender used to notify when component has disconnected from underlying zx::Channel
+    component_stop_tx: mpsc::Sender<()>,
 }
 
 impl HubTestCapability {
-    pub fn new(observers: Arc<Mutex<HashMap<String, HubReportChannel>>>) -> Self {
-        HubTestCapability { observers }
+    pub fn new(
+        observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
+        component_stop_tx: mpsc::Sender<()>,
+    ) -> Self {
+        HubTestCapability { observers, component_stop_tx }
     }
 
     pub async fn open_async(&self, server_end: zx::Channel) -> Result<(), ModelError> {
@@ -125,6 +148,7 @@ impl HubTestCapability {
             .into_stream()
             .expect("could not convert channel into stream");
         let observers = self.observers.clone();
+        let mut component_stop_tx = self.component_stop_tx.clone();
         fasync::spawn(async move {
             while let Some(Ok(request)) = stream.next().await {
                 let (path, event) = match request {
@@ -149,6 +173,9 @@ impl HubTestCapability {
                 let channel = get_or_insert_channel(&mut observers, path.clone());
                 channel.sender = Some(sender);
             }
+
+            // Notify HubTestHook that the component has been stopped
+            component_stop_tx.send(()).await.expect("component stop channel has been closed");
         });
         Ok(())
     }

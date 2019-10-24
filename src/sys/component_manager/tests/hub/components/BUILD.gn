@@ -1,0 +1,67 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("advanced_routing_reporter_bin") {
+  name = "advanced_routing_reporter"
+  edition = "2018"
+  source_root = "advanced_routing/reporter.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("simple_component_bin") {
+  name = "simple"
+  edition = "2018"
+  source_root = "simple_component/main.rs"
+  deps = [
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+rustc_binary("dynamic_child_reporter_bin") {
+  name = "dynamic_child_reporter"
+  edition = "2018"
+  source_root = "dynamic_child/reporter.rs"
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("visibility_reporter_bin") {
+  name = "visibility_reporter"
+  edition = "2018"
+  source_root = "visibility/reporter.rs"
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.hub-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}

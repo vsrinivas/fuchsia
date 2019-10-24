@@ -31,7 +31,7 @@
         },
         {
             "name": "hub_client",
-            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
+            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/advanced_routing_reporter.cm",
             "startup": "eager",
         },
     ],

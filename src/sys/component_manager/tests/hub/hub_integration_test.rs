@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    breakpoints::*,
     component_manager_lib::{
         model::{self, hooks::*, testing::test_helpers, AbsoluteMoniker, Hub, Model},
         startup,
@@ -16,7 +17,6 @@ use {
     },
     fidl_fuchsia_test_hub as fhub, fuchsia_zircon as zx,
     hub_test_hook::*,
-    breakpoints::*,
     std::{path::PathBuf, sync::Arc, vec::Vec},
 };
 
@@ -68,12 +68,13 @@ async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
 
 async fn register_breakpoints(
     model: &Model,
-    event_types:Vec<EventType>
+    event_types: Vec<EventType>,
 ) -> (Arc<BreakpointHook>, Arc<BreakpointCapabilityHook>, BreakpointInvocationReceiver) {
     let breakpoint_registry = Arc::new(BreakpointRegistry::new());
     let breakpoint_receiver = breakpoint_registry.register(event_types).await;
     let breakpoint_hook = Arc::new(BreakpointHook::new(breakpoint_registry.clone()));
-    let breakpoint_capability_hook = Arc::new(BreakpointCapabilityHook::new(breakpoint_registry.clone()));
+    let breakpoint_capability_hook =
+        Arc::new(BreakpointCapabilityHook::new(breakpoint_registry.clone()));
     model.root_realm.hooks.install(breakpoint_hook.clone().hooks()).await;
     model.root_realm.hooks.install(breakpoint_capability_hook.clone().hooks()).await;
     (breakpoint_hook, breakpoint_capability_hook, breakpoint_receiver)
@@ -91,13 +92,22 @@ impl TestRunner {
         let model = create_model(root_component_url).await?;
         let (hub, hub_proxy) = install_hub(&model).await?;
         let hub_test_hook = install_hub_test_hook(&model).await;
-        let (breakpoint_hook, breakpoint_capability_hook, breakpoint_receiver) = register_breakpoints(&model, event_types).await;
+        let (breakpoint_hook, breakpoint_capability_hook, breakpoint_receiver) =
+            register_breakpoints(&model, event_types).await;
 
         let res = model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 
-        Ok(Self { model, hub, hub_proxy, hub_test_hook, _breakpoint_hook: breakpoint_hook, _breakpoint_capability_hook: breakpoint_capability_hook, breakpoint_receiver })
+        Ok(Self {
+            model,
+            hub,
+            hub_proxy,
+            hub_test_hook,
+            _breakpoint_hook: breakpoint_hook,
+            _breakpoint_capability_hook: breakpoint_capability_hook,
+            breakpoint_receiver,
+        })
     }
 
     async fn expect_invocation(
@@ -190,10 +200,14 @@ impl TestRunner {
     async fn verify_global_file_content(&self, relative_path: &str, expected_content: &str) {
         assert_eq!(expected_content, test_helpers::read_file(&self.hub_proxy, relative_path).await);
     }
+
+    async fn wait_for_component_stop(&self) {
+        self.hub_test_hook.wait_for_component_stop().await;
+    }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn basic_hub_test() -> Result<(), Error> {
+async fn advanced_routing_test() -> Result<(), Error> {
     let root_component_url = "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_realm.cm";
     let test_runner = TestRunner::new(root_component_url).await?;
 
@@ -203,14 +217,10 @@ async fn basic_hub_test() -> Result<(), Error> {
         .await;
 
     // Verify hub_client's instance id.
-    test_runner
-        .verify_global_file_content("children/hub_client/id", "0")
-        .await;
+    test_runner.verify_global_file_content("children/hub_client/id", "0").await;
 
     // Verify echo_server's instance id.
-    test_runner
-        .verify_global_file_content("children/echo_server/id", "0")
-        .await;
+    test_runner.verify_global_file_content("children/echo_server/id", "0").await;
 
     // Verify the args from hub_client.cml.
     test_runner
@@ -271,10 +281,7 @@ async fn basic_hub_test() -> Result<(), Error> {
     // Verify that hub_client's view is able to correctly read the names of the
     // children of the parent echo_realm.
     let responder = test_runner
-        .verify_local_directory_listing(
-            "/parent_hub/children",
-            vec!["echo_server", "hub_client"],
-        )
+        .verify_local_directory_listing("/parent_hub/children", vec!["echo_server", "hub_client"])
         .await;
     responder.send().expect("Could not respond");
 
@@ -290,9 +297,9 @@ async fn basic_hub_test() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
+async fn dynamic_child_test() -> Result<(), Error> {
     let root_component_url =
-        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_collection_realm.cm";
+        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/dynamic_child_reporter.cm";
     let test_runner = TestRunner::new_with_breakpoints(
         root_component_url,
         vec![
@@ -316,9 +323,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
         .await;
 
     // Verify that the dynamic child has the correct instance id.
-    test_runner
-        .verify_local_file_content("/hub/children/coll:simple_instance/id", "1")
-        .await;
+    test_runner.verify_local_file_content("/hub/children/coll:simple_instance/id", "1").await;
 
     // Before binding, verify that the dynamic child's static children are invisible
     test_runner.verify_directory_listing("children/coll:simple_instance/children", vec![]).await;
@@ -381,14 +386,9 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
         .await;
 
     // When deletion begins, the dynamic child's static child should be moved to the deleting directory
+    test_runner.verify_directory_listing("deleting/coll:simple_instance:1/children", vec![]).await;
     test_runner
-        .verify_directory_listing("deleting/coll:simple_instance:1/children", vec![])
-        .await;
-    test_runner
-        .verify_directory_listing(
-            "deleting/coll:simple_instance:1/deleting",
-            vec!["child:0"],
-        )
+        .verify_directory_listing("deleting/coll:simple_instance:1/deleting", vec!["child:0"])
         .await;
     test_runner
         .verify_directory_listing(
@@ -409,9 +409,7 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
         .await;
 
     // The dynamic child's static child should not be visible in the hub anymore
-    test_runner
-        .verify_directory_listing("deleting/coll:simple_instance:1/deleting", vec![])
-        .await;
+    test_runner.verify_directory_listing("deleting/coll:simple_instance:1/deleting", vec![]).await;
 
     // Unblock the Component Manager
     breakpoint.resume();
@@ -427,12 +425,16 @@ async fn dynamic_child_create_bind_stop_delete_test() -> Result<(), Error> {
     // Unblock the Component Manager
     breakpoint.resume();
 
+    // Wait for the component to stop
+    test_runner.wait_for_component_stop().await;
+
     Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn grandchild_of_lazy_child_is_not_shown_test() -> Result<(), Error> {
-    let root_component_url = "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/parent.cm";
+async fn visibility_test() -> Result<(), Error> {
+    let root_component_url =
+        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/visibility_reporter.cm";
     let test_runner = TestRunner::new(root_component_url).await?;
 
     // Verify that the child exists in the parent's hub

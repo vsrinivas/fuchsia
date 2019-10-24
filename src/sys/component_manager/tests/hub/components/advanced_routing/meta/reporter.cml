@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/hub_client",
+        "binary": "bin/advanced_routing_reporter",
         "args": ["Hippos", "rule!"],
     },
     "use": [
