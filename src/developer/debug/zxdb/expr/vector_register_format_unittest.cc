@@ -12,6 +12,8 @@ namespace zxdb {
 
 namespace {
 
+using debug_ipc::RegisterID;
+
 // Returns true if the expr value type matches the parameters.
 bool IsTypeArrayOf(const ExprValue& value, const char* expected_type, uint32_t expected_bytes,
                    size_t expected_array_elts) {
@@ -32,24 +34,27 @@ bool IsTypeArrayOf(const ExprValue& value, const char* expected_type, uint32_t e
 
 TEST(VectorRegisterFormat, VectorRegisterToValue) {
   std::vector<uint8_t> bytes{1, 2, 3, 4, 5, 6, 7, 8};
-  ExprValue v = VectorRegisterToValue(VectorRegisterFormat::kUnsigned16, bytes);
+  ExprValue v =
+      VectorRegisterToValue(RegisterID::kX64_xmm4, VectorRegisterFormat::kUnsigned16, bytes);
   EXPECT_TRUE(IsTypeArrayOf(v, "uint16_t", 2u, 4u));
   EXPECT_EQ(bytes, v.data());
+  EXPECT_EQ(ExprValueSource::Type::kRegister, v.source().type());
+  EXPECT_EQ(RegisterID::kX64_xmm4, v.source().register_id());
 
-  v = VectorRegisterToValue(VectorRegisterFormat::kSigned8, bytes);
+  v = VectorRegisterToValue(RegisterID::kX64_xmm4, VectorRegisterFormat::kSigned8, bytes);
   EXPECT_TRUE(IsTypeArrayOf(v, "int8_t", 1u, 8u));
 
-  v = VectorRegisterToValue(VectorRegisterFormat::kUnsigned16, bytes);
+  v = VectorRegisterToValue(RegisterID::kX64_xmm4, VectorRegisterFormat::kUnsigned16, bytes);
   EXPECT_TRUE(IsTypeArrayOf(v, "uint16_t", 2u, 4u));
 
-  v = VectorRegisterToValue(VectorRegisterFormat::kUnsigned128,
+  v = VectorRegisterToValue(RegisterID::kX64_xmm4, VectorRegisterFormat::kUnsigned128,
                             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
   EXPECT_TRUE(IsTypeArrayOf(v, "uint128_t", 16u, 1u));
 
-  v = VectorRegisterToValue(VectorRegisterFormat::kFloat, bytes);
+  v = VectorRegisterToValue(RegisterID::kX64_xmm4, VectorRegisterFormat::kFloat, bytes);
   EXPECT_TRUE(IsTypeArrayOf(v, "float", 4u, 2u));
 
-  v = VectorRegisterToValue(VectorRegisterFormat::kDouble, bytes);
+  v = VectorRegisterToValue(RegisterID::kX64_xmm4, VectorRegisterFormat::kDouble, bytes);
   EXPECT_TRUE(IsTypeArrayOf(v, "double", 8u, 1u));
 }
 

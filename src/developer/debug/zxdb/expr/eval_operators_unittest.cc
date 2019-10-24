@@ -100,6 +100,24 @@ TEST_F(EvalOperators, Assignment) {
   EXPECT_EQ(data, mem_writes[0].second);
 }
 
+TEST_F(EvalOperators, AssignmentBad) {
+  auto int32_type = MakeInt32Type();
+
+  ExprValue source(42);  // Value we'll assign from.
+
+  // Assignment to a temporary.
+  ExprValue temp_value(0, fxl::RefPtr<Type>(), ExprValueSource(ExprValueSource::Type::kTemporary));
+  ErrOrValue out = SyncEvalBinaryOperator(temp_value, ExprTokenType::kEquals, source);
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ("Can't assign to a temporary.", out.err().msg());
+
+  // Assignment to a constant.
+  ExprValue const_value(0, fxl::RefPtr<Type>(), ExprValueSource(ExprValueSource::Type::kConstant));
+  out = SyncEvalBinaryOperator(const_value, ExprTokenType::kEquals, source);
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ("Can't assign to a constant.", out.err().msg());
+}
+
 TEST_F(EvalOperators, IntArithmetic) {
   // Simple signed arithmatic of 32-bit types. We promote all math results to 64-bit.
   ErrOrValue out = SyncEvalBinaryOperator(ExprValue(static_cast<int32_t>(12)), ExprTokenType::kPlus,

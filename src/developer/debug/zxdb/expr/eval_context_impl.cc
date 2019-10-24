@@ -52,22 +52,25 @@ Err GetUnavailableRegisterErr(RegisterID id) {
 ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
                                containers::array_view<uint8_t> data) {
   if (ShouldFormatRegisterAsVector(id))
-    return VectorRegisterToValue(vector_fmt, std::vector<uint8_t>(data.begin(), data.end()));
+    return VectorRegisterToValue(id, vector_fmt, std::vector<uint8_t>(data.begin(), data.end()));
+
+  ExprValueSource source(id);
 
   if (data.size() <= sizeof(uint64_t)) {
     uint64_t int_value = 0;
     memcpy(&int_value, &data[0], data.size());
 
     // Use the types defined by ExprValue for the unsigned number of the corresponding size.
+    // Passing a null type will cause ExprValue to create one matching the input type.
     switch (data.size()) {
       case 1:
-        return ExprValue(static_cast<uint8_t>(int_value));
+        return ExprValue(static_cast<uint8_t>(int_value), fxl::RefPtr<Type>(), source);
       case 2:
-        return ExprValue(static_cast<uint16_t>(int_value));
+        return ExprValue(static_cast<uint16_t>(int_value), fxl::RefPtr<Type>(), source);
       case 4:
-        return ExprValue(static_cast<uint32_t>(int_value));
+        return ExprValue(static_cast<uint32_t>(int_value), fxl::RefPtr<Type>(), source);
       case 8:
-        return ExprValue(static_cast<uint64_t>(int_value));
+        return ExprValue(static_cast<uint64_t>(int_value), fxl::RefPtr<Type>(), source);
     }
   }
 
@@ -80,7 +83,7 @@ ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
 
   return ExprValue(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, data.size(), type_name),
-      std::vector<uint8_t>(data.begin(), data.end()));
+      std::vector<uint8_t>(data.begin(), data.end()), source);
 }
 
 }  // namespace
@@ -410,17 +413,26 @@ void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
 
     // The DWARF expression produced the exact value (it's not in memory).
     uint32_t type_size = concrete_type->byte_size();
-    if (type_size > sizeof(uint64_t)) {
+    if (type_size > sizeof(DwarfExprEval::StackEntry)) {
       state->callback(Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
                                             "Please file a bug with a repro case.",
                                             type_size)),
                       state->symbol);
       return;
     }
+
+    // When the result was read directly from a register or is known to be constant, preserve that
+    // so the user can potentially write to it (or give a good error message about writing to it).
+    ExprValueSource source(ExprValueSource::Type::kTemporary);
+    if (state->dwarf_eval.current_register_id() != debug_ipc::RegisterID::kUnknown)
+      source = ExprValueSource(state->dwarf_eval.current_register_id());
+    else if (state->dwarf_eval.result_is_constant())
+      source = ExprValueSource(ExprValueSource::Type::kConstant);
+
     std::vector<uint8_t> data;
     data.resize(type_size);
     memcpy(&data[0], &result_int, type_size);
-    state->callback(ExprValue(state->type, std::move(data)), state->symbol);
+    state->callback(ExprValue(state->type, std::move(data), source), state->symbol);
   } else {
     // The DWARF result is a pointer to the value.
     ResolvePointer(RefPtrTo(this), result_int, state->type,

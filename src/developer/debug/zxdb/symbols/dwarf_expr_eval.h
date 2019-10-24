@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
@@ -84,6 +85,15 @@ class DwarfExprEval {
   // be dependent on the context of the expression being evaluated. Most results will be smaller
   // than this in which case they will use only the low bits.
   StackEntry GetResult() const;
+
+  // When the result is computed, this will indicate if the result is directly from a register,
+  // and if it is, which one. If the current result was the result of some computation and has no
+  // direct register source, it will be RegisterID::kUnknown.
+  debug_ipc::RegisterID current_register_id() const { return current_register_id_; }
+
+  // When the result is computed, this will indicate whether it's from a constant source (encoded in
+  // the DWARF expression) or is the result of reading some memory or registers.
+  bool result_is_constant() const { return result_is_constant_; }
 
   // This will take a reference to the SymbolDataProvider until the computation is complete.
   //
@@ -201,6 +211,15 @@ class DwarfExprEval {
   bool is_success_ = false;
 
   std::vector<StackEntry> stack_;
+
+  // Set when a register value is pushed on the stack and cleared when anything else happens. This
+  // allows the user of the expression to determine if the result of the expression is directly from
+  // a register (say, to support writing to that value in the future).
+  debug_ipc::RegisterID current_register_id_ = debug_ipc::RegisterID::kUnknown;
+
+  // Tracks whether the current expression uses only constant data. Any operations that read memory
+  // or registers should clear this.
+  bool result_is_constant_ = true;
 
   fxl::WeakPtrFactory<DwarfExprEval> weak_factory_;
 

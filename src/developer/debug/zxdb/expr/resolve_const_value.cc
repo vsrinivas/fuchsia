@@ -18,7 +18,8 @@ ErrOrValue ResolveConstValue(const fxl::RefPtr<EvalContext>& context, const Valu
     return Err("Invalid type for '%s'.", value->GetFullName().c_str());
   auto concrete = context->GetConcreteType(type);
 
-  return ExprValue(RefPtrTo(type), value->const_value().GetConstValue(concrete->byte_size()));
+  return ExprValue(RefPtrTo(type), value->const_value().GetConstValue(concrete->byte_size()),
+                   ExprValueSource(ExprValueSource::Type::kConstant));
 }
 
 }  // namespace zxdb

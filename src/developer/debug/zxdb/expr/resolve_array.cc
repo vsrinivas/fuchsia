@@ -19,6 +19,7 @@ namespace zxdb {
 
 namespace {
 
+// Handles the "Foo[4]" case.
 ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* array_type,
                                     size_t begin_index, size_t end_index) {
   const std::vector<uint8_t>& data = array.data();
@@ -39,9 +40,19 @@ ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* arr
     if (begin_offset + type_size > data.size())
       break;
 
+    ExprValueSource source = array.source();
+    if (source.type() == ExprValueSource::Type::kMemory) {
+      source = source.GetOffsetInto(begin_offset);
+    } else if (source.type() == ExprValueSource::Type::kRegister) {
+      // Vector register, compute the bit shifts for this subset. This assumes little-endian
+      // so we can compute the bit shifts to write to the register from the left.
+      source = ExprValueSource(source.register_id(), type_size * 8,
+                               source.bit_shift() + (begin_offset * 8));
+    }
+    // else keep as original temporary/constant source.
+
     std::vector<uint8_t> item_data(&data[begin_offset], &data[begin_offset] + type_size);
-    result.emplace_back(RefPtrTo(value_type), std::move(item_data),
-                        array.source().GetOffsetInto(begin_offset));
+    result.emplace_back(RefPtrTo(value_type), std::move(item_data), source);
   }
   return result;
 }

@@ -70,6 +70,42 @@ TEST_F(ResolveArrayTest, ResolveStatic) {
   EXPECT_EQ(kBaseAddress + kTypeSize * 2, result.value()[1].source().address());
 }
 
+// Tests the static resolution case when the source is a vector register. The "source" of array
+// elements in this case is tricky.
+TEST_F(ResolveArrayTest, ResolveVectorRegister) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  // Array holds 4 uint32_t.
+  constexpr uint32_t kTypeSize = 4;
+  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, kTypeSize, "uint32_t");
+  auto array_type = fxl::MakeRefCounted<ArrayType>(elt_type, 4);
+
+  std::vector<uint8_t> array_bytes = {0, 0, 0, 0,   // array[0] = 0
+                                      1, 0, 0, 0,   // array[1] = 1
+                                      2, 0, 0, 0,   // array[2] = 2
+                                      3, 0, 0, 0};  // array[3] = 3
+  constexpr debug_ipc::RegisterID register_id = debug_ipc::RegisterID::kX64_xmm3;
+  ExprValue value(array_type, array_bytes, ExprValueSource(register_id));
+
+  // Ask for all 4 values.
+  ErrOrValueVector result = ResolveArray(eval_context, value, 0, 4);
+  EXPECT_FALSE(result.has_error());
+  ASSERT_EQ(4u, result.value().size());
+
+  // Each element should be 32 bits wide and shifted 32 bits more than the previous.
+  EXPECT_EQ(0u, result.value()[0].GetAs<uint32_t>());
+  EXPECT_EQ(ExprValueSource(register_id, 32, 0), result.value()[0].source());
+
+  EXPECT_EQ(1u, result.value()[1].GetAs<uint32_t>());
+  EXPECT_EQ(ExprValueSource(register_id, 32, 32), result.value()[1].source());
+
+  EXPECT_EQ(2u, result.value()[2].GetAs<uint32_t>());
+  EXPECT_EQ(ExprValueSource(register_id, 32, 64), result.value()[2].source());
+
+  EXPECT_EQ(3u, result.value()[3].GetAs<uint32_t>());
+  EXPECT_EQ(ExprValueSource(register_id, 32, 96), result.value()[3].source());
+}
+
 // Resolves an array element with a pointer as the base.
 TEST_F(ResolveArrayTest, ResolvePointer) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();

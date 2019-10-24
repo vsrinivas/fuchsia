@@ -50,7 +50,8 @@ const char* VectorRegisterFormatToString(VectorRegisterFormat fmt);
 std::optional<VectorRegisterFormat> StringToVectorRegisterFormat(const std::string& str);
 
 // Converts the given vector register data to an array of the given format.
-ExprValue VectorRegisterToValue(VectorRegisterFormat fmt, std::vector<uint8_t> data);
+ExprValue VectorRegisterToValue(debug_ipc::RegisterID id, VectorRegisterFormat fmt,
+                                std::vector<uint8_t> data);
 
 // Returns true if the given register should be formatted as a vector register.
 //

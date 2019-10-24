@@ -32,7 +32,7 @@
 // an overflowing value is extremely undesirable.
 //
 // As a result we upcast all integer operations to 64-bit. This is in contrast to C++ which often
-// prefers "int" for smaller types which 32-bit on the current targeted system.
+// prefers "int" which are often 32 bits.
 //
 // We still more-or-less follow the signed/unsigned rules since sometimes those behaviors are
 // important to the result being computed. Effectively, this means using the larger of the two types
@@ -54,6 +54,12 @@ void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left
   const ExprValueSource& dest = left_value.source();
   if (dest.type() == ExprValueSource::Type::kTemporary)
     return cb(Err("Can't assign to a temporary."));
+  if (dest.type() == ExprValueSource::Type::kConstant)
+    return cb(Err("Can't assign to a constant."));
+
+  // TODO(bug 39589) implement register assignment.
+  if (dest.type() == ExprValueSource::Type::kRegister)
+    return cb(Err("Assignment to registers is not currently supported."));
 
   // The coerced value will be the result. It should have the "source" of the left-hand-side since
   // the location being assigned to doesn't change.

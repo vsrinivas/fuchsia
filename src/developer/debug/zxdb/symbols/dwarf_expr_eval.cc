@@ -111,6 +111,9 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
   FXL_DCHECK(!is_complete_);
   FXL_DCHECK(expr_index_ < expr_.size());
 
+  // Clear any current register information. See current_register_id_ declaration for more.
+  current_register_id_ = debug_ipc::RegisterID::kUnknown;
+
   // Opcode is next byte in the data buffer. Consume it.
   uint8_t op = expr_[expr_index_];
   expr_index_++;
@@ -295,6 +298,9 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
 
 DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_register_number,
                                                                 SignedStackEntry offset) {
+  // Reading register data means the result is not constant.
+  result_is_constant_ = false;
+
   const debug_ipc::RegisterInfo* reg_info =
       debug_ipc::DWARFToRegisterInfo(data_provider_->GetArch(), dwarf_register_number);
   if (!reg_info) {
@@ -316,13 +322,17 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
       StackEntry reg_value = 0;
       memcpy(&reg_value, reg_data->data(), std::min(sizeof(StackEntry), reg_data->size()));
       Push(reg_value + offset);
+
+      // When the current value represents a register, save that fact.
+      if (offset == 0)
+        current_register_id_ = reg_info->id;
     }
     return Completion::kSync;
   }
 
   // Must request async.
   data_provider_->GetRegisterAsync(
-      reg_info->id, [weak_eval = weak_factory_.GetWeakPtr(), offset](
+      reg_info->id, [reg_id = reg_info->id, weak_eval = weak_factory_.GetWeakPtr(), offset](
                         const Err& err, std::vector<uint8_t> reg_data) {
         if (!weak_eval)
           return;
@@ -335,6 +345,10 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
         StackEntry reg_value = 0;
         memcpy(&reg_value, reg_data.data(), std::min(sizeof(StackEntry), reg_data.size()));
         weak_eval->Push(static_cast<StackEntry>(reg_value + offset));
+
+        // When the current value represents a register, save that fact.
+        if (offset == 0)
+          weak_eval->current_register_id_ = reg_id;
 
         // Picks up processing at the next instruction.
         weak_eval->ContinueEval();
@@ -473,6 +487,9 @@ DwarfExprEval::Completion DwarfExprEval::OpBreg(uint8_t op) {
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpCFA() {
+  // Reading the CFA means the result is not constant.
+  result_is_constant_ = false;
+
   if (StackEntry cfa = data_provider_->GetCanonicalFrameAddress())
     Push(cfa);
   else
@@ -516,6 +533,9 @@ DwarfExprEval::Completion DwarfExprEval::OpDup() {
 
 // 1 parameter: Signed LEB128 offset from frame base pointer.
 DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
+  // Reading the frame base means the result is not constant.
+  result_is_constant_ = false;
+
   SignedStackEntry offset = 0;
   if (!ReadLEBSigned(&offset))
     return Completion::kSync;
@@ -606,6 +626,9 @@ DwarfExprEval::Completion DwarfExprEval::OpBregx() {
 
 // Pops the stack and pushes an given-sized value from memory at that location.
 DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size) {
+  // Reading memory means the result is not constant.
+  result_is_constant_ = false;
+
   if (stack_.empty()) {
     ReportStackUnderflow();
     return Completion::kSync;

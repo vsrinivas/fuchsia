@@ -332,6 +332,27 @@ TEST_F(EvalContextImplTest, IntOnStack) {
   EXPECT_TRUE(result1.called);
   ASSERT_FALSE(result1.value.has_error()) << result1.value.err().msg();
   EXPECT_EQ(ExprValue(kValue), result1.value.value());
+
+  // Validate variable source annotation.
+  const ExprValueSource& source = result1.value.value().source();
+  EXPECT_EQ(ExprValueSource::Type::kMemory, source.type());
+  EXPECT_EQ(kBp + kOffset, source.address());
+}
+
+// Checks that constant DWARF expressions result in constant variables.
+TEST_F(EvalContextImplTest, ConstantVariable) {
+  auto type = MakeInt32Type();
+  auto var = MakeUint64VariableForTest("i", 0, 0,
+                                       {llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_stack_value});
+  var->set_type(type);
+
+  ValueResult result;
+  GetVariableValue(MakeEvalContext(), var, &result);
+  loop().RunUntilNoTasks();
+
+  ASSERT_TRUE(result.called);
+  EXPECT_EQ(3, result.value.value().GetAs<int32_t>());
+  EXPECT_EQ(ExprValueSource::Type::kConstant, result.value.value().source().type());
 }
 
 // Tests that externs are resolved by GetVariableValue(). This requires using the index.
@@ -437,6 +458,12 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   EXPECT_FALSE(reg.value.has_error()) << reg.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value.value());
 
+  // The value source should map back to the input register.
+  const ExprValueSource& source = reg.value.value().source();
+  EXPECT_EQ(ExprValueSource::Type::kRegister, source.type());
+  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_x0, source.register_id());
+  EXPECT_FALSE(source.is_bitfield());
+
   // This register is synchronously known unavailable.
   provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x2, true, std::vector<uint8_t>{});
   reg.called = false;
@@ -516,6 +543,12 @@ TEST_F(EvalContextImplTest, RegisterShort) {
   ASSERT_FALSE(reg.value.has_error()) << reg.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint32_t>(kRegValue)), reg.value.value());
   EXPECT_EQ("uint32_t", reg.value.value().type()->GetFullName());
+
+  // Check source mapping.
+  const ExprValueSource& source = reg.value.value().source();
+  EXPECT_EQ(ExprValueSource::Type::kRegister, source.type());
+  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_w0, source.register_id());
+  EXPECT_FALSE(source.is_bitfield());
 }
 
 TEST_F(EvalContextImplTest, VectorRegister) {
@@ -541,6 +574,12 @@ TEST_F(EvalContextImplTest, VectorRegister) {
 
   // The data should be passed through unchanged, the array code will handle unpacking it.
   EXPECT_EQ(data, reg.value.value().data());
+
+  // Check source mapping.
+  const ExprValueSource& source = reg.value.value().source();
+  EXPECT_EQ(ExprValueSource::Type::kRegister, source.type());
+  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_v0, source.register_id());
+  EXPECT_FALSE(source.is_bitfield());
 }
 
 // Also tests ResolveForwardDefinition().

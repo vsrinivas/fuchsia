@@ -90,7 +90,8 @@ std::optional<VectorRegisterFormat> StringToVectorRegisterFormat(const std::stri
   return std::nullopt;
 }
 
-ExprValue VectorRegisterToValue(VectorRegisterFormat fmt, std::vector<uint8_t> data) {
+ExprValue VectorRegisterToValue(RegisterID id, VectorRegisterFormat fmt,
+                                std::vector<uint8_t> data) {
   size_t byte_size = 1;
   int base_type = BaseType::kBaseTypeNone;
   const char* type_name = "";
@@ -163,7 +164,7 @@ ExprValue VectorRegisterToValue(VectorRegisterFormat fmt, std::vector<uint8_t> d
   size_t array_size = data.size() / byte_size;
   auto array_type = fxl::MakeRefCounted<ArrayType>(std::move(item_type), array_size);
 
-  return ExprValue(std::move(array_type), std::move(data));
+  return ExprValue(std::move(array_type), std::move(data), ExprValueSource(id));
 }
 
 bool ShouldFormatRegisterAsVector(RegisterID id_enum) {

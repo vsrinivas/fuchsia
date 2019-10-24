@@ -113,7 +113,7 @@ class ExprValue {
   // Internal constructor for the primitive types. It uses the given |type| if given, otherwise they
   // construct an on-the-fly type definition for the built-in type with the given parameters.
   ExprValue(fxl::RefPtr<Type> optional_type, int base_type, const char* type_name, void* data,
-            uint32_t data_size);
+            uint32_t data_size, const ExprValueSource& source);
 
   // Application-defined type from the symbols.
   fxl::RefPtr<Type> type_;

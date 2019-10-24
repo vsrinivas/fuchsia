@@ -133,7 +133,7 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
   std::vector<std::unique_ptr<FormatNode>> formatted;
   for (const auto& r : registers) {
     // Use the expression formatter to format the vector members.
-    ExprValue vector_value = VectorRegisterToValue(options.vector_format, r.data);
+    ExprValue vector_value = VectorRegisterToValue(r.id, options.vector_format, r.data);
     auto node = std::make_unique<FormatNode>(RegisterIDToString(r.id), std::move(vector_value));
 
     // In general formatting is asynchronous but a vector of numbers should always be completable

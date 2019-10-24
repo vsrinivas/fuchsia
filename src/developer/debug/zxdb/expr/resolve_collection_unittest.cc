@@ -380,6 +380,7 @@ TEST_F(ResolveCollectionTest, ConstValue) {
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(const_int32_type.get(), result.value().type());
   EXPECT_EQ(kConstValue, result.value().GetAs<int32_t>());
+  EXPECT_EQ(ExprValueSource::Type::kConstant, result.value().source().type());
 
   // Extern const one. Have to use the non-nonstatic call to fully test the static codepath.
   bool called = false;
@@ -394,6 +395,7 @@ TEST_F(ResolveCollectionTest, ConstValue) {
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(const_int32_type.get(), result.value().type());
   EXPECT_EQ(kExternConstValue, result.value().GetAs<int32_t>());
+  EXPECT_EQ(ExprValueSource::Type::kConstant, result.value().source().type());
 }
 
 }  // namespace zxdb
