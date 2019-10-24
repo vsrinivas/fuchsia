@@ -9,7 +9,7 @@ mod watcher;
 use self::{filter::*, player_event::PlayerEvent, watcher::*};
 use crate::{proxies::player::Player, spawn_log_error, Result};
 use fidl_fuchsia_media_sessions2::*;
-use futures::{self, channel::mpsc, prelude::*};
+use futures::{self, channel::mpsc, prelude::*, stream};
 use mpmc;
 use std::collections::HashMap;
 use streammap::StreamMap;
@@ -30,7 +30,7 @@ impl Discovery {
     ) -> Result<()> {
         let mut player_updates = StreamMap::new();
         let sender = mpmc::Sender::default();
-        let mut catch_up_events: HashMap<u64, FilterApplicant<(u64, PlayerEvent)>> = HashMap::new();
+        let mut catch_up_events = HashMap::new();
 
         // Loop forever. All input channels live the life of the service, so we will always have a
         // stream to poll.
@@ -50,22 +50,11 @@ impl Discovery {
                             }
                         }
                         DiscoveryRequest::WatchSessions { watch_options, session_watcher, ..} => {
-                            let mut event_queue = futures::stream::iter(
-                                catch_up_events.values().cloned()
-                            );
-                            let event_queue_size = catch_up_events.len();
-
-                            let (mut event_sink, event_stream) = mpsc::channel(event_queue_size);
-                            event_sink.send_all(&mut event_queue).await?;
-
-                            let mut connector_to_new_player_events = sender.new_receiver();
-                            spawn_log_error(async move {
-                                while let Some(event) = connector_to_new_player_events.next().await {
-                                    event_sink.send(event).await?;
-                                }
-
-                                Ok(())
-                            });
+                            let queue: Vec<FilterApplicant<(u64, PlayerEvent)>> = catch_up_events
+                                .values()
+                                .cloned()
+                                .collect();
+                            let event_stream = stream::iter(queue).chain(sender.new_receiver());
 
                             spawn_log_error(Watcher::new(
                                 Filter::new(watch_options),

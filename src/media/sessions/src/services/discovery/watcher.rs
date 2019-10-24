@@ -10,8 +10,11 @@ use crate::{Result, MAX_EVENTS_SENT_WITHOUT_ACK};
 use failure::ResultExt;
 use fidl::endpoints::*;
 use fidl_fuchsia_media_sessions2::*;
-use futures::{self, channel::mpsc, prelude::*};
-use std::collections::{HashSet, VecDeque};
+use futures::{self, prelude::*, Stream};
+use std::{
+    collections::{HashSet, VecDeque},
+    marker::Unpin,
+};
 
 /// Implements `fuchsia.media.sessions2.SessionsWatcher`.
 ///
@@ -21,16 +24,13 @@ use std::collections::{HashSet, VecDeque};
 ///
 /// We need to keep clones of events in each instance of `Watcher` because clients may consume them
 /// at different rates; each one needs a individual queue.
-pub struct Watcher {
+pub struct Watcher<T> {
     filter: Filter,
-    event_stream: mpsc::Receiver<FilterApplicant<(u64, PlayerEvent)>>,
+    event_stream: T,
 }
 
-impl Watcher {
-    pub fn new(
-        filter: Filter,
-        event_stream: mpsc::Receiver<FilterApplicant<(u64, PlayerEvent)>>,
-    ) -> Self {
+impl<T: Stream<Item = FilterApplicant<(u64, PlayerEvent)>> + Unpin> Watcher<T> {
+    pub fn new(filter: Filter, event_stream: T) -> Self {
         Self { filter, event_stream }
     }
 
