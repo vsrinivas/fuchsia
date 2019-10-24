@@ -66,7 +66,7 @@ func doTestOTAs(t *testing.T, device *device.Client) {
 		if err != nil {
 			t.Fatalf("failed to create a temporary directory: %s", err)
 		}
-		defer os.RemoveAll(c.OutputDir)
+		defer os.RemoveAll(outputDir)
 	}
 
 	repo, err := c.GetUpgradeRepository(outputDir)
@@ -138,7 +138,7 @@ func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, buildID stri
 		if err != nil {
 			t.Fatalf("failed to create a temporary directory: %s", err)
 		}
-		defer os.RemoveAll(c.OutputDir)
+		defer os.RemoveAll(outputDir)
 	}
 
 	build, err := c.BuildArchive().GetBuildByID(buildID, outputDir)
@@ -171,7 +171,7 @@ func doPaveDevice(t *testing.T, device *device.Client) {
 		if err != nil {
 			t.Fatalf("failed to create a temporary directory: %s", err)
 		}
-		defer os.RemoveAll(c.OutputDir)
+		defer os.RemoveAll(outputDir)
 	}
 	downgradePaver, err := c.GetDowngradePaver(outputDir)
 	if err != nil {
