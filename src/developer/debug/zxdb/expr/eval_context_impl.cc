@@ -71,8 +71,16 @@ ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
     }
   }
 
-  // Very large non-vector data (?) or some unexpected size.
-  return Err("This %zu-byte register can not converted to a number.", data.size());
+  // Large and/or weird sized registers.
+  const char* type_name;
+  if (data.size() == sizeof(uint128_t))
+    type_name = "uint128_t";
+  else
+    type_name = "(register data)";
+
+  return ExprValue(
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, data.size(), type_name),
+      std::vector<uint8_t>(data.begin(), data.end()));
 }
 
 }  // namespace

@@ -134,6 +134,17 @@ TEST(FormatRegisters, VectorRegisters) {
       "     Currently showing vectors of \"float\".)\n"
       "\n",
       FormatRegisters(options, FilterRegisters(options, registers)).AsString());
+
+  // Format as 128-bit.
+  options.vector_format = VectorRegisterFormat::kUnsigned128;
+  EXPECT_EQ(
+      "Vector Registers\n"
+      "  Name                                [1]                                [0]\n"
+      "  ymm0 0x00000000000000000000000000000000 0x00000000000000000000000040490fd0\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"u128\".)\n"
+      "\n",
+      FormatRegisters(options, FilterRegisters(options, registers)).AsString());
 }
 
 TEST(FormatRegisters, AllRegisters) {

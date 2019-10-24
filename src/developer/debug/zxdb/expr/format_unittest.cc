@@ -92,6 +92,14 @@ TEST_F(FormatTest, Unsigned) {
   EXPECT_EQ(" = long long, 18446744073709551614\n",
             GetDebugTreeForValue(eval_context(), val_int64, opts));
 
+  // 128 bit (this always get output as hex today).
+  ExprValue val_int128(
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 16, "insanely long"),
+      {0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11,    // Low 64 bits.
+       0x04, 0x03, 0x02, 0x01, 0xef, 0xbe, 0xad, 0xde});  // High 64 bits.
+  EXPECT_EQ(" = insanely long, 0xdeadbeef010203041112131415161718\n",
+            GetDebugTreeForValue(eval_context(), val_int128, opts));
+
   // Force a 32-bit float to an unsigned and a hex.
   ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
                       {0x04, 0x03, 0x02, 0x01});

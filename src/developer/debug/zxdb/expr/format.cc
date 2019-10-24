@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/format.h"
 
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
@@ -107,6 +108,17 @@ void FormatSignedInt(FormatNode* node) {
 }
 
 void FormatUnsignedInt(FormatNode* node, const FormatOptions& options) {
+  // All > 64-bit output needs a separate code path since they can't be printf'ed. We only ever
+  // bother to output this as 0-padded hex. This could be enhanced in the future.
+  if (node->value().data().size() > sizeof(uint64_t)) {
+    // This assumes little-endian.
+    std::string desc = "0x";
+    for (uint8_t b : Reversed(node->value().data()))
+      desc.append(fxl::StringPrintf("%02x", b));
+    node->set_description(std::move(desc));
+    return;
+  }
+
   // This formatter handles unsigned and hex output.
   uint64_t int_val = 0;
   Err err = node->value().PromoteTo64(&int_val);
@@ -161,6 +173,13 @@ void FormatChar(FormatNode* node) {
 // been determined to be numeric. This may also be called as a fallback for things like enums.
 void FormatNumeric(FormatNode* node, const FormatOptions& options) {
   node->set_description_kind(FormatNode::kBaseType);
+
+  if (node->value().data().size() > sizeof(uint64_t)) {
+    // All >64-bit values get formatted as hex because we can't easily give these things to
+    // printf.
+    FormatUnsignedInt(node, options);
+    return;
+  }
 
   if (options.num_format != NumFormat::kDefault) {
     // Overridden format option.
