@@ -471,69 +471,60 @@ zx_status_t RndisHost::AddDevice() {
 }
 
 static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
-  usb_protocol_t usb;
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &usb);
+  usb_protocol_t proto;
+  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &proto);
   if (status != ZX_OK) {
     return status;
   }
-
-  // Find our endpoints.
-  usb_desc_iter_t iter;
-  status = usb_desc_iter_init(&usb, &iter);
-  if (status < 0) {
-    return status;
-  }
-
-  // We should have two interfaces: the CDC classified interface the bulk in
-  // and out endpoints, and the RNDIS interface for control. The RNDIS
-  // interface will be classified as USB_CLASS_WIRELESS when the device is
-  // used for tethering.
-  // TODO: Figure out how to handle other RNDIS use cases.
-  usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, false);
   uint8_t bulk_in_addr = 0;
   uint8_t bulk_out_addr = 0;
   uint8_t intr_addr = 0;
   uint8_t control_intf = 0;
-  while (intf) {
-    if (intf->bInterfaceClass == USB_CLASS_WIRELESS) {
-      control_intf = intf->bInterfaceNumber;
-      if (intf->bNumEndpoints != 1) {
-        usb_desc_iter_release(&iter);
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
-      while (endp) {
-        if (usb_ep_direction(endp) == USB_ENDPOINT_IN &&
-            usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
-          intr_addr = endp->bEndpointAddress;
-        }
-        endp = usb_desc_iter_next_endpoint(&iter);
-      }
-    } else if (intf->bInterfaceClass == USB_CLASS_CDC) {
-      if (intf->bNumEndpoints != 2) {
-        usb_desc_iter_release(&iter);
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
-      while (endp) {
-        if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
-          if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-            bulk_out_addr = endp->bEndpointAddress;
-          }
-        } else if (usb_ep_direction(endp) == USB_ENDPOINT_IN) {
-          if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-            bulk_in_addr = endp->bEndpointAddress;
-          }
-        }
-        endp = usb_desc_iter_next_endpoint(&iter);
-      }
-    } else {
-      usb_desc_iter_release(&iter);
-      return ZX_ERR_NOT_SUPPORTED;
+  {
+    // Find our endpoints.
+    // We should have two interfaces: the CDC classified interface the bulk in
+    // and out endpoints, and the RNDIS interface for control. The RNDIS
+    // interface will be classified as USB_CLASS_WIRELESS when the device is
+    // used for tethering.
+    // TODO: Figure out how to handle other RNDIS use cases.
+    usb_desc_iter_t iter;
+    status = usb_desc_iter_init(&proto, &iter);
+    if (status != ZX_OK) {
+      return status;
     }
-    intf = usb_desc_iter_next_interface(&iter, false);
+    for (const usb::Interface& interface : usb::InterfaceList(iter, false)) {
+      const usb_interface_descriptor_t* intf = interface.descriptor();
+      if (intf->bInterfaceClass == USB_CLASS_WIRELESS) {
+        control_intf = intf->bInterfaceNumber;
+        if (intf->bNumEndpoints != 1) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        for (const auto& endp : interface.GetEndpointList()) {
+          if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_IN &&
+              usb_ep_type(&endp.descriptor) == USB_ENDPOINT_INTERRUPT) {
+            intr_addr = endp.descriptor.bEndpointAddress;
+          }
+        }
+      } else if (intf->bInterfaceClass == USB_CLASS_CDC) {
+        if (intf->bNumEndpoints != 2) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        for (const auto& endp : interface.GetEndpointList()) {
+          if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_OUT) {
+            if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
+              bulk_out_addr = endp.descriptor.bEndpointAddress;
+            }
+          } else if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_IN) {
+            if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
+              bulk_in_addr = endp.descriptor.bEndpointAddress;
+            }
+          }
+        }
+      } else {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+    }
   }
-  usb_desc_iter_release(&iter);
 
   if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
     zxlogf(ERROR, "rndishost couldn't find endpoints\n");
@@ -542,7 +533,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
 
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<RndisHost>(&ac, parent, control_intf, bulk_in_addr,
-                                                 bulk_out_addr, usb);
+                                                 bulk_out_addr, proto);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
