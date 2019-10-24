@@ -373,6 +373,98 @@ TEST(LineInput, EndOfTransimission) {
   EXPECT_EQ(input.line(), "First Second ");
 }
 
+TEST(LineInput, Transpose) {
+  TestLineInput input("[prompt] ");
+  input.BeginReadLine();
+
+  //             v
+  input.SetLine("First Second Third");
+  input.SetPos(0);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
+  EXPECT_EQ(input.line(), "First Second Third");
+
+  //              v
+  input.SetLine("First Second Third");
+  input.SetPos(1);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
+  EXPECT_EQ(input.line(), "First Second Third");
+
+  //               v
+  input.SetLine("First Second Third");
+  input.SetPos(2);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
+  EXPECT_EQ(input.line(), "iFrst Second Third");
+
+  //                               v
+  input.SetLine("First Second Third");
+  input.SetPos(18);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
+  EXPECT_EQ(input.line(), "First Second Thidr");
+}
+
+TEST(LineInput, DeleteEnd) {
+  TestLineInput input("[prompt] ");
+  input.BeginReadLine();
+
+  //             v
+  input.SetLine("First Second Third");
+  input.SetPos(0);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  EXPECT_EQ(input.line(), "");
+
+  //               v
+  input.SetLine("First Second Third");
+  input.SetPos(2);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  EXPECT_EQ(input.line(), "Fi");
+
+  //                  v
+  input.SetLine("First Second Third");
+  input.SetPos(5);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  EXPECT_EQ(input.line(), "First");
+
+  //                     v
+  input.SetLine("First Second Third");
+  input.SetPos(8);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  EXPECT_EQ(input.line(), "First Se");
+
+  //                         v
+  input.SetLine("First Second Third");
+  input.SetPos(12);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  EXPECT_EQ(input.line(), "First Second");
+
+  //                               v
+  input.SetLine("First Second Third");
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  EXPECT_EQ(input.line(), "First Second Third");
+}
+
+TEST(LineInput, CancelCommand) {
+  TestLineInput input("[prompt] ");
+  input.BeginReadLine();
+
+  //             v
+  input.SetLine("First Second Third");
+  input.SetPos(0);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
+  EXPECT_EQ(input.line(), "");
+
+  //               v
+  input.SetLine("First Second Third");
+  input.SetPos(2);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
+  EXPECT_EQ(input.line(), "");
+
+  //                               v
+  input.SetLine("First Second Third");
+  input.SetPos(18);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
+  EXPECT_EQ(input.line(), "");
+}
+
 TEST(LineInput, ReverseHistory_Select) {
   TestLineInput input("> ");
 

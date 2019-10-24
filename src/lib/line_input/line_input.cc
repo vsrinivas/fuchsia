@@ -99,6 +99,9 @@ bool LineInputBase::OnInput(char c) {
     case SpecialCharacters::kKeyControlB:
       MoveLeft();
       break;
+    case SpecialCharacters::kKeyControlC:
+      CancelCommand();
+      break;
     case SpecialCharacters::kKeyControlD:
       if (cur_line().empty()) {
         HandleEndOfFile();
@@ -113,14 +116,17 @@ bool LineInputBase::OnInput(char c) {
     case SpecialCharacters::kKeyControlF:
       MoveRight();
       break;
+    case SpecialCharacters::kKeyControlK:
+      DeleteToEnd();
+      break;
     case SpecialCharacters::kKeyFormFeed:
       HandleFormFeed();
       break;
     case SpecialCharacters::kKeyTab:
       HandleTab();
       break;
-    case SpecialCharacters::kKeyNewline:
-    case SpecialCharacters::kKeyEnter:
+    case SpecialCharacters::kKeyNewline: // == Ctrl + J
+    case SpecialCharacters::kKeyEnter:   // == Ctrl + M
       HandleEnter();
       return true;
     case SpecialCharacters::kKeyControlN:
@@ -131,6 +137,9 @@ bool LineInputBase::OnInput(char c) {
       break;
     case SpecialCharacters::kKeyControlR:
       StartReverseHistoryMode();
+      break;
+    case SpecialCharacters::kKeyControlT:
+      TransposeLastTwoCharacters();
       break;
     case SpecialCharacters::kKeyControlU:
       HandleNegAck();
@@ -513,6 +522,26 @@ void LineInputBase::MoveHome() {
 
 void LineInputBase::MoveEnd() {
   pos_ = cur_line().size();
+  RepaintLine();
+}
+
+void LineInputBase::TransposeLastTwoCharacters() {
+  if (pos_ >= 2) {
+    auto swap = cur_line()[pos_ - 1];
+    cur_line()[pos_ - 1] = cur_line()[pos_ - 2];
+    cur_line()[pos_ - 2] = swap;
+    RepaintLine();
+  }
+}
+
+void LineInputBase::CancelCommand() {
+  Write("^C\r\n");
+  ResetLineState();
+  RepaintLine();
+}
+
+void LineInputBase::DeleteToEnd() {
+  cur_line().resize(pos_);
   RepaintLine();
 }
 

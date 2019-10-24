@@ -20,17 +20,20 @@ namespace line_input {
 struct SpecialCharacters {
   static constexpr char kKeyControlA = 1;
   static constexpr char kKeyControlB = 2;
+  static constexpr char kKeyControlC = 3;
   static constexpr char kKeyControlD = 4;
   static constexpr char kKeyControlE = 5;
   static constexpr char kKeyControlF = 6;
   static constexpr char kKeyControlH = 8;
   static constexpr char kKeyTab = 9;
   static constexpr char kKeyNewline = 10;
+  static constexpr char kKeyControlK = 11;
   static constexpr char kKeyFormFeed = 12;
   static constexpr char kKeyEnter = 13;
   static constexpr char kKeyControlN = 14;
   static constexpr char kKeyControlP = 16;
   static constexpr char kKeyControlR = 18;
+  static constexpr char kKeyControlT = 20;
   static constexpr char kKeyControlU = 21;
   static constexpr char kKeyControlW = 23;
   static constexpr char kKeyEsc = 27;
@@ -134,6 +137,7 @@ class LineInputBase {
 
   void HandleBackspace();
   void HandleDelete();
+  // FormFeed is the name of Ctrl-L in ASCII world.
   void HandleFormFeed();
   void HandleEnter();
   void HandleTab();
@@ -157,6 +161,10 @@ class LineInputBase {
   void MoveDown();
   void MoveHome();
   void MoveEnd();
+
+  void TransposeLastTwoCharacters();
+  void CancelCommand();
+  void DeleteToEnd();
 
   void CancelCompletion();
   void AcceptCompletion();
