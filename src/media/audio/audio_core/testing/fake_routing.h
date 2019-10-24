@@ -37,8 +37,6 @@ class FakeRouting : public Routing {
     AudioObject::LinkObjects(fbl::RefPtr(renderer), fbl::RefPtr(output));
   }
 
-  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy) override {}
-
  private:
   std::unordered_set<AudioDevice*> outputs_;
 };

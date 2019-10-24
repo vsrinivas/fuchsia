@@ -296,37 +296,6 @@ TEST_F(UsageVolumeControlTest, ConnectToUsageVolume) {
 // TODO(mpuryear): "fuzz" tests (FIDL-compliant but protocol-inconsistent).
 //
 
-// Test setting (and re-setting) the audio output routing policy.
-TEST_F(AudioTest, SetRoutingPolicy) {
-  audio_core_->SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
-
-  // Setting policy again should have no effect.
-  audio_core_->SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
-
-  // Setting policy to different mode.
-  audio_core_->SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
-
-  // Give time for Disconnect to occur if it must, but we expect this callback.
-  audio_core_.events().SystemGainMuteChanged = CompletionCallback([](float, bool) {});
-
-  audio_core_->SetSystemGain(-1.0f);
-  audio_core_->SetSystemGain(0.0f);
-  ExpectCallback();
-}
-
-// Out-of-range enum should be blocked at sender-side with a debug message
-// printed to stderr, and not disconnect.
-TEST_F(AudioTest, SetBadRoutingPolicy) {
-  audio_core_->SetRoutingPolicy(static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u));
-
-  // Give time for Disconnect to occur if it must, but we expect this callback.
-  audio_core_.events().SystemGainMuteChanged = CompletionCallback([](float gain_db, bool muted) {});
-
-  audio_core_->SetSystemGain(-1.0f);
-  audio_core_->SetSystemGain(0.0f);
-  ExpectCallback();
-}
-
 //
 // Validation of System Gain and Mute
 //

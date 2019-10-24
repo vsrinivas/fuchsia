@@ -107,25 +107,4 @@ TEST_F(AudioSyncTest, CreateAudioCapturer) {
 // TODO(mpuryear): "fuzz" tests (FIDL-compliant but protocol-inconsistent).
 //
 
-// Test the setting of audio output routing policy.
-TEST_F(AudioSyncTest, SetRoutingPolicy) {
-  // Validate Audio can set last-plugged routing policy synchronously.
-  EXPECT_EQ(ZX_OK, audio_core_sync_->SetRoutingPolicy(
-                       fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
-
-  // Validate Audio can set all-outputs routing policy synchronously.
-  EXPECT_EQ(ZX_OK, audio_core_sync_->SetRoutingPolicy(
-                       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS));
-
-  // Out-of-range enum should be blocked at sender-side.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, audio_core_sync_->SetRoutingPolicy(
-                                     static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u)));
-
-  // These tests should be running hermetically, but if not (if running on the
-  // system's global audio_core), reset persistent system settings to defaults!
-  EXPECT_EQ(ZX_OK, audio_core_sync_->SetRoutingPolicy(
-                       fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
-  EXPECT_TRUE(audio_core_sync_.is_bound());
-}
-
 }  // namespace media::audio::test

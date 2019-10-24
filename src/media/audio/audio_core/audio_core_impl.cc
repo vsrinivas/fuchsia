@@ -204,8 +204,7 @@ void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUs
 
 void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRoutingPolicy");
-  AUD_VLOG(TRACE) << " (policy: " << static_cast<int>(policy) << ")";
-  device_manager_.SetRoutingPolicy(policy);
+  FXL_LOG(WARNING) << "Deprecated SetRoutingPolicy called.";
 }
 
 void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
@@ -229,7 +228,6 @@ void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media:
 
 void AudioCoreImpl::LoadDefaults() {
   TRACE_DURATION("audio", "AudioCoreImpl::LoadDefaults");
-  // TODO(35145): Move disk I/O off main thread.
   auto policy = PolicyLoader::LoadDefaultPolicy();
   FXL_CHECK(policy);
   audio_admin_.SetInteractionsFromAudioPolicy(std::move(*policy));

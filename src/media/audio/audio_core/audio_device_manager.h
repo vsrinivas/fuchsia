@@ -73,7 +73,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
   //
   void SelectOutputsForAudioRenderer(AudioRendererImpl* audio_renderer) override;
   void LinkOutputToAudioRenderer(AudioOutput* output, AudioRendererImpl* audio_renderer) override;
-  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) override;
 
   // |media::audio::StreamRegistry|
   void AddAudioRenderer(fbl::RefPtr<AudioRendererImpl> audio_renderer) override;
@@ -162,9 +161,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator,
 
   AudioDeviceSettingsPersistence& device_settings_persistence_;
 
-  // State which affects routing policy.
-  fuchsia::media::AudioOutputRoutingPolicy routing_policy_ =
-      fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT;
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;
 };

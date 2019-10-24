@@ -57,9 +57,6 @@ constexpr char kSystemGainDefaultDb[] = "-12.0";
 constexpr char kSystemMuteSwitch[] = "smute";
 constexpr char kSystemMuteDefault[] = "1";
 
-constexpr char kPlayToLastSwitch[] = "last";
-constexpr char kPlayToAllSwitch[] = "all";
-
 constexpr char kDeviceSettingsSwitch[] = "settings";
 constexpr char kDeviceSettingsDefault[] = "0";
 
@@ -133,11 +130,6 @@ void usage(const char* prog_name) {
       "'--%s' is provided)\n",
       kSystemMuteSwitch, kSystemMuteSwitch);
   printf("\t  Note: changes to System Gain/Mute persist after playback\n");
-
-  printf("\n\t  By default, system audio output routing policy is unchanged\n");
-  printf("\t--%s\t\t\tSet 'Play to Most-Recently-Plugged' routing policy\n", kPlayToLastSwitch);
-  printf("\t--%s\t\t\tSet 'Play to All' routing policy\n", kPlayToAllSwitch);
-  printf("\t\t\t\tNote: changes to routing policy persist after playback\n");
 
   printf("\n\t  By default, changes to audio device settings are persisted\n");
   printf("\t--%s[=<0|1>]\tEnable/disable creation/update of device settings\n",
@@ -309,19 +301,6 @@ int main(int argc, const char** argv) {
     }
 
     media_app.set_system_mute(fxl::StringToNumber<uint32_t>(system_mute_str) != 0);
-  }
-
-  // Handle output routing policy
-  if (command_line.HasOption(kPlayToLastSwitch)) {
-    // Don't allow the user to specify both policies
-    if (command_line.HasOption(kPlayToAllSwitch)) {
-      usage(argv[0]);
-      return 0;
-    }
-    media_app.set_audio_policy(fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
-  }
-  if (command_line.HasOption(kPlayToAllSwitch)) {
-    media_app.set_audio_policy(fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
   }
 
   // Handle device settings

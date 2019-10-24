@@ -240,10 +240,6 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
     audio->SetSystemMute(system_mute_);
   }
 
-  if (set_policy_) {
-    audio->SetRoutingPolicy(audio_policy_);
-  }
-
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_.set_error_handler([this](zx_status_t status) {
     FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.AudioRenderer failed";

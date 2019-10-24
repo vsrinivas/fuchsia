@@ -21,8 +21,6 @@ class Routing {
 
   // // Link an output to an AudioRenderer.
   virtual void LinkOutputToAudioRenderer(AudioOutput* output, AudioRendererImpl* renderer) = 0;
-
-  virtual void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) = 0;
 };
 
 }  // namespace media::audio
