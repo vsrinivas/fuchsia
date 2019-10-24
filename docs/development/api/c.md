@@ -378,8 +378,8 @@ global) should be avoided in new code.
 ## Linkage
 
 The default symbol visibility in a library should be hidden. Use
-either a whitelist of exported symbols, or explicit visibility
-annotations, on symbols to exported.
+either an allowlist of exported symbols, or explicit visibility
+annotations on symbols to exported.
 
 C libraries must not export C++ symbols.
 

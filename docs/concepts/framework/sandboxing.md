@@ -39,7 +39,7 @@ Processes that are [components](/docs/glossary.md#component) receive an `/svc`
 directory in their namespace. The services available through `/svc` are a
 subset of the services provided by the component's
 [environment](/docs/glossary.md#environment). This subset is determined by the
-[`sandbox.services`](/docs/concepts/storage/package_metadata.md#sandbox) whitelist in the
+[`sandbox.services`](/docs/concepts/storage/package_metadata.md#sandbox) allowlist in the
 component's [manifest file](/docs/concepts/storage/package_metadata.md#component-manifest).
 
 A typical component will interact with a number of services from `/svc` in

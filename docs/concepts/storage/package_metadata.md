@@ -176,9 +176,9 @@ The `sandbox` property is a JSON object with the following schema:
 The `dev` array contains a list of well-known device directories that are
 provided to the component. For example, if the string `class/input` appears in
 the `dev` array, then `/dev/class/input` will appear in the namespaces of components
-loaded from the package. To whitelist access to a `misc` device, such as
+loaded from the package. To allow access to a `misc` device, such as
 `/dev/misc/sysinfo`, add the string `misc` to the `dev` array. Unfortunately,
-whitelisting access to individual `misc` devices is not possible currently.
+allowing access to individual `misc` devices is not possible currently.
 
 The `system` array contains a list of well-known paths within the system package
 that are provided to the component. For example, if the string `bin` appears
@@ -191,13 +191,13 @@ appears in the `pkgfs` array, then `/pkgfs/versions` will appear in the
 namespaces of components loaded from the package, providing access to all
 packages fully cached on the system.
 
-The `services` array defines a whitelist of services from `/svc` that the
+The `services` array defines a list of services from `/svc` that the
 component may access. A typical component will require a number services from
 `/svc` in order to play some useful role in the system. For example, if
 `"services" = [ "fuchsia.sys.Launcher", "fuchsia.netstack.Netstack" ]`, the
 component will have the ability to launch other components and access network
-services. A component may declare any list of services in its `services`
-whitelist, but it will only be able to access services present in its
+services. A component may declare any list of services in its `services`,
+but it will only be able to access services present in its
 [environment](/docs/glossary.md#environment). This property should be defined by
 all new components, and soon a migration will take place to convert all
 components to define `services`.
