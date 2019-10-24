@@ -12,6 +12,10 @@
             "from": "framework"
         },
         {
+            "legacy_service": "/svc/fuchsia.test.hub.Breakpoints",
+            "from": "framework"
+        },
+        {
             "directory": "/hub",
             "from": "framework",
             "rights": ["r*"],

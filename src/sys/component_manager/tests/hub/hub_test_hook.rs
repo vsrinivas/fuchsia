@@ -27,71 +27,18 @@ fn get_or_insert_channel<'a>(
     })
 }
 
-// A Breakpoint is an object created and sent to the integration test when a
-// BreakpointEvent is triggered in ComponentManager. The object contains information
-// about the Breakpoint (what event occurred and what realm it applies to) along with
-// a means to resume/unblock the ComponentManager.
-pub struct Breakpoint {
-    pub event: Event,
-
-    // This Sender is used by the integration test
-    // to unblock the ComponentManager.
-    responder: oneshot::Sender<()>,
-}
-
-impl Breakpoint {
-    pub fn resume(self) {
-        self.responder.send(()).unwrap()
-    }
-}
-
-// Breakpoints is used to wait for a Breakpoint object or to send a Breakpoint object when
-// a BreakpointEvent occurs.
-pub struct Breakpoints {
-    tx: Arc<Mutex<mpsc::Sender<Breakpoint>>>,
-    rx: Arc<Mutex<mpsc::Receiver<Breakpoint>>>,
-}
-
-impl Breakpoints {
-    pub fn new() -> Self {
-        let (tx, rx) = mpsc::channel(0);
-        Self { tx: Arc::new(Mutex::new(tx)), rx: Arc::new(Mutex::new(rx)) }
-    }
-
-    pub async fn send(&self, event: Event) -> Result<(), ModelError> {
-        let (responder_tx, responder_rx) = oneshot::channel();
-        {
-            let mut tx = self.tx.lock().await;
-            tx.send(Breakpoint { event, responder: responder_tx }).await.unwrap();
-        }
-        responder_rx.await.unwrap();
-        Ok(())
-    }
-
-    pub async fn receive(&self) -> Breakpoint {
-        let mut rx = self.rx.lock().await;
-        rx.next().await.expect("Breakpoint did not occur")
-    }
-}
-
 // A HubTestHook is a framework capability routing hook that injects a
 // HubTestCapability every time a connection is requested to connect to the
 // 'fuchsia.sys.HubReport' framework capability.
 pub struct HubTestHook {
-    observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
-    breakpoints: Breakpoints,
+    observers: Arc<Mutex<HashMap<String, HubReportChannel>>>
 }
 
 impl HubTestHook {
     pub fn new() -> Self {
         HubTestHook {
-            observers: Arc::new(Mutex::new(HashMap::new())),
-            breakpoints: Breakpoints::new(),
+            observers: Arc::new(Mutex::new(HashMap::new()))
         }
-    }
-
-    pub async fn wait_for_breakpoint(&self) -> Breakpoint {
-        self.breakpoints.receive().await
     }
 
     // Given a directory path, blocks the current task until a component
@@ -133,7 +80,7 @@ impl HubTestHook {
 }
 
 impl Hook for HubTestHook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match event {
                 Event::RouteFrameworkCapability { realm: _, capability_decl, capability } => {
@@ -142,9 +89,7 @@ impl Hook for HubTestHook {
                         .on_route_framework_capability_async(capability_decl, capability.take())
                         .await?;
                 }
-                _ => {
-                    self.breakpoints.send(event.clone()).await?;
-                }
+                _ => {}
             };
             Ok(())
         })

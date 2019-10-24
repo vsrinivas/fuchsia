@@ -10,6 +10,25 @@ using fuchsia.io;
 /// This capacity is currently set somewhat arbitrarily.
 const uint64 MAX_NUM_ENTRIES = 100;
 
+/// These EventTypes are used for the Breakpoints protocol.
+/// They are FIDL versions of the EventType enum in hooks.rs and have
+/// the same meaning.
+enum EventType {
+    /// An instance was stopped successfully.
+    /// This event must occur before PostDestroyInstance.
+    StopInstance = 0;
+
+    /// The component subtree rooted at this instance is about to be destroyed.
+    /// The instance may have been stopped by this point.
+    /// This event must occur before PostDestroyInstance.
+    //TODO(fxb/39417): Ensure the instance is stopped before this event.
+    PreDestroyInstance = 1;
+
+    /// The component subtree rooted at this instance has been destroyed.
+    /// All instances under this subtree have been stopped by this point.
+    PostDestroyInstance = 2;
+};
+
 /// A protocol used in testing by a component instance to propagate its view of
 /// hub directory to the integration test.
 [Discoverable]
@@ -22,4 +41,23 @@ protocol HubReport {
   /// Returns the content of the file specified by the provided path.
   ReportFileContent(string:fuchsia.io.MAX_PATH path,
                     string:fuchsia.io.MAX_BUF content) -> ();
+};
+
+/// A protocol used in testing by a component instance to block the
+/// component manager until specific events occur.
+[Discoverable]
+protocol Breakpoints {
+  /// Register breakpoints for the given EventTypes.
+  /// Must be called exactly once before Expect or Resume.
+  Register(vector<EventType> event_types) -> ();
+
+  /// Blocks until the next invocation of a breakpoint occurs and verifies
+  /// that the EventType and component list are as expected.
+  ///
+  /// Note: The component manager is blocked after this call and will not be
+  /// allowed to proceed until resumed explicitly.
+  Expect(EventType event_type, vector<string> components) -> ();
+
+  /// Resume the component manager from the last expected invocation.
+  Resume() -> ();
 };

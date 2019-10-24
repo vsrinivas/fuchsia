@@ -16,29 +16,68 @@ macro_rules! get_names_from_listing {
     };
 }
 
-async fn report_directory_contents(
-    hub_report: &fhub::HubReportProxy,
-    dir_path: &str,
-) -> Result<(), Error> {
-    let dir_proxy = io_util::open_directory_in_namespace(dir_path, io_util::OPEN_RIGHT_READABLE)
-        .expect("Unable to open directory in namespace");
-    let dir_listing = files_async::readdir(&dir_proxy).await.expect("readdir failed");
-    hub_report
-        .list_directory(dir_path, get_names_from_listing!(dir_listing))
-        .await
-        .context("list directory failed")?;
-    Ok(())
+struct Testing {
+    hub_report: fhub::HubReportProxy,
+    breakpoints: fhub::BreakpointsProxy,
 }
 
-async fn report_file_content(hub_report: &fhub::HubReportProxy, path: &str) -> Result<(), Error> {
-    let resolved_url_proxy = io_util::open_file_in_namespace(path, io_util::OPEN_RIGHT_READABLE)
-        .expect("Unable to open the file.");
-    let resolved_url_file_content = io_util::read_file(&resolved_url_proxy).await?;
-    hub_report
-        .report_file_content(path, &resolved_url_file_content)
-        .await
-        .context("report file content failed")?;
-    Ok(())
+impl Testing {
+    fn new() -> Result<Self, Error> {
+        let hub_report = connect_to_service::<fhub::HubReportMarker>()
+            .context("error connecting to HubReport")?;
+        let breakpoints = connect_to_service::<fhub::BreakpointsMarker>()
+            .context("error connecting to Breakpoints")?;
+        Ok(Self { hub_report, breakpoints })
+    }
+
+    async fn report_directory_contents(&self, dir_path: &str) -> Result<(), Error> {
+        let dir_proxy =
+            io_util::open_directory_in_namespace(dir_path, io_util::OPEN_RIGHT_READABLE)
+                .expect("Unable to open directory in namespace");
+        let dir_listing = files_async::readdir(&dir_proxy).await.expect("readdir failed");
+        self.hub_report
+            .list_directory(dir_path, get_names_from_listing!(dir_listing))
+            .await
+            .context("list directory failed")?;
+        Ok(())
+    }
+
+    async fn register_breakpoints(&self, event_types: Vec<fhub::EventType>) -> Result<(), Error> {
+        self.breakpoints
+            .register(&mut event_types.into_iter())
+            .await
+            .context("register breakpoints failed")?;
+        Ok(())
+    }
+
+    async fn report_file_content(&self, path: &str) -> Result<(), Error> {
+        let resolved_url_proxy =
+            io_util::open_file_in_namespace(path, io_util::OPEN_RIGHT_READABLE)
+                .expect("Unable to open the file.");
+        let resolved_url_file_content = io_util::read_file(&resolved_url_proxy).await?;
+        self.hub_report
+            .report_file_content(path, &resolved_url_file_content)
+            .await
+            .context("report file content failed")?;
+        Ok(())
+    }
+
+    async fn expect_breakpoint(
+        &self,
+        event_type: fhub::EventType,
+        components: Vec<&str>,
+    ) -> Result<(), Error> {
+        self.breakpoints
+            .expect(event_type, &mut components.into_iter())
+            .await
+            .context("expect breakpoint failed")?;
+        Ok(())
+    }
+
+    async fn resume_breakpoint(&self) -> Result<(), Error> {
+        self.breakpoints.resume().await.context("resume breakpoint failed")?;
+        Ok(())
+    }
 }
 
 #[fasync::run_singlethreaded]
@@ -57,24 +96,32 @@ async fn main() -> Result<(), Error> {
         .context("create_child failed")?
         .expect("failed to create child");
 
-    let hub_report =
-        connect_to_service::<fhub::HubReportMarker>().context("error connecting to HubReport")?;
+    let testing = Testing::new()?;
+
+    // Register breakpoints for relevant events
+    testing
+        .register_breakpoints(vec![
+            fhub::EventType::StopInstance,
+            fhub::EventType::PreDestroyInstance,
+            fhub::EventType::PostDestroyInstance,
+        ])
+        .await?;
 
     // Read the children of this component and pass the results to the integration test
     // via HubReport.
-    report_directory_contents(&hub_report, "/hub/children").await?;
+    testing.report_directory_contents("/hub/children").await?;
 
     // Read the hub of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance").await?;
+    testing.report_directory_contents("/hub/children/coll:simple_instance").await?;
 
     // Read the instance id of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_file_content(&hub_report, "/hub/children/coll:simple_instance/id").await?;
+    testing.report_file_content("/hub/children/coll:simple_instance/id").await?;
 
     // Read the children of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance/children").await?;
+    testing.report_directory_contents("/hub/children/coll:simple_instance/children").await?;
 
     // Bind to the dynamic child
     let mut child_ref = fsys::ChildRef {
@@ -86,15 +133,15 @@ async fn main() -> Result<(), Error> {
 
     // Read the hub of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance").await?;
+    testing.report_directory_contents("/hub/children/coll:simple_instance").await?;
 
     // Read the children of the dynamic child and pass the results to the integration test
     // via HubReport
-    report_directory_contents(&hub_report, "/hub/children/coll:simple_instance/children").await?;
+    testing.report_directory_contents("/hub/children/coll:simple_instance/children").await?;
 
     // Read the instance id of the dynamic child's static child and pass the results to the
     // integration test via HubReport
-    report_file_content(&hub_report, "/hub/children/coll:simple_instance/children/child/id").await?;
+    testing.report_file_content("/hub/children/coll:simple_instance/children/child/id").await?;
 
     // Delete the dynamic child
     let mut child_ref = fsys::ChildRef {
@@ -107,8 +154,57 @@ async fn main() -> Result<(), Error> {
         .context("delete_child failed")?
         .expect("failed to delete child");
 
-    // TODO(xbhatnag): Add breakpointing for component side so that directory contents can be
-    //                 reported after stop/deletion.
+    // Wait for the dynamic child to begin deletion
+    testing
+        .expect_breakpoint(fhub::EventType::PreDestroyInstance, vec!["coll:simple_instance:1"])
+        .await?;
+    testing.report_directory_contents("/hub/children").await?;
+    testing.report_directory_contents("/hub/deleting").await?;
+    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
+    testing.resume_breakpoint().await?;
+
+    // Wait for the dynamic child to stop
+    testing
+        .expect_breakpoint(fhub::EventType::StopInstance, vec!["coll:simple_instance:1"])
+        .await?;
+    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
+    testing.resume_breakpoint().await?;
+
+    // Wait for the dynamic child's static child to begin deletion
+    testing
+        .expect_breakpoint(
+            fhub::EventType::PreDestroyInstance,
+            vec!["coll:simple_instance:1", "child:0"],
+        )
+        .await?;
+    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1/children").await?;
+    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
+    testing
+        .report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting/child:0")
+        .await?;
+    testing.resume_breakpoint().await?;
+
+    // Wait for the dynamic child's static child to be destroyed
+    testing
+        .expect_breakpoint(
+            fhub::EventType::PostDestroyInstance,
+            vec!["coll:simple_instance:1", "child:0"],
+        )
+        .await?;
+    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
+    testing.resume_breakpoint().await?;
+
+    // Wait for the dynamic child to be destroyed
+    testing
+        .expect_breakpoint(fhub::EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
+        .await?;
+    testing.report_directory_contents("/hub/deleting").await?;
+
+    // TODO(xbhatnag): The integration test task terminates before this resume_breakpoint
+    // call. This causes a ClientChannelClosed error here, despite the test succeeding. One way to
+    // fix this is to make Breakpoint::resume behave as a barrier, preventing the integration
+    // test from continuing until the component has also resumed.
+    testing.resume_breakpoint().await?;
 
     Ok(())
 }

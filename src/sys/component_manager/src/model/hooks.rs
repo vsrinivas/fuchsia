@@ -24,7 +24,6 @@ pub enum EventType {
     BindInstance,
     PostDestroyInstance,
     PreDestroyInstance,
-    DestroyChild,
     RouteFrameworkCapability,
     StopInstance,
 }
@@ -66,6 +65,17 @@ pub enum Event {
 }
 
 impl Event {
+    pub fn target_realm(&self) -> Arc<Realm> {
+        match self {
+            Event::AddDynamicChild { realm} => realm.clone(),
+            Event::BindInstance { realm, .. } => realm.clone(),
+            Event::PostDestroyInstance { realm } => realm.clone(),
+            Event::PreDestroyInstance { realm } => realm.clone(),
+            Event::RouteFrameworkCapability { realm, .. } => realm.clone(),
+            Event::StopInstance { realm } => realm.clone()
+        }
+    }
+
     pub fn type_(&self) -> EventType {
         match self {
             Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
