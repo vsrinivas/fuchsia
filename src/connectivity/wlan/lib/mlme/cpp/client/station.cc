@@ -37,10 +37,6 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 using common::dBm;
 
-static inline constexpr wlan_span_t AsWlanSpan(fbl::Span<const uint8_t> span) {
-  return wlan_span_t{.data = span.data(), .size = span.size_bytes()};
-}
-
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
 #define STA(c) static_cast<Station*>(c)
@@ -194,8 +190,9 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
   const bool has_padding =
       rx_info != nullptr && rx_info->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
   bool is_controlled_port_open = controlled_port_ == eapol::PortState::kOpen;
-  client_sta_handle_data_frame(rust_client_.get(), AsWlanSpan({pkt->data(), pkt->len()}),
-                               has_padding, is_controlled_port_open);
+  auto frame_span = fbl::Span<uint8_t>{pkt->data(), pkt->len()};
+  client_sta_handle_data_frame(rust_client_.get(), AsWlanSpan(frame_span), has_padding,
+                               is_controlled_port_open);
 
   return ZX_OK;
 }
@@ -284,32 +281,10 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
 
   debugjoin("associating to %s\n", join_ctx_->bssid().ToString().c_str());
 
-  constexpr size_t reserved_ie_len = 128;
-  constexpr size_t max_frame_len =
-      MgmtFrameHeader::max_len() + AssociationRequest::max_len() + reserved_ie_len;
-  auto packet = GetWlanPacket(max_frame_len);
-  if (packet == nullptr) {
-    service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  BufferWriter w(*packet);
-  auto mgmt_hdr = w.Write<MgmtFrameHeader>();
-  mgmt_hdr->fc.set_type(FrameType::kManagement);
-  mgmt_hdr->fc.set_subtype(ManagementSubtype::kAssociationRequest);
-  mgmt_hdr->addr1 = join_ctx_->bssid();
-  mgmt_hdr->addr2 = self_addr();
-  mgmt_hdr->addr3 = join_ctx_->bssid();
-  auto seq_mgr = client_sta_seq_mgr(rust_client_.get());
-  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &mgmt_hdr->addr1.byte);
-  mgmt_hdr->sc.set_seq(seq_num);
-
   auto ifc_info = device_->GetWlanInfo().ifc_info;
   auto client_capability = MakeClientAssocCtx(ifc_info, join_ctx_->channel());
-  auto assoc = w.Write<AssociationRequest>();
-  assoc->cap = OverrideCapability(client_capability.cap);
-  assoc->listen_interval = 0;
-  join_ctx_->set_listen_interval(assoc->listen_interval);
+  auto cap_info = OverrideCapability(client_capability.cap);
+  join_ctx_->set_listen_interval(0);
 
   auto rates = BuildAssocReqSuppRates(join_ctx_->bss()->basic_rate_set,
                                       join_ctx_->bss()->op_rate_set, client_capability.rates);
@@ -323,19 +298,11 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  BufferWriter elem_w(w.RemainingBuffer());
-  common::WriteSsid(&elem_w, join_ctx_->bss()->ssid);
-  RatesWriter rates_writer{*rates};
-  rates_writer.WriteSupportedRates(&elem_w);
-  rates_writer.WriteExtendedSupportedRates(&elem_w);
-
-  // Write RSNE from MLME-Association.request if available.
-  if (!rsne.empty()) {
-    elem_w.Write(rsne);
-  }
-
+  HtCapabilities ht_cap{};
+  const auto* ht_cap_ptr = &ht_cap;
   if (join_ctx_->IsHt() || join_ctx_->IsVht()) {
-    auto ht_cap = client_capability.ht_cap.value_or(HtCapabilities{});
+    ht_cap = client_capability.ht_cap.value_or(HtCapabilities{});
+    ht_cap_ptr = &ht_cap;
     debugf("HT cap(hardware reports): %s\n", debug::Describe(ht_cap).c_str());
 
     zx_status_t status = OverrideHtCapability(&ht_cap);
@@ -346,12 +313,13 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
       return ZX_ERR_IO;
     }
     debugf("HT cap(after overriding): %s\n", debug::Describe(ht_cap).c_str());
-
-    common::WriteHtCapabilities(&elem_w, ht_cap);
   }
 
+  VhtCapabilities vht_cap{};
+  const VhtCapabilities* vht_cap_ptr = nullptr;
   if (join_ctx_->IsVht()) {
-    auto vht_cap = client_capability.vht_cap.value_or(VhtCapabilities{});
+    vht_cap = client_capability.vht_cap.value_or(VhtCapabilities{});
+    vht_cap_ptr = &vht_cap;
     // debugf("VHT cap(hardware reports): %s\n",
     // debug::Describe(vht_cap).c_str());
     if (auto status = OverrideVhtCapability(&vht_cap, *join_ctx_); status != ZX_OK) {
@@ -362,12 +330,14 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
     }
     // debugf("VHT cap(after overriding): %s\n",
     // debug::Describe(vht_cap).c_str());
-    common::WriteVhtCapabilities(&elem_w, vht_cap);
   }
 
-  packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
+  const auto& ssid = join_ctx_->bss()->ssid;
+  fbl::Span<SupportedRate> rates_span{rates->data(), rates->size()};
 
-  zx_status_t status = SendMgmtFrame(std::move(packet));
+  zx_status_t status = client_sta_send_assoc_req_frame(
+      rust_client_.get(), cap_info.val(), AsWlanSpan(ssid), AsWlanSpan(rates_span),
+      AsWlanSpan(rsne), AsWlanSpan(ht_cap_ptr), AsWlanSpan(vht_cap_ptr));
   if (status != ZX_OK) {
     errorf("could not send assoc packet: %d\n", status);
     service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);

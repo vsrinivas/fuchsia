@@ -5,7 +5,6 @@
 use {
     failure::{self, Fail},
     fuchsia_zircon as zx,
-    log::error,
     wlan_common::{
         appendable::BufferTooSmall,
         error::{FrameParseError, FrameWriteError},
@@ -62,7 +61,7 @@ impl ResultExt for Result<(), Error> {
         match self {
             Ok(()) | Err(Error::Status(_, zx::Status::OK)) => zx::sys::ZX_OK,
             Err(e) => {
-                error!("{}", e);
+                eprintln!("{}", e);
                 Into::<zx::Status>::into(e).into_raw()
             }
         }

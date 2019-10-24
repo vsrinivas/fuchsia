@@ -14,6 +14,7 @@ use {
     },
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
+    frame_writer::*,
     log::error,
     state::States,
     wlan_common::{
@@ -25,8 +26,6 @@ use {
     },
     zerocopy::ByteSlice,
 };
-
-pub use frame_writer::*;
 
 /// Maximum size of EAPOL frames forwarded to SME.
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.

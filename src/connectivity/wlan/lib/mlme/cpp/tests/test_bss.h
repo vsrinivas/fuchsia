@@ -50,7 +50,8 @@ static constexpr SupportedRate kSupportedRates[] = {
 
 static constexpr uint8_t kRsne[] = {
     0x30,                    // element id
-    0x12,                    // length
+    0x14,                    // length
+    1,    0,                 // version
     0x00, 0x0f, 0xac, 0x04,  // group data cipher suite
     0x01, 0x00,              // pairwise cipher suite count
     0x00, 0x0f, 0xac, 0x04,  // pairwise cipher suite list
