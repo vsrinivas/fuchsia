@@ -85,7 +85,7 @@ async fn main() -> Result<(), Error> {
         })
         .try_for_each_concurrent(None, |()| futures::future::ok(()));
 
-    if args.test_only {
+    if args.test_only || !server.borrow().is_serving() {
         fx_log_info!("starting server in test only mode");
         let () = admin_fut.await?;
     } else {

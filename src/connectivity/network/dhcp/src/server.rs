@@ -171,6 +171,11 @@ where
         Ok(server)
     }
 
+    /// Returns true if the server has a populated address pool and is therefore serving requests.
+    pub fn is_serving(&self) -> bool {
+        !self.pool.is_empty()
+    }
+
     /// Dispatches an incoming DHCP message to the appropriate handler for processing.
     ///
     /// If the incoming message is a valid client DHCP message, then the server will attempt to
@@ -626,6 +631,10 @@ impl AddressPool {
 
     fn addr_is_allocated(&self, addr: Ipv4Addr) -> bool {
         !self.available_addrs.contains(&addr) && self.allocated_addrs.contains(&addr)
+    }
+
+    fn is_empty(&self) -> bool {
+        self.available_addrs.len() == 0 && self.allocated_addrs.len() == 0
     }
 }
 

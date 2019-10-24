@@ -1,0 +1,15 @@
+{
+    "default_lease_time": 86400,
+    "managed_addrs": [
+    ],
+    "max_lease_time_s": 86400,
+    "name_servers": [
+        "8.8.8.8",
+        "8.8.4.4"
+    ],
+    "routers": [
+        "127.0.0.1"
+    ],
+    "server_ip": "192.168.0.1",
+    "subnet_mask": 25
+}

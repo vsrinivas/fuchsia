@@ -90,8 +90,12 @@ package("dhcpd") {
   ]
   resources = [
     {
-      path = rebase_path("data/test_server_config.json")
+      path = rebase_path("data/default_config.json")
       dest = "config.json"
+    },
+    {
+      path = rebase_path("data/test_config.json")
+      dest = "test_config.json"
     },
   ]
   binaries = [

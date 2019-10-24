@@ -543,7 +543,7 @@ async fn acquire_dhcp() -> Result {
     let _dhcpd = fuchsia_component::client::launch(
         &launcher,
         fuchsia_component::fuchsia_single_component_package_url!("dhcpd").to_string(),
-        None,
+        Some(vec![String::from("--config"), String::from("/pkg/data/test_config.json")]),
     )
     .context("failed to start dhcpd")?;
     let client_environment =
