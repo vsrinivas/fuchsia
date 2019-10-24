@@ -49,7 +49,7 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo
             .active_cooling = false,
             .passive_cooling = true,
             .gpu_throttling = true,
-            .num_trip_points = 7,
+            .num_trip_points = 6,
             .big_little = true,
             .critical_temp_celsius = 102.0f,
             .trip_point_info =
@@ -60,6 +60,65 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo
                     TripPoint(90.0f, 6, 7, 3),
                     TripPoint(95.0f, 5, 6, 3),
                     TripPoint(100.0f, 4, 5, 2),
+                    TripPoint(-273.15f, 0, 0, 0),   // 0 Kelvin is impossible, marks end of TripPoints
+                },
+            .opps =
+                {
+                    [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+                        {
+                            .opp =
+                                {
+                                    [0] = {.freq_hz = 100000000, .volt_uv = 751000},
+                                    [1] = {.freq_hz = 250000000, .volt_uv = 751000},
+                                    [2] = {.freq_hz = 500000000, .volt_uv = 751000},
+                                    [3] = {.freq_hz = 667000000, .volt_uv = 751000},
+                                    [4] = {.freq_hz = 1000000000, .volt_uv = 771000},
+                                    [5] = {.freq_hz = 1200000000, .volt_uv = 771000},
+                                    [6] = {.freq_hz = 1398000000, .volt_uv = 791000},
+                                    [7] = {.freq_hz = 1512000000, .volt_uv = 821000},
+                                    [8] = {.freq_hz = 1608000000, .volt_uv = 861000},
+                                    [9] = {.freq_hz = 1704000000, .volt_uv = 891000},
+                                    [10] = {.freq_hz = 1704000000, .volt_uv = 891000},
+                                },
+                            .latency = 0,
+                            .count = 11,
+                        },
+                    [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
+                        {
+                            .opp =
+                                {
+                                    [0] = {.freq_hz = 100000000, .volt_uv = 731000},
+                                    [1] = {.freq_hz = 250000000, .volt_uv = 731000},
+                                    [2] = {.freq_hz = 500000000, .volt_uv = 731000},
+                                    [3] = {.freq_hz = 667000000, .volt_uv = 731000},
+                                    [4] = {.freq_hz = 1000000000, .volt_uv = 731000},
+                                    [5] = {.freq_hz = 1200000000, .volt_uv = 731000},
+                                    [6] = {.freq_hz = 1398000000, .volt_uv = 761000},
+                                    [7] = {.freq_hz = 1512000000, .volt_uv = 791000},
+                                    [8] = {.freq_hz = 1608000000, .volt_uv = 831000},
+                                    [9] = {.freq_hz = 1704000000, .volt_uv = 861000},
+                                    [10] = {.freq_hz = 1896000000, .volt_uv = 1011000},
+                                },
+                            .latency = 0,
+                            .count = 11,
+                        },
+                },
+};
+
+static fuchsia_hardware_thermal_ThermalDeviceInfo
+    fake_thermal_config_less =
+        {
+            .active_cooling = false,
+            .passive_cooling = true,
+            .gpu_throttling = true,
+            .num_trip_points = 2,
+            .big_little = true,
+            .critical_temp_celsius = 102.0f,
+            .trip_point_info =
+                {
+                    TripPoint(55.0f, 9, 10, 4),
+                    TripPoint(75.0f, 8, 9, 4),
+                    TripPoint(-273.15f, 0, 0, 0),   // 0 Kelvin is impossible, marks end of TripPoints
                 },
             .opps =
                 {
@@ -126,7 +185,7 @@ namespace thermal {
 class FakeAmlTSensor : public AmlTSensor {
  public:
   static fbl::unique_ptr<FakeAmlTSensor> Create(ddk::MmioBuffer pll_mmio, ddk::MmioBuffer ao_mmio,
-                                                ddk::MmioBuffer hiu_mmio) {
+                                                ddk::MmioBuffer hiu_mmio, bool less) {
     fbl::AllocChecker ac;
 
     auto test = fbl::make_unique_checked<FakeAmlTSensor>(&ac, std::move(pll_mmio),
@@ -135,7 +194,11 @@ class FakeAmlTSensor : public AmlTSensor {
       return nullptr;
     }
 
-    EXPECT_OK(test->InitSensor(fake_thermal_config));
+    if (less) {
+      EXPECT_OK(test->InitSensor(fake_thermal_config_less));
+    } else {
+      EXPECT_OK(test->InitSensor(fake_thermal_config));
+    }
     return test;
   }
 
@@ -190,33 +253,56 @@ class AmlTSensorTest : public zxtest::Test {
     (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
         .ExpectRead(0x00000000)
         .ExpectWrite(0x63B);  // sensor ctl
+  }
+
+  void Create(bool less) {
     // InitTripPoints
+    if (!less) {
+      (*mock_pll_mmio_)[(0x800 + (0x5 << 2))]
+          .ExpectRead(0x00000000)  // set thresholds 4, rise
+          .ExpectWrite(0x00027E);
+      (*mock_pll_mmio_)[(0x800 + (0x7 << 2))]
+          .ExpectRead(0x00000000)  // set thresholds 4, fall
+          .ExpectWrite(0x000272);
+      (*mock_pll_mmio_)[(0x800 + (0x5 << 2))]
+          .ExpectRead(0x00000000)  // set thresholds 3, rise
+          .ExpectWrite(0x272000);
+      (*mock_pll_mmio_)[(0x800 + (0x7 << 2))]
+          .ExpectRead(0x00000000)  // set thresholds 3, fall
+          .ExpectWrite(0x268000);
+      (*mock_pll_mmio_)[(0x800 + (0x4 << 2))]
+          .ExpectRead(0x00000000)  // set thresholds 2, rise
+          .ExpectWrite(0x00025A);
+      (*mock_pll_mmio_)[(0x800 + (0x6 << 2))]
+          .ExpectRead(0x00000000)  // set thresholds 2, fall
+          .ExpectWrite(0x000251);
+    }
     (*mock_pll_mmio_)[(0x800 + (0x4 << 2))]
         .ExpectRead(0x00000000)  // set thresholds 1, rise
-        .ExpectWrite(0x25025A);
+        .ExpectWrite(0x250000);
     (*mock_pll_mmio_)[(0x800 + (0x6 << 2))]
         .ExpectRead(0x00000000)  // set thresholds 1, fall
-        .ExpectWrite(0x245251);
-    (*mock_pll_mmio_)[(0x800 + (0x5 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 2, rise
-        .ExpectWrite(0x27227E);
-    (*mock_pll_mmio_)[(0x800 + (0x7 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 1, fall
-        .ExpectWrite(0x268272);
+        .ExpectWrite(0x245000);
     (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00FF0000);
     (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00000000);
-    (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
-        .ExpectRead(0x00000000)  // enable IRQs
-        .ExpectWrite(0x0F008000);
+    if (!less) {
+      (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+          .ExpectRead(0x00000000)  // enable IRQs
+          .ExpectWrite(0x0F008000);
+    } else {
+      (*mock_pll_mmio_)[(0x800 + (0x1 << 2))]
+          .ExpectRead(0x00000000)  // enable IRQs
+          .ExpectWrite(0x01008000);
+    }
 
     ddk::MmioBuffer pll_mmio(mock_pll_mmio_->GetMmioBuffer());
     ddk::MmioBuffer ao_mmio(mock_ao_mmio_->GetMmioBuffer());
     ddk::MmioBuffer hiu_mmio(mock_hiu_mmio_->GetMmioBuffer());
-    tsensor_ = FakeAmlTSensor::Create(std::move(pll_mmio), std::move(ao_mmio), std::move(hiu_mmio));
+    tsensor_ = FakeAmlTSensor::Create(std::move(pll_mmio), std::move(ao_mmio), std::move(hiu_mmio), less);
     ASSERT_TRUE(tsensor_ != nullptr);
   }
 
@@ -240,6 +326,7 @@ class AmlTSensorTest : public zxtest::Test {
 };
 
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest0) {
+  Create(false);
   for (int j = 0; j < 0x10; j++) {
     (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x0000);
   }
@@ -249,6 +336,7 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest0) {
 }
 
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest1) {
+  Create(false);
   for (int j = 0; j < 0x10; j++) {
     (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x18A9);
   }
@@ -258,6 +346,7 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest1) {
 }
 
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest2) {
+  Create(false);
   for (int j = 0; j < 0x10; j++) {
     (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x32A7);
   }
@@ -267,6 +356,7 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest2) {
 }
 
 TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest3) {
+  Create(false);
   (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x18A9);
   (*mock_pll_mmio_)[(0x800 + (0x10 << 2))].ExpectRead(0x18AA);
   for (int j = 0; j < 0xE; j++) {
@@ -278,8 +368,13 @@ TEST_F(AmlTSensorTest, ReadTemperatureCelsiusTest3) {
 }
 
 TEST_F(AmlTSensorTest, GetStateChangePortTest) {
+  Create(false);
   zx_handle_t port;
   EXPECT_OK(tsensor_->GetStateChangePort(&port));
+}
+
+TEST_F(AmlTSensorTest, LessTripPointsTest) {
+  Create(true);
 }
 
 // PWM
@@ -864,18 +959,30 @@ class AmlThermalTest : public zxtest::Test {
         .ExpectRead(0x00000000)
         .ExpectWrite(0x63B);  // sensor ctl
     // InitTripPoints
+    (*tsensor_mock_pll_mmio_)[(0x800 + (0x5 << 2))]
+        .ExpectRead(0x00000000)  // set thresholds 4, rise
+        .ExpectWrite(0x00027E);
+    (*tsensor_mock_pll_mmio_)[(0x800 + (0x7 << 2))]
+        .ExpectRead(0x00000000)  // set thresholds 4, fall
+        .ExpectWrite(0x000272);
+    (*tsensor_mock_pll_mmio_)[(0x800 + (0x5 << 2))]
+        .ExpectRead(0x00000000)  // set thresholds 3, rise
+        .ExpectWrite(0x272000);
+    (*tsensor_mock_pll_mmio_)[(0x800 + (0x7 << 2))]
+        .ExpectRead(0x00000000)  // set thresholds 3, fall
+        .ExpectWrite(0x268000);
+    (*tsensor_mock_pll_mmio_)[(0x800 + (0x4 << 2))]
+        .ExpectRead(0x00000000)  // set thresholds 2, rise
+        .ExpectWrite(0x00025A);
+    (*tsensor_mock_pll_mmio_)[(0x800 + (0x6 << 2))]
+        .ExpectRead(0x00000000)  // set thresholds 2, fall
+        .ExpectWrite(0x000251);
     (*tsensor_mock_pll_mmio_)[(0x800 + (0x4 << 2))]
         .ExpectRead(0x00000000)  // set thresholds 1, rise
-        .ExpectWrite(0x25025A);
+        .ExpectWrite(0x250000);
     (*tsensor_mock_pll_mmio_)[(0x800 + (0x6 << 2))]
         .ExpectRead(0x00000000)  // set thresholds 1, fall
-        .ExpectWrite(0x245251);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x5 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 2, rise
-        .ExpectWrite(0x27227E);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x7 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 1, fall
-        .ExpectWrite(0x268272);
+        .ExpectWrite(0x245000);
     (*tsensor_mock_pll_mmio_)[(0x800 + (0x1 << 2))]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00FF0000);

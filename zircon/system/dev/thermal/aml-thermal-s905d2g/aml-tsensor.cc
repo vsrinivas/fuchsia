@@ -154,33 +154,47 @@ int AmlTSensor::TripPointIrqHandler() {
 }
 
 zx_status_t AmlTSensor::InitTripPoints() {
+  if (thermal_config_.trip_point_info[thermal_config_.num_trip_points].up_temp_celsius != (-273.15f + 2.0f)) {
+    return ZX_ERR_INTERNAL;
+  }
+
   auto set_thresholds = [this](auto&& rise_threshold, auto&& fall_threshold, uint32_t i) {
-    auto rise_temperature_0 =
+    auto rise_temperature =
         TempCelsiusToCode(thermal_config_.trip_point_info[i].up_temp_celsius, true);
-    auto rise_temperature_1 =
-        TempCelsiusToCode(thermal_config_.trip_point_info[i + 1].up_temp_celsius, true);
-    auto fall_temperature_0 =
+    auto fall_temperature =
         TempCelsiusToCode(thermal_config_.trip_point_info[i].down_temp_celsius, false);
-    auto fall_temperature_1 =
-        TempCelsiusToCode(thermal_config_.trip_point_info[i + 1].down_temp_celsius, false);
 
     // Program the 2 rise temperature thresholds.
-    rise_threshold.ReadFrom(&*pll_mmio_)
-        .set_rise_th0(rise_temperature_0)
-        .set_rise_th1(rise_temperature_1)
-        .WriteTo(&*pll_mmio_);
-
-    // Program the 2 fall temperature thresholds.
-    fall_threshold.ReadFrom(&*pll_mmio_)
-        .set_fall_th0(fall_temperature_0)
-        .set_fall_th1(fall_temperature_1)
-        .WriteTo(&*pll_mmio_);
+    if (i % 2) {
+      rise_threshold.ReadFrom(&*pll_mmio_).set_rise_th0(rise_temperature).WriteTo(&*pll_mmio_);
+      fall_threshold.ReadFrom(&*pll_mmio_).set_fall_th0(fall_temperature).WriteTo(&*pll_mmio_);
+    } else {
+      rise_threshold.ReadFrom(&*pll_mmio_).set_rise_th1(rise_temperature).WriteTo(&*pll_mmio_);
+      fall_threshold.ReadFrom(&*pll_mmio_).set_fall_th1(fall_temperature).WriteTo(&*pll_mmio_);
+    }
   };
 
   // Set rise and fall trip points for the first 4 trip points, since the HW supports only 4.
   // We skip the 1st entry since it's the default setting for boot up.
-  set_thresholds(TsCfgReg4::Get(), TsCfgReg6::Get(), 1);
-  set_thresholds(TsCfgReg5::Get(), TsCfgReg7::Get(), 3);
+  switch (thermal_config_.num_trip_points) {
+    default:
+    case 5:
+      set_thresholds(TsCfgReg5::Get(), TsCfgReg7::Get(), 4);
+      [[fallthrough]];
+    case 4:
+      set_thresholds(TsCfgReg5::Get(), TsCfgReg7::Get(), 3);
+      [[fallthrough]];
+    case 3:
+      set_thresholds(TsCfgReg4::Get(), TsCfgReg6::Get(), 2);
+      [[fallthrough]];
+    case 2:
+      set_thresholds(TsCfgReg4::Get(), TsCfgReg6::Get(), 1);
+      [[fallthrough]];
+    case 1:
+      [[fallthrough]];
+    case 0:
+      break;
+  }
 
   // Clear all IRQ's status.
   TsCfgReg1::Get()
@@ -208,14 +222,26 @@ zx_status_t AmlTSensor::InitTripPoints() {
       .WriteTo(&*pll_mmio_);
 
   // Enable all IRQs.
-  TsCfgReg1::Get()
-      .ReadFrom(&*pll_mmio_)
-      .set_rise_th3_irq_en(1)
-      .set_rise_th2_irq_en(1)
-      .set_rise_th1_irq_en(1)
-      .set_rise_th0_irq_en(1)
-      .set_enable_irq(1)
-      .WriteTo(&*pll_mmio_);
+  auto ts_cfg_reg1 = TsCfgReg1::Get().ReadFrom(&*pll_mmio_);
+  switch (thermal_config_.num_trip_points) {
+    default:
+    case 5:
+      ts_cfg_reg1.set_rise_th3_irq_en(1);
+      [[fallthrough]];
+    case 4:
+      ts_cfg_reg1.set_rise_th2_irq_en(1);
+      [[fallthrough]];
+    case 3:
+      ts_cfg_reg1.set_rise_th1_irq_en(1);
+      [[fallthrough]];
+    case 2:
+      ts_cfg_reg1.set_rise_th0_irq_en(1);
+      [[fallthrough]];
+    case 1:
+    case 0:
+      break;
+  }
+  ts_cfg_reg1.set_enable_irq(1).WriteTo(&*pll_mmio_);
 
   // Start thermal notification thread.
   auto start_thread = [](void* arg) -> int {

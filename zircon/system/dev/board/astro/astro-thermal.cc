@@ -116,6 +116,7 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo astro_config = {
             TripPoint(90.0f, 6, 2),
             TripPoint(95.0f, 5, 1),
             TripPoint(100.0f, 4, 0),
+            TripPoint(-273.15f, 0, 0),   // 0 Kelvin is impossible, marks end of TripPoints
         },
     .opps =
         {
