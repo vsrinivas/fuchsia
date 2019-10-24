@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_PKGFS_LAUNCHER_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_PKGFS_LAUNCHER_H_
 
 #include "filesystem-mounter.h"
 
 namespace devmgr {
 
 // Launches pkgfs from within blobfs by parsing environment variables.
-void LaunchBlobInit(FilesystemMounter* filesystems);
+void LaunchPkgfs(FilesystemMounter* filesystems);
 
 }  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_PKGFS_LAUNCHER_H_

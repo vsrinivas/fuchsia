@@ -141,10 +141,12 @@ zx_test("block-watcher-test") {
   sources = [
     "block-device-test.cc",
     "block-watcher-test.cc",
+    "filesystem-mounter-test.cc",
   ]
   deps = [
     ":block-watcher",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs/metrics:metrics-cobalt",
     "$zx/system/ulib/minfs",
