@@ -56,7 +56,7 @@ class H264Decoder : public VideoDecoder {
   void TryReturnFrames();
   void OnFatalError();
 
-  io_buffer_t codec_data_ = {};
+  std::optional<InternalBuffer> codec_data_;
   io_buffer_t sei_data_buffer_ = {};
   std::optional<InternalBuffer> reference_mv_buffer_;
   io_buffer_t secondary_firmware_ = {};

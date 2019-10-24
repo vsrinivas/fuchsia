@@ -4,6 +4,7 @@
 
 #include "h264_decoder.h"
 
+#include <fbl/algorithm.h>
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_frame.h>
 #include <lib/media/codec_impl/codec_packet.h>
@@ -19,10 +20,12 @@
 //
 // Change these to InternalBuffer:
 //
-// reference_mv_buffer_ - optionally secure
-// codec_data_ - optionally secure
 // sei_data_buffer_ - optionally secure
 // InputContext::buffer - optionally secure
+// (done) reference_mv_buffer_ - optionally secure
+// (done) codec_data_ - optionally secure
+//
+// Plumb is_secure to each of the above.
 //
 // (Fine as io_bufer_t for now:
 //    * loading firmware can use clear memory, since those are just reads by the HW, and we can only
@@ -30,6 +33,7 @@
 //    * secondary_firmware_ - never secure)
 
 static const uint32_t kBufferAlignShift = 4 + 12;
+static const uint32_t kBufferAlign = 1 << kBufferAlignShift;
 
 // AvScratch1
 class StreamInfo : public TypedRegisterBase<DosRegisterIo, StreamInfo, uint32_t> {
@@ -216,10 +220,10 @@ H264Decoder::~H264Decoder() {
   owner_->core()->StopDecoding();
   owner_->core()->WaitForIdle();
   BarrierBeforeRelease();
-  io_buffer_release(&codec_data_);
   io_buffer_release(&sei_data_buffer_);
   io_buffer_release(&secondary_firmware_);
   // ~reference_mv_buffer_
+  // ~codec_data_
 }
 
 zx_status_t H264Decoder::ResetHardware() {
@@ -315,16 +319,20 @@ zx_status_t H264Decoder::Initialize() {
   PscaleCtrl::Get().FromValue(0).WriteTo(owner_->dosbus());
   AvScratch0::Get().FromValue(0).WriteTo(owner_->dosbus());
 
-  const uint32_t kCodecDataSize = 0x1ee000;
-  status = io_buffer_init_aligned(&codec_data_, owner_->bti()->get(), kCodecDataSize,
-                                  kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to make codec data buffer: %d\n", status);
-    return status;
+  // TODO(34192): After sysmem has min_base_phys_address_divisor, use that to avoid over-allocating
+  // and rounding up here.
+  const uint32_t kCodecDataSize = 0x1ee000 + kBufferAlign;
+  auto create_result = InternalBuffer::Create(
+      "H264CodecData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kCodecDataSize, is_secure_,
+      /*is_writable=*/true, /*is_mapping_needed*/false);
+  if (!create_result.is_ok()) {
+    LOG(ERROR, "Failed to make codec data buffer - status: %d", create_result.error());
+    return create_result.error();
   }
-  SetIoBufferName(&codec_data_, "H264CodecData");
-
-  io_buffer_cache_flush(&codec_data_, 0, kCodecDataSize);
+  codec_data_.emplace(create_result.take_value());
+  zx_paddr_t aligned_codec_data_phys = fbl::round_up(codec_data_->phys_base(), kBufferAlign);
+  // sysmem ensures that newly allocated buffers are zeroed and flushed, to extent possible, so
+  // codec_data_ doesn't need CacheFlush() here.
 
   status = LoadSecondaryFirmware(data, firmware_size);
   if (status != ZX_OK)
@@ -337,7 +345,7 @@ zx_status_t H264Decoder::Initialize() {
   BarrierAfterFlush();  // For codec_data and secondary_firmware_
 
   // This may wrap if the address is less than the buffer start offset.
-  uint32_t buffer_offset = truncate_to_32(io_buffer_phys(&codec_data_)) - kBufferStartAddressOffset;
+  uint32_t buffer_offset = truncate_to_32(aligned_codec_data_phys) - kBufferStartAddressOffset;
   AvScratch1::Get().FromValue(buffer_offset).WriteTo(owner_->dosbus());
   AvScratchG::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&secondary_firmware_)))
