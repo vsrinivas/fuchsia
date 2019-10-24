@@ -60,7 +60,8 @@ void Display::Dump() {
 void Display::Init(zx_handle_t dc_handle) {
   if (mode_idx_ != 0) {
     fuchsia_hardware_display_ControllerSetDisplayModeRequest set_mode_msg = {};
-    set_mode_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayModeOrdinal;
+    fidl_init_txn_header(&set_mode_msg.hdr, 0,
+                         fuchsia_hardware_display_ControllerSetDisplayModeOrdinal);
     set_mode_msg.display_id = id_;
     set_mode_msg.mode = modes_[mode_idx_];
     ZX_ASSERT(zx_channel_write(dc_handle, 0, &set_mode_msg, sizeof(set_mode_msg), nullptr, 0) ==
@@ -69,7 +70,8 @@ void Display::Init(zx_handle_t dc_handle) {
 
   if (grayscale_) {
     fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest cc_msg = {};
-    cc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayColorConversionOrdinal;
+    fidl_init_txn_header(&cc_msg.hdr, 0,
+                         fuchsia_hardware_display_ControllerSetDisplayColorConversionOrdinal);
     cc_msg.display_id = id_;
     cc_msg.postoffsets[0] = nanf("post");
     cc_msg.preoffsets[0] = nanf("pre");

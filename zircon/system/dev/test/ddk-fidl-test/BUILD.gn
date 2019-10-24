@@ -15,6 +15,7 @@ zx_test("ddk-fidl-test") {
     "$zx/system/ulib/driver-integration-test",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",

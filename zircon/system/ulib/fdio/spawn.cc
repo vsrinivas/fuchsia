@@ -12,6 +12,7 @@
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -345,7 +346,7 @@ static zx_status_t send_cstring_array(const zx::channel& launcher, uint64_t ordi
   fidl_vector_t* bytes = (fidl_vector_t*)(vector + 1);
   uint8_t* payload = (uint8_t*)(bytes + count);
 
-  hdr->ordinal = ordinal;
+  fidl_init_txn_header(hdr, 0, ordinal);
   vector->count = count;
   vector->data = (void*)FIDL_ALLOC_PRESENT;
 
@@ -379,7 +380,7 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
 
   memset(handles, 0, sizeof(handles));
 
-  req->hdr.ordinal = fuchsia_process_LauncherAddHandlesOrdinal;
+  fidl_init_txn_header(&req->hdr, 0, fuchsia_process_LauncherAddHandlesOrdinal);
 
   zx_status_t status = ZX_OK;
   uint32_t h = 0;
@@ -509,7 +510,7 @@ static zx_status_t send_namespace(const zx::channel& launcher, size_t name_count
 
   memset(handles, 0, sizeof(handles));
 
-  req->hdr.ordinal = fuchsia_process_LauncherAddNamesOrdinal;
+  fidl_init_txn_header(&req->hdr, 0, fuchsia_process_LauncherAddNamesOrdinal);
   req->names.count = name_count;
   req->names.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
@@ -860,7 +861,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     memset(&msg, 0, sizeof(msg));
     size_t msg_len = sizeof(fuchsia_process_LauncherLaunchRequest) + FIDL_ALIGN(process_name_size);
 
-    msg.req.hdr.ordinal = fuchsia_process_LauncherLaunchOrdinal;
+    fidl_init_txn_header(&msg.req.hdr, 0, fuchsia_process_LauncherLaunchOrdinal);
     msg.req.info.executable = FIDL_HANDLE_PRESENT;
     msg.req.info.job = FIDL_HANDLE_PRESENT;
     msg.req.info.name.size = process_name_size;

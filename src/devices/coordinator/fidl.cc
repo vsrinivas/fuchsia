@@ -6,6 +6,7 @@
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/txn_header.h>
 
 #include "coordinator.h"
 #include "log.h"
@@ -26,9 +27,10 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
   char* driver_path_data = builder.NewArray<char>(static_cast<uint32_t>(driver_path_size));
   char* args_data = builder.NewArray<char>(static_cast<uint32_t>(args_size));
   ZX_ASSERT(req != nullptr && driver_path_data != nullptr && args_data != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid,
+                       fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal);
 
   req->rpc = FIDL_HANDLE_PRESENT;
 
@@ -64,7 +66,8 @@ zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel rpc
 
   auto req = builder.New<fuchsia_device_manager_DevhostControllerCreateDeviceStubRequest>();
   ZX_ASSERT(req != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DevhostControllerCreateDeviceStubOrdinal;
+  fidl_init_txn_header(&req->hdr, 1,
+                       fuchsia_device_manager_DevhostControllerCreateDeviceStubOrdinal);
   // TODO(teisenbe): Allocate and track txids
   req->hdr.txid = 1;
 
@@ -88,9 +91,9 @@ zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo 
   auto req = builder.New<fuchsia_device_manager_DeviceControllerBindDriverRequest>();
   char* libname_data = builder.NewArray<char>(static_cast<uint32_t>(libname_size));
   ZX_ASSERT(req != nullptr && libname_data != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid, fuchsia_device_manager_DeviceControllerBindDriverOrdinal);
 
   req->driver_path.size = libname_size;
   req->driver_path.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
@@ -110,9 +113,9 @@ zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
 
   auto req = builder.New<fuchsia_device_manager_DeviceControllerConnectProxyRequest>();
   ZX_ASSERT(req != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerConnectProxyOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid, fuchsia_device_manager_DeviceControllerConnectProxyOrdinal);
 
   req->shadow = FIDL_HANDLE_PRESENT;
 
@@ -128,9 +131,9 @@ zx_status_t dh_send_suspend(const Device* dev, uint32_t flags) {
 
   auto req = builder.New<fuchsia_device_manager_DeviceControllerSuspendRequest>();
   ZX_ASSERT(req != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerSuspendOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid, fuchsia_device_manager_DeviceControllerSuspendOrdinal);
   req->flags = flags;
 
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
@@ -143,9 +146,9 @@ zx_status_t dh_send_resume(const Device* dev, uint32_t target_system_state) {
 
   auto req = builder.New<fuchsia_device_manager_DeviceControllerResumeRequest>();
   ZX_ASSERT(req != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerResumeOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid, fuchsia_device_manager_DeviceControllerResumeOrdinal);
   req->target_system_state = target_system_state;
 
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
@@ -160,9 +163,10 @@ zx_status_t dh_send_complete_compatibility_tests(const Device* dev, zx_status_t 
   auto req =
       builder.New<fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequest>();
   ZX_ASSERT(req != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid,
+                       fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsOrdinal);
   req->status = status;
 
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
@@ -175,9 +179,9 @@ zx_status_t dh_send_unbind(const Device* dev) {
 
   auto req = builder.New<fuchsia_device_manager_DeviceControllerUnbindRequest>();
   ZX_ASSERT(req != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerUnbindOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid, fuchsia_device_manager_DeviceControllerUnbindOrdinal);
 
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
   return msg.Write(dev->channel()->get(), 0);
@@ -190,9 +194,10 @@ zx_status_t dh_send_complete_removal(const Device* dev) {
 
   auto req = builder.New<fuchsia_device_manager_DeviceControllerCompleteRemovalRequest>();
   ZX_ASSERT(req != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DeviceControllerCompleteRemovalOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid,
+                       fuchsia_device_manager_DeviceControllerCompleteRemovalOrdinal);
 
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
   return msg.Write(dev->channel()->get(), 0);
@@ -214,9 +219,10 @@ zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite
       builder.NewArray<uint64_t>(static_cast<uint32_t>(composite.components_count()));
   char* name_data = builder.NewArray<char>(static_cast<uint32_t>(name_size));
   ZX_ASSERT(req != nullptr && components_data != nullptr && name_data != nullptr);
-  req->hdr.ordinal = fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal;
   // TODO(teisenbe): Allocate and track txids
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid,
+                       fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal);
 
   req->rpc = FIDL_HANDLE_PRESENT;
 

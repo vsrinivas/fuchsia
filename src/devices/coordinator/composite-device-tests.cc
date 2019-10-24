@@ -47,7 +47,8 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
   auto resp =
       reinterpret_cast<fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponse*>(
           bytes);
-  resp->hdr.ordinal = fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal;
+  fidl_init_txn_header(&resp->hdr, 0,
+                       fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal);
   resp->status = ZX_OK;
   status =
       fidl_encode(&fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable,

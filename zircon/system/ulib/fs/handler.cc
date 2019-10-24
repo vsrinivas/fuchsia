@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -65,7 +66,7 @@ zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch) {
 zx_status_t CloseMessage(FidlDispatchFunction dispatch) {
   fuchsia_io_NodeCloseRequest request;
   memset(&request, 0, sizeof(request));
-  request.hdr.ordinal = fuchsia_io_NodeCloseOrdinal;
+  fidl_init_txn_header(&request.hdr, 0, fuchsia_io_NodeCloseOrdinal);
   fidl_msg_t msg = {
       .bytes = &request,
       .handles = NULL,

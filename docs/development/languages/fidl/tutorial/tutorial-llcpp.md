@@ -695,9 +695,7 @@ zx_status_t SayHello(const zx::channel& channel, fidl::StringView text,
       fidl::BytePart(buffer, 512));
 
   // Fill in header and contents
-  auto& header = decoded.message()->_hdr;
-  header.transaction_id = 1;
-  header.ordinal = example_Animal_Say_ordinal;
+  example::Animal::SetTransactionHeaderFor::SayRequest(&decoded);
 
   decoded.message()->text = text;
   // Handle types have to be moved

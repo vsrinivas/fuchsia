@@ -9,6 +9,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -157,7 +158,7 @@ void prepopulate_protocol_dirs() {
 void describe_error(zx::channel h, zx_status_t status) {
   fuchsia_io_NodeOnOpenEvent msg;
   memset(&msg, 0, sizeof(msg));
-  msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+  fidl_init_txn_header(&msg.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
   msg.s = status;
   h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
@@ -424,7 +425,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
     if (describe) {
       fs::OnOpenMsg msg;
       memset(&msg, 0, sizeof(msg));
-      msg.primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+      fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
       msg.primary.s = ZX_OK;
       msg.primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
       msg.extra.tag = fuchsia_io_NodeInfoTag_directory;

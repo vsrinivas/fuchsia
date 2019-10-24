@@ -121,7 +121,7 @@ static bool bind_display(fbl::Vector<Display>* displays) {
   }
 
   fuchsia_hardware_display_ControllerEnableVsyncRequest enable_vsync = {};
-  enable_vsync.hdr.ordinal = fuchsia_hardware_display_ControllerEnableVsyncOrdinal;
+  fidl_init_txn_header(&enable_vsync.hdr, 0, fuchsia_hardware_display_ControllerEnableVsyncOrdinal);
   enable_vsync.enable = true;
   if (zx_channel_write(dc_handle, 0, &enable_vsync, sizeof(enable_vsync), nullptr, 0) != ZX_OK) {
     printf("Failed to enable vsync\n");
@@ -174,7 +174,8 @@ bool update_display_layers(const fbl::Vector<fbl::unique_ptr<VirtualLayer>>& lay
 
     auto set_layers_msg =
         reinterpret_cast<fuchsia_hardware_display_ControllerSetDisplayLayersRequest*>(fidl_bytes);
-    set_layers_msg->hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayLayersOrdinal;
+    fidl_init_txn_header(&set_layers_msg->hdr, 0,
+                         fuchsia_hardware_display_ControllerSetDisplayLayersOrdinal);
     set_layers_msg->layer_ids.count = current_layers->size();
     set_layers_msg->layer_ids.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     set_layers_msg->display_id = display.id();
@@ -196,7 +197,7 @@ bool apply_config() {
   fuchsia_hardware_display_ControllerCheckConfigRequest check_msg = {};
   uint8_t check_resp_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   check_msg.discard = false;
-  check_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCheckConfigOrdinal;
+  fidl_init_txn_header(&check_msg.hdr, 0, fuchsia_hardware_display_ControllerCheckConfigOrdinal);
   zx_channel_call_args_t check_call = {};
   check_call.wr_bytes = &check_msg;
   check_call.rd_bytes = check_resp_bytes;
@@ -230,7 +231,7 @@ bool apply_config() {
   }
 
   fuchsia_hardware_display_ControllerApplyConfigRequest apply_msg = {};
-  apply_msg.hdr.ordinal = fuchsia_hardware_display_ControllerApplyConfigOrdinal;
+  fidl_init_txn_header(&apply_msg.hdr, 0, fuchsia_hardware_display_ControllerApplyConfigOrdinal);
   if (zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), nullptr, 0) != ZX_OK) {
     printf("Apply failed\n");
     return false;

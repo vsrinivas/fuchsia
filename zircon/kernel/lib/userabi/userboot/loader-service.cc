@@ -6,6 +6,7 @@
 
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <lib/fidl/txn_header.h>
 
 #include <cstring>
 
@@ -107,8 +108,7 @@ bool LoaderService::HandleRequest(const zx::channel& channel) {
   rsp.rv = ZX_OK;
   rsp.object = vmo ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
 error_reply:
-  rsp.header.txid = req.header.txid;
-  rsp.header.ordinal = req.header.ordinal;
+  fidl_init_txn_header(&rsp.header, req.header.txid, req.header.ordinal);
 
   if (vmo) {
     zx_handle_t handles[] = {vmo.release()};

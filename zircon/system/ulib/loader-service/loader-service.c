@@ -10,6 +10,7 @@
 #include <lib/async/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/fidl/txn_header.h>
 #include <limits.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -216,8 +217,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
 
   ldmsg_rsp_t rsp;
   memset(&rsp, 0, sizeof(rsp));
-  rsp.header.txid = req.header.txid;
-  rsp.header.ordinal = req.header.ordinal;
+  fidl_init_txn_header(&rsp.header, req.header.txid, req.header.ordinal);
   rsp.rv = status;
   rsp.object = rsp_handle == ZX_HANDLE_INVALID ? FIDL_HANDLE_ABSENT : FIDL_HANDLE_PRESENT;
   if ((status = zx_channel_write(h, 0, &rsp, ldmsg_rsp_get_size(&rsp), &rsp_handle,

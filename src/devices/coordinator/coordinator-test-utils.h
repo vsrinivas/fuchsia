@@ -13,6 +13,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
+#include <lib/fidl/txn_header.h>
 #include <string.h>
 #include <threads.h>
 

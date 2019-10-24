@@ -6,9 +6,11 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -90,8 +92,8 @@ class AsyncTearDownVnode : public FdCountVnode {
 bool send_sync(const zx::channel& client) {
   BEGIN_HELPER;
   fuchsia_io_NodeSyncRequest request;
-  request.hdr.txid = 5;
-  request.hdr.ordinal = fuchsia_io_NodeSyncOrdinal;
+  zx_txid_t txid = 5;
+  fidl_init_txn_header(&request.hdr, txid, fuchsia_io_NodeSyncOrdinal);
   ASSERT_EQ(client.write(0, &request, sizeof(request), nullptr, 0), ZX_OK);
   END_HELPER;
 }

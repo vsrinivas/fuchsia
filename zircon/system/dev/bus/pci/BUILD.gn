@@ -89,6 +89,7 @@ if (enable_user_pci) {
       "$zx/system/banjo/ddk.protocol.platform.device",
       "$zx/system/banjo/ddk.protocol.sysmem",
       "$zx/system/ulib/ddk",
+      "$zx/system/ulib/fidl",
       "$zx/system/ulib/zircon",
     ]
   }

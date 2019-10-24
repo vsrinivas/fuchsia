@@ -78,7 +78,8 @@ custom_layer_t* VirtualLayer::CreateLayer(zx_handle_t dc_handle) {
   layers_[layers_.size() - 1].active = false;
 
   fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg = {};
-  create_layer_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCreateLayerOrdinal;
+  fidl_init_txn_header(&create_layer_msg.hdr, 0,
+                       fuchsia_hardware_display_ControllerCreateLayerOrdinal);
 
   fuchsia_hardware_display_ControllerCreateLayerResponse create_layer_rsp = {};
   zx_channel_call_args_t call_args = {};
@@ -150,7 +151,8 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
     }
 
     fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest config = {};
-    config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal;
+    fidl_init_txn_header(&config.hdr, 0,
+                         fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal);
     config.layer_id = layer->id;
     images_[0]->GetConfig(&config.image_config);
 
@@ -160,7 +162,8 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
     }
 
     fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest alpha_config = {};
-    alpha_config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaOrdinal;
+    fidl_init_txn_header(&alpha_config.hdr, 0,
+                         fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaOrdinal);
     alpha_config.layer_id = layer->id;
     alpha_config.mode = alpha_enable_ ? fuchsia_hardware_display_AlphaMode_HW_MULTIPLY
                                       : fuchsia_hardware_display_AlphaMode_DISABLE;
@@ -300,7 +303,8 @@ void PrimaryLayer::Render(int32_t frame_num) {
 
 void PrimaryLayer::SetLayerPositions(zx_handle_t dc_handle) {
   fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest msg = {};
-  msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryPositionOrdinal;
+  fidl_init_txn_header(&msg.hdr, 0,
+                       fuchsia_hardware_display_ControllerSetLayerPrimaryPositionOrdinal);
 
   for (auto& layer : layers_) {
     msg.layer_id = layer.id;
@@ -324,7 +328,7 @@ void PrimaryLayer::SetLayerPositions(zx_handle_t dc_handle) {
 
 void VirtualLayer::SetLayerImages(zx_handle_t dc_handle, bool alt_image) {
   fuchsia_hardware_display_ControllerSetLayerImageRequest msg = {};
-  msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerImageOrdinal;
+  fidl_init_txn_header(&msg.hdr, 0, fuchsia_hardware_display_ControllerSetLayerImageOrdinal);
 
   for (auto& layer : layers_) {
     msg.layer_id = layer.id;
@@ -385,7 +389,8 @@ bool CursorLayer::Init(zx_handle_t dc_handle) {
     zx_object_signal(layer->import_info[0].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
 
     fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest config = {};
-    config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerCursorConfigOrdinal;
+    fidl_init_txn_header(&config.hdr, 0,
+                         fuchsia_hardware_display_ControllerSetLayerCursorConfigOrdinal);
     config.layer_id = layer->id;
     config.image_config.height = info.height;
     config.image_config.width = info.width;
@@ -412,7 +417,8 @@ void CursorLayer::StepLayout(int32_t frame_num) {
 
 void CursorLayer::SendLayout(zx_handle_t dc_handle) {
   fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest msg = {};
-  msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerCursorPositionOrdinal;
+  fidl_init_txn_header(&msg.hdr, 0,
+                       fuchsia_hardware_display_ControllerSetLayerCursorPositionOrdinal);
 
   uint32_t display_start = 0;
   for (unsigned i = 0; i < displays_.size(); i++) {
@@ -450,7 +456,8 @@ bool ColorLayer::Init(zx_handle_t dc_handle) {
 
     auto config =
         reinterpret_cast<fuchsia_hardware_display_ControllerSetLayerColorConfigRequest*>(data);
-    config->hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerColorConfigOrdinal;
+    fidl_init_txn_header(&config->hdr, 0,
+                         fuchsia_hardware_display_ControllerSetLayerColorConfigOrdinal);
     config->layer_id = layer->id;
     config->pixel_format = kColorLayerFormat;
     config->color_bytes.count = ZX_PIXEL_FORMAT_BYTES(kColorLayerFormat);

@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/txn_header.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <zircon/compiler.h>
+#include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
 #include <ddk/binding.h>
@@ -36,8 +38,7 @@ static zx_status_t pci_rpc_reply(zx_handle_t ch, zx_status_t status, zx_handle_t
     handle_cnt++;
   }
 
-  resp->txid = req->txid;
-  resp->ordinal = status;
+  fidl_init_txn_header(&resp->hdr, req->hdr.txid, status);
   return zx_channel_write(ch, 0, resp, sizeof(*resp), handle, handle_cnt);
 };
 
@@ -250,14 +251,14 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
     return ZX_ERR_INTERNAL;
   }
 
-  uint32_t op = req.ordinal;
-  uint32_t id = req.txid;
+  uint32_t op = req.hdr.ordinal;
+  uint32_t id = req.hdr.txid;
   if (op >= PCI_OP_MAX || rxrpc_cbk_tbl[op] == NULL) {
     zxlogf(ERROR, "pci[%s]: unsupported rpc op %u\n", name, op);
     st = ZX_ERR_NOT_SUPPORTED;
     goto err;
   }
-  if (req.ordinal == PCI_OP_CONNECT_SYSMEM) {
+  if (req.hdr.ordinal == PCI_OP_CONNECT_SYSMEM) {
     if (actual_handles > 0) {
       req.handle = handle;
       handle = ZX_HANDLE_INVALID;
@@ -269,7 +270,7 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
 
   zxlogf(SPEW, "pci[%s]: rpc id %u op %s(%u) args '%#02x %#02x %#02x %#02x...'\n", name, id,
          rpc_op_lbl(op), op, req.data[0], req.data[1], req.data[2], req.data[3]);
-  st = rxrpc_cbk_tbl[req.ordinal](&req, device, ch);
+  st = rxrpc_cbk_tbl[req.hdr.ordinal](&req, device, ch);
   if (st != ZX_OK) {
     goto err;
   }
@@ -279,9 +280,9 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
 
 err:;
   pci_msg_t resp = {
-      .txid = req.txid,
-      .ordinal = st,
+      .hdr = {}, // initialized below
   };
+  fidl_init_txn_header(&resp.hdr, req.hdr.txid, st);
   zx_handle_close(handle);
 
   zxlogf(SPEW, "pci[%s]: rpc id %u op %s(%u) error %d\n", name, id, rpc_op_lbl(op), op, st);

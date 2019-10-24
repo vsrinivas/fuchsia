@@ -83,6 +83,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/lib/userabi:headers",
       "$zx/system/ulib/elf-psabi",
       "$zx/system/ulib/elfload",
+      "$zx/system/ulib/fidl",
       "$zx/system/ulib/hermetic-decompressor",
       "$zx/system/ulib/ldmsg",
       "$zx/system/ulib/processargs",

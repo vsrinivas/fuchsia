@@ -10,6 +10,7 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
@@ -174,7 +175,8 @@ TEST(ControlFlowTest, MustSendEpitaph) {
     // Manually write the epitaph request message, since the epitaph will cause the C bindings
     // to fail.
     fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequest request = {};
-    request.hdr.ordinal = fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphOrdinal;
+    fidl_init_txn_header(&request.hdr, 0,
+                         fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphOrdinal);
     ASSERT_OK(client_chan.write(0, &request, sizeof(request), nullptr, 0));
 
     ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));

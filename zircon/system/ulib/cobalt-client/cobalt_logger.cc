@@ -8,6 +8,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/coding.h>
+#include <lib/fidl/txn_header.h>
 
 #include <utility>
 
@@ -31,8 +32,8 @@ zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
   memset(msg, 0, sizeof(msg));
   fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequest* request =
       reinterpret_cast<fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequest*>(msg);
-  request->hdr.txid = kFactoryRequestTxnId;
-  request->hdr.ordinal = fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleOrdinal;
+  fidl_init_txn_header(&request->hdr, kFactoryRequestTxnId,
+                       fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleOrdinal);
   request->logger = logger_svc->release();
 
   request->profile.release_stage =
@@ -60,8 +61,8 @@ zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
   memset(msg, 0, sizeof(msg));
   fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectNameRequest* request =
       reinterpret_cast<fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectNameRequest*>(msg);
-  request->hdr.txid = kFactoryRequestTxnId;
-  request->hdr.ordinal = fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectNameOrdinal;
+  fidl_init_txn_header(&request->hdr, kFactoryRequestTxnId,
+                       fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectNameOrdinal);
   request->logger = logger_svc->release();
   // Writing the message wont edit data.
   request->project_name.data = reinterpret_cast<char*>(

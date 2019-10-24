@@ -11,6 +11,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/coding.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/channel.h>
@@ -48,7 +49,7 @@ namespace devmgr {
 void describe_error(zx::channel h, zx_status_t status) {
   fuchsia_io_NodeOnOpenEvent msg;
   memset(&msg, 0, sizeof(msg));
-  msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+  fidl_init_txn_header(&msg.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
   msg.s = status;
   h.write(0, &msg, sizeof(msg), nullptr, 0);
 }
@@ -56,7 +57,7 @@ void describe_error(zx::channel h, zx_status_t status) {
 static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, fs::OnOpenMsg* msg,
                                       zx::eventpair* handle) {
   memset(msg, 0, sizeof(*msg));
-  msg->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+  fidl_init_txn_header(&msg->primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
   msg->extra.tag = fuchsia_io_NodeInfoTag_device;
   msg->primary.s = ZX_OK;
   msg->primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;

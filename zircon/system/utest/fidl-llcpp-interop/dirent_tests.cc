@@ -11,6 +11,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
@@ -140,7 +141,7 @@ class Server {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(decoded.message()->dirents.count(), 3);
     gen::DirEntTestInterface::ConsumeDirectoriesResponse response = {};
-    response._hdr.ordinal = decoded.message()->_hdr.ordinal;
+    fidl_init_txn_header(&response._hdr, 0, decoded.message()->_hdr.ordinal);
     fidl::DecodedMessage<gen::DirEntTestInterface::ConsumeDirectoriesResponse> response_msg;
     response_msg.Reset(
         fidl::BytePart(reinterpret_cast<uint8_t*>(&response), sizeof(response), sizeof(response)));

@@ -72,7 +72,7 @@ void MultipleDeviceTestCase::SendSuspendReply(const zx::channel& remote,
   // Write the Suspend response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendResponse*>(bytes);
-  resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerSuspendOrdinal;
+  fidl_init_txn_header(&resp->hdr, 0, fuchsia_device_manager_DeviceControllerSuspendOrdinal);
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerSuspendResponseTable, bytes,
@@ -261,8 +261,7 @@ void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote) {
   // Write the UnbindDone message.
   memset(bytes, 0, sizeof(bytes));
   auto req = reinterpret_cast<fuchsia_device_manager_CoordinatorUnbindDoneRequest*>(bytes);
-  req->hdr.ordinal = fuchsia_device_manager_CoordinatorUnbindDoneOrdinal;
-  req->hdr.txid = 1;
+  fidl_init_txn_header(&req->hdr, 1, fuchsia_device_manager_CoordinatorUnbindDoneOrdinal);
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_CoordinatorUnbindDoneRequestTable, bytes, sizeof(*req),
                   handles, fbl::count_of(handles), &actual_handles, nullptr);
@@ -328,8 +327,8 @@ void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote) {
   // Write the RemoveDone message.
   memset(bytes, 0, sizeof(bytes));
   auto req = reinterpret_cast<fuchsia_device_manager_CoordinatorRemoveDoneRequest*>(bytes);
-  req->hdr.ordinal = fuchsia_device_manager_CoordinatorRemoveDoneOrdinal;
-  req->hdr.txid = 1;
+  zx_txid_t txid = 1;
+  fidl_init_txn_header(&req->hdr, txid, fuchsia_device_manager_CoordinatorRemoveDoneOrdinal);
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_CoordinatorRemoveDoneRequestTable, bytes, sizeof(*req),
                   handles, fbl::count_of(handles), &actual_handles, nullptr);
@@ -399,7 +398,7 @@ void MultipleDeviceTestCase::SendResumeReply(const zx::channel& remote, zx_statu
   // Write the Resume response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerResumeResponse*>(bytes);
-  resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerResumeOrdinal;
+  fidl_init_txn_header(&resp->hdr, 0, fuchsia_device_manager_DeviceControllerResumeOrdinal);
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerResumeResponseTable, bytes, sizeof(*resp),

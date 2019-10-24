@@ -8,6 +8,7 @@
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/driver/binding.h>
+#include <zircon/fidl.h>
 #include <zircon/process.h>
 
 #include <ddk/debug.h>
@@ -34,7 +35,7 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
     handle_cnt = 1;
   }
 
-  req->ordinal = op;
+  req->hdr.ordinal = op;
   zx_channel_call_args_t cc_args = {
       .wr_bytes = req,
       .rd_bytes = resp,
@@ -58,7 +59,7 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
     return ZX_ERR_INTERNAL;
   }
 
-  return resp->ordinal;
+  return resp->hdr.ordinal;
 }
 
 // pci_op_* methods are called by the proxy devhost. For each PCI

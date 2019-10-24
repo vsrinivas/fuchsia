@@ -8,6 +8,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/message_buffer.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -294,7 +295,7 @@ std::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     return nullptr;
   }
   fuchsia_logger_LogListenRequest req = {};
-  req.hdr.ordinal = fuchsia_logger_LogListenOrdinal;
+  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenOrdinal);
   req.log_listener = FIDL_HANDLE_PRESENT;
   zx_handle_t listener_handle = listener.release();
   status = logger.write(0, &req, sizeof(req), &listener_handle, 1);

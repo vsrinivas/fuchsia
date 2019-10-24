@@ -6,6 +6,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/handle.h>
 #include <limits.h>
@@ -42,7 +43,7 @@ namespace {
 void WriteDescribeError(zx::channel channel, zx_status_t status) {
   fuchsia_io_NodeOnOpenEvent msg;
   memset(&msg, 0, sizeof(msg));
-  msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+  fidl_init_txn_header(&msg.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
   msg.s = status;
   channel.write(0, &msg, sizeof(msg), nullptr, 0);
 }
@@ -94,7 +95,7 @@ zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, VnodeConnectionOptions opt
 
 void Describe(const fbl::RefPtr<Vnode>& vn, VnodeConnectionOptions options, OnOpenMsg* response,
               zx_handle_t* handle) {
-  response->primary.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
+  fidl_init_txn_header(&response->primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
   response->extra.file.event = ZX_HANDLE_INVALID;
   zx_status_t r = GetNodeInfo(vn, options, &response->extra);
 

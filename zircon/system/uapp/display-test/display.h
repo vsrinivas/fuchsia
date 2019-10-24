@@ -6,6 +6,7 @@
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
+#include <lib/fidl/txn_header.h>
 #include <zircon/pixelformat.h>
 
 #include "fuchsia/hardware/display/c/fidl.h"

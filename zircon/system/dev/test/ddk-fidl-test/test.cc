@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <vector>
 
@@ -64,8 +65,8 @@ TEST(FidlDDKDispatcherTest, TransactionHandleTest) {
 
   fuchsia_hardware_test_DeviceGetChannelRequest req;
   std::memset(&req, 0, sizeof(req));
-  req.hdr.ordinal = fuchsia_hardware_test_DeviceGetChannelOrdinal;
-  req.hdr.txid = 1;
+  zx_txid_t first_txid = 1;
+  fidl_init_txn_header(&req.hdr, first_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
   uint32_t actual = 0;
   status = fidl_encode(&fuchsia_hardware_test_DeviceGetChannelRequestTable, &req, sizeof(req),
                        nullptr, 0, &actual, nullptr);
@@ -75,8 +76,8 @@ TEST(FidlDDKDispatcherTest, TransactionHandleTest) {
   ASSERT_OK(zx_object_wait_one(driver_channel, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, nullptr));
 
   std::memset(&req, 0, sizeof(req));
-  req.hdr.ordinal = fuchsia_hardware_test_DeviceGetChannelOrdinal;
-  req.hdr.txid = 2;
+  zx_txid_t second_txid = 2;
+  fidl_init_txn_header(&req.hdr, second_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
   status = fidl_encode(&fuchsia_hardware_test_DeviceGetChannelRequestTable, &req, sizeof(req),
                        nullptr, 0, &actual, nullptr);
   ASSERT_OK(status);

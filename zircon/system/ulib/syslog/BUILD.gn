@@ -20,6 +20,7 @@ zx_library("syslog") {
     "$zx/system/fidl/fuchsia-logger:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

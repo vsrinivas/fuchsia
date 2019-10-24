@@ -26,6 +26,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <zircon/dlfcn.h>
+#include <zircon/fidl.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
@@ -2267,9 +2268,10 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint64_t ordinal, const void* d
   // the stack size too much.  Calls to this function are always
   // serialized anyway, so there is no danger of collision.
   static ldmsg_req_t req;
-
+  // TODO(38643) use fidl_init_txn_header once it is inline
   memset(&req.header, 0, sizeof(req.header));
   req.header.ordinal = ordinal;
+  req.header.magic_number = kFidlWireFormatMagicNumberInitial;
 
   size_t req_len;
   zx_status_t status = ldmsg_req_encode(&req, &req_len, (const char*)data, len);
@@ -2363,14 +2365,15 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
   if ((status = _zx_channel_create(0, &h0, &h1)) != ZX_OK) {
     return status;
   }
+  // TODO(38643) use fidl_init_txn_header once it is inline
   struct {
-    fidl_message_header_t header;
+    fidl_message_header_t hdr;
     ldmsg_clone_t clone;
   } req = {
-      .header =
-          {
-              .ordinal = LDMSG_OP_CLONE,
-          },
+      .hdr = {
+        .ordinal = LDMSG_OP_CLONE,
+        .magic_number = kFidlWireFormatMagicNumberInitial,
+      },
       .clone =
           {
               .object = FIDL_HANDLE_PRESENT,

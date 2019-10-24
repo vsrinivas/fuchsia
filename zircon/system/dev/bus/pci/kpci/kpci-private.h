@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/pciroot.h>
 #include <ddk/protocol/platform/device.h>
+#include <zircon/fidl.h>
 #include <zircon/types.h>
 
 typedef struct kpci_device {
@@ -63,10 +64,7 @@ typedef struct {
 
 #define PCI_MAX_DATA 4096
 typedef struct {
-  zx_txid_t txid;  // FIDL message header
-  uint32_t reserved0;
-  uint32_t flags;
-  uint32_t ordinal;
+  fidl_message_header_t hdr;
 
   uint32_t outlen;
   uint32_t datalen;

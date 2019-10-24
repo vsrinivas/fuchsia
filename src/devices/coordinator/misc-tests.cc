@@ -58,7 +58,7 @@ void BindDriverTestOutput(const zx::channel& remote, zx::channel test_output) {
   // Write the BindDriver response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
-  resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
+  fidl_init_txn_header(&resp->hdr, 0, fuchsia_device_manager_DeviceControllerBindDriverOrdinal);
   resp->status = ZX_OK;
   resp->test_output = test_output.release();
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
@@ -76,8 +76,8 @@ void WriteTestLog(const zx::channel& output) {
   fidl::Builder builder(bytes, len);
 
   auto* req = builder.New<fuchsia_driver_test_LoggerLogMessageRequest>();
-  req->hdr.ordinal = fuchsia_driver_test_LoggerLogMessageOrdinal;
-  req->hdr.txid = FIDL_TXID_NO_RESPONSE;
+  fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
+                       fuchsia_driver_test_LoggerLogMessageOrdinal);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(strlen(kLogMessage)));
   req->msg.data = data;
@@ -99,8 +99,8 @@ void WriteTestCase(const zx::channel& output) {
   fidl::Builder builder(bytes, len);
 
   auto* req = builder.New<fuchsia_driver_test_LoggerLogTestCaseRequest>();
-  req->hdr.ordinal = fuchsia_driver_test_LoggerLogTestCaseOrdinal;
-  req->hdr.txid = FIDL_TXID_NO_RESPONSE;
+  fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
+                       fuchsia_driver_test_LoggerLogTestCaseOrdinal);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(strlen(kLogTestCaseName)));
   req->name.data = data;
@@ -150,7 +150,7 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
   // Write the BindDriver response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
-  resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
+  fidl_init_txn_header(&resp->hdr, 0, fuchsia_device_manager_DeviceControllerBindDriverOrdinal);
   resp->status = ZX_OK;
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
                        sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);

@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/logger/logger.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/syslog/global.h>
 
 #include <utility>
@@ -67,7 +68,7 @@ class Fixture {
     ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
     fuchsia_logger_LogSinkConnectRequest req;
     memset(&req, 0, sizeof(req));
-    req.hdr.ordinal = fuchsia_logger_LogSinkConnectOrdinal;
+    fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogSinkConnectOrdinal);
     req.socket = FIDL_HANDLE_PRESENT;
     zx_handle_t handles[1] = {remote.release()};
     ASSERT_EQ(ZX_OK, logger_handle_.write(0, &req, sizeof(req), handles, 1));

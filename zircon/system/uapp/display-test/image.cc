@@ -8,6 +8,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmar.h>
@@ -96,7 +97,8 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
     return nullptr;
   }
   fuchsia_hardware_display_ControllerImportBufferCollectionRequest import_msg = {};
-  import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportBufferCollectionOrdinal;
+  fidl_init_txn_header(&import_msg.hdr, 0,
+                       fuchsia_hardware_display_ControllerImportBufferCollectionOrdinal);
   import_msg.collection_id = collection_id;
   import_msg.collection_token = FIDL_HANDLE_PRESENT;
 
@@ -119,8 +121,8 @@ Image* Image::Create(zx_handle_t dc_handle, uint32_t width, uint32_t height,
   }
 
   fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequest constraints_msg = {};
-  constraints_msg.hdr.ordinal =
-      fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsOrdinal;
+  fidl_init_txn_header(&constraints_msg.hdr, 0,
+                       fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsOrdinal);
   constraints_msg.config.pixel_format = format;
   constraints_msg.config.height = height;
   constraints_msg.config.width = width;
@@ -365,7 +367,8 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
     }
 
     fuchsia_hardware_display_ControllerImportEventRequest import_evt_msg = {};
-    import_evt_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportEventOrdinal;
+    fidl_init_txn_header(&import_evt_msg.hdr, 0,
+                         fuchsia_hardware_display_ControllerImportEventOrdinal);
     import_evt_msg.id = event_id++;
     import_evt_msg.event = FIDL_HANDLE_PRESENT;
 
@@ -383,7 +386,7 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
   }
 
   fuchsia_hardware_display_ControllerImportImageRequest import_msg = {};
-  import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportImageOrdinal;
+  fidl_init_txn_header(&import_msg.hdr, 0, fuchsia_hardware_display_ControllerImportImageOrdinal);
   GetConfig(&import_msg.image_config);
   import_msg.collection_id = collection_id_;
   import_msg.index = 0;

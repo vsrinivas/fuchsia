@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <lib/elf-psabi/sp.h>
 #include <lib/fdio/io.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -382,15 +383,12 @@ static zx_status_t loader_svc_rpc(zx_handle_t loader_svc, uint64_t ordinal, cons
   static _Atomic zx_txid_t next_txid;
 
   ldmsg_req_t req;
-  memset(&req.header, 0, sizeof(req.header));
-  req.header.ordinal = ordinal;
+  fidl_init_txn_header(&req.header, atomic_fetch_add(&next_txid, 1), ordinal);
 
   size_t req_len;
   zx_status_t status = ldmsg_req_encode(&req, &req_len, data, len);
   if (status != ZX_OK)
     return status;
-
-  req.header.txid = atomic_fetch_add(&next_txid, 1);
 
   ldmsg_rsp_t rsp;
   memset(&rsp, 0, sizeof(rsp));

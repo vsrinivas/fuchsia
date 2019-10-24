@@ -9,6 +9,7 @@
 #include <fuchsia/driver/test/c/fidl.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
+#include <lib/fidl/txn_header.h>
 #include <zxtest/base/test-case.h>
 
 namespace driver_unit_test {
@@ -43,8 +44,8 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
   fidl::Builder builder(buf, len);
 
   auto* req = builder.New<fuchsia_driver_test_LoggerLogMessageRequest>();
-  req->hdr.ordinal = fuchsia_driver_test_LoggerLogMessageOrdinal;
-  req->hdr.txid = FIDL_TXID_NO_RESPONSE;
+  fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
+                       fuchsia_driver_test_LoggerLogMessageOrdinal);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(log_msg_size));
   req->msg.data = data;
@@ -71,8 +72,8 @@ zx_status_t Logger::SendLogTestCase() {
   fidl::Builder builder(buf, len);
 
   auto* req = builder.New<fuchsia_driver_test_LoggerLogTestCaseRequest>();
-  req->hdr.ordinal = fuchsia_driver_test_LoggerLogTestCaseOrdinal;
-  req->hdr.txid = FIDL_TXID_NO_RESPONSE;
+  fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
+                       fuchsia_driver_test_LoggerLogTestCaseOrdinal);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(test_name_size));
   req->name.data = data;
