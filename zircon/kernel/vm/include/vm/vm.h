@@ -49,6 +49,19 @@ extern char __data_end[];
 extern char __bss_start[];
 extern char _end[];
 
+// Prints a single mapping required to interpret backtraces.
+template <class F>
+void print_mmap(const F &f, uintptr_t bias, const void *begin, const void *end,
+                const char *perm) {
+  const uintptr_t start = reinterpret_cast<uintptr_t>(begin);
+  const size_t size = reinterpret_cast<uintptr_t>(end) - start;
+  f("{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
+}
+
+template <class F> void print_module(const F &f, const char *build_id) {
+  f("{{{module:0:kernel:elf:%s}}}\n", build_id);
+}
+
 // return the physical address corresponding to _start
 static inline paddr_t get_kernel_base_phys(void) {
   extern paddr_t kernel_base_phys;

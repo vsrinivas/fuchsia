@@ -1457,6 +1457,10 @@ static size_t thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb
   return n;
 }
 
+namespace {
+  constexpr const char* bt_fmt = "{{{bt:%zu:%p}}}\n";
+}
+
 static zx_status_t _thread_print_backtrace(thread_t* t, void* fp) {
   if (!t || !fp) {
     return ZX_ERR_BAD_STATE;
@@ -1470,14 +1474,8 @@ static zx_status_t _thread_print_backtrace(thread_t* t, void* fp) {
 
   print_backtrace_version_info();
 
-  // TODO(jakehehrlich): Remove the legacy format.
   for (size_t n = 0; n < count; n++) {
-    printf("bt#%02zu: %p\n", n, tb.pc[n]);
-  }
-  printf("bt#%02zu: end\n", count);
-
-  for (size_t n = 0; n < count; n++) {
-    printf("{{{bt:%zu:%p}}}\n", n, tb.pc[n]);
+    printf(bt_fmt, n, tb.pc[n]);
   }
 
   return ZX_OK;
@@ -1508,19 +1506,13 @@ size_t thread_append_current_backtrace(char* out, const size_t out_len) {
   size_t remain = out_len;
   size_t len;
   for (size_t n = 0; n < count; n++) {
-    len = snprintf(buf, remain, "bt#%02zu: %p\n", n, tb.pc[n]);
+    len = snprintf(buf, remain, bt_fmt, n, tb.pc[n]);
     if (len > remain) {
       return out_len;
     }
     remain -= len;
     buf += len;
   }
-  len = snprintf(buf, remain, "bt#%02zu: end\n", count);
-  if (len > remain) {
-    return out_len;
-  }
-  remain -= len;
-  buf += len;
 
   return out_len - remain;
 }
