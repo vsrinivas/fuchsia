@@ -50,7 +50,7 @@ class CodecAdapterSW : public CodecAdapter {
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override { return false; }
 
-  bool IsCoreCodecMappedBufferNeeded(CodecPort port) override { return true; }
+  bool IsCoreCodecMappedBufferUseful(CodecPort port) override { return true; }
 
   bool IsCoreCodecHwBased() override { return false; }
 

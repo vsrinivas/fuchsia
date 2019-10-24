@@ -943,7 +943,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   __WARN_UNUSED_RESULT bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
 
-  __WARN_UNUSED_RESULT bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
+  __WARN_UNUSED_RESULT bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
 
   __WARN_UNUSED_RESULT bool IsCoreCodecHwBased() override;
 

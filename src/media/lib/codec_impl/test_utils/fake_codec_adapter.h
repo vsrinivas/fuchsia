@@ -14,7 +14,7 @@ class FakeCodecAdapter : public CodecAdapter {
 
   // CodecAdapter interface:
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
-  bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
+  bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
   bool IsCoreCodecHwBased() override;
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
   fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(

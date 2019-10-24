@@ -27,7 +27,7 @@ class CodecAdapterAacEncoder : public CodecAdapter {
   ~CodecAdapterAacEncoder();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
-  bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
+  bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
   bool IsCoreCodecHwBased() override;
 
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;

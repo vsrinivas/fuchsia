@@ -54,7 +54,7 @@ bool FakeCodecAdapter::IsCoreCodecRequiringOutputConfigForFormatDetection() {
   return true;
 }
 
-bool FakeCodecAdapter::IsCoreCodecMappedBufferNeeded(CodecPort port) { return true; }
+bool FakeCodecAdapter::IsCoreCodecMappedBufferUseful(CodecPort port) { return true; }
 
 bool FakeCodecAdapter::IsCoreCodecHwBased() { return false; }
 

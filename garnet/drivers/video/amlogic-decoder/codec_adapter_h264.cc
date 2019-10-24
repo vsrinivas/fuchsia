@@ -118,7 +118,7 @@ CodecAdapterH264::~CodecAdapterH264() {
 
 bool CodecAdapterH264::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
-bool CodecAdapterH264::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+bool CodecAdapterH264::IsCoreCodecMappedBufferUseful(CodecPort port) {
   if (port == kInputPort) {
     // Returning true here essentially means that we may be able to make use of mapped buffers if
     // they're possible.  However if is_secure true, we won't get a mapping and we don't really need

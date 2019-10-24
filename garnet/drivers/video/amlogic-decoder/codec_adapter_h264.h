@@ -23,7 +23,7 @@ class CodecAdapterH264 : public CodecAdapter {
   ~CodecAdapterH264();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
-  bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
+  bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
   bool IsCoreCodecHwBased() override;
   zx::unowned_bti CoreCodecBti() override;
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;

@@ -29,7 +29,7 @@ CodecAdapterAacEncoder::~CodecAdapterAacEncoder() {}
 
 bool CodecAdapterAacEncoder::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
-bool CodecAdapterAacEncoder::IsCoreCodecMappedBufferNeeded(CodecPort port) { return true; }
+bool CodecAdapterAacEncoder::IsCoreCodecMappedBufferUseful(CodecPort port) { return true; }
 
 bool CodecAdapterAacEncoder::IsCoreCodecHwBased() { return false; }
 

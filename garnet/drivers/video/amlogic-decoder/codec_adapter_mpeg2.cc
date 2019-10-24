@@ -21,7 +21,7 @@ CodecAdapterMpeg2::~CodecAdapterMpeg2() {
 
 bool CodecAdapterMpeg2::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
-bool CodecAdapterMpeg2::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+bool CodecAdapterMpeg2::IsCoreCodecMappedBufferUseful(CodecPort port) {
   // Since protected memory input/output isn't supported for mpeg2, may as well
   // claim we need mapped buffers for now, in case we end up needing to re-pack
   // input or fix output.

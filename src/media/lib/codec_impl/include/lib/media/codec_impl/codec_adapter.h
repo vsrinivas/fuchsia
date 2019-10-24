@@ -66,16 +66,14 @@ class CodecAdapter {
   // memory, and CodecBuffer::base() is usable for direct CPU access.
   //
   // If a codec doesn't support secure memory operation, then buffers won't be
-  // secure memory and will be mapped if IsCoreCodecMappedBufferNeeded().
+  // secure memory and will be mapped if IsCoreCodecMappedBufferUseful().
   //
   // If buffers are secure, then CodecImpl won't actually map the buffer VMOs,
   // and CodecBuffer::base() isn't usable for direct CPU access.  Instead
   // CodecBuffer::base() will be a vaddr that will fault if accessed as if it
   // were buffer data, and preserves the low-order vmo_usable_start %
   // ZX_PAGE_SIZE bits.
-  //
-  // TODO(38652): Rename this to IsCoreCodecMappedBufferUseful().
-  virtual bool IsCoreCodecMappedBufferNeeded(CodecPort port) = 0;
+  virtual bool IsCoreCodecMappedBufferUseful(CodecPort port) = 0;
 
   // If true, the codec is HW-based, in the sense that at least some of the
   // processing is performed by specialized processing HW running separately
@@ -169,7 +167,7 @@ class CodecAdapter {
   //
   // Filling out the usage bits is optional.  If the usage bits are not filled
   // out (all still 0), the caller will fill them out based on
-  // IsCoreCodecMappedBufferNeeded() and IsCoreCodecHwBased().  The core codec
+  // IsCoreCodecMappedBufferUseful() and IsCoreCodecHwBased().  The core codec
   // must either leave usage set to all 0, or completely fill them out.
   virtual fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
       CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,

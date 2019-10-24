@@ -110,7 +110,7 @@ CodecAdapterVp9::~CodecAdapterVp9() {
 
 bool CodecAdapterVp9::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
 
-bool CodecAdapterVp9::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+bool CodecAdapterVp9::IsCoreCodecMappedBufferUseful(CodecPort port) {
   // If buffers are protected, the decoder should/will call secmem TA to re-pack
   // VP9 headers in the input.  Else the decoder will use a CPU mapping to do
   // this repack.

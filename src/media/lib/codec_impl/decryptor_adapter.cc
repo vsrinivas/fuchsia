@@ -77,7 +77,7 @@ DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_a
 
 bool DecryptorAdapter::IsCoreCodecRequiringOutputConfigForFormatDetection() { return true; }
 
-bool DecryptorAdapter::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+bool DecryptorAdapter::IsCoreCodecMappedBufferUseful(CodecPort port) {
   // Only require mapped buffers for input and clear output buffers.
   return (port == kInputPort) || (port == kOutputPort && !is_secure());
 }

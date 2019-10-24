@@ -1768,7 +1768,7 @@ void CodecImpl::OnBufferCollectionInfoInternal(
     fake_secure = IsSecureInput();
   }
   if (port_settings_[port]->is_secure() || fake_secure) {
-    if (IsCoreCodecMappedBufferNeeded(port)) {
+    if (IsCoreCodecMappedBufferUseful(port)) {
       zx_status_t status =
           FakeMapRange::Create(port_settings_[port]->vmo_usable_size(), &fake_map_range_[port]);
       if (status != ZX_OK) {
@@ -2048,7 +2048,7 @@ bool CodecImpl::AddBufferCommon(bool is_client, CodecPort port,
     std::unique_ptr<CodecBuffer> local_buffer =
         std::unique_ptr<CodecBuffer>(new CodecBuffer(this, port, std::move(buffer),
                                                      port_settings_[port]->is_secure()));
-    if (IsCoreCodecMappedBufferNeeded(port)) {
+    if (IsCoreCodecMappedBufferUseful(port)) {
       if (fake_map_range_[port]) {
         // The fake_map_range_[port]->base() is % ZX_PAGE_SIZE == 0, which is the same as a mapping
         // would be.  There are sufficient virtual pages starting at FakeMapRange::base() to permit
@@ -2762,7 +2762,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     fuchsia::sysmem::BufferCollectionConstraints* buffer_collection_constraints) {
   fuchsia::sysmem::BufferUsage& usage = buffer_collection_constraints->usage;
 
-  if (IsCoreCodecMappedBufferNeeded(port)) {
+  if (IsCoreCodecMappedBufferUseful(port)) {
     // Not surprisingly, both decoders and encoders read from input and write to
     // output.
     if (port == kInputPort) {
@@ -2780,7 +2780,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     }
   } else {
     if (usage.cpu) {
-      FailLocked("Core codec set usage.cpu despite !IsCoreCodecMappedBufferNeeded()");
+      FailLocked("Core codec set usage.cpu despite !IsCoreCodecMappedBufferUseful()");
       return false;
     }
     // The CPU won't touch the buffers at all.
@@ -3767,10 +3767,10 @@ bool CodecImpl::IsCoreCodecRequiringOutputConfigForFormatDetection() {
   return codec_adapter_->IsCoreCodecRequiringOutputConfigForFormatDetection();
 }
 
-bool CodecImpl::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+bool CodecImpl::IsCoreCodecMappedBufferUseful(CodecPort port) {
   ZX_DEBUG_ASSERT(port == kInputPort && thrd_current() == stream_control_thread_ ||
                   port == kOutputPort && thrd_current() == fidl_thread());
-  return codec_adapter_->IsCoreCodecMappedBufferNeeded(port);
+  return codec_adapter_->IsCoreCodecMappedBufferUseful(port);
 }
 
 bool CodecImpl::IsCoreCodecHwBased() { return codec_adapter_->IsCoreCodecHwBased(); }
