@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# The purpose of this template is solely to allow build files under //zircon to
+# be used in the GN build. It does not actually provide any functionality in
+# the ZN build.
+
 template("zx_library") {
   library(target_name) {
     forward_variables_from(invoker, "*")

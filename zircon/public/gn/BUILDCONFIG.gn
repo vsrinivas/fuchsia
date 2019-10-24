@@ -649,6 +649,13 @@ template("library") {
       } else {
         install_path = "lib/${toolchain.libprefix}lib${_library_name}.so"
       }
+
+      zx_manifest_file = "$target_gen_dir/$target_name.zx_manifest.txt"
+      library_file = "$target_out_dir/lib${_library_name}.so"
+      manifest_line = "${install_path}=" +
+          rebase_path(library_file, root_build_dir)
+      write_file(zx_manifest_file, [ manifest_line ], "list lines")
+
       shared_library("${_library_name}.shared") {
         output_name = _library_name
         forward_variables_from(invoker,
@@ -685,6 +692,8 @@ template("library") {
           deps += invoker.deps
         }
 
+        toolchain_label = get_label_info(":$target_name", "toolchain")
+
         metadata = {
           if (defined(invoker.metadata)) {
             # The $metadata set on library() goes on the source_set().
@@ -701,15 +710,33 @@ template("library") {
 
           # An explicit `install_path = false` means this DSO is not installed.
           if (install_path != false) {
-            manifest_inputs = [ "$target_out_dir/lib${output_name}.so" ]
-            manifest_lines = [ "${install_path}=" +
-                               rebase_path(manifest_inputs[0], root_build_dir) ]
+            manifest_inputs = [ library_file ]
+            manifest_lines = [ manifest_line ]
           }
 
           # TODO(BLD-353): temporary hacks
           forward_variables_from(legacy_metadata, "*")
           if (defined(invoker.metadata)) {
             forward_variables_from(invoker.metadata, [ "legacy_sysroot" ])
+          }
+
+          # Make the manifest describing this library available to the build
+          # API module for unification.
+          # The manifest is not published for fuzzer variants.
+          if (string_replace(toolchain_label, "fuzzer", "") == toolchain_label) {
+            zx_manifest = [
+              {
+                label = get_label_info(":$target_name", "label_with_toolchain")
+                name = "lib.$_library_name"
+                if (toolchain.variant_suffix != ".clang") {
+                  name += toolchain.variant_suffix
+                }
+                toolchain = toolchain_label
+                path = rebase_path(zx_manifest_file, root_build_dir)
+                cpu = current_cpu
+                os = current_os
+              }
+            ]
           }
         }
       }
@@ -1809,6 +1836,11 @@ template("driver") {
 
     data_deps = []
     deps = []
+
+    # Save the target name here as it will be overridden by the call to
+    # `forward_variables_from`.
+    original_target_name = target_name
+
     forward_variables_from(invoker,
                            "*",
                            [
@@ -1829,7 +1861,7 @@ template("driver") {
 
     # Elaborate the defaults to compute the output file name.
     if (!defined(output_name)) {
-      output_name = target_name
+      output_name = original_target_name
     }
 
     # Set the standard install_path.
@@ -1838,7 +1870,7 @@ template("driver") {
     }
 
     # Enforce the shared library allowlist.
-    deps += [ ":_driver.shlib-denylist-check.$target_name" ]
+    deps += [ ":_driver.shlib-denylist-check.$original_target_name" ]
   }
 
   driver_label = get_label_info(":$target_name", "label_with_toolchain")
@@ -1920,7 +1952,6 @@ template("driver") {
 #
 template("test_driver") {
   driver(target_name) {
-    testonly = true
     forward_variables_from(invoker,
                            "*",
                            [
@@ -1933,6 +1964,12 @@ template("test_driver") {
                              "testonly",
                              "visibility",
                            ])
+
+    if (defined(testonly)) {
+      assert(testonly, "Test drivers can only be marked as testonly")
+    } else {
+      testonly = true
+    }
 
     # Elaborate the defaults to compute the output file name.
     if (!defined(output_name)) {

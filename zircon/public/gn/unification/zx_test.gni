@@ -2,8 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("zx_binary.gni")
+
 template("zx_test") {
-  test(target_name) {
+  test_name = target_name
+
+  zx_binary(test_name) {
     forward_variables_from(invoker, "*")
+
+    type = "test"
+
+    prefix = "test"
+    if (defined(test_group)) {
+      prefix += ".$test_group"
+    } else {
+      prefix += ".sys"
+    }
+
+    testonly = true
+
+    if (!defined(output_name)) {
+      output_name = "$test_name-test"
+    }
   }
 }

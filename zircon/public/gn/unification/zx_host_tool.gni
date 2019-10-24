@@ -2,8 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("zx_binary.gni")
+
 template("zx_host_tool") {
-  host_tool(target_name) {
-    forward_variables_from(invoker, "*")
+  if (is_fuchsia) {
+    zx_binary(target_name) {
+      forward_variables_from(invoker, "*")
+      type = "host_tool"
+      prefix = "bin"
+    }
+  } else {
+    host_tool(target_name) {
+      forward_variables_from(invoker, "*")
+    }
   }
 }

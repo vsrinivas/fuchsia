@@ -1,0 +1,89 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("zx_manifest.gni")
+
+# Generates a standalone manifest for an executable target.
+#
+# Parameters
+#
+#   type (required)
+#     Type of the target to generate, e.g. `executable`, `driver`.
+#
+#   prefix (required)
+#     String prefixed to generated manifest names.
+
+template("zx_binary") {
+  assert(defined(invoker.type), "Need a type")
+  assert(defined(invoker.prefix), "Need a prefix")
+
+  local_params = [
+    "prefix",
+    "type",
+  ]
+
+  main_target_name = target_name
+  binary_target_name = "$target_name.binary"
+  manifest_target_name = "$target_name.manifest"
+
+  target(invoker.type, binary_target_name) {
+    forward_variables_from(invoker, "*", local_params)
+
+    if (!defined(output_name)) {
+      output_name = main_target_name
+    }
+  }
+
+  zx_manifest(manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    target = ":$binary_target_name"
+
+    name = "${invoker.prefix}.$main_target_name"
+    if (defined(invoker.output_name)) {
+      name = "${invoker.prefix}.${invoker.output_name}"
+    }
+    if (toolchain.variant_suffix != ".clang") {
+      name += toolchain.variant_suffix
+    }
+    if (defined(toolchain.shlib) && current_toolchain == toolchain.shlib) {
+      name += ".shlib"
+    }
+  }
+
+  group(main_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    public_deps = [ ":$binary_target_name" ]
+
+    deps = [ ":$manifest_target_name" ]
+  }
+
+  # Provide redirects to other variants.
+  foreach(variant, toolchain.other_variants) {
+    group("$main_target_name${variant.suffix}") {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      data_deps = [
+        ":$binary_target_name${variant.suffix}(${variant.label})",
+      ]
+
+      deps = [
+        ":$manifest_target_name(${variant.label})",
+      ]
+    }
+  }
+
+  group("$main_target_name${toolchain.variant_suffix}") {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    data_deps = [
+      ":$binary_target_name${toolchain.variant_suffix}",
+    ]
+
+    deps = [
+      ":$manifest_target_name",
+    ]
+  }
+}

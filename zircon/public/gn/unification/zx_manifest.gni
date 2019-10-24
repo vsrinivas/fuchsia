@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates a manifest file for a given binary declared in the ZN build.
+#
+# This template is very similar to manifest.gni. The only notable difference is
+# that it does not unroll dependent binaries and instead uses a new manifest
+# entry type for declaring a dependency: `@foobar` represents a dependency on
+# an executable described in a manifest called `foobar`.
+#
+# This scheme is used to convey binary dependency structures to the GN build.
+
+template("zx_manifest") {
+  assert(defined(invoker.target), "Must define a target")
+  assert(defined(invoker.name), "Must define a name")
+
+  no_barrier = defined(invoker.no_barrier) && invoker.no_barrier
+
+  main_target_name = target_name
+  manifest_target_name = "$target_name.manifest"
+
+  manifest_file = "$target_gen_dir/$target_name.zx_manifest.txt"
+
+  generated_file(manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    deps = [ invoker.target ]
+
+    output_conversion = "list lines"
+
+    outputs = [ manifest_file ]
+
+    data_keys = [
+      "manifest_lines",
+      "zx_manifest_lines",
+    ]
+
+    walk_keys = [ "manifest_barrier" ]
+  }
+
+  group(main_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    public_deps = [ ":$manifest_target_name" ]
+
+    metadata = {
+      # Make it so that the present executable is picked up as a dependency and
+      # that its contents are not listed by any dependents.
+      zx_manifest_lines = [ "@${invoker.name}" ]
+
+      # Add a barrier as the required information is encapsulated in
+      # zx_manifest_lines.
+      if (!no_barrier) {
+        manifest_barrier = []
+      }
+
+      # This metadata is picked up by the top-level aggregation target.
+      zx_manifest = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          toolchain = get_label_info(":$target_name", "toolchain")
+          name = invoker.name
+          path = rebase_path(manifest_file, root_build_dir)
+          cpu = current_cpu
+          os = current_os
+        }
+      ]
+    }
+  }
+}

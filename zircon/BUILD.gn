@@ -601,6 +601,27 @@ build_api_module("legacy_images") {
   }
 }
 
+# This target complements legacy_images in that it lists the various elements
+# that end up in images.
+foreach(cpu, standard_fuchsia_cpus) {
+  build_api_module("legacy_unification-$cpu") {
+    testonly = true
+    data_keys = [ "zx_manifest" ]
+    deps = [
+      ":legacy-$cpu",
+      "tools",
+    ]
+    # Add the dependencies of legacy-aux directly, as that target sets a barrier
+    # that's not desirable here.
+    deps += [
+      ":all-ulib-$cpu",
+      ":driver-deps-$cpu",
+      ":instrumented-ulib-$cpu",
+      ":legacy-tests-deps-$cpu",
+    ]
+  }
+}
+
 # TODO(BLD-353): This is just for the legacy build and is not really a
 # proper build API module.  In the unified build, this string will just be
 # directly embedded inside test metadata.

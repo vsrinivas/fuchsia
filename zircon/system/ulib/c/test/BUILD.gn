@@ -12,6 +12,12 @@ if (toolchain.tool_dir == "") {
   # is only decided inside the c_toolchain() instantiation itself.
   group("noop.${toolchain.variant}") {
   }
+
+  group("noop.binary.${toolchain.variant}") {
+  }
+
+  group("noop.manifest") {
+  }
 } else {
   zx_test("noop") {
     sources = [
