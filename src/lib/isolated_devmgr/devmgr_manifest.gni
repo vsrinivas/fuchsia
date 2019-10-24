@@ -23,6 +23,7 @@ template("devmgr_manifest") {
                            ])
     visibility = [ ":*" ]
     sources = zircon_boot_manifests
+    deps = zircon_boot_manifests_deps
     outputs = [
       "$target_gen_dir/devmgr.manifest",
     ]
@@ -34,7 +35,7 @@ template("devmgr_manifest") {
     ]
     foreach(manifest, sources) {
       args += [
-        "--cwd=" + rebase_path(zircon_root_build_dir, root_build_dir),
+        "--cwd=.",
         "--manifest=" + rebase_path(manifest, root_build_dir),
       ]
     }

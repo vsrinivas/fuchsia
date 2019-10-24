@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon_images.gni")
+import("//build/images/zircon/bootsvc.gni")
 
 declare_args() {
   # Manifest files describing target libraries from toolchains.
@@ -22,17 +23,42 @@ declare_args() {
   extra_manifest_args = []
 }
 
+# Manifests inherited from Zircon.
+# Paths in these manifest are relative to this build's root directory.
 zircon_boot_manifests = []
-foreach(image, zircon_images) {
-  if (image.type == "manifest") {
-    if (image.name == "legacy-image-$target_cpu" ||
-        (image.cpu == target_cpu && image.name == "bootsvc")) {
-      zircon_boot_manifests += [ "$zircon_root_build_dir/${image.path}" ]
-    } else if (image.name == "legacy-aux-$target_cpu") {
-      zircon_aux_manifests = [ "$zircon_root_build_dir/${image.path}" ]
-    }
-  }
+zircon_boot_manifests_deps = []
+zircon_aux_manifests = []
+zircon_aux_manifests_deps = []
+
+legacy_image = {
+  target = "//build/images/zircon:legacy-image"
+  gen_dir = get_label_info(target, "target_gen_dir")
+  name = get_label_info(target, "name")
+  file = "$gen_dir/$name.rebased.manifest"
 }
+zircon_boot_manifests += [ legacy_image.file ]
+zircon_boot_manifests_deps += [ legacy_image.target ]
+
+foreach(flavor, bootsvc_flavors) {
+  legacy_bootsvc = {}
+  legacy_bootsvc = {
+    target = "//build/images/zircon:${flavor.name}"
+    gen_dir = get_label_info(target, "target_gen_dir")
+    name = get_label_info(target, "name")
+    file = "$gen_dir/$name.rebased.manifest"
+  }
+  zircon_boot_manifests += [ legacy_bootsvc.file ]
+  zircon_boot_manifests_deps += [ legacy_bootsvc.target ]
+}
+
+legacy_aux = {
+  target = "//build/images/zircon:legacy-aux"
+  gen_dir = get_label_info(target, "target_gen_dir")
+  name = get_label_info(target, "name")
+  file = "$gen_dir/$name.rebased.manifest"
+}
+zircon_aux_manifests += [ legacy_aux.file ]
+zircon_aux_manifests_deps += [ legacy_aux.target ]
 
 # Action target that generates a response file in GN's "shlex" format.
 #
@@ -149,6 +175,9 @@ template("generate_manifest") {
     if (!defined(sources)) {
       sources = []
     }
+    if (!defined(deps)) {
+      deps = []
+    }
     if (!defined(zircon_groups)) {
       zircon_groups = ""
     }
@@ -200,10 +229,10 @@ template("generate_manifest") {
       ]
     }
     sources += zircon_aux_manifests + zircon_boot_manifests
+    deps += zircon_aux_manifests_deps + zircon_boot_manifests_deps
     foreach(manifest, zircon_aux_manifests + zircon_boot_manifests) {
-      manifest_cwd = rebase_path(zircon_root_build_dir)
       response_file_contents += [
-        "--cwd=$manifest_cwd",
+        "--cwd=.",
         "--manifest=" + rebase_path(manifest),
       ]
     }
@@ -266,9 +295,8 @@ template("generate_manifest") {
         response_file_contents += [ "--groups=${manifest.groups}" ]
         sources += zircon_boot_manifests
         foreach(manifest, zircon_boot_manifests) {
-          manifest_cwd = rebase_path(zircon_root_build_dir)
           response_file_contents += [
-            "--cwd=$manifest_cwd",
+            "--cwd=.",
             "--manifest=" + rebase_path(manifest),
           ]
         }

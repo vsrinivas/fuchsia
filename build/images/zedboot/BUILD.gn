@@ -86,9 +86,10 @@ generate_manifest("zedboot.manifest") {
   # The --binary switch only matches binaries, not other files.
   # Get the non-binary files from the manifest directly.
   args += [ "--include=lib/firmware/*" ]
+  deps = zircon_boot_manifests_deps
   foreach(manifest, zircon_boot_manifests) {
     args += [
-      "--cwd=" + rebase_path(zircon_root_build_dir, root_build_dir),
+      "--cwd=.",
       "--manifest=" + rebase_path(manifest, root_build_dir),
     ]
   }
