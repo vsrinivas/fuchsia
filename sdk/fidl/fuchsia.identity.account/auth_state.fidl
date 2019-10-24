@@ -1,0 +1,132 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.identity.account;
+
+/// An assessment of whether the account owner is present.
+enum Presence {
+    /// The account itself is locked and inaccessible.
+    LOCKED = 1;
+
+    /// The account owner is marked as absent.
+    ABSENT = 2;
+
+    /// No information (either affirming or dissenting) is available about the
+    /// current presence of the account owner.
+    PRESENCE_UNKNOWN = 3;
+
+    /// The account owner is marked as present.
+    PRESENT = 4;
+};
+
+/// An assessment of whether the account owner is engaged.
+enum Engagement {
+    /// The account itself is locked and inaccessible.
+    LOCKED = 1;
+
+    /// The account owner is marked as disengaged.
+    DISENGAGED = 2;
+
+    /// No information (either affirming or dissenting) is available about the
+    /// current engagement of the account owner.
+    ENGAGEMENT_UNKNOWN = 3;
+
+    /// The account owner is marked as engaged.
+    ENGAGED = 4;
+};
+
+/// A type of attacker to consider when creating authentication states.
+enum ThreatScenario {
+    /// No attackers are considered.
+    NONE = 1;
+
+    /// People that may typically and frequently gain access to a user’s device
+    /// are considered. Examples include nefarious roommates, coworkers,
+    /// houseguests, family members, or thieves. We assume limited technical
+    /// skills and/or motivation and commonly available technology.
+    ///
+    /// Additionally, remote abusers performing an (initially untargeted) attack
+    /// are considered. We assume these attackers use the standard tools of
+    /// their trade such as password dumps, phishing toolkits, brute forcing, or
+    /// stolen identities.
+    BASIC_ATTACKER = 2;
+
+    /// Technologically capable people or organizations who are motivated to
+    /// perform a targeted attack on a user are considered. Examples include
+    /// freelance security professionals, organized crime, law enforcement, and
+    /// government agencies.
+    ADVANCED_ATTACKER = 3;
+};
+
+/// Defines the context to consider when creating authentication states.
+[MaxHandles = "0"]
+struct Scenario {
+    /// If true, experimental or test authenticators are included when creating
+    /// authentication states and MUST NOT be used to hand out sensitive user
+    /// information.
+    bool include_test;
+
+    /// Defines the threat scenario to consider when creating
+    /// authentication states.
+    ThreatScenario threat_scenario;
+};
+
+/// A high level assessment of whether the account owner is present and engaged.
+enum AuthStateSummary {
+
+    /// The account itself is locked and inaccessible.
+    LOCKED = 1;
+
+    /// The account owner is probably physically close to the device but cannot
+    /// be said to be either actively using the device or be physically close
+    /// it.
+    NOT_KNOWN_TO_BE_PRESENT_OR_ENGAGED = 2;
+
+    /// The account owner is probably physically close to the device but cannot
+    /// be said to be actively using it.
+    PRESENT_WITHOUT_KNOWN_ENGAGEMENT = 3;
+
+    /// The account owner is probably actively using the device.
+    ENGAGED = 4;
+};
+
+/// An assessment of the current presence and engagement of an account owner,
+/// under the provided scenario, including the system's confidence in that
+/// assessment and its timeliness.
+[MaxHandles = "0"]
+table AuthState {
+    /// The scenario that was considered when creating this authentication
+    /// state.
+    1: Scenario scenario;
+
+    /// A high level assessment of whether the account owner is present and
+    /// engaged.
+    2: AuthStateSummary summary;
+
+    /// An assessment of whether the account owner is present.
+    3: Presence presence;
+
+    /// An assessment of whether the account owner is engaged.
+    4: Engagement engagement;
+
+    // TODO(jsankey): Add additional fields to express timeliness and
+    // confidence.
+};
+
+/// An expression of the types of changes to an auth state that should be
+/// reported over listener interfaces. By default no changes will be reported.
+[MaxHandles = "0"]
+table AuthChangeGranularity {
+    /// If true, any changes in the `AuthStateSummary` enumeration will be
+    /// reported.
+    1: bool summary_changes;
+
+    /// If true, any changes in the `AuthState.presence` enumeration will
+    /// be reported.
+    2: bool presence_changes;
+
+    /// If true, any changes in the `AuthState.engagement` enumeration will
+    /// be reported.
+    3: bool engagement_changes;
+};

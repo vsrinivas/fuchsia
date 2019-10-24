@@ -23,7 +23,7 @@ protocol AccountManager {
     /// Returns a vector of all unlocked accounts provisioned on the current
     /// device and the current authentication state for each.
     GetAccountAuthStates() -> (
-            vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states
+        vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states
         ) error Error;
 
     /// Connects a channel to read properties of and perform operations on
@@ -102,6 +102,7 @@ struct AccountAuthState {
     /// A unique identifier for the Fuchsia account on the current device.
     LocalAccountId account_id;
     /// An authentication state for the Fuchsia account.
+    // TODO(dnordstrom): Use fuchsia.identity.account.AuthState instead
     fuchsia.auth.AuthState auth_state;
 };
 
@@ -119,6 +120,8 @@ struct AccountListenerOptions {
     bool remove_account;
     /// An `AuthChangeGranularity` expressing the magnitude of change in
     /// authentication state that will lead to AuthStateChange events.
+    // TODO(dnordstrom): Use fuchsia.identity.account.AuthChangeGranularity
+    // instead
     fuchsia.auth.AuthChangeGranularity granularity;
 };
 
