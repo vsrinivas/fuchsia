@@ -42,6 +42,8 @@ class InspectManager {
                             const std::string& server_report_id);
 
  private:
+  bool Contains(const std::string& local_report_id);
+
   // Callback to update |settings_| on upload policy changes.
   void OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy);
 
@@ -81,7 +83,12 @@ class InspectManager {
   struct Report {
     Report(inspect::Node* parent_node, const std::string& local_report_id,
            const std::string& creation_time);
-    Report(Report&&) = default;
+
+    // Allow moving, disallow copying.
+    Report(Report&& other) = default;
+    Report& operator=(Report&& other) noexcept;
+    Report(const Report& other) = delete;
+    Report& operator=(const Report& other) = delete;
 
     // Adds the crash server entries after receiving a server response.
     void MarkAsUploaded(const std::string& server_report_id, const std::string& creation_time);
@@ -93,24 +100,16 @@ class InspectManager {
     inspect::Node server_node_;
     inspect::StringProperty server_id_;
     inspect::StringProperty server_creation_time_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(Report);
-  };
-
-  // Inspect node containing a list of reports for a given program.
-  struct ReportList {
-    inspect::Node node;
-    // Allocate all reports on the heap so we can use pointers to them in |Reports|.
-    std::vector<std::unique_ptr<Report>> reports;
   };
 
   // Inspect node pointing to the list of reports.
   struct Reports {
     inspect::Node node;
-    // Maps a program name to a list of |Report| nodes.
-    std::map<std::string, ReportList> program_name_to_report_lists;
-    // Maps a local report ID to the corresponding |Report|
-    std::map<std::string, Report*> local_report_id_to_report;
+
+    // Maps a program name to the node that manages the report nodes for that program.
+    std::map<std::string, inspect::Node> program_nodes;
+    // Maps a local report ID to a |Report|.
+    std::map<std::string, Report> reports;
   };
 
   inspect::Node* root_node_ = nullptr;

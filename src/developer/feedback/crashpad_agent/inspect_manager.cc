@@ -41,35 +41,25 @@ InspectManager::InspectManager(inspect::Node* root_node, timekeeper::Clock* cloc
 
 bool InspectManager::AddReport(const std::string& program_name,
                                const std::string& local_report_id) {
-  if (reports_.local_report_id_to_report.find(local_report_id) !=
-      reports_.local_report_id_to_report.end()) {
+  if (Contains(local_report_id)) {
     FX_LOGS(ERROR) << fxl::Substitute("Local crash report, ID $0, already exposed in Inspect",
                                       local_report_id);
     return false;
   }
 
-  // Find or create a Node for this program.
-  InspectManager::ReportList* report_list;
-  auto* report_lists = &reports_.program_name_to_report_lists;
-  if (auto it = report_lists->find(program_name); it != report_lists->end()) {
-    report_list = &it->second;
-  } else {
-    (*report_lists)[program_name].node = reports_.node.CreateChild(program_name);
-    report_list = &(*report_lists)[program_name];
+  if (reports_.program_nodes.find(program_name) == reports_.program_nodes.end()) {
+    reports_.program_nodes[program_name] = reports_.node.CreateChild(program_name);
   }
 
-  // Create a new Report object and index it.
-  report_list->reports.push_back(
-      std::make_unique<Report>(&report_list->node, local_report_id, CurrentTime()));
-  reports_.local_report_id_to_report[local_report_id] = report_list->reports.back().get();
+  reports_.reports.emplace(local_report_id, Report(&reports_.program_nodes[program_name],
+                                                   local_report_id, CurrentTime()));
   return true;
 }
 
 bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
                                           const std::string& server_report_id) {
-  if (auto it = reports_.local_report_id_to_report.find(local_report_id);
-      it != reports_.local_report_id_to_report.end()) {
-    it->second->MarkAsUploaded(server_report_id, CurrentTime());
+  if (Contains(local_report_id)) {
+    reports_.reports.at(local_report_id).MarkAsUploaded(server_report_id, CurrentTime());
     return true;
   }
   FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
@@ -101,6 +91,9 @@ void InspectManager::ExposeSettings(feedback::Settings* settings) {
       });
 }
 
+bool InspectManager::Contains(const std::string& local_report_id) {
+  return reports_.reports.find(local_report_id) != reports_.reports.end();
+}
 void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy) {
   settings_.upload_policy = settings_.node.CreateString("upload_policy", ToString(upload_policy));
 }
