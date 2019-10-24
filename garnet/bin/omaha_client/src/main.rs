@@ -38,8 +38,7 @@ fn main() -> Result<(), Error> {
             Some(channel_configs) => channel_configs.default_channel.clone(),
             None => None,
         };
-        let app_set = configuration::get_app_set(&version, default_channel)
-            .context("Failed to get app set")?;
+        let app_set = configuration::get_app_set(&version, default_channel);
         info!("Omaha app set: {:?}", app_set.to_vec().await);
         let config = configuration::get_config(&version);
         info!("Update config: {:?}", config);

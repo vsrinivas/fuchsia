@@ -236,6 +236,10 @@ impl App {
     pub fn set_target_channel(&mut self, channel: Option<String>) {
         self.cohort.hint = channel;
     }
+
+    pub fn valid(&self) -> bool {
+        !self.id.is_empty() && self.version != Version::from([0])
+    }
 }
 
 /// A set of Apps.
@@ -312,6 +316,11 @@ impl AppSet {
     /// Clone the apps into a Vec.
     pub async fn to_vec(&self) -> Vec<App> {
         self.apps.lock().await.clone()
+    }
+
+    pub async fn valid(&self) -> bool {
+        let apps = self.apps.lock().await;
+        apps.iter().all(|app| app.valid())
     }
 }
 
@@ -702,6 +711,20 @@ mod tests {
     }
 
     #[test]
+    fn test_app_valid() {
+        let app = App::new("some_id", [0, 1], Cohort::default());
+        assert!(app.valid());
+    }
+
+    #[test]
+    fn test_app_not_valid() {
+        let app = App::new("", [0, 1], Cohort::default());
+        assert!(!app.valid());
+        let app = App::new("some_id", [0], Cohort::default());
+        assert!(!app.valid());
+    }
+
+    #[test]
     #[should_panic]
     fn test_appset_panics_with_empty_vec() {
         AppSet::new(vec![]);
@@ -733,6 +756,40 @@ mod tests {
             let mut vec = app_set.to_vec().await;
             vec[0].id = "some_other_id".to_string();
             assert_eq!("some_id", app_set.to_vec().await[0].id);
+        });
+    }
+
+    #[test]
+    fn test_appset_valid() {
+        block_on(async {
+            let app_set = AppSet::new(vec![App::new("some_id", [0, 1], Cohort::default())]);
+            assert!(app_set.valid().await);
+            let app_set = AppSet::new(vec![
+                App::new("some_id", [0, 1], Cohort::default()),
+                App::new("some_id_2", [1], Cohort::default()),
+            ]);
+            assert!(app_set.valid().await);
+        });
+    }
+
+    #[test]
+    fn test_appset_not_valid() {
+        block_on(async {
+            let app_set = AppSet::new(vec![
+                App::new("some_id", [0, 1], Cohort::default()),
+                App::new("", [0, 1], Cohort::default()),
+            ]);
+            assert!(!app_set.valid().await);
+            let app_set = AppSet::new(vec![
+                App::new("some_id", [0], Cohort::default()),
+                App::new("some_id_2", [0, 1], Cohort::default()),
+            ]);
+            assert!(!app_set.valid().await);
+            let app_set = AppSet::new(vec![
+                App::new("some_id", [0], Cohort::default()),
+                App::new("", [0, 1], Cohort::default()),
+            ]);
+            assert!(!app_set.valid().await);
         });
     }
 }

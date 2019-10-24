@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
-use log::info;
+use log::{error, info};
 use omaha_client::{
     common::{App, AppSet, UserCounting, Version},
     configuration::{Config, Updater},
@@ -12,24 +11,34 @@ use omaha_client::{
 use std::fs;
 use std::io;
 
-pub fn get_app_set(version: &str, default_channel: Option<String>) -> Result<AppSet, Error> {
-    let id = fs::read_to_string("/config/data/omaha_app_id")?;
-    let version = version
-        .parse::<Version>()
-        .context(format!("Unable to parse '{}' as Omaha version format", version))?;
+pub fn get_app_set(version: &str, default_channel: Option<String>) -> AppSet {
+    let id = match fs::read_to_string("/config/data/omaha_app_id") {
+        Ok(id) => id,
+        Err(e) => {
+            error!("Unable read omaha app id: {:?}", e);
+            String::new()
+        }
+    };
+    let version = match version.parse::<Version>() {
+        Ok(version) => version,
+        Err(e) => {
+            error!("Unable to parse '{}' as Omaha version format: {:?}", version, e);
+            Version::from([0])
+        }
+    };
     let channel_config = sysconfig_client::channel::read_channel_config();
     info!("Channel configuration in sysconfig: {:?}", channel_config);
     let channel =
         channel_config.map(|config| config.channel_name().to_string()).ok().or(default_channel);
     let cohort = Cohort { hint: channel.clone(), name: channel, ..Cohort::default() };
     // Fuchsia only has a single app.
-    Ok(AppSet::new(vec![App {
+    AppSet::new(vec![App {
         id,
         version,
         fingerprint: None,
         cohort,
         user_counting: UserCounting::ClientRegulatedByDate(None),
-    }]))
+    }])
 }
 
 pub fn get_config(version: &str) -> Config {
@@ -69,7 +78,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_app_set() {
-        let app_set = get_app_set("1.2.3.4", None).unwrap();
+        let app_set = get_app_set("1.2.3.4", None);
         let apps = app_set.to_vec().await;
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "fuchsia:test-app-id");
@@ -80,7 +89,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_app_set_default_channel() {
-        let app_set = get_app_set("1.2.3.4", Some("default-channel".to_string())).unwrap();
+        let app_set = get_app_set("1.2.3.4", Some("default-channel".to_string()));
         let apps = app_set.to_vec().await;
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "fuchsia:test-app-id");
@@ -89,8 +98,10 @@ mod tests {
         assert_eq!(apps[0].cohort.hint, Some("default-channel".to_string()));
     }
 
-    #[test]
-    fn test_get_app_set_invalid_version() {
-        assert!(get_app_set("invalid version", None).is_err());
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_app_set_invalid_version() {
+        let app_set = get_app_set("invalid version", None);
+        let apps = app_set.to_vec().await;
+        assert_eq!(apps[0].version, Version::from([0]));
     }
 }

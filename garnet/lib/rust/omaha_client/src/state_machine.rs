@@ -234,6 +234,16 @@ where
     /// Start the StateMachine to do periodic update check in the background. The future this
     /// function returns never finishes!
     pub async fn start(state_machine_ref: Rc<RefCell<Self>>) {
+        {
+            let state_machine = state_machine_ref.borrow();
+            if !state_machine.app_set.valid().await {
+                error!(
+                    "App set not valid, not starting state machine: {:#?}",
+                    state_machine.app_set.to_vec().await
+                );
+                return;
+            }
+        }
         loop {
             {
                 let mut state_machine = state_machine_ref.borrow_mut();
