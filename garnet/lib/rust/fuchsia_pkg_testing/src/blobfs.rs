@@ -16,6 +16,8 @@ use {
     fuchsia_zircon as zx,
     openat::Dir,
     ramdevice_client::RamdiskClient,
+    std::convert::TryInto,
+    std::io::{Read, Write},
     std::{collections::BTreeSet, ffi::CString},
     zx::prelude::*,
 };
@@ -146,6 +148,20 @@ impl TestBlobFs {
                     .parse()?)
             })
             .collect()
+    }
+
+    /// Writes the blob to blobfs.
+    pub fn add_blob_from(
+        &self,
+        merkle: &fuchsia_merkle::Hash,
+        mut source: impl Read,
+    ) -> Result<(), failure::Error> {
+        let mut bytes = vec![];
+        source.read_to_end(&mut bytes)?;
+        let mut file = self.as_dir().unwrap().write_file(merkle.to_string(), 0777)?;
+        file.set_len(bytes.len().try_into().unwrap())?;
+        file.write_all(&bytes)?;
+        Ok(())
     }
 }
 

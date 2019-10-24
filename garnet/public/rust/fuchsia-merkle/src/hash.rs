@@ -5,6 +5,7 @@
 use crate::util::HASH_SIZE;
 use failure::Fail;
 use hex::{FromHex, FromHexError, ToHex};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::str;
 
@@ -27,6 +28,16 @@ impl str::FromStr for Hash {
     }
 }
 
+impl<'de> Deserialize<'de> for Hash {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        str::FromStr::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
 impl From<[u8; HASH_SIZE]> for Hash {
     fn from(bytes: [u8; HASH_SIZE]) -> Self {
         Hash(bytes)
@@ -36,6 +47,15 @@ impl From<[u8; HASH_SIZE]> for Hash {
 impl fmt::Display for Hash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.write_hex(f)
+    }
+}
+
+impl Serialize for Hash {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }
 

@@ -46,6 +46,10 @@ impl PackageEntry {
         }
     }
 }
+pub struct BlobFile {
+    pub merkle: fuchsia_merkle::Hash,
+    pub file: File,
+}
 
 impl Package {
     /// The merkle root of the package's meta.far.
@@ -119,6 +123,43 @@ impl Package {
         let mut res = btreeset![self.meta_far_merkle.clone()];
         res.extend(meta_contents.contents().iter().map(|(_, merkle)| merkle));
         Ok(res)
+    }
+
+    /// Returns an iterator of merkle/File pairs for each content blob in the package.
+    ///
+    /// Does not include the meta.far, see `meta_far()` and `meta_far_merkle_root()`, instead.
+    pub fn content_blob_files(&self) -> impl Iterator<Item = BlobFile> {
+        let bytes = fs::read(self.artifacts().join("manifest.json")).expect("read manifest blob");
+        let manifest: fuchsia_pkg::PackageManifest = serde_json::from_slice(&bytes).unwrap();
+        struct Blob {
+            merkle: fuchsia_merkle::Hash,
+            path: PathBuf,
+        }
+        let blobs = manifest
+            .into_blobs()
+            .into_iter()
+            .filter(|blob| blob.path != "meta/")
+            .map(|blob| Blob {
+                merkle: blob.merkle,
+                path: self.artifacts().join(
+                    // fixup source_path to be relative to artifacts by stripping
+                    // "/packages/{name}/" off the front.
+                    &blob.source_path[("/packages/".len() + self.name().len() + "/".len())..],
+                ),
+            })
+            .collect::<Vec<_>>();
+
+        blobs
+            .into_iter()
+            .map(|blob| BlobFile { merkle: blob.merkle, file: File::open(blob.path).unwrap() })
+    }
+
+    /// Puts all the blobs for the package in blobfs.
+    pub fn write_to_blobfs(&self, blobfs: &crate::blobfs::TestBlobFs) {
+        blobfs.add_blob_from(&self.meta_far_merkle_root(), self.meta_far().unwrap()).unwrap();
+        for blob in self.content_blob_files() {
+            blobfs.add_blob_from(&blob.merkle, blob.file).unwrap();
+        }
     }
 
     /// Verifies that the given directory serves the contents of this package.
@@ -425,7 +466,7 @@ impl PackageDir {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_merkle::MerkleTree, matches::assert_matches};
+    use {super::*, fuchsia_merkle::MerkleTree, matches::assert_matches, std::io::Read};
 
     #[test]
     #[should_panic(expected = r#""data" is not a directory"#)]
@@ -494,6 +535,33 @@ mod tests {
                 "b5b34f6234631edc7ccaa25533e2050e5d597a7331c8974306b617a3682a3197".parse()?
             ]
         );
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_content_blob_files() -> Result<(), Error> {
+        let pkg = PackageBuilder::new("rolldice")
+            .dir("bin")
+            .add_resource_at("rolldice", "asldkfjaslkdfjalskdjfalskdf".as_bytes())
+            .add_resource_at("rolldice2", "asldkfjaslkdfjalskdjfalskdf".as_bytes())
+            .finish()
+            .build()
+            .await?;
+
+        let mut iter = pkg.content_blob_files();
+        // 2 identical entries
+        for _ in 0..2 {
+            let BlobFile { merkle, mut file } = iter.next().unwrap();
+            assert_eq!(
+                merkle,
+                "b5b34f6234631edc7ccaa25533e2050e5d597a7331c8974306b617a3682a3197".parse().unwrap()
+            );
+            let mut contents = vec![];
+            file.read_to_end(&mut contents).unwrap();
+            assert_eq!(contents, b"asldkfjaslkdfjalskdjfalskdf")
+        }
+        assert_eq!(iter.next().map(|b| b.merkle), None);
 
         Ok(())
     }
