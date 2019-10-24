@@ -18,3 +18,9 @@ graphics_compute_glslangValidator_tool_target =
 # Path to the 'clang-format' host tool. Only used to generate debug shaders.
 # Should be either an absolute path, or a path relative to |root_out_dir|.
 graphics_compute_clang_format_host_tool = "$clang_prefix/clang-format"
+
+# A GN target that provides the GoogleTest library. To be used as a dependency
+# in source sets that include <gtest/gtest.h>. Executable should depend on
+# graphics_compute_gtest_main_target, which is defined differently for the
+# host and Fuchsia builds.
+graphics_compute_gtest_target = "//third_party/googletest:gtest"

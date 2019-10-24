@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("gn/testing.gni")
+import("gn/build_rules.gni")
 
 # Ensure that host tests are always rebuilt with device ones on Linux hosts.
 _build_host_tests = is_fuchsia && host_os == "linux"
@@ -24,10 +24,22 @@ group("compute") {
 # a missing appropriate bot configuration (see SPN-42 for details). Thus tests
 # are spread over two targets.
 #
+#   tests: A group that lists all the tests to build by default, and which
+#          will be run during continuous integration, since this is reachable
+#          from //bundles/tests.
+#
+#   all_tests: A group that depends on 'tests', but adds other programs
+#              and test packages that should not or cannot run during
+#              continuous integration.
+#
+# 'fx run-test <name>' or 'fx run-host-tests <name>' can be used to manually
+# launch a test that was defined with graphics_compute_test_package() or
+# graphics_compute_unittests_package().
+#
+# Other programs (e.g. graphics_compute_executable() targts) can be run with
+# "fx shell run <name>" or "out/default/host_x64/<name>" instead.
+#
 
-# These tests will always run on the Fuchsia CQ since they are reachable from
-# //bundles/tests. These tests can be run with 'fx run-test' as well as
-# 'fx run-host-tests'.
 group("tests") {
   testonly = true
   public_deps = [
@@ -35,6 +47,16 @@ group("tests") {
     "mold:mold-tests",
     "spinel-rs:spinel-rs-tests",
   ]
+
+  # NOTE: All dependencies here are run in continuous integration, but our
+  # host bots currently lack a proper Vulkan loader + ICD. Thus only add
+  # the device-specific Vulkan-based unit-tests for now.
+  if (is_fuchsia) {
+    public_deps += [
+      ":graphics_compute_vk_unittests",
+    ]
+  }
+
   if (_build_host_tests) {
     data_deps = [
       ":tests($host_toolchain)",
@@ -42,13 +64,10 @@ group("tests") {
   }
 }
 
-# This is the set of all tests, including thoses that do not run on the CQ
-# until SPN-42 is fixed. These tests can be run with 'fx run-test' on a
-# Fuchsia device. For host tests, one will need to manually invoke them
-# (e.g. out/default/host_x64/<test_name>).
 group("all_tests") {
   testonly = true
   public_deps = [
+    ":graphics_compute_vk_unittests",
     ":tests",
     "hotsort:tests",
     "spinel:tests",
@@ -62,10 +81,20 @@ group("all_tests") {
 }
 
 # A target used to group all simple graphics compute unit-tests
-# (i.e. those that do not depend on Vulkan for now).
-graphics_compute_unittest_package("graphics_compute_unittests") {
-  tests = [
+# (i.e. those that do not depend on Vulkan for now). Unlike Vulkan-based
+# tests, these can run anywhere on the CQ.
+graphics_compute_unittests_package("graphics_compute_unittests") {
+  deps = [
     "common:common_unittests",
     "tests:common_unittests",
   ]
+}
+
+# A target used to group all graphics compute unit-tests that depend
+# on a working Vulkan environment.
+graphics_compute_unittests_package("graphics_compute_vk_unittests") {
+  deps = [
+    "tests:common_vk_unittests",
+  ]
+  needs_vulkan = true
 }

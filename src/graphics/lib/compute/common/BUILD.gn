@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../gn/testing.gni")
+import("../gn/build_rules.gni")
 
 config("common_public_config") {
   # Unlike the sources, clients use "common/..." to include the headers here.

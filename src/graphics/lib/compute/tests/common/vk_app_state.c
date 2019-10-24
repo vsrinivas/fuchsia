@@ -702,12 +702,13 @@ static RENDERDOC_API_1_1_2 * s_renderdoc_api = NULL;
 static void *                s_renderdoc_lib = NULL;
 
 static void
-renderdoc_capture_setup(void)
+renderdoc_capture_setup(bool debug)
 {
   s_renderdoc_lib = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD);
   if (!s_renderdoc_lib)
     {
-      fprintf(stderr, "RenderDoc is not running, capture is impossible!\n");
+      if (debug)
+        fprintf(stderr, "RenderDoc is not running, capture is impossible!\n");
       return;
     }
 
@@ -719,10 +720,15 @@ renderdoc_capture_setup(void)
 
   if (!s_renderdoc_api)
     {
-      fprintf(stderr, "RenderDoc API not available, capture is impossible!\n");
+      if (debug)
+        fprintf(stderr, "RenderDoc API not available, capture is impossible!\n");
+
       return;
     }
-  printf("ENABLING RENDERDOC CAPTURE\n");
+
+  if (debug)
+    printf("ENABLING RENDERDOC CAPTURE\n");
+
   s_renderdoc_api->StartFrameCapture(NULL, NULL);
 }
 
@@ -900,7 +906,7 @@ bool
 vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * config)
 {
 #if USE_RENDERDOC_CAPTURE
-  renderdoc_capture_setup();
+  renderdoc_capture_setup(config->enable_debug_report);
 #endif
 
   *app_state = (const vk_app_state_t){};
@@ -929,7 +935,9 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   StringList enabled_layers     = STRING_LIST_INITIALIZER;
   StringList enabled_extensions = STRING_LIST_INITIALIZER;
 
-  if (config->enable_validation)
+  bool enable_validation = config->enable_validation || config->enable_debug_report;
+
+  if (enable_validation)
     {
       // VK_LAYER_KHRONOS_validation is the new hotness to use, but not
       // all Vulkan installs support it yet, so fallback to
@@ -1134,12 +1142,19 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   uint32_t graphics_family = UINT32_MAX;
   uint32_t compute_family  = UINT32_MAX;
 
+  const VkQueueFlags wanted_combined_queues = device_config.required_combined_queues;
+  VkQueueFlags       wanted_queues = wanted_combined_queues | device_config.required_queues;
+
+  // Enabling the swapchain requires the graphics queue.
+  // Otherwise, use the graphics queue by default if none was asked.
+  if (require_swapchain || !wanted_queues)
+    wanted_queues |= VK_QUEUE_GRAPHICS_BIT;
+
   {
     QueueFamilies families;
     queue_families_init(&families, app_state->pd);
 
     // First, try to find combined queues if requested.
-    VkQueueFlags wanted_combined_queues = device_config.required_combined_queues;
     if (wanted_combined_queues)
       {
         uint32_t family;
@@ -1158,9 +1173,7 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
       }
 
     // Then find other queues if requested.
-    VkQueueFlags single_queues =
-      device_config.required_queues & ~device_config.required_combined_queues;
-
+    VkQueueFlags single_queues = wanted_queues & ~wanted_combined_queues;
     if (single_queues)
       {
         uint32_t family;
@@ -1198,9 +1211,6 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   }
 
   // Sanity checks.
-  VkQueueFlags wanted_queues =
-    device_config.required_combined_queues | device_config.required_queues;
-
   if ((wanted_queues & VK_QUEUE_GRAPHICS_BIT) != 0 && graphics_family == UINT32_MAX)
     {
       fprintf(stderr, "This device does not provide a graphics queue!\n");
@@ -1228,19 +1238,32 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   app_state->compute_qfi = compute_family;
 
   //
-  // create queue
+  // create queues
   //
-  float const qp[2] = { 1.0f };
+  uint32_t queue_families[2]  = { graphics_family, compute_family };
+  uint32_t queue_family_count = 0;
 
-  VkDeviceQueueCreateInfo const queue_info = {
+  if (graphics_family != UINT32_MAX)
+    {
+      queue_families[queue_family_count++] = graphics_family;
+    }
+  if (compute_family != UINT32_MAX && compute_family != graphics_family)
+    {
+      queue_families[queue_family_count++] = compute_family;
+    }
 
-    .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-    .pNext            = NULL,
-    .flags            = 0,
-    .queueFamilyIndex = app_state->qfi,
-    .queueCount       = 1,
-    .pQueuePriorities = qp
-  };
+  VkDeviceQueueCreateInfo queue_family_info[2];
+  for (uint32_t nn = 0; nn < queue_family_count; ++nn)
+    {
+      queue_family_info[nn] = (const VkDeviceQueueCreateInfo){
+        .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .pNext            = NULL,
+        .flags            = 0,
+        .queueFamilyIndex = queue_families[nn],
+        .queueCount       = 1,
+        .pQueuePriorities = &(const float){ 1.0f },
+      };
+    }
 
   StringList device_extensions = STRING_LIST_INITIALIZER;
 
@@ -1292,8 +1315,8 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
     .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     .pNext                   = NULL,
     .flags                   = 0,
-    .queueCreateInfoCount    = 1,
-    .pQueueCreateInfos       = &queue_info,
+    .queueCreateInfoCount    = queue_family_count,
+    .pQueueCreateInfos       = queue_family_info,
     .enabledLayerCount       = 0,
     .ppEnabledLayerNames     = NULL,
     .enabledExtensionCount   = device_extensions.count,

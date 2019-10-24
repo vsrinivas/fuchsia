@@ -4,7 +4,6 @@
 
 import("../gn/build_rules.gni")
 import("../gn/glsl_shader_rules.gni")
-import("../gn/testing.gni")
 import("vulkan_testing.gni")
 
 config("common_public_config") {
@@ -86,6 +85,15 @@ source_set("common_vk") {
     }
   }
   public_configs = [ ":common_public_config" ]
+}
+
+graphics_compute_unittests("common_vk_unittests") {
+  sources = [
+    "common/vk_app_state_unittest.cc",
+  ]
+  deps = [
+    ":common_vk",
+  ]
 }
 
 # Skia test application helper library.

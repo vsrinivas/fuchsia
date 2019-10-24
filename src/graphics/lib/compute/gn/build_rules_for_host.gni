@@ -12,95 +12,58 @@ if (_is_fuchsia_tree) {
   import("//build/testing/test_spec.gni")
 }
 
+# A target that provides the GTest main() function for the host.
+graphics_compute_gtest_main_target = "//third_party/googletest:gtest_main"
+
 # A target providing access to Vulkan at compile time when added to deps.
 # TODO(SPN-14): Change this to a more recent upstream.
 graphics_compute_vulkan_loader_target = "${graphics_compute_dir}/gn/host:vulkan"
 
-# Generate an executable for the graphics compute project.
-# This also generates a Fuchsia package for it, using a default .cmx file
-# that can be overriden by providing a "meta" argument.
-#
-# Expect all variables supported by the Fuchsia package() template.
-#
-template("graphics_compute_executable") {
+# NOTE: These definitions are used by those in build_rules.gni.
+
+# Accepts same variables as GN executable() rule, as well as:
+#   needs_vulkan: Optional flag. Set to true to add Vulkan dependencies.
+template("graphics_compute_executable_rule") {
   executable(target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "loadable_modules",
-                             "meta",
-                             "resources",
-                             "target_name",
-                           ])
-    output_name = invoker.target_name
-
-    # Ignore Fuchsia package specific variables.
-    assert(defined(resources) || !defined(resources))
-    assert(defined(loadable_modules) || !defined(loadable_modules))
-    assert(defined(meta) || !defined(meta))
-  }
-}
-
-# Generate a Vulkan-based executable for the graphics compute project.
-# Compared to graphics_compute_executable(), this adds Vulkan dependencies
-# automatically to the executable and its Fuchsia package.
-#
-template("graphics_compute_vulkan_executable") {
-  graphics_compute_executable(target_name) {
-    forward_variables_from(invoker, "*")
-    if (!defined(deps)) {
-      deps = []
+    forward_variables_from(invoker, "*", [ "needs_vulkan" ])
+    if (defined(invoker.needs_vulkan) && invoker.needs_vulkan) {
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ graphics_compute_vulkan_loader_target ]
     }
-    deps += [ graphics_compute_vulkan_loader_target ]
   }
 }
 
-# Used to generate an executable that depends on GoogleTest and statically
-# links a gtest_main library appropriate for the host. DO NOT CALL DIRECTLY,
-# Use graphics_compute_unittest_package() instead.
-template("graphics_compute_unittest_package_rule") {
-  _main_target_name = target_name
-  _output_name = target_name
-  if (defined(invoker.output_name)) {
-    _output_name = invoker.output_name
+# Accepts same variables as GN executable() rule, as well as:
+#   needs_vulkan: Optional flag. Set to true to add Vulkan dependencies.
+template("graphics_compute_test_rule") {
+  _target_name = target_name
+
+  # Generate the executable
+  _binary_target = "bin_${target_name}"
+  graphics_compute_executable_rule(_binary_target) {
+    testonly = true
+    output_name = _target_name
+    forward_variables_from(invoker, "*", [ "target_name" ])
   }
-  _output_path = "${root_out_dir}/${_output_name}"
 
-  _deps = []
+  _deps = [ ":${_binary_target}" ]
 
+  # For Fuchsia, ensure the test is visible for 'fx run-host-tests <test_name>'
   if (_is_fuchsia_tree) {
-    # Support 'fx run-host-tests <test_name>' for Fuchsia tree builds.
     _test_spec_target_name = "${target_name}__test_spec"
     test_spec(_test_spec_target_name) {
       testonly = true
-      name = _main_target_name
-      install_path = _output_path
-      command = [ rebase_path(_output_path, root_build_dir) ]
+      name = _target_name
+      install_path = "${root_out_dir}/${_target_name}"
+      command = [ rebase_path(install_path, root_build_dir) ]
     }
 
     _deps += [ ":${_test_spec_target_name}" ]
   }
 
-  _program_target = "bin_${target_name}"
-  executable(_program_target) {
-    testonly = true
-    output_name = _output_name
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "target_name",
-                             "tests",
-                           ])
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += invoker.tests
-    deps += [ "//third_party/googletest:gtest_main" ]
-  }
-
-  _deps += [ ":${_program_target}" ]
-
-  group(_main_target_name) {
+  group(_target_name) {
     testonly = true
     deps = _deps
   }

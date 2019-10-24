@@ -8,3 +8,112 @@ if (_host_build) {
 } else {
   import("build_rules_for_fuchsia.gni")
 }
+
+# Create a simple host or device executable.
+# For Fuchsia, this creates a package with a single component,
+# which by default only requires the minimal amount of sandbox
+# features and services to run.
+#
+# Set |needs_vulkan| to true when calling this template to add
+# Vulkan-related dependencies and component features/services.
+#
+# You can launch these programs with:
+#
+#     fx shell run <name>          (on Fuchsia devices), or
+#     out/default/host_x64/<name>  (on the host)
+#
+# Note that on Fuchsia, the executable is launched in the
+# process of its caller.
+#
+# Same variables as GN executable(), as well as:
+#   needs_vulkan: Optional flag. set to true to add Vulkan dependencies.
+#
+template("graphics_compute_executable") {
+  graphics_compute_executable_rule(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+}
+
+# Convenience rule for Vulkan-based executables.
+# Same as above, but also automatically sets |needs_vulkan| to true.
+#
+template("graphics_compute_vulkan_executable") {
+  graphics_compute_executable_rule(target_name) {
+    forward_variables_from(invoker, "*")
+    needs_vulkan = true
+  }
+}
+
+# Create a host program or Fuchsia test package.
+#
+# This creates a test component that can be invoked with
+#     "fx run-test <name>" (to run on a device), or
+#     "fx run-host-tests <name>" (to run on the host).
+#
+# Note that on Fuchsia, this runs the test component in an hermetic process,
+# unlike regular executables that run inside their caller process' environment.
+#
+# Set |needs_vulkan| to true when calling this rule in order to
+# add Vulkan-based dependencies as well as Fuchsia features/services.
+# Moreover, this will ensure, on Fuchsia, that said tests will
+# run during continuous integration (CQ or global integration) in
+# graphics-compatible bots.
+#
+# Same variables as GN executable() as well as:
+#   needs_vulkan: Optional flag. set to true to add Vulkan dependencies.
+#
+template("graphics_compute_test_package") {
+  graphics_compute_test_rule(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+}
+
+# Convenience rule to define source set that defines GoogleTest-based
+# tests. Use these as dependencies of a graphics_compute_unittests_package()
+# target. See example usage below.
+#
+# Same variables as GN source_set() rule.
+#
+template("graphics_compute_unittests") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+    testonly = true
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ graphics_compute_gtest_target ]
+  }
+}
+
+# Create a test program or Fuchsia package that runs GoogleTest-based
+# unittests. Typical usage is to list dependencies that are source sets
+# that use graphics_compute_gtest_target, as in:
+#
+#    graphics_compute_unittests_package("foo_tests") {
+#      deps = [
+#         ":foo_unittests",
+#         ":foo_extra_unittests",
+#      ]
+#    }
+#
+#    graphics_compute_unittests("foo_unittests") {
+#      sources = [ "foo_unittest.cc" ]
+#    }
+#
+#    graphics_compute_unittests("foo_extra_unittests") {
+#      sources = [ "foo_extra_unittest.cc" ]
+#    }
+#
+# Same variables as GN executable() as well as:
+#   needs_vulkan: Optional flag. set to true to add Vulkan dependencies.
+#
+template("graphics_compute_unittests_package") {
+  graphics_compute_test_rule(target_name) {
+    testonly = true
+    forward_variables_from(invoker, "*")
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ graphics_compute_gtest_main_target ]
+  }
+}

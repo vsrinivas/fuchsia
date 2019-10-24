@@ -72,22 +72,6 @@ template("vulkan_test_app") {
       "${graphics_compute_dir}/tests:common",
       "${graphics_compute_dir}/tests:common_vk",
     ]
-    if (is_fuchsia) {
-      if (!defined(public_deps)) {
-        public_deps = []
-      }
-      public_deps += image_pipe_swapchain_fb.public_deps
-
-      if (!defined(loadable_modules)) {
-        loadable_modules = []
-      }
-      loadable_modules += image_pipe_swapchain_fb.loadable_modules
-
-      if (!defined(resources)) {
-        resources = []
-      }
-      resources += image_pipe_swapchain_fb.resources
-    }
     if (defined(_shaders_c_source_target)) {
       if (!defined(include_dirs)) {
         include_dirs = []
