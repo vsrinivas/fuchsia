@@ -9,17 +9,7 @@ bootsvc_flavors = []
 foreach(image, zircon_images) {
   if (image.type == "manifest" && image.cpu == target_cpu &&
       image.name == "bootsvc") {
-    _name = "bootsvc"
-    toolchain = get_label_info(image.label, "toolchain")
-    if (string_replace(toolchain, "asan-ubsan", "") != toolchain) {
-      _name += ".asan-ubsan"
-    } else if (string_replace(toolchain, "ubsan", "") != toolchain) {
-      _name += ".ubsan"
-    } else if (string_replace(toolchain, "asan", "") != toolchain) {
-      _name += ".asan"
-    } else if (string_replace(toolchain, "gcc", "") != toolchain) {
-      _name += ".gcc"
-    }
+    _name = string_replace("bootsvc.${image.path}", "/", "_")
     bootsvc_flavors += [
       {
         name = _name
