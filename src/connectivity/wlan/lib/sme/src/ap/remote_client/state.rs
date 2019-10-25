@@ -9,10 +9,10 @@ use {
             rsn::is_valid_rsne_subset, Context, RsnCfg,
         },
         timer::EventId,
-        MlmeRequest,
     },
     failure::{bail, ensure, format_err},
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon::{self as zx, DurationNum},
     log::error,
     std::sync::{Arc, Mutex},
     wlan_common::{
@@ -28,6 +28,10 @@ use {
     },
     wlan_statemachine::*,
 };
+
+// This is not specified by 802.11, but we need some way of kicking out clients that authenticate
+// but don't intend to associate.
+const ASSOCIATION_TIMEOUT_SECONDS: i64 = 300;
 
 /// Authenticating is the initial state a client is in when it arrives at the SME.
 ///
@@ -58,7 +62,7 @@ impl Authenticating {
 
         let event = ClientEvent::AssociationTimeout;
         let timeout_event_id =
-            r_sta.schedule_at(ctx, zx::Time::after(r_sta.association_timeout), event);
+            r_sta.schedule_at(ctx, zx::Time::after(ASSOCIATION_TIMEOUT_SECONDS.seconds()), event);
 
         Ok(timeout_event_id)
     }
@@ -138,12 +142,7 @@ impl Authenticated {
                     result_code: fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
                 })?;
 
-                Some(RsnaLinkState::try_new(r_sta, ctx, authenticator).map_err(|error| {
-                    AssociationError {
-                        error,
-                        result_code: fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
-                    }
-                })?)
+                Some(RsnaLinkState::new(authenticator))
             }
             (None, None) => None,
             _ => {
@@ -202,20 +201,14 @@ pub const RSNA_NEGOTIATION_REQUEST_TIMEOUT_SECONDS: i64 = 1;
 pub const RSNA_NEGOTIATION_TIMEOUT_SECONDS: i64 = 5;
 
 impl RsnaLinkState {
-    fn try_new(
-        r_sta: &mut RemoteClient,
-        ctx: &mut Context,
-        authenticator: Box<dyn Authenticator>,
-    ) -> Result<RsnaLinkState, failure::Error> {
-        let mut rsna_link_state = Self {
+    fn new(authenticator: Box<dyn Authenticator>) -> Self {
+        Self {
             authenticator,
             last_key_frame: None,
             request_attempts: 0,
             request_timeout_event_id: None,
             negotiation_timeout_event_id: None,
-        };
-        rsna_link_state.initiate_key_exchange(r_sta, ctx)?;
-        Ok(rsna_link_state)
+        }
     }
 
     /// Initiates a key exchange between the remote client and AP.
@@ -287,14 +280,8 @@ impl RsnaLinkState {
             .as_ref()
             .ok_or(RsnaNegotiationError::Error(format_err!("no key frame available to resend?")))?;
 
-        ctx.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
-            src_addr: ctx.device_info.addr.clone(),
-            dst_addr: r_sta.addr.clone(),
-            data: frame.clone().into(),
-        }));
-
+        r_sta.send_eapol_req(ctx, frame.clone());
         self.reschedule_request_timeout(r_sta, ctx);
-
         Ok(())
     }
 
@@ -320,22 +307,16 @@ impl RsnaLinkState {
         for update in update_sink {
             match update {
                 SecAssocUpdate::TxEapolKeyFrame(frame) => {
-                    ctx.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
-                        src_addr: ctx.device_info.addr.clone(),
-                        dst_addr: r_sta.addr.clone(),
-                        data: frame.clone().into(),
-                    }));
+                    r_sta.send_eapol_req(ctx, frame.clone());
                     self.last_key_frame = Some(frame.clone());
                 }
-                SecAssocUpdate::Key(key) => r_sta.send_key(&key, ctx),
+                SecAssocUpdate::Key(key) => r_sta.send_key(ctx, &key),
                 SecAssocUpdate::Status(status) => match status {
                     SecAssocStatus::EssSaEstablished => {
-                        ctx.mlme_sink.send(MlmeRequest::SetCtrlPort(
-                            fidl_mlme::SetControlledPortRequest {
-                                peer_sta_address: r_sta.addr.clone(),
-                                state: fidl_mlme::ControlledPortState::Open,
-                            },
-                        ));
+                        r_sta.send_set_controlled_port_req(
+                            ctx,
+                            fidl_mlme::ControlledPortState::Open,
+                        );
 
                         // Negotiation is complete, clear the timeout and stop storing the last key
                         // frame.
@@ -431,7 +412,7 @@ impl Associated {
     ) -> EventId {
         aid_map.release_aid(self.aid);
         let event = ClientEvent::AssociationTimeout;
-        r_sta.schedule_at(ctx, zx::Time::after(r_sta.association_timeout), event)
+        r_sta.schedule_at(ctx, zx::Time::after(ASSOCIATION_TIMEOUT_SECONDS.seconds()), event)
     }
 }
 
@@ -449,9 +430,7 @@ statemachine!(
     Associated => Authenticating,
 );
 
-// TODO(tonyy): Remove this when we use states.
 /// The external representation of the state machine for the client.
-#[allow(dead_code)]
 impl States {
     pub fn new_initial() -> States {
         States::from(State::new(Authenticating))
@@ -534,12 +513,28 @@ impl States {
         match self {
             States::Authenticated(state) => {
                 match state.handle_assoc_ind(r_sta, ctx, aid_map, rsn_cfg, s_rsne) {
-                    Ok((aid, rsna_link_state)) => {
+                    Ok((aid, mut rsna_link_state)) => {
                         r_sta.send_associate_resp(
                             ctx,
                             fidl_mlme::AssociateResultCodes::Success,
                             aid,
                         );
+
+                        // RSNA authentication needs to be handled after association.
+                        if let Some(rsna_link_state) = rsna_link_state.as_mut() {
+                            if let Err(error) = rsna_link_state.initiate_key_exchange(r_sta, ctx) {
+                                error!(
+                                    "client {:02X?} MLME-ASSOCIATE.indication (key exchange): {}",
+                                    r_sta.addr, error
+                                );
+                                r_sta.send_deauthenticate_req(
+                                    ctx,
+                                    fidl_mlme::ReasonCode::Ieee8021XAuthFailed,
+                                );
+                                return state.transition_to(Authenticating).into();
+                            }
+                        }
+
                         state.transition_to(Associated { aid, rsna_link_state }).into()
                     }
                     Err(AssociationError { error, result_code }) => {
@@ -691,9 +686,6 @@ impl States {
                     self
                 }
             },
-
-            // TODO(tonyy): Remove this, the new state machine uses RsnaTimeout(RsnaTimeout::Negotiation).
-            _ => unreachable!(),
         }
     }
 }
@@ -705,7 +697,7 @@ mod tests {
         crate::{
             ap::{aid, create_rsn_cfg, test_utils::MockAuthenticator, TimeStream},
             sink::MlmeSink,
-            test_utils, timer, MlmeStream,
+            test_utils, timer, MlmeRequest, MlmeStream,
         },
         futures::channel::mpsc,
         wlan_common::{
@@ -722,7 +714,6 @@ mod tests {
 
     const AP_ADDR: MacAddr = [6u8; 6];
     const CLIENT_ADDR: MacAddr = [7u8; 6];
-    const ASSOCIATION_TIMEOUT_SECONDS: i64 = 5;
 
     fn make_cipher(suite_type: u8) -> cipher::Cipher {
         cipher::Cipher { oui: OUI, suite_type }
@@ -742,12 +733,7 @@ mod tests {
     }
 
     fn make_remote_client() -> RemoteClient {
-        RemoteClient::new(
-            CLIENT_ADDR,
-            0,
-            None,
-            zx::Duration::from_seconds(ASSOCIATION_TIMEOUT_SECONDS),
-        )
+        RemoteClient::new(CLIENT_ADDR)
     }
 
     fn make_env() -> (Context, MlmeStream, TimeStream) {
@@ -1100,9 +1086,6 @@ mod tests {
         assert_variant!(rsna_link_state, Some(_));
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
-        assert_variant!(mlme_event, MlmeRequest::Eapol(fidl_mlme::EapolRequest { .. }));
-
-        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
@@ -1111,6 +1094,9 @@ mod tests {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
         });
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::Eapol(fidl_mlme::EapolRequest { .. }));
     }
 
     #[test]

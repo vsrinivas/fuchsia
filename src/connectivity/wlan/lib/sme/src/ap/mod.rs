@@ -8,32 +8,31 @@ mod event;
 mod remote_client;
 mod rsn;
 #[cfg(test)]
-mod test_utils;
+pub mod test_utils;
 
-use crate::ap::{
-    aid::AssociationId,
-    authenticator::Authenticator,
-    event::{Event, SmeEvent},
-    rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset},
-};
-use crate::phy_selection::derive_phy_cbw_for_ap;
-use crate::responder::Responder;
-use crate::sink::MlmeSink;
-use crate::timer::{self, EventId, TimedEvent, Timer};
-use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
-use failure::{bail, ensure};
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
-use futures::channel::{mpsc, oneshot};
-use log::{debug, error, info, warn};
-use std::boxed::Box;
-use std::sync::{Arc, Mutex};
-use wlan_common::ie::rsn::rsne::{self, Rsne};
-use wlan_common::{
-    channel::{Channel, Phy},
-    RadioConfig,
-};
-use wlan_rsn::{
-    self, gtk::GtkProvider, nonce::NonceReader, psk, NegotiatedProtection, ProtectionInfo,
+use remote_client::*;
+use event::*;
+use rsn::*;
+
+use {
+    crate::{
+        phy_selection::derive_phy_cbw_for_ap,
+        responder::Responder,
+        sink::MlmeSink,
+        timer::{self, EventId, TimedEvent, Timer},
+        DeviceInfo, MacAddr, MlmeRequest, Ssid,
+    },
+    failure::bail,
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
+    futures::channel::{mpsc, oneshot},
+    log::{debug, error, info, warn},
+    std::collections::HashMap,
+    wlan_common::{
+        channel::{Channel, Phy},
+        ie::rsn::rsne::Rsne,
+        RadioConfig,
+    },
+    wlan_rsn::{self, psk},
 };
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
@@ -80,7 +79,8 @@ pub struct RsnCfg {
 struct InfraBss {
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
-    client_map: remote_client::Map,
+    clients: HashMap<MacAddr, RemoteClient>,
+    aid_map: aid::Map,
     ctx: Context,
 }
 
@@ -248,9 +248,7 @@ impl super::Station for ApSme {
                     }
                     MlmeEvent::AssociateInd { ind } => bss.handle_assoc_ind(ind),
                     MlmeEvent::DisassociateInd { ind } => bss.handle_disassoc_ind(ind),
-                    MlmeEvent::EapolInd { ind } => {
-                        let _ = bss.handle_eapol_ind(ind).map_err(|e| warn!("{}", e));
-                    }
+                    MlmeEvent::EapolInd { ind } => bss.handle_eapol_ind(ind),
                     MlmeEvent::EapolConf { resp } => {
                         if resp.result_code != fidl_mlme::EapolResultCodes::Success {
                             // TODO(NET-1634) - Handle unsuccessful EAPoL confirmation. It doesn't
@@ -316,7 +314,15 @@ fn handle_start_conf(
     match conf.result_code {
         fidl_mlme::StartResultCodes::Success => {
             responder.respond(StartResult::Success);
-            State::Started { bss: InfraBss { ssid, rsn_cfg, client_map: Default::default(), ctx } }
+            State::Started {
+                bss: InfraBss {
+                    ssid,
+                    rsn_cfg,
+                    clients: HashMap::new(),
+                    aid_map: aid::Map::default(),
+                    ctx,
+                },
+            }
         }
         result_code => {
             error!("failed to start BSS: {:?}", result_code);
@@ -327,130 +333,111 @@ fn handle_start_conf(
 }
 
 impl InfraBss {
-    fn handle_auth_ind(&mut self, ind: fidl_mlme::AuthenticateIndication) {
-        if self.client_map.remove_client(&ind.peer_sta_address).is_some() {
-            warn!(
-                "client {:?} authenticates while still associated; removed client from map",
-                ind.peer_sta_address
-            );
-        }
-
-        let result_code = if ind.auth_type == fidl_mlme::AuthenticationTypes::OpenSystem {
-            fidl_mlme::AuthenticateResultCodes::Success
+    /// Removes a client from the map.
+    ///
+    /// A client may only be removed via |remove_client| if:
+    ///
+    /// - MLME-DEAUTHENTICATE.request has been issued for the client, or,
+    /// - MLME-DEAUTHENTICATE.indication or MLME-DEAUTHENTICATE.confirm has been received for the
+    ///   client, or,
+    /// - MLME-AUTHENTICATE.indication is being handled (see comment in |handle_auth_ind| for
+    ///   details).
+    ///
+    /// If the client has an AID, its AID will be released from the AID map.
+    ///
+    /// Returns true if a client was removed, otherwise false.
+    fn remove_client(&mut self, addr: &MacAddr) -> bool {
+        if let Some(client) = self.clients.remove(addr) {
+            if let Some(aid) = client.aid() {
+                self.aid_map.release_aid(aid);
+            }
+            true
         } else {
-            warn!("unsupported authentication type {:?}", ind.auth_type);
-            fidl_mlme::AuthenticateResultCodes::Refused
-        };
-        let resp =
-            fidl_mlme::AuthenticateResponse { peer_sta_address: ind.peer_sta_address, result_code };
-        self.ctx.mlme_sink.send(MlmeRequest::AuthResponse(resp));
+            false
+        }
     }
 
-    fn handle_deauth(&mut self, client_addr: &MacAddr) {
-        let _ = self.client_map.remove_client(client_addr);
+    fn handle_auth_ind(&mut self, ind: fidl_mlme::AuthenticateIndication) {
+        let peer_addr = ind.peer_sta_address;
+        if self.remove_client(&peer_addr) {
+            // This may occur if an already authenticated client on the SME receives a fresh
+            // MLME-AUTHENTICATE.indication from the MLME.
+            //
+            // This is safe, as we will make a fresh the client state and return an appropriate
+            // MLME-AUTHENTICATE.response to the MLME, indicating whether it should deauthenticate
+            // the client or not.
+            warn!(
+                "client {:02X?} is trying to reauthenticate; removing client and starting again",
+                peer_addr
+            );
+        }
+        let mut client = RemoteClient::new(peer_addr);
+        client.handle_auth_ind(&mut self.ctx, ind.auth_type);
+        if !client.authenticated() {
+            info!("client {:02X?} was not authenticated", peer_addr);
+            return;
+        }
+
+        info!("client {:02X?} authenticated", peer_addr);
+        self.clients.insert(peer_addr, client);
+    }
+
+    fn handle_deauth(&mut self, peer_addr: &MacAddr) {
+        if !self.remove_client(peer_addr) {
+            warn!(
+                "client {:02X?} never authenticated, ignoring deauthentication request",
+                peer_addr
+            );
+            return;
+        }
+
+        info!("client {:02X?} deauthenticated", peer_addr);
     }
 
     fn handle_assoc_ind(&mut self, ind: fidl_mlme::AssociateIndication) {
-        if self.client_map.remove_client(&ind.peer_sta_address).is_some() {
-            warn!(
-                "client {:?} associates while still associated; removed client from map",
-                ind.peer_sta_address
-            );
-        }
+        let peer_addr = ind.peer_sta_address;
 
-        let result = match (ind.rsn.as_ref(), self.rsn_cfg.clone()) {
-            (Some(s_rsne_bytes), Some(a_rsn)) => {
-                self.handle_rsn_assoc_ind(s_rsne_bytes, a_rsn, &ind.peer_sta_address)
+        let client = match self.clients.get_mut(&peer_addr) {
+            None => {
+                warn!(
+                    "client {:02X?} never authenticated, ignoring association indication",
+                    peer_addr
+                );
+                return;
             }
-            (None, None) => self.add_client(ind.peer_sta_address.clone(), None),
-            _ => {
-                warn!("unexpected RSN element from client: {:?}", ind.rsn);
-                Err(fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch)
-            }
-        };
-        let (aid, result_code) = match result {
-            Ok(aid) => (aid, fidl_mlme::AssociateResultCodes::Success),
-            Err(result_code) => (0, result_code),
-        };
-        let resp = fidl_mlme::AssociateResponse {
-            peer_sta_address: ind.peer_sta_address.clone(),
-            result_code,
-            association_id: aid,
+            Some(client) => client,
         };
 
-        self.ctx.mlme_sink.send(MlmeRequest::AssocResponse(resp));
-        if result_code == fidl_mlme::AssociateResultCodes::Success && self.rsn_cfg.is_some() {
-            match self.client_map.get_mut_client(&ind.peer_sta_address) {
-                Some(client) => client.initiate_key_exchange(&mut self.ctx, 1),
-                None => error!(
-                    "cannot initiate key exchange for unknown client: {:02X?}",
-                    ind.peer_sta_address
-                ),
-            }
+        client.handle_assoc_ind(&mut self.ctx, &mut self.aid_map, &self.rsn_cfg, ind.rsn);
+        if !client.authenticated() {
+            warn!("client {:02X?} failed to associate and was deauthenticated", peer_addr);
+            self.remove_client(&peer_addr);
+        } else if !client.associated() {
+            warn!("client {:02X?} failed to associate but did not deauthenticate", peer_addr);
+        } else {
+            info!("client {:02X?} associated", peer_addr);
         }
     }
 
     fn handle_disassoc_ind(&mut self, ind: fidl_mlme::DisassociateIndication) {
-        let _ = self.client_map.remove_client(&ind.peer_sta_address);
-    }
+        let peer_addr = ind.peer_sta_address;
 
-    fn handle_rsn_assoc_ind(
-        &mut self,
-        s_rsne_bytes: &Vec<u8>,
-        a_rsn: RsnCfg,
-        client_addr: &MacAddr,
-    ) -> Result<AssociationId, fidl_mlme::AssociateResultCodes> {
-        let (_, s_rsne) = rsne::from_bytes(s_rsne_bytes).map_err(|e| {
-            warn!("failed to deserialize RSNE: {:?}", e);
-            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
-        })?;
-        validate_s_rsne(&s_rsne, &a_rsn.rsne).map_err(|_| {
-            warn!("incompatible client RSNE");
-            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
-        })?;
+        let client = match self.clients.get_mut(&peer_addr) {
+            None => {
+                warn!(
+                    "client {:02X?} never authenticated, ignoring disassociation indication",
+                    peer_addr
+                );
+                return;
+            }
+            Some(client) => client,
+        };
 
-        // Note: There should be one Reader per device, not per SME.
-        // Follow-up with improving on this.
-        let nonce_rdr = NonceReader::new(&self.ctx.device_info.addr[..]).map_err(|e| {
-            warn!("failed to create NonceReader: {}", e);
-            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
-        })?;
-        let gtk_provider = get_gtk_provider(&s_rsne).map_err(|e| {
-            warn!("failed to create GtkProvider: {}", e);
-            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
-        })?;
-        let authenticator = wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
-            nonce_rdr,
-            gtk_provider,
-            a_rsn.psk.clone(),
-            client_addr.clone(),
-            ProtectionInfo::Rsne(s_rsne),
-            self.ctx.device_info.addr,
-            ProtectionInfo::Rsne(a_rsn.rsne),
-        )
-        .map_err(|e| {
-            warn!("failed to create authenticator: {}", e);
-            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
-        })?;
-        self.add_client(client_addr.clone(), Some(Box::new(authenticator)))
-    }
-
-    fn add_client(
-        &mut self,
-        addr: MacAddr,
-        auth: Option<Box<dyn Authenticator>>,
-    ) -> Result<AssociationId, fidl_mlme::AssociateResultCodes> {
-        self.client_map.add_client(addr, auth).map_err(|e| {
-            warn!("unable to add user to client map: {}", e);
-            fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified
-        })
-    }
-
-    fn handle_eapol_ind(&mut self, ind: fidl_mlme::EapolIndication) -> Result<(), failure::Error> {
-        let client_addr = &ind.src_addr;
-        match self.client_map.get_mut_client(client_addr) {
-            Some(client) => client.handle_eapol_ind(ind, &mut self.ctx),
-            None => bail!("client {:02X?} not found; ignoring EapolInd msg", client_addr),
+        client.handle_disassoc_ind(&mut self.ctx, &mut self.aid_map);
+        if client.associated() {
+            panic!("client {:02X?} didn't disassociate? this should never happen!", peer_addr)
+        } else {
+            info!("client {:02X?} disassociated", peer_addr);
         }
     }
 
@@ -458,23 +445,34 @@ impl InfraBss {
         match timed_event.event {
             Event::Sme { .. } => (),
             Event::Client { addr, event } => {
-                if let Some(client) = self.client_map.get_mut_client(&addr) {
-                    client.handle_timeout(timed_event.id, event, &mut self.ctx);
+                let client = match self.clients.get_mut(&addr) {
+                    None => {
+                        return;
+                    }
+                    Some(client) => client,
+                };
+
+                client.handle_timeout(&mut self.ctx, timed_event.id, event);
+                if !client.authenticated() {
+                    self.remove_client(&addr);
+                    info!("client {:02X?} lost authentication", addr);
                 }
             }
         }
     }
-}
 
-fn validate_s_rsne(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<(), failure::Error> {
-    ensure!(is_valid_rsne_subset(s_rsne, a_rsne)?, "incompatible client RSNE");
-    Ok(())
-}
+    fn handle_eapol_ind(&mut self, ind: fidl_mlme::EapolIndication) {
+        let peer_addr = ind.src_addr;
+        let client = match self.clients.get_mut(&peer_addr) {
+            None => {
+                warn!("client {:02X?} never authenticated, ignoring EAPoL indication", peer_addr);
+                return;
+            }
+            Some(client) => client,
+        };
 
-fn get_gtk_provider(s_rsne: &Rsne) -> Result<Arc<Mutex<GtkProvider>>, failure::Error> {
-    let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
-    let gtk_provider = GtkProvider::new(negotiated_protection.group_data)?;
-    Ok(Arc::new(Mutex::new(gtk_provider)))
+        client.handle_eapol_ind(&mut self.ctx, &ind.data[..]);
+    }
 }
 
 fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, failure::Error> {
@@ -529,6 +527,7 @@ mod tests {
             assert_variant,
             channel::{Cbw, Phy},
             ie::*,
+            mac::Aid,
             RadioConfig,
         },
     };
@@ -738,8 +737,14 @@ mod tests {
         let client = Client::default();
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
 
+        // Drain the association timeout message.
+        assert_variant!(time_stream.try_next(), Ok(Some(_)));
+
         sme.on_mlme_event(client.create_assoc_ind(Some(RSNE.to_vec())));
         client.verify_assoc_resp(&mut mlme_stream, 1, fidl_mlme::AssociateResultCodes::Success);
+
+        // Drain the RSNA negotiation timeout message.
+        assert_variant!(time_stream.try_next(), Ok(Some(_)));
 
         for _i in 0..4 {
             client.verify_eapol_req(&mut mlme_stream);
@@ -966,7 +971,7 @@ mod tests {
         fn verify_assoc_resp(
             &self,
             mlme_stream: &mut MlmeStream,
-            aid: AssociationId,
+            aid: Aid,
             result_code: fidl_mlme::AssociateResultCodes,
         ) {
             let msg = mlme_stream.try_next();

@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::bail;
+use {failure::bail, wlan_common::mac::Aid};
 
 const ASSOCIATION_ID_MAX_VALUE: u16 = 2007;
-
-pub type AssociationId = u16;
 
 #[derive(Debug)]
 pub struct Map {
@@ -24,7 +22,7 @@ pub struct Map {
 impl Map {
     const ELEM_BITS: u16 = 64;
 
-    pub fn assign_aid(&mut self) -> Result<AssociationId, failure::Error> {
+    pub fn assign_aid(&mut self) -> Result<Aid, failure::Error> {
         for (i, bitmap) in self.aids.iter_mut().enumerate() {
             if bitmap.count_zeros() > 0 {
                 let first_unset_bit_pos = (!*bitmap).trailing_zeros() as u16;
@@ -43,7 +41,7 @@ impl Map {
         panic!("unexpected error assigning association ID")
     }
 
-    pub fn release_aid(&mut self, aid: AssociationId) {
+    pub fn release_aid(&mut self, aid: Aid) {
         let index = (aid / Map::ELEM_BITS) as usize;
         self.aids[index] &= !(1 << (aid % Map::ELEM_BITS));
     }

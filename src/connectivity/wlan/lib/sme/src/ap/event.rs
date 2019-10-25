@@ -8,10 +8,6 @@ use crate::{timer::TimeoutDuration, MacAddr};
 
 pub const START_TIMEOUT_SECONDS: i64 = 5;
 
-// TODO(tonyy): Remove this, the new state machine keeps track of this internally.
-pub const KEY_EXCHANGE_TIMEOUT_SECONDS: i64 = 2;
-pub const KEY_EXCHANGE_MAX_ATTEMPTS: u32 = 4;
-
 #[derive(Debug, Clone)]
 pub enum Event {
     Sme { event: SmeEvent },
@@ -50,9 +46,6 @@ pub enum RsnaTimeout {
 pub enum ClientEvent {
     AssociationTimeout,
     RsnaTimeout(RsnaTimeout),
-
-    // TODO(tonyy): Remove this, the new state machine uses RsnaNegotiationTimeout.
-    KeyExchangeTimeout { attempt: u32 },
 }
 
 impl ClientEvent {
@@ -62,9 +55,6 @@ impl ClientEvent {
             // TODO(tonyy): Switch everything to use schedule_at, maybe?
             ClientEvent::AssociationTimeout => 0.seconds(),
             ClientEvent::RsnaTimeout { .. } => 0.seconds(),
-
-            // TODO(tonyy): Remove this, the new state machine uses RsnaNegotiationTimeout.
-            ClientEvent::KeyExchangeTimeout { .. } => KEY_EXCHANGE_TIMEOUT_SECONDS.seconds(),
         }
     }
 }
