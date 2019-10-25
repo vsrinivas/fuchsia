@@ -21,7 +21,7 @@ use {
     failure::Error,
     fake_font_info_loader::FakeFontInfoLoaderImpl,
     font_info::{FontAssetSource, FontInfo, FontInfoLoader, FontInfoLoaderImpl},
-    std::{convert::TryInto, fs, io, path::PathBuf},
+    std::{convert::TryInto, env, fs, io, path::PathBuf},
     structopt::StructOpt,
 };
 
@@ -102,6 +102,8 @@ impl FontInfoLoader for FontInfoLoaderType {
 }
 
 fn main() -> Result<(), Error> {
+    env::set_var("RUST_BACKTRACE", "full");
+
     let args: Args = Args::from_args();
 
     let font_sets = FontSets::load_from_path(args.font_sets)?;

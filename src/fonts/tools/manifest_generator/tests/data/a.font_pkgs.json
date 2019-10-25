@@ -40,6 +40,11 @@
       "file_name": "BetaSans-Italic.ttf",
       "safe_name": "betasans-italic-ttf",
       "path_prefix": "beta"
+    },
+    {
+      "file_name": "AlphaAndBeta-Thin.ttc",
+      "safe_name": "alphanadbeta-thin-ttc",
+      "path_prefix": "alphanadbeta"
     }
   ]
 }

@@ -2,22 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use manifest::v2::PackageLocator;
 use {
     crate::{
-        constants::PKG_URL_PREFIX, font_catalog as fi, FontCatalog, FontPackageListing, FontSets,
+        constants::PKG_URL_PREFIX,
+        font_catalog as fi,
+        font_catalog::{AssetInFamilyIndex, FamilyIndex, TypefaceInAssetIndex},
+        FontCatalog, FontPackageListing, FontSets,
     },
     char_set::CharSet,
-    failure::{Error, Fail},
+    failure::{format_err, Error, Fail},
     font_info::{FontAssetSource, FontInfo, FontInfoLoader},
     fuchsia_url::pkg_url::PkgUrl,
     itertools::{Either, Itertools},
     manifest::v2,
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, BTreeSet},
         path::{Path, PathBuf},
     },
 };
+
+type AssetKey = (FamilyIndex, AssetInFamilyIndex);
 
 /// Collection of font metadata used for generating a font manifest for a particular target.
 ///
@@ -30,12 +34,10 @@ pub(crate) struct FontDb {
     font_catalog: FontCatalog,
     font_sets: FontSets,
 
-    family_name_to_family: BTreeMap<String, usize>,
-    /// The index is the asset index within a family.
-    asset_name_to_asset: BTreeMap<String, usize>,
-    asset_name_to_family: BTreeMap<String, usize>,
+    family_name_to_family: BTreeMap<String, FamilyIndex>,
+    asset_name_to_assets: BTreeMap<String, BTreeSet<AssetKey>>,
     asset_name_to_pkg_url: BTreeMap<String, PkgUrl>,
-    typeface_to_char_set: BTreeMap<(String, u32), CharSet>,
+    typeface_to_char_set: BTreeMap<(String, TypefaceInAssetIndex), CharSet>,
 }
 
 impl FontDb {
@@ -48,16 +50,17 @@ impl FontDb {
         font_dir: P,
     ) -> Result<FontDb, FontDbErrors> {
         let mut family_name_to_family = BTreeMap::new();
-        let mut asset_name_to_asset = BTreeMap::new();
-        let mut asset_name_to_family = BTreeMap::new();
+        let mut asset_name_to_assets = BTreeMap::new();
         let mut asset_name_to_pkg_url = BTreeMap::new();
         let typeface_to_char_set = BTreeMap::new();
 
         let mut errors: Vec<FontDbError> = vec![];
 
         for (family_idx, family) in (&font_catalog.families).iter().enumerate() {
+            let family_idx = FamilyIndex(family_idx);
             let mut asset_count = 0;
             for (asset_idx, asset) in (&family.assets).iter().enumerate() {
+                let asset_idx = AssetInFamilyIndex(asset_idx);
                 let asset_name = asset.file_name.clone();
                 if asset.typefaces.is_empty() {
                     errors.push(FontDbError::FontCatalogNoTypeFaces { asset_name });
@@ -78,16 +81,18 @@ impl FontDb {
                     }
                     let pkg_url = pkg_url.unwrap();
 
-                    asset_name_to_asset.insert(asset_name.clone(), asset_idx);
+                    asset_name_to_assets
+                        .entry(asset_name.clone())
+                        .or_insert_with(|| BTreeSet::new())
+                        .insert((family_idx, asset_idx));
                     asset_name_to_pkg_url.insert(asset_name.clone(), pkg_url);
-                    asset_name_to_family.insert(asset_name.clone(), family_idx);
 
                     asset_count += 1;
                 }
-                // Skip families where no assets are included in the target product
-                if asset_count > 0 {
-                    family_name_to_family.insert(family.name.clone(), family_idx);
-                }
+            }
+            // Skip families where no assets are included in the target product
+            if asset_count > 0 {
+                family_name_to_family.insert(family.name.clone(), family_idx);
             }
         }
 
@@ -96,8 +101,7 @@ impl FontDb {
             font_catalog,
             font_sets,
             family_name_to_family,
-            asset_name_to_asset,
-            asset_name_to_family,
+            asset_name_to_assets,
             asset_name_to_pkg_url,
             typeface_to_char_set,
         };
@@ -107,8 +111,10 @@ impl FontDb {
         match font_infos {
             Ok(font_infos) => {
                 for (request, font_info) in font_infos {
-                    db.typeface_to_char_set
-                        .insert((request.asset_name(), request.index), font_info.char_set);
+                    db.typeface_to_char_set.insert(
+                        (request.asset_name(), TypefaceInAssetIndex(request.index)),
+                        font_info.char_set,
+                    );
                 }
             }
             Err(mut font_info_errors) => {
@@ -125,30 +131,39 @@ impl FontDb {
 
     pub fn get_family_by_name(&self, family_name: impl AsRef<str>) -> Option<&fi::Family> {
         let family_idx = self.family_name_to_family.get(family_name.as_ref())?;
-        self.font_catalog.families.get(*family_idx)
+        self.font_catalog.families.get(family_idx.0)
     }
 
-    pub fn get_asset_by_name(&self, asset_name: impl AsRef<str>) -> Option<&fi::Asset> {
-        let family = self.get_family_by_asset_name(asset_name.as_ref())?;
-        let asset_idx = self.asset_name_to_asset.get(asset_name.as_ref())?;
-        family.assets.get(*asset_idx)
-    }
-
-    pub fn get_family_by_asset_name(&self, asset_name: impl AsRef<str>) -> Option<&fi::Family> {
-        let family_idx = self.asset_name_to_family.get(asset_name.as_ref())?;
-        self.font_catalog.families.get(*family_idx)
+    /// Get all [`Asset`]s with the given file name. There may be more than one instance if the
+    /// asset appears in multiple font families.
+    pub fn get_assets_by_name(&self, asset_name: impl AsRef<str>) -> Vec<&fi::Asset> {
+        self.asset_name_to_assets
+            .get(asset_name.as_ref())
+            // Iterate over the 0 or 1 values inside Option
+            .iter()
+            .flat_map(|asset_keys| asset_keys.iter())
+            .flat_map(move |(family_idx, asset_idx)| {
+                self.font_catalog
+                    .families
+                    .get(family_idx.0)
+                    .and_then(|family| family.get_asset(*asset_idx))
+            })
+            .collect_vec()
     }
 
     /// The asset must be in the `FontDb` or this method will panic.
-    pub fn get_code_points(&self, asset: &fi::Asset, index: u32) -> &CharSet {
-        // Alas, no sane way to transpose between `(&str, &u32)` and `&(String, u32)`.
+    pub fn get_code_points(&self, asset: &fi::Asset, index: TypefaceInAssetIndex) -> &CharSet {
+        // Alas, no sane way to transpose between `(&str, &x)` and `&(String, x)`.
         let key = (asset.file_name.to_owned(), index);
-        self.typeface_to_char_set.get(&key).unwrap()
+        self.typeface_to_char_set
+            .get(&key)
+            .ok_or_else(|| format_err!("No code points for {:?}", &key))
+            .unwrap()
     }
 
     /// The asset must be in the `FontDb` or this method will panic.
     pub fn get_asset_location(&self, asset: &fi::Asset) -> v2::AssetLocation {
-        v2::AssetLocation::Package(PackageLocator {
+        v2::AssetLocation::Package(v2::PackageLocator {
             url: self.asset_name_to_pkg_url.get(&*asset.file_name).unwrap().clone(),
             set: self.font_sets.get_package_set(&*asset.file_name).unwrap().clone(),
         })
@@ -171,7 +186,7 @@ impl FontDb {
         family
             .assets
             .iter()
-            .filter(move |asset| self.get_asset_by_name(&*asset.file_name).is_some())
+            .filter(move |asset| !self.get_assets_by_name(&*asset.file_name).is_empty())
     }
 
     fn make_pkg_url(safe_name: impl AsRef<str>) -> Result<PkgUrl, FontDbError> {
@@ -242,14 +257,20 @@ impl FontDb {
         path.push(path_prefix);
         path.push(asset_name);
 
-        let asset = db.get_asset_by_name(asset_name).unwrap();
-        asset
-            .typefaces
+        // We have to collect into a vector here because otherwise there's no way to return a
+        // consistent `Iterator` type.
+        let requests = db
+            .get_assets_by_name(asset_name)
             .iter()
-            .map(move |typeface| Ok(FontInfoRequest { path: path.clone(), index: typeface.index }))
-            .collect_vec()
-        // We have to collect into a vector here because otherwise there's no way to return
-        // a consistent `Iterator` type.
+            .flat_map(|asset| asset.typefaces.keys())
+            .map(move |index| Ok(FontInfoRequest { path: path.clone(), index: index.0 }))
+            .collect_vec();
+
+        if requests.is_empty() {
+            vec![Err(FontDbError::FontCatalogMissingEntry { asset_name: asset_name.to_owned() })]
+        } else {
+            requests
+        }
     }
 }
 
@@ -263,13 +284,19 @@ pub(crate) struct FontDbErrors(Vec<FontDbError>);
 pub(crate) enum FontDbError {
     #[fail(display = "Asset {} has no typefaces", asset_name)]
     FontCatalogNoTypeFaces { asset_name: String },
+
     #[fail(display = "Asset {} is not listed in *.font_pkgs.json", asset_name)]
     FontPkgsMissingEntry { asset_name: String },
+
+    #[fail(display = "Asset {} is not listed in *.font_catalog.json", asset_name)]
+    FontCatalogMissingEntry { asset_name: String },
+
     #[fail(display = "PkgUrl error: {:?}", error)]
     PkgUrl {
         #[cause]
         error: Error,
     },
+
     #[fail(display = "Failed to load font info for {:?}: {:?}", request, error)]
     FontInfo {
         request: FontInfoRequest,

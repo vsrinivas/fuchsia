@@ -58,6 +58,15 @@
               "slant": "italic"
             }
           ]
+        },
+        {
+          "file_name": "AlphaAndBeta-Thin.ttc",
+          "typefaces": [
+            {
+              "index": 0,
+              "weight": 100
+            }
+          ]
         }
       ]
     },
@@ -121,6 +130,15 @@
                 "en"
               ],
               "slant": "italic"
+            }
+          ]
+        },
+        {
+          "file_name": "AlphaAndBeta-Thin.ttc",
+          "typefaces": [
+            {
+              "index": 1,
+              "weight": 100
             }
           ]
         }

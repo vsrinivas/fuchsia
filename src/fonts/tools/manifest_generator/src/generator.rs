@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{font_db::FontDb, FontCatalog, FontPackageListing, FontSets},
+    crate::{
+        font_catalog::TypefaceInAssetIndex, font_db::FontDb, FontCatalog, FontPackageListing,
+        FontSets,
+    },
     failure::Error,
     font_info::FontInfoLoader,
     manifest::{v2, FontManifestWrapper},
@@ -43,13 +46,16 @@ pub(crate) fn generate_manifest(
                         location: db.get_asset_location(fi_asset),
                         typefaces: fi_asset
                             .typefaces
-                            .iter()
+                            .values()
                             .map(|fi_typeface| v2::Typeface {
                                 index: fi_typeface.index,
                                 languages: fi_typeface.languages.clone(),
                                 style: fi_typeface.style.clone(),
                                 code_points: db
-                                    .get_code_points(fi_asset, fi_typeface.index)
+                                    .get_code_points(
+                                        fi_asset,
+                                        TypefaceInAssetIndex(fi_typeface.index),
+                                    )
                                     .clone(),
                             })
                             .collect(),
