@@ -25,7 +25,6 @@
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/sdio.h>
 #include <ddk/protocol/wlanif.h>
 #include <ddk/protocol/wlanphyimpl.h>
 #include <wifi/wifi-config.h>

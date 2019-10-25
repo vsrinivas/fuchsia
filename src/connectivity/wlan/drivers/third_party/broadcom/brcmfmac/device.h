@@ -26,7 +26,6 @@
 namespace wlan {
 namespace brcmfmac {
 
-using BusRegisterFn = std::function<zx_status_t(brcmf_pub* drvr)>;
 class WlanInterface;
 
 class Device : public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
@@ -45,14 +44,17 @@ class Device : public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
   virtual zx_status_t DeviceRemove(zx_device_t* dev) = 0;
 
  protected:
+  Device();
+
   // Initialize the device-agnostic bits of the device
-  zx_status_t Init(zx_device_t* phy_device, zx_device_t* parent_device, BusRegisterFn);
+  zx_status_t Init(zx_device_t* phy_device, zx_device_t* parent_device);
 
   void DisableDispatcher();
 
+  std::unique_ptr<brcmf_pub> brcmf_pub_;
+
  private:
   std::unique_ptr<::async::Loop> dispatcher_;
-  std::unique_ptr<brcmf_pub> brcmf_pub_;
 
   // Two fixed interfaces supported; the default instance as a client, and a second one as an AP.
   WlanInterface* client_interface_;

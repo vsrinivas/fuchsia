@@ -7,7 +7,6 @@
 #include "sim_test.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim_device.h"
 
 namespace wlan::brcmfmac {
 

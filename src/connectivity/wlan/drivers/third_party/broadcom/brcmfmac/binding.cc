@@ -11,6 +11,9 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
 #include <memory>
 
 #include <ddk/binding.h>
@@ -20,19 +23,38 @@
 #include <hw/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio_device.h"
+
+#if CONFIG_BRCMFMAC_SDIO
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio_device.h"  // nogncheck
+#endif  // CONFIG_BRCMFMAC_SDIO
 
 static constexpr zx_driver_ops_t brcmfmac_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = [](void* ctx,
-               zx_device_t* device) { return ::wlan::brcmfmac::SdioDevice::Create(device); },
+    .bind =
+        [](void* ctx, zx_device_t* device) {
+          zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+#if CONFIG_BRCMFMAC_SDIO
+          if ((status = ::wlan::brcmfmac::SdioDevice::Create(device)) == ZX_OK) {
+            return ZX_OK;
+          }
+          if (status != ZX_ERR_NOT_SUPPORTED) {
+            return status;
+          }
+#endif  // CONFIG_BRCMFMAC_SDIO
+          return status;
+        },
 };
 
 // clang-format off
 
 ZIRCON_DRIVER_BEGIN(brcmfmac, brcmfmac_driver_ops, "zircon", "0.1", 33)
-BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 5910),
+#if CONFIG_BRCMFMAC_SDIO
+    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 5910),
+#endif  // CONFIG_BRCMFMAC_SDIO
+#if CONFIG_BRCMFMAC_USB
     BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB, 758),
+#endif  // CONFIG_BRCMFMAC_USB
+#if CONFIG_BRCMFMAC_PCIE
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, BRCM_PCIE_VENDOR_ID_BROADCOM),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, PCI_CLASS_NETWORK),
@@ -55,10 +77,21 @@ BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 5910),
     BI_MATCH_IF(EQ, BIND_PCI_DID, BRCM_PCIE_4366_DEVICE_ID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, BRCM_PCIE_4366_2G_DEVICE_ID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, BRCM_PCIE_4366_5G_DEVICE_ID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, BRCM_PCIE_4371_DEVICE_ID), BI_ABORT(), BI_LABEL(758),
-    BI_ABORT_IF(NE, BIND_USB_VID, 0x043e), BI_MATCH_IF(EQ, BIND_USB_PID, 0x3101), BI_ABORT(),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, BRCM_PCIE_4371_DEVICE_ID),
+    BI_ABORT(),
+#endif  // CONFIG_BRCMFMAC_PCIE
+#if CONFIG_BRCMFMAC_USB
+    BI_LABEL(758),
+    BI_ABORT_IF(NE, BIND_USB_VID, 0x043e),
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x3101),
+    BI_ABORT(),
+#endif  // CONFIG_BRCMFMAC_USB
+#if CONFIG_BRCMFMAC_SDIO
     // Composite binding used for SDIO.
-    BI_LABEL(5910), BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOM),
+    BI_LABEL(5910),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOM),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_BCM_WIFI),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_BCM4356),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_BCM43458), ZIRCON_DRIVER_END(brcmfmac)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_BCM43458),
+#endif  // CONFIG_BRCMFMAC_SDIO
+ZIRCON_DRIVER_END(brcmfmac)

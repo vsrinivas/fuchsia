@@ -3411,10 +3411,9 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
   sdio_claim_host(sdiodev->func1);
 
 #ifdef SDIO_PRINTER
-  int status = thrd_create_with_name(&sdio_thread, &sdio_printer,
-                                     nullptr, "sdio_printer");
+  int status = thrd_create_with_name(&sdio_thread, &sdio_printer, nullptr, "sdio_printer");
   if (status != thrd_success) {
-    BRCMF_ERR("Unable to create sdio_printer thread: %d\n"< status);
+    BRCMF_ERR("Unable to create sdio_printer thread: %d\n" < status);
     goto fail;
   }
 #endif  // SDIO_PRINTER
@@ -3840,10 +3839,8 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   /* Initialize watchdog thread */
   bus->watchdog_wait = {};
   bus->watchdog_should_stop.store(false);
-  thread_result = thrd_create_with_name(&bus->watchdog_tsk,
-                                        &brcmf_sdio_watchdog_thread,
-                                        bus,
-                                        "brcmf-watchdog");
+  thread_result =
+      thrd_create_with_name(&bus->watchdog_tsk, &brcmf_sdio_watchdog_thread, bus, "brcmf-watchdog");
 
   if (thread_result != thrd_success) {
     BRCMF_ERR("brcmf_watchdog thread failed to start: error %d\n", thread_result);

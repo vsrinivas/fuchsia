@@ -22,7 +22,7 @@ namespace brcmfmac {
 zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
-  const auto ddk_remover = [](SdioDevice* device) { device->DdkRemoveDeprecated(); };
+  const auto ddk_remover = [](SdioDevice* device) { device->DdkAsyncRemove(); };
   std::unique_ptr<SdioDevice, decltype(ddk_remover)> device(new SdioDevice(parent_device),
                                                             ddk_remover);
   if ((status = device->DdkAdd("brcmfmac-wlanphy", DEVICE_ADD_INVISIBLE)) != ZX_OK) {
@@ -30,18 +30,22 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  auto bus_register_fn = std::bind(&SdioDevice::BusRegister, device.get(), std::placeholders::_1);
-  status = device->brcmfmac::Device::Init(device->zxdev(), parent_device, bus_register_fn);
-  if (status != ZX_OK) {
+  if ((status = device->brcmfmac::Device::Init(device->zxdev(), parent_device)) != ZX_OK) {
     return status;
   }
+
+  std::unique_ptr<brcmf_bus> bus;
+  if ((status = brcmf_sdio_register(device->brcmf_pub_.get(), &bus)) != ZX_OK) {
+    return status;
+  }
+  device->brcmf_bus_ = std::move(bus);
 
   device->DdkMakeVisible();
   device.release();  // This now has its lifecycle managed by the devhost.
   return ZX_OK;
 }
 
-void SdioDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void SdioDevice::DdkUnbindNew(::ddk::UnbindTxn txn) { txn.Reply(); }
 
 void SdioDevice::DdkRelease() { delete this; }
 
@@ -50,18 +54,6 @@ zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_dev
 }
 
 zx_status_t SdioDevice::DeviceRemove(zx_device_t* dev) { return device_remove_deprecated(dev); }
-
-zx_status_t SdioDevice::BusRegister(brcmf_pub* drvr) {
-  zx_status_t status;
-  std::unique_ptr<brcmf_bus> bus;
-
-  if ((status = brcmf_sdio_register(drvr, &bus)) != ZX_OK) {
-    return status;
-  }
-
-  brcmf_bus_ = std::move(bus);
-  return ZX_OK;
-}
 
 SdioDevice::SdioDevice(zx_device_t* parent)
     : ::ddk::Device<SdioDevice, ::ddk::UnbindableNew>(parent) {}

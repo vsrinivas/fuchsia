@@ -41,11 +41,20 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device,
     return status;
   }
 
-  *device_out = std::make_unique<SimDevice>(phy_device, dev_mgr, env);
-  auto bus_register_fn =
-      std::bind(&SimDevice::BusRegister, device_out->get(), std::placeholders::_1);
-  return (*device_out)
-      ->brcmfmac::Device::Init((*device_out)->phy_device_, parent_device, bus_register_fn);
+  auto device = std::make_unique<SimDevice>(phy_device, dev_mgr, env);
+  if ((status = device->brcmfmac::Device::Init(device->phy_device_, parent_device)) != ZX_OK) {
+    return status;
+  }
+
+  std::unique_ptr<brcmf_bus> bus;
+  if ((status = brcmf_sim_register(device->brcmf_pub_.get(), &bus, device->fake_dev_mgr_.get(),
+                                   device->sim_environ_.get())) != ZX_OK) {
+    return status;
+  }
+  device->brcmf_bus_ = std::move(bus);
+
+  *device_out = std::move(device);
+  return ZX_OK;
 }
 
 zx_status_t SimDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
@@ -53,18 +62,6 @@ zx_status_t SimDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_devi
 }
 
 zx_status_t SimDevice::DeviceRemove(zx_device_t* dev) { return fake_dev_mgr_->DeviceRemove(dev); }
-
-zx_status_t SimDevice::BusRegister(brcmf_pub* drvr) {
-  zx_status_t status;
-  std::unique_ptr<brcmf_bus> bus;
-
-  if ((status = brcmf_sim_register(drvr, &bus, fake_dev_mgr_.get(), sim_environ_.get())) != ZX_OK) {
-    return status;
-  }
-
-  brcmf_bus_ = std::move(bus);
-  return ZX_OK;
-}
 
 SimDevice::~SimDevice() {
   DisableDispatcher();

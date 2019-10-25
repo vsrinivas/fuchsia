@@ -30,10 +30,11 @@ constexpr uint16_t kApInterfaceId = 1;
 
 }  // namespace
 
+Device::Device() : client_interface_(nullptr), ap_interface_(nullptr) {}
+
 Device::~Device() = default;
 
-zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device,
-                         BusRegisterFn bus_register_fn) {
+zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
   auto dispatcher = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -50,16 +51,8 @@ zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device,
     entry = BRCMF_BSSIDX_INVALID;
   }
 
-  // Perform the bus-specific initialization
-  if ((status = (bus_register_fn)(pub.get())) != ZX_OK) {
-    BRCMF_ERR("BusRegister() failed: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  dispatcher_ = std::move(dispatcher);
   brcmf_pub_ = std::move(pub);
-  client_interface_ = nullptr;
-  ap_interface_ = nullptr;
+  dispatcher_ = std::move(dispatcher);
   return ZX_OK;
 }
 

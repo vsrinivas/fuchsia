@@ -24,7 +24,6 @@
 #include <ddk/driver.h>
 
 #include "netbuf.h"
-#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 
 // HW/SW bus in use
 enum brcmf_bus_type { BRCMF_BUS_TYPE_SDIO, BRCMF_BUS_TYPE_SIM, BRCMF_BUS_TYPE_USB };

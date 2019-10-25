@@ -15,6 +15,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_DEVICE_H_
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
@@ -40,10 +41,6 @@ class SimDevice : public Device {
   // Trampolines for DDK functions, for platforms that support them
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   zx_status_t DeviceRemove(zx_device_t* dev) override;
-
- protected:
-  // Perform the bus-specific initialization
-  zx_status_t BusRegister(brcmf_pub* drvr);
 
  private:
   std::unique_ptr<brcmf_bus> brcmf_bus_;

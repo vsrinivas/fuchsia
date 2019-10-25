@@ -19,8 +19,6 @@
 
 #include "defs.h" /* for PAD macro */
 
-#define CHIPCREGOFFS(field) offsetof(struct chipcregs, field)
-
 struct chipcregs {
   uint32_t chipid; /* 0x0 */
   uint32_t capabilities;

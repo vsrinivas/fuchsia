@@ -29,6 +29,24 @@ executable("debug_test") {
   ]
 }
 
+executable("dynamic_if_test") {
+  output_name = "dynamic_if_test"
+  testonly = true
+  sources = [
+    "dynamic_if_test.cc",
+    "sim_test.cc",
+    "sim_test.h",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
 executable("lifecycle_test") {
   output_name = "lifecycle_test"
   testonly = true
@@ -38,8 +56,7 @@ executable("lifecycle_test") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_test",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:firmware",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
@@ -69,10 +86,10 @@ executable("scan_test") {
   ]
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_test",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:firmware",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
@@ -86,8 +103,8 @@ executable("sdio_test") {
   ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_test",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sdio",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:sim",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/broadcom",
@@ -116,23 +133,6 @@ executable("workqueue_test") {
   ]
 }
 
-executable("dynamic_if_test") {
-  output_name = "dynamic_if_test"
-  testonly = true
-  sources = [
-    "dynamic_if_test.cc",
-    "sim_test.cc",
-    "sim_test.h",
-  ]
-  deps = [
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_test",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:firmware",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fake_ddk",
-  ]
-}
 unittest_package("brcmfmac_test") {
   package_name = "brcmfmac_test"
 
