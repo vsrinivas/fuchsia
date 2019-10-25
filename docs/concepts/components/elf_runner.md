@@ -5,7 +5,7 @@ The ELF runner is the runner responsible for launching
 format).
 
 For a detailed explanation of how processes are created, please see
-[`//docs/zircon/program_loading.md`][program-loading].
+[`//docs/concepts/booting/program_loading.md`][program-loading].
 
 ## Using the ELF Runner
 
@@ -28,6 +28,6 @@ and `world!`:
 ```
 
 [glossary-components]: /docs/glossary.md#component
-[program-loading]: /docs/zircon/program_loading.md
+[program-loading]: /docs/concepts/booting/program_loading.md
 <!-- TODO: the component manifest link describes v1 manifests -->
 [glossary-component-manifests]: /docs/glossary.md#component-manifest

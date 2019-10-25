@@ -36,7 +36,7 @@ machine-specific C calling conventions governing the use of machine
 registers and the stack, which is common across many systems that use ELF,
 such as Linux and all the BSD variants.  They do not rely on complex
 features such as ELF Thread-Local Storage, nor on Fuchsia-specific ABI
-elements such as the [SafeStack](/docs/zircon/safestack.md) unsafe stack pointer.
+elements such as the [SafeStack](/docs/concepts/kernel/safestack.md) unsafe stack pointer.
 
 ### vDSO Unwind Information
 

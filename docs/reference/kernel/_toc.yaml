@@ -6,3 +6,5 @@ toc:
   path: /docs/reference/kernel/kernel_cmdline.md
 - title: "Symbolizer markup format"
   path: /docs/reference/kernel/symbolizer_markup.md
+- title: "Abigen file grammar"
+  path: /docs/reference/kernel/grammar.md

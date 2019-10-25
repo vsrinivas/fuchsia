@@ -3,8 +3,8 @@
 In Zircon, the kernel is not directly involved in normal program loading.
 Instead, the kernel provides the building blocks from
 which userspace program loading is built, such as
-[Virtual Memory Objects](objects/vm_object.md), [processes](objects/process.md),
-[Virtual Memory Address Regions](objects/vm_address_region.md), and [threads](objects/thread.md).
+[Virtual Memory Objects](/docs/zircon/objects/vm_object.md), [processes](/docs/zircon/objects/process.md),
+[Virtual Memory Address Regions](/docs/zircon/objects/vm_address_region.md), and [threads](/docs/zircon/objects/thread.md).
 
 Note: The only time that the kernel is involved in program loading is when you bootstrap the
 userspace environment at system startup. See [`userboot`](userboot.md) for more information.
@@ -88,8 +88,8 @@ The [lowest userspace layers of the system](userboot.md) implement the same
 protocols.
 
 Filesystems are not part of the lower layers of Zircon API. Instead,
-program loading is based on [VMOs](objects/vm_object.md) and on IPC
-protocols used through [channels](objects/channel.md).
+program loading is based on [VMOs](/docs/zircon/objects/vm_object.md) and on IPC
+protocols used through [channels](/docs/zircon/objects/channel.md).
 
 A program loading request starts with:
 
@@ -97,7 +97,7 @@ A program loading request starts with:
    `ZX_RIGHT_EXECUTE` rights are required)
  * A list of argument strings (to become `argv[]` in a C/C++ program)
  * A list of environment strings (to become `environ[]` in a C/C++ program)
- * A list of initial [handles](handles.md), each with
+ * A list of initial [handles](/docs/zircon/handles.md), each with
    a [*handle info entry*](#handle-info-entry)
 
 Three types of file are handled:
@@ -127,7 +127,7 @@ Three types of file are handled:
 
   * The system chooses a random base address for the first `PT_LOAD` segment
     and then maps in each `PT_LOAD` segment relative to that base address.
-    This is done by creating a [VMAR](objects/vm_address_region.md) covering
+    This is done by creating a [VMAR](/docs/zircon/objects/vm_address_region.md) covering
     the whole range from the first page of the first segment to the last
     page of the last segment.
   * A VMO is created and mapped at another random address to hold the stack
@@ -137,19 +137,19 @@ Three types of file are handled:
   * The [vDSO](/docs/concepts/kernel/vdso.md) is mapped into the process
     (another VMO containing an ELF image), also at a random base address.
   * A new thread is created in the process with [`zx_thread_create()`].
-  * A new [channel](objects/channel.md) is created, called the *bootstrap
+  * A new [channel](/docs/zircon/objects/channel.md) is created, called the *bootstrap
     channel*. The program loader writes into this channel a message
     in [the `processargs` protocol](#the-processargs-protocol) format. This
     *bootstrap message* includes the argument and environment strings and
     the initial handles from the original request. That list is augmented
     with handles for:
 
-     * the new [process](objects/process.md) itself
-     * its root [VMAR](objects/vm_address_region.md)
-     * its initial [thread](objects/thread.md)
+     * the new [process](/docs/zircon/objects/process.md) itself
+     * its root [VMAR](/docs/zircon/objects/vm_address_region.md)
+     * its initial [thread](/docs/zircon/objects/thread.md)
      * the VMAR covering where the executable was loaded
      * the VMO just created for the stack
-     * optionally, a default [job](objects/job.md) so the new
+     * optionally, a default [job](/docs/zircon/objects/job.md) so the new
        process itself can create more processes
      * optionally, the vDSO VMO so the new process can let the processes
        it creates make system calls themselves
@@ -251,7 +251,7 @@ code.
 
 A bootstrap message conveys:
 
- * a list of initial [handles](handles.md)
+ * a list of initial [handles](/docs/zircon/handles.md)
  * a 32-bit *handle info entry* corresponding to each handle
  * a list of name strings that a *handle info entry* can refer to
  * a list of argument strings (to become `argv[]` in a C/C++ program)
@@ -261,14 +261,14 @@ A bootstrap message conveys:
 The handles serve many purposes, indicated by the *handle info entry* type:
 
  * essential handles for the process to make [system calls](/docs/reference/syscalls/README.md):
-   [process](objects/process.md), [VMAR](objects/vm_address_region.md),
-   [thread](objects/thread.md), [job](objects/job.md)
- * [channel](objects/channel.md) to the [loader service](#the-loader-service)
- * [vDSO](/docs/concepts/kernel/vdso.md) [VMO](objects/vm_object.md)
+   [process](/docs/zircon/objects/process.md), [VMAR](/docs/zircon/objects/vm_address_region.md),
+   [thread](/docs/zircon/objects/thread.md), [job](/docs/zircon/objects/job.md)
+ * [channel](/docs/zircon/objects/channel.md) to the [loader service](#the-loader-service)
+ * [vDSO](/docs/concepts/kernel/vdso.md) [VMO](/docs/zircon/objects/vm_object.md)
  * filesystem-related handles: current directory, file descriptors, name
    space bindings (these encode an index into the list of name strings)
  * special handles for system processes:
-   [resource](objects/resource.md), [VMO](objects/vm_object.md)
+   [resource](/docs/zircon/objects/resource.md), [VMO](/docs/zircon/objects/vm_object.md)
  * other types used for higher-layer or private protocol purposes
 
 Most of these are just passed through by the program loader,
@@ -289,8 +289,8 @@ program loading cannot be defined in terms of higher-layer abstractions
 such as a filesystem paradigm,
 as
 [traditional systems have done](#background_traditional-elf-program-loading).
-Instead, program loading is based only on [VMOs](objects/vm_object.md) and
-a simple [channel](objects/channel.md)-based protocol.
+Instead, program loading is based only on [VMOs](/docs/zircon/objects/vm_object.md) and
+a simple [channel](/docs/zircon/objects/channel.md)-based protocol.
 
 This *loader service* protocol is how a dynamic linker acquires VMOs
 representing the additional files it needs to load as shared libraries.

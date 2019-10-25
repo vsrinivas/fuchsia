@@ -2,12 +2,6 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Overview"
-  path: /docs/zircon
-
-- title: "Architecture support"
-  path: /docs/zircon/architecture_support.md
-
 - title: Objects
   section:
   - title: "Kernel objects"
@@ -18,57 +12,8 @@ toc:
   - title: "Time units"
     path: /docs/zircon/time.md
 
-- title: "Kernel"
-  section:
-  - title: "Kernel internal errors"
-    path: /docs/zircon/kernel_internal_errors.md
-  - title: "Kernel invariants"
-    path: /docs/zircon/kernel_invariants.md
-  - title: "Kernel scheduling"
-    path: /docs/zircon/kernel_scheduling.md
-  - title: "Fair scheduling"
-    path: /docs/zircon/fair_scheduler.md
-  - title: "Kernel reference"
-    section:
-    - include: /docs/reference/kernel/_toc.yaml
-
-- title: "Errors"
-  path: /docs/zircon/errors.md
-
-- title: "Exceptions"
-  path: /docs/zircon/exceptions.md
-
 - title: "Handles"
   path: /docs/zircon/handles.md
-
-- title: "Rights"
-  path: /docs/zircon/rights.md
-
-- title: "Signals"
-  path: /docs/zircon/signals.md
-
-- title: "Runtime locks"
-  section:
-  - title: Overview
-    path: /docs/zircon/lockdep.md
-  - title: Design
-    path: /docs/zircon/lockdep-design.md
-
-- title: "System calls"
-  section:
-  - include: /docs/reference/syscalls/_toc.yaml
-
-- title: "abigen file grammar"
-  path: /docs/zircon/abigen/grammar.md
-
-- title: "Bootsvc"
-  path: /docs/zircon/bootsvc.md
-
-- title: "Userspace bootstrapping"
-  path: /docs/zircon/userboot.md
-
-- title: "Program loading"
-  path: /docs/zircon/program_loading.md
 
 - title: "Jitterentropy"
   section:
@@ -90,15 +35,6 @@ toc:
 - title: "Out of memory system"
   path: /docs/zircon/oom.md
 
-- title: "Safe stack"
-  path: /docs/zircon/safestack.md
-
-- title: "Shadow call stack"
-  path: /docs/zircon/shadow_call_stack.md
-
-- title: "Zircon and LK"
-  path: /docs/zircon/zx_and_lk.md
-
 - title: "Reference"
   path: /docs/reference/README.md
 
@@ -106,5 +42,3 @@ toc:
   section:
   - title: "Entropy collection TODOs"
     path: /docs/zircon/entropy_collection_todos.md
-  - title: "Avoiding a problem with the SYSRET"
-    path: /docs/zircon/sysret_problem.md

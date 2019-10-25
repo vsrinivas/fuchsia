@@ -39,7 +39,7 @@ TODO(ZX-2399)
 platform.
 
 ## NOTES
-Refer to [Architecture Support](/docs/zircon/architecture_support.md) for supported
+Refer to [Architecture Support](/docs/concepts/architecture/architecture_support.md) for supported
 processor architectures.
 
 Refer to [zircon/features.h](/zircon/system/public/zircon/features.h) for kinds

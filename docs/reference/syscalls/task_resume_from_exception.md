@@ -21,7 +21,7 @@ zx_status_t zx_task_resume_from_exception(zx_handle_t handle,
 ## DESCRIPTION
 
 **Note: exception ports are deprecated and will be removed soon. See**
-**[exceptions](/docs/zircon/exceptions.md) for information on the replacement API.**
+**[exceptions](/docs/concepts/kernel/exceptions.md) for information on the replacement API.**
 
 `zx_task_resume_from_exception()` causes the requested task to resume after an
 exception has been reported to the debug exception port. The port parameter

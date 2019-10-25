@@ -99,7 +99,7 @@ In a future build this error will no longer occur.
 
 ## NOTES
 
-See [signals](/docs/zircon/signals.md) for more information about signals and their terminology.
+See [signals](/docs/concepts/kernel/signals.md) for more information about signals and their terminology.
 
 ## SEE ALSO
 

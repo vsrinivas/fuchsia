@@ -517,7 +517,7 @@ or else relative to the root of the BOOTFS (which later is ordinarily
 seen at `/boot`).  It should not start with a `/` prefix.
 
 If this executable uses `PT_INTERP` (i.e. the dynamic linker), the userboot
-process provides a [loader service](/docs/zircon/program_loading.md#the-loader-service) to
+process provides a [loader service](/docs/concepts/booting/program_loading.md#the-loader-service) to
 resolve the `PT_INTERP` (dynamic linker) name and any shared library names it
 may request.  That service simply looks in the `lib/` directory (under
 `userboot.root`) in the BOOTFS.

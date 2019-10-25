@@ -37,7 +37,7 @@ logical fields:
 + The rights to the kernel object
 + The process it is bound to (or if it's bound to kernel)
 
-The '[rights](rights.md)' specify what operations on the kernel object
+The '[rights](/docs/concepts/kernel/rights.md)' specify what operations on the kernel object
 are allowed. It is possible for a single process to have two different
 handles to the same kernel object with different rights.
 
@@ -266,5 +266,5 @@ generate an exception when a process under such job object attempts any of
 the of the mentioned invalid cases.
 
 ## See Also
-[Objects](objects.md),
-[Rights](rights.md)
+[Objects](/docs/zircon/objects.md),
+[Rights](/docs/concepts/kernel/rights.md)

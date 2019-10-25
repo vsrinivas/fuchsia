@@ -85,7 +85,7 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
- - [exceptions](/docs/zircon/exceptions.md)
+ - [exceptions](/docs/concepts/kernel/exceptions.md)
  - [`zx_channel_read()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->

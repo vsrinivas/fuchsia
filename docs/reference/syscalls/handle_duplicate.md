@@ -53,7 +53,7 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
- - [rights](/docs/zircon/rights.md)
+ - [rights](/docs/concepts/kernel/rights.md)
  - [`zx_channel_write_etc()`]
  - [`zx_handle_close()`]
  - [`zx_handle_close_many()`]

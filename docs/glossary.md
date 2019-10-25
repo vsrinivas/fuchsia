@@ -52,7 +52,7 @@ other filesystems are available. It is part of the [ZBI](#zircon-boot-image),
 and is decompressed and served by [bootsvc](#bootsvc). After the early boot
 process is complete, the bootfs is mounted at `/boot`.
 
--   [Documentation](/docs/zircon/userboot.md#BOOTFS)
+-   [Documentation](/docs/concepts/booting/userboot.md#BOOTFS)
 
 #### **bootsvc** {#bootsvc}
 
@@ -61,7 +61,7 @@ service for the [bootfs](#bootfs) and a loader service that loads programs from
 the same bootfs. After starting these services, it loads the third program,
 which defaults to `devmgr`.
 
--   [Documentation](/docs/zircon/bootsvc.md)
+-   [Documentation](/docs/concepts/booting/bootsvc.md)
 
 #### **Bus Driver** {#bus-driver}
 
@@ -681,7 +681,7 @@ the kernel image in the same way as the [vDSO](#virtual-dynamic-shared-object),
 instead of being loaded from a filesystem. Its primary purpose is to load the
 second process, [bootsvc](#bootsvc), from the [bootfs](#bootfs).
 
--   [Documentation](/docs/zircon/userboot.md)
+-   [Documentation](/docs/concepts/booting/userboot.md)
 
 #### **Virtual Dynamic Shared Object** {#virtual-dynamic-shared-object}
 

@@ -44,7 +44,7 @@ code in libzircon and the kernel's libsyscalls.
 
 
 ## [Handles](/docs/zircon/handles.md) and
-[Rights](/docs/zircon/rights.md)
+[Rights](/docs/concepts/kernel/rights.md)
 
 Objects may have multiple Handles (in one or more Processes) that refer to them.
 
@@ -99,12 +99,12 @@ Threads represent threads of execution (CPU registers, stack, etc) within an
 address space which is owned by the Process in which they exist.  Processes are
 owned by Jobs, which define various resource limitations.  Jobs are owned by
 parent Jobs, all the way up to the Root Job which was created by the kernel at
-boot and passed to [`userboot`, the first userspace Process to begin execution](/docs/zircon/userboot.md).
+boot and passed to [`userboot`, the first userspace Process to begin execution](/docs/concepts/booting/userboot.md).
 
 Without a Job Handle, it is not possible for a Thread within a Process to create another
 Process or another Job.
 
-[Program loading](/docs/zircon/program_loading.md) is provided by userspace facilities and
+[Program loading](/docs/concepts/booting/program_loading.md) is provided by userspace facilities and
 protocols above the kernel layer.
 
 See: [`zx_process_create()`](/docs/reference/syscalls/process_create.md),
@@ -150,7 +150,7 @@ for example, may be READABLE or WRITABLE.  Processes or Threads may be TERMINATE
 
 Threads may wait for signals to become active on one or more Objects.
 
-See [signals](/docs/zircon/signals.md) for more information.
+See [signals](/docs/concepts/kernel/signals.md) for more information.
 
 ## Waiting: Wait One, Wait Many, and Ports
 

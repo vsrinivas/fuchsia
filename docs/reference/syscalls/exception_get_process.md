@@ -50,7 +50,7 @@ In the event of failure, a negative error value is returned.
 
 ## SEE ALSO
 
- - [exceptions](/docs/zircon/exceptions.md)
+ - [exceptions](/docs/concepts/kernel/exceptions.md)
  - [`zx_exception_get_thread()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->

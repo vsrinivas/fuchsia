@@ -82,7 +82,7 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
- - [exceptions](/docs/zircon/exceptions.md)
+ - [exceptions](/docs/concepts/kernel/exceptions.md)
  - [`zx_port_create()`]
  - [`zx_port_wait()`]
  - [`zx_task_resume_from_exception()`]

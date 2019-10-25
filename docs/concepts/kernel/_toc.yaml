@@ -2,9 +2,43 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Zircon kernel overview"
+  path: /docs/concepts/kernel
 - title: "Zircon kernel concepts"
   path: /docs/concepts/kernel/concepts.md
+- title: "Avoiding a problem with the SYSRET"
+  path: /docs/concepts/kernel/sysret_problem.md
+- title: "Errors"
+  path: /docs/concepts/kernel/errors.md
+- title: "Fair scheduling"
+  path: /docs/concepts/kernel/fair_scheduler.md
+- title: "Exceptions"
+  path: /docs/concepts/kernel/exceptions.md
+- title: "Kernel internal errors"
+  path: /docs/concepts/kernel/kernel_internal_errors.md
+- title: "Kernel invariants"
+  path: /docs/concepts/kernel/kernel_invariants.md
+- title: "Kernel scheduling"
+  path: /docs/concepts/kernel/kernel_scheduling.md
+- title: "Rights"
+  path: /docs/concepts/kernel/rights.md
+- title: "Safe stack"
+  path: /docs/concepts/kernel/safestack.md
+- title: "Shadow call stack"
+  path: /docs/concepts/kernel/shadow_call_stack.md
+- title: "Signals"
+  path: /docs/concepts/kernel/signals.md
+- title: "Runtime locks overview"
+  path: /docs/concepts/kernel/lockdep.md
+- title: "Runtime locks design"
+  path: /docs/concepts/kernel/lockdep-design.md
 - title: "vDSO (libzircon)"
   path: /docs/concepts/kernel/vdso.md
-- title: "System calls"
-  path: /docs/reference/syscalls/README.md
+- title: "Zircon and LK"
+  path: /docs/concepts/kernel/zx_and_lk.md
+- title: "Kernel reference"
+  section:
+  - include: /docs/reference/kernel/_toc.yaml
+- title: "System calls reference"
+  section:
+  - include: /docs/reference/syscalls/_toc.yaml
