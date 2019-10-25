@@ -12,7 +12,6 @@ zx_library("cobalt-client") {
     "cobalt-client/cpp/histogram-internal.h",
     "cobalt-client/cpp/histogram.h",
     "cobalt-client/cpp/metric-options.h",
-    "cobalt-client/cpp/timer.h",
     "cobalt-client/cpp/types-internal.h",
   ]
   host = true
