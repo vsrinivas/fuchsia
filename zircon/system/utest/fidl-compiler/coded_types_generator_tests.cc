@@ -23,7 +23,7 @@ struct Arrays {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(4, gen.coded_types().size());
 
@@ -76,7 +76,7 @@ struct Vectors {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   auto name_some_struct = fidl::flat::Name(library.library(), "SomeStruct");
   auto type_some_struct = gen.CodedTypeFor(&name_some_struct);
@@ -129,7 +129,7 @@ protocol UseOfProtocol {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(2, gen.coded_types().size());
 
@@ -171,7 +171,7 @@ protocol UseOfRequestOfProtocol {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(2, gen.coded_types().size());
 
@@ -215,7 +215,7 @@ xunion MyXUnion {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(3, gen.coded_types().size());
 
@@ -302,7 +302,7 @@ struct Wrapper2 {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   // 7 == size of {bool-outside-of-envelope, bool-inside-of-envelope,
   // int32-outside-of-envelope, int32-inside-of-envelope, MyStruct?, MyUnion?,
@@ -336,7 +336,7 @@ struct Complex {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(4, gen.coded_types().size());
 
@@ -406,7 +406,7 @@ struct Wrapper2 {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   // 3 == size of {bool, int32, MyXUnion?}, which is all of the types used in
   // the example.
@@ -450,7 +450,7 @@ table MyTable {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(4, gen.coded_types().size());
 
@@ -525,7 +525,7 @@ bits MyBits : uint8 {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(0, gen.coded_types().size());
   auto name_bits = fidl::flat::Name(library.library(), "MyBits");
@@ -555,7 +555,7 @@ enum MyEnum : uint16 {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes();
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(0, gen.coded_types().size());
 

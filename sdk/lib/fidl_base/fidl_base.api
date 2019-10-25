@@ -6,7 +6,7 @@
   "pkg/fidl_base/include/lib/fidl/cpp/message_builder.h": "56deb4b6704b6c59a1c21abb8ac686b3",
   "pkg/fidl_base/include/lib/fidl/cpp/message_part.h": "efcc7af2c309ed28a5758810e95843fb",
   "pkg/fidl_base/include/lib/fidl/envelope_frames.h": "d494a230043a6dcdb54fcfd631b52076",
-  "pkg/fidl_base/include/lib/fidl/internal.h": "1444d9f7fc453a3ab927b37efac14d10",
+  "pkg/fidl_base/include/lib/fidl/internal.h": "73f5b07ab77dae7d122e94648d0c0400",
   "pkg/fidl_base/include/lib/fidl/internal_callable_traits.h": "a18e97bafa2f7e388422a7e721d6421d",
   "pkg/fidl_base/include/lib/fidl/txn_header.h": "dd733ba705e299a00c8e1e3fb252ba22",
   "pkg/fidl_base/include/lib/fidl/visitor.h": "7983d99b554e578d34b1b2518e91f3ad",

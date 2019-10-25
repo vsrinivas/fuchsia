@@ -4,6 +4,8 @@
 
 extern "C" {
 
+// Coding tables for old wire format.
+
 extern const fidl_type_t test_name_EnumTypeTable;
 extern const fidl_type_t test_name_BitsTypeTable;
 
@@ -14,5 +16,20 @@ const fidl_type_t test_name_EnumTypeTable = fidl_type_t(::fidl::FidlCodedEnum(::
 
 static constexpr bool EnumValidatorFor_test_name_BitsType(uint64_t v) { return (v == 1ul) || false; }
 const fidl_type_t test_name_BitsTypeTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt32, &EnumValidatorFor_test_name_BitsType, "test.name/BitsType"));
+
+// Coding tables for v1 wire format.
+
+extern const fidl_type_t v1_test_name_EnumTypeTable;
+extern const fidl_type_t v1_test_name_BitsTypeTable;
+
+
+
+static constexpr bool EnumValidatorFor_v1_test_name_EnumType(uint64_t v) { return (v == 1ul) || false; }
+const fidl_type_t v1_test_name_EnumTypeTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt32, &EnumValidatorFor_v1_test_name_EnumType, "test.name/EnumType"));
+
+static constexpr bool EnumValidatorFor_v1_test_name_BitsType(uint64_t v) { return (v == 1ul) || false; }
+const fidl_type_t v1_test_name_BitsTypeTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt32, &EnumValidatorFor_v1_test_name_BitsType, "test.name/BitsType"));
+
+// Old <-> V1 map.
 
 } // extern "C"

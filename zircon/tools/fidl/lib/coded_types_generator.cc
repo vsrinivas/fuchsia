@@ -8,19 +8,42 @@
 
 namespace fidl {
 
+std::vector<const coded::Type*> CodedTypesGenerator::AllCodedTypes() const {
+  std::vector<const coded::Type*> coded_types;
+  coded_types.reserve(coded_types_.size() + named_coded_types_.size());
+
+  for (const auto& coded_type : coded_types_) {
+    assert(coded_type.get());
+
+    if (coded_type->coding_needed == coded::CodingNeeded::kEnvelopeOnly)
+      continue;
+
+    coded_types.push_back(coded_type.get());
+  }
+
+  for (const auto& [_, coded_type] : named_coded_types_) {
+    assert(coded_type.get());
+
+    coded_types.push_back(coded_type.get());
+  }
+
+  return coded_types;
+}
+
 const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
-                                                    coded::CodingContext context) {
+                                                    coded::CodingContext context,
+                                                    const WireFormat wire_format) {
   switch (type->kind) {
     case flat::Type::Kind::kArray: {
       auto array_type = static_cast<const flat::ArrayType*>(type);
       auto iter = array_type_map_.find(WithContext(context, array_type));
       if (iter != array_type_map_.end())
         return iter->second;
-      auto coded_element_type =
-          CompileType(array_type->element_type, coded::CodingContext::kOutsideEnvelope);
-      uint32_t array_size = array_type->typeshape(WireFormat::kOld).InlineSize();
-      uint32_t element_size = array_type->element_type->typeshape(WireFormat::kOld).InlineSize();
-      auto name = NameCodedArray(coded_element_type->coded_name, array_size);
+      auto coded_element_type = CompileType(array_type->element_type,
+                                            coded::CodingContext::kOutsideEnvelope, wire_format);
+      uint32_t array_size = array_type->typeshape(wire_format).InlineSize();
+      uint32_t element_size = array_type->element_type->typeshape(wire_format).InlineSize();
+      auto name = NameCodedArray(coded_element_type->coded_name, array_size, wire_format);
       auto coded_array_type = std::make_unique<coded::ArrayType>(
           std::move(name), coded_element_type, array_size, element_size, context);
       array_type_map_[WithContext(context, array_type)] = coded_array_type.get();
@@ -32,12 +55,12 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto iter = vector_type_map_.find(vector_type);
       if (iter != vector_type_map_.end())
         return iter->second;
-      auto coded_element_type =
-          CompileType(vector_type->element_type, coded::CodingContext::kOutsideEnvelope);
+      auto coded_element_type = CompileType(vector_type->element_type,
+                                            coded::CodingContext::kOutsideEnvelope, wire_format);
       uint32_t max_count = vector_type->element_count->value;
       uint32_t element_size = coded_element_type->size;
       std::string_view element_name = coded_element_type->coded_name;
-      auto name = NameCodedVector(element_name, max_count, vector_type->nullability);
+      auto name = NameCodedVector(element_name, max_count, vector_type->nullability, wire_format);
       auto coded_vector_type = std::make_unique<coded::VectorType>(
           std::move(name), coded_element_type, max_count, element_size, vector_type->nullability);
       vector_type_map_[vector_type] = coded_vector_type.get();
@@ -50,7 +73,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       if (iter != string_type_map_.end())
         return iter->second;
       uint32_t max_size = string_type->max_size->value;
-      auto name = NameCodedString(max_size, string_type->nullability);
+      auto name = NameCodedString(max_size, string_type->nullability, wire_format);
       auto coded_string_type =
           std::make_unique<coded::StringType>(std::move(name), max_size, string_type->nullability);
       string_type_map_[string_type] = coded_string_type.get();
@@ -62,7 +85,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto iter = handle_type_map_.find(handle_type);
       if (iter != handle_type_map_.end())
         return iter->second;
-      auto name = NameCodedHandle(handle_type->subtype, handle_type->nullability);
+      auto name = NameCodedHandle(handle_type->subtype, handle_type->nullability, wire_format);
       auto coded_handle_type = std::make_unique<coded::HandleType>(
           std::move(name), handle_type->subtype, handle_type->nullability);
       handle_type_map_[handle_type] = coded_handle_type.get();
@@ -74,8 +97,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto iter = request_type_map_.find(request_type);
       if (iter != request_type_map_.end())
         return iter->second;
-      auto name = NameCodedRequestHandle(NameCodedName(request_type->protocol_type->name),
-                                         request_type->nullability);
+      auto name =
+          NameCodedRequestHandle(NameCodedName(request_type->protocol_type->name, wire_format),
+                                 request_type->nullability, wire_format);
       auto coded_request_type =
           std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
       request_type_map_[request_type] = coded_request_type.get();
@@ -90,7 +114,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       auto name = NameFlatName(primitive_type->name);
       auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(
           std::move(name), primitive_type->subtype,
-          primitive_type->typeshape(WireFormat::kOld).InlineSize(), context);
+          primitive_type->typeshape(wire_format).InlineSize(), context);
       primitive_type_map_[WithContext(context, primitive_type)] = coded_primitive_type.get();
       coded_types_.push_back(std::move(coded_primitive_type));
       return coded_types_.back().get();
@@ -115,14 +139,14 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           }
           auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
           auto struct_pointer_type = std::make_unique<coded::PointerType>(
-              NamePointer(coded_struct_type->coded_name), coded_struct_type);
+              NamePointer(coded_struct_type->coded_name, wire_format), coded_struct_type);
           coded_struct_type->maybe_reference_type = struct_pointer_type.get();
           struct_type_map_[identifier_type] = struct_pointer_type.get();
           coded_types_.push_back(std::move(struct_pointer_type));
           return coded_types_.back().get();
         }
         case coded::Type::Kind::kTable: {
-          // Tables cannot be nullable, nothing to do.
+          // Tables cannot be nullable.
           assert(identifier_type->nullability != types::Nullability::kNullable);
           return coded_type;
         }
@@ -137,7 +161,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           }
           auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
           auto union_pointer_type = std::make_unique<coded::PointerType>(
-              NamePointer(coded_union_type->coded_name), coded_union_type);
+              NamePointer(coded_union_type->coded_name, wire_format), coded_union_type);
           coded_union_type->maybe_reference_type = union_pointer_type.get();
           union_type_map_[identifier_type] = union_pointer_type.get();
           coded_types_.push_back(std::move(union_pointer_type));
@@ -156,8 +180,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           auto iter = protocol_type_map_.find(identifier_type);
           if (iter != protocol_type_map_.end())
             return iter->second;
-          auto name = NameCodedProtocolHandle(NameCodedName(identifier_type->name),
-                                              identifier_type->nullability);
+          auto name = NameCodedProtocolHandle(NameCodedName(identifier_type->name, wire_format),
+                                              identifier_type->nullability, wire_format);
           auto coded_protocol_type = std::make_unique<coded::ProtocolHandleType>(
               std::move(name), identifier_type->nullability);
           protocol_type_map_[identifier_type] = coded_protocol_type.get();
@@ -184,7 +208,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
   }
 }
 
-void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
+void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat wire_format) {
   switch (decl->kind) {
     case flat::Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const flat::Protocol*>(decl);
@@ -200,13 +224,13 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           for (const auto& parameter : message.members) {
             std::string parameter_name =
                 coded_message->coded_name + "_" + std::string(parameter.name.data());
-            auto coded_parameter_type =
-                CompileType(parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
+            auto coded_parameter_type = CompileType(
+                parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope, wire_format);
             if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
               request_fields.emplace_back(coded_parameter_type,
-                                          parameter.typeshape(WireFormat::kOld).InlineSize(),
-                                          parameter.fieldshape(WireFormat::kOld).Offset(),
-                                          parameter.fieldshape(WireFormat::kOld).Padding());
+                                          parameter.typeshape(wire_format).InlineSize(),
+                                          parameter.fieldshape(wire_format).Offset(),
+                                          parameter.fieldshape(wire_format).Padding());
           }
           // We move the coded_message to coded_types_ so that we'll generate tables for the
           // message in the proper order.
@@ -230,21 +254,20 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       std::vector<coded::StructField>& struct_fields = coded_struct->fields;
       for (const auto& member : struct_decl->members) {
         std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
-        auto coded_member_type =
-            CompileType(member.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
+        auto coded_member_type = CompileType(member.type_ctor->type,
+                                             coded::CodingContext::kOutsideEnvelope, wire_format);
         if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
           [[maybe_unused]] auto is_primitive =
               coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in struct coding table!");
-          struct_fields.emplace_back(coded_member_type,
-                                     member.typeshape(WireFormat::kOld).InlineSize(),
-                                     member.fieldshape(WireFormat::kOld).Offset(),
-                                     member.fieldshape(WireFormat::kOld).Padding());
-        } else if (member.fieldshape(WireFormat::kOld).Padding() > 0) {
+          struct_fields.emplace_back(coded_member_type, member.typeshape(wire_format).InlineSize(),
+                                     member.fieldshape(wire_format).Offset(),
+                                     member.fieldshape(wire_format).Padding());
+        } else if (member.fieldshape(wire_format).Padding() > 0) {
           // The type does not need coding, but the field needs padding zeroing.
-          struct_fields.emplace_back(nullptr, member.typeshape(WireFormat::kOld).InlineSize(),
-                                     member.fieldshape(WireFormat::kOld).Offset(),
-                                     member.fieldshape(WireFormat::kOld).Padding());
+          struct_fields.emplace_back(nullptr, member.typeshape(wire_format).InlineSize(),
+                                     member.fieldshape(wire_format).Offset(),
+                                     member.fieldshape(wire_format).Padding());
         }
       }
       break;
@@ -263,19 +286,21 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           continue;
         std::string member_name =
             union_struct->coded_name + "_" + std::string(member.maybe_used->name.data());
-        auto coded_member_type =
-            CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kOutsideEnvelope);
+        auto coded_member_type = CompileType(member.maybe_used->type_ctor->type,
+                                             coded::CodingContext::kOutsideEnvelope, wire_format);
+        auto xunion_ordinal = member.xunion_ordinal->value;
         if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
           [[maybe_unused]] auto is_primitive =
               coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in union coding table!");
           union_members.emplace_back(coded_member_type,
-                                     member.maybe_used->fieldshape(WireFormat::kOld).Padding());
+                                     member.maybe_used->fieldshape(wire_format).Padding(),
+                                     xunion_ordinal);
         } else {
           // We need union_members.size() to match union_decl->members.size() because
           // the coding tables will use the union |tag| to index into the member array.
-          union_members.emplace_back(nullptr,
-                                     member.maybe_used->fieldshape(WireFormat::kOld).Padding());
+          union_members.emplace_back(nullptr, member.maybe_used->fieldshape(wire_format).Padding(),
+                                     xunion_ordinal);
         }
       }
       break;
@@ -300,8 +325,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         const auto& member = *member_pair.second;
         if (!member.maybe_used)
           continue;
-        auto coded_member_type =
-            CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
+        auto coded_member_type = CompileType(member.maybe_used->type_ctor->type,
+                                             coded::CodingContext::kInsideEnvelope, wire_format);
         coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
         nullable_coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
       }
@@ -324,8 +349,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           continue;
         std::string member_name =
             coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
-        auto coded_member_type =
-            CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
+        auto coded_member_type = CompileType(member.maybe_used->type_ctor->type,
+                                             coded::CodingContext::kInsideEnvelope, wire_format);
         table_fields.emplace_back(coded_member_type, member.ordinal->value);
       }
       break;
@@ -336,22 +361,22 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
   }
 }
 
-void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
+void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat wire_format) {
   switch (decl->kind) {
     case flat::Decl::Kind::kBits: {
       auto bits_decl = static_cast<const flat::Bits*>(decl);
-      std::string bits_name = NameCodedName(bits_decl->name);
+      std::string bits_name = NameCodedName(bits_decl->name, wire_format);
       auto primitive_type = static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type);
-      named_coded_types_.emplace(&bits_decl->name,
-                                 std::make_unique<coded::BitsType>(
-                                     std::move(bits_name), primitive_type->subtype,
-                                     primitive_type->typeshape(WireFormat::kOld).InlineSize(),
-                                     bits_decl->mask, NameFlatName(bits_decl->name)));
+      named_coded_types_.emplace(
+          &bits_decl->name,
+          std::make_unique<coded::BitsType>(std::move(bits_name), primitive_type->subtype,
+                                            primitive_type->typeshape(wire_format).InlineSize(),
+                                            bits_decl->mask, NameFlatName(bits_decl->name)));
       break;
     }
     case flat::Decl::Kind::kEnum: {
       auto enum_decl = static_cast<const flat::Enum*>(decl);
-      std::string enum_name = NameCodedName(enum_decl->name);
+      std::string enum_name = NameCodedName(enum_decl->name, wire_format);
       std::vector<uint64_t> members;
       for (const auto& member : enum_decl->members) {
         std::unique_ptr<flat::ConstantValue> value;
@@ -371,16 +396,16 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         }
         members.push_back(uint64);
       }
-      named_coded_types_.emplace(&enum_decl->name,
-                                 std::make_unique<coded::EnumType>(
-                                     std::move(enum_name), enum_decl->type->subtype,
-                                     enum_decl->type->typeshape(WireFormat::kOld).InlineSize(),
-                                     std::move(members), NameFlatName(enum_decl->name)));
+      named_coded_types_.emplace(
+          &enum_decl->name,
+          std::make_unique<coded::EnumType>(std::move(enum_name), enum_decl->type->subtype,
+                                            enum_decl->type->typeshape(wire_format).InlineSize(),
+                                            std::move(members), NameFlatName(enum_decl->name)));
       break;
     }
     case flat::Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const flat::Protocol*>(decl);
-      std::string protocol_name = NameCodedName(protocol_decl->name);
+      std::string protocol_name = NameCodedName(protocol_decl->name, wire_format);
       std::string protocol_qname = NameFlatName(protocol_decl->name);
       std::vector<std::unique_ptr<coded::MessageType>> protocol_messages;
       for (const auto& method_with_info : protocol_decl->all_methods) {
@@ -393,7 +418,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
           std::string message_qname = NameMessage(method_qname, kind);
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
               std::move(message_name), std::vector<coded::StructField>(),
-              message.typeshape(WireFormat::kOld).InlineSize(), std::move(message_qname)));
+              message.typeshape(wire_format).InlineSize(), std::move(message_qname)));
         };
         if (method.maybe_request) {
           CreateMessage(*method.maybe_request, types::MessageKind::kRequest);
@@ -410,41 +435,41 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kTable: {
       auto table_decl = static_cast<const flat::Table*>(decl);
-      std::string table_name = NameCodedName(table_decl->name);
-      named_coded_types_.emplace(&decl->name,
-                                 std::make_unique<coded::TableType>(
-                                     std::move(table_name), std::vector<coded::TableField>(),
-                                     table_decl->typeshape(WireFormat::kOld).InlineSize(),
-                                     NameFlatName(table_decl->name)));
+      std::string table_name = NameCodedName(table_decl->name, wire_format);
+      named_coded_types_.emplace(
+          &decl->name,
+          std::make_unique<coded::TableType>(
+              std::move(table_name), std::vector<coded::TableField>(),
+              table_decl->typeshape(wire_format).InlineSize(), NameFlatName(table_decl->name)));
       break;
     }
     case flat::Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const flat::Struct*>(decl);
       if (struct_decl->is_request_or_response)
         break;
-      std::string struct_name = NameCodedName(struct_decl->name);
-      named_coded_types_.emplace(&decl->name,
-                                 std::make_unique<coded::StructType>(
-                                     std::move(struct_name), std::vector<coded::StructField>(),
-                                     struct_decl->typeshape(WireFormat::kOld).InlineSize(),
-                                     NameFlatName(struct_decl->name)));
+      std::string struct_name = NameCodedName(struct_decl->name, wire_format);
+      named_coded_types_.emplace(
+          &decl->name,
+          std::make_unique<coded::StructType>(
+              std::move(struct_name), std::vector<coded::StructField>(),
+              struct_decl->typeshape(wire_format).InlineSize(), NameFlatName(struct_decl->name)));
       break;
     }
     case flat::Decl::Kind::kUnion: {
       auto union_decl = static_cast<const flat::Union*>(decl);
-      std::string union_name = NameCodedName(union_decl->name);
-      named_coded_types_.emplace(&decl->name,
-                                 std::make_unique<coded::UnionType>(
-                                     std::move(union_name), std::vector<coded::UnionField>(),
-                                     union_decl->DataOffset(WireFormat::kOld),
-                                     union_decl->typeshape(WireFormat::kOld).InlineSize(),
-                                     NameFlatName(union_decl->name)));
+      std::string union_name = NameCodedName(union_decl->name, wire_format);
+      named_coded_types_.emplace(
+          &decl->name,
+          std::make_unique<coded::UnionType>(
+              std::move(union_name), std::vector<coded::UnionField>(),
+              TypeShape(union_decl, wire_format).alignment,
+              union_decl->typeshape(wire_format).InlineSize(), NameFlatName(union_decl->name)));
       break;
     }
     case flat::Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const flat::XUnion*>(decl);
-      std::string xunion_name = NameCodedName(xunion_decl->name);
-      std::string nullable_xunion_name = NameNullableXUnion(xunion_name);
+      std::string xunion_name = NameCodedName(xunion_decl->name, wire_format);
+      std::string nullable_xunion_name = NameNullableXUnion(xunion_name, wire_format);
 
       // Always create the reference type
       auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
@@ -470,15 +495,15 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
   }
 }
 
-void CodedTypesGenerator::CompileCodedTypes() {
+void CodedTypesGenerator::CompileCodedTypes(const WireFormat wire_format) {
   for (const auto& decl : library_->declaration_order_) {
-    CompileDecl(decl);
+    CompileDecl(decl, wire_format);
   }
 
   for (const auto& decl : library_->declaration_order_) {
     if (decl->name.library() != library_)
       continue;
-    CompileFields(decl);
+    CompileFields(decl, wire_format);
   }
 }
 

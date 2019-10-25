@@ -31,7 +31,7 @@ namespace fidl {
 
 class TablesGenerator {
  public:
-  explicit TablesGenerator(const flat::Library* library) : coded_types_generator_(library) {}
+  explicit TablesGenerator(const flat::Library* library) : library_(library) {}
 
   ~TablesGenerator() = default;
 
@@ -73,9 +73,13 @@ class TablesGenerator {
   void GenerateForward(const coded::UnionType& union_type);
   void GenerateForward(const coded::XUnionType& xunion_type);
 
-  CodedTypesGenerator coded_types_generator_;
+  void Produce(CodedTypesGenerator* coded_types_generator, const WireFormat wire_format);
 
+  const flat::Library* library_;
+
+  // |tables_file_| will be empty after calling Produce(), since Produce() std::moves this.
   std::ostringstream tables_file_;
+
   size_t indent_level_ = 0u;
 };
 

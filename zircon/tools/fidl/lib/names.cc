@@ -43,6 +43,15 @@ std::string LengthPrefixedString(std::string_view str) {
   return out.str();
 }
 
+std::string WireFormatPrefix(const WireFormat wire_format) {
+  switch (wire_format) {
+    case WireFormat::kOld:
+      return "";
+    case WireFormat::kV1NoEe:
+      return "v1_";
+  }
+}
+
 }  // namespace
 
 std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator) {
@@ -387,7 +396,8 @@ std::string NameFlatType(const flat::Type* type) {
   return buf.str();
 }
 
-std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
+std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind,
+                          const WireFormat wire_format) {
   for (;;) {
     switch (type->kind) {
       case flat::Type::Kind::kHandle:
@@ -417,7 +427,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kUnion: {
-            std::string name = NameCodedName(identifier_type->name);
+            std::string name = NameCodedName(identifier_type->name, wire_format);
             if (identifier_type->nullability == types::Nullability::kNullable) {
               name.push_back('*');
             }
@@ -497,12 +507,12 @@ std::string NameMessage(std::string_view method_name, types::MessageKind kind) {
   return message_name;
 }
 
-std::string NameTable(std::string_view type_name) { return std::string(type_name) + "Table"; }
+std::string NameTable(std::string_view table_name) { return std::string(table_name) + "Table"; }
 
-std::string NamePointer(std::string_view name) {
+std::string NamePointer(std::string_view name, const WireFormat wire_format) {
   std::string pointer_name("Pointer");
   pointer_name += LengthPrefixedString(name);
-  return pointer_name;
+  return WireFormatPrefix(wire_format) + pointer_name;
 }
 
 std::string NameMembers(std::string_view name) {
@@ -517,54 +527,62 @@ std::string NameFields(std::string_view name) {
   return fields_name;
 }
 
-std::string NameNullableXUnion(std::string_view name) { return std::string(name) + "NullableRef"; }
+std::string NameNullableXUnion(std::string_view name, const WireFormat wire_format) {
+  return WireFormatPrefix(wire_format) + std::string(name) + "NullableRef";
+}
 
-std::string NameCodedName(const flat::Name& name) { return FormatName(name, "_", "_"); }
+std::string NameCodedName(const flat::Name& name, const WireFormat wire_format) {
+  return WireFormatPrefix(wire_format) + FormatName(name, "_", "_");
+}
 
-std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability) {
+std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability,
+                            const WireFormat wire_format) {
   std::string name("Handle");
   name += NameHandleSubtype(subtype);
   name += NameNullability(nullability);
-  return name;
+  return WireFormatPrefix(wire_format) + name;
 }
 
-std::string NameCodedProtocolHandle(std::string_view protocol_name,
-                                    types::Nullability nullability) {
+std::string NameCodedProtocolHandle(std::string_view protocol_name, types::Nullability nullability,
+                                    const WireFormat wire_format) {
   std::string name("Protocol");
   name += LengthPrefixedString(protocol_name);
   name += NameNullability(nullability);
-  return name;
+  return WireFormatPrefix(wire_format) + name;
 }
 
-std::string NameCodedRequestHandle(std::string_view protocol_name, types::Nullability nullability) {
+std::string NameCodedRequestHandle(std::string_view protocol_name, types::Nullability nullability,
+                                   const WireFormat wire_format) {
   std::string name("Request");
   name += LengthPrefixedString(protocol_name);
   name += NameNullability(nullability);
-  return name;
+  return WireFormatPrefix(wire_format) + name;
 }
 
-std::string NameCodedArray(std::string_view element_name, uint64_t size) {
+std::string NameCodedArray(std::string_view element_name, uint64_t size,
+                           const WireFormat wire_format) {
   std::string name("Array");
   name += NameSize(size);
   name += "_";
   name += LengthPrefixedString(element_name);
-  return name;
+  return WireFormatPrefix(wire_format) + name;
 }
 
 std::string NameCodedVector(std::string_view element_name, uint64_t max_size,
-                            types::Nullability nullability) {
+                            types::Nullability nullability, const WireFormat wire_format) {
   std::string name("Vector");
   name += NameSize(max_size);
   name += NameNullability(nullability);
   name += LengthPrefixedString(element_name);
-  return name;
+  return WireFormatPrefix(wire_format) + name;
 }
 
-std::string NameCodedString(uint64_t max_size, types::Nullability nullability) {
+std::string NameCodedString(uint64_t max_size, types::Nullability nullability,
+                            const WireFormat wire_format) {
   std::string name("String");
   name += NameSize(max_size);
   name += NameNullability(nullability);
-  return name;
+  return WireFormatPrefix(wire_format) + name;
 }
 
 }  // namespace fidl

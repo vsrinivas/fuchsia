@@ -41,7 +41,27 @@ class CodedTypesGenerator {
  public:
   explicit CodedTypesGenerator(const flat::Library* library) : library_(library) {}
 
-  void CompileCodedTypes();
+  void CompileCodedTypes(const WireFormat wire_format);
+
+  const flat::Library* library() const { return library_; }
+  const std::vector<std::unique_ptr<coded::Type>>& coded_types() const { return coded_types_; }
+
+  const coded::Type* CodedTypeFor(const flat::Name* name) const {
+    auto it = named_coded_types_.find(name);
+    return it != named_coded_types_.end() ? it->second.get() : nullptr;
+  }
+
+  std::vector<const coded::Type*> AllCodedTypes() const;
+
+ private:
+  // Returns a pointer owned by coded_types_.
+  const coded::Type* CompileType(const flat::Type* type, coded::CodingContext context,
+                                 const WireFormat wire_format);
+  void CompileFields(const flat::Decl* decl, const WireFormat wire_format);
+  void CompileDecl(const flat::Decl* decl, const WireFormat wire_format);
+  void CompileXRef(const coded::Type* type, const WireFormat wire_format);
+
+  const flat::Library* library_;
 
   template <typename FlatType, typename CodedType>
   using TypeMap = std::map<const FlatType*, const CodedType*, flat::PtrCompare<const FlatType>>;
@@ -49,19 +69,6 @@ class CodedTypesGenerator {
   template <typename FlatType, typename CodedType>
   using ContextTypeMap = std::map<const WithContext<const FlatType>, const CodedType*,
                                   WithContextCompare<const FlatType>>;
-
-  const flat::Library* library() const { return library_; }
-  const std::vector<std::unique_ptr<coded::Type>>& coded_types() const { return coded_types_; }
-
-  const coded::Type* CodedTypeFor(const flat::Name* name) { return named_coded_types_[name].get(); }
-
- private:
-  // Returns a pointer owned by coded_types_.
-  const coded::Type* CompileType(const flat::Type* type, coded::CodingContext);
-  void CompileFields(const flat::Decl* decl);
-  void CompileDecl(const flat::Decl* decl);
-
-  const flat::Library* library_;
 
   // All flat::Types and flat::Names here are owned by library_, and
   // all coded::Types by the named_coded_types_ map or the coded_types_ vector.

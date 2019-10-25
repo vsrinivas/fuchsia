@@ -76,9 +76,13 @@ struct FidlStructField {
 struct FidlUnionField {
   const fidl_type* type;
   uint32_t padding;
+  uint32_t xunion_ordinal;
 
-  constexpr FidlUnionField(const fidl_type* type, uint32_t padding)
-      : type(type), padding(padding) {}
+  // TODO(fxb/39680): Update this constructor, so that a variant is available where not supplying
+  // the |xunion_ordinal| parameter forces the constructor caller to acknowledge it's for the old
+  // wire format only.
+  constexpr FidlUnionField(const fidl_type* type, uint32_t padding, uint32_t xunion_ordinal = 0)
+      : type(type), padding(padding), xunion_ordinal(xunion_ordinal) {}
 };
 
 struct FidlTableField {
@@ -157,9 +161,17 @@ struct FidlCodedStruct {
   const uint32_t size;
   const char* name;  // may be nullptr if omitted at compile time
 
+  // Pointer to the alternate ("alt") version of this FidlCodedStruct, which is the v1 version of
+  // the struct if this is the old struct; or the old version of the struct if this is the v1
+  // version.
+  const FidlCodedStruct* const alt_type;
+
+  // TODO(fxb/39680): Update this constructor, so that a variant is available where not supplying
+  // the |alt_type| parameter forces the constructor caller to acknowledge it's for the old wire
+  // format only.
   constexpr FidlCodedStruct(const FidlStructField* fields, uint32_t field_count, uint32_t size,
-                            const char* name)
-      : fields(fields), field_count(field_count), size(size), name(name) {}
+                            const char* name, const FidlCodedStruct* const alt_type = nullptr)
+      : fields(fields), field_count(field_count), size(size), name(name), alt_type(alt_type) {}
 };
 
 struct FidlCodedStructPointer {
@@ -187,13 +199,22 @@ struct FidlCodedUnion {
   const uint32_t size;
   const char* name;  // may be nullptr if omitted at compile time
 
+  // Pointer to the alternate ("alt") version of this FidlCodedUnion, which is the v1 version of the
+  // union if this is the old union; or the old version of the union if this is the v1 version.
+  const FidlCodedUnion* const alt_type;
+
+  // TODO(fxb/39680): Update this constructor, so that a variant is available where not supplying
+  // the |alt_type| parameter forces the constructor caller to acknowledge it's for the old wire
+  // format only.
   constexpr FidlCodedUnion(const FidlUnionField* const fields, uint32_t field_count,
-                           uint32_t data_offset, uint32_t size, const char* name)
+                           uint32_t data_offset, uint32_t size, const char* name,
+                           const FidlCodedUnion* const alt_type = nullptr)
       : fields(fields),
         field_count(field_count),
         data_offset(data_offset),
         size(size),
-        name(name) {}
+        name(name),
+        alt_type(alt_type) {}
 };
 
 struct FidlCodedUnionPointer {
@@ -226,8 +247,16 @@ struct FidlCodedArray {
   const uint32_t array_size;
   const uint32_t element_size;
 
-  constexpr FidlCodedArray(const fidl_type* element, uint32_t array_size, uint32_t element_size)
-      : element(element), array_size(array_size), element_size(element_size) {}
+  // Pointer to the alternate ("alt") version of this FidlCodedArray, which is the v1 version of the
+  // array if this is the old struct; or the old version of the array if this is the v1 version.
+  const FidlCodedArray* const alt_type;
+
+  // TODO(fxb/39680): Update this constructor, so that a variant is available where not supplying
+  // the |alt_type| parameter forces the constructor caller to acknowledge it's for the old wire
+  // format only.
+  constexpr FidlCodedArray(const fidl_type* element, uint32_t array_size, uint32_t element_size,
+                           const FidlCodedArray* const alt_type = nullptr)
+      : element(element), array_size(array_size), element_size(element_size), alt_type(alt_type) {}
 };
 
 // Note: must keep in sync with fidlc types.h HandleSubtype.
@@ -289,9 +318,22 @@ struct FidlCodedVector {
   const uint32_t element_size;
   const FidlNullability nullable;
 
+  // Pointer to the alternate ("alt") version of this FidlCodedVector, which is the v1 version of
+  // the vector if this is the old struct; or the old version of the vector if this is the v1
+  // version.
+  const FidlCodedVector* const alt_type;
+
+  // TODO(fxb/39680): Update this constructor, so that a variant is available where not supplying
+  // the |alt_type| parameter forces the constructor caller to acknowledge it's for the old wire
+  // format only.
   constexpr FidlCodedVector(const fidl_type* element, uint32_t max_count, uint32_t element_size,
-                            FidlNullability nullable)
-      : element(element), max_count(max_count), element_size(element_size), nullable(nullable) {}
+                            FidlNullability nullable,
+                            const FidlCodedVector* const alt_type = nullptr)
+      : element(element),
+        max_count(max_count),
+        element_size(element_size),
+        nullable(nullable),
+        alt_type(alt_type) {}
 };
 
 }  // namespace fidl

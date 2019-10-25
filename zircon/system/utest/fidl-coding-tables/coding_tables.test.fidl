@@ -55,6 +55,18 @@ struct NumberCollision {
     string:1 f;
 };
 
+// MyUnion & MyUnionContainer below are designed to test the alt_type pointers in the coding tables.
+union MyUnion {
+    uint8 one;
+    uint16 two;
+};
+
+struct MyUnionContainer {
+    MyUnion u;
+    array<MyUnion>:5 a;
+    vector<MyUnion>:7 v;
+};
+
 // fidlc will only expose coding tables for message types.
 // However, we can obtain the coding tables for SomeStruct/MyXUnion etc. via the coding table
 // for request message types, by defining dummy methods which take a single desired argument.

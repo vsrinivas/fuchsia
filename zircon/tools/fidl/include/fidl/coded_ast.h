@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <cassert>
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,7 +23,8 @@
 // - Names have been unnested and fully qualified
 // - All data structure sizes and layouts have been computed
 
-// See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#c_family_runtime
+// See
+// https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#c_family_runtime
 // for additional context
 
 namespace fidl {
@@ -75,17 +77,14 @@ struct StructField {
 };
 
 struct UnionField {
-  UnionField(const Type* type, uint32_t padding) : type(type), padding(padding) {}
+  UnionField(const Type* type, uint32_t padding, uint32_t xunion_ordinal)
+      : type(type), padding(padding), xunion_ordinal(xunion_ordinal) {}
 
   const Type* type;
   const uint32_t padding;
+  const uint32_t xunion_ordinal;
 };
 
-// This carries the same information as the XUnionField struct below and
-// arguably violates DRY, but it's useful to make it a different type to
-// distinguish its use-case in code, and also to make it easier to change later
-// if necessary. (Gotta do something at least three times before we abstract it
-// out, right?)
 struct TableField {
   TableField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
 
@@ -93,10 +92,6 @@ struct TableField {
   const uint32_t ordinal;
 };
 
-// This carries the same information as the TableField struct above and arguably
-// violates DRY, but it's useful to make it a different type to distinguish its
-// use-case in code, and also to make it easier to change later if necessary.
-// (Gotta do something at least three times before we abstract it out, right?)
 struct XUnionField {
   XUnionField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
 
@@ -309,6 +304,69 @@ struct VectorType : public Type {
   const uint32_t element_size;
   const types::Nullability nullability;
 };
+
+struct TypeTraits {
+  // The qualified C++ identifier for this type.
+  const std::string_view pointer_name;
+
+  // The C++ identifier to access this type inside a fidl_type's anonymous union.
+  const std::string_view fidl_type_accessor;
+};
+
+constexpr TypeTraits GetTypeTraits(const UnionType&) {
+  return TypeTraits{
+      .pointer_name = "::fidl::FidlCodedUnion*",
+      .fidl_type_accessor = "coded_union",
+  };
+}
+
+constexpr TypeTraits GetTypeTraits(const ArrayType&) {
+  return TypeTraits{
+      .pointer_name = "::fidl::FidlCodedArray*",
+      .fidl_type_accessor = "coded_array",
+  };
+}
+
+constexpr TypeTraits GetTypeTraits(const StructType&) {
+  return TypeTraits{
+      .pointer_name = "::fidl::FidlCodedStruct*",
+      .fidl_type_accessor = "coded_struct",
+  };
+}
+
+constexpr TypeTraits GetTypeTraits(const MessageType&) {
+  return TypeTraits{
+      .pointer_name = "::fidl::FidlCodedStruct*",
+      .fidl_type_accessor = "coded_struct",
+  };
+}
+
+constexpr TypeTraits GetTypeTraits(const VectorType&) {
+  return TypeTraits{
+      .pointer_name = "::fidl::FidlCodedVector*",
+      .fidl_type_accessor = "coded_vector",
+  };
+}
+
+inline TypeTraits GetTypeTraits(const Type& type) {
+  switch (type.kind) {
+    using Kind = Type::Kind;
+
+    case Kind::kUnion:
+      return GetTypeTraits(static_cast<const UnionType&>(type));
+    case Kind::kStruct:
+      return GetTypeTraits(static_cast<const StructType&>(type));
+    case Kind::kMessage:
+      return GetTypeTraits(static_cast<const MessageType&>(type));
+    case Kind::kArray:
+      return GetTypeTraits(static_cast<const ArrayType&>(type));
+    case Kind::kVector:
+      return GetTypeTraits(static_cast<const VectorType&>(type));
+    default:
+      assert(false && "Invalid type passed to GetTypeTraits()");
+      return TypeTraits{};
+  }
+}
 
 }  // namespace coded
 }  // namespace fidl
