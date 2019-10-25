@@ -182,6 +182,20 @@ struct GpioProxyResponse {
   uint8_t value;
 };
 
+// ZX_PROTOCOL_BUTTONS proxy support.
+enum class ButtonsOp {
+  GET_NOTIFY_CHANNEL,
+};
+
+struct ButtonsProxyRequest {
+  ProxyRequest header;
+  ButtonsOp op;
+};
+
+struct ButtonsProxyResponse {
+  ProxyResponse header;
+};
+
 // ZX_PROTOCOL_CLOCK proxy support.
 enum class ClockOp {
   ENABLE,

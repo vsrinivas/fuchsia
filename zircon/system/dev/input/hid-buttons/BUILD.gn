@@ -3,17 +3,33 @@
 # found in the LICENSE file.
 
 zx_driver("hid-buttons") {
+  sources = []
+  deps = [
+    ":common",
+  ]
+
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
+}
+
+source_set("common") {
   sources = [
     "hid-buttons.cc",
   ]
-  deps = [
+
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.buttons",
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/fidl/fuchsia-buttons:llcpp",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
@@ -26,23 +42,11 @@ zx_test("hid-buttons-test") {
   output_name = "hid-buttons-test"
   sources = [
     "hid-buttons-test.cc",
-    "hid-buttons.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.buttons",
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.hidbus",
+    ":common",
     "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hid",
     "$zx/system/ulib/mock-function",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
 }

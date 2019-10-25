@@ -13,6 +13,7 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
+#include <ddktl/protocol/buttons.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/ethernet/board.h>
@@ -36,6 +37,7 @@ class Component : public ComponentBase {
   explicit Component(zx_device_t* parent)
       : ComponentBase(parent),
         canvas_(parent),
+        buttons_(parent),
         clock_(parent),
         eth_board_(parent),
         gpio_(parent),
@@ -72,6 +74,10 @@ class Component : public ComponentBase {
   zx_status_t RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                         uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                         zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcButtons(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                         uint32_t* out_resp_size, zx::handle* req_handles,
+                         uint32_t req_handle_count, zx::handle* resp_handles,
+                         uint32_t* resp_handle_count);
   zx_status_t RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                        zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -118,6 +124,7 @@ class Component : public ComponentBase {
                                     const dai_supported_formats_t* formats_list,
                                     size_t formats_count);
   ddk::AmlogicCanvasProtocolClient canvas_;
+  ddk::ButtonsProtocolClient buttons_;
   ddk::ClockProtocolClient clock_;
   ddk::EthBoardProtocolClient eth_board_;
   ddk::GpioProtocolClient gpio_;

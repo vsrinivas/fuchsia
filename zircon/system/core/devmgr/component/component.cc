@@ -62,6 +62,34 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
   }
 }
 
+zx_status_t Component::RpcButtons(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                  uint32_t* out_resp_size, zx::handle* req_handles,
+                                  uint32_t req_handle_count, zx::handle* resp_handles,
+                                  uint32_t* resp_handle_count) {
+  if (!buttons_.is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto* req = reinterpret_cast<const ButtonsProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+  auto* resp = reinterpret_cast<ButtonsProxyResponse*>(resp_buf);
+  *out_resp_size = sizeof(*resp);
+
+  switch (req->op) {
+    case ButtonsOp::GET_NOTIFY_CHANNEL:
+      if (req_handle_count != 1) {
+        zxlogf(ERROR, "%s received %u handles, expecting 1\n", __func__, req_handle_count);
+        return ZX_ERR_INTERNAL;
+      }
+      return buttons_.GetChannel(zx::channel(std::move(req_handles[0])));
+    default:
+      zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
 zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                                 uint32_t* out_resp_size, zx::handle* req_handles,
                                 uint32_t req_handle_count, zx::handle* resp_handles,
@@ -791,6 +819,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_AMLOGIC_CANVAS:
       status = RpcCanvas(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                          resp_handles, &resp_handle_count);
+      break;
+    case ZX_PROTOCOL_BUTTONS:
+      status = RpcButtons(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                          resp_handles, &resp_handle_count);
       break;
     case ZX_PROTOCOL_CLOCK:
       status = RpcClock(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,

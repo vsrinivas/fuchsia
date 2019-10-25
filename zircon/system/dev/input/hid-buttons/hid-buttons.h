@@ -5,17 +5,25 @@
 #ifndef ZIRCON_SYSTEM_DEV_INPUT_HID_BUTTONS_HID_BUTTONS_H_
 #define ZIRCON_SYSTEM_DEV_INPUT_HID_BUTTONS_HID_BUTTONS_H_
 
+#include <fuchsia/buttons/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
 
+#include <list>
 #include <map>
 #include <optional>
 #include <vector>
 
 #include <ddk/metadata/buttons.h>
+#include <ddk/protocol/buttons.h>
 #include <ddk/protocol/gpio.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/buttons.h>
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/array.h>
@@ -24,12 +32,8 @@
 #include <fbl/ref_counted.h>
 #include <hid/buttons.h>
 
-#include "ddk/protocol/buttons.h"
-
-// == operator for button_notify_callback_t
-inline bool operator==(const button_notify_callback_t& c1, const button_notify_callback_t c2) {
-  return (c1.notify_button == c2.notify_button) && (c1.ctx == c2.ctx);
-}
+#include "lib/zx/channel.h"
+#include "zircon/types.h"
 
 namespace buttons {
 
@@ -44,6 +48,10 @@ class HidButtonsHidBusFunction;
 using HidBusFunctionType = ddk::Device<HidButtonsHidBusFunction, ddk::UnbindableDeprecated>;
 class HidButtonsButtonsFunction;
 using ButtonsFunctionType = ddk::Device<HidButtonsButtonsFunction, ddk::UnbindableDeprecated>;
+class ButtonsNotifyInterface;
+
+using Buttons = ::llcpp::fuchsia::buttons::Buttons;
+using ButtonType = ::llcpp::fuchsia::buttons::ButtonType;
 
 class HidButtonsDevice : public DeviceType {
  public:
@@ -53,7 +61,8 @@ class HidButtonsDevice : public DeviceType {
     buttons_gpio_config_t config;
   };
 
-  explicit HidButtonsDevice(zx_device_t* device) : DeviceType(device) {}
+  explicit HidButtonsDevice(zx_device_t* device)
+      : DeviceType(device), button2channels_(static_cast<size_t>(ButtonType::MAX)) {}
   virtual ~HidButtonsDevice() = default;
 
   // Hidbus Protocol Functions.
@@ -71,25 +80,33 @@ class HidButtonsDevice : public DeviceType {
   zx_status_t HidbusSetProtocol(uint8_t protocol);
 
   // Buttons Protocol Functions.
-  bool ButtonsGetState(button_type_t type);
-  zx_status_t ButtonsRegisterNotifyButton(button_type_t type,
-                                          const button_notify_callback_t* callback);
-  void ButtonsUnregisterNotifyButton(button_type_t type, const button_notify_callback_t* callback);
+  zx_status_t ButtonsGetChannel(zx::channel chan, async_dispatcher_t* dispatcher);
+
+  // FIDL Interface Functions.
+  bool GetState(ButtonType type);
+  zx_status_t RegisterNotify(uint8_t types, uint64_t chan_id);
 
   void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t Bind(fbl::Array<Gpio> gpios, fbl::Array<buttons_button_config_t> buttons);
+  virtual void ClosingChannel(uint64_t id);
 
  protected:
   // Protected for unit testing.
   void ShutDown() TA_EXCL(client_lock_);
+  HidButtonsButtonsFunction* GetButtonsFunction() { return buttons_function_; }
 
   zx::port port_;
 
-  fbl::Mutex callbacks_lock_;
-  fbl::Array<std::vector<button_notify_callback_t>> callbacks_ TA_GUARDED(callbacks_lock_);
-  // only for DIRECT; callbacks_, gpios_ and buttons_ are 1:1:1 in the same order
+  fbl::Mutex channels_lock_;
+  // only for DIRECT; interfaces_, gpios_ and buttons_ are 1:1:1 in the same order
+  // button2channels_ stores the IDs of the channels, where the IDs are equivalent to the
+  //    addresses/pointers to the ButtonsNotifyInterface struct containing the unowned channel.
+  //    the ID allows us to identify the unowned channel so we can remove it from this struct
+  //    when the corresponding channel is closed.
+  std::vector<std::vector<ButtonsNotifyInterface*>> button2channels_ TA_GUARDED(channels_lock_);
+  std::list<ButtonsNotifyInterface> interfaces_ TA_GUARDED(channels_lock_);  // owns the channels
   std::map<uint8_t, uint32_t> button_map_;  // Button ID to Button Number
 
  private:
@@ -115,46 +132,40 @@ class HidButtonsHidBusFunction
       public fbl::RefCounted<HidButtonsHidBusFunction> {
  public:
   explicit HidButtonsHidBusFunction(zx_device_t* device, HidButtonsDevice* peripheral)
-      : HidBusFunctionType(device), peripheral_(peripheral) {}
+      : HidBusFunctionType(device), device_(peripheral) {}
   virtual ~HidButtonsHidBusFunction() = default;
 
   void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
   void DdkRelease() { delete this; }
 
   // Methods required by the ddk mixins.
-  zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) {
-    return peripheral_->HidbusStart(ifc);
-  }
+  zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) { return device_->HidbusStart(ifc); }
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) {
-    return peripheral_->HidbusQuery(options, info);
+    return device_->HidbusQuery(options, info);
   }
-  void HidbusStop() { peripheral_->HidbusStop(); }
+  void HidbusStop() { device_->HidbusStop(); }
   zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
                                   size_t data_size, size_t* out_data_actual) {
-    return peripheral_->HidbusGetDescriptor(desc_type, out_data_buffer, data_size, out_data_actual);
+    return device_->HidbusGetDescriptor(desc_type, out_data_buffer, data_size, out_data_actual);
   }
   zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
                               size_t* out_len) {
-    return peripheral_->HidbusGetReport(rpt_type, rpt_id, data, len, out_len);
+    return device_->HidbusGetReport(rpt_type, rpt_id, data, len, out_len);
   }
   zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len) {
-    return peripheral_->HidbusSetReport(rpt_type, rpt_id, data, len);
+    return device_->HidbusSetReport(rpt_type, rpt_id, data, len);
   }
   zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
-    return peripheral_->HidbusGetIdle(rpt_id, duration);
+    return device_->HidbusGetIdle(rpt_id, duration);
   }
   zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
-    return peripheral_->HidbusSetIdle(rpt_id, duration);
+    return device_->HidbusSetIdle(rpt_id, duration);
   }
-  zx_status_t HidbusGetProtocol(uint8_t* protocol) {
-    return peripheral_->HidbusGetProtocol(protocol);
-  }
-  zx_status_t HidbusSetProtocol(uint8_t protocol) {
-    return peripheral_->HidbusSetProtocol(protocol);
-  }
+  zx_status_t HidbusGetProtocol(uint8_t* protocol) { return device_->HidbusGetProtocol(protocol); }
+  zx_status_t HidbusSetProtocol(uint8_t protocol) { return device_->HidbusSetProtocol(protocol); }
 
  private:
-  HidButtonsDevice* peripheral_;
+  HidButtonsDevice* device_;
 };
 
 class HidButtonsButtonsFunction
@@ -162,25 +173,69 @@ class HidButtonsButtonsFunction
       public ddk::ButtonsProtocol<HidButtonsButtonsFunction, ddk::base_protocol>,
       public fbl::RefCounted<HidButtonsButtonsFunction> {
  public:
-  explicit HidButtonsButtonsFunction(zx_device_t* device, HidButtonsDevice* peripheral)
-      : ButtonsFunctionType(device), peripheral_(peripheral) {}
+  HidButtonsButtonsFunction(zx_device_t* device, HidButtonsDevice* peripheral)
+      : ButtonsFunctionType(device),
+        device_(peripheral),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    loop_.StartThread("hid-buttons-notify-loop", &loop_thread_);
+  }
   virtual ~HidButtonsButtonsFunction() = default;
 
-  void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
+  void DdkUnbindDeprecated() {
+    loop_.Shutdown();
+    DdkRemoveDeprecated();
+  }
   void DdkRelease() { delete this; }
 
   // Methods required by the ddk mixins.
-  bool ButtonsGetState(button_type_t type) { return peripheral_->ButtonsGetState(type); }
-  zx_status_t ButtonsRegisterNotifyButton(button_type_t type,
-                                          const button_notify_callback_t* callback) {
-    return peripheral_->ButtonsRegisterNotifyButton(type, callback);
-  }
-  void ButtonsUnregisterNotifyButton(button_type_t type, const button_notify_callback_t* callback) {
-    peripheral_->ButtonsUnregisterNotifyButton(type, callback);
+  zx_status_t ButtonsGetChannel(zx::channel chan) {
+    return device_->ButtonsGetChannel(std::move(chan), loop_.dispatcher());
   }
 
  private:
-  HidButtonsDevice* peripheral_;
+  HidButtonsDevice* device_;
+
+  async::Loop loop_;
+  thrd_t loop_thread_;
+};
+
+class ButtonsNotifyInterface : public Buttons::Interface {
+ public:
+  explicit ButtonsNotifyInterface(HidButtonsDevice* peripheral) : device_(peripheral) {}
+  ~ButtonsNotifyInterface() = default;
+
+  void Init(async_dispatcher_t* dispatcher, zx::channel chan, uint64_t id) {
+    id_ = id;
+    chan_ = zx::unowned_channel(chan);
+
+    fidl::OnChannelCloseFn<ButtonsNotifyInterface> closing =
+        [this](ButtonsNotifyInterface* interface) { device_->ClosingChannel(id_); };
+    fidl::OnChannelCloseFn<ButtonsNotifyInterface> closed = [](ButtonsNotifyInterface* interface) {
+      return;
+    };
+    fidl::AsyncBind(dispatcher, std::move(chan), this, std::move(closing), std::move(closed));
+  }
+
+  uint64_t id() const { return id_; }
+  zx::unowned_channel& chan() { return chan_; }
+
+  // Methods required by the FIDL interface
+  void GetState(ButtonType type, GetStateCompleter::Sync _completer) {
+    _completer.Reply(device_->GetState(type));
+  }
+  void RegisterNotify(uint8_t types, RegisterNotifyCompleter::Sync _completer) {
+    zx_status_t status = ZX_OK;
+    if ((status = device_->RegisterNotify(types, id_)) == ZX_OK) {
+      _completer.ReplySuccess();
+    } else {
+      _completer.ReplyError(status);
+    }
+  }
+
+ private:
+  HidButtonsDevice* device_;
+  uint64_t id_;
+  zx::unowned_channel chan_;
 };
 
 }  // namespace buttons

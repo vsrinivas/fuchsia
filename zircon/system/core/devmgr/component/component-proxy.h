@@ -12,6 +12,7 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
+#include <ddktl/protocol/buttons.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/ethernet/board.h>
@@ -30,11 +31,11 @@
 namespace component {
 
 class ComponentProxy;
-using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::UnbindableNew,
-                                       ddk::GetProtocolable>;
+using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::UnbindableNew, ddk::GetProtocolable>;
 
 class ComponentProxy : public ComponentProxyBase,
                        public ddk::AmlogicCanvasProtocol<ComponentProxy>,
+                       public ddk::ButtonsProtocol<ComponentProxy>,
                        public ddk::ClockProtocol<ComponentProxy>,
                        public ddk::EthBoardProtocol<ComponentProxy>,
                        public ddk::GpioProtocol<ComponentProxy>,
@@ -70,6 +71,7 @@ class ComponentProxy : public ComponentProxyBase,
   zx_status_t AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
                                   uint8_t* out_canvas_idx);
   zx_status_t AmlogicCanvasFree(uint8_t canvas_idx);
+  zx_status_t ButtonsGetChannel(zx::channel chan);
   zx_status_t ClockEnable();
   zx_status_t ClockDisable();
   zx_status_t ClockIsEnabled(bool* out_enabled);

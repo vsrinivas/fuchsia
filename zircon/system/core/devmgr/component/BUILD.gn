@@ -11,6 +11,7 @@ zx_driver("component") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
+    "$zx/system/banjo/ddk.protocol.buttons",
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.codec",
     "$zx/system/banjo/ddk.protocol.ethernet.board",
@@ -38,6 +39,7 @@ zx_driver("component.proxy") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
+    "$zx/system/banjo/ddk.protocol.buttons",
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.codec",
     "$zx/system/banjo/ddk.protocol.ethernet.board",

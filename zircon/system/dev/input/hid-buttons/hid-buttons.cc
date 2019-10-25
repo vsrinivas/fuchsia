@@ -7,27 +7,26 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 #include <cstdint>
 #include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/buttons.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/buttons.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hid/descriptor.h>
-
-#include "ddk/device.h"
-#include "ddk/metadata/buttons.h"
-#include "ddk/protocol/buttons.h"
-#include "zircon/assert.h"
-#include "zircon/types.h"
 
 namespace buttons {
 
@@ -51,10 +50,12 @@ int HidButtonsDevice::Thread() {
         // We need to reconfigure the GPIO to catch the opposite polarity.
         uint8_t val = ReconfigurePolarity(type, packet.key);
 
-        // Callbacks
-        fbl::AutoLock lock(&callbacks_lock_);
-        for (auto const& fn : callbacks_[type]) {
-          fn.notify_button(fn.ctx, static_cast<bool>(val));
+        // Notify
+        fbl::AutoLock lock(&channels_lock_);
+        for (auto const& interface : button2channels_[type]) {
+          Buttons::SendNotifyEvent(zx::unowned_channel(interface->chan()),
+                                   static_cast<ButtonType>(buttons_[type].id),
+                                   static_cast<bool>(val));
         }
       }
 
@@ -238,12 +239,7 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
   buttons_ = std::move(buttons);
   gpios_ = std::move(gpios);
   fbl::AllocChecker ac;
-  fbl::AutoLock lock(&callbacks_lock_);
-  callbacks_ =
-      fbl::Array(new (&ac) std::vector<button_notify_callback_t>[BUTTON_TYPE_MAX], BUTTON_TYPE_MAX);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  fbl::AutoLock lock(&channels_lock_);
 
   status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
   if (status != ZX_OK) {
@@ -375,16 +371,16 @@ void HidButtonsDevice::DdkUnbindDeprecated() {
 void HidButtonsDevice::DdkRelease() { delete this; }
 
 static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
-  // button_type and buttons_id happen to be the same, in the future might need a map,
+  // ButtonType and buttons_id happen to be the same, in the future might need a map,
   // combine declarations with ddk/metadata/buttons.h, or replace. Bug 36834
-  static_assert(BUTTON_TYPE_VOLUME_UP == BUTTONS_ID_VOLUME_UP,
-                "BUTTON_TYPE doesn't match BUTTONS_ID, volume up");
-  static_assert(BUTTON_TYPE_VOLUME_DOWN == BUTTONS_ID_VOLUME_DOWN,
-                "BUTTON_TYPE doesn't match BUTTONS_ID, volume down");
-  static_assert(BUTTON_TYPE_RESET == BUTTONS_ID_FDR,
-                "BUTTON_TYPE doesn't match BUTTONS_ID, reset/fdr");
-  static_assert(BUTTON_TYPE_MUTE == BUTTONS_ID_MIC_MUTE,
-                "BUTTON_TYPE doesn't match BUTTONS_ID, mute/mic mute");
+  static_assert(static_cast<uint8_t>(ButtonType::VOLUME_UP) == BUTTONS_ID_VOLUME_UP,
+                "ButtonType doesn't match BUTTONS_ID, volume up");
+  static_assert(static_cast<uint8_t>(ButtonType::VOLUME_DOWN) == BUTTONS_ID_VOLUME_DOWN,
+                "ButtonType doesn't match BUTTONS_ID, volume down");
+  static_assert(static_cast<uint8_t>(ButtonType::RESET) == BUTTONS_ID_FDR,
+                "ButtonType doesn't match BUTTONS_ID, reset/fdr");
+  static_assert(static_cast<uint8_t>(ButtonType::MUTE) == BUTTONS_ID_MIC_MUTE,
+                "ButtonType doesn't match BUTTONS_ID, mute/mic mute");
 
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<buttons::HidButtonsDevice>(&ac, parent);
@@ -473,29 +469,57 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-bool HidButtonsDevice::ButtonsGetState(button_type_t type) {
-  uint8_t val;
-  gpio_read(&gpios_[buttons_[button_map_[type]].gpioA_idx].gpio, &val);
-  return val;
-}
+zx_status_t HidButtonsDevice::ButtonsGetChannel(zx::channel chan, async_dispatcher_t* dispatcher) {
+  fbl::AutoLock lock(&channels_lock_);
 
-zx_status_t HidButtonsDevice::ButtonsRegisterNotifyButton(
-    button_type_t type, const button_notify_callback_t* callback) {
-  fbl::AutoLock lock(&callbacks_lock_);
-  callbacks_[button_map_[type]].push_back(*callback);
+  interfaces_.emplace_back(this);
+  interfaces_.back().Init(dispatcher, std::move(chan),
+                          reinterpret_cast<uint64_t>(&(interfaces_.back())));
+
   return ZX_OK;
 }
 
-void HidButtonsDevice::ButtonsUnregisterNotifyButton(button_type_t type,
-                                                     const button_notify_callback_t* callback) {
-  fbl::AutoLock lock(&callbacks_lock_);
-  auto& callbacks = callbacks_[button_map_[type]];
-  auto cb = std::find(callbacks.begin(), callbacks.end(), *callback);
-  if (cb != callbacks.end()) {
-    callbacks.erase(cb);
+bool HidButtonsDevice::GetState(ButtonType type) {
+  uint8_t val;
+  gpio_read(&gpios_[buttons_[button_map_[static_cast<uint8_t>(type)]].gpioA_idx].gpio, &val);
+  return static_cast<bool>(val);
+}
+
+zx_status_t HidButtonsDevice::RegisterNotify(uint8_t types, uint64_t chan_id) {
+  auto addr = reinterpret_cast<ButtonsNotifyInterface*>(chan_id);
+  fbl::AutoLock lock(&channels_lock_);
+  for (const auto& [type, button] : button_map_) {
+    auto it = find(button2channels_[button].begin(), button2channels_[button].end(), addr);
+    if ((types & (1 << type)) && (it == button2channels_[button].end())) {
+      button2channels_[button].push_back(addr);
+    }
+    if (!(types & (1 << type)) && (it != button2channels_[button].end())) {
+      // types already registered and not listed in the client's request are removed
+      button2channels_[button].erase(it);
+    }
+  }
+  return ZX_OK;
+}
+
+void HidButtonsDevice::ClosingChannel(uint64_t id) {
+  fbl::AutoLock lock(&channels_lock_);
+  for (const auto& [type, button] : button_map_) {
+    auto it = find(button2channels_[button].begin(), button2channels_[button].end(),
+                   reinterpret_cast<ButtonsNotifyInterface*>(id));
+    // Note: not all buttons may have the channel to be closed (it may be in any buttons either)
+    if (it != button2channels_[button].end()) {
+      button2channels_[button].erase(it);
+    }
+  }
+
+  // release ownership
+  auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
+                         [&id](ButtonsNotifyInterface& interface) { return interface.id() == id; });
+  if (it == interfaces_.end()) {
+    zxlogf(ERROR, "%s interfaces_ could not find channel\n", __func__);
     return;
   }
-  zxlogf(ERROR, "%s could not erase %p callback for %u button\n", __FUNCTION__, callback, type);
+  interfaces_.erase(it);
 }
 
 static constexpr zx_driver_ops_t hid_buttons_driver_ops = []() {

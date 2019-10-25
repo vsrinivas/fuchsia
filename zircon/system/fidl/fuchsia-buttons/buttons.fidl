@@ -1,0 +1,39 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.buttons;
+using zx;
+
+/// ButtonType should the same as BUTTONS_ID_... in metadata/buttons.h
+enum ButtonType : uint8 {
+    VOLUME_UP = 0;
+    VOLUME_DOWN = 1;
+    RESET = 2;
+    MUTE = 3;
+    MAX = 4;
+};
+
+/// Protocol for other devices to get the state of buttons and register for
+/// notifications of state change.
+[Discoverable]
+protocol Buttons {
+    /// Gets the state of the button requested.
+    /// |type| : Button type.
+    /// @Returns: |pressed| : True if button is pressed.
+    GetState(ButtonType type) -> (bool pressed);
+
+    /// Registers to receive notifications of a state change for some buttons.
+    /// |types| : Bitmask which indicates the interested buttons. 0 means not
+    ///           interested, 1 means interested. Bit position corresponds to
+    ///           ButtonType, e.g. (1 << VOLUME_UP) means notify only when
+    ///           the state of the VOLUME_UP button changes. Types not listed
+    ///           in subsequent calls are removed.
+    /// @Returns: |status| : ZX_OK if succeeds.
+    RegisterNotify(uint8 types) -> () error zx.status;
+
+    /// Notify event. Called when state of previously registered button changes.
+    /// |type| : Button type.
+    /// |pressed| : True if button is pressed.
+    -> Notify(ButtonType type, bool pressed);
+};
