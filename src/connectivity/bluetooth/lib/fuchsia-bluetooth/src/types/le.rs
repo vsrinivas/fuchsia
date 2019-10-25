@@ -389,7 +389,7 @@ mod tests {
             advertising_data: None,
         };
         let expected =
-            Peer { id: PeerId::new(1), connectable: false, rssi: None, advertising_data: None };
+            Peer { id: PeerId(1), connectable: false, rssi: None, advertising_data: None };
         let peer = Peer::try_from(peer).expect("expected successful conversion");
         assert_eq!(expected, peer);
     }
@@ -411,7 +411,7 @@ mod tests {
             }),
         };
         let expected = Peer {
-            id: PeerId::new(1),
+            id: PeerId(1),
             connectable: true,
             rssi: Some(-10),
             advertising_data: Some(AdvertisingData {

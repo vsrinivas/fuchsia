@@ -33,7 +33,6 @@ use {
     std::{
         collections::hash_map::{self, Entry},
         collections::{HashMap, HashSet},
-        convert::TryFrom,
         string::String,
         sync::Arc,
     },
@@ -798,9 +797,9 @@ async fn start_control_service(
                 let mut connected_peers: Vec<fidl_fuchsia_bluetooth::PeerId> =
                     Vec::with_capacity(8);
                 for peer in remotes.write().keys() {
-                    let peer_id = PeerId::try_from(peer.clone()).expect("String to PeerId failed.");
-                    let fidl_peer_id: fidl_fuchsia_bluetooth::PeerId = peer_id.into();
-                    connected_peers.push(fidl_peer_id);
+                    let peer_id =
+                        peer.parse::<PeerId>().expect("Parsing PeerId from String failed.");
+                    connected_peers.push(peer_id.into());
                 }
                 //let iter = connected_peers.into_iter();
                 responder.send(&mut connected_peers.iter_mut())?;
@@ -1010,8 +1009,9 @@ async fn main() -> Result<(), Error> {
                         // PeerManager event listener
                         let wpm_handle = pm_handle.clone();
                         if let Some(handle) = &wpm_handle.write().handle {
-                            let peer_id: PeerId = PeerId::try_from(device_id.clone())
-                                .expect("String to PeerId failed.");
+                            let peer_id = device_id
+                                .parse::<PeerId>()
+                                .expect("Parsing PeerId from String failed.");
                             if let Some(err) =
                                 handle.send_on_peer_connected(&mut peer_id.into()).err()
                             {
