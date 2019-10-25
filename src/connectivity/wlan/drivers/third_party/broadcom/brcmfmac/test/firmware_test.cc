@@ -49,6 +49,11 @@ TEST(FirmwareTest, ParseNvram) {
           "\t#comment\n\n\t foo = bar   baz\nboardrev = 0xcafe  # foo \n"s,
           "foo=bar   baz\0boardrev=0xcafe\0\0\0\x08\x00\xF7\xFF"s,
       },
+      // DOS newlines, because those are a thing.
+      {
+          "#comment1\n#comment2\r\n\r\nfoo = bar \r\nboardrev = 0xcafe  # foo \r\n"s,
+          "foo=bar\0boardrev=0xcafe\0\0\0\0\0\x07\x00\xF8\xFF"s,
+      },
       // Comments and ignored "special keys".
       {
           " # comment\n\nRAW1=1\ndevpath_foo=foo\npcie/bar=bar\n"s,

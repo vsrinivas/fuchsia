@@ -165,11 +165,13 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
   std::string parsed_nvram;
   // The initial parsing pass only removes characters, so the input size is a good starting point.
   parsed_nvram.reserve(nvram.size());
+  int line_index = 1;
   bool boardrev_found = false;
 
   // Skip whitespace.
   const auto skip_past_blank = [&]() {
-    while (read_iter != nvram.cend() && std::isblank(*read_iter)) {
+    // Note that std::isspace() will munch '\r' as well, for DOS-style newlines.
+    while (read_iter != nvram.cend() && std::isspace(*read_iter) && *read_iter != '\n') {
       ++read_iter;
     }
   };
@@ -183,6 +185,7 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
       const char read_char = *read_iter;
       ++read_iter;
       if (read_char == '\n') {
+        ++line_index;
         return;
       }
     }
@@ -196,6 +199,7 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
     }
     if (*read_iter == '\n') {
       // This was a blank line.
+      ++line_index;
       ++read_iter;
       continue;
     }
@@ -215,20 +219,23 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
     }
     const std::string_view key(&*key_begin, read_iter - key_begin);
     if (read_iter == key_begin) {
-      BRCMF_ERR("Invalid NVRAM key %.*s\n", static_cast<int>(key.size()), key.data());
+      BRCMF_ERR("Invalid NVRAM key \"%.s*\" at line %d\n", static_cast<int>(key.size()), key.data(),
+                line_index);
       return ZX_ERR_INVALID_ARGS;
     }
 
     // Find the "=" separator for the value, possibly surrounded by blankspace.
     skip_past_blank();
     if (read_iter == nvram.cend() || *read_iter != '=') {
-      BRCMF_ERR("Missing NVRAM value for key %.*s\n", static_cast<int>(key.size()), key.data());
+      BRCMF_ERR("Missing NVRAM value for key \"%.*s\" at line %d\n", static_cast<int>(key.size()),
+                key.data(), line_index);
       return ZX_ERR_INVALID_ARGS;
     }
     ++read_iter;
     skip_past_blank();
     if (read_iter == nvram.cend()) {
-      BRCMF_ERR("Missing NVRAM value for key %.*s\n", static_cast<int>(key.size()), key.data());
+      BRCMF_ERR("Missing NVRAM value for key \"%.*s\" at line %d\n", static_cast<int>(key.size()),
+                key.data(), line_index);
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -239,7 +246,7 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
     }
     // Trim trailing whitespace.
     auto value_end = read_iter;
-    while (value_end > value_begin && std::isblank(*(value_end - 1))) {
+    while (value_end > value_begin && std::isspace(*(value_end - 1))) {
       --value_end;
     }
     const std::string_view value(&*value_begin, value_end - value_begin);
@@ -247,8 +254,8 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
     // The rest of the line is either whitespace to a newline, or a comment.
     skip_past_newline();
     if (*(read_iter - 1) != '\n') {
-      BRCMF_ERR("Missing NVRAM newline after value for key %.*s\n", static_cast<int>(key.size()),
-                key.data());
+      BRCMF_ERR("Missing NVRAM newline after value for key \"%.*s\" at line %d\n",
+                static_cast<int>(key.size()), key.data(), line_index);
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -258,7 +265,8 @@ zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_o
       continue;
     } else if (key.compare(0, 7, "devpath") == 0 || key.compare(0, 5, "pcie/") == 0) {
       // These features are not supported, yet.
-      BRCMF_ERR("Unsupported NVRAM key %.*s\n", static_cast<int>(key.size()), key.data());
+      BRCMF_ERR("Unsupported NVRAM key \"%.*s\" at line %d\n", static_cast<int>(key.size()),
+                key.data(), line_index);
       continue;
     } else if (key.compare("boardrev") == 0) {
       boardrev_found = true;
