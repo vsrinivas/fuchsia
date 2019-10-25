@@ -14,7 +14,7 @@ pub enum ControllerEvent {
 pub type ControllerEventStream = mpsc::Receiver<ControllerEvent>;
 
 /// Controller interface for a remote peer returned by the PeerManager using the
-/// PeerControllerRequest stream for a given PeerControllerRequest.
+/// ControllerRequest stream for a given ControllerRequest.
 #[derive(Debug)]
 pub struct Controller {
     peer: Arc<RemotePeer>,

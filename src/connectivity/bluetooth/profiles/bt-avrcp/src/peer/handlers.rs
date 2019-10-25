@@ -9,17 +9,12 @@ use super::*;
 /// registered notifications by the peer.
 /// FIXME: This is a stub that mostly logs incoming commands as we implement out features in TARGET.
 #[derive(Debug)]
-pub struct ControlChannelCommandHandler {
+pub struct ControlChannelHandler {
     /// Handle back to the remote peer. Weak to prevent a reference cycle since the remote peer owns this object.
     pub remote_peer: Weak<RemotePeer>,
-    // TODO: implement continuations
-    // Remaining packets packets as part of fragmented response.
-    // Map of PduIDs to a Vec of remaining encoded packets.
-    //#[allow(dead_code)]
-    //continuations: HashMap<u8, Vec<Vec<u8>>>,
 }
 
-impl ControlChannelCommandHandler {
+impl ControlChannelHandler {
     pub fn new(remote_peer: Weak<RemotePeer>) -> Self {
         Self { remote_peer }
     }

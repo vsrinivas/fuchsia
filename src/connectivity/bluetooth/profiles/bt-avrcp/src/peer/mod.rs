@@ -33,8 +33,9 @@ use {
     },
 };
 
-mod command_handler;
 mod controller;
+mod handlers;
+mod notification_stream;
 mod remote_peer;
 
 use crate::{
@@ -43,9 +44,10 @@ use crate::{
     types::{PeerError as Error, PeerId, PeerIdStreamMap},
 };
 
-use command_handler::ControlChannelCommandHandler;
 pub use controller::{Controller, ControllerEvent, ControllerEventStream};
-use remote_peer::{NotificationStream, PeerChannel, RemotePeer};
+use handlers::ControlChannelHandler;
+use notification_stream::NotificationStream;
+use remote_peer::{PeerChannel, RemotePeer};
 
 #[derive(Debug)]
 pub struct ControllerRequest {
@@ -61,8 +63,6 @@ impl ControllerRequest {
         (receiver, Self { peer_id: peer_id.clone(), reply: sender })
     }
 }
-
-type RemotePeersMap = HashMap<PeerId, Arc<RemotePeer>>;
 
 pub struct PeerManager<'a> {
     /// shared internal state storage for all connected peers.
@@ -185,7 +185,7 @@ impl<'a> PeerManager<'a> {
                 // we have a connection with a profile descriptor but we aren't processing it yet.
 
                 *command_handle_guard =
-                    Some(ControlChannelCommandHandler::new(Arc::downgrade(&remote_peer)));
+                    Some(ControlChannelHandler::new(Arc::downgrade(&remote_peer)));
 
                 let stream = PeerIdStreamMap::new(peer_connection.take_command_stream(), peer_id);
                 self.control_channel_streams.push(stream);
@@ -426,7 +426,7 @@ impl<'a> PeerManager<'a> {
 #[derive(Debug)]
 pub struct PeerManagerInner {
     profile_svc: Box<dyn ProfileService + Send + Sync>,
-    remotes: RwLock<RemotePeersMap>,
+    remotes: RwLock<HashMap<PeerId, Arc<RemotePeer>>>,
     // TODO(1279): implement the target handler.
 }
 
