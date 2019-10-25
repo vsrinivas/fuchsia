@@ -238,7 +238,15 @@ test_package("netstack_c_api_tests_inner") {
   tests = [
     {
       name = "connect_test"
-      environments = [ qemu_env ]
+      environments = [
+        # qemu_env
+        {
+          dimensions = {
+            device_type = "QEMU"
+          }
+          tags = [ "flaky" ]  # Bug: 39341
+        },
+      ]
     },
     {
       name = "name_provider_service_not_present_test"
