@@ -7,13 +7,29 @@ use {
     failure::Error,
     failure::ResultExt,
     fuchsia_async as fasync,
-    fuchsia_pkg_testing::{pkgfs::TestPkgFs, PackageBuilder},
+    fuchsia_pkg_testing::{pkgfs::TestPkgFs, Package, PackageBuilder, VerificationError},
+    std::future::Future,
     std::io::{Read, Write},
 };
 
 fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, Error> {
     Ok(d.map(|i| i.map(|entry| entry.file_name().to_string_lossy().into()))
         .collect::<Result<Vec<_>, _>>()?)
+}
+
+fn verify_contents<'a>(
+    pkg: &'a Package,
+    d: &openat::Dir,
+    path: &str,
+) -> impl Future<Output = Result<(), VerificationError>> + 'a {
+    let handle = fdio::transfer_fd(
+        d.open_file(path).unwrap_or_else(|e| panic!("opening {}: {:?}", path, e)),
+    )
+    .unwrap();
+    let proxy = fidl_fuchsia_io::DirectoryProxy::new(
+        fuchsia_async::Channel::from_channel(handle.into()).unwrap(),
+    );
+    async move { pkg.verify_contents(&proxy).await }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -104,12 +120,7 @@ async fn test_pkgfs_short_write() -> Result<(), Error> {
         std::io::ErrorKind::NotFound
     );
 
-    let mut file_contents = String::new();
-    d.open_file("packages/example/0/a/b")
-        .expect("read package file")
-        .read_to_string(&mut file_contents)
-        .expect("read package file");
-    assert_eq!(&file_contents, "Hello world!\n");
+    verify_contents(&pkg, &d, "packages/example/0").await.expect("valid example package");
     let mut file_contents = String::new();
     d.open_file("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b")
         .expect("read package file")
@@ -298,12 +309,7 @@ async fn test_pkgfs_restart_install() -> Result<(), Error> {
         std::io::ErrorKind::NotFound
     );
 
-    let mut file_contents = String::new();
-    d.open_file("packages/example/0/a/b")
-        .expect("read package file")
-        .read_to_string(&mut file_contents)
-        .expect("read package file");
-    assert_eq!(&file_contents, "Hello world!\n");
+    verify_contents(&pkg, &d, "packages/example/0").await.expect("valid example package");
     let mut file_contents = String::new();
     d.open_file("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b")
         .expect("read versions file")
@@ -451,12 +457,7 @@ async fn test_pkgfs_restart_install_already_done() -> Result<(), Error> {
         Err(std::io::ErrorKind::NotFound)
     );
 
-    let mut file_contents = String::new();
-    d.open_file("packages/example/0/a/b")
-        .expect("read package file")
-        .read_to_string(&mut file_contents)
-        .expect("read package file");
-    assert_eq!(&file_contents, "Hello world!\n");
+    verify_contents(&pkg, &d, "packages/example/0").await.expect("valid example package");
     let mut file_contents = String::new();
     d.open_file("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b")
         .expect("read package file")
@@ -548,6 +549,90 @@ async fn test_pkgfs_restart_install_failed_meta_far() -> Result<(), Error> {
         ls_simple(blobfs_root_dir.list_dir(".").expect("list dir")).expect("list dir contents"),
         Vec::<&str>::new()
     );
+
+    drop(d);
+
+    pkgfs.stop().await?;
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_install_update() -> Result<(), Error> {
+    fn copy_file_with_len(
+        d: &openat::Dir,
+        path: &std::path::Path,
+        source: &mut std::fs::File,
+    ) -> Result<(), failure::Error> {
+        use std::convert::TryInto;
+        let mut bytes = vec![];
+        source.read_to_end(&mut bytes)?;
+        let mut file = d.write_file(path, 0777)?;
+        file.set_len(bytes.len().try_into().unwrap())?;
+        file.write_all(&bytes)?;
+        Ok(())
+    }
+
+    let pkgfs = TestPkgFs::start().context("starting pkgfs")?;
+    let d = pkgfs.root_dir().context("getting pkgfs root dir")?;
+
+    let pkg = PackageBuilder::new("example")
+        .add_resource_at("a/b", "Hello world!\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+    copy_file_with_len(
+        &d,
+        &std::path::Path::new(&format!("install/pkg/{}", pkg.meta_far_merkle_root())),
+        &mut pkg.meta_far().unwrap(),
+    )
+    .unwrap();
+
+    let needs =
+        ls_simple(d.list_dir(format!("needs/packages/{}", pkg.meta_far_merkle_root())).unwrap())
+            .unwrap();
+
+    assert_eq!(needs, ["e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3"]);
+    copy_file_with_len(
+        &d,
+        &std::path::Path::new(
+            "install/blob/e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3",
+        ),
+        &mut pkg.content_blob_files().next().unwrap().file,
+    )
+    .unwrap();
+
+    assert_eq!(ls_simple(d.list_dir("packages/example").unwrap()).unwrap(), ["0"]);
+    verify_contents(&pkg, &d, "packages/example/0").await.expect("valid example package");
+
+    let pkg2 = PackageBuilder::new("example")
+        .add_resource_at("a/b", "Hello world 2!\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+    copy_file_with_len(
+        &d,
+        &std::path::Path::new(&format!("install/pkg/{}", pkg2.meta_far_merkle_root())),
+        &mut pkg2.meta_far().unwrap(),
+    )
+    .unwrap();
+
+    let needs =
+        ls_simple(d.list_dir(format!("needs/packages/{}", pkg2.meta_far_merkle_root())).unwrap())
+            .unwrap();
+
+    assert_eq!(needs, ["c575064c3168bb6eb56f435efe2635594ed02d161927ac3a5a7842c3cb748f03"]);
+    copy_file_with_len(
+        &d,
+        &std::path::Path::new(
+            "install/blob/c575064c3168bb6eb56f435efe2635594ed02d161927ac3a5a7842c3cb748f03",
+        ),
+        &mut pkg2.content_blob_files().next().unwrap().file,
+    )
+    .unwrap();
+
+    assert_eq!(ls_simple(d.list_dir("packages/example").unwrap()).unwrap(), ["0"]);
+    verify_contents(&pkg2, &d, "packages/example/0").await.expect("pkg2 replaced pkg");
 
     drop(d);
 
