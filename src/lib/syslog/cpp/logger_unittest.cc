@@ -156,6 +156,17 @@ TEST(Logger, CheckFunction) {
   EXPECT_EQ(0u, outstanding_bytes);
 }
 
+TEST(LoggerDeathTest, CheckFunction) {
+  Cleanup cleanup;
+  ASSERT_EQ(ZX_OK, syslog::InitLogger());
+  ASSERT_DEATH(FX_CHECK(false) << "test output", "");
+}
+
+TEST(LoggerDeathTest, CheckFunctionWithoutLogger) {
+  Cleanup cleanup;
+  ASSERT_DEATH(FX_CHECK(false) << "test output", "");
+}
+
 TEST(Logger, VLog) {
   Cleanup cleanup;
   zx::socket local, remote;
