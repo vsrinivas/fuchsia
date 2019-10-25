@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-hid.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -15,35 +17,19 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
 #include <ddk/protocol/usb.h>
+#include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+namespace usb_hid {
 
 #define to_usb_hid(d) containerof(d, usb_hid_device_t, hiddev)
 
 // This driver binds on any USB device that exposes HID reports. It passes the
 // reports to the HID driver by implementing the HidBus protocol.
-typedef struct usb_hid_device {
-  zx_device_t* zxdev;
-  zx_device_t* usbdev;
-  usb_protocol_t usb;
 
-  hid_info_t info;
-  usb_request_t* req;
-  bool req_queued;
-
-  mtx_t lock;
-  hidbus_ifc_protocol_t ifc;
-  void* cookie;
-
-  uint8_t interface;
-  usb_desc_iter_t desc_iter;
-  usb_hid_descriptor_t* hid_desc;
-  size_t parent_req_size;
-} usb_hid_device_t;
-
-static void usb_interrupt_callback(void* ctx, usb_request_t* req) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
+void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
   // TODO use usb request copyfrom instead of mmap
   void* buffer;
   zx_status_t status = usb_request_mmap(req, &buffer);
@@ -57,16 +43,15 @@ static void usb_interrupt_callback(void* ctx, usb_request_t* req) {
   }
 
   bool requeue = true;
+  fbl::AutoLock lock(&usb_lock_);
   switch (req->response.status) {
     case ZX_ERR_IO_NOT_PRESENT:
       requeue = false;
       break;
     case ZX_OK:
-      mtx_lock(&hid->lock);
-      if (hid->ifc.ops) {
-        hidbus_ifc_io_queue(&hid->ifc, buffer, req->response.actual);
+      if (ifc_.is_valid()) {
+        ifc_.IoQueue(buffer, req->response.actual);
       }
-      mtx_unlock(&hid->lock);
       break;
     default:
       zxlogf(ERROR, "usb-hid: unknown interrupt status %d; not requeuing req\n",
@@ -77,79 +62,88 @@ static void usb_interrupt_callback(void* ctx, usb_request_t* req) {
 
   if (requeue) {
     usb_request_complete_t complete = {
-        .callback = usb_interrupt_callback,
-        .ctx = hid,
+        .callback =
+            [](void* ctx, usb_request_t* request) {
+              static_cast<UsbHidbus*>(ctx)->UsbInterruptCallback(request);
+            },
+        .ctx = this,
     };
-    usb_request_queue(&hid->usb, req, &complete);
+    usb_.RequestQueue(req, &complete);
   } else {
-    hid->req_queued = false;
+    req_queued_ = false;
   }
 }
 
-static zx_status_t usb_hid_query(void* ctx, uint32_t options, hid_info_t* info) {
+zx_status_t UsbHidbus::HidbusQuery(uint32_t options, hid_info_t* info) {
   if (!info) {
     return ZX_ERR_INVALID_ARGS;
   }
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  info->dev_num = hid->info.dev_num;
-  info->device_class = hid->info.device_class;
-  info->boot_device = hid->info.boot_device;
+  info->dev_num = info_.dev_num;
+  info->device_class = info_.device_class;
+  info->boot_device = info_.boot_device;
+
+  info->vendor_id = info_.vendor_id;
+  info->product_id = info_.product_id;
+  info->version = info_.version;
   return ZX_OK;
 }
 
-static zx_status_t usb_hid_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  mtx_lock(&hid->lock);
-  if (hid->ifc.ops) {
-    mtx_unlock(&hid->lock);
+zx_status_t UsbHidbus::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
+  fbl::AutoLock lock(&usb_lock_);
+  if (ifc_.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  hid->ifc = *ifc;
-  if (!hid->req_queued) {
-    hid->req_queued = true;
+  ifc_ = ifc;
+  if (!req_queued_) {
+    req_queued_ = true;
     usb_request_complete_t complete = {
-        .callback = usb_interrupt_callback,
-        .ctx = hid,
+        .callback =
+            [](void* ctx, usb_request_t* request) {
+              static_cast<UsbHidbus*>(ctx)->UsbInterruptCallback(request);
+            },
+        .ctx = this,
     };
-    usb_request_queue(&hid->usb, hid->req, &complete);
+    usb_.RequestQueue(req_, &complete);
   }
-  mtx_unlock(&hid->lock);
   return ZX_OK;
 }
 
-static void usb_hid_stop(void* ctx) {
+void UsbHidbus::HidbusStop() {
   // TODO(tkilbourn) set flag to stop requeueing the interrupt request when we start using
   // this callback
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  mtx_lock(&hid->lock);
-  hid->ifc.ops = NULL;
-  mtx_unlock(&hid->lock);
+  fbl::AutoLock lock(&usb_lock_);
+  ifc_.clear();
 }
 
-static zx_status_t usb_hid_control(usb_hid_device_t* hid, uint8_t req_type, uint8_t request,
-                                   uint16_t value, uint16_t index, void* data, size_t length,
-                                   size_t* out_length) {
+zx_status_t UsbHidbus::UsbHidControlIn(uint8_t req_type, uint8_t request, uint16_t value,
+                                       uint16_t index, void* data, size_t length,
+                                       size_t* out_length) {
   zx_status_t status;
-  if ((req_type & USB_DIR_MASK) == USB_DIR_OUT) {
-    status =
-        usb_control_out(&hid->usb, req_type, request, value, index, ZX_TIME_INFINITE, data, length);
-  } else {
-    status = usb_control_in(&hid->usb, req_type, request, value, index, ZX_TIME_INFINITE, data,
-                            length, out_length);
-  }
+  fbl::AutoLock lock(&usb_lock_);
+  status =
+      usb_.ControlIn(req_type, request, value, index, ZX_TIME_INFINITE, data, length, out_length);
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
-    usb_reset_endpoint(&hid->usb, 0);
+    status = usb_.ResetEndpoint(0);
   }
   return status;
 }
 
-static zx_status_t usb_hid_get_descriptor(void* ctx, hid_description_type_t desc_type,
-                                          void* out_data_buffer, size_t data_size,
-                                          size_t* out_data_actual) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
+zx_status_t UsbHidbus::UsbHidControlOut(uint8_t req_type, uint8_t request, uint16_t value,
+                                        uint16_t index, const void* data, size_t length,
+                                        size_t* out_length) {
+  zx_status_t status;
+  fbl::AutoLock lock(&usb_lock_);
+  status = usb_.ControlOut(req_type, request, value, index, ZX_TIME_INFINITE, data, length);
+  if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
+    status = usb_.ResetEndpoint(0);
+  }
+  return status;
+}
+zx_status_t UsbHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                           size_t data_size, size_t* out_data_actual) {
   int desc_idx = -1;
-  for (int i = 0; i < hid->hid_desc->bNumDescriptors; i++) {
-    if (hid->hid_desc->descriptors[i].bDescriptorType == desc_type) {
+  for (int i = 0; i < hid_desc_->bNumDescriptors; i++) {
+    if (hid_desc_->descriptors[i].bDescriptorType == desc_type) {
       desc_idx = i;
       break;
     }
@@ -158,193 +152,158 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, hid_description_type_t desc
     return ZX_ERR_NOT_FOUND;
   }
 
-  size_t desc_len = hid->hid_desc->descriptors[desc_idx].wDescriptorLength;
+  size_t desc_len = hid_desc_->descriptors[desc_idx].wDescriptorLength;
   if (data_size < desc_len) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
+
   zx_status_t status =
-      usb_hid_control(hid, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
-                      USB_REQ_GET_DESCRIPTOR, static_cast<uint16_t>(desc_type << 8), hid->interface,
-                      out_data_buffer, desc_len, out_data_actual);
+      UsbHidControlIn(USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE, USB_REQ_GET_DESCRIPTOR,
+                      static_cast<uint16_t>(desc_type << 8), interface_, out_data_buffer, desc_len,
+                      out_data_actual);
   if (status < 0) {
     zxlogf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
   }
   return status;
 }
 
-static zx_status_t usb_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id, void* data,
-                                      size_t len, size_t* out_len) {
+zx_status_t UsbHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+                                       size_t* out_len) {
   if (out_len == NULL) {
     return ZX_ERR_INVALID_ARGS;
   }
-
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  return usb_hid_control(hid, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_GET_REPORT,
-                         static_cast<uint16_t>(rpt_type << 8 | rpt_id), hid->interface, data, len,
+  return UsbHidControlIn(USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_GET_REPORT,
+                         static_cast<uint16_t>(rpt_type << 8 | rpt_id), interface_, data, len,
                          out_len);
 }
 
-static zx_status_t usb_hid_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id, const void* data,
-                                      size_t len) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  return usb_hid_control(hid, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                         USB_HID_SET_REPORT, (static_cast<uint16_t>(rpt_type << 8 | rpt_id)),
-                         hid->interface, (void*)data, len, NULL);
+zx_status_t UsbHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
+                                       size_t len) {
+  return UsbHidControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_SET_REPORT,
+                          (static_cast<uint16_t>(rpt_type << 8 | rpt_id)), interface_, data, len,
+                          NULL);
 }
 
-static zx_status_t usb_hid_get_idle(void* ctx, uint8_t rpt_id, uint8_t* duration) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  return usb_hid_control(hid, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_GET_IDLE,
-                         rpt_id, hid->interface, duration, sizeof(*duration), NULL);
+zx_status_t UsbHidbus::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+  return UsbHidControlIn(USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_GET_IDLE,
+                         rpt_id, interface_, duration, sizeof(*duration), NULL);
 }
 
-static zx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  return usb_hid_control(hid, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_SET_IDLE,
-                         static_cast<uint16_t>((duration << 8) | rpt_id), hid->interface, NULL, 0,
-                         NULL);
+zx_status_t UsbHidbus::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
+  return UsbHidControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_SET_IDLE,
+                          static_cast<uint16_t>((duration << 8) | rpt_id), interface_, NULL, 0,
+                          NULL);
 }
 
-static zx_status_t usb_hid_get_protocol(void* ctx, uint8_t* protocol) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  return usb_hid_control(hid, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                         USB_HID_GET_PROTOCOL, 0, hid->interface, protocol, sizeof(*protocol),
-                         NULL);
+zx_status_t UsbHidbus::HidbusGetProtocol(uint8_t* protocol) {
+  return UsbHidControlIn(USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_GET_PROTOCOL, 0,
+                         interface_, protocol, sizeof(*protocol), NULL);
 }
 
-static zx_status_t usb_hid_set_protocol(void* ctx, uint8_t protocol) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  return usb_hid_control(hid, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                         USB_HID_SET_PROTOCOL, protocol, hid->interface, NULL, 0, NULL);
+zx_status_t UsbHidbus::HidbusSetProtocol(uint8_t protocol) {
+  return UsbHidControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_SET_PROTOCOL,
+                          protocol, interface_, NULL, 0, NULL);
 }
 
-static hidbus_protocol_ops_t usb_hid_bus_ops = {
-    .query = usb_hid_query,
-    .start = usb_hid_start,
-    .stop = usb_hid_stop,
-    .get_descriptor = usb_hid_get_descriptor,
-    .get_report = usb_hid_get_report,
-    .set_report = usb_hid_set_report,
-    .get_idle = usb_hid_get_idle,
-    .set_idle = usb_hid_set_idle,
-    .get_protocol = usb_hid_get_protocol,
-    .set_protocol = usb_hid_set_protocol,
-};
+void UsbHidbus::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
-static void usb_hid_unbind(void* ctx) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  device_unbind_reply(hid->zxdev);
-}
-
-static void usb_hid_release(void* ctx) {
-  usb_hid_device_t* hid = static_cast<usb_hid_device_t*>(ctx);
-  usb_request_release(hid->req);
-  usb_desc_iter_release(&hid->desc_iter);
-  free(hid);
-}
-
-static zx_protocol_device_t usb_hid_dev_ops = []() {
-  zx_protocol_device_t ops = {};
-  ops.version = DEVICE_OPS_VERSION;
-  ops.unbind = usb_hid_unbind;
-  ops.release = usb_hid_release;
-  return ops;
-}();
-
-static void free_usb_hid(usb_hid_device_t* usbhid) {
-  if (usbhid->req) {
-    usb_request_release(usbhid->req);
+void UsbHidbus::DdkRelease() {
+  usb_request_release(req_);
+  usb_desc_iter_release(&desc_iter_);
+  if (req_) {
+    usb_request_release(req_);
   }
-  usb_desc_iter_release(&usbhid->desc_iter);
-  free(usbhid);
+  usb_desc_iter_release(&desc_iter_);
+  delete this;
 }
 
-static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
-  usb_hid_device_t* usbhid = static_cast<usb_hid_device_t*>(calloc(1, sizeof(usb_hid_device_t)));
-  if (usbhid == NULL) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  zx_status_t status = device_get_protocol(dev, ZX_PROTOCOL_USB, &usbhid->usb);
-  if (status != ZX_OK) {
-    free_usb_hid(usbhid);
-    return status;
-  }
-
-  usbhid->parent_req_size = usb_get_request_size(&usbhid->usb);
-
-  status = usb_desc_iter_init(&usbhid->usb, &usbhid->desc_iter);
-  if (status != ZX_OK) {
-    free_usb_hid(usbhid);
-    return status;
-  }
-
-  usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&usbhid->desc_iter, true);
-  if (!intf || intf->bInterfaceClass != USB_CLASS_HID) {
-    status = ZX_ERR_NOT_SUPPORTED;
-    free_usb_hid(usbhid);
-    return status;
-  }
-
-  usb_endpoint_descriptor_t* endpt = NULL;
-  usb_hid_descriptor_t* hid_desc = NULL;
-
-  // look for interrupt endpoint and HID descriptor
-  usb_descriptor_header_t* header = usb_desc_iter_next(&usbhid->desc_iter);
-  while (header && !(endpt && hid_desc)) {
-    if (header->bDescriptorType == USB_DT_HID) {
-      hid_desc = (usb_hid_descriptor_t*)header;
-    } else if (header->bDescriptorType == USB_DT_ENDPOINT) {
-      endpt = (usb_endpoint_descriptor_t*)header;
-      if (usb_ep_direction(endpt) != USB_ENDPOINT_IN ||
-          usb_ep_type(endpt) != USB_ENDPOINT_INTERRUPT) {
-        endpt = NULL;
+void UsbHidbus::FindDescriptors(usb::Interface interface, usb_hid_descriptor_t** hid_desc,
+                                usb_endpoint_descriptor_t** endpt) {
+  for (auto& descriptor : interface.GetDescriptorList()) {
+    if (descriptor.bDescriptorType == USB_DT_HID) {
+      *hid_desc = (usb_hid_descriptor_t*)&descriptor;
+      if (*endpt) {
+        break;
+      }
+    } else if (descriptor.bDescriptorType == USB_DT_ENDPOINT) {
+      if (usb_ep_direction((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_IN &&
+          usb_ep_type((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_INTERRUPT) {
+        *endpt = (usb_endpoint_descriptor_t*)&descriptor;
+        if (*hid_desc) {
+          break;
+        }
       }
     }
-    header = usb_desc_iter_next(&usbhid->desc_iter);
   }
+}
 
-  if (!endpt || !hid_desc) {
-    status = ZX_ERR_NOT_SUPPORTED;
-    free_usb_hid(usbhid);
+zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
+  zx_status_t status;
+  fbl::AutoLock lock(&usb_lock_);
+  usb_ = usbhid;
+  parent_req_size_ = usb_.GetRequestSize();
+  status = usb::InterfaceList::Create(usb_, true, &usb_interface_list_);
+  if (status != ZX_OK) {
     return status;
   }
 
-  usbhid->usbdev = dev;
-  usbhid->interface = usbhid->info.dev_num = intf->bInterfaceNumber;
-  usbhid->hid_desc = hid_desc;
+  usb_hid_descriptor_t* hid_desc = NULL;
+  usb_endpoint_descriptor_t* endpt = NULL;
+  auto interface = *usb_interface_list_->begin();
+  FindDescriptors(interface, &hid_desc, &endpt);
 
-  usbhid->info.boot_device = intf->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
-  usbhid->info.device_class = HID_DEVICE_CLASS_OTHER;
-  if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
-    usbhid->info.device_class = HID_DEVICE_CLASS_KBD;
-  } else if (intf->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
-    usbhid->info.device_class = HID_DEVICE_CLASS_POINTER;
+  interface_ = info_.dev_num = interface.descriptor()->bInterfaceNumber;
+  info_.boot_device = interface.descriptor()->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
+  info_.device_class = HID_DEVICE_CLASS_OTHER;
+  if (interface.descriptor()->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
+    info_.device_class = HID_DEVICE_CLASS_KBD;
+  } else if (interface.descriptor()->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
+    info_.device_class = HID_DEVICE_CLASS_POINTER;
   }
 
-  status = usb_request_alloc(&usbhid->req, usb_ep_max_packet(endpt), endpt->bEndpointAddress,
-                             usbhid->parent_req_size);
+  if (!endpt) {
+    status = ZX_ERR_NOT_SUPPORTED;
+    return status;
+  }
+
+  if (!hid_desc) {
+    status = ZX_ERR_NOT_SUPPORTED;
+    return status;
+  }
+
+  hid_desc_ = hid_desc;
+
+  status =
+      usb_request_alloc(&req_, usb_ep_max_packet(endpt), endpt->bEndpointAddress, parent_req_size_);
   if (status != ZX_OK) {
     status = ZX_ERR_NO_MEMORY;
-    free_usb_hid(usbhid);
     return status;
   }
 
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "usb-hid";
-  args.ctx = usbhid;
-  args.ops = &usb_hid_dev_ops;
-  args.proto_id = ZX_PROTOCOL_HIDBUS;
-  args.proto_ops = &usb_hid_bus_ops;
-
-  status = device_add(dev, &args, &usbhid->zxdev);
+  status = DdkAdd("usb-hid");
   if (status != ZX_OK) {
-    free_usb_hid(usbhid);
     return status;
   }
 
   return ZX_OK;
+}
+
+static zx_status_t usb_hid_bind(void* ctx, zx_device_t* parent) {
+  auto usbHid = std::make_unique<UsbHidbus>(parent);
+
+  ddk::UsbProtocolClient usb;
+  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &usb);
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = usbHid->Bind(usb);
+  if (status == ZX_OK) {
+    // devmgr is now in charge of the memory for dev.
+    __UNUSED auto ptr = usbHid.release();
+  }
+  return status;
 }
 
 static zx_driver_ops_t usb_hid_driver_ops = []() {
@@ -354,8 +313,10 @@ static zx_driver_ops_t usb_hid_driver_ops = []() {
   return ops;
 }();
 
+}  // namespace usb_hid
+
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_hid, usb_hid_driver_ops, "zircon", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(usb_hid, usb_hid::usb_hid_driver_ops, "zircon", "0.1", 2)
   BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
   BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HID),
 ZIRCON_DRIVER_END(usb_hid)
