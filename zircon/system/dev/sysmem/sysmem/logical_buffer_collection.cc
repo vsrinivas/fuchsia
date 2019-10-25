@@ -752,6 +752,12 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
 
 bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
     fuchsia_sysmem_ImageFormatConstraints* constraints) {
+  FieldDefaultMax(&constraints->max_coded_width);
+  FieldDefaultMax(&constraints->max_coded_height);
+  FieldDefaultMax(&constraints->max_bytes_per_row);
+  FieldDefaultMax(&constraints->max_coded_width_times_coded_height);
+  FieldDefault1(&constraints->layers);
+
   FieldDefault1(&constraints->coded_width_divisor);
   FieldDefault1(&constraints->coded_height_divisor);
   FieldDefault1(&constraints->bytes_per_row_divisor);

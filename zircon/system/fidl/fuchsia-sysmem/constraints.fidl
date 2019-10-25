@@ -190,6 +190,7 @@ enum HeapType : uint64 {
 
 struct BufferMemoryConstraints {
     uint32 min_size_bytes = 0;
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 max_size_bytes = 0xFFFFFFFF;
 
     bool physically_contiguous_required = false;
@@ -269,6 +270,7 @@ struct ImageFormatConstraints {
     /// Maximum width in pixels.  For example Scenic may set this field
     /// (directly or via sub-participants) to the maximum width that can be
     /// composited.
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 max_coded_width;
 
     /// Minimum height in pixels.  For example a video decoder participant may
@@ -277,38 +279,47 @@ struct ImageFormatConstraints {
     /// Maximum height in pixels.  For example Scenic may set this field
     /// (directly or via sub-participants) to the maximum height that can be
     /// composited.
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 max_coded_height;
 
     /// Must be >= the value implied by min_coded_width for plane 0.
     uint32 min_bytes_per_row;
     /// Must be >= the value implied by max_coded_width for plane 0.
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 max_bytes_per_row;
 
     /// The max image area in pixels is limited indirectly via
     /// BufferSettings.size_bytes, and can also be enforced directly via this
     /// field.
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 max_coded_width_times_coded_height = 0xFFFFFFFF;
 
     /// Number of layers within a multi-layered image.
-    /// Defaults to 1 if not specified.
+    /// 0 is treated as 1.
     uint32 layers = 1;
 
     /// coded_width % width_divisor must be 0.
+    /// 0 is treated as 1.
     uint32 coded_width_divisor = 1;
 
     /// coded_height % height_divisor must be 0.
+    /// 0 is treated as 1.
     uint32 coded_height_divisor = 1;
 
     /// bytes_per_row % bytes_per_row_divisor must be 0.
+    /// 0 is treated as 1.
     uint32 bytes_per_row_divisor = 1;
 
     /// vmo_usable_start % start_offset_divisor must be 0.
+    /// 0 is treated as 1.
     uint32 start_offset_divisor = 1;
 
     /// display_width % display_width_divisor must be 0.
+    /// 0 is treated as 1.
     uint32 display_width_divisor = 1;
 
     /// display_height % display_height_divisor must be 0.
+    /// 0 is treated as 1.
     uint32 display_height_divisor = 1;
 
     /// required_ dimension bounds.
@@ -345,10 +356,13 @@ struct ImageFormatConstraints {
     /// TODO(dustingreen): Make it easier to allocate buffers of minimal size
     /// that can (optionally) also handle 90 degree rotated version of the max
     /// dimensions / alternate required bounds for another main aspect ratio.
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 required_min_coded_width;
     uint32 required_max_coded_width;
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 required_min_coded_height;
     uint32 required_max_coded_height;
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 required_min_bytes_per_row;
     uint32 required_max_bytes_per_row;
 };
