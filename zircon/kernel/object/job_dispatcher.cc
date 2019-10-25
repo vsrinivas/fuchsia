@@ -107,7 +107,7 @@ JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(T& children, zx
 
 fbl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
   fbl::AllocChecker ac;
-  auto job = fbl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, JobPolicy()));
+  auto job = fbl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, JobPolicy::CreateRootPolicy()));
   if (!ac.check())
     return nullptr;
   job->set_name(kRootJobName, sizeof(kRootJobName));

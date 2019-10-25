@@ -10,62 +10,13 @@
 #include <zircon/syscalls/policy.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/bitfield.h>
 #include <kernel/deadline.h>
 
 namespace {
-
-constexpr uint32_t kDefaultAction = ZX_POL_ACTION_ALLOW;
-
-constexpr pol_cookie_t kPolicyEmpty = 0u;
-
-// The encoding of the basic policy is done 4 bits per each item.
-//
-// - When the top bit is 1, the lower 3 bits contain the action
-//   (ZX_POL_ACTION_ALLOW, ZX_POL_ACTION_DENY, etc.)
-//
-// - When the top bit is 0 then its the default policy and other bits
-//   should be zero so that kPolicyEmpty == 0 meets the requirement of
-//   all entries being default.
-
-union Encoding {
-  static constexpr uint8_t kExplicitBit = 0b1000;
-  static constexpr uint8_t kActionBits = 0b0111;
-
-  // Indicates the policies are fully encoded in the cookie.
-  static constexpr uint8_t kPolicyInCookie = 0;
-
-  pol_cookie_t encoded;
-  struct {
-    uint64_t bad_handle : 4;
-    uint64_t wrong_obj : 4;
-    uint64_t vmar_wx : 4;
-    uint64_t new_vmo : 4;
-    uint64_t new_channel : 4;
-    uint64_t new_event : 4;
-    uint64_t new_eventpair : 4;
-    uint64_t new_port : 4;
-    uint64_t new_socket : 4;
-    uint64_t new_fifo : 4;
-    uint64_t new_timer : 4;
-    uint64_t new_process : 4;
-    uint64_t new_profile : 4;
-    uint64_t ambient_mark_vmo_exec : 4;
-    uint64_t unused_bits : 7;
-    uint64_t cookie_mode : 1;  // see kPolicyInCookie.
-  };
-
-  static uint32_t action(uint64_t item) { return item & kActionBits; }
-  static bool is_default(uint64_t item) { return item == 0; }
-};
-
-// The packing of bits on a bitset (above) is defined by the standard as
-// implementation dependent so we must check that it is using the storage
-// space of a single uint64_t so the 'union' trick works.
-static_assert(sizeof(Encoding) == sizeof(pol_cookie_t), "bitfield issue");
-
 // It is critical that this array contain all "new object" policies because it's used to implement
 // ZX_NEW_ANY.
-const uint32_t kNewObjectPolicies[]{
+constexpr uint32_t kNewObjectPolicies[]{
     ZX_POL_NEW_VMO,     ZX_POL_NEW_CHANNEL, ZX_POL_NEW_EVENT, ZX_POL_NEW_EVENTPAIR,
     ZX_POL_NEW_PORT,    ZX_POL_NEW_SOCKET,  ZX_POL_NEW_FIFO,  ZX_POL_NEW_TIMER,
     ZX_POL_NEW_PROCESS, ZX_POL_NEW_PROFILE,
@@ -75,88 +26,233 @@ static_assert(
     "please update JobPolicy::AddPartial, JobPolicy::QueryBasicPolicy, kNewObjectPolicies,"
     "and the add_basic_policy_deny_any_new() test");
 
-bool CanSetEntry(uint64_t existing, uint32_t new_action) {
-  if (Encoding::is_default(existing))
-    return true;
-  return (new_action == Encoding::action(existing)) ? true : false;
-}
+FBL_BITFIELD_DEF_START(JobPolicyBits, uint64_t)
+FBL_BITFIELD_MEMBER(bad_handle, 0, 3);
+FBL_BITFIELD_MEMBER(bad_handle_override, 3, 1);
+FBL_BITFIELD_MEMBER(wrong_object, 4, 3);
+FBL_BITFIELD_MEMBER(wrong_object_override, 7, 1);
+FBL_BITFIELD_MEMBER(vmar_wx, 8, 3);
+FBL_BITFIELD_MEMBER(vmar_wx_override, 11, 1);
+FBL_BITFIELD_MEMBER(new_vmo, 12, 3);
+FBL_BITFIELD_MEMBER(new_vmo_override, 15, 1);
+FBL_BITFIELD_MEMBER(new_channel, 16, 3);
+FBL_BITFIELD_MEMBER(new_channel_override, 19, 1);
+FBL_BITFIELD_MEMBER(new_event, 20, 3);
+FBL_BITFIELD_MEMBER(new_event_override, 23, 1);
+FBL_BITFIELD_MEMBER(new_eventpair, 24, 3);
+FBL_BITFIELD_MEMBER(new_eventpair_override, 27, 1);
+FBL_BITFIELD_MEMBER(new_port, 28, 3);
+FBL_BITFIELD_MEMBER(new_port_override, 31, 1);
+FBL_BITFIELD_MEMBER(new_socket, 32, 3);
+FBL_BITFIELD_MEMBER(new_socket_override, 35, 1);
+FBL_BITFIELD_MEMBER(new_fifo, 36, 3);
+FBL_BITFIELD_MEMBER(new_fifo_override, 39, 1);
+FBL_BITFIELD_MEMBER(new_timer, 40, 3);
+FBL_BITFIELD_MEMBER(new_timer_override, 43, 1);
+FBL_BITFIELD_MEMBER(new_process, 44, 3);
+FBL_BITFIELD_MEMBER(new_process_override, 47, 1);
+FBL_BITFIELD_MEMBER(new_profile, 48, 3);
+FBL_BITFIELD_MEMBER(new_profile_override, 51, 1);
+FBL_BITFIELD_MEMBER(ambient_mark_vmo_exec, 52, 3);
+FBL_BITFIELD_MEMBER(ambient_mark_vmo_exec_override, 55, 1);
+FBL_BITFIELD_MEMBER(unused_bits, 56, 8);
+FBL_BITFIELD_DEF_END();
 
-uint32_t GetEffectiveAction(uint64_t policy) {
-  return Encoding::is_default(policy) ? kDefaultAction : Encoding::action(policy);
-}
-
-#define POLMAN_SET_ENTRY(mode, existing, in_pol, resultant) \
-  do {                                                      \
-    if (CanSetEntry(existing, in_pol)) {                    \
-      resultant = in_pol & Encoding::kActionBits;           \
-      resultant |= Encoding::kExplicitBit;                  \
-    } else if (mode == ZX_JOB_POL_ABSOLUTE) {               \
-      return ZX_ERR_ALREADY_EXISTS;                         \
-    }                                                       \
+#define SET_POL_ENTRY(policy_member, policy, override)                         \
+  do {                                                                         \
+    if (bits->policy_member##_override == ZX_POL_OVERRIDE_ALLOW) {             \
+      bits->policy_member = policy;                                            \
+      bits->policy_member##_override = override;                               \
+      return ZX_OK;                                                            \
+    }                                                                          \
+    if ((bits->policy_member == policy) && (override == ZX_POL_OVERRIDE_DENY)) \
+      return ZX_OK;                                                            \
+    return (mode == ZX_JOB_POL_ABSOLUTE) ? ZX_ERR_ALREADY_EXISTS : ZX_OK;      \
   } while (0)
 
-zx_status_t AddPartial(uint32_t mode, pol_cookie_t existing_policy, uint32_t condition,
-                       uint32_t policy, uint64_t* partial) {
-  Encoding existing = {existing_policy};
-  Encoding result = {};
-
+zx_status_t AddPartial(uint32_t mode, uint32_t condition, uint32_t policy, uint32_t override,
+                       JobPolicyBits* bits) {
   if (policy >= ZX_POL_ACTION_MAX)
     return ZX_ERR_NOT_SUPPORTED;
 
+  if (override > ZX_POL_OVERRIDE_DENY)
+    return ZX_ERR_INVALID_ARGS;
+
   switch (condition) {
     case ZX_POL_BAD_HANDLE:
-      POLMAN_SET_ENTRY(mode, existing.bad_handle, policy, result.bad_handle);
-      break;
+      SET_POL_ENTRY(bad_handle, policy, override);
     case ZX_POL_WRONG_OBJECT:
-      POLMAN_SET_ENTRY(mode, existing.wrong_obj, policy, result.wrong_obj);
-      break;
+      SET_POL_ENTRY(wrong_object, policy, override);
     case ZX_POL_VMAR_WX:
-      POLMAN_SET_ENTRY(mode, existing.vmar_wx, policy, result.vmar_wx);
-      break;
+      SET_POL_ENTRY(vmar_wx, policy, override);
     case ZX_POL_NEW_VMO:
-      POLMAN_SET_ENTRY(mode, existing.new_vmo, policy, result.new_vmo);
-      break;
+      SET_POL_ENTRY(new_vmo, policy, override);
     case ZX_POL_NEW_CHANNEL:
-      POLMAN_SET_ENTRY(mode, existing.new_channel, policy, result.new_channel);
-      break;
+      SET_POL_ENTRY(new_channel, policy, override);
     case ZX_POL_NEW_EVENT:
-      POLMAN_SET_ENTRY(mode, existing.new_event, policy, result.new_event);
-      break;
+      SET_POL_ENTRY(new_event, policy, override);
     case ZX_POL_NEW_EVENTPAIR:
-      POLMAN_SET_ENTRY(mode, existing.new_eventpair, policy, result.new_eventpair);
-      break;
+      SET_POL_ENTRY(new_eventpair, policy, override);
     case ZX_POL_NEW_PORT:
-      POLMAN_SET_ENTRY(mode, existing.new_port, policy, result.new_port);
-      break;
+      SET_POL_ENTRY(new_port, policy, override);
     case ZX_POL_NEW_SOCKET:
-      POLMAN_SET_ENTRY(mode, existing.new_socket, policy, result.new_socket);
-      break;
+      SET_POL_ENTRY(new_socket, policy, override);
     case ZX_POL_NEW_FIFO:
-      POLMAN_SET_ENTRY(mode, existing.new_fifo, policy, result.new_fifo);
-      break;
+      SET_POL_ENTRY(new_fifo, policy, override);
     case ZX_POL_NEW_TIMER:
-      POLMAN_SET_ENTRY(mode, existing.new_timer, policy, result.new_timer);
-      break;
+      SET_POL_ENTRY(new_timer, policy, override);
     case ZX_POL_NEW_PROCESS:
-      POLMAN_SET_ENTRY(mode, existing.new_process, policy, result.new_process);
-      break;
+      SET_POL_ENTRY(new_process, policy, override);
     case ZX_POL_NEW_PROFILE:
-      POLMAN_SET_ENTRY(mode, existing.new_profile, policy, result.new_profile);
-      break;
+      SET_POL_ENTRY(new_profile, policy, override);
     case ZX_POL_AMBIENT_MARK_VMO_EXEC:
-      POLMAN_SET_ENTRY(mode, existing.ambient_mark_vmo_exec, policy, result.ambient_mark_vmo_exec);
-      break;
+      SET_POL_ENTRY(ambient_mark_vmo_exec, policy, override);
     default:
-      return ZX_ERR_NOT_SUPPORTED;
+      return ZX_ERR_INVALID_ARGS;
   }
-
-  *partial = result.encoded;
   return ZX_OK;
 }
 
-#undef POLMAN_SET_ENTRY
+#undef SET_POL_ENTRY
+
+zx_status_t SetOverride(JobPolicyBits* policy, uint32_t condition, uint32_t override) {
+  switch (condition) {
+    case ZX_POL_BAD_HANDLE:
+      policy->bad_handle_override = override;
+      break;
+    case ZX_POL_WRONG_OBJECT:
+      policy->wrong_object_override = override;
+      break;
+    case ZX_POL_VMAR_WX:
+      policy->vmar_wx_override = override;
+      break;
+    case ZX_POL_NEW_VMO:
+      policy->new_vmo_override = override;
+      break;
+    case ZX_POL_NEW_CHANNEL:
+      policy->new_channel_override = override;
+      break;
+    case ZX_POL_NEW_EVENT:
+      policy->new_event_override = override;
+      break;
+    case ZX_POL_NEW_EVENTPAIR:
+      policy->new_eventpair_override = override;
+      break;
+    case ZX_POL_NEW_PORT:
+      policy->new_port_override = override;
+      break;
+    case ZX_POL_NEW_SOCKET:
+      policy->new_socket_override = override;
+      break;
+    case ZX_POL_NEW_FIFO:
+      policy->new_fifo_override = override;
+      break;
+    case ZX_POL_NEW_TIMER:
+      policy->new_timer_override = override;
+      break;
+    case ZX_POL_NEW_PROCESS:
+      policy->new_process_override = override;
+      break;
+    case ZX_POL_NEW_PROFILE:
+      policy->new_profile_override = override;
+      break;
+    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
+      policy->ambient_mark_vmo_exec_override = override;
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  return ZX_OK;
+}
+
+uint64_t GetAction(JobPolicyBits policy, uint32_t condition) {
+  switch (condition) {
+    case ZX_POL_BAD_HANDLE:
+      return policy.bad_handle;
+    case ZX_POL_WRONG_OBJECT:
+      return policy.wrong_object;
+    case ZX_POL_VMAR_WX:
+      return policy.vmar_wx;
+    case ZX_POL_NEW_VMO:
+      return policy.new_vmo;
+    case ZX_POL_NEW_CHANNEL:
+      return policy.new_channel;
+    case ZX_POL_NEW_EVENT:
+      return policy.new_event;
+    case ZX_POL_NEW_EVENTPAIR:
+      return policy.new_eventpair;
+    case ZX_POL_NEW_PORT:
+      return policy.new_port;
+    case ZX_POL_NEW_SOCKET:
+      return policy.new_socket;
+    case ZX_POL_NEW_FIFO:
+      return policy.new_fifo;
+    case ZX_POL_NEW_TIMER:
+      return policy.new_timer;
+    case ZX_POL_NEW_PROCESS:
+      return policy.new_process;
+    case ZX_POL_NEW_PROFILE:
+      return policy.new_profile;
+    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
+      return policy.ambient_mark_vmo_exec;
+    default:
+      return ZX_POL_ACTION_DENY;
+  }
+}
+
+uint64_t GetOverride(JobPolicyBits policy, uint32_t condition) {
+  switch (condition) {
+    case ZX_POL_BAD_HANDLE:
+      return policy.bad_handle_override;
+    case ZX_POL_WRONG_OBJECT:
+      return policy.wrong_object_override;
+    case ZX_POL_VMAR_WX:
+      return policy.vmar_wx_override;
+    case ZX_POL_NEW_VMO:
+      return policy.new_vmo_override;
+    case ZX_POL_NEW_CHANNEL:
+      return policy.new_channel_override;
+    case ZX_POL_NEW_EVENT:
+      return policy.new_event_override;
+    case ZX_POL_NEW_EVENTPAIR:
+      return policy.new_eventpair_override;
+    case ZX_POL_NEW_PORT:
+      return policy.new_port_override;
+    case ZX_POL_NEW_SOCKET:
+      return policy.new_socket_override;
+    case ZX_POL_NEW_FIFO:
+      return policy.new_fifo_override;
+    case ZX_POL_NEW_TIMER:
+      return policy.new_timer_override;
+    case ZX_POL_NEW_PROCESS:
+      return policy.new_process_override;
+    case ZX_POL_NEW_PROFILE:
+      return policy.new_profile_override;
+    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
+      return policy.ambient_mark_vmo_exec_override;
+    default:
+      return ZX_POL_ACTION_DENY;
+  }
+}
+
+// The policy applied to the root job allows everything and can override anything.
+constexpr uint64_t GetRootJobBitsPolicy() {
+  static_assert((ZX_POL_ACTION_ALLOW == 0u) && (ZX_POL_OVERRIDE_ALLOW == 0u));
+  constexpr JobPolicyBits policy(0u);
+  return policy;
+}
 
 }  // namespace
+
+JobPolicy::JobPolicy(const JobPolicy& parent) : cookie_(parent.cookie_), slack_(parent.slack_) {}
+JobPolicy::JobPolicy(pol_cookie_t cookie, const TimerSlack& slack)
+    : cookie_(cookie), slack_(slack) {}
+
+// static
+JobPolicy JobPolicy::CreateRootPolicy() {
+  return JobPolicy(GetRootJobBitsPolicy(), TimerSlack::none());
+}
 
 zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_t* policy_input,
                                       size_t policy_count) {
@@ -165,101 +261,47 @@ zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_t* po
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  uint64_t partials[ZX_POL_MAX] = {};
-
-  // The policy computation algorithm is as follows:
-  //
-  //    loop over all input entries
-  //        if existing item is default or same then
-  //            store new policy in partial result array
-  //        else if mode is absolute exit with failure
-  //        else continue
-  //
-  // A special case is ZX_POL_NEW_ANY which applies the algorithm with
-  // the same input over all ZX_NEW_ actions so that the following can
-  // be expressed:
-  //
-  //   [0] ZX_POL_NEW_ANY     --> ZX_POL_ACTION_DENY
-  //   [1] ZX_POL_NEW_CHANNEL --> ZX_POL_ACTION_ALLOW
-  //
-  // Which means "deny all object creation except for channel".
-
   zx_status_t res = ZX_OK;
-
-  pol_cookie_t new_cookie = cookie_;
+  JobPolicyBits pol_new(cookie_);
+  bool has_new_any = false;
 
   for (size_t ix = 0; ix != policy_count; ++ix) {
     const auto& in = policy_input[ix];
 
-    if (in.condition >= ZX_POL_MAX) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-
     if (in.condition == ZX_POL_NEW_ANY) {
-      // loop over all ZX_POL_NEW_xxxx conditions.
-      for (auto pol : kNewObjectPolicies) {
-        if ((res = AddPartial(mode, new_cookie, pol, in.policy, &partials[pol])) < 0) {
+      for (auto cond : kNewObjectPolicies) {
+        res = AddPartial(mode, cond, in.policy, ZX_POL_OVERRIDE_ALLOW, &pol_new);
+        if (res != ZX_OK)
           return res;
-        }
       }
+      has_new_any = true;
     } else {
-      if ((res = AddPartial(mode, new_cookie, in.condition, in.policy, &partials[in.condition])) <
-          0) {
+      res = AddPartial(mode, in.condition, in.policy, ZX_POL_OVERRIDE_DENY, &pol_new);
+      if (res != ZX_OK)
         return res;
-      }
     }
   }
 
-  // Compute the resultant policy. The simple OR works because the only items that
-  // can change are the items that have zero. See Encoding::is_default().
-  for (const auto& partial : partials) {
-    new_cookie |= partial;
+  if (has_new_any) {
+    for (auto cond : kNewObjectPolicies) {
+      auto res = SetOverride(&pol_new, cond, ZX_POL_OVERRIDE_DENY);
+      if (res != ZX_OK)
+        return res;
+    }
   }
 
-  cookie_ = new_cookie;
+  cookie_ = pol_new.value;
   return ZX_OK;
 }
 
 uint32_t JobPolicy::QueryBasicPolicy(uint32_t condition) const {
-  if (cookie_ == kPolicyEmpty) {
-    return kDefaultAction;
-  }
+  JobPolicyBits policy(cookie_);
+  return static_cast<uint32_t>(GetAction(policy, condition));
+}
 
-  Encoding existing = {cookie_};
-  DEBUG_ASSERT(existing.cookie_mode == Encoding::kPolicyInCookie);
-
-  switch (condition) {
-    case ZX_POL_BAD_HANDLE:
-      return GetEffectiveAction(existing.bad_handle);
-    case ZX_POL_WRONG_OBJECT:
-      return GetEffectiveAction(existing.wrong_obj);
-    case ZX_POL_NEW_VMO:
-      return GetEffectiveAction(existing.new_vmo);
-    case ZX_POL_NEW_CHANNEL:
-      return GetEffectiveAction(existing.new_channel);
-    case ZX_POL_NEW_EVENT:
-      return GetEffectiveAction(existing.new_event);
-    case ZX_POL_NEW_EVENTPAIR:
-      return GetEffectiveAction(existing.new_eventpair);
-    case ZX_POL_NEW_PORT:
-      return GetEffectiveAction(existing.new_port);
-    case ZX_POL_NEW_SOCKET:
-      return GetEffectiveAction(existing.new_socket);
-    case ZX_POL_NEW_FIFO:
-      return GetEffectiveAction(existing.new_fifo);
-    case ZX_POL_NEW_TIMER:
-      return GetEffectiveAction(existing.new_timer);
-    case ZX_POL_NEW_PROCESS:
-      return GetEffectiveAction(existing.new_process);
-    case ZX_POL_NEW_PROFILE:
-      return GetEffectiveAction(existing.new_profile);
-    case ZX_POL_VMAR_WX:
-      return GetEffectiveAction(existing.vmar_wx);
-    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
-      return GetEffectiveAction(existing.ambient_mark_vmo_exec);
-    default:
-      return ZX_POL_ACTION_DENY;
-  }
+uint32_t JobPolicy::QueryBasicPolicyOverride(uint32_t condition) const {
+  JobPolicyBits policy(cookie_);
+  return static_cast<uint32_t>(GetOverride(policy, condition));
 }
 
 void JobPolicy::SetTimerSlack(TimerSlack slack) { slack_ = slack; }

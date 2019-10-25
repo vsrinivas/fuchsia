@@ -15,10 +15,17 @@ namespace {
 static bool initial_state() {
   BEGIN_TEST;
 
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
+
   for (uint32_t pol = 0; pol < ZX_POL_MAX; ++pol) {
+    if (pol == ZX_POL_NEW_ANY)
+      continue;
     EXPECT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(pol));
+    EXPECT_EQ(ZX_POL_OVERRIDE_ALLOW, p.QueryBasicPolicyOverride(pol));
   }
+
+  EXPECT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_ANY));
+
   const TimerSlack slack = p.GetTimerSlack();
   EXPECT_TRUE(slack == TimerSlack::none());
 
@@ -29,7 +36,7 @@ static bool initial_state() {
 static bool add_basic_policy_no_widening() {
   BEGIN_TEST;
 
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
 
   // Start with deny all.
   zx_policy_basic_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY};
@@ -54,7 +61,7 @@ static bool add_basic_policy_no_widening() {
 static bool add_basic_policy_no_widening_with_any() {
   BEGIN_TEST;
 
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
 
   // Start with deny event creation.
   zx_policy_basic_t policy{ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY};
@@ -85,7 +92,8 @@ static bool add_basic_policy_no_widening_with_any() {
 static bool add_basic_policy_absolute() {
   BEGIN_TEST;
 
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
+
   zx_policy_basic_t repeated[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY},
                                 {ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY}};
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, repeated, 2));
@@ -102,7 +110,8 @@ static bool add_basic_policy_absolute() {
 static bool add_basic_policy_relative() {
   BEGIN_TEST;
 
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
+
   zx_policy_basic_t repeated[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY},
                                 {ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY}};
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_RELATIVE, repeated, 2));
@@ -120,7 +129,8 @@ static bool add_basic_policy_relative() {
 static bool add_basic_policy_unmodified_on_error() {
   BEGIN_TEST;
 
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
+
   zx_policy_basic_t policy[2]{{ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW_EXCEPTION},
                               {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_KILL}};
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, policy, fbl::count_of(policy)));
@@ -143,7 +153,8 @@ static bool add_basic_policy_unmodified_on_error() {
 static bool add_basic_policy_deny_any_new() {
   BEGIN_TEST;
 
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
+
   zx_policy_basic_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY};
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
@@ -168,7 +179,8 @@ static bool add_basic_policy_deny_any_new() {
 static bool set_get_timer_slack() {
   BEGIN_TEST;
 
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
+
   p.SetTimerSlack({1200, TIMER_SLACK_EARLY});
   ASSERT_EQ(1200, p.GetTimerSlack().amount());
   ASSERT_EQ(TIMER_SLACK_EARLY, p.GetTimerSlack().mode());
@@ -181,7 +193,8 @@ static bool increment_counters() {
 
   // There's no programmatic interface to read kcounters so there's nothing to assert (aside from
   // not crashing).
-  JobPolicy p;
+  auto p = JobPolicy::CreateRootPolicy();
+
   for (uint32_t action = 0; action < ZX_POL_ACTION_MAX; ++action) {
     for (uint32_t condition = 0; condition < ZX_POL_MAX; ++condition) {
       p.IncrementCounter(action, condition);

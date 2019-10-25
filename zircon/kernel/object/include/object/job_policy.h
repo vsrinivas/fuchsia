@@ -30,6 +30,10 @@ typedef uint64_t pol_cookie_t;
 // and deadline events.
 class JobPolicy {
  public:
+  JobPolicy() = delete;
+  JobPolicy(const JobPolicy& parent);
+  static JobPolicy CreateRootPolicy();
+
   // Merge array |policy| of length |count| into this object.
   //
   // |mode| controls what happens when the policies in |policy| and this object intersect. |mode|
@@ -47,6 +51,10 @@ class JobPolicy {
   // This method asserts if |policy| is invalid, and returns ZX_POL_ACTION_DENY for all other
   // failure modes.
   uint32_t QueryBasicPolicy(uint32_t condition) const;
+
+  // Returns if the action for the specified condition can be overriden, so it returns
+  // ZX_POL_OVERRIDE_ALLOW or ZX_POL_OVERRIDE_DENY.
+  uint32_t QueryBasicPolicyOverride(uint32_t condition) const;
 
   // Sets the timer slack policy.
   //
@@ -67,6 +75,7 @@ class JobPolicy {
   static void IncrementCounter(uint32_t action, uint32_t condition);
 
  private:
+  JobPolicy(pol_cookie_t cookie, const TimerSlack& slack);
   // Remember, JobPolicy is a value type so think carefully before increasing its size.
   //
   // Const instances of JobPolicy must be immutable to ensure thread-safety.

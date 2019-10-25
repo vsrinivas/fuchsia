@@ -59,6 +59,11 @@ typedef struct zx_policy_basic {
 #define ZX_POL_ACTION_MAX                   5u
 #endif
 
+// Policy override.
+#define ZX_POL_OVERRIDE_ALLOW               0u
+#define ZX_POL_OVERRIDE_DENY                1u
+
+
 // Input structure to use with ZX_JOB_POL_TIMER_SLACK.
 typedef struct zx_policy_timer_slack {
     zx_duration_t min_slack;
