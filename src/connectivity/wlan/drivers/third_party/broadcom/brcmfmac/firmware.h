@@ -1,95 +1,51 @@
-/*
- * Copyright (c) 2013 Broadcom Corporation
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+// Copyright (c) 2019 The Fuchsia Authors
+//
+// Permission to use, copy, modify, and/or distribute this software for any purpose with or without
+// fee is hereby granted, provided that the above copyright notice and this permission notice
+// appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+// SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+// AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+// NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+// OF THIS SOFTWARE.
+
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FIRMWARE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FIRMWARE_H_
 
-#include "common.h"
-#include "linuxisms.h"
+#include <zircon/types.h>
 
-// clang-format off
+#include <string>
 
-#define BRCMF_FW_REQUEST         0x000F
-#define BRCMF_FW_REQUEST_NVRAM   0x0001
-#define BRCMF_FW_REQ_FLAGS       0x00F0
-#define BRCMF_FW_REQ_NV_OPTIONAL 0x0010
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 
-// clang-format on
+namespace wlan {
+namespace brcmfmac {
 
-#define BRCMF_FW_DEFAULT_PATH ""
+class Device;
 
-struct brcmf_firmware {
-  size_t size;
-  void* data;
-};
+zx_status_t GetFirmwareName(brcmf_bus_type bus_type, uint32_t chipid, uint32_t chiprev,
+                            std::string_view* name_out);
 
-/**
- * struct brcmf_firmware_mapping - Used to map chipid/revmask to firmware
- *  filename and nvram filename. Each bus type implementation should create
- *  a table of firmware mappings (using the macros defined below).
- *
- * @chipid: ID of chip.
- * @revmask: bitmask of revisions, e.g. 0x10 means rev 4 only, 0xf means rev 0-3
- * @fw: name of the firmware file.
- * @nvram: name of nvram file.
- */
-struct brcmf_firmware_mapping {
-  uint32_t chipid;
-  uint32_t revmask;
-  const char* fw;
-  const char* nvram;
-};
+// Get the firmware binary for the given bus and chip, as a data string.
+zx_status_t GetFirmwareBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
+                              uint32_t chiprev, std::string* binary_out);
 
-#define BRCMF_FW_NVRAM_DEF(fw_nvram_name, fw, nvram)                                   \
-  static const char BRCM_##fw_nvram_name##_FIRMWARE_NAME[] = BRCMF_FW_DEFAULT_PATH fw; \
-  static const char BRCM_##fw_nvram_name##_NVRAM_NAME[] = BRCMF_FW_DEFAULT_PATH nvram; \
-  MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH fw)
+// Get the CLM binary blob for the given bus and chip, as a data string.
+zx_status_t GetClmBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid, uint32_t chiprev,
+                         std::string* binary_out);
 
-#define BRCMF_FW_DEF(fw_name, fw)                                                \
-  static const char BRCM_##fw_name##_FIRMWARE_NAME[] = BRCMF_FW_DEFAULT_PATH fw; \
-  MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH fw)
+// Get the NVRAM binary for the given bus and chip, as a data string.  The returned binary has
+// already beedn parsed and is suitable for uploading to the device.
+zx_status_t GetNvramBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
+                           uint32_t chiprev, std::string* binary_out);
 
-#define BRCMF_FW_NVRAM_ENTRY(chipid, mask, name) \
-  { chipid, mask, BRCM_##name##_FIRMWARE_NAME, BRCM_##name##_NVRAM_NAME }
+// Parse an NVRAM image from file, into a format suitable for uploading to the device.  This
+// function is exposed here for testing.
+zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_out);
 
-#define BRCMF_FW_ENTRY(chipid, mask, name) \
-  { chipid, mask, BRCM_##name##_FIRMWARE_NAME, NULL }
-
-zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
-                                      struct brcmf_firmware_mapping mapping_table[],
-                                      uint32_t table_size, char fw_name[BRCMF_FW_NAME_LEN],
-                                      char nvram_name[BRCMF_FW_NAME_LEN]);
-void brcmf_fw_nvram_free(void* nvram);
-/*
- * Request firmware(s) asynchronously. When the asynchronous request
- * fails it will not use the callback, but call device_release_driver()
- * instead which will call the driver .remove() callback.
- */
-zx_status_t brcmf_fw_get_firmwares_pcie(brcmf_pub* drvr, uint16_t flags, const char* code,
-                                        const char* nvram,
-                                        void (*fw_cb)(brcmf_pub* drvr, zx_status_t err,
-                                                      const brcmf_firmware* fw, void* nvram_image,
-                                                      uint32_t nvram_len),
-                                        uint16_t domain_nr, uint16_t bus_nr);
-zx_status_t brcmf_fw_get_firmwares(brcmf_pub* drvr, uint16_t flags, const char* code,
-                                   const char* nvram,
-                                   void (*fw_cb)(brcmf_pub* drvr, zx_status_t err,
-                                                 const brcmf_firmware* fw, void* nvram_image,
-                                                 uint32_t nvram_len));
-zx_status_t request_firmware_nowait(const char* name, brcmf_pub* drvr, void* ctx,
-                                    zx_status_t (*callback)(const struct brcmf_firmware* fw,
-                                                            void* ctx));
+}  // namespace brcmfmac
+}  // namespace wlan
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FIRMWARE_H_

@@ -21,12 +21,13 @@
 #include <sys/random.h>
 #include <zircon/status.h>
 
+#include <memory>
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
 #include "debug.h"
 #include "device.h"
-#include "firmware.h"
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
@@ -40,6 +41,8 @@ MODULE_LICENSE("Dual BSD/GPL")
 
 /* default boost value for RSSI_DELTA in preferred join selection */
 #define BRCMF_JOIN_PREF_RSSI_BOOST 8
+
+#define BRCMF_FW_NAME_LEN 256
 
 static int brcmf_p2p_enable;
 module_param_named(p2pon, brcmf_p2p_enable, int, 0)
@@ -86,150 +89,54 @@ module_param_named(ignore_probe_fail, brcmf_ignore_probe_fail, int, 0)
   }
 }
 
-static zx_status_t brcmf_c_get_clm_name(struct brcmf_if* ifp, uint8_t* clm_name) {
-  struct brcmf_bus* bus = ifp->drvr->bus_if;
-  struct brcmf_rev_info* ri = &ifp->drvr->revinfo;
-  uint8_t fw_name[BRCMF_FW_NAME_LEN];
-  uint8_t* ptr;
-  size_t len;
-  zx_status_t err;
+// Read and send the CLM blob to firmware.
+zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_binary) {
+  zx_status_t status = ZX_OK;
 
-  memset(fw_name, 0, BRCMF_FW_NAME_LEN);
-  err = brcmf_bus_get_fwname(bus, ri->chipnum, ri->chiprev, fw_name);
-  if (err != ZX_OK) {
-    BRCMF_ERR("get firmware name failed (%d)\n", err);
-    goto done;
-  }
+  const size_t dload_buf_size = sizeof(brcmf_dload_data_le) + MAX_CHUNK_LEN;
+  std::unique_ptr<char[]> dload_buf(new char[dload_buf_size]);
+  std::memset(dload_buf.get(), 0, dload_buf_size);
 
-  /* generate CLM blob file name */
-  ptr = (uint8_t*)strrchr((char*)fw_name, '.');
-  if (!ptr) {
-    err = ZX_ERR_NOT_FOUND;
-    goto done;
-  }
+  brcmf_dload_data_le* const dload_data = reinterpret_cast<brcmf_dload_data_le*>(dload_buf.get());
+  dload_data->flag = (DLOAD_HANDLER_VER << DLOAD_FLAG_VER_SHIFT) | DL_BEGIN;
+  dload_data->dload_type = DL_TYPE_CLM;
+  dload_data->crc = 0;
 
-  len = ptr - fw_name + 1;
-  if (len + strlen(".clm_blob") > BRCMF_FW_NAME_LEN) {
-    err = ZX_ERR_BUFFER_TOO_SMALL;
-  } else {
-    strlcpy((char*)clm_name, (const char*)fw_name, len);
-    strlcat((char*)clm_name, ".clm_blob", BRCMF_FW_NAME_LEN);
-  }
-done:
-  return err;
-}
-
-static zx_status_t brcmf_c_download(struct brcmf_if* ifp, uint16_t flag,
-                                    struct brcmf_dload_data_le* dload_buf, uint32_t len) {
-  zx_status_t status;
-  uint32_t buflen;
-  int32_t fw_err = 0;
-
-  flag |= (DLOAD_HANDLER_VER << DLOAD_FLAG_VER_SHIFT);
-  dload_buf->flag = flag;
-  dload_buf->dload_type = DL_TYPE_CLM;
-  dload_buf->len = len;
-  dload_buf->crc = 0;
-  buflen = sizeof(*dload_buf) + len;
-
-  status = brcmf_fil_iovar_data_set(ifp, "clmload", dload_buf, buflen, &fw_err);
-  if (status != ZX_OK) {
-    BRCMF_ERR("clmload failed: %s, fw err %s\n", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
-  }
-  return status;
-}
-
-/* callback routine for request_firmware_nowait() for reading in the contents of
- * CLM.blob
- */
-static zx_status_t brcmf_request_clm_done(const struct brcmf_firmware* fw, void* ctx) {
-  struct brcmf_if* ifp = (struct brcmf_if*)ctx;
-  struct brcmf_dload_data_le* chunk_buf;
-  uint32_t chunk_len;
-  uint32_t datalen;
-  uint32_t cumulative_len;
-  uint16_t dl_flag = DL_BEGIN;
-  uint32_t status;
-  zx_status_t err;
-  int32_t fw_err = 0;
-
-  if (!fw) {
-    return (ZX_ERR_INVALID_ARGS);
-  }
-
-  chunk_buf = static_cast<decltype(chunk_buf)>(calloc(1, sizeof(*chunk_buf) + MAX_CHUNK_LEN));
-  if (!chunk_buf) {
-    return (ZX_ERR_NO_MEMORY);
-  }
-
-  datalen = fw->size;
-  cumulative_len = 0;
-  do {
-    if (datalen > MAX_CHUNK_LEN) {
-      chunk_len = MAX_CHUNK_LEN;
-    } else {
-      chunk_len = datalen;
-      dl_flag |= DL_END;
+  for (size_t offset = 0; offset < clm_binary.size(); offset += MAX_CHUNK_LEN) {
+    size_t chunk_len = MAX_CHUNK_LEN;
+    if (clm_binary.size() - offset <= MAX_CHUNK_LEN) {
+      chunk_len = clm_binary.size() - offset;
+      dload_data->flag |= DL_END;
     }
-    memcpy(chunk_buf->data, static_cast<char*>(fw->data) + cumulative_len, chunk_len);
 
-    err = brcmf_c_download(ifp, dl_flag, chunk_buf, chunk_len);
+    int32_t fw_err = 0;
+    std::memcpy(dload_data->data, clm_binary.data() + offset, chunk_len);
+    dload_data->len = chunk_len;
+    if ((status = brcmf_fil_iovar_data_set(ifp, "clmload", dload_data,
+                                           sizeof(*dload_data) + chunk_len, &fw_err)) != ZX_OK) {
+      BRCMF_ERR("clmload failed at offset %zu: %s (fw err %s)\n", offset,
+                zx_status_get_string(status), brcmf_fil_get_errstr(fw_err));
+      return status;
+    }
 
-    dl_flag &= ~DL_BEGIN;
-
-    cumulative_len += chunk_len;
-    datalen -= chunk_len;
-  } while ((datalen > 0) && (err == ZX_OK));
-
-  if (err != ZX_OK) {
-    BRCMF_ERR("clmload (%zu byte file) failed (%d); ", fw->size, err);
-    goto done;
-  } else {
-    BRCMF_INFO("CLM Load success\n");
+    dload_data->flag &= ~DL_BEGIN;
   }
-  err = brcmf_fil_iovar_int_get(ifp, "clmload_status", &status, &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("get clmload_status failed: %s, fw err %s\n", zx_status_get_string(err),
+
+  uint32_t clm_status = 0;
+  int32_t fw_err = 0;
+  if ((status = brcmf_fil_iovar_int_get(ifp, "clmload_status", &clm_status, &fw_err)) != ZX_OK) {
+    BRCMF_ERR("get clmload_status failed: %s (fw err %s)\n", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
+    return status;
   } else {
     // If status is non-zero, CLM load failed, return error back to caller.
-    if (status != 0) {
+    if (clm_status != 0) {
       BRCMF_ERR("clmload failed status=%d\n", status);
-      err = ZX_ERR_IO;
+      return ZX_ERR_IO;
     }
   }
 
-done:
-  free(chunk_buf);
-
-  return err;
-}
-
-// Generate CLM blob filename from the firmware filename and if found, read and
-// send it to firmware
-static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
-  uint8_t clm_name[BRCMF_FW_NAME_LEN];
-  zx_status_t err;
-
-  BRCMF_DBG(TRACE, "Enter\n");
-  memset(clm_name, 0, BRCMF_FW_NAME_LEN);
-  err = brcmf_c_get_clm_name(ifp, clm_name);
-  if (err != ZX_OK) {
-    BRCMF_ERR("get CLM blob file name failed (%d)\n", err);
-    return err;
-  }
-  // Print out the CLM filename to the log
-  BRCMF_DBG(INFO, "CLM name %s\n", clm_name);
-
-  // call request_firmware_nowait() to read out the contents of the
-  // file into memory which is then processed by the callback to
-  // write it out to firmware.
-  err = request_firmware_nowait((const char*)clm_name, ifp->drvr, ifp, brcmf_request_clm_done);
-  if (err != ZX_OK) {
-    BRCMF_ERR("download CLM blob file '%s' failed, %d\n", clm_name, err);
-  }
-  return err;
+  return ZX_OK;
 }
 
 static void brcmf_gen_random_mac_addr(uint8_t* mac_addr) {
@@ -326,9 +233,6 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     ri->nvramrev = revinfo.nvramrev;
   }
   ri->result = err;
-
-  /* Do any CLM downloading */
-  err = brcmf_c_process_clm_blob(ifp);
 
   /* query for 'ver' to get version info from firmware */
   memset(buf, 0, sizeof(buf));

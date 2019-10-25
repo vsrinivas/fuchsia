@@ -63,6 +63,10 @@ zx_status_t SimDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_devi
 
 zx_status_t SimDevice::DeviceRemove(zx_device_t* dev) { return fake_dev_mgr_->DeviceRemove(dev); }
 
+zx_status_t SimDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 SimDevice::~SimDevice() {
   DisableDispatcher();
   if (fake_dev_mgr_ != nullptr && phy_device_ != nullptr) {

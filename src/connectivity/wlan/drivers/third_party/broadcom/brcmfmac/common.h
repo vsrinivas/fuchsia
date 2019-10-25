@@ -15,13 +15,14 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_COMMON_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_COMMON_H_
 
+#include <string>
+
 #include "bus.h"
 #include "core.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
 
 #define BRCMF_FW_ALTPATH_LEN 256
-#define BRCMF_FW_NAME_LEN 320
 
 /**
  * struct brcmfmac_sdio_pd - SDIO-specific device module parameters
@@ -61,6 +62,8 @@ void brcmf_c_set_joinpref_default(struct brcmf_if* ifp);
 struct brcmf_mp_device* brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip,
                                                uint32_t chiprev);
 void brcmf_release_module_param(struct brcmf_mp_device* module_param);
+
+zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_binary);
 
 /* Sets dongle media info (drv_version, mac address). */
 zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp);

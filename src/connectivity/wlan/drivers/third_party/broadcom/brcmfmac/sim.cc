@@ -45,15 +45,13 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
     .get_memdump = [](brcmf_bus* bus, void* data,
                       size_t len) { return BUS_OP(bus)->BusGetMemdump(data, len); },
     .get_fwname =
-        [](brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name) {
-          return BUS_OP(bus)->BusGetFwName(chip, chiprev, fw_name);
+        [](brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name, size_t* fw_name_size) {
+          return BUS_OP(bus)->BusGetFwName(chip, chiprev, fw_name, fw_name_size);
         },
     .get_bootloader_macaddr =
         [](brcmf_bus* bus, uint8_t* mac_addr) {
           return BUS_OP(bus)->BusGetBootloaderMacAddr(mac_addr);
         },
-    .open_firmware_file = [](zx_device_t* zxdev, const char* name, zx_handle_t* out_handle,
-                             size_t* size) { return ZX_ERR_NOT_SUPPORTED; },
     .get_wifi_metadata =
         [](zx_device_t* zx_dev, void* data, size_t exp_size, size_t* actual) {
           wifi_config_t wifi_config = {

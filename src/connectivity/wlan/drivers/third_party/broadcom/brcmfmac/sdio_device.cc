@@ -13,6 +13,11 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio_device.h"
 
+#include <string>
+
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio.h"
 
 namespace wlan {
@@ -38,6 +43,43 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   if ((status = brcmf_sdio_register(device->brcmf_pub_.get(), &bus)) != ZX_OK) {
     return status;
   }
+
+  std::string firmware_binary;
+  if ((status = GetFirmwareBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, bus->chip,
+                                  bus->chiprev, &firmware_binary)) != ZX_OK) {
+    return status;
+  }
+
+  std::string nvram_binary;
+  if ((status = GetNvramBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, bus->chip,
+                               bus->chiprev, &nvram_binary)) != ZX_OK) {
+    return status;
+  }
+
+  if ((status = brcmf_sdio_firmware_callback(device->brcmf_pub_.get(), firmware_binary.data(),
+                                             firmware_binary.size(), nvram_binary.data(),
+                                             nvram_binary.size())) != ZX_OK) {
+    return status;
+  }
+
+  // CLM blob loading is optional, and only performed if the blob binary exists.
+  std::string clm_binary;
+  if ((status = GetClmBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, bus->chip,
+                             bus->chiprev, &clm_binary)) == ZX_OK) {
+    // The firmware IOVAR accesses to upload the CLM blob are always on ifidx 0, so we stub out an
+    // appropriate brcmf_if instance here.
+    brcmf_if ifp = {};
+    ifp.drvr = device->brcmf_pub_.get();
+    ifp.ifidx = 0;
+    if ((status = brcmf_c_process_clm_blob(&ifp, clm_binary)) != ZX_OK) {
+      return status;
+    }
+  }
+
+  if ((status = brcmf_bus_started(device->brcmf_pub_.get())) != ZX_OK) {
+    return status;
+  }
+
   device->brcmf_bus_ = std::move(bus);
 
   device->DdkMakeVisible();
@@ -54,6 +96,10 @@ zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_dev
 }
 
 zx_status_t SdioDevice::DeviceRemove(zx_device_t* dev) { return device_remove_deprecated(dev); }
+
+zx_status_t SdioDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) {
+  return load_firmware(zxdev(), path, fw, size);
+}
 
 SdioDevice::SdioDevice(zx_device_t* parent)
     : ::ddk::Device<SdioDevice, ::ddk::UnbindableNew>(parent) {}

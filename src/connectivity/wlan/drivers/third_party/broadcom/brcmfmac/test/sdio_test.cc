@@ -31,6 +31,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
 // This is required to use ddk::MockSdio.

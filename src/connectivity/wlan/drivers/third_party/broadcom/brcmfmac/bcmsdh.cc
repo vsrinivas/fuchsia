@@ -567,11 +567,11 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
 }
 
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              void* data, uint32_t size) {
+                              void* data, size_t data_size) {
   zx_status_t err = ZX_OK;
   struct brcmf_netbuf* pkt;
   // SBSDIO_SB_OFT_ADDR_LIMIT is the max transfer limit a single chunk.
-  uint32_t alloc_size = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);
+  uint32_t alloc_size = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
   uint32_t transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
   uint32_t transfer_size;
 
@@ -592,14 +592,14 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
   sdio_claim_host(sdiodev->func1);
   // Handling the situation when transfer_address + transfer_size > SBSDIO_SB_OFT_ADDR_LIMIT by
   // doing address alignment.
-  if ((transfer_address + size) & SBSDIO_SBWINDOW_MASK) {
+  if ((transfer_address + data_size) & SBSDIO_SBWINDOW_MASK) {
     transfer_size = (SBSDIO_SB_OFT_ADDR_LIMIT - transfer_address);
   } else {
-    transfer_size = size;
+    transfer_size = data_size;
   }
 
   /* Do the transfer(s) */
-  while (size) {
+  while (data_size) {
     /* Set the backplane window to include the start address */
     err = brcmf_sdiod_set_backplane_window(sdiodev, address);
 
@@ -627,12 +627,12 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
     brcmf_netbuf_reduce_length_to(pkt, 0);
 
     /* Adjust for next transfer (if any) */
-    size -= transfer_size;
+    data_size -= transfer_size;
     if (data)
       data = static_cast<char*>(data) + transfer_size;
     address += transfer_size;
     transfer_address += transfer_size;
-    transfer_size = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);
+    transfer_size = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
   }
 
   brcmf_netbuf_free(pkt);

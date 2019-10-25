@@ -228,8 +228,11 @@ zx_status_t SimFirmware::BusGetMemdump(void* data, size_t len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SimFirmware::BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name) {
-  strlcpy((char*)fw_name, "sim-fake-fw.bin", BRCMF_FW_NAME_LEN);
+zx_status_t SimFirmware::BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name,
+                                      size_t* fw_name_size) {
+  constexpr char kFirmwareName[] = "sim-fake-fw.bin";
+  strlcpy((char*)fw_name, kFirmwareName, *fw_name_size);
+  *fw_name_size = sizeof(kFirmwareName);
   return ZX_OK;
 }
 

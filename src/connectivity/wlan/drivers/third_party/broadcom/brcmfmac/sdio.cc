@@ -582,47 +582,6 @@ static const struct sdiod_drive_str sdiod_drvstr_tab6_1v8[] = {
 static const struct sdiod_drive_str sdiod_drvstr_tab2_3v3[] = {
     {16, 0x7}, {12, 0x5}, {8, 0x3}, {4, 0x1}};
 
-BRCMF_FW_NVRAM_DEF(43143, "brcmfmac43143-sdio.bin", "brcmfmac43143-sdio.txt")
-BRCMF_FW_NVRAM_DEF(43241B0, "brcmfmac43241b0-sdio.bin", "brcmfmac43241b0-sdio.txt")
-BRCMF_FW_NVRAM_DEF(43241B4, "brcmfmac43241b4-sdio.bin", "brcmfmac43241b4-sdio.txt")
-BRCMF_FW_NVRAM_DEF(43241B5, "brcmfmac43241b5-sdio.bin", "brcmfmac43241b5-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4329, "brcmfmac4329-sdio.bin", "brcmfmac4329-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4330, "brcmfmac4330-sdio.bin", "brcmfmac4330-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4334, "brcmfmac4334-sdio.bin", "brcmfmac4334-sdio.txt")
-BRCMF_FW_NVRAM_DEF(43340, "brcmfmac43340-sdio.bin", "brcmfmac43340-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4335, "brcmfmac4335-sdio.bin", "brcmfmac4335-sdio.txt")
-BRCMF_FW_NVRAM_DEF(43362, "brcmfmac43362-sdio.bin", "brcmfmac43362-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4339, "brcmfmac4339-sdio.bin", "brcmfmac4339-sdio.txt")
-BRCMF_FW_NVRAM_DEF(43430A0, "brcmfmac43430a0-sdio.bin", "brcmfmac43430a0-sdio.txt")
-/* Note the names are not postfixed with a1 for backward compatibility */
-BRCMF_FW_NVRAM_DEF(43430A1, "brcmfmac43430-sdio.bin", "brcmfmac43430-sdio.txt")
-BRCMF_FW_NVRAM_DEF(43455, "brcmfmac43455-sdio.bin", "brcmfmac43455-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4354, "brcmfmac4354-sdio.bin", "brcmfmac4354-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4356, "brcmfmac4356-sdio.bin", "brcmfmac4356-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4359, "brcmfmac4359-sdio.bin", "brcmfmac4359-sdio.txt")
-BRCMF_FW_NVRAM_DEF(4373, "brcmfmac4373-sdio.bin", "brcmfmac4373-sdio.txt")
-
-static struct brcmf_firmware_mapping brcmf_sdio_fwnames[] = {
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43143_CHIP_ID, 0xFFFFFFFF, 43143),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43241_CHIP_ID, 0x0000001F, 43241B0),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43241_CHIP_ID, 0x00000020, 43241B4),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43241_CHIP_ID, 0xFFFFFFC0, 43241B5),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4329_CHIP_ID, 0xFFFFFFFF, 4329),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4330_CHIP_ID, 0xFFFFFFFF, 4330),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4334_CHIP_ID, 0xFFFFFFFF, 4334),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43340_CHIP_ID, 0xFFFFFFFF, 43340),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43341_CHIP_ID, 0xFFFFFFFF, 43340),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4335_CHIP_ID, 0xFFFFFFFF, 4335),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43362_CHIP_ID, 0xFFFFFFFE, 43362),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4339_CHIP_ID, 0xFFFFFFFF, 4339),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43430_CHIP_ID, 0x00000001, 43430A0),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_43430_CHIP_ID, 0xFFFFFFFE, 43430A1),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4345_CHIP_ID, 0xFFFFFFC0, 43455),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4354_CHIP_ID, 0xFFFFFFFF, 4354),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4356_CHIP_ID, 0xFFFFFFFF, 4356),
-    BRCMF_FW_NVRAM_ENTRY(BRCM_CC_4359_CHIP_ID, 0xFFFFFFFF, 4359),
-    BRCMF_FW_NVRAM_ENTRY(CY_CC_4373_CHIP_ID, 0xFFFFFFFF, 4373)};
-
 static void pkt_align(struct brcmf_netbuf* p, int len, int align) {
   uint datalign;
   datalign = (unsigned long)(p->data);
@@ -931,7 +890,7 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
   zx_status_t rv;
   uint32_t shaddr = 0;
   struct sdpcm_shared_le sh_le;
-  uint32_t addr_le;
+  uint32_t addr_le = 0;
 
   sdio_claim_host(bus->sdiodev->func1);
   brcmf_sdio_bus_sleep(bus, false, false);
@@ -2787,7 +2746,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(brcmf_bus* bus_if, unsigned char* msg, u
 
 #if !defined(NDEBUG)
 static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
-                                    uint8_t* ram_data, uint ram_sz) {
+                                    const void* ram_data, size_t ram_sz) {
   char* ram_cmp;
   zx_status_t err;
   bool ret = true;
@@ -2812,7 +2771,7 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
       BRCMF_ERR("error %d on reading %d membytes at 0x%08x\n", err, len, address);
       ret = false;
       break;
-    } else if (memcmp(ram_cmp, &ram_data[offset], len)) {
+    } else if (memcmp(ram_cmp, static_cast<const char*>(ram_data) + offset, len)) {
       BRCMF_ERR("Downloaded RAM image is corrupted, block offset is %d, len is %d\n", offset, len);
       ret = false;
       break;
@@ -2827,65 +2786,65 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
 }
 #else  /* !defined(NDEBUG) */
 static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
-                                    uint8_t* ram_data, uint ram_sz) {
+                                    const void* ram_data, size_t ram_sz) {
   return true;
 }
 #endif /* !defined(NDEBUG) */
 
-static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus,
-                                                 const struct brcmf_firmware* fw) {
+static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus, const void* firmware,
+                                                 size_t firmware_size) {
   zx_status_t err;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
-  err = brcmf_sdiod_ramrw(bus->sdiodev, true, bus->ci->rambase, (uint8_t*)fw->data, fw->size);
+  err = brcmf_sdiod_ramrw(bus->sdiodev, true, bus->ci->rambase, const_cast<void*>(firmware),
+                          firmware_size);
   if (err != ZX_OK)
-    BRCMF_ERR("error %d on writing %d membytes at 0x%08x\n", err, (int)fw->size, bus->ci->rambase);
-  else if (!brcmf_sdio_verifymemory(bus->sdiodev, bus->ci->rambase, (uint8_t*)fw->data, fw->size)) {
+    BRCMF_ERR("error %d on writing %zu membytes at 0x%08x\n", err, firmware_size, bus->ci->rambase);
+  else if (!brcmf_sdio_verifymemory(bus->sdiodev, bus->ci->rambase, firmware, firmware_size)) {
     err = ZX_ERR_IO;
   }
 
   return err;
 }
 
-static zx_status_t brcmf_sdio_download_nvram(struct brcmf_sdio* bus, void* vars, uint32_t varsz) {
+static zx_status_t brcmf_sdio_download_nvram(struct brcmf_sdio* bus, const void* vars,
+                                             uint32_t varsz) {
   int address;
   zx_status_t err;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
   address = bus->ci->ramsize - varsz + bus->ci->rambase;
-  err = brcmf_sdiod_ramrw(bus->sdiodev, true, address, vars, varsz);
+  err = brcmf_sdiod_ramrw(bus->sdiodev, true, address, const_cast<void*>(vars), varsz);
   if (err != ZX_OK) {
     BRCMF_ERR("error %d on writing %d nvram bytes at 0x%08x\n", err, varsz, address);
-  } else if (!brcmf_sdio_verifymemory(bus->sdiodev, address, static_cast<uint8_t*>(vars), varsz)) {
+  } else if (!brcmf_sdio_verifymemory(bus->sdiodev, address, vars, varsz)) {
     err = ZX_ERR_IO;
   }
 
   return err;
 }
 
-static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus,
-                                                const struct brcmf_firmware* fw, void* nvram,
-                                                uint32_t nvlen) {
+static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus, const void* firmware,
+                                                size_t firmware_size, const void* nvram,
+                                                size_t nvram_size) {
   zx_status_t bcmerror;
   uint32_t rstvec;
 
   sdio_claim_host(bus->sdiodev->func1);
   brcmf_sdio_clkctl(bus, CLK_AVAIL, false);
 
-  rstvec = *(uint32_t*)fw->data;
+  rstvec = *(const uint32_t*)firmware;
   BRCMF_DBG(SDIO, "firmware rstvec: %x\n", rstvec);
 
-  bcmerror = brcmf_sdio_download_code_file(bus, fw);
+  bcmerror = brcmf_sdio_download_code_file(bus, firmware, firmware_size);
   if (bcmerror != ZX_OK) {
     BRCMF_ERR("dongle image file download failed\n");
-    brcmf_fw_nvram_free(nvram);
     goto err;
   }
 
-  bcmerror = brcmf_sdio_download_nvram(bus, nvram, nvlen);
-  brcmf_fw_nvram_free(nvram);
+  bcmerror = brcmf_sdio_download_nvram(bus, nvram, nvram_size);
   if (bcmerror != ZX_OK) {
     BRCMF_ERR("dongle nvram file download failed\n");
     goto err;
@@ -3603,22 +3562,23 @@ static void brcmf_sdio_watchdog(void* data) {
 }
 
 static zx_status_t brcmf_sdio_get_fwname(brcmf_bus* bus_if, uint32_t chip, uint32_t chiprev,
-                                         uint8_t* fw_name) {
+                                         uint8_t* fw_name, size_t* fw_name_size) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   int ret = ZX_OK;
 
-  if (sdiodev->fw_name[0] != '\0') {
-    strlcpy((char*)fw_name, sdiodev->fw_name, BRCMF_FW_NAME_LEN);
+  if (!sdiodev->fw_name.empty()) {
+    strlcpy((char*)fw_name, sdiodev->fw_name.c_str(), *fw_name_size);
+    *fw_name_size = sdiodev->fw_name.size() + 1;
   } else {
-    ret = brcmf_fw_map_chip_to_name(chip, chiprev, brcmf_sdio_fwnames, countof(brcmf_sdio_fwnames),
-                                    (char*)fw_name, NULL);
+    std::string_view firmware_name;
+    ret = ::wlan::brcmfmac::GetFirmwareName(brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, chip, chiprev,
+                                            &firmware_name);
+    if (ret == ZX_OK) {
+      strlcpy(reinterpret_cast<char*>(fw_name), firmware_name.data(), *fw_name_size);
+      *fw_name_size = firmware_name.size() + 1;
+    }
   }
   return ret;
-}
-
-static zx_status_t brcmf_sdio_load_firmware(zx_device_t* zxdev, const char* name,
-                                            zx_handle_t* out_handle, size_t* size) {
-  return load_firmware(zxdev, name, out_handle, size);
 }
 
 static zx_status_t brcmf_get_wifi_metadata(zx_device_t* zx_dev, void* data, size_t exp_size,
@@ -3643,13 +3603,13 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .get_memdump = brcmf_sdio_bus_get_memdump,
     .get_fwname = brcmf_sdio_get_fwname,
     .get_bootloader_macaddr = brcmf_sdio_get_bootloader_macaddr,
-    .open_firmware_file = brcmf_sdio_load_firmware,
     .get_wifi_metadata = brcmf_get_wifi_metadata,
 };
 
-static void brcmf_sdio_firmware_callback(brcmf_pub* drvr, zx_status_t err,
-                                         const brcmf_firmware* code, void* nvram,
-                                         uint32_t nvram_len) {
+zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
+                                         size_t firmware_size, const void* nvram,
+                                         size_t nvram_size) {
+  zx_status_t err = ZX_OK;
   struct brcmf_sdio_dev* sdiodev = drvr->bus_if->bus_priv.sdio;
   struct brcmf_sdio* bus = sdiodev->bus;
   struct brcmf_sdio_dev* sdiod = bus->sdiodev;
@@ -3665,7 +3625,7 @@ static void brcmf_sdio_firmware_callback(brcmf_pub* drvr, zx_status_t err,
 
   /* try to download image and nvram to the dongle */
   bus->alp_only = true;
-  err = brcmf_sdio_download_firmware(bus, code, nvram, nvram_len);
+  err = brcmf_sdio_download_firmware(bus, firmware, firmware_size, nvram, nvram_size);
   if (err != ZX_OK) {
     goto fail;
   }
@@ -3689,6 +3649,7 @@ static void brcmf_sdio_firmware_callback(brcmf_pub* drvr, zx_status_t err,
   brcmf_sdio_clkctl(bus, CLK_AVAIL, false);
   if (bus->clkstate != CLK_AVAIL) {
     BRCMF_ERR("Bad clockstate %d, should be %d\n", bus->clkstate, CLK_AVAIL);
+    err = ZX_ERR_INTERNAL;
     goto release;
   }
 
@@ -3770,21 +3731,19 @@ static void brcmf_sdio_firmware_callback(brcmf_pub* drvr, zx_status_t err,
   sdio_release_host(sdiodev->func1);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
-  err = brcmf_bus_started(sdiodev->drvr);
-  if (err != ZX_OK) {
-    BRCMF_ERR("dongle is not responding\n");
-    goto fail;
-  }
-  return;
+  return ZX_OK;
 
 release:
   sdio_release_host(sdiodev->func1);
+
 fail:
   BRCMF_DBG(TRACE, "failed: dev=%s, err=%d\n", device_get_name(sdiodev->drvr->zxdev), err);
   BRCMF_ERR("Need to implement driver release logic (WLAN-888)\n");
   // TODO(WLAN-888)
   // device_release_driver(&sdiodev->func2->dev);
   // device_release_driver(dev);
+
+  return err;
 }
 
 struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
@@ -3792,6 +3751,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   int thread_result;
   struct brcmf_sdio* bus;
   WorkQueue* wq;
+  std::string_view firmware_name;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
@@ -3902,20 +3862,12 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->sr_enabled = false;
 
   BRCMF_DBG(INFO, "completed!!\n");
-
-  ret =
-      brcmf_fw_map_chip_to_name(bus->ci->chip, bus->ci->chiprev, brcmf_sdio_fwnames,
-                                countof(brcmf_sdio_fwnames), sdiodev->fw_name, sdiodev->nvram_name);
+  ret = ::wlan::brcmfmac::GetFirmwareName(brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, bus->ci->chip,
+                                          bus->ci->chiprev, &firmware_name);
   if (ret != ZX_OK) {
     goto fail;
   }
-
-  ret = brcmf_fw_get_firmwares(sdiodev->drvr, BRCMF_FW_REQUEST_NVRAM, sdiodev->fw_name,
-                               sdiodev->nvram_name, brcmf_sdio_firmware_callback);
-  if (ret != ZX_OK) {
-    BRCMF_ERR("async firmware request failed: %d\n", ret);
-    goto fail;
-  }
+  sdiodev->fw_name = firmware_name;
 
   return bus;
 

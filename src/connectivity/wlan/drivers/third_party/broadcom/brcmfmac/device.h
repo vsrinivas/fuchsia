@@ -39,9 +39,10 @@ class Device : public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
   zx_status_t WlanphyImplDestroyIface(uint16_t iface_id);
   zx_status_t WlanphyImplSetCountry(const wlanphy_country_t* country);
 
-  // Trampolines for DDK functions, for platforms that support them
+  // Trampolines for DDK functions, for platforms that support them.
   virtual zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) = 0;
   virtual zx_status_t DeviceRemove(zx_device_t* dev) = 0;
+  virtual zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) = 0;
 
  protected:
   Device();

@@ -47,6 +47,19 @@ executable("dynamic_if_test") {
   ]
 }
 
+executable("firmware_test") {
+  output_name = "firmware_test"
+  testonly = true
+  sources = [
+    "firmware_test.cc",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
 executable("lifecycle_test") {
   output_name = "lifecycle_test"
   testonly = true
@@ -139,6 +152,7 @@ unittest_package("brcmfmac_test") {
   deps = [
     ":debug_test",
     ":dynamic_if_test",
+    ":firmware_test",
     ":lifecycle_test",
     ":netbuf_test",
     ":scan_test",
@@ -153,6 +167,10 @@ unittest_package("brcmfmac_test") {
     },
     {
       name = "dynamic_if_test"
+      environments = basic_envs
+    },
+    {
+      name = "firmware_test"
       environments = basic_envs
     },
     {

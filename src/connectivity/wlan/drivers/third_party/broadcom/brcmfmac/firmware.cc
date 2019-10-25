@@ -1,629 +1,307 @@
-/*
- * Copyright (c) 2013 Broadcom Corporation
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+// Copyright (c) 2019 The Fuchsia Authors
+//
+// Permission to use, copy, modify, and/or distribute this software for any purpose with or without
+// fee is hereby granted, provided that the above copyright notice and this permission notice
+// appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+// SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+// AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+// NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+// OF THIS SOFTWARE.
 
-#include "firmware.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
 
-#include <zircon/syscalls.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 
-#include <ddk/device.h>
+#include <cctype>
 
-#include "common.h"
-#include "core.h"
-#include "debug.h"
-#include "linuxisms.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
-#define BRCMF_FW_MAX_NVRAM_SIZE 64000
-#define BRCMF_FW_NVRAM_DEVPATH_LEN 19 /* devpath0=pcie/1/4/ */
-#define BRCMF_FW_NVRAM_PCIEDEV_LEN 10 /* pcie/1/4/ + \0 */
-#define BRCMF_FW_DEFAULT_BOARDREV "boardrev=0xff"
+namespace wlan {
+namespace brcmfmac {
+namespace {
+
+struct FirmwareMapping {
+  uint32_t chipid;
+  uint32_t chiprev_mask;
+  const char* firmware_filename;
+  const char* nvram_filename;
+};
 
 constexpr char kDefaultFirmwarePath[] = "brcmfmac/";
 
-enum nvram_parser_state { IDLE, KEY, VALUE, COMMENT, END };
-
-/**
- * struct nvram_parser - internal info for parser.
- *
- * @state: current parser state.
- * @data: input buffer being parsed.
- * @nvram: output buffer with parse result.
- * @nvram_len: lenght of parse result.
- * @line: current line.
- * @column: current column in line.
- * @pos: byte offset in input buffer.
- * @entry: start position of key,value entry.
- * @multi_dev_v1: detect pcie multi device v1 (compressed).
- * @multi_dev_v2: detect pcie multi device v2.
- * @boardrev_found: nvram contains boardrev information.
- */
-struct nvram_parser {
-  enum nvram_parser_state state;
-  const uint8_t* data;
-  uint8_t* nvram;
-  uint32_t nvram_len;
-  uint32_t line;
-  uint32_t column;
-  uint32_t pos;
-  uint32_t entry;
-  bool multi_dev_v1;
-  bool multi_dev_v2;
-  bool boardrev_found;
+constexpr FirmwareMapping kSdioFirmwareMappings[] = {
+    {BRCM_CC_43143_CHIP_ID, 0xFFFFFFFF, "brcmfmac43143-sdio.bin", "brcmfmac43143-sdio.txt"},
+    {BRCM_CC_43241_CHIP_ID, 0x0000001F, "brcmfmac43241b0-sdio.bin", "brcmfmac43241b0-sdio.txt"},
+    {BRCM_CC_43241_CHIP_ID, 0x00000020, "brcmfmac43241b4-sdio.bin", "brcmfmac43241b4-sdio.txt"},
+    {BRCM_CC_43241_CHIP_ID, 0xFFFFFFC0, "brcmfmac43241b5-sdio.bin", "brcmfmac43241b5-sdio.txt"},
+    {BRCM_CC_4329_CHIP_ID, 0xFFFFFFFF, "brcmfmac4329-sdio.bin", "brcmfmac4329-sdio.txt"},
+    {BRCM_CC_4330_CHIP_ID, 0xFFFFFFFF, "brcmfmac4330-sdio.bin", "brcmfmac4330-sdio.txt"},
+    {BRCM_CC_4334_CHIP_ID, 0xFFFFFFFF, "brcmfmac4334-sdio.bin", "brcmfmac4334-sdio.txt"},
+    {BRCM_CC_43340_CHIP_ID, 0xFFFFFFFF, "brcmfmac43340-sdio.bin", "brcmfmac43340-sdio.txt"},
+    {BRCM_CC_43341_CHIP_ID, 0xFFFFFFFF, "brcmfmac43340-sdio.bin", "brcmfmac43340-sdio.txt"},
+    {BRCM_CC_4335_CHIP_ID, 0xFFFFFFFF, "brcmfmac4335-sdio.bin", "brcmfmac4335-sdio.txt"},
+    {BRCM_CC_43362_CHIP_ID, 0xFFFFFFFE, "brcmfmac43362-sdio.bin", "brcmfmac43362-sdio.txt"},
+    {BRCM_CC_4339_CHIP_ID, 0xFFFFFFFF, "brcmfmac4339-sdio.bin", "brcmfmac4339-sdio.txt"},
+    {BRCM_CC_43430_CHIP_ID, 0x00000001, "brcmfmac43430a0-sdio.bin", "brcmfmac43430a0-sdio.txt"},
+    {BRCM_CC_43430_CHIP_ID, 0xFFFFFFFE, "brcmfmac43430-sdio.bin", "brcmfmac43430-sdio.txt"},
+    {BRCM_CC_4345_CHIP_ID, 0xFFFFFFC0, "brcmfmac43455-sdio.bin", "brcmfmac43455-sdio.txt"},
+    {BRCM_CC_4354_CHIP_ID, 0xFFFFFFFF, "brcmfmac4354-sdio.bin", "brcmfmac4354-sdio.txt"},
+    {BRCM_CC_4356_CHIP_ID, 0xFFFFFFFF, "brcmfmac4356-sdio.bin", "brcmfmac4356-sdio.txt"},
+    {BRCM_CC_4359_CHIP_ID, 0xFFFFFFFF, "brcmfmac4359-sdio.bin", "brcmfmac4359-sdio.txt"},
+    {CY_CC_4373_CHIP_ID, 0xFFFFFFFF, "brcmfmac4373-sdio.bin", "brcmfmac4373-sdio.txt"},
 };
 
-/**
- * is_nvram_char() - check if char is a valid one for NVRAM entry
- *
- * It accepts all printable ASCII chars except for '#' which opens a comment.
- * Please note that ' ' (space) while accepted is not a valid key name char.
- */
-static bool is_nvram_char(char c) {
-  /* comment marker excluded */
-  if (c == '#') {
-    return false;
+const FirmwareMapping* GetFirmwareMapping(brcmf_bus_type bus_type, uint32_t chipid,
+                                          uint32_t chiprev) {
+  switch (bus_type) {
+    case brcmf_bus_type::BRCMF_BUS_TYPE_SDIO: {
+      for (const auto& mapping : kSdioFirmwareMappings) {
+        if (chipid == mapping.chipid && ((1 << chiprev) & mapping.chiprev_mask)) {
+          return &mapping;
+        }
+      }
+      break;
+    }
+    default:
+      break;
   }
 
-  /* key and value may have any other readable character */
-  return (c >= 0x20 && c < 0x7f);
+  BRCMF_ERR("No firmware/NVRAM mapping found for bus_type=%d, chipid=0x%x, chiprev=%d\n",
+            static_cast<int>(bus_type), chipid, chiprev);
+  return nullptr;
 }
 
-static bool is_whitespace(char c) { return (c == ' ' || c == '\r' || c == '\n' || c == '\t'); }
-
-static enum nvram_parser_state brcmf_nvram_handle_idle(struct nvram_parser* nvp) {
-  char c;
-
-  c = nvp->data[nvp->pos];
-  if (c == '\n') {
-    return COMMENT;
-  }
-  if (is_whitespace(c) || c == '\0') {
-    goto proceed;
-  }
-  if (c == '#') {
-    return COMMENT;
-  }
-  if (is_nvram_char(c)) {
-    nvp->entry = nvp->pos;
-    return KEY;
-  }
-  BRCMF_DBG(INFO, "warning: ln=%d:col=%d: ignoring invalid character\n", nvp->line, nvp->column);
-proceed:
-  nvp->column++;
-  nvp->pos++;
-  return IDLE;
-}
-
-static enum nvram_parser_state brcmf_nvram_handle_key(struct nvram_parser* nvp) {
-  enum nvram_parser_state st = nvp->state;
-  char c;
-
-  c = nvp->data[nvp->pos];
-  if (c == '=') {
-    /* ignore RAW1 by treating as comment */
-    if (strncmp((char*)&nvp->data[nvp->entry], "RAW1", 4) == 0) {
-      st = COMMENT;
-    } else {
-      st = VALUE;
-    }
-    if (strncmp((char*)&nvp->data[nvp->entry], "devpath", 7) == 0) {
-      nvp->multi_dev_v1 = true;
-    }
-    if (strncmp((char*)&nvp->data[nvp->entry], "pcie/", 5) == 0) {
-      nvp->multi_dev_v2 = true;
-    }
-    if (strncmp((char*)&nvp->data[nvp->entry], "boardrev", 8) == 0) {
-      nvp->boardrev_found = true;
-    }
-  } else if (!is_nvram_char(c) || c == ' ') {
-    BRCMF_DBG(INFO, "warning: ln=%d:col=%d: '=' expected, skip invalid key entry\n", nvp->line,
-              nvp->column);
-    return COMMENT;
+zx_status_t LoadBinaryFromFile(Device* device, std::string_view filename, std::string* binary_out) {
+  zx_status_t status = ZX_OK;
+  zx_handle_t vmo_handle = ZX_HANDLE_INVALID;
+  size_t vmo_size = 0;
+  const auto filepath = std::string(kDefaultFirmwarePath).append(filename);
+  if ((status = device->LoadFirmware(filepath.c_str(), &vmo_handle, &vmo_size)) != ZX_OK) {
+    BRCMF_ERR("Failed to load filepath %s: %s\n", filepath.c_str(), zx_status_get_string(status));
+    return status;
   }
 
-  nvp->column++;
-  nvp->pos++;
-  return st;
-}
-
-static enum nvram_parser_state brcmf_nvram_handle_value(struct nvram_parser* nvp) {
-  char c;
-  char* skv;
-  char* ekv;
-  uint32_t cplen;
-
-  c = nvp->data[nvp->pos];
-  if (!is_nvram_char(c)) {
-    /* key,value pair complete */
-    ekv = (char*)&nvp->data[nvp->pos];
-    skv = (char*)&nvp->data[nvp->entry];
-    cplen = ekv - skv;
-    if (nvp->nvram_len + cplen + 1 >= BRCMF_FW_MAX_NVRAM_SIZE) {
-      return END;
-    }
-    /* copy to output buffer */
-    memcpy(&nvp->nvram[nvp->nvram_len], skv, cplen);
-    nvp->nvram_len += cplen;
-    nvp->nvram[nvp->nvram_len] = '\0';
-    nvp->nvram_len++;
-    return IDLE;
-  }
-  nvp->pos++;
-  nvp->column++;
-  return VALUE;
-}
-
-static enum nvram_parser_state brcmf_nvram_handle_comment(struct nvram_parser* nvp) {
-  char* eoc;
-  char* sol;
-
-  sol = (char*)&nvp->data[nvp->pos];
-  eoc = strchr(sol, '\n');
-  if (!eoc) {
-    eoc = strchr(sol, '\0');
-    if (!eoc) {
-      return END;
-    }
+  std::string binary_data(vmo_size, '\0');
+  if ((status = zx_vmo_read(vmo_handle, binary_data.data(), 0, binary_data.size())) != ZX_OK) {
+    BRCMF_ERR("Failed to read filepath %s: %s\n", filepath.c_str(), zx_status_get_string(status));
+    return status;
   }
 
-  /* eat all moving to next line */
-  nvp->line++;
-  nvp->column = 1;
-  nvp->pos += (eoc - sol) + 1;
-  return IDLE;
-}
-
-static enum nvram_parser_state brcmf_nvram_handle_end(struct nvram_parser* nvp) {
-  /* final state */
-  return END;
-}
-
-static enum nvram_parser_state (*nv_parser_states[])(struct nvram_parser* nvp) = {
-    brcmf_nvram_handle_idle, brcmf_nvram_handle_key, brcmf_nvram_handle_value,
-    brcmf_nvram_handle_comment, brcmf_nvram_handle_end};
-
-static zx_status_t brcmf_init_nvram_parser(struct nvram_parser* nvp, const uint8_t* data,
-                                           size_t data_len) {
-  size_t size;
-
-  memset(nvp, 0, sizeof(*nvp));
-  nvp->data = data;
-  /* Limit size to MAX_NVRAM_SIZE, some files contain lot of comment */
-  if (data_len > BRCMF_FW_MAX_NVRAM_SIZE) {
-    size = BRCMF_FW_MAX_NVRAM_SIZE;
-  } else {
-    size = data_len;
-  }
-  /* Alloc for extra 0 byte + roundup by 4 + length field */
-  size += 1 + 3 + sizeof(uint32_t);
-  nvp->nvram = static_cast<decltype(nvp->nvram)>(calloc(1, size));
-  if (!nvp->nvram) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  nvp->line = 1;
-  nvp->column = 1;
+  *binary_out = std::move(binary_data);
   return ZX_OK;
 }
 
-/* brcmf_fw_strip_multi_v1 :Some nvram files contain settings for multiple
- * devices. Strip it down for one device, use domain_nr/bus_nr to determine
- * which data is to be returned. v1 is the version where nvram is stored
- * compressed and "devpath" maps to index for valid entries.
- */
-static void brcmf_fw_strip_multi_v1(struct nvram_parser* nvp, uint16_t domain_nr, uint16_t bus_nr) {
-  /* Device path with a leading '=' key-value separator */
-  char pci_path[] = "=pci/?/?";
-  size_t pci_len;
-  char pcie_path[] = "=pcie/?/?";
-  size_t pcie_len;
+}  // namespace
 
-  uint32_t i, j;
-  bool found;
-  uint8_t* nvram;
-  uint8_t id;
-
-  nvram = static_cast<decltype(nvram)>(calloc(1, nvp->nvram_len + 1 + 3 + sizeof(uint32_t)));
-  if (!nvram) {
-    goto fail;
+zx_status_t GetFirmwareName(brcmf_bus_type bus_type, uint32_t chipid, uint32_t chiprev,
+                            std::string_view* name_out) {
+  const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chipid, chiprev);
+  if (firmware_mapping == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  /* min length: devpath0=pcie/1/4/ + 0:x=y */
-  if (nvp->nvram_len < BRCMF_FW_NVRAM_DEVPATH_LEN + 6) {
-    goto fail;
+  *name_out = std::string_view(firmware_mapping->firmware_filename);
+  return ZX_OK;
+}
+
+zx_status_t GetFirmwareBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
+                              uint32_t chiprev, std::string* binary_out) {
+  zx_status_t status = ZX_OK;
+
+  std::string_view firmware_name;
+  if ((status = GetFirmwareName(bus_type, chipid, chiprev, &firmware_name)) != ZX_OK) {
+    return status;
   }
 
-  /* First search for the devpathX and see if it is the configuration
-   * for domain_nr/bus_nr. Search complete nvp
-   */
-  snprintf(pci_path, sizeof(pci_path), "=pci/%d/%d", domain_nr, bus_nr);
-  pci_len = strlen(pci_path);
-  snprintf(pcie_path, sizeof(pcie_path), "=pcie/%d/%d", domain_nr, bus_nr);
-  pcie_len = strlen(pcie_path);
-  found = false;
-  i = 0;
-  while (i < nvp->nvram_len - BRCMF_FW_NVRAM_DEVPATH_LEN) {
-    /* Format: devpathX=pcie/Y/Z/
-     * Y = domain_nr, Z = bus_nr, X = virtual ID
-     */
-    if (strncmp((char*)&nvp->nvram[i], "devpath", 7) == 0 &&
-        (!strncmp((char*)&nvp->nvram[i + 8], pci_path, pci_len) ||
-         !strncmp((char*)&nvp->nvram[i + 8], pcie_path, pcie_len))) {
-      id = nvp->nvram[i + 7] - '0';
-      found = true;
+  return LoadBinaryFromFile(device, firmware_name, binary_out);
+}
+
+zx_status_t GetClmBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid, uint32_t chiprev,
+                         std::string* binary_out) {
+  const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chipid, chiprev);
+  if (firmware_mapping == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  const std::string_view firmware_name(firmware_mapping->firmware_filename);
+  const std::string clm_name =
+      std::string(firmware_name.substr(0, firmware_name.find_last_of('.'))).append(".clm_blob");
+
+  return LoadBinaryFromFile(device, clm_name, binary_out);
+}
+
+// Get the NVRAM binary for the given bus and chip.
+zx_status_t GetNvramBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
+                           uint32_t chiprev, std::string* binary_out) {
+  zx_status_t status = ZX_OK;
+
+  const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chipid, chiprev);
+  if (firmware_mapping == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  std::string binary_data;
+  if ((status = LoadBinaryFromFile(device, firmware_mapping->nvram_filename, &binary_data)) !=
+      ZX_OK) {
+    return status;
+  }
+
+  if ((status = ParseNvramBinary(binary_data, binary_out)) != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+// Parse an NVRAM image from file, into a format suitable for uploading to the device.
+zx_status_t ParseNvramBinary(std::string_view nvram, std::string* parsed_nvram_out) {
+  auto read_iter = nvram.cbegin();
+  std::string parsed_nvram;
+  // The initial parsing pass only removes characters, so the input size is a good starting point.
+  parsed_nvram.reserve(nvram.size());
+  bool boardrev_found = false;
+
+  // Skip whitespace.
+  const auto skip_past_blank = [&]() {
+    while (read_iter != nvram.cend() && std::isblank(*read_iter)) {
+      ++read_iter;
+    }
+  };
+
+  // Skip to the next line.
+  const auto skip_past_newline = [&]() {
+    while (true) {
+      if (read_iter == nvram.cend()) {
+        return;
+      }
+      const char read_char = *read_iter;
+      ++read_iter;
+      if (read_char == '\n') {
+        return;
+      }
+    }
+  };
+
+  while (true) {
+    // Skip leading whitespace.
+    skip_past_blank();
+    if (read_iter == nvram.cend()) {
       break;
     }
-    while (nvp->nvram[i] != 0) {
-      i++;
+    if (*read_iter == '\n') {
+      // This was a blank line.
+      ++read_iter;
+      continue;
     }
-    i++;
-  }
-  if (!found) {
-    goto fail;
-  }
 
-  /* Now copy all valid entries, release old nvram and assign new one */
-  i = 0;
-  j = 0;
-  while (i < nvp->nvram_len) {
-    if ((nvp->nvram[i] - '0' == id) && (nvp->nvram[i + 1] == ':')) {
-      i += 2;
-      if (strncmp((char*)&nvp->nvram[i], "boardrev", 8) == 0) {
-        nvp->boardrev_found = true;
-      }
-      while (nvp->nvram[i] != 0) {
-        nvram[j] = nvp->nvram[i];
-        i++;
-        j++;
-      }
-      nvram[j] = 0;
-      j++;
+    // This is a comment.
+    if (*read_iter == '#') {
+      skip_past_newline();
+      continue;
     }
-    while (nvp->nvram[i] != 0) {
-      i++;
+
+    // This is a key/value pair.  Write it to the output.
+    // Keys are named with printable characters (but not spaces), except for '#' which is a comment.
+    const auto key_begin = read_iter;
+    while (read_iter != nvram.cend() && std::isgraph(*read_iter) && *read_iter != '#' &&
+           *read_iter != '=') {
+      ++read_iter;
     }
-    i++;
-  }
-  free(nvp->nvram);
-  nvp->nvram = nvram;
-  nvp->nvram_len = j;
-  return;
-
-fail:
-  free(nvram);
-  nvp->nvram_len = 0;
-}
-
-/* brcmf_fw_strip_multi_v2 :Some nvram files contain settings for multiple
- * devices. Strip it down for one device, use domain_nr/bus_nr to determine
- * which data is to be returned. v2 is the version where nvram is stored
- * uncompressed, all relevant valid entries are identified by
- * pcie/domain_nr/bus_nr:
- */
-static void brcmf_fw_strip_multi_v2(struct nvram_parser* nvp, uint16_t domain_nr, uint16_t bus_nr) {
-  char prefix[BRCMF_FW_NVRAM_PCIEDEV_LEN];
-  size_t len;
-  uint32_t i, j;
-  uint8_t* nvram;
-
-  nvram = static_cast<decltype(nvram)>(calloc(1, nvp->nvram_len + 1 + 3 + sizeof(uint32_t)));
-  if (!nvram) {
-    goto fail;
-  }
-
-  /* Copy all valid entries, release old nvram and assign new one.
-   * Valid entries are of type pcie/X/Y/ where X = domain_nr and
-   * Y = bus_nr.
-   */
-  snprintf(prefix, sizeof(prefix), "pcie/%d/%d/", domain_nr, bus_nr);
-  len = strlen(prefix);
-  i = 0;
-  j = 0;
-  while (i < nvp->nvram_len - len) {
-    if (strncmp((char*)&nvp->nvram[i], prefix, len) == 0) {
-      i += len;
-      if (strncmp((char*)&nvp->nvram[i], "boardrev", 8) == 0) {
-        nvp->boardrev_found = true;
-      }
-      while (nvp->nvram[i] != 0) {
-        nvram[j] = nvp->nvram[i];
-        i++;
-        j++;
-      }
-      nvram[j] = 0;
-      j++;
+    const std::string_view key(&*key_begin, read_iter - key_begin);
+    if (read_iter == key_begin) {
+      BRCMF_ERR("Invalid NVRAM key %.*s\n", static_cast<int>(key.size()), key.data());
+      return ZX_ERR_INVALID_ARGS;
     }
-    while (nvp->nvram[i] != 0) {
-      i++;
+
+    // Find the "=" separator for the value, possibly surrounded by blankspace.
+    skip_past_blank();
+    if (read_iter == nvram.cend() || *read_iter != '=') {
+      BRCMF_ERR("Missing NVRAM value for key %.*s\n", static_cast<int>(key.size()), key.data());
+      return ZX_ERR_INVALID_ARGS;
     }
-    i++;
-  }
-  free(nvp->nvram);
-  nvp->nvram = nvram;
-  nvp->nvram_len = j;
-  return;
-fail:
-  free(nvram);
-  nvp->nvram_len = 0;
-}
-
-static void brcmf_fw_add_defaults(struct nvram_parser* nvp) {
-  if (nvp->boardrev_found) {
-    return;
-  }
-
-  memcpy(&nvp->nvram[nvp->nvram_len], &BRCMF_FW_DEFAULT_BOARDREV,
-         strlen(BRCMF_FW_DEFAULT_BOARDREV));
-  nvp->nvram_len += strlen(BRCMF_FW_DEFAULT_BOARDREV);
-  nvp->nvram[nvp->nvram_len] = '\0';
-  nvp->nvram_len++;
-}
-
-/* brcmf_nvram_strip :Takes a buffer of "<var>=<value>\n" lines read from a fil
- * and ending in a NUL. Removes carriage returns, empty lines, comment lines,
- * and converts newlines to NULs. Shortens buffer as needed and pads with NULs.
- * End of buffer is completed with token identifying length of buffer.
- */
-static void* brcmf_fw_nvram_strip(const uint8_t* data, size_t data_len, uint32_t* new_length,
-                                  uint16_t domain_nr, uint16_t bus_nr) {
-  struct nvram_parser nvp;
-  uint32_t pad;
-  uint32_t token;
-  uint32_t token_le;
-
-  if (brcmf_init_nvram_parser(&nvp, data, data_len) < 0) {
-    return NULL;
-  }
-
-  while (nvp.pos < data_len) {
-    nvp.state = nv_parser_states[nvp.state](&nvp);
-    if (nvp.state == END) {
-      break;
+    ++read_iter;
+    skip_past_blank();
+    if (read_iter == nvram.cend()) {
+      BRCMF_ERR("Missing NVRAM value for key %.*s\n", static_cast<int>(key.size()), key.data());
+      return ZX_ERR_INVALID_ARGS;
     }
-  }
-  if (nvp.multi_dev_v1) {
-    nvp.boardrev_found = false;
-    brcmf_fw_strip_multi_v1(&nvp, domain_nr, bus_nr);
-  } else if (nvp.multi_dev_v2) {
-    nvp.boardrev_found = false;
-    brcmf_fw_strip_multi_v2(&nvp, domain_nr, bus_nr);
+
+    // Values can be printable characters, including spaces, except for '#' which is a comment.
+    const auto value_begin = read_iter;
+    while (read_iter != nvram.cend() && std::isprint(*read_iter) && *read_iter != '#') {
+      ++read_iter;
+    }
+    // Trim trailing whitespace.
+    auto value_end = read_iter;
+    while (value_end > value_begin && std::isblank(*(value_end - 1))) {
+      --value_end;
+    }
+    const std::string_view value(&*value_begin, value_end - value_begin);
+
+    // The rest of the line is either whitespace to a newline, or a comment.
+    skip_past_newline();
+    if (*(read_iter - 1) != '\n') {
+      BRCMF_ERR("Missing NVRAM newline after value for key %.*s\n", static_cast<int>(key.size()),
+                key.data());
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Check for special key values.
+    if (key.compare("RAW1") == 0) {
+      // Ignore RAW1 lines.
+      continue;
+    } else if (key.compare(0, 7, "devpath") == 0 || key.compare(0, 5, "pcie/") == 0) {
+      // These features are not supported, yet.
+      BRCMF_ERR("Unsupported NVRAM key %.*s\n", static_cast<int>(key.size()), key.data());
+      continue;
+    } else if (key.compare("boardrev") == 0) {
+      boardrev_found = true;
+    }
+
+    // Write to the output.
+    parsed_nvram.append(key);
+    parsed_nvram.append(1, '=');
+    parsed_nvram.append(value);
+    parsed_nvram.append(1, '\0');
   }
 
-  if (nvp.nvram_len == 0) {
-    free(nvp.nvram);
-    return NULL;
+  // Append the footer.  The binary has default entries appended, if applicable; then it is padded
+  // with an extra '\0', then padded out to 4-byte alignment, then appended with a 4-byte length
+  // token.
+  const size_t parsed_size = parsed_nvram.size();
+  size_t default_values_size = 0;
+  const char kDefaultBoardrev[] = "boardrev=0xff";
+  if (!boardrev_found) {
+    default_values_size += sizeof(kDefaultBoardrev);  // sizeof() includes the trailing '\0'.
+  }
+  const size_t padding_size = 4 - ((parsed_size + default_values_size + 1) % 4);
+  uint32_t token = 0;
+  constexpr size_t kTokenSize = sizeof(token);
+  parsed_nvram.reserve(parsed_size + default_values_size + 1 + padding_size + kTokenSize);
+
+  // Append the default entries.
+  if (!boardrev_found) {
+    parsed_nvram.append(kDefaultBoardrev, sizeof(kDefaultBoardrev));  // Include the trailing '\0'.
   }
 
-  brcmf_fw_add_defaults(&nvp);
+  // Pad with an extra '\0', then out to 4-byte alignment.
+  parsed_nvram.append(1 + padding_size, '\0');
 
-  pad = nvp.nvram_len;
-  *new_length = roundup(nvp.nvram_len + 1, 4);
-  while (pad != *new_length) {
-    nvp.nvram[pad] = 0;
-    pad++;
-  }
-
-  token = *new_length / 4;
+  // Append the length token.
+  token = parsed_nvram.size() / 4;
   token = (~token << 16) | (token & 0x0000FFFF);
-  token_le = token;
+  parsed_nvram.append(reinterpret_cast<const char*>(&token), sizeof(token));
+  parsed_nvram.shrink_to_fit();
 
-  memcpy(&nvp.nvram[*new_length], &token_le, sizeof(token_le));
-  *new_length += sizeof(token_le);
-
-  return nvp.nvram;
-}
-
-void brcmf_fw_nvram_free(void* nvram) { free(nvram); }
-
-struct brcmf_fw {
-  brcmf_pub* drvr;
-  uint16_t flags;
-  const struct brcmf_firmware* code;
-  const char* nvram_name;
-  uint16_t domain_nr;
-  uint16_t bus_nr;
-  void (*done)(brcmf_pub* drvr, zx_status_t err, const struct brcmf_firmware* fw, void* nvram_image,
-               uint32_t nvram_len);
-};
-
-static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, void* ctx) {
-  struct brcmf_fw* fwctx = static_cast<decltype(fwctx)>(ctx);
-  uint32_t nvram_length = 0;
-  void* nvram = NULL;
-  uint8_t* data = NULL;
-  size_t data_len;
-  bool raw_nvram;
-
-  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(fwctx->drvr->zxdev));
-  if (fw && fw->data) {
-    data = (uint8_t*)fw->data;
-    data_len = fw->size;
-    raw_nvram = false;
-  } else {
-    data = static_cast<decltype(data)>(bcm47xx_nvram_get_contents(&data_len));
-    if (!data && !(fwctx->flags & BRCMF_FW_REQ_NV_OPTIONAL)) {
-      goto fail;
-    }
-    raw_nvram = true;
-  }
-
-  if (data)
-    nvram = brcmf_fw_nvram_strip(data, data_len, &nvram_length, fwctx->domain_nr, fwctx->bus_nr);
-
-  if (raw_nvram) {
-    bcm47xx_nvram_release_contents(data);
-  }
-  if (!nvram && !(fwctx->flags & BRCMF_FW_REQ_NV_OPTIONAL)) {
-    goto fail;
-  }
-
-  fwctx->done(fwctx->drvr, ZX_OK, fwctx->code, nvram, nvram_length);
-  free(fwctx);
-  return ZX_OK;
-
-fail:
-  BRCMF_DBG(TRACE, "failed: dev=%s\n", device_get_name(fwctx->drvr->zxdev));
-  fwctx->done(fwctx->drvr, ZX_ERR_NOT_FOUND, NULL, NULL, 0);
-  free(fwctx);
-  return ZX_ERR_NO_RESOURCES;
-}
-
-zx_status_t request_firmware_nowait(const char* name, brcmf_pub* drvr, void* ctx,
-                                    zx_status_t (*callback)(const brcmf_firmware* fw, void* ctx)) {
-  zx_status_t result;
-  zx_handle_t fw_vmo;
-  struct brcmf_firmware fw;
-
-  // Use the bus specific op to access the file
-  result = drvr->bus_if->ops->open_firmware_file(drvr->zxdev, name, &fw_vmo, &fw.size);
-  BRCMF_DBG(TEMP, "load_firmware of '%s' -> ret %d, size %ld", name, result, fw.size);
-  if (result != ZX_OK) {
-    return result;
-  }
-  if (fw.size == 0) {
-    zx_handle_close(fw_vmo);
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-  char* fw_buf = static_cast<decltype(fw_buf)>(malloc(fw.size));
-  if (fw_buf == NULL) {
-    zx_handle_close(fw_vmo);
-    return ZX_ERR_NO_MEMORY;
-  }
-  // TODO(cphoenix): Use vmar_map/destroy to save an unnecessary copy
-  result = zx_vmo_read(fw_vmo, fw_buf, 0, fw.size);
-  if (result == ZX_OK) {
-    fw.data = fw_buf;
-    result = callback(&fw, ctx);
-  }
-  free(fw_buf);
-  zx_handle_close(fw_vmo);
-  return result;
-}
-
-static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, void* ctx) {
-  struct brcmf_fw* fwctx = static_cast<decltype(fwctx)>(ctx);
-  zx_status_t result = ZX_OK;
-
-  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(fwctx->drvr->zxdev));
-  if (!fw) {
-    result = ZX_ERR_INVALID_ARGS;
-    goto fail;
-  }
-  /* only requested code so done here */
-  if (!(fwctx->flags & BRCMF_FW_REQUEST_NVRAM)) {
-    goto done;
-  }
-
-  fwctx->code = fw;
-  result =
-      request_firmware_nowait(fwctx->nvram_name, fwctx->drvr, fwctx, brcmf_fw_request_nvram_done);
-
-  /* pass NULL to nvram callback for bcm47xx fallback */
-  if (result != ZX_OK) {
-    brcmf_fw_request_nvram_done(NULL, fwctx);
-  }
-  return result;
-
-fail:
-  BRCMF_DBG(TRACE, "failed: dev=%s\n", device_get_name(fwctx->drvr->zxdev));
-done:
-  fwctx->done(fwctx->drvr, result, fw, NULL, 0);
-  free(fwctx);
-  return result;
-}
-
-zx_status_t brcmf_fw_get_firmwares_pcie(brcmf_pub* drvr, uint16_t flags, const char* code,
-                                        const char* nvram,
-                                        void (*fw_cb)(brcmf_pub* drvr, zx_status_t err,
-                                                      const brcmf_firmware* fw, void* nvram_image,
-                                                      uint32_t nvram_len),
-                                        uint16_t domain_nr, uint16_t bus_nr) {
-  struct brcmf_fw* fwctx;
-
-  BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(drvr->zxdev));
-  if (!fw_cb || !code) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if ((flags & BRCMF_FW_REQUEST_NVRAM) && !nvram) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  fwctx = static_cast<decltype(fwctx)>(calloc(1, sizeof(*fwctx)));
-  if (!fwctx) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  fwctx->drvr = drvr;
-  fwctx->flags = flags;
-  fwctx->done = fw_cb;
-  if (flags & BRCMF_FW_REQUEST_NVRAM) {
-    fwctx->nvram_name = nvram;
-  }
-  fwctx->domain_nr = domain_nr;
-  fwctx->bus_nr = bus_nr;
-
-  return request_firmware_nowait(code, drvr, fwctx, brcmf_fw_request_code_done);
-}
-
-zx_status_t brcmf_fw_get_firmwares(brcmf_pub* drvr, uint16_t flags, const char* code,
-                                   const char* nvram,
-                                   void (*fw_cb)(brcmf_pub* drvr, zx_status_t err,
-                                                 const brcmf_firmware* fw, void* nvram_image,
-                                                 uint32_t nvram_len)) {
-  return brcmf_fw_get_firmwares_pcie(drvr, flags, code, nvram, fw_cb, 0, 0);
-}
-
-zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
-                                      struct brcmf_firmware_mapping mapping_table[],
-                                      uint32_t table_size, char fw_name[BRCMF_FW_NAME_LEN],
-                                      char nvram_name[BRCMF_FW_NAME_LEN]) {
-  uint32_t i;
-  char end;
-
-  for (i = 0; i < table_size; i++) {
-    if (mapping_table[i].chipid == chip && mapping_table[i].revmask & BIT(chiprev)) {
-      break;
-    }
-  }
-
-  if (i == table_size) {
-    BRCMF_ERR("Unknown chipid %d [%d]\n", chip, chiprev);
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  /* check if firmware path is provided by module parameter */
-  if (kDefaultFirmwarePath[0] != '\0') {
-    strlcpy(fw_name, kDefaultFirmwarePath, BRCMF_FW_NAME_LEN);
-    if ((nvram_name) && (mapping_table[i].nvram)) {
-      strlcpy(nvram_name, kDefaultFirmwarePath, BRCMF_FW_NAME_LEN);
-    }
-
-    end = kDefaultFirmwarePath[strlen(kDefaultFirmwarePath) - 1];
-    if (end != '/') {
-      strlcat(fw_name, "/", BRCMF_FW_NAME_LEN);
-      if ((nvram_name) && (mapping_table[i].nvram)) {
-        strlcat(nvram_name, "/", BRCMF_FW_NAME_LEN);
-      }
-    }
-  }
-  strlcat(fw_name, mapping_table[i].fw, BRCMF_FW_NAME_LEN);
-  if ((nvram_name) && (mapping_table[i].nvram)) {
-    strlcat(nvram_name, mapping_table[i].nvram, BRCMF_FW_NAME_LEN);
-  }
-
-  BRCMF_DBG(TEMP, "using %s for chip %#08x(%d) rev %#08x\n", fw_name, chip, chip, chiprev);
-
+  *parsed_nvram_out = std::move(parsed_nvram);
   return ZX_OK;
 }
+
+}  // namespace brcmfmac
+}  // namespace wlan

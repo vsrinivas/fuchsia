@@ -83,10 +83,9 @@ struct brcmf_bus_ops {
   void (*wowl_config)(brcmf_bus* bus, bool enabled);
   size_t (*get_ramsize)(brcmf_bus* bus);
   zx_status_t (*get_memdump)(brcmf_bus* bus, void* data, size_t len);
-  zx_status_t (*get_fwname)(brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name);
+  zx_status_t (*get_fwname)(brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name,
+                            size_t* fw_name_size);
   zx_status_t (*get_bootloader_macaddr)(brcmf_bus* bus, uint8_t* mac_addr);
-  zx_status_t (*open_firmware_file)(zx_device_t* zxdev, const char* name, zx_handle_t* out_handle,
-                                    size_t* size);
   zx_status_t (*get_wifi_metadata)(zx_device_t* zxdev, void* config, size_t exp_size,
                                    size_t* actual);
 };
@@ -199,8 +198,8 @@ static inline zx_status_t brcmf_bus_get_memdump(struct brcmf_bus* bus, void* dat
 }
 
 static inline zx_status_t brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip, uint chiprev,
-                                               unsigned char* fw_name) {
-  return bus->ops->get_fwname(bus, chip, chiprev, fw_name);
+                                               unsigned char* fw_name, size_t* fw_name_size) {
+  return bus->ops->get_fwname(bus, chip, chiprev, fw_name, fw_name_size);
 }
 
 static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus,

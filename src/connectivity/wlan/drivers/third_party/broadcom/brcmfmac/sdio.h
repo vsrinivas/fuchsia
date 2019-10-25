@@ -17,12 +17,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_H_
 
+#include <string>
+
 #include <ddk/device.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/sdio.h>
 
 #include "defs.h"
-#include "firmware.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 
@@ -212,8 +213,8 @@ struct brcmf_sdio_dev {
   bool oob_irq_requested;
   bool sd_irq_requested;
   bool irq_wake; /* irq wake enable flags */
-  char fw_name[BRCMF_FW_NAME_LEN];
-  char nvram_name[BRCMF_FW_NAME_LEN];
+  std::string fw_name;
+  std::string nvram_name;
   bool wowl_enabled;
   enum brcmf_sdiod_state state;
 };
@@ -383,7 +384,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
  * Returns 0 or error code.
  */
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              void* data, uint size);
+                              void* data, size_t size);
 // TODO(cphoenix): Expand "uint" to "unsigned int" everywhere.
 
 /* Issue an abort to the specified function */
@@ -392,6 +393,9 @@ int brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, uint32_t func);
 void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_state state);
 
 struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev);
+zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
+                                         size_t firmware_size, const void* nvram,
+                                         size_t nvram_size);
 void brcmf_sdio_remove(struct brcmf_sdio* bus);
 void brcmf_sdio_isr(struct brcmf_sdio* bus);
 

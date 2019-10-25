@@ -85,7 +85,7 @@ class SimFirmware {
   void BusWowlConfig(bool enabled);
   size_t BusGetRamsize();
   zx_status_t BusGetMemdump(void* data, size_t len);
-  zx_status_t BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name);
+  zx_status_t BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name, size_t* fw_name_size);
   zx_status_t BusGetBootloaderMacAddr(uint8_t* mac_addr);
 
  private:
