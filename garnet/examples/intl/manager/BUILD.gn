@@ -26,6 +26,7 @@ rustc_binary("intl_property_manager_bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:structopt",
   ]
 }
 
@@ -43,6 +44,10 @@ package("intl_property_manager") {
     {
       path = rebase_path("meta/intl_property_manager.cmx")
       dest = "intl_property_manager.cmx"
+    },
+    {
+      path = rebase_path("meta/intl_property_manager_without_flags.cmx")
+      dest = "intl_property_manager_without_flags.cmx"
     },
   ]
 }

@@ -7,8 +7,8 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_examples_intl_manager::{PropertyManagerRequest, PropertyManagerRequestStream},
     fidl_fuchsia_intl::{
-        Profile, PropertyProviderControlHandle, PropertyProviderRequest,
-        PropertyProviderRequestStream,
+        LocaleId, Profile, PropertyProviderControlHandle, PropertyProviderRequest,
+        PropertyProviderRequestStream, TimeZoneId,
     },
     fidl_fuchsia_intl_ext::CloneExt,
     fuchsia_async as fasync,
@@ -21,6 +21,7 @@ use {
         rc::Rc,
         sync::{Arc, RwLock},
     },
+    structopt::StructOpt,
 };
 
 static LOG_TAG: &str = "intl_property_manager";
@@ -132,9 +133,8 @@ impl Server {
     /// (`PropertyProvider`, `PropertyManager`).
     async fn run(&mut self, fs: ServiceFs<ServiceObjLocal<'static, Service>>) {
         let self_ = Rc::new(self.clone());
-        fs.for_each_concurrent(None, move |service| {
-            self_.clone().handle_service_stream(service)
-        }).await;
+        fs.for_each_concurrent(None, move |service| self_.clone().handle_service_stream(service))
+            .await;
         fx_log_verbose!("Registered services");
     }
 
@@ -222,8 +222,63 @@ impl Debug for Service {
     }
 }
 
+#[derive(Debug, StructOpt)]
+#[structopt(
+    name = "intl property manager example",
+    about = "provides a test implementation of fuchsia.intl.ProfileProvider"
+)]
+struct Opts {
+    #[structopt(long)]
+    /// If set to `true`, the starting profile will be created based on the
+    /// flag settings like `--locale_ids=...`.
+    set_initial_profile: bool,
+    #[structopt(long, raw(use_delimiter = "true"))]
+    /// A list of comma-separated BCP-47 locale ID strings to serve initially, in the order of
+    /// priority.
+    locale_ids: Vec<String>,
+    #[structopt(long, raw(use_delimiter = "true"))]
+    /// A list of comma-separated BCP-47 timezone IDs (e.g. und-tz-usnyc) to serve initially, in
+    /// order of preference.
+    timezone_ids: Vec<String>,
+}
+impl From<&Opts> for Profile {
+    fn from(opts: &Opts) -> Self {
+        Profile {
+            locales: Some(
+                opts.locale_ids
+                    .iter()
+                    .map(|loc_id| LocaleId { id: String::from(loc_id) })
+                    .collect(),
+            ),
+            time_zones: Some(
+                opts.timezone_ids
+                    .iter()
+                    .map(|tz_id| TimeZoneId { id: String::from(tz_id) })
+                    .collect(),
+            ),
+            // TODO(fmil): Implement these too.
+            calendars: None,
+            temperature_unit: None,
+        }
+    }
+}
+
+fn initial_profile(opts: &Opts) -> Option<Profile> {
+    // Not sure if it is possible to evict the set_initial flag altogether.
+    match opts.set_initial_profile {
+        false => None,
+        true => {
+            let profile = opts.into();
+            fx_log_info!("Serving initial profile: {:?}", profile);
+            Some(profile)
+        }
+    }
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let opts = Opts::from_args();
+
     fuchsia_syslog::init_with_tags(&[LOG_TAG])?;
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
     fuchsia_syslog::set_verbosity(LOG_VERBOSITY);
@@ -235,7 +290,7 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let fs = fs;
 
-    let mut server = Server::new(None);
+    let mut server = Server::new(initial_profile(&opts));
     fx_log_info!("Starting server...");
     server.run(fs).await;
     Ok(())
@@ -260,6 +315,8 @@ mod test {
 
     static COMPONENT_URL: &str =
         "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
+    static COMPONENT_URL_WITHOUT_FLAGS: &str =
+        "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager_without_flags.cmx";
 
     lazy_static! {
         static ref PROFILE_EMPTY: Profile =
@@ -282,6 +339,16 @@ mod test {
             time_zones: Some(vec![TimeZoneId { id: "Europe/Athens".to_string() }]),
             temperature_unit: Some(TemperatureUnit::Celsius),
         };
+        // This profile corresponds to the flag settings in the manifest at `COMPONENT_URL`.
+        static ref INITIAL_PROFILE: Profile = Profile {
+            locales: Some(vec![
+                LocaleId { id: "en-US".to_string() },
+                LocaleId { id: "nl-NL".to_string() }
+            ]),
+            calendars: None,
+            time_zones: Some(vec![TimeZoneId { id: "und-u-tz-uslax".to_string() }]),
+            temperature_unit: None,
+        };
     }
 
     /// The test launches the provider/manager, then sets and gets `Profile` values several times,
@@ -291,7 +358,7 @@ mod test {
     async fn test_get_set_profile() -> Result<(), Error> {
         let launcher: LauncherProxy =
             client::launcher().context("Failed to open launcher service")?;
-        let app = client::launch(&launcher, COMPONENT_URL.to_string(), None)
+        let app = client::launch(&launcher, COMPONENT_URL_WITHOUT_FLAGS.to_string(), None)
             .context("Failed to launch Intl Property Manager")?;
 
         let property_manager: PropertyManagerProxy = app
@@ -322,4 +389,25 @@ mod test {
         Ok(())
     }
 
+    /// This test confirms that the provider will serve a nonempty initial
+    /// profile when invoked from the default component manifest URL, and that
+    /// the served profile corresponds to the settings that are currently in
+    /// the manifest.
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn test_set_initial_profile() -> Result<(), Error> {
+        let launcher: LauncherProxy =
+            client::launcher().context("Failed to open launcher service")?;
+        let app = client::launch(&launcher, COMPONENT_URL.to_string(), None)
+            .context("Failed to launch Intl Property Manager")?;
+
+        let property_provider: PropertyProviderProxy = app
+            .connect_to_service::<PropertyProviderMarker>()
+            .context("Failed to connect to intl PropertyProvider service")?;
+
+        let initial_profile = property_provider.get_profile().await?;
+        assert_eq!(initial_profile, *INITIAL_PROFILE);
+
+        Ok(())
+    }
 }
