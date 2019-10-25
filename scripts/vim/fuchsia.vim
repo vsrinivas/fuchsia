@@ -101,6 +101,9 @@ if jiri_manifest != ""
     " .cml files are JSON5
     autocmd BufRead,BufNewFile *.cml set syntax=json5
 
+    " .tmpl.go files are Go template files
+    autocmd BufRead,BufNewFile *.tmpl.go set syntax=gotmpl
+
     " If this is a golden file, strip the .golden and run autocommands
     " This will allow syntax highlighting of FIDL goldens.
     autocmd BufNewFile *.golden execute "doautocmd BufNewFile " . expand("%:r")
