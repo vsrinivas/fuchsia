@@ -109,7 +109,7 @@ zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_sock
 
 // socket ----------------------------------------------------------------------
 
-// A |zxio_t| backend that uses a zxs object.
+// A |zxio_t| backend that uses a fuchsia.posix.socket.Control object.
 //
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.

@@ -19,13 +19,13 @@ __BEGIN_CDECLS
 
 bool fdio_is_socket(fdio_t* io);
 
-// Returns a pointer to the |zxs_socket_t| inside the given |fd|, if such a
+// Returns a pointer to the |zxio_socket_t| inside the given |fd|, if such a
 // struct exists.
 //
 // Caller receives a reference to the |fdio_t|. The caller is responsible for
 // calling fdio_release to balance the reference count.
 //
-// Returns |NULL| if no |zxs_socket_t| was found.
+// Returns |NULL| if no |zxio_socket_t| was found.
 fdio_t* fd_to_socket(int fd, zxio_socket_t** out_socket);
 
 __END_CDECLS
