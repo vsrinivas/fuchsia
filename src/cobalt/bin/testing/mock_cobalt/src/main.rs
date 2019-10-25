@@ -81,7 +81,7 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 count,
                 responder,
             } => {
-                log.log_event.push(
+                log.log_event_count.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
@@ -90,7 +90,7 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogElapsedTime { metric_id, event_code, component, elapsed_micros, responder } => {
-                log.log_event.push(
+                log.log_elapsed_time.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
@@ -99,7 +99,7 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogFrameRate { metric_id, event_code, component, fps, responder } => {
-                log.log_event.push(
+                log.log_frame_rate.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
@@ -108,7 +108,7 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogMemoryUsage { metric_id, event_code, component, bytes, responder } => {
-                log.log_event.push(
+                log.log_memory_usage.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
@@ -117,11 +117,11 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogString { metric_id, s, responder } => {
-                log.log_event.push(CobaltEvent::builder(metric_id).as_string_event(s));
+                log.log_string.push(CobaltEvent::builder(metric_id).as_string_event(s));
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogIntHistogram { metric_id, event_code, component, histogram, responder } => {
-                log.log_event.push(
+                log.log_int_histogram.push(
                     CobaltEvent::builder(metric_id)
                         .with_event_code(event_code)
                         .with_component(component)
@@ -130,7 +130,7 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogCobaltEvent { event, responder } => {
-                log.log_event.push(event);
+                log.log_cobalt_event.push(event);
                 let _ = responder.send(cobalt::Status::Ok);
             }
             LogCobaltEvents { mut events, responder } => {
@@ -349,6 +349,66 @@ mod tests {
                 .await
                 .expect("query_logger fidl call to succeed")
         );
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn mock_logger_logger_type_tracking() -> Result<(), fidl::Error> {
+        let loggers = LoggersHandle::default();
+
+        let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
+            .expect("create logger factroy proxy and stream to succeed");
+        let (logger_proxy, server) =
+            create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
+
+        fasync::spawn_local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()));
+        let project_name = "foo";
+
+        factory_proxy
+            .create_logger_from_project_name(project_name, ReleaseStage::Ga, server)
+            .await
+            .expect("create_logger_from_project_name fidl call to succeed");
+
+        let metric_id = 1;
+        let event_code = 2;
+        let component_name = "component";
+        let period_duration_micros = 0;
+        let count = 3;
+        let frame_rate: f32 = 59.9;
+
+        logger_proxy.log_event(metric_id, event_code).await?;
+        logger_proxy
+            .log_event_count(metric_id, event_code, component_name, period_duration_micros, count)
+            .await?;
+        logger_proxy
+            .log_elapsed_time(metric_id, event_code, component_name, period_duration_micros)
+            .await?;
+        logger_proxy.log_memory_usage(metric_id, event_code, component_name, count).await?;
+        logger_proxy.log_frame_rate(metric_id, event_code, component_name, frame_rate).await?;
+        logger_proxy.log_string(metric_id, component_name).await?;
+        logger_proxy
+            .log_int_histogram(metric_id, event_code, component_name, &mut vec![].into_iter())
+            .await?;
+        logger_proxy
+            .log_cobalt_event(&mut cobalt::CobaltEvent {
+                metric_id,
+                event_codes: vec![event_code],
+                component: Some(component_name.to_string()),
+                payload: cobalt::EventPayload::Event(cobalt::Event {}),
+            })
+            .await?;
+        logger_proxy.log_cobalt_events(&mut vec![].into_iter()).await?;
+        let log = loggers.lock().await;
+        let log = log.get(project_name).expect("project should have been created");
+        let log = log.lock().await;
+        assert_eq!(log.log_event.len(), 1);
+        assert_eq!(log.log_event_count.len(), 1);
+        assert_eq!(log.log_elapsed_time.len(), 1);
+        assert_eq!(log.log_memory_usage.len(), 1);
+        assert_eq!(log.log_frame_rate.len(), 1);
+        assert_eq!(log.log_string.len(), 1);
+        assert_eq!(log.log_int_histogram.len(), 1);
+        assert_eq!(log.log_cobalt_event.len(), 1);
+        Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
