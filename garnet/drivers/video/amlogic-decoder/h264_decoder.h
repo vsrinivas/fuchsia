@@ -57,7 +57,7 @@ class H264Decoder : public VideoDecoder {
   void OnFatalError();
 
   std::optional<InternalBuffer> codec_data_;
-  io_buffer_t sei_data_buffer_ = {};
+  std::optional<InternalBuffer> sei_data_buffer_;
   std::optional<InternalBuffer> reference_mv_buffer_;
   io_buffer_t secondary_firmware_ = {};
   // All H264Decoder errors require creating a new H264Decoder to recover.

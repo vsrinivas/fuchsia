@@ -20,10 +20,10 @@
 //
 // Change these to InternalBuffer:
 //
-// sei_data_buffer_ - optionally secure
 // InputContext::buffer - optionally secure
 // (done) reference_mv_buffer_ - optionally secure
 // (done) codec_data_ - optionally secure
+// (done) sei_data_buffer_ - optionally secure
 //
 // Plumb is_secure to each of the above.
 //
@@ -220,9 +220,9 @@ H264Decoder::~H264Decoder() {
   owner_->core()->StopDecoding();
   owner_->core()->WaitForIdle();
   BarrierBeforeRelease();
-  io_buffer_release(&sei_data_buffer_);
   io_buffer_release(&secondary_firmware_);
   // ~reference_mv_buffer_
+  // ~sei_data_buffer_
   // ~codec_data_
 }
 
@@ -322,14 +322,14 @@ zx_status_t H264Decoder::Initialize() {
   // TODO(34192): After sysmem has min_base_phys_address_divisor, use that to avoid over-allocating
   // and rounding up here.
   const uint32_t kCodecDataSize = 0x1ee000 + kBufferAlign;
-  auto create_result = InternalBuffer::Create(
+  auto codec_data_create_result = InternalBuffer::Create(
       "H264CodecData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kCodecDataSize, is_secure_,
       /*is_writable=*/true, /*is_mapping_needed*/false);
-  if (!create_result.is_ok()) {
-    LOG(ERROR, "Failed to make codec data buffer - status: %d", create_result.error());
-    return create_result.error();
+  if (!codec_data_create_result.is_ok()) {
+    LOG(ERROR, "Failed to make codec data buffer - status: %d", codec_data_create_result.error());
+    return codec_data_create_result.error();
   }
-  codec_data_.emplace(create_result.take_value());
+  codec_data_.emplace(codec_data_create_result.take_value());
   zx_paddr_t aligned_codec_data_phys = fbl::round_up(codec_data_->phys_base(), kBufferAlign);
   // sysmem ensures that newly allocated buffers are zeroed and flushed, to extent possible, so
   // codec_data_ doesn't need CacheFlush() here.
@@ -366,18 +366,23 @@ zx_status_t H264Decoder::Initialize() {
       .set_disable_fast_poc(0)
       .WriteTo(owner_->dosbus());
 
-  status = io_buffer_init_aligned(&sei_data_buffer_, owner_->bti()->get(), 8 * 1024,
-                                  kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to make sei data buffer: %d", status);
-    return status;
+  // TODO(34192): After sysmem has min_base_phys_address_divisor, use that to avoid over-allocating
+  // and rounding up here.
+  constexpr uint32_t kSeiBufferSize = 8 * 1024 + kBufferAlign;
+  auto sei_create_result = InternalBuffer::Create(
+      "H264SeiData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kSeiBufferSize, is_secure_,
+      /*is_writable=*/true, /*is_mapping_neede=*/false);
+  if (!sei_create_result.is_ok()) {
+    LOG(ERROR, "Failed to make sei data buffer - status: %d", sei_create_result.error());
+    return sei_create_result.error();
   }
-  SetIoBufferName(&sei_data_buffer_, "H264SeiData");
-  io_buffer_cache_flush(&sei_data_buffer_, 0, io_buffer_size(&sei_data_buffer_, 0));
+  sei_data_buffer_.emplace(sei_create_result.take_value());
+  zx_paddr_t sei_data_buffer_aligned_phys = fbl::round_up(sei_data_buffer_->phys_base(), kBufferAlign);
+  // Sysmem has zeroed sei_data_buffer_, flushed the zeroes, and fenced the flush, to extent
+  // possible.
 
-  BarrierAfterFlush();
   AvScratchI::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&sei_data_buffer_)) - buffer_offset)
+      .FromValue(truncate_to_32(sei_data_buffer_aligned_phys) - buffer_offset)
       .WriteTo(owner_->dosbus());
   AvScratchJ::Get().FromValue(0).WriteTo(owner_->dosbus());
   MdecPicDcThresh::Get().FromValue(0x404038aa).WriteTo(owner_->dosbus());
