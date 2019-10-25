@@ -4,6 +4,14 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
+#include <lib/zx/debuglog.h>
+#include <lib/zx/process.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -11,18 +19,12 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <fs-management/mount.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/spawn.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/zx/process.h>
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <fs-management/mount.h>
 
 namespace {
 
@@ -43,6 +45,34 @@ enum class StdioType {
   kNone,
 };
 
+zx_handle_t RetriveWriteOnlyDebuglogHandle() {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "fs-management: Cannot create channel: %d (%s)\n", status,
+            zx_status_get_string(status));
+    return ZX_HANDLE_INVALID;
+  }
+
+  constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
+  status = fdio_service_connect(kWriteOnlyLogPath, remote.release());
+  if (status != ZX_OK) {
+    fprintf(stderr, "fs-management: Failed to connect to WriteOnlyLog: %d (%s)\n", status,
+            zx_status_get_string(status));
+    return ZX_HANDLE_INVALID;
+  }
+
+  zx::debuglog log;
+  status = fuchsia_boot_WriteOnlyLogGet(local.get(), log.reset_and_get_address());
+  if (status != ZX_OK) {
+    fprintf(stderr, "fs-management: WriteOnlyLogGet failed: %d (%s)\n", status,
+            zx_status_get_string(status));
+    return ZX_HANDLE_INVALID;
+  }
+
+  return log.release();
+}
+
 // Initializes Stdio.
 //
 // If necessary, updates the |actions| which will be sent to fdio_spawn.
@@ -53,9 +83,8 @@ enum class StdioType {
 void InitStdio(StdioType stdio, fdio_spawn_action_t* actions, size_t* action_count,
                uint32_t* flags) {
   switch (stdio) {
-    case StdioType::kLog:
-      zx_handle_t h;
-      zx_debuglog_create(ZX_HANDLE_INVALID, 0, &h);
+    case StdioType::kLog: {
+      zx_handle_t h = RetriveWriteOnlyDebuglogHandle();
       if (h != ZX_HANDLE_INVALID) {
         actions[*action_count].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
         actions[*action_count].h.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO);
@@ -64,6 +93,7 @@ void InitStdio(StdioType stdio, fdio_spawn_action_t* actions, size_t* action_cou
       }
       *flags &= ~FDIO_SPAWN_CLONE_STDIO;
       break;
+    }
     case StdioType::kClone:
       *flags |= FDIO_SPAWN_CLONE_STDIO;
       break;
