@@ -227,15 +227,15 @@ void ArmIspDeviceTester::TestCallbacks(fuchsia_camera_test_TestReport* report) {
 
   // Manually cycle dma through one frame, see that callbacks are called
   isp_->full_resolution_dma_->Enable();
+  isp_->full_resolution_dma_->LoadNewFrame();
   isp_->full_resolution_dma_->OnNewFrame();
-  isp_->full_resolution_dma_->OnFrameWritten();
   ISP_TEST_EXPECT_EQ(full_res_receiver.ready_ids.size(), 1,
                      "Full resolution callbacks not equal to 1.");
   ISP_TEST_EXPECT_EQ(downscaled_receiver.ready_ids.size(), 0,
                      "Downscaled callbacks not equal to 0.");
   isp_->downscaled_dma_->Enable();
+  isp_->downscaled_dma_->LoadNewFrame();
   isp_->downscaled_dma_->OnNewFrame();
-  isp_->downscaled_dma_->OnFrameWritten();
   ISP_TEST_ASSERT_EQ(full_res_receiver.ready_ids.size(), 1,
                      "Full resolution callbacks not equal to 1.");
   ISP_TEST_ASSERT_EQ(downscaled_receiver.ready_ids.size(), 1,

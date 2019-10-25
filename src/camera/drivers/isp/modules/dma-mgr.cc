@@ -171,6 +171,9 @@ void DmaManager::Disable() {
   // TODO(CAM-54): Provide a way to dump the previous set of write locked
   // buffers.
   write_locked_buffers_.clear();
+  // Don't send a callback the next time we get OnNewFrame, because we will not
+  // have any previously written frame.
+  first_frame_ = true;
 }
 
 void DmaManager::OnFrameWritten() {
@@ -181,55 +184,54 @@ void DmaManager::OnFrameWritten() {
   ZX_ASSERT(frame_available_callback_ != nullptr);
   ZX_ASSERT(!write_locked_buffers_.empty());
   fuchsia_camera_FrameAvailableEvent event;
-  event.buffer_id = write_locked_buffers_.back().ReleaseWriteLockAndGetIndex();
-  event.frame_status = fuchsia_camera_FrameStatus_OK;
-  // TODO(garratt): set metadata
-  event.metadata.timestamp = 0;
-  frame_available_callback_(event);
-  ZX_ASSERT(!enabled_ || !write_locked_buffers_.empty());
-  // An additional check is needed here as the callback may have disabled us.
-  if (!enabled_) {
-    return;
-  }
-  write_locked_buffers_.pop_back();
-}
-
-// Called as one of the later steps when a new frame arrives.
-bool DmaManager::OnNewFrame() {
-  // If we have not initialized yet with a format, just skip.
-  if (!enabled_) {
-    return false;
-  }
-  // 1) Get another buffer
-  auto buffer = buffers_.LockBufferForWrite();
-  if (!buffer) {
-    FX_LOG(ERROR, "", "Failed to get buffer\n");
-    // TODO(garratt): what should we do when we run out of buffers?
-    // If we run out of buffers, disable write and send the callback for
-    // out of buffers:
-    // clang-format off
-        GetPrimaryMisc().ReadFrom(&isp_mmio_local_)
-           .set_frame_write_on(0)
-           .WriteTo(&isp_mmio_local_);
-        if (current_format_->HasSecondaryChannel()) {
-          GetUvMisc().ReadFrom(&isp_mmio_local_)
-              .set_frame_write_on(0)
-              .WriteTo(&isp_mmio_local_);
-        }
-    // clang-format on
-    // Send callback:
-    fuchsia_camera_FrameAvailableEvent event;
+  // If we had a buffer available when we loaded the new frame:
+  if (write_locked_buffers_.back()) {
+    event.buffer_id = write_locked_buffers_.back()->ReleaseWriteLockAndGetIndex();
+    event.frame_status = fuchsia_camera_FrameStatus_OK;
+    // TODO(garratt): set metadata
+    event.metadata.timestamp = 0;
+  } else {
+    // We were not able to get a buffer when the frame was loaded. So we just
+    // let the client know now that the buffer was full.
     event.buffer_id = 0;
     event.frame_status = fuchsia_camera_FrameStatus_ERROR_BUFFER_FULL;
     event.metadata.timestamp = 0;
-    frame_available_callback_(event);
-    return false;
   }
-  // 2) Optional?  Set the DMA settings again... seems unnecessary
-  // 3) Set the DMA address
-  auto memory_address = static_cast<uint32_t>(buffer->physical_address());
+  write_locked_buffers_.pop_back();
+  frame_available_callback_(event);
+}
 
-  // clang-format off
+// Called as one of the later steps when a new frame arrives.
+void DmaManager::OnNewFrame() {
+  if (!enabled_) {
+    return;
+  }
+
+  // First, call the callbacks for the previous written frame
+  // This assumes that OnFrameWritten will not be called by a seperate interrupt.
+  if (first_frame_) {
+    first_frame_ = false;
+  } else if (write_locked_buffers_.size() > 0) {
+    OnFrameWritten();
+  }
+
+  // Next, load a frame for the next dma write:
+  LoadNewFrame();
+}
+
+void DmaManager::LoadNewFrame() {
+  // Generally we use LoadFrame to load as many buffers are needed for system operation.
+  // We mark first_frame_ false here because we assume that LoadNewFrame will be called the correct
+  // number of times to set up the system.
+  first_frame_ = false;
+  // 1) Get another buffer
+  auto buffer = buffers_.LockBufferForWrite();
+  uint32_t enable_buffer_write = 0;
+  if (buffer) {
+    // 3) Set the DMA address
+    auto memory_address = static_cast<uint32_t>(buffer->physical_address());
+
+    // clang-format off
     GetPrimaryBank0().FromValue(0)
       .set_value(memory_address + current_format_->GetBank0Offset())
       .WriteTo(&isp_mmio_local_);
@@ -238,21 +240,29 @@ bool DmaManager::OnNewFrame() {
           .set_value(memory_address + current_format_->GetBank0OffsetUv())
           .WriteTo(&isp_mmio_local_);
     }
-    // 4) Optional? Enable Write_on
-    GetPrimaryMisc().ReadFrom(&isp_mmio_local_)
-        .set_frame_write_on(1)
-        .WriteTo(&isp_mmio_local_);
-    if (current_format_->HasSecondaryChannel()) {
-        GetUvMisc().ReadFrom(&isp_mmio_local_)
-            .set_frame_write_on(1)
-            .WriteTo(&isp_mmio_local_);
-    }
-  // clang-format on
-  WriteFormat();
-  // Add buffer to queue of buffers we are writing:
-  write_locked_buffers_.push_front(std::move(*buffer));
+    // clang-format on
 
-  return true;
+    WriteFormat();
+    enable_buffer_write = 1;
+  } else {
+    // If we run out of buffers, disable write and send the callback for
+    // out of buffers:
+    FX_LOG(ERROR, "", "Failed to get buffer\n");
+  }
+
+  // 4) Set Write_on
+  GetPrimaryMisc()
+      .ReadFrom(&isp_mmio_local_)
+      .set_frame_write_on(enable_buffer_write)
+      .WriteTo(&isp_mmio_local_);
+  if (current_format_->HasSecondaryChannel()) {
+    GetUvMisc()
+        .ReadFrom(&isp_mmio_local_)
+        .set_frame_write_on(enable_buffer_write)
+        .WriteTo(&isp_mmio_local_);
+  }
+  // Add buffer to queue of buffers we are writing:
+  write_locked_buffers_.push_front(std::move(buffer));
 }
 
 zx_status_t DmaManager::ReleaseFrame(uint32_t buffer_index) {

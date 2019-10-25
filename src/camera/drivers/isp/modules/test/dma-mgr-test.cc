@@ -189,7 +189,7 @@ TEST_F(DmaMgrTest, BasicConnectionTest) {
   EXPECT_FALSE(CheckWriteEnabled(Stream::Downscaled));
   EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
   EXPECT_EQ(full_resolution_callbacks_.size(), 0);
-  full_resolution_dma_->OnFrameWritten();
+  full_resolution_dma_->OnNewFrame();
   EXPECT_EQ(full_resolution_callbacks_.size(), 1);
 }
 
@@ -201,14 +201,14 @@ TEST_F(DmaMgrTest, EnableCallbacksTest) {
   // Test that the outputs are not enabled:
   EXPECT_FALSE(CheckWriteEnabled(Stream::FullResolution));
   EXPECT_EQ(full_resolution_callbacks_.size(), 0);
-  full_resolution_dma_->OnFrameWritten();
+  full_resolution_dma_->OnNewFrame();
   EXPECT_EQ(full_resolution_callbacks_.size(), 0);
 
   full_resolution_dma_->Enable();
   full_resolution_dma_->OnNewFrame();
   // Test that the outputs are enabled:
   EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
-  full_resolution_dma_->OnFrameWritten();
+  full_resolution_dma_->OnNewFrame();
   EXPECT_EQ(full_resolution_callbacks_.size(), 1);
 }
 
@@ -235,7 +235,7 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
   // Test just write locking:
   for (uint32_t i = 0; i < kFullResNumberOfBuffers; ++i) {
     SetMagicWriteAddresses();
-    full_resolution_dma_->OnNewFrame();
+    full_resolution_dma_->LoadNewFrame();
     EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
     CheckDmaWroteAddress(Stream::FullResolution);
     EXPECT_EQ(full_resolution_callbacks_.size(), 0);
@@ -244,18 +244,19 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
   // We should get a callback instead, saying out of buffers.
   for (uint32_t i = 0; i < kFullResNumberOfBuffers; ++i) {
     SetMagicWriteAddresses();
-    full_resolution_dma_->OnNewFrame();
+    full_resolution_dma_->LoadNewFrame();
     EXPECT_FALSE(CheckWriteEnabled(Stream::FullResolution));
     CheckNoDmaWriteAddress(Stream::FullResolution);
-    EXPECT_EQ(full_resolution_callbacks_.size(), i + 1);
-    EXPECT_EQ(full_resolution_callbacks_.back().frame_status,
-              fuchsia_camera_FrameStatus_ERROR_BUFFER_FULL);
+    EXPECT_EQ(full_resolution_callbacks_.size(), 0);  // Loading frames does not trigger a callback
   }
   full_resolution_callbacks_.clear();
-  // Now mark them all written:
+  // Now mark them all written.  This will send out notices of okay frames,
+  // but all of the frames we are trying to write to are gone, so we are filling
+  // the queue with unwritten frames.  This sounds odd, but the ISP only has 2
+  // frames that it write-locks at a time, so the client would get the notification pretty soon.
   for (uint32_t i = 0; i < kFullResNumberOfBuffers; ++i) {
     SetMagicWriteAddresses();
-    full_resolution_dma_->OnFrameWritten();
+    full_resolution_dma_->OnNewFrame();
     CheckNoDmaWriteAddress(Stream::FullResolution);
     EXPECT_EQ(full_resolution_callbacks_.size(), i + 1);
     EXPECT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_FrameStatus_OK);
@@ -282,18 +283,6 @@ TEST_F(DmaMgrTest, RunOutOfBuffers) {
   CheckDmaWroteAddress(Stream::FullResolution);
 }
 
-// Make sure a new address is written to the dma frame every time we call
-// OnNewFrame:
-TEST_F(DmaMgrTest, DieOnInvalidFrameWritten) {
-  // We should not die because the dma is not enabled:
-  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
-  ConnectToStreams();
-  // Now we should die because we don't have any frames that we are writing:
-  ASSERT_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
-  full_resolution_dma_->OnNewFrame();
-  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
-}
-
 // Make sure we can switch the dma manager to a different BufferCollection:
 TEST_F(DmaMgrTest, MultipleConfigureCalls) {
   ConnectToStreams();
@@ -301,16 +290,13 @@ TEST_F(DmaMgrTest, MultipleConfigureCalls) {
   downscaled_dma_->OnNewFrame();
 
   // Read lock one of the full_res frames:
+  full_resolution_dma_->LoadNewFrame();
   full_resolution_dma_->OnNewFrame();
-  full_resolution_dma_->OnFrameWritten();
 
   // Now connect the dmamgr to a "different" set of buffers.
   // DmaMgr cannot tell the difference between vmos, so we can just pass in the
   // same ones.
   ConnectToStreams();
-
-  // Now we should die because we don't have any frames that we are writing:
-  ASSERT_DEATH(([this]() { downscaled_dma_->OnFrameWritten(); }));
 
   // Releasing frames should also fail:
   ASSERT_EQ(full_resolution_callbacks_.size(), 1);
@@ -325,7 +311,7 @@ TEST_F(DmaMgrTest, MultipleConfigureCalls) {
   EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
   CheckDmaWroteAddress(Stream::FullResolution);
   // Make sure we can mark the frame written.
-  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnFrameWritten(); }));
+  ASSERT_NO_DEATH(([this]() { full_resolution_dma_->OnNewFrame(); }));
   // Make sure we can release the frame.
   ASSERT_EQ(full_resolution_callbacks_.size(), 1);
   ASSERT_EQ(full_resolution_callbacks_.back().frame_status, fuchsia_camera_FrameStatus_OK);
@@ -347,7 +333,7 @@ TEST_F(DmaMgrTest, CallbackReentrancy) {
   ASSERT_TRUE(full_resolution_dma_->enabled());
   full_resolution_dma_->OnNewFrame();
   EXPECT_TRUE(CheckWriteEnabled(Stream::FullResolution));
-  ASSERT_NO_DEATH([this]() { full_resolution_dma_->OnFrameWritten(); });
+  ASSERT_NO_DEATH([this]() { full_resolution_dma_->OnNewFrame(); });
   ASSERT_NE(buffer_id, kFullResNumberOfBuffers);
   full_resolution_dma_->ReleaseFrame(buffer_id);
 }

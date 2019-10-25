@@ -50,16 +50,19 @@ class DmaManager {
   static zx_status_t Create(const zx::bti& bti, const ddk::MmioView& isp_mmio_local,
                             Stream stream_type, std::unique_ptr<DmaManager>* out);
 
+  // Loads a frame and writes the frame info into the current register block.
   // Updates the dma writer with the address of a free buffer from the pool.
-  // Returns true iff a new frame was actually written.
-  bool OnNewFrame();
+  // This is called when initializing multiple buffers in preparation for
+  // enabling streaming.
+  void LoadNewFrame();
+
+  // Called when the new_frame interrupt is triggered.  Processes any previously
+  // written frames, including calling the frame_available_callback and loads a
+  // new frame.
+  void OnNewFrame();
 
   // Signal that all consumers are done with this frame.
   zx_status_t ReleaseFrame(uint32_t buffer_index);
-
-  // Releases the write lock on the frame and calls the
-  // frame_available_callback.
-  void OnFrameWritten();
 
   // Prints status registers. Used for debugging.
   void PrintStatus(ddk::MmioBuffer* mmio);
@@ -75,13 +78,18 @@ class DmaManager {
 
  private:
   bool enabled_ = false;
+  bool first_frame_ = true;
   ddk::MmioView isp_mmio_local_;
   fzl::VmoPool buffers_;
-  std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;
+  std::deque<std::optional<fzl::VmoPool::Buffer>> write_locked_buffers_;
   std::optional<DmaFormat> current_format_;
   Stream stream_type_;
   fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback_;
   zx::bti bti_;
+
+  // Releases the write lock on the frame and calls the
+  // frame_available_callback.
+  void OnFrameWritten();
 
   // Get the Registers used by the DMA Writer.
   auto GetPrimaryMisc();

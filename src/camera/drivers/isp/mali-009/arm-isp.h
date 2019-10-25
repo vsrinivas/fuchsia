@@ -185,9 +185,6 @@ class ArmIspDevice : public IspDeviceType,
   int FrameProcessingThread();
   thrd_t frame_processing_thread_;
   std::atomic<bool> running_frame_processing_;
-  // Some work upon a NewFrame signal is for dealing with previous frame data.
-  // We should stop using this variable when we handle other signals.
-  bool first_frame_ = true;
 
   ddk::CameraSensorProtocolClient camera_sensor_;
 
