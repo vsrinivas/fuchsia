@@ -192,9 +192,6 @@ class DebuggedThread {
   OnStop UpdateForSoftwareBreakpoint(zx_thread_state_general_regs* regs,
                                      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
-  OnStop UpdateForHardwareBreakpoint(zx_thread_state_general_regs* regs,
-                                     std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
-
   OnStop UpdateForWatchpoint(zx_thread_state_general_regs* regs,
                              std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 

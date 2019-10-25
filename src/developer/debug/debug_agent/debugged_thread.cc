@@ -15,10 +15,12 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/process_watchpoint.h"
+#include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
@@ -187,7 +189,7 @@ void DebuggedThread::OnException(zx::exception exception_token,
   }
 
   FXL_NOTREACHED() << "Invalid exception notification type: "
-                   << static_cast<uint32_t>(exception.type);
+                   << debug_ipc::ExceptionTypeToString(exception.type);
 
   // The exception was unhandled, so we close it so that the system can run its
   // course. The destructor would've done it anyway, but being explicit helps
@@ -270,9 +272,21 @@ void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* except
 
 void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* exception,
                                               zx_thread_state_general_regs* regs) {
-  if (UpdateForHardwareBreakpoint(regs, &exception->hit_breakpoints) == OnStop::kIgnore)
-    return;
+  uint64_t breakpoint_address = arch_provider_->BreakpointInstructionForHardwareExceptionAddress(
+      *arch_provider_->IPInRegs(regs));
+  HardwareBreakpoint* found_bp = process_->FindHardwareBreakpoint(breakpoint_address);
+  if (found_bp) {
+    UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp, regs,
+                                  &exception->hit_breakpoints);
+  } else {
+    // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.
+    // This is probably a race between the removal and the exception handler.
+    *arch_provider_->IPInRegs(regs) = breakpoint_address;
+  }
 
+  // The ProcessBreakpoint could've been deleted if it was a one-shot, so must
+  // not be derefereced below this.
+  found_bp = nullptr;
   SendExceptionNotification(exception, regs);
 }
 
@@ -448,8 +462,8 @@ void DebuggedThread::ReadRegisters(const std::vector<debug_ipc::RegisterCategory
   for (const auto& cat_type : cats_to_get) {
     zx_status_t status = arch_provider_->ReadRegisters(cat_type, handle_, out);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not get register state for category: "
-                     << debug_ipc::RegisterCategoryToString(cat_type);
+      DEBUG_LOG(Thread) << "Could not get register state for category: "
+                        << debug_ipc::RegisterCategoryToString(cat_type);
     }
   }
 }
@@ -520,7 +534,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   uint64_t breakpoint_address = arch_provider_->BreakpointInstructionForSoftwareExceptionAddress(
       *arch_provider_->IPInRegs(regs));
 
-  ProcessBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address);
+  SoftwareBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address);
   if (found_bp) {
     LogHitBreakpoint(FROM_HERE, this, found_bp, breakpoint_address);
 
@@ -584,35 +598,6 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     }
   }
   return OnStop::kNotify;
-}
-
-DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
-    zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
-  // TODO(donosoc): Reactivate when HW breakpoints are active again.
-  return OnStop::kIgnore;
-
-#ifdef BREAKPOINT_REFACTORING
-  uint64_t breakpoint_address = arch_provider_->BreakpointInstructionForHardwareExceptionAddress(
-      *arch_provider_->IPInRegs(regs));
-  ProcessBreakpoint* found_bp = nullptr;
-  if (!found_bp) {
-    // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.
-    // This is probably a race between the removal and the exception handler.
-
-    // Send a notification.
-    *arch_provider_->IPInRegs(regs) = breakpoint_address;
-    return OnStop::kNotify;
-  }
-
-  FixSoftwareBreakpointAddress(found_bp, regs);
-  UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp, regs,
-                                hit_breakpoints);
-
-  // The ProcessBreakpoint could've been deleted if it was a one-shot, so must
-  // not be derefereced below this.
-  found_bp = nullptr;
-  return OnStop::kNotify;
-#endif
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForWatchpoint(

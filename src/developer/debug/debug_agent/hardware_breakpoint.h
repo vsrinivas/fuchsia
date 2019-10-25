@@ -18,7 +18,7 @@ class HardwareBreakpoint : public ProcessBreakpoint {
  public:
   explicit HardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process, uint64_t address,
                               std::shared_ptr<arch::ArchProvider> arch_provider);
-  ~HardwareBreakpoint();
+  virtual ~HardwareBreakpoint();
 
   zx_status_t Update() override;
 

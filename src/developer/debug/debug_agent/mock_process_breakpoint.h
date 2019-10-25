@@ -4,7 +4,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_PROCESS_BREAKPOINT_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_PROCESS_BREAKPOINT_H_
 
+#include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
+#include "src/developer/debug/debug_agent/software_breakpoint.h"
 
 namespace debug_agent {
 
@@ -20,15 +22,10 @@ class MockProcessBreakpoint : public ProcessBreakpoint {
   debug_ipc::BreakpointType Type() const override { return type_; }
 
   bool Installed(zx_koid_t thread_koid) const override { return false; }
-
   void BeginStepOver(DebuggedThread* thread) override {}
-
   void EndStepOver(DebuggedThread* thread) override {}
-
   void ExecuteStepOver(DebuggedThread* thread) override {}
-
   void StepOverCleanup(DebuggedThread* thread) override {}
-
   zx_status_t Update() override { return ZX_OK; }
 
  private:
@@ -36,6 +33,45 @@ class MockProcessBreakpoint : public ProcessBreakpoint {
   zx_status_t Uninstall() override { return ZX_OK; }
 
   debug_ipc::BreakpointType type_ = debug_ipc::BreakpointType::kLast;
+};
+
+class MockSoftwareBreakpoint : public SoftwareBreakpoint {
+ public:
+  explicit MockSoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
+                                  ProcessMemoryAccessor* memory_accessor, uint64_t address)
+      : SoftwareBreakpoint(breakpoint, process, memory_accessor, address) {}
+
+  debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kSoftware; }
+  bool Installed(zx_koid_t thread_koid) const override { return false; }
+  void BeginStepOver(DebuggedThread* thread) override {}
+  void EndStepOver(DebuggedThread* thread) override {}
+  void ExecuteStepOver(DebuggedThread* thread) override {}
+  void StepOverCleanup(DebuggedThread* thread) override {}
+  zx_status_t Update() override { return ZX_OK; }
+
+ private:
+  zx_status_t Uninstall(DebuggedThread* thread) override { return ZX_OK; }
+  zx_status_t Uninstall() override { return ZX_OK; }
+};
+
+class MockHardwareBreakpoint : public HardwareBreakpoint {
+ public:
+  explicit MockHardwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
+                                  uint64_t address,
+                                  std::shared_ptr<arch::ArchProvider> arch_provider)
+      : HardwareBreakpoint(breakpoint, process, address, std::move(arch_provider)) {}
+
+  debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kHardware; }
+  bool Installed(zx_koid_t thread_koid) const override { return false; }
+  void BeginStepOver(DebuggedThread* thread) override {}
+  void EndStepOver(DebuggedThread* thread) override {}
+  void ExecuteStepOver(DebuggedThread* thread) override {}
+  void StepOverCleanup(DebuggedThread* thread) override {}
+  zx_status_t Update() override { return ZX_OK; }
+
+ private:
+  zx_status_t Uninstall(DebuggedThread* thread) override { return ZX_OK; }
+  zx_status_t Uninstall() override { return ZX_OK; }
 };
 
 }  // namespace debug_agent

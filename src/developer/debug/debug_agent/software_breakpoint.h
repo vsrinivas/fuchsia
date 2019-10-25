@@ -19,9 +19,7 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
  public:
   explicit SoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process,
                               ProcessMemoryAccessor* memory_accessor, uint64_t address);
-
-  SoftwareBreakpoint(ProcessMemoryAccessor*);
-  ~SoftwareBreakpoint();
+  virtual ~SoftwareBreakpoint();
 
   debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kSoftware; }
 

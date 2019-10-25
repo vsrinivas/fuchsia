@@ -408,11 +408,18 @@ void DebuggedProcess::SendModuleNotification(std::vector<uint64_t> paused_thread
   debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
-ProcessBreakpoint* DebuggedProcess::FindSoftwareBreakpoint(uint64_t address) const {
-  auto found = software_breakpoints_.find(address);
-  if (found == software_breakpoints_.end())
+SoftwareBreakpoint* DebuggedProcess::FindSoftwareBreakpoint(uint64_t address) const {
+  auto it = software_breakpoints_.find(address);
+  if (it == software_breakpoints_.end())
     return nullptr;
-  return found->second.get();
+  return it->second.get();
+}
+
+HardwareBreakpoint* DebuggedProcess::FindHardwareBreakpoint(uint64_t address) const {
+  auto it = hardware_breakpoints_.find(address);
+  if (it == hardware_breakpoints_.end())
+    return nullptr;
+  return it->second.get();
 }
 
 ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
