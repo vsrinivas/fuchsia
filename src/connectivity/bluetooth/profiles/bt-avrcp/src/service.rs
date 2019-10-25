@@ -125,7 +125,7 @@ impl AvrcpClientController {
                 responder.send(
                     &mut self
                         .controller
-                        .send_avc_passthrough_keypress(command.into_primitive())
+                        .send_keypress(command.into_primitive())
                         .await
                         .map_err(ControllerError::from),
                 )?;

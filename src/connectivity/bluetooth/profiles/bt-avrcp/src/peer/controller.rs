@@ -25,33 +25,71 @@ impl Controller {
         Controller { peer }
     }
 
-    pub async fn send_avc_passthrough_keypress(&self, avc_keycode: u8) -> Result<(), Error> {
-        self.peer.send_avc_passthrough_keypress(avc_keycode).await
+    /// Sends a AVC key press and key release passthrough command.
+    pub async fn send_keypress(&self, avc_keycode: u8) -> Result<(), Error> {
+        {
+            // key_press
+            let payload_1 = &[avc_keycode, 0x00];
+            let _ = self.peer.send_avc_passthrough(payload_1).await?;
+        }
+        {
+            // key_release
+            let payload_2 = &[avc_keycode | 0x80, 0x00];
+            self.peer.send_avc_passthrough(payload_2).await
+        }
     }
 
-    pub async fn set_absolute_volume(&self, requested_volume: u8) -> Result<u8, Error> {
-        self.peer.set_absolute_volume(requested_volume).await
+    /// Sends SetAbsoluteVolume command to the peer.
+    /// Returns the volume as reported by the peer.
+    pub async fn set_absolute_volume(&self, volume: u8) -> Result<u8, Error> {
+        let peer = self.peer.get_control_connection()?;
+        let cmd = SetAbsoluteVolumeCommand::new(volume).map_err(|e| Error::PacketError(e))?;
+        fx_vlog!(tag: "avrcp", 1, "set_absolute_volume send command {:#?}", cmd);
+        let buf = RemotePeer::send_status_vendor_dependent_command(&peer, &cmd).await?;
+        let response =
+            SetAbsoluteVolumeResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        fx_vlog!(tag: "avrcp", 1, "set_absolute_volume received response {:#?}", response);
+        Ok(response.volume())
     }
 
+    /// Sends GetElementAttributes command to the peer.
+    /// Returns all the media attributes received as a response or an error.
     pub async fn get_media_attributes(&self) -> Result<MediaAttributes, Error> {
-        self.peer.get_media_attributes().await
+        let peer = self.peer.get_control_connection()?;
+        let mut media_attributes = MediaAttributes::new_empty();
+        let cmd = GetElementAttributesCommand::all_attributes();
+        fx_vlog!(tag: "avrcp", 1, "get_media_attributes send command {:#?}", cmd);
+        let buf = RemotePeer::send_status_vendor_dependent_command(&peer, &cmd).await?;
+        let response =
+            GetElementAttributesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        fx_vlog!(tag: "avrcp", 1, "get_media_attributes received response {:#?}", response);
+        media_attributes.title = response.title.unwrap_or("".to_string());
+        media_attributes.artist_name = response.artist_name.unwrap_or("".to_string());
+        media_attributes.album_name = response.album_name.unwrap_or("".to_string());
+        media_attributes.track_number = response.track_number.unwrap_or("".to_string());
+        media_attributes.total_number_of_tracks =
+            response.total_number_of_tracks.unwrap_or("".to_string());
+        media_attributes.genre = response.genre.unwrap_or("".to_string());
+        media_attributes.playing_time = response.playing_time.unwrap_or("".to_string());
+        Ok(media_attributes)
     }
 
+    /// Send a GetCapabilities command requesting all supported events by the peer.
+    /// Returns the supported NotificationEventIds by the peer or an error.
     pub async fn get_supported_events(&self) -> Result<Vec<NotificationEventId>, Error> {
         self.peer.get_supported_events().await
     }
 
+    /// Sends a raw vendor dependent AVC command on the control channel. Returns the response
+    /// from from the peer or an error. Used by the test controller and intended only for debugging.
     pub async fn send_raw_vendor_command<'a>(
         &'a self,
         pdu_id: u8,
         payload: &'a [u8],
     ) -> Result<Vec<u8>, Error> {
         let command = RawVendorDependentPacket::new(PduId::try_from(pdu_id)?, payload);
-        let connection = self.peer.control_channel.read().connection();
-        match connection {
-            Some(peer) => RemotePeer::send_status_vendor_dependent_command(&peer, &command).await,
-            _ => Err(Error::RemoteNotFound),
-        }
+        let peer = self.peer.get_control_connection()?;
+        RemotePeer::send_status_vendor_dependent_command(&peer, &command).await
     }
 
     /// For the FIDL test controller. Informational only and intended for logging only. The state is

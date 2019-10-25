@@ -37,7 +37,8 @@ pub struct RemotePeer {
     // TODO(BT-2221): add browse channel.
     // browse_channel: RwLock<PeerChannel<AvtcpPeer>>,
     //
-    /// Contains a vec of all PeerControllers that have taken an event stream waiting for events from this peer.
+    /// Contains a vec of all event stream listeners obtained by any Controllers around this peer
+    /// that are listening for events from this peer from this peer.
     pub controller_listeners: Mutex<Vec<mpsc::Sender<ControllerEvent>>>,
 
     /// Processes commands received as AVRCP target and holds state for continuations and requested
@@ -88,6 +89,10 @@ impl RemotePeer {
         *control_channel = PeerChannel::Disconnected;
     }
 
+    pub fn get_control_connection(&self) -> Result<Arc<AvcPeer>, Error> {
+        self.control_channel.read().connection().ok_or(Error::RemoteNotFound)
+    }
+
     /// Send a generic "status" vendor dependent command and returns the result as a future.
     /// This method encodes the `command` packet, awaits and decodes all responses, will issue
     /// continuation commands for incomplete responses (eg "get_element_attributes" command), and
@@ -102,20 +107,17 @@ impl RemotePeer {
 
         loop {
             let response = loop {
-                if let Some(result) = stream.next().await {
-                    let response: AvcCommandResponse = result.map_err(|e| Error::AvctpError(e))?;
-                    fx_vlog!(tag: "avrcp", 1, "vendor response {:#?}", response);
-                    match response.response_type() {
-                        AvcResponseType::Interim => continue,
-                        AvcResponseType::NotImplemented => return Err(Error::CommandNotSupported),
-                        AvcResponseType::Rejected => return Err(Error::CommandFailed),
-                        AvcResponseType::InTransition => return Err(Error::UnexpectedResponse),
-                        AvcResponseType::Changed => return Err(Error::UnexpectedResponse),
-                        AvcResponseType::Accepted => return Err(Error::UnexpectedResponse),
-                        AvcResponseType::ImplementedStable => break response.1,
-                    }
-                } else {
-                    return Err(Error::CommandFailed);
+                let result = stream.next().await.ok_or(Error::CommandFailed)?;
+                let response: AvcCommandResponse = result.map_err(|e| Error::AvctpError(e))?;
+                fx_vlog!(tag: "avrcp", 1, "vendor response {:#?}", response);
+                match response.response_type() {
+                    AvcResponseType::Interim => continue,
+                    AvcResponseType::NotImplemented => return Err(Error::CommandNotSupported),
+                    AvcResponseType::Rejected => return Err(Error::CommandFailed),
+                    AvcResponseType::InTransition => return Err(Error::UnexpectedResponse),
+                    AvcResponseType::Changed => return Err(Error::UnexpectedResponse),
+                    AvcResponseType::Accepted => return Err(Error::UnexpectedResponse),
+                    AvcResponseType::ImplementedStable => break response.1,
                 }
             };
 
@@ -145,126 +147,45 @@ impl RemotePeer {
         Ok(buf)
     }
 
-    pub async fn send_avc_passthrough_keypress(&self, avc_keycode: u8) -> Result<(), Error> {
-        {
-            // key_press
-            let payload_1 = &[avc_keycode, 0x00];
-            let r = self.control_channel.read().connection();
-            if let Some(peer) = r {
-                let response = peer.send_avc_passthrough_command(payload_1).await;
-                match response {
-                    Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => {}
-                    Ok(AvcCommandResponse(AvcResponseType::NotImplemented, _)) => {
-                        return Err(Error::CommandNotSupported);
-                    }
-                    Err(e) => {
-                        fx_log_err!("error sending avc command to {}: {:?}", self.peer_id, e);
-                        return Err(Error::CommandFailed);
-                    }
-                    Ok(response) => {
-                        fx_log_err!(
-                            "error sending avc command. unhandled response {}: {:?}",
-                            self.peer_id,
-                            response
-                        );
-                        return Err(Error::CommandFailed);
-                    }
-                }
-            } else {
-                return Err(Error::RemoteNotFound);
+    /// Sends a single passthrough keycode over the control channel.
+    pub async fn send_avc_passthrough(&self, payload: &[u8; 2]) -> Result<(), Error> {
+        let peer = self.get_control_connection()?;
+        let response = peer.send_avc_passthrough_command(payload).await;
+        match response {
+            Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => {
+                return Ok(());
             }
-        }
-        {
-            // key_release
-            let payload_2 = &[avc_keycode | 0x80, 0x00];
-            let r = self.control_channel.read().connection();
-            if let Some(peer) = r {
-                let response = peer.send_avc_passthrough_command(payload_2).await;
-                match response {
-                    Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => {
-                        return Ok(());
-                    }
-                    Ok(AvcCommandResponse(AvcResponseType::Rejected, _)) => {
-                        fx_log_info!("avrcp command rejected {}: {:?}", self.peer_id, response);
-                        return Err(Error::CommandNotSupported);
-                    }
-                    Err(e) => {
-                        fx_log_err!("error sending avc command to {}: {:?}", self.peer_id, e);
-                        return Err(Error::CommandFailed);
-                    }
-                    _ => {
-                        fx_log_err!(
-                            "error sending avc command. unhandled response {}: {:?}",
-                            self.peer_id,
-                            response
-                        );
-                        return Err(Error::CommandFailed);
-                    }
-                }
-            } else {
-                Err(Error::RemoteNotFound)
+            Ok(AvcCommandResponse(AvcResponseType::Rejected, _)) => {
+                fx_log_info!("avrcp command rejected {}: {:?}", self.peer_id, response);
+                return Err(Error::CommandNotSupported);
+            }
+            Err(e) => {
+                fx_log_err!("error sending avc command to {}: {:?}", self.peer_id, e);
+                return Err(Error::CommandFailed);
+            }
+            _ => {
+                fx_log_err!(
+                    "error sending avc command. unhandled response {}: {:?}",
+                    self.peer_id,
+                    response
+                );
+                return Err(Error::CommandFailed);
             }
         }
     }
 
-    pub async fn set_absolute_volume(&self, volume: u8) -> Result<u8, Error> {
-        let conn = self.control_channel.read().connection();
-        match conn {
-            Some(peer) => {
-                let cmd =
-                    SetAbsoluteVolumeCommand::new(volume).map_err(|e| Error::PacketError(e))?;
-                fx_vlog!(tag: "avrcp", 1, "set_absolute_volume send command {:#?}", cmd);
-                let buf = Self::send_status_vendor_dependent_command(&peer, &cmd).await?;
-                let response = SetAbsoluteVolumeResponse::decode(&buf[..])
-                    .map_err(|e| Error::PacketError(e))?;
-                fx_vlog!(tag: "avrcp", 1, "set_absolute_volume received response {:#?}", response);
-                Ok(response.volume())
-            }
-            _ => Err(Error::RemoteNotFound),
-        }
-    }
-
-    pub async fn get_media_attributes(&self) -> Result<MediaAttributes, Error> {
-        let conn = self.control_channel.read().connection();
-        match conn {
-            Some(peer) => {
-                let mut media_attributes = MediaAttributes::new_empty();
-                let cmd = GetElementAttributesCommand::all_attributes();
-                fx_vlog!(tag: "avrcp", 1, "get_media_attributes send command {:#?}", cmd);
-                let buf = Self::send_status_vendor_dependent_command(&peer, &cmd).await?;
-                let response = GetElementAttributesResponse::decode(&buf[..])
-                    .map_err(|e| Error::PacketError(e))?;
-                fx_vlog!(tag: "avrcp", 1, "get_media_attributes received response {:#?}", response);
-                media_attributes.title = response.title.unwrap_or("".to_string());
-                media_attributes.artist_name = response.artist_name.unwrap_or("".to_string());
-                media_attributes.album_name = response.album_name.unwrap_or("".to_string());
-                media_attributes.track_number = response.track_number.unwrap_or("".to_string());
-                media_attributes.total_number_of_tracks =
-                    response.total_number_of_tracks.unwrap_or("".to_string());
-                media_attributes.genre = response.genre.unwrap_or("".to_string());
-                media_attributes.playing_time = response.playing_time.unwrap_or("".to_string());
-                Ok(media_attributes)
-            }
-            _ => Err(Error::RemoteNotFound),
-        }
-    }
-
+    /// Retrieve the events supported by the peer by issuing a GetCapabilities command.
     pub async fn get_supported_events(&self) -> Result<Vec<NotificationEventId>, Error> {
-        let conn = self.control_channel.read().connection();
-        match conn {
-            Some(peer) => {
-                let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
-                fx_vlog!(tag: "avrcp", 1, "get_capabilities(events) send command {:#?}", cmd);
-                let buf = Self::send_status_vendor_dependent_command(&peer, &cmd).await?;
-                let capabilities =
-                    GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
-                let mut event_ids = vec![];
-                for event_id in capabilities.event_ids() {
-                    event_ids.push(NotificationEventId::try_from(event_id)?);
-                }
-                Ok(event_ids)
-            }
-            _ => Err(Error::RemoteNotFound),
+        let peer = self.get_control_connection()?;
+        let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
+        fx_vlog!(tag: "avrcp", 1, "get_capabilities(events) send command {:#?}", cmd);
+        let buf = Self::send_status_vendor_dependent_command(&peer, &cmd).await?;
+        let capabilities =
+            GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        let mut event_ids = vec![];
+        for event_id in capabilities.event_ids() {
+            event_ids.push(NotificationEventId::try_from(event_id)?);
         }
+        Ok(event_ids)
     }
 }
