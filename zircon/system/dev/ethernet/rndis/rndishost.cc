@@ -53,23 +53,23 @@ static bool command_succeeded(const void* buf, uint32_t type, size_t length) {
 
 zx_status_t RndisHost::Command(void* buf) {
   rndis_header* header = static_cast<rndis_header*>(buf);
-  uint32_t request_id = next_request_id_++;
-  header->request_id = request_id;
+  uint32_t sent_request_id = next_request_id_++;
+  header->request_id = sent_request_id;
 
   zx_status_t status;
-  status = usb_control_out(&usb_, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+  status = usb_.ControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                            USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, control_intf_,
                            RNDIS_CONTROL_TIMEOUT, buf, header->msg_length);
 
-  if (status < 0) {
+  if (status != ZX_OK) {
     return status;
   }
 
-  status = usb_control_in(&usb_, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+  status = usb_.ControlIn(USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                           USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, control_intf_,
                           RNDIS_CONTROL_TIMEOUT, buf, RNDIS_BUFFER_SIZE, nullptr);
 
-  if (header->request_id != request_id) {
+  if (header->request_id != sent_request_id) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -121,7 +121,7 @@ void RndisHost::ReadComplete(usb_request_t* request) {
   fbl::AutoLock lock(&mutex_);
   if (request->response.status == ZX_ERR_IO_REFUSED) {
     zxlogf(TRACE, "rndis_read_complete usb_reset_endpoint\n");
-    usb_reset_endpoint(&usb_, bulk_in_addr_);
+    usb_.ResetEndpoint(bulk_in_addr_);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
     zxlogf(TRACE,
            "rndis_read_complete Slowing down the requests by %d usec"
@@ -130,7 +130,7 @@ void RndisHost::ReadComplete(usb_request_t* request) {
     if (rx_endpoint_delay_ < ETHERNET_MAX_RECV_DELAY) {
       rx_endpoint_delay_ += ETHERNET_RECV_DELAY;
     }
-    usb_reset_endpoint(&usb_, bulk_in_addr_);
+    usb_.ResetEndpoint(bulk_in_addr_);
   }
   if (request->response.status == ZX_OK && ifc_.ops) {
     Recv(request);
@@ -146,7 +146,7 @@ void RndisHost::ReadComplete(usb_request_t* request) {
       },
       .ctx = this,
   };
-  usb_request_queue(&usb_, request, &complete);
+  usb_.RequestQueue(request, &complete);
 }
 
 void RndisHost::WriteComplete(usb_request_t* request) {
@@ -159,7 +159,7 @@ void RndisHost::WriteComplete(usb_request_t* request) {
   fbl::AutoLock lock(&mutex_);
   if (request->response.status == ZX_ERR_IO_REFUSED) {
     zxlogf(TRACE, "rndishost usb_reset_endpoint\n");
-    usb_reset_endpoint(&usb_, bulk_out_addr_);
+    usb_.ResetEndpoint(bulk_out_addr_);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
     zxlogf(TRACE,
            "rndis_write_complete Slowing down the requests by %d usec"
@@ -168,7 +168,7 @@ void RndisHost::WriteComplete(usb_request_t* request) {
     if (tx_endpoint_delay_ < ETHERNET_MAX_TRANSMIT_DELAY) {
       tx_endpoint_delay_ += ETHERNET_TRANSMIT_DELAY;
     }
-    usb_reset_endpoint(&usb_, bulk_out_addr_);
+    usb_.ResetEndpoint(bulk_out_addr_);
   }
 
   zx_status_t status = usb_req_list_add_tail(&free_write_reqs_, request, parent_req_size_);
@@ -176,7 +176,7 @@ void RndisHost::WriteComplete(usb_request_t* request) {
 }
 
 RndisHost::RndisHost(zx_device_t* parent, uint8_t control_intf, uint8_t bulk_in_addr,
-                     uint8_t bulk_out_addr, usb_protocol_t usb)
+                     uint8_t bulk_out_addr, const usb::UsbDevice& usb)
     : RndisHostType(parent),
       usb_(usb),
       mac_addr_{},
@@ -188,7 +188,7 @@ RndisHost::RndisHost(zx_device_t* parent, uint8_t control_intf, uint8_t bulk_in_
       tx_endpoint_delay_(0),
       ifc_({}),
       thread_started_(false),
-      parent_req_size_(usb_get_request_size(&usb)) {
+      parent_req_size_(usb.GetRequestSize()) {
   list_initialize(&free_read_reqs_);
   list_initialize(&free_write_reqs_);
 
@@ -279,7 +279,7 @@ void RndisHost::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
         },
         .ctx = this,
     };
-    usb_request_queue(&usb_, req, &complete);
+    usb_.RequestQueue(req, &complete);
   }
 
 done:
@@ -408,7 +408,7 @@ zx_status_t RndisHost::StartThread() {
         .ctx = this,
     };
     while ((txn = usb_req_list_remove_head(&free_read_reqs_, parent_req_size_)) != nullptr) {
-      usb_request_queue(&usb_, txn, &complete);
+      usb_.RequestQueue(txn, &complete);
     }
   }
 
@@ -471,11 +471,12 @@ zx_status_t RndisHost::AddDevice() {
 }
 
 static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
-  usb_protocol_t proto;
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_USB, &proto);
+  usb::UsbDevice usb;
+  zx_status_t status = usb::UsbDevice::CreateFromDevice(parent, &usb);
   if (status != ZX_OK) {
     return status;
   }
+
   uint8_t bulk_in_addr = 0;
   uint8_t bulk_out_addr = 0;
   uint8_t intr_addr = 0;
@@ -487,12 +488,12 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
     // interface will be classified as USB_CLASS_WIRELESS when the device is
     // used for tethering.
     // TODO: Figure out how to handle other RNDIS use cases.
-    usb_desc_iter_t iter;
-    status = usb_desc_iter_init(&proto, &iter);
+    std::optional<usb::InterfaceList> interfaces;
+    status = usb::InterfaceList::Create(usb, false, &interfaces);
     if (status != ZX_OK) {
       return status;
     }
-    for (const usb::Interface& interface : usb::InterfaceList(iter, false)) {
+    for (const usb::Interface& interface : *interfaces) {
       const usb_interface_descriptor_t* intf = interface.descriptor();
       if (intf->bInterfaceClass == USB_CLASS_WIRELESS) {
         control_intf = intf->bInterfaceNumber;
@@ -533,7 +534,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
 
   fbl::AllocChecker ac;
   auto dev = fbl::make_unique_checked<RndisHost>(&ac, parent, control_intf, bulk_in_addr,
-                                                 bulk_out_addr, proto);
+                                                 bulk_out_addr, usb);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

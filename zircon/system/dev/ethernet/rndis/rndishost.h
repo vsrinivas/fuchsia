@@ -168,7 +168,7 @@ class RndisHost : public RndisHostType,
                   public ddk::EthernetImplProtocol<RndisHost, ddk::base_protocol> {
  public:
   explicit RndisHost(zx_device_t* parent, uint8_t control_intf, uint8_t bulk_in_addr,
-                     uint8_t bulk_out_addr, usb_protocol_t usb);
+                     uint8_t bulk_out_addr, const usb::UsbDevice& usb);
 
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
@@ -195,7 +195,7 @@ class RndisHost : public RndisHostType,
 
   zx_status_t Command(void* buf);
 
-  usb_protocol_t usb_;
+  usb::UsbDevice usb_;
 
   uint8_t mac_addr_[ETH_MAC_SIZE];
   uint8_t control_intf_;
