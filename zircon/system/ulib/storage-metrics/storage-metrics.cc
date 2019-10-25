@@ -2,13 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
 #include <storage-metrics/storage-metrics.h>
 
-#include <algorithm>
-
 namespace storage_metrics {
+
+bool RawCallStatEqual(const CallStatRawFidl& lhs, const CallStatRawFidl& rhs) {
+  return (lhs.total_calls == rhs.total_calls) && (lhs.bytes_transferred == rhs.bytes_transferred);
+}
+
+bool CallStatEqual(const CallStatFidl& lhs, const CallStatFidl& rhs) {
+  return RawCallStatEqual(lhs.success, rhs.success) &&
+         RawCallStatEqual(lhs.failure, rhs.failure);
+}
+
+bool BlockStatEqual(const BlockStatFidl& lhs, const BlockStatFidl& rhs) {
+  return CallStatEqual(lhs.read, rhs.read) &&
+         CallStatEqual(lhs.write, rhs.write) &&
+         CallStatEqual(lhs.trim, rhs.trim) &&
+         CallStatEqual(lhs.flush, rhs.flush) &&
+         CallStatEqual(lhs.barrier_before, rhs.barrier_before) &&
+         CallStatEqual(lhs.barrier_after, rhs.barrier_after);
+}
+
 CallStat::CallStatRaw::CallStatRaw() { Reset(); }
 
 void CallStat::CallStatRaw::Reset() {
@@ -196,7 +215,7 @@ void FsMetrics::Dump(FILE* stream, std::optional<bool> success) const {
   open_.Dump(stream, "open", success);
 }
 
-BlockDeviceMetrics::BlockDeviceMetrics(const fuchsia_hardware_block_BlockStats* metrics) {
+BlockDeviceMetrics::BlockDeviceMetrics(const BlockStatFidl* metrics) {
   read_.CopyFromFidl(&metrics->read);
   write_.CopyFromFidl(&metrics->write);
   trim_.CopyFromFidl(&metrics->trim);
@@ -207,7 +226,7 @@ BlockDeviceMetrics::BlockDeviceMetrics(const fuchsia_hardware_block_BlockStats* 
   SetEnable(true);
 }
 
-void BlockDeviceMetrics::CopyToFidl(fuchsia_hardware_block_BlockStats* metrics) const {
+void BlockDeviceMetrics::CopyToFidl(BlockStatFidl* metrics) const {
   read_.CopyToFidl(&metrics->read);
   write_.CopyToFidl(&metrics->write);
   trim_.CopyToFidl(&metrics->trim);

@@ -2,21 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_STORAGE_METRICS_H_
-#define ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_STORAGE_METRICS_H_
+#ifndef STORAGE_METRICS_STORAGE_METRICS_H_
+#define STORAGE_METRICS_STORAGE_METRICS_H_
+
+#include <fuchsia/storage/metrics/c/fidl.h>
+#include <stdio.h>
 
 #include <atomic>
 #include <limits>
 #include <optional>
-#include <stdio.h>
 
 #include <fbl/macros.h>
-#include <fuchsia/storage/metrics/c/fidl.h>
 
 namespace storage_metrics {
 constexpr zx_ticks_t kUninitializedMinimumLatency = std::numeric_limits<zx_ticks_t>::max();
 using CallStatFidl = fuchsia_storage_metrics_CallStat;
 using CallStatRawFidl = fuchsia_storage_metrics_CallStatRaw;
+
+// Compares total_calls and bytes_transferred. Returns false if they don't match.
+bool RawCallStatEqual(const CallStatRawFidl& lhs, const CallStatRawFidl& rhs);
+
+// Compare raw stats for success and failure. Returns false if they don't match.
+bool CallStatEqual(const CallStatFidl& lhs, const CallStatFidl& rhs);
 
 // The class provides light weight mechanism to maintain stats for system calls.
 // The updates are pseudo-atomic - meaning each field gets updated atomically
@@ -126,4 +133,4 @@ class Metrics {
 };
 
 }  // namespace storage_metrics
-#endif  //  ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_STORAGE_METRICS_H_
+#endif  // STORAGE_METRICS_STORAGE_METRICS_H_

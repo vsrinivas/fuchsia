@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
 #include <storage-metrics/storage-metrics.h>
 #include <zxtest/zxtest.h>
-
-#include <algorithm>
 
 namespace storage_metrics {
 namespace {
@@ -150,6 +150,57 @@ void ExpectBlockDeviceMetricsInitialState(
   fidl_call_stat.success.minimum_latency = storage_metrics::kUninitializedMinimumLatency;
   fidl_call_stat.failure.minimum_latency = storage_metrics::kUninitializedMinimumLatency;
   CompareFidlBlockDeviceStatAll(fidl_block_device_metrics, fidl_call_stat);
+}
+
+TEST(RawCallStatEqual, Same) {
+  CallStatRawFidl a = {}, b = {};
+  ASSERT_TRUE(RawCallStatEqual(a, b));
+}
+
+TEST(RawCallStatEqual, LargerTotalCalls) {
+  CallStatRawFidl a = {}, b = {};
+  a.total_calls++;
+  ASSERT_FALSE(RawCallStatEqual(a, b));
+}
+
+TEST(RawCallStatEqual, LargerBytesTransferred) {
+  CallStatRawFidl a = {}, b = {};
+  a.bytes_transferred++;
+  ASSERT_FALSE(RawCallStatEqual(a, b));
+}
+
+TEST(CallStatEqual, Same) {
+  CallStatFidl a = {}, b = {};
+  ASSERT_TRUE(CallStatEqual(a, b));
+}
+
+TEST(CallStatEqual, LargerTotalCalls) {
+  CallStatFidl a = {}, b = {};
+  a.success.total_calls++;
+  ASSERT_FALSE(CallStatEqual(a, b));
+}
+
+TEST(CallStatEqual, LargerBytesTransferred) {
+  CallStatFidl a = {}, b = {};
+  a.failure.bytes_transferred++;
+  ASSERT_FALSE(CallStatEqual(a, b));
+}
+
+TEST(BlockStatEqual, Same) {
+  BlockStatFidl a = {}, b = {};
+  ASSERT_TRUE(BlockStatEqual(a, b));
+}
+
+TEST(BlockStatEqual, LargerReadTotalCalls) {
+  BlockStatFidl a = {}, b = {};
+  a.read.success.total_calls++;
+  ASSERT_FALSE(BlockStatEqual(a, b));
+}
+
+TEST(BlockStatEqual, LargerWriteBytesTransferred) {
+  BlockStatFidl a = {}, b = {};
+  a.write.failure.bytes_transferred++;
+  ASSERT_FALSE(BlockStatEqual(a, b));
 }
 
 TEST(CallStatTest, UpdateSuccess) {

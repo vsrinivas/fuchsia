@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_BLOCK_METRICS_H_
-#define ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_BLOCK_METRICS_H_
+#ifndef STORAGE_METRICS_BLOCK_METRICS_H_
+#define STORAGE_METRICS_BLOCK_METRICS_H_
 
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <stdio.h>
@@ -14,10 +14,16 @@
 
 namespace storage_metrics {
 
+using BlockStatFidl = fuchsia_hardware_block_BlockStats;
+
+// Compares block stat for read, write, trim, flush, barrier_before and
+// barrier_after. Returns false if the stats dont match.
+bool BlockStatEqual(const BlockStatFidl& lhs, const BlockStatFidl& rhs);
+
 class BlockDeviceMetrics : public storage_metrics::Metrics {
  public:
   BlockDeviceMetrics() = default;
-  explicit BlockDeviceMetrics(const fuchsia_hardware_block_BlockStats* metrics);
+  explicit BlockDeviceMetrics(const BlockStatFidl* metrics);
   BlockDeviceMetrics(const BlockDeviceMetrics&) = delete;
   BlockDeviceMetrics(BlockDeviceMetrics&& rhs);
   BlockDeviceMetrics& operator=(const BlockDeviceMetrics&) = delete;
@@ -25,7 +31,7 @@ class BlockDeviceMetrics : public storage_metrics::Metrics {
   ~BlockDeviceMetrics() = default;
 
   // Copies to fields of fidl structure the corresponding fields of BlockDeviceMetrics
-  void CopyToFidl(fuchsia_hardware_block_BlockStats* metrics) const;
+  void CopyToFidl(BlockStatFidl* metrics) const;
 
   // Prints the fields of BlockDeviceMetrics to file |stream|.
   void Dump(FILE* stream, std::optional<bool> success = std::nullopt) const;
@@ -105,4 +111,4 @@ class BlockDeviceMetrics : public storage_metrics::Metrics {
 };
 
 }  // namespace storage_metrics
-#endif  // ZIRCON_SYSTEM_ULIB_STORAGE_METRICS_BLOCK_METRICS_H_
+#endif  // STORAGE_METRICS_BLOCK_METRICS_H_
