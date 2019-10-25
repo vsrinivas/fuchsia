@@ -13,8 +13,8 @@
 
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
-#include "third_party/cobalt/src/logger/logger_test_utils.h"
 #include "third_party/cobalt/src/logger/event_aggregator.h"
+#include "third_party/cobalt/src/logger/logger_test_utils.h"
 
 namespace cobalt {
 
@@ -66,6 +66,18 @@ TEST_F(LoggerImplTest, PauseDuringBatch) {
   events.push_back(CobaltEventBuilder(1).as_event());
   logger_->LogCobaltEvents(std::move(events), [](Status status) {});
   EXPECT_EQ(fake_logger_.call_count(), 2 * one_event_call_count);
+}
+
+// Tests that if StartTimer() and EndTimer() are invoked when the LoggerImpl
+// was constructed without a TimerManager, then instead of crashing we
+// return an error.
+TEST_F(LoggerImplTest, NoTimerPresent) {
+  Status status = Status::OK;
+  logger_->StartTimer(0u, 0u, "", "", 0u, 0u, [&status](Status s) { status = s; });
+  EXPECT_EQ(status, Status::INTERNAL_ERROR);
+  status = Status::OK;
+  logger_->EndTimer("", 0u, 0u, [&status](Status s) { status = s; });
+  EXPECT_EQ(status, Status::INTERNAL_ERROR);
 }
 
 }  // namespace cobalt

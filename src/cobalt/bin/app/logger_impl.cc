@@ -7,9 +7,7 @@
 namespace cobalt {
 
 LoggerImpl::LoggerImpl(std::unique_ptr<logger::Logger> logger, TimerManager* timer_manager)
-    : logger_(std::move(logger)), timer_manager_(timer_manager) {
-  CHECK(timer_manager);
-}
+    : logger_(std::move(logger)), timer_manager_(timer_manager) {}
 
 void LoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_code,
                           fuchsia::cobalt::LoggerBase::LogEventCallback callback) {
@@ -129,6 +127,11 @@ void LoggerImpl::AddTimerObservationIfReady(std::unique_ptr<TimerVal> timer_val_
 void LoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_code, std::string component,
                             std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
                             fuchsia::cobalt::LoggerBase::StartTimerCallback callback) {
+  if (!timer_manager_) {
+    FX_LOGS(ERROR) << "Cobalt internal error: StartTimer() invoked but there is no TimerManager";
+    callback(Status::INTERNAL_ERROR);
+    return;
+  }
   std::unique_ptr<TimerVal> timer_val_ptr;
   auto status = timer_manager_->GetTimerValWithStart(metric_id, event_code, component, 0, timer_id,
                                                      timestamp, timeout_s, &timer_val_ptr);
@@ -143,6 +146,11 @@ void LoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_code, std::string
 
 void LoggerImpl::EndTimer(std::string timer_id, uint64_t timestamp, uint32_t timeout_s,
                           fuchsia::cobalt::LoggerBase::EndTimerCallback callback) {
+  if (!timer_manager_) {
+    FX_LOGS(ERROR) << "Cobalt internal error: EndTimer() invoked but there is no TimerManager";
+    callback(Status::INTERNAL_ERROR);
+    return;
+  }
   std::unique_ptr<TimerVal> timer_val_ptr;
   auto status = timer_manager_->GetTimerValWithEnd(timer_id, timestamp, timeout_s, &timer_val_ptr);
 
