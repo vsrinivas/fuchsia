@@ -50,7 +50,7 @@ template("modular_config") {
     config = invoker.config
   }
 
-  config_data("basemgr.config") {
+  config_data(target_name + "_basemgr.config") {
     for_pkg = "sysmgr"
     sources = [
       "//src/modular/build/modular_config/basemgr.config",
@@ -65,7 +65,7 @@ template("modular_config") {
   # launch_basemgr_on_boot = false.
   config_data_deps = [ ":${invoker.target_name}_validate" ]
   if (launch_basemgr_on_boot) {
-    config_data_deps += [ ":basemgr.config" ]
+    config_data_deps += [ ":" + target_name + "_basemgr.config" ]
   }
 
   config_data(invoker.target_name) {
