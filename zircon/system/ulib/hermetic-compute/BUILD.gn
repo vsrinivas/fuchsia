@@ -51,4 +51,6 @@ zx_library("hermetic-compute") {
     sources += [ "get-vdso.cc" ]
     deps += [ "$zx/system/ulib/fdio" ]
   }
+
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

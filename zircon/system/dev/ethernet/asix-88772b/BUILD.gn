@@ -16,4 +16,5 @@ zx_driver("asix-88772b") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

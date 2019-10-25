@@ -85,7 +85,7 @@ void idt_setup_readonly(void);
  *
  * @param idt Pointer to the IDT
  */
-static void idt_load(struct idt *idt) {
+static inline void idt_load(struct idt *idt) {
   // After VM exit IDT limit is always set to 0xffff, so in order to avoid
   // calling LIDT in hypervisor to restore the proper IDT limit after every
   // VM exit in hypervisor we decided to use 0xffff all the time. There is

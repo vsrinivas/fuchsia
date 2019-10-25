@@ -113,9 +113,11 @@ static void gic_init_percpu_early() {
   GICREG(0, GICC_PMR) = 0xff;    // unmask interrupts at all priority levels
 }
 
-static void arm_gic_suspend_cpu(uint level) { suspend_resume_fiq(false, false); }
+// TODO(38135): This function is potentially unused and may be removable.
+[[maybe_unused]] static void arm_gic_suspend_cpu(uint level) { suspend_resume_fiq(false, false); }
 
-static void arm_gic_resume_cpu(uint level) {
+// TODO(38135): This function is potentially unused and may be removable.
+[[maybe_unused]] static void arm_gic_resume_cpu(uint level) {
   spin_lock_saved_state_t state;
   bool resume_gicd = false;
 

@@ -25,4 +25,5 @@ zx_driver("gauss-pdm-input") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

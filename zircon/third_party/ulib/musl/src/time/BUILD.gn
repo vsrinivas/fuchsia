@@ -45,4 +45,5 @@ source_set("time") {
   ]
 
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

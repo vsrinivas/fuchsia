@@ -38,4 +38,5 @@ zx_driver("xhci") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

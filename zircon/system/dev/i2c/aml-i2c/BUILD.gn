@@ -15,4 +15,5 @@ zx_driver("aml-i2c") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

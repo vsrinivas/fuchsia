@@ -18,4 +18,5 @@ zx_driver("intel-i2c") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

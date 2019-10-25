@@ -36,6 +36,7 @@ zx_test("fit") {
   if (is_fuchsia) {
     deps += [ "$zx/system/ulib/fdio" ]
   }
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 # chromium uses this library, and enables the following flag,

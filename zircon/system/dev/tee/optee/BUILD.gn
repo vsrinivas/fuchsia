@@ -32,6 +32,7 @@ zx_driver("optee") {
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 group("test") {
@@ -69,4 +70,5 @@ zx_test("optee-message-test") {
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

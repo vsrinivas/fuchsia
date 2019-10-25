@@ -70,9 +70,9 @@ static inline bool atomic_cmpxchg_relaxed(volatile int* ptr, int* oldval, int ne
                                      __ATOMIC_RELAXED);
 }
 
-static int atomic_load_relaxed(volatile int* ptr) { return __atomic_load_n(ptr, __ATOMIC_RELAXED); }
+static inline int atomic_load_relaxed(volatile int* ptr) { return __atomic_load_n(ptr, __ATOMIC_RELAXED); }
 
-static void atomic_store_relaxed(volatile int* ptr, int newval) {
+static inline void atomic_store_relaxed(volatile int* ptr, int newval) {
   __atomic_store_n(ptr, newval, __ATOMIC_RELAXED);
 }
 

@@ -29,4 +29,5 @@ zx_driver("dwc3") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

@@ -21,6 +21,7 @@ if (toolchain.environment == "physmem") {
     deps = [
       "$zx/kernel/lib/libc/string",
     ]
+    public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
   }
 
   config("boot_shim_config") {

@@ -56,6 +56,7 @@ if (defined(zx)) {
       "$zx/third_party/ulib/uboringssl",
     ]
     configs += [ ":fidlc_config" ]
+    public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
   }
 
   source_set("json_schema") {

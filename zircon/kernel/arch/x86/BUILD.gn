@@ -157,6 +157,7 @@ zx_library("x86") {
     # <arch/x86/apic.h> has #include <dev/interrupt.h>.
     "$zx/kernel/dev/interrupt:headers",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 source_set("syscall") {

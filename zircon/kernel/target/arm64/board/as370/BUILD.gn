@@ -17,4 +17,6 @@ zx_test("as370-boot-shim-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
   ]
+
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

@@ -106,6 +106,7 @@ zx_driver("platform-bus-x86") {
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 zx_test("x86-battery-test") {

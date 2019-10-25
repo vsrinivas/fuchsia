@@ -122,7 +122,7 @@ static inline cpu_num_t arch_curr_cpu_num(void) {
 }
 
 extern uint8_t x86_num_cpus;
-static uint arch_max_num_cpus(void) { return x86_num_cpus; }
+static inline uint arch_max_num_cpus(void) { return x86_num_cpus; }
 
 #define READ_PERCPU_FIELD32(field) x86_read_gs_offset32(offsetof(struct x86_percpu, field))
 

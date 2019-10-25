@@ -36,6 +36,7 @@ zx_driver("intel-i915") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 test("intel-i915-test") {
@@ -79,4 +80,5 @@ test("intel-i915-test") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

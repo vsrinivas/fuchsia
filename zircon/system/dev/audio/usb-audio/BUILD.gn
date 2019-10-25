@@ -37,4 +37,5 @@ zx_driver("usb-audio") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

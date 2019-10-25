@@ -414,7 +414,6 @@ config("default_warnings") {
     "-Wall",
     "-Wextra",
     "-Wno-unused-parameter",
-    "-Wno-unused-function",
     "-Werror=unused-label",
     "-Werror=return-type",
 
@@ -454,6 +453,10 @@ config("default_warnings") {
       "-Wno-int-in-bool-context",
     ]
   }
+}
+
+config("Wno-unused-function") {
+  cflags = [ "-Wno-unused-function" ]
 }
 
 config("warn-implicit-fallthrough") {

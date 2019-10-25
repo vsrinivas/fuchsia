@@ -48,4 +48,5 @@ source_set("shared") {
     # legacy complications.
     "$zx/system/ulib/trace:headers",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

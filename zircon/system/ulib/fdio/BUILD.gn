@@ -86,6 +86,7 @@ if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
       "$zx/system/ulib/zxs",
     ]
     configs += [ "$zx_build/public/gn/config:static-libc++" ]
+    public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
   }
 
   # TODO(38226): Binaries built in the fuzzer environment look for libraries

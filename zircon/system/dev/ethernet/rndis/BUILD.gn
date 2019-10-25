@@ -15,4 +15,5 @@ zx_driver("rndis") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

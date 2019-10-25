@@ -69,7 +69,7 @@ static inline paddr_t get_kernel_base_phys(void) {
   return kernel_base_phys;
 }
 
-static size_t get_kernel_size(void) { return _end - __code_start; }
+static inline size_t get_kernel_size(void) { return _end - __code_start; }
 
 __BEGIN_CDECLS
 

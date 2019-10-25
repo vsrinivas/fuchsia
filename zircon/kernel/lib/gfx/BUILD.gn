@@ -13,4 +13,5 @@ zx_library("gfx") {
   public_deps = [
     "$zx/system/ulib/gfx-font-data",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

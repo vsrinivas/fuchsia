@@ -60,6 +60,7 @@ source_set("common") {
   ]
 
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 # "$zx/system/ulib/driver" is an alias for this.
@@ -109,4 +110,5 @@ zx_test("devhost-test") {
     "$zx/system/ulib/zxtest",
     "../shared:env",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

@@ -10,4 +10,5 @@ zx_library("cmpctmalloc") {
   deps = [
     "$zx/kernel/lib/counters",
   ]
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
