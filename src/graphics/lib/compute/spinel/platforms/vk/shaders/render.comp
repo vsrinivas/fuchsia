@@ -10,6 +10,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 #extension GL_KHR_shader_subgroup_basic : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
 
 //
 // RENDER KERNEL
@@ -27,110 +28,52 @@
 //
 // SINGLE PRECISION FLOAT
 //
-#if defined(SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT)
+#if defined(SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT32)
 
-#define SPN_RENDER_TILE_CHANNEL_SIZE_LOG2   0
+#define SPN_RENDER_TILE_CHANNEL                     float
+#define SPN_RENDER_TILE_COVER                       SPN_RENDER_TILE_CHANNEL
+#define SPN_RENDER_TILE_COLOR                       vec4
 
-#define SPN_RENDER_TILE_CHANNEL             float
-#define SPN_RENDER_TILE_COVER               SPN_RENDER_TILE_CHANNEL
-#define SPN_RENDER_TILE_COLOR               vec4
+#define SPN_RENDER_PIXEL_COVER                      float
 
-#define SPN_RENDER_PIXEL_COVER              float
+#define SPN_RENDER_TILE_CHANNEL_IS_ZERO(c)          ((c) == SPN_RENDER_TILE_CHANNEL(0))
 
-#define SPN_RENDER_TILE_CHANNEL_IS_ZERO(c)  ((c) == SPN_RENDER_TILE_CHANNEL(0))
+#define SPN_RENDER_COLOR_UNPACK(rg32,ba32)                              \
+  SPN_RENDER_TILE_COLOR(unpackHalf2x16(rg32),unpackHalf2x16(ba32));
 
-#define SPN_RENDER_COLOR_PAIR_UNPACK(v)     unpackHalf2x16(v)
-#define SPN_RENDER_COLOR_PAIR               vec2
-
-#define SPN_RENDER_COLOR_ACC_RGBA           vec4
+#define SPN_RENDER_COLOR_ACC_RGBA                   vec4
 
 //
-// HALF PRECISION FLOAT
+// HALF PRECISION FLOAT (FP16)
 //
-#elif defined(SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16)
+#elif defined(SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT16)
 
 #ifdef SPN_DEVICE_AMD_GCN3
-#extension GL_AMD_gpu_shader_half_float                    : require  // temporary
-#else
-#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#extension GL_AMD_gpu_shader_half_float : require  // GCN3/AMDVLK disables float16
 #endif
 
-#define SPN_RENDER_TILE_CHANNEL_SIZE_LOG2   0
+#define SPN_RENDER_TILE_CHANNEL                     float16_t
+#define SPN_RENDER_TILE_COVER                       SPN_RENDER_TILE_CHANNEL
+#define SPN_RENDER_TILE_COLOR                       f16vec4
 
-#define SPN_RENDER_TILE_CHANNEL             float16_t
-#define SPN_RENDER_TILE_COVER               SPN_RENDER_TILE_CHANNEL
-#define SPN_RENDER_TILE_COLOR               f16vec4
+#define SPN_RENDER_PIXEL_COVER                      float16_t
 
-#define SPN_RENDER_PIXEL_COVER              float16_t
+#define SPN_RENDER_TILE_CHANNEL_IS_ZERO(c)          ((c) == SPN_RENDER_TILE_CHANNEL(0))
 
-#define SPN_RENDER_TILE_CHANNEL_IS_ZERO(c)  ((c) == SPN_RENDER_TILE_CHANNEL(0))
+#define SPN_RENDER_COLOR_UNPACK(rg32,ba32)                              \
+  SPN_RENDER_TILE_COLOR(unpackFloat2x16(rg32),unpackFloat2x16(ba32));
 
-#define SPN_RENDER_COLOR_PAIR_UNPACK(v)     unpackFloat2x16(v)
-#define SPN_RENDER_COLOR_PAIR               f16vec2
-
-#define SPN_RENDER_COLOR_ACC_RGBA           f16vec4
-
-//
-// TWO PACKED HALF PRECISION FLOATS
-//
-#elif defined(SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16X2)
-
-#ifdef SPN_DEVICE_AMD_GCN3
-#extension GL_AMD_gpu_shader_half_float                    : require  // temporary
-#else
-#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
-#endif
-
-#define SPN_RENDER_TILE_CHANNEL_SIZE_LOG2   1
-
-#define SPN_RENDER_TILE_CHANNEL             f16vec2
-#define SPN_RENDER_TILE_COVER               SPN_RENDER_TILE_CHANNEL
-#define SPN_RENDER_TILE_COLOR               f16vec2[4] // FIXME(allanmac): switch this to an f16mat4x2?
-
-#define SPN_RENDER_PIXEL_COVER              float16_t
-
-#define SPN_RENDER_TILE_CHANNEL_IS_ZERO(c)  (packFloat2x16(c) == 0)
-
-#define SPN_RENDER_COLOR_PAIR_UNPACK(v)     unpackFloat2x16(v)
-#define SPN_RENDER_COLOR_PAIR               f16vec2
-
-#define SPN_RENDER_COLOR_ACC_RGBA           f16vec4
+#define SPN_RENDER_COLOR_ACC_RGBA                   f16vec4
 
 #else
 
-#error "SPN_RENDER_TILE_CHANNEL_IS_XXX is not defined!"
+#error "SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOATXX is not defined!"
 
 #endif
-
-//
-//
-//
-
-#define SPN_COLOR_WIP_R(I) color_wip[I][0]
-#define SPN_COLOR_WIP_G(I) color_wip[I][1]
-#define SPN_COLOR_WIP_B(I) color_wip[I][2]
-#define SPN_COLOR_WIP_A(I) color_wip[I][3]
-
-#define SPN_COLOR_ACC_R(I) color_acc[I][0]
-#define SPN_COLOR_ACC_G(I) color_acc[I][1]
-#define SPN_COLOR_ACC_B(I) color_acc[I][2]
-#define SPN_COLOR_ACC_A(I) color_acc[I][3]
-
-//
-// GENERAL DATA TYPES THAT WE MAY WANT TO TWEAK LATER
-//
-// NOTE(allanmac): these could vary in OpenCL
-//
-
-#define SPN_RENDER_TTX         int
-#define SPN_RENDER_PIXEL_AREA  int
 
 //
 // COMMON DEFINES
 //
-
-#define SPN_TILE_CHANNEL_SIZE           (1 << SPN_RENDER_TILE_CHANNEL_SIZE_LOG2)
-#define SPN_TILE_CHANNEL_MASK           SPN_GLSL_BITS_TO_MASK(SPN_RENDER_TILE_CHANNEL_SIZE_LOG2)
 
 #define SPN_RENDER_WORKGROUP_SIZE       (1 << SPN_DEVICE_RENDER_WORKGROUP_SIZE_LOG2)
 
@@ -147,8 +90,6 @@
 
 #define SPN_RENDER_SUBTILE_WIDTH_LOG2   (SPN_DEVICE_TILE_WIDTH_LOG2 + SPN_DEVICE_TILE_HEIGHT_LOG2 - SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2)
 #define SPN_RENDER_SUBTILE_WIDTH        (1 << SPN_RENDER_SUBTILE_WIDTH_LOG2)
-
-#define SPN_RENDER_SUBTILE_MEMBERS_LOG2 (SPN_RENDER_SUBTILE_WIDTH_LOG2 - SPN_RENDER_SUBTILE_CHANNEL_SIZE_LOG2)
 
 //
 // Make sure the config has all necessary steering switches
@@ -171,7 +112,7 @@
 #error "SPN_DEVICE_RENDER_STYLING_CMDS_XXX undefined!"
 #endif
 
-#if (SPN_RENDER_SUBTILE_COUNT > 1)            && \
+#if (SPN_RENDER_SUBTILE_COUNT > 1)                   && \
     !defined(SPN_DEVICE_RENDER_COVERAGE_USE_SHUFFLE) && \
     !defined(SPN_DEVICE_RENDER_COVERAGE_USE_SHARED)
 #error "SPN_DEVICE_RENDER_COVERAGE_XXX undefined!"
@@ -236,26 +177,6 @@ SPN_VK_GLSL_DECL_KERNEL_RENDER();
 #endif
 
 //
-// SUBTILE MEMBERS EXPANSION
-//
-
-#if (SPN_RENDER_SUBTILE_MEMBERS_LOG2 == 0)
-#define SPN_RENDER_SUBTILE_MEMBERS_EXPAND() SPN_EXPAND_1()
-#elif (SPN_RENDER_SUBTILE_MEMBERS_LOG2 == 1)
-#define SPN_RENDER_SUBTILE_MEMBERS_EXPAND() SPN_EXPAND_2()
-#elif (SPN_RENDER_SUBTILE_MEMBERS_LOG2 == 2)
-#define SPN_RENDER_SUBTILE_MEMBERS_EXPAND() SPN_EXPAND_4()
-#elif (SPN_RENDER_SUBTILE_MEMBERS_LOG2 == 3)
-#define SPN_RENDER_SUBTILE_MEMBERS_EXPAND() SPN_EXPAND_8()
-#elif (SPN_RENDER_SUBTILE_MEMBERS_LOG2 == 4)
-#define SPN_RENDER_SUBTILE_MEMBERS_EXPAND() SPN_EXPAND_16()
-#elif (SPN_RENDER_SUBTILE_MEMBERS_LOG2 == 5)
-#define SPN_RENDER_SUBTILE_MEMBERS_EXPAND() SPN_EXPAND_32()
-#else
-#error "SPN_RENDER_SUBTILE_MEMBERS_LOG2 not supported!"
-#endif
-
-//
 // Globally declare tile cover and color registers
 //
 // Total number of color and cover "channels" is 11.
@@ -279,12 +200,66 @@ SPN_VK_GLSL_DECL_KERNEL_RENDER();
 //     64    |   ---    11     44    176
 //
 
-SPN_RENDER_TILE_COLOR color_wip[SPN_RENDER_SUBTILE_WIDTH];  // 4
-SPN_RENDER_TILE_COLOR color_acc[SPN_RENDER_SUBTILE_WIDTH];  // 4
+//
+// COLOR
+//
+// color_wip
+// color_acc
+//
+#ifndef SPN_RENDER_TILE_COLOR_WIP_ENABLED
+  // this results in the color_wip being a scalar -- per thread or per
+  // subgroup depending on the capability of the target arch.
+  SPN_SUBGROUP_UNIFORM SPN_RENDER_TILE_COLOR color_wip;
 
-SPN_RENDER_TILE_COVER cover_wip[SPN_RENDER_SUBTILE_WIDTH];  // 1
-SPN_RENDER_TILE_COVER cover_acc[SPN_RENDER_SUBTILE_WIDTH];  // 1
-SPN_RENDER_TILE_COVER cover_msk[SPN_RENDER_SUBTILE_WIDTH];  // 1
+#define SPN_RENDER_TILE_COLOR_WIP(I) color_wip
+
+#else
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)     SPN_RENDER_TILE_COLOR color_wip##I;
+
+SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+
+#define SPN_RENDER_TILE_COLOR_WIP(I) color_wip##I
+
+#endif
+
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)     SPN_RENDER_TILE_COLOR color_acc##I;
+
+SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+
+//
+// COVER
+//
+// cover_wip
+// cover_acc
+// cover_msk
+//
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)     SPN_RENDER_TILE_COVER cover_wip##I;
+
+SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+
+// cover_acc
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)     SPN_RENDER_TILE_COVER cover_acc##I;
+
+SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)     SPN_RENDER_TILE_COVER cover_msk##I;
+
+SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+
+//
+// GENERAL DATA TYPES THAT WE MAY WANT TO TWEAK LATER
+//
+// NOTE(allanmac): these could vary in OpenCL
+//
+
+#define SPN_RENDER_TTX         int
+#define SPN_RENDER_PIXEL_AREA  int
 
 //
 // Shared memory is primarily for accumulating areas but is also
@@ -731,7 +706,7 @@ spn_tile_smem_zero()
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   SPN_RENDER_SMEM().area[gl_SubgroupInvocationID + I * SPN_RENDER_SUBGROUP_SIZE] = 0;
 
-  SPN_RENDER_SUBTILE_WIDTH_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -857,24 +832,6 @@ spn_tile_scatter_ttsb(const SPN_RENDER_TTS tts)
         {
           atomicAdd(SPN_RENDER_SMEM().area[tile_idx], right);
           atomicAdd(SPN_RENDER_SMEM().area[tile_idx + SPN_TILE_HEIGHT], left);
-
-          //
-          // DEBUG
-          //
-#if 0
-          {
-            uint debug_base = atomicAdd(bp_debug_count[0], 32);
-
-            bp_debug[debug_base + 0] = 0xCAFEBABE;
-            bp_debug[debug_base + 1] = SPN_TTCK_GET_Y(lgf_yxl);
-            bp_debug[debug_base + 2] = SPN_TTCK_GET_X(lgf_yxl);
-            bp_debug[debug_base + 3] = tile_idx;
-            bp_debug[debug_base + 4] = right;
-            bp_debug[debug_base + 5] = tile_idx + SPN_TILE_HEIGHT;
-            bp_debug[debug_base + 6] = left;
-            bp_debug[debug_base + 7] = tts;
-          }
-#endif
         }
     }
 }
@@ -895,17 +852,17 @@ spn_tile_scatter_ttsb(const SPN_RENDER_TTS tts)
 //
 #if (SPN_RENDER_SUBTILE_COUNT == 1)
 
-#define SPN_RENDER_PIXEL_AREA_PREAMBLE() // noop
-#define SPN_SUBTILE_AREA_SCAN_PRE(I, area)      area += SPN_PIXEL_SMEM_AREA(I, gl_SubgroupInvocationID)
-#define SPN_SUBTILE_AREA_SCAN_POST(area)        // noop
+#define SPN_RENDER_PIXEL_AREA_PREAMBLE()    // noop
+#define SPN_SUBTILE_AREA_SCAN_PRE(I, area)  area += SPN_PIXEL_SMEM_AREA(I, gl_SubgroupInvocationID)
+#define SPN_SUBTILE_AREA_SCAN_POST(area)    // noop
 
 //
 // MULTIPLE SUBTILES
 //
 #else
 
-#define SPN_RENDER_SUBTILE_LAST       (SPN_RENDER_SUBTILE_COUNT - 1)
-#define SPN_RENDER_SUBTILE_LAST_BASE  (SPN_RENDER_SUBTILE_LAST * SPN_TILE_HEIGHT)
+#define SPN_RENDER_SUBTILE_LAST             (SPN_RENDER_SUBTILE_COUNT - 1)
+#define SPN_RENDER_SUBTILE_LAST_BASE        (SPN_RENDER_SUBTILE_LAST * SPN_TILE_HEIGHT)
 
 //
 // clang-format on
@@ -1026,16 +983,6 @@ spn_tile_scatter_ttsb(const SPN_RENDER_TTS tts)
 #endif
 
 //
-//
-//
-
-#if (SPN_RENDER_TILE_CHANNEL_SIZE_LOG2 == 0)
-#define SPN_PIXEL_COVER_WIP(I) cover_wip[I]
-#else
-#define SPN_PIXEL_COVER_WIP(I) cover_wip[I / SPN_TILE_CHANNEL_SIZE][I & SPN_TILE_CHANNEL_MASK]
-#endif
-
-//
 // Compute accumulated pixel coverage "fill rules" using Surveyor's
 // Algorithm.
 //
@@ -1062,7 +1009,7 @@ spn_tile_cover_nonzero()
     const SPN_RENDER_PIXEL_AREA  trapmin = min(trapabs, SPN_TTS_FILL_MAX_AREA);                    \
     const SPN_RENDER_PIXEL_COVER nonzero = SPN_RENDER_PIXEL_COVER(trapmin);                        \
                                                                                                    \
-    SPN_PIXEL_COVER_WIP(I) = nonzero * SPN_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32);      \
+    cover_wip##I = nonzero * SPN_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32);                \
                                                                                                    \
     if (!L)                                                                                        \
       {                                                                                            \
@@ -1092,7 +1039,7 @@ spn_tile_cover_evenodd()
     const SPN_RENDER_PIXEL_AREA  reflect = abs(SPN_TTS_FILL_MAX_AREA - maskabs);                   \
     const SPN_RENDER_PIXEL_COVER evenodd = SPN_RENDER_PIXEL_COVER(reflect);                        \
                                                                                                    \
-    SPN_PIXEL_COVER_WIP(I) = evenodd * SPN_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32);      \
+    cover_wip##I = evenodd * SPN_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32);                \
                                                                                                    \
     if (!L)                                                                                        \
       {                                                                                            \
@@ -1108,25 +1055,31 @@ spn_tile_cover_evenodd()
 //
 
 void
-spn_tile_color_fill_solid(SPN_SUBGROUP_UNIFORM const uint rg_uint,
-                          SPN_SUBGROUP_UNIFORM const uint ba_uint)
+spn_tile_color_fill_solid(SPN_SUBGROUP_UNIFORM const uint rg32,
+                          SPN_SUBGROUP_UNIFORM const uint ba32)
 {
   //
-  // solid fill -- loads { fp16x2 rg, fp16x2 ba } from cmd stream
+  // solid fill
   //
-  SPN_SUBGROUP_UNIFORM const SPN_RENDER_COLOR_PAIR rg = SPN_RENDER_COLOR_PAIR_UNPACK(rg_uint);
+  // loads { fp16x2 rg, fp16x2 ba } from cmd stream
+  //
+  // NOTE(allanmac): we could load the color into column 0 and then
+  // copy it to the remaining columns.
+  //
+#ifndef SPN_RENDER_TILE_COLOR_WIP_ENABLED
+  color_wip = SPN_RENDER_COLOR_UNPACK(rg32, ba32);
 
-  SPN_SUBGROUP_UNIFORM const SPN_RENDER_COLOR_PAIR ba = SPN_RENDER_COLOR_PAIR_UNPACK(ba_uint);
+  color_wip.a = -color_wip.a;
+#else
+  SPN_SUBGROUP_UNIFORM SPN_RENDER_TILE_COLOR rgba = SPN_RENDER_COLOR_UNPACK(rg32, ba32);
 
-  SPN_SUBGROUP_UNIFORM const SPN_RENDER_TILE_COLOR rgba = { SPN_RENDER_TILE_CHANNEL(rg[0]),
-                                                            SPN_RENDER_TILE_CHANNEL(rg[1]),
-                                                            SPN_RENDER_TILE_CHANNEL(ba[0]),
-                                                            SPN_RENDER_TILE_CHANNEL(ba[1]) };
+  rgba.a = -rgba.a;  // temporarily here
 
 #undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) color_wip[I] = rgba;
+#define SPN_EXPAND_X(I, N, P, L) color_wip##I = rgba;
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND()
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+#endif
 }
 
 //
@@ -1139,23 +1092,18 @@ spn_tile_blend_over()
   //
   // fralunco = cover.wip * acc.a
   //
-  // acc.r    =  fralunco * wip.r + acc.r
-  // acc.g    =  fralunco * wip.g + acc.g
-  // acc.b    =  fralunco * wip.b + acc.b
-  // acc.a    = -fralunco * wip.a + acc.a
+  // acc.r = +fralunco * wip.r + acc.r
+  // acc.g = +fralunco * wip.g + acc.g
+  // acc.b = +fralunco * wip.b + acc.b
+  // acc.a = -fralunco * wip.a + acc.a <-- wip.a is negated
+  //
+  // Assumes color.wip.a is negated.
   //
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  {                                                                                                \
-    const SPN_RENDER_TILE_COVER fralunco = cover_wip[I] * SPN_COLOR_ACC_A(I);                      \
-                                                                                                   \
-    SPN_COLOR_ACC_R(I) = fma(+fralunco, SPN_COLOR_WIP_R(I), SPN_COLOR_ACC_R(I));                   \
-    SPN_COLOR_ACC_G(I) = fma(+fralunco, SPN_COLOR_WIP_G(I), SPN_COLOR_ACC_G(I));                   \
-    SPN_COLOR_ACC_B(I) = fma(+fralunco, SPN_COLOR_WIP_B(I), SPN_COLOR_ACC_B(I));                   \
-    SPN_COLOR_ACC_A(I) = fma(-fralunco, SPN_COLOR_WIP_A(I), SPN_COLOR_ACC_A(I));                   \
-  }
+  color_acc##I += (cover_wip##I * color_acc##I.a) * SPN_RENDER_TILE_COLOR_WIP(I);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1166,25 +1114,18 @@ void
 spn_tile_blend_plus()
 {
   //
-  // cover_min = min(cover.wip,a.acc)
+  // cover_min = min(cover.wip,acc.a)
   //
-  // r.acc =  cover_min * r.wip + r.acc
-  // g.acc =  cover_min * g.wip + g.acc
-  // b.acc =  cover_min * b.wip + b.acc
-  // a.acc = -cover_min * a.wip + a.acc
+  // r.acc =  cover_min * wip.r + acc.r
+  // g.acc =  cover_min * wip.g + acc.g
+  // b.acc =  cover_min * wip.b + acc.b
+  // a.acc = -cover_min * wip.a + acc.a
   //
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  {                                                                                                \
-    const SPN_RENDER_TILE_COVER cover_min = min(cover_wip[I], SPN_COLOR_ACC_A(I));                 \
-                                                                                                   \
-    SPN_COLOR_ACC_R(I) = fma(+cover_min, SPN_COLOR_WIP_R(I), SPN_COLOR_ACC_R(I));                  \
-    SPN_COLOR_ACC_G(I) = fma(+cover_min, SPN_COLOR_WIP_G(I), SPN_COLOR_ACC_G(I));                  \
-    SPN_COLOR_ACC_B(I) = fma(+cover_min, SPN_COLOR_WIP_B(I), SPN_COLOR_ACC_B(I));                  \
-    SPN_COLOR_ACC_A(I) = fma(-cover_min, SPN_COLOR_WIP_A(I), SPN_COLOR_ACC_A(I));                  \
-  }
+  color_acc##I += min(cover_wip##I, color_acc##I.a) * SPN_RENDER_TILE_COLOR_WIP(I);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1195,21 +1136,18 @@ void
 spn_tile_blend_multiply()
 {
   //
-  // r.acc = (cover.wip * r.wip) * r.acc
-  // g.acc = (cover.wip * g.wip) * g.acc
-  // b.acc = (cover.wip * b.wip) * b.acc
-  // a.acc = (cover.wip * a.wip) * (1.0 - a.acc) <-- a.acc is already (1.0 - alpha)
+  // acc.r = (cover.wip * wip.r) * acc.r
+  // acc.g = (cover.wip * wip.g) * acc.g
+  // acc.b = (cover.wip * wip.b) * acc.b
+  // acc.a = (cover.wip * wip.a) * (1.0 - acc.a) <-- acc.a is already (1.0 - alpha)
+  //
+  // FIXME(allanmac): This may be incorrect.
   //
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  {                                                                                                \
-    SPN_COLOR_ACC_R(I) *= cover_wip[I] * SPN_COLOR_WIP_R(I);                                       \
-    SPN_COLOR_ACC_G(I) *= cover_wip[I] * SPN_COLOR_WIP_G(I);                                       \
-    SPN_COLOR_ACC_B(I) *= cover_wip[I] * SPN_COLOR_WIP_B(I);                                       \
-    SPN_COLOR_ACC_A(I) *= cover_wip[I] * SPN_COLOR_WIP_A(I);                                       \
-  }
+  color_acc##I = cover_wip##I * SPN_RENDER_TILE_COLOR_WIP(I) * color_acc##I;
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1223,26 +1161,37 @@ spn_tile_blend_knockout()
   // cover.wip.contrib = (1.0 - cover.acc) * cover.wip
   // cover.acc         = cover.acc + cover.wip.contrib
   //
-  // r.acc =  cover.wip.contrib * r.wip + r.acc
-  // g.acc =  cover.wip.contrib * g.wip + g.acc
-  // b.acc =  cover.wip.contrib * b.wip + b.acc
-  // a.acc = -cover.wip.contrib * a.wip * a.acc
+  // r.acc =  cover.wip.contrib * wip.r + acc.r
+  // g.acc =  cover.wip.contrib * wip.g + acc.g
+  // b.acc =  cover.wip.contrib * wip.b + acc.b
+  // a.acc = -cover.wip.contrib * wip.a + acc.a
+  //
+  // Destructively updates cover.wip
+  //
+
+  //
+  // 1. cover_wip = cover_wip - cover_wip * cover.acc
   //
 #undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  {                                                                                                \
-    const SPN_RENDER_TILE_COVER contrib =                                                          \
-      cover_wip[I] * (SPN_RENDER_TILE_COVER(1) - cover_acc[I]);                                    \
-                                                                                                   \
-    cover_acc[I] += contrib;                                                                       \
-                                                                                                   \
-    SPN_COLOR_ACC_R(I) = fma(+contrib, SPN_COLOR_WIP_R(I), SPN_COLOR_ACC_R(I));                    \
-    SPN_COLOR_ACC_G(I) = fma(+contrib, SPN_COLOR_WIP_G(I), SPN_COLOR_ACC_G(I));                    \
-    SPN_COLOR_ACC_B(I) = fma(+contrib, SPN_COLOR_WIP_B(I), SPN_COLOR_ACC_B(I));                    \
-    SPN_COLOR_ACC_A(I) = fma(-contrib, SPN_COLOR_WIP_A(I), SPN_COLOR_ACC_A(I));                    \
-  }
+#define SPN_EXPAND_X(I, N, P, L) cover_wip##I = fma(-cover_wip##I, cover_acc##I, cover_wip##I);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+
+  //
+  // 2. cover_acc += cover_wip
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) cover_acc##I += cover_wip##I;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+
+  //
+  // 3. color_acc = color_wip * cover_wip + color_acc
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) color_acc##I += SPN_RENDER_TILE_COLOR_WIP(I) * cover_wip##I;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1253,9 +1202,9 @@ void
 spn_tile_cover_msk_copy_wip()
 {
 #undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) cover_msk[I] = cover_wip[I];
+#define SPN_EXPAND_X(I, N, P, L) cover_msk##I = cover_wip##I;
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1266,9 +1215,9 @@ void
 spn_tile_cover_msk_copy_acc()
 {
 #undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) cover_msk[I] = cover_acc[I];
+#define SPN_EXPAND_X(I, N, P, L) cover_msk##I = cover_acc##I;
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1282,15 +1231,35 @@ spn_tile_cover_accumulate()
   // cover.wip.contrib = (1.0 - cover.acc) * cover.wip
   // cover.acc         = cover.acc + cover.wip.contrib
   //
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  cover_acc[I] = fma(SPN_RENDER_TILE_COVER(1) - cover_acc[I], cover_wip[I], cover_acc[I]);
+  // Destructively updates cover.wip
+  //
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  //
+  // cover.wip = cover.wip - cover.acc * cover.wip
+  // cover.acc = cover.acc + cover.wip
+  //
+  // cover.acc = cover.acc + cover.wip - cover.acc * cover.wip
+  //
+
+  //
+  // 1. cover_wip = -cover_wip * cover_acc + cover_wip
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) cover_wip##I = fma(-cover_wip##I, cover_acc##I, cover_wip##I);
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+
+  //
+  // 2. cover_acc = cover_acc + cover_wip
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) cover_acc##I += cover_wip##I;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
-//
+// COVER MASK
 //
 
 void
@@ -1300,53 +1269,64 @@ spn_tile_cover_wip_mask()
   // cover.wip *= cover.msk
   //
 #undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) cover_wip[I] *= cover_msk[I];
+#define SPN_EXPAND_X(I, N, P, L) cover_wip##I *= cover_msk##I;
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
-//
+// COVER ZERO
 //
 
+//
+// FIXME(allanmac): cover_wip_zero() is never going to be used
+//
 void
 spn_tile_cover_wip_zero()
 {
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) cover_wip[I] = SPN_RENDER_TILE_COVER(0);
+  const SPN_RENDER_TILE_COVER zero = SPN_RENDER_TILE_COVER(0);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) cover_wip##I = zero;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 void
 spn_tile_cover_acc_zero()
 {
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) cover_acc[I] = SPN_RENDER_TILE_COVER(0);
+  const SPN_RENDER_TILE_COVER zero = SPN_RENDER_TILE_COVER(0);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) cover_acc##I = zero;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 void
 spn_tile_cover_msk_zero()
 {
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) cover_msk[I] = SPN_RENDER_TILE_COVER(0);
+  const SPN_RENDER_TILE_COVER zero = SPN_RENDER_TILE_COVER(0);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) cover_msk##I = zero;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
-//
+// COVER ONE
 //
 
 void
 spn_tile_cover_msk_one()
 {
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) cover_msk[I] = SPN_RENDER_TILE_COVER(1);
+  const SPN_RENDER_TILE_COVER one = SPN_RENDER_TILE_COVER(1);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) cover_msk##I = one;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1356,40 +1336,45 @@ spn_tile_cover_msk_one()
 void
 spn_tile_cover_msk_invert()
 {
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) cover_msk[I] = SPN_RENDER_TILE_COVER(1) - cover_msk[I];
+  const SPN_RENDER_TILE_COVER one = SPN_RENDER_TILE_COVER(1);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) cover_msk##I = one - cover_msk##I;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
 //
 //
 
+//
+// FIXME(allanmac): color_wip_zero() will never be used
+//
 void
 spn_tile_color_wip_zero()
 {
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  color_wip[I] = SPN_RENDER_TILE_COLOR(SPN_RENDER_TILE_CHANNEL(0),                                 \
-                                       SPN_RENDER_TILE_CHANNEL(0),                                 \
-                                       SPN_RENDER_TILE_CHANNEL(0),                                 \
-                                       SPN_RENDER_TILE_CHANNEL(1));
+#ifndef SPN_RENDER_TILE_COLOR_WIP_ENABLED
+  color_wip = SPN_RENDER_TILE_COLOR(0, 0, 0, -1);
+#else
+  const SPN_RENDER_TILE_COLOR rgba = SPN_RENDER_TILE_COLOR(0, 0, 0, -1);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) color_wip##I = rgba;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+#endif
 }
 
 void
 spn_tile_color_acc_zero()
 {
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  color_acc[I] = SPN_RENDER_TILE_COLOR(SPN_RENDER_TILE_CHANNEL(0),                                 \
-                                       SPN_RENDER_TILE_CHANNEL(0),                                 \
-                                       SPN_RENDER_TILE_CHANNEL(0),                                 \
-                                       SPN_RENDER_TILE_CHANNEL(1));
+  const SPN_RENDER_TILE_COLOR rgba = SPN_RENDER_TILE_COLOR(0, 0, 0, 1);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) color_acc##I = rgba;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1417,9 +1402,9 @@ spn_tile_color_acc_test_opacity()
   SPN_RENDER_TILE_CHANNEL a = SPN_RENDER_TILE_CHANNEL(0);
 
 #undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) a = max(a, SPN_COLOR_ACC_A(I));
+#define SPN_EXPAND_X(I, N, P, L) a = max(a, color_acc##I.a);
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND();
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND();
 
   // are all components in the subtile zero?
   if (subgroupAll(SPN_RENDER_TILE_CHANNEL_IS_ZERO(a)))
@@ -1440,31 +1425,24 @@ spn_tile_color_acc_test_opacity()
 //
 
 void
-spn_tile_color_acc_over_background(SPN_SUBGROUP_UNIFORM const uint rg_uint,
-                                   SPN_SUBGROUP_UNIFORM const uint ba_uint)
+spn_tile_color_acc_over_background(SPN_SUBGROUP_UNIFORM const uint rg32,
+                                   SPN_SUBGROUP_UNIFORM const uint ba32)
 {
   //
   // acc.r = acc.a * r + acc.r
   // acc.g = acc.a * g + acc.g
   // acc.b = acc.a * b + acc.b
   //
-  SPN_SUBGROUP_UNIFORM const SPN_RENDER_COLOR_PAIR rg = SPN_RENDER_COLOR_PAIR_UNPACK(rg_uint);
-
-  SPN_SUBGROUP_UNIFORM const SPN_RENDER_TILE_CHANNEL r = SPN_RENDER_TILE_CHANNEL(rg[0]);
-
-  SPN_SUBGROUP_UNIFORM const SPN_RENDER_TILE_CHANNEL g = SPN_RENDER_TILE_CHANNEL(rg[1]);
-
-  SPN_SUBGROUP_UNIFORM const SPN_RENDER_COLOR_PAIR ba = SPN_RENDER_COLOR_PAIR_UNPACK(ba_uint);
-
-  SPN_SUBGROUP_UNIFORM const SPN_RENDER_TILE_CHANNEL b = SPN_RENDER_TILE_CHANNEL(ba[0]);
+  SPN_SUBGROUP_UNIFORM const SPN_RENDER_TILE_COLOR rgb1 = SPN_RENDER_COLOR_UNPACK(rg32, ba32);
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  SPN_COLOR_ACC_R(I) = fma(SPN_COLOR_ACC_A(I), r, SPN_COLOR_ACC_R(I));                             \
-  SPN_COLOR_ACC_G(I) = fma(SPN_COLOR_ACC_A(I), g, SPN_COLOR_ACC_G(I));                             \
-  SPN_COLOR_ACC_B(I) = fma(SPN_COLOR_ACC_A(I), b, SPN_COLOR_ACC_B(I));
+  {                                                                                                \
+    color_acc##I.rg += color_acc##I.a * rgb1.rg;                                                   \
+    color_acc##I.b += color_acc##I.a * rgb1.b;                                                     \
+  }
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND()
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1505,10 +1483,10 @@ spn_tile_color_acc_store_to_surface()
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  imageStore(surface, xy, color_acc[I]);                                                           \
+  imageStore(surface, xy, color_acc##I);                                                           \
   xy.x += SPN_RENDER_SUBTILE_COUNT;
 
-  SPN_RENDER_SUBTILE_MEMBERS_EXPAND()
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
 
 //
@@ -1571,14 +1549,6 @@ main()
 #endif
 
   //
-  // DEBUG
-  //
-#if 0
-  if (ttck_offset_idx == 1)
-    return;
-#endif
-
-  //
   //
   //
 
@@ -1620,31 +1590,6 @@ main()
     if (!is_valid)
       ttck_sg[1] = ~lgf_yxl[1];
   }
-
-  //
-  // DEBUG
-  //
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0], SPN_RENDER_SUBGROUP_SIZE * 5);
-
-    debug_base = subgroupBroadcast(debug_base, 0);
-
-    bp_debug[debug_base + gl_SubgroupInvocationID + SPN_RENDER_SUBGROUP_SIZE * 0] =
-      0xAAAAAAAA;
-    bp_debug[debug_base + gl_SubgroupInvocationID + SPN_RENDER_SUBGROUP_SIZE * 1] =
-      gl_SubgroupInvocationID;
-    bp_debug[debug_base + gl_SubgroupInvocationID + SPN_RENDER_SUBGROUP_SIZE * 2] =
-      ttck_offset_idx;
-    bp_debug[debug_base + gl_SubgroupInvocationID + SPN_RENDER_SUBGROUP_SIZE * 3] =
-      ttck_sg[0];
-    bp_debug[debug_base + gl_SubgroupInvocationID + SPN_RENDER_SUBGROUP_SIZE * 4] =
-      ttck_sg[1];
-  }
-#endif
 
 #elif defined(SPN_DEVICE_RENDER_TTCKS_USE_SHARED)
   //
@@ -1808,22 +1753,6 @@ main()
 
                       const SPN_RENDER_TTX ttx = int(bp_blocks[ttxb_base + subtile_iid]);
 
-                      //
-                      // DEBUG
-                      //
-#if 0
-                      {
-                        uint debug_base = 0;
-
-                        if (subtile_iid == 0)
-                          debug_base = atomicAdd(bp_debug_count[0], 32);
-
-                        debug_base = subgroupShuffleUp(debug_base, subtile_iid);
-
-                        bp_debug[debug_base + subtile_iid] = 0xDEADBEEF;
-                        bp_debug[debug_base + subtile_iid + SPN_BLOCK_POOL_SUBBLOCK_DWORDS] = ttx;
-                      }
-#endif
                       //
                       // NOTE(allanmac): POTENTIAL OPTIMIZATION -- It's
                       // not a requirement, but sorting against all
@@ -2199,8 +2128,8 @@ main()
                     spn_tile_color_acc_test_opacity();
                     break;
 
-                    //default:
-                    //return; // this is an illegal opcode -- trap and die!
+                    // default:
+                    // return;  // this is an illegal opcode -- trap and die!
                 }
             }
         }  // continue as long as tile flush isn't complete

@@ -163,9 +163,9 @@
 #define SPN_DEVICE_RENDER_COVERAGE_USE_SHUFFLE
 
 #if 1
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT                   // temporarily enabled
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT32                 // temporarily enabled
 #else
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16                    // GCN3/4:fp16, GCN5:fp16x2
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT16                 // GCN3/4:fp16, GCN5+:fp16x2
 #endif
 
 // expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent

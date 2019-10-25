@@ -35,7 +35,7 @@ declare_args() {
   # Disabling the spirv-opt pass may also be useful in identifying and
   # attributing code generation bugs.
   #
-  graphics_compute_skip_spirv_opt = false
+  graphics_compute_skip_spirv_opt = true
 
   # The glslangValidator compiler is noisy by default.  A cleanly
   # compiling shader still prints out its filename.

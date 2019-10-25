@@ -163,11 +163,13 @@
 #define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_COVERAGE_USE_SHUFFLE
 
+//
+// TODO(allanmac): generate a new target for NVIDIA devices that support fp16
+//
 #if 1
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT                   // nvidia default
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT32                 // CC: 3.0, 3.2, 3.5, 3.7, 5.0, 5.2, 6.1
 #else
- // we will generate a new target for architectures that support fp16
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FP16                    // compute capability: 5.3, 6.0, 6.2, 7.x
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT16                 // CC: 5.3, 6.0, 6.2, 7.x
 #endif
 
 // expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent

@@ -495,10 +495,22 @@ main(int argc, char const * argv[])
   //
   // create VkDevice
   //
+#if 0
+  //
+  // This feature is missing from our prebuilt Vulkan SDK. Enable as
+  // soon as the prebuilt SDK is updated.
+  //
+  VkPhysicalDeviceShaderFloat16Int8FeaturesKHR const shaderFloat16Int8 = {
+    .sType         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR,
+    .shaderFloat16 = true,
+    .shaderInt8    = true
+  };
+#endif
+
   VkDeviceCreateInfo const device_info = {
 
     .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext                   = NULL,
+    .pNext                   = NULL,  // &shaderFloat16Int8,
     .flags                   = 0,
     .queueCreateInfoCount    = spn_tr.qci_count,
     .pQueueCreateInfos       = qcis,
@@ -996,25 +1008,22 @@ main(int argc, char const * argv[])
 
   switch (vendor_id)
     {
-    case 0x1002:
-      checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_AMD;
-      break;
+      case 0x1002:
+        checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_AMD;
+        break;
 
-    case 0x8086:
-      checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_INTEL;
-      break;
+      case 0x8086:
+        checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_INTEL;
+        break;
 
-    case 0x10DE:
-      checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_NVIDIA;
-      break;
+      case 0x10DE:
+        checksum_good = SPN_DEMO_LION_CUB_CHECKSUM_NVIDIA;
+        break;
     }
 
   if (checksum != checksum_good)
     {
-      fprintf(stderr,
-              "Image checksum failure: 0x%08X != 0x%08X\n",
-              checksum,
-              checksum_good);
+      fprintf(stderr, "Image checksum failure: 0x%08X != 0x%08X\n", checksum, checksum_good);
 
       return EXIT_FAILURE;
     }
