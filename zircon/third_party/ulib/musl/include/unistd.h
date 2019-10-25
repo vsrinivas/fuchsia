@@ -136,8 +136,6 @@ long gethostid(void);
 void sync(void);
 int syncfs(int);
 pid_t setpgrp(void);
-char* crypt(const char*, const char*);
-void encrypt(char*, int);
 void swab(const void* __restrict, void* __restrict, ssize_t);
 #endif
 
