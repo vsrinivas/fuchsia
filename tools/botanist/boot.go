@@ -187,8 +187,9 @@ func BootZedbootShim(ctx context.Context, t tftp.Client, imgs []build.Image) err
 
 func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
 	netsvcName := kernelNetsvcName
-	zirconRImg := build.Image{}
 	bootloaderImg := build.Image{}
+	vbmetaRImg := build.Image{}
+	zirconRImg := build.Image{}
 	for _, img := range imgs {
 		for _, arg := range img.PaveArgs {
 			// Find name by bootserver arg to ensure we are extracting the correct zircon-r.
@@ -199,14 +200,16 @@ func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
 				return nil, fmt.Errorf("unrecognized bootserver argument found: %q", arg)
 			}
 			switch name {
+			case bootloaderNetsvcName:
+				bootloaderImg = img
+			case vbmetaRNetsvcName:
+				vbmetaRImg = img
 			case zirconRNetsvcName:
 				zirconRImg = img
 				// Signed ZBIs cannot be mexec()'d, so pave them to A and boot instead.
 				if strings.HasSuffix(img.Name, ".signed") {
 					netsvcName = zirconANetsvcName
 				}
-			case bootloaderNetsvcName:
-				bootloaderImg = img
 			default:
 				continue
 			}
@@ -220,6 +223,13 @@ func filterZedbootShimImages(imgs []build.Image) ([]*netsvcFile, error) {
 			return nil, err
 		}
 		files = append(files, zedbootFile)
+		if vbmetaRImg.Path != "" && netsvcName == zirconANetsvcName {
+			vbmetaRFile, err := openNetsvcFile(vbmetaANetsvcName, vbmetaRImg.Path)
+			if err != nil {
+				return nil, err
+			}
+			files = append(files, vbmetaRFile)
+		}
 		if bootloaderImg.Path != "" {
 			bootloaderFile, err := openNetsvcFile(bootloaderNetsvcName, bootloaderImg.Path)
 			if err != nil {

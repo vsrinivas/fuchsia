@@ -26,6 +26,10 @@ func TestFilterZedbootShimImages(t *testing.T) {
 		Name:     "zedboot.signed",
 		PaveArgs: []string{"--zirconr"},
 	}
+	vbmetaRImage := build.Image{
+		Name:     "zedboot.vbmeta",
+		PaveArgs: []string{"--vbmetar"},
+	}
 	zedbootImage := build.Image{
 		Name:     "zedboot",
 		PaveArgs: []string{"--zirconr"},
@@ -38,10 +42,10 @@ func TestFilterZedbootShimImages(t *testing.T) {
 		expectedErr error
 	}{
 		{"Empty", []build.Image{}, 0, fmt.Errorf("no zircon-r image found in: %v", []build.Image{})},
-		{"ZedbootNoBootloader", []build.Image{zedbootImage}, 1, nil},
-		{"ZedbootAndBootloader", []build.Image{zedbootImage, bootloaderImage}, 2, nil},
-		{"BooloaderNoZedboot", []build.Image{bootloaderImage}, 0, fmt.Errorf("no zircon-r image found in: %v", []build.Image{bootloaderImage})},
-		{"SignedZedboot", []build.Image{signedZedbootImage}, 1, nil},
+		{"ZedbootNoBootloader", []build.Image{zedbootImage, vbmetaRImage}, 1, nil},
+		{"ZedbootAndBootloader", []build.Image{zedbootImage, vbmetaRImage, bootloaderImage}, 2, nil},
+		{"BooloaderNoZedboot", []build.Image{bootloaderImage, vbmetaRImage}, 0, fmt.Errorf("no zircon-r image found in: %v", []build.Image{bootloaderImage})},
+		{"SignedZedboot", []build.Image{signedZedbootImage, vbmetaRImage}, 2, nil},
 		{"UnexpectedArg", []build.Image{malformedImage}, 0, fmt.Errorf("unrecognized bootserver argument found: %q", "--zirconq")},
 	}
 
