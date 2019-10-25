@@ -47,7 +47,7 @@ A successful call to `zx_futex_wait()` results in the owner of the futex being
 set to the thread referenced by the *new_futex_owner* handle, or to nothing if
 *new_futex_owner* is **ZX_HANDLE_INVALID**.
 
-See *Ownership and Priority Inheritance* in [futex](/docs/zircon/objects/futex.md) for
+See *Ownership and Priority Inheritance* in [futex](/docs/concepts/objects/futex.md) for
 details.
 
 ## RIGHTS
@@ -74,8 +74,8 @@ None.
 
 ## SEE ALSO
 
- - [futex objects](/docs/zircon/objects/futex.md)
- - [timer slack](/docs/zircon/timer_slack.md)
+ - [futex objects](/docs/concepts/objects/futex.md)
+ - [timer slack](/docs/concepts/objects/timer_slack.md)
  - [`zx_futex_requeue()`]
  - [`zx_futex_wake()`]
 

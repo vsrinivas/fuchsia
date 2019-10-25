@@ -266,5 +266,5 @@ generate an exception when a process under such job object attempts any of
 the of the mentioned invalid cases.
 
 ## See Also
-[Objects](/docs/zircon/objects.md),
+[Objects](/docs/concepts/objects/objects.md),
 [Rights](/docs/concepts/kernel/rights.md)

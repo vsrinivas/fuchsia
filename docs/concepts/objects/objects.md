@@ -17,39 +17,39 @@ Zircon actively manages the following resources:
 ## Kernel objects for applications
 
 ### IPC
-+ [Channel](objects/channel.md)
-+ [Socket](objects/socket.md)
-+ [FIFO](objects/fifo.md)
++ [Channel](/docs/concepts/objects/channel.md)
++ [Socket](/docs/concepts/objects/socket.md)
++ [FIFO](/docs/concepts/objects/fifo.md)
 
 ### Tasks
-+ [Process](objects/process.md)
-+ [Thread](objects/thread.md)
-+ [Job](objects/job.md)
-+ [Task](objects/task.md)
++ [Process](/docs/concepts/objects/process.md)
++ [Thread](/docs/concepts/objects/thread.md)
++ [Job](/docs/concepts/objects/job.md)
++ [Task](/docs/concepts/objects/task.md)
 
 ### Scheduling
-+ [Profile](objects/profile.md)
++ [Profile](/docs/concepts/objects/profile.md)
 
 ### Signaling
-+ [Event](objects/event.md)
-+ [Event Pair](objects/eventpair.md)
-+ [Futex](objects/futex.md)
++ [Event](/docs/concepts/objects/event.md)
++ [Event Pair](/docs/concepts/objects/eventpair.md)
++ [Futex](/docs/concepts/objects/futex.md)
 
 ### Memory and address space
-+ [Virtual Memory Object](objects/vm_object.md)
-+ [Virtual Memory Address Region](objects/vm_address_region.md)
-+ [bus_transaction_initiator](objects/bus_transaction_initiator.md)
-+ [Pager](objects/pager.md)
++ [Virtual Memory Object](/docs/concepts/objects/vm_object.md)
++ [Virtual Memory Address Region](/docs/concepts/objects/vm_address_region.md)
++ [bus_transaction_initiator](/docs/concepts/objects/bus_transaction_initiator.md)
++ [Pager](/docs/concepts/objects/pager.md)
 
 ### Waiting
-+ [Port](objects/port.md)
-+ [Timer](objects/timer.md)
++ [Port](/docs/concepts/objects/port.md)
++ [Timer](/docs/concepts/objects/timer.md)
 
 ## Kernel objects for drivers
 
-+ [Interrupts](objects/interrupts.md)
-+ [Resource](objects/resource.md)
-+ [Debuglog](objects/debuglog.md)
++ [Interrupts](/docs/concepts/objects/interrupts.md)
++ [Resource](/docs/concepts/objects/resource.md)
++ [Debuglog](/docs/concepts/objects/debuglog.md)
 
 ## Kernel Object and LK
 Some kernel objects wrap one or more LK-level constructs. For example the

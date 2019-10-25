@@ -48,7 +48,7 @@ None.
 
 ## SEE ALSO
 
- - [futex objects](/docs/zircon/objects/futex.md)
+ - [futex objects](/docs/concepts/objects/futex.md)
  - [`zx_futex_requeue()`]
  - [`zx_futex_wait()`]
  - [`zx_futex_wake()`]

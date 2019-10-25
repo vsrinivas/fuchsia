@@ -51,7 +51,7 @@ process.  (For example, a Channel ceases asserting **ZX_CHANNEL_READABLE**
 once the last message in its queue is read).
 
 The maximum number of items that may be waited upon is **ZX_WAIT_MANY_MAX_ITEMS**,
-which is 8.  To wait on more things at once use [Ports](/docs/zircon/objects/port.md).
+which is 8.  To wait on more things at once use [Ports](/docs/concepts/objects/port.md).
 
 ## RIGHTS
 
@@ -103,7 +103,7 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
- - [timer slack](/docs/zircon/timer_slack.md)
+ - [timer slack](/docs/concepts/objects/timer_slack.md)
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_one()`]
 

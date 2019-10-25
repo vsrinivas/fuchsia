@@ -2,18 +2,6 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: Objects
-  section:
-  - title: "Kernel objects"
-    path: /docs/zircon/objects.md
-  - include: /docs/zircon/objects/_toc.yaml
-  - title: "Timer Slack"
-    path: /docs/zircon/timer_slack.md
-  - title: "Time units"
-    path: /docs/zircon/time.md
-
-- title: "Handles"
-  path: /docs/zircon/handles.md
 
 - title: "Jitterentropy"
   section:

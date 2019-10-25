@@ -27,7 +27,7 @@ zx_status_t zx_clock_get_details(zx_handle_t handle,
 ## DESCRIPTION
 
 Fetches the fine grained details of the clock object.  See
-[clocks](/docs/zircon/objects/clock.md) for the specifics of the details
+[clocks](/docs/concepts/objects/clock.md) for the specifics of the details
 reported.  Currently, there is only one details structure defined for clocks,
 `zx_clock_details_v1_t`.  Users must specify the version of the structure using
 the options parameter as well as providing at least
@@ -64,8 +64,8 @@ out parameter.
 
 ## SEE ALSO
 
- - [clock transformations](/docs/zircon/clock_transformations.md)
- - [clocks](/docs/zircon/objects/clock.md)
+ - [clock transformations](/docs/concepts/objects/clock_transformations.md)
+ - [clocks](/docs/concepts/objects/clock.md)
  - [`zx_clock_create()`]
  - [`zx_clock_read()`]
  - [`zx_clock_update()`]
