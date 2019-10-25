@@ -52,7 +52,20 @@ class DwarfExprEval {
   // A DWARF expression can compute either the address of the desired object in the debugged
   // programs address space, or it can compute the actual value of the object (because it may not
   // exist in memory).
-  enum class ResultType { kPointer, kValue };
+  enum class ResultType {
+    // The return value from GetResult() is a pointer to the result in memory. The caller will need
+    // to know the size and type of this result from the context.
+    kPointer,
+
+    // The return value from GetResult() is the resulting value itself. Most results will need
+    // to be truncated to the correct size (the caller needs to know the size and type from the
+    // context).
+    kValue,
+
+    // The result is stored in a data block returned by result_data(). It can be any size. Do not
+    // call GetResult() as the stack normally has no data on it in this case.
+    kData
+  };
 
   // The DWARF spec says the stack entry "can represent a value of any supported base type of the
   // target machine". We need to support x87 long doubles (80 bits) and XMM registers (128 bits).
@@ -81,10 +94,13 @@ class DwarfExprEval {
   // Valid when is_success(), this indicates how to interpret the value from GetResult().
   ResultType GetResultType() const;
 
-  // Valid when is_success(), this returns the result of evaluating the expression. The meaning will
-  // be dependent on the context of the expression being evaluated. Most results will be smaller
-  // than this in which case they will use only the low bits.
+  // Valid when is_success() and type() == kPointer/kValue. Returns the result of evaluating the
+  // expression. The meaning will be dependent on the context of the expression being evaluated.
+  // Most results will be smaller than this in which case they will use only the low bits.
   StackEntry GetResult() const;
+
+  // Valid when is_success() and type() == kData.
+  const std::vector<uint8_t>& result_data() const { return result_data_; }
 
   // When the result is computed, this will indicate if the result is directly from a register,
   // and if it is, which one. If the current result was the result of some computation and has no
@@ -139,6 +155,14 @@ class DwarfExprEval {
   bool ReadLEBSigned(SignedStackEntry* output);
   bool ReadLEBUnsigned(StackEntry* output);
 
+  // Schedules an asynchronous memory read. If there is any failure, including short reads, this
+  // will report it and fail evaluation.
+  //
+  // If the correct amount of memory is read, it will issue the callback with the data and then
+  // continue evaluation.
+  void ReadMemory(TargetPointer address, uint32_t byte_size,
+                  fit::callback<void(DwarfExprEval* eval, std::vector<uint8_t> value)> on_success);
+
   void ReportError(const std::string& msg);
   void ReportError(const Err& err);
   void ReportStackUnderflow();
@@ -170,6 +194,7 @@ class DwarfExprEval {
   Completion OpMod();
   Completion OpOver();
   Completion OpPick();
+  Completion OpPiece();
   Completion OpPlusUconst();
   Completion OpPushSigned(int byte_count);
   Completion OpPushUnsigned(int byte_count);
@@ -201,6 +226,12 @@ class DwarfExprEval {
   std::unique_ptr<llvm::DataExtractor> data_extractor_;
 
   // The result type. Normally expressions compute pointers unless explicitly tagged as a value.
+  // This tracks the current "simple" expression result type. For "composite" operations that
+  // use one or more DW_OP_[bit_]piece there will be nonempty result_data_ rather than writing
+  // "kData" here.
+  //
+  // This needs to be separate because there can be multiple simple expressions independent of the
+  // result_data_ in the composite case. So this value will never be "kData".
   ResultType result_type_ = ResultType::kPointer;
 
   // Indicates that execution is complete. When this is true, the callback will have been issued. A
@@ -211,6 +242,13 @@ class DwarfExprEval {
   bool is_success_ = false;
 
   std::vector<StackEntry> stack_;
+
+  // Tracks the result when generating composite descriptions via DW_OP_[bit_]piece. A nonempty
+  // contents indicates that the final result is of type "kData" (see result_type_ for more).
+  //
+  // TODO(bug 39630) we will need to track source information (memory address or register ID) for
+  // each subrange in this block to support writing to the generated object.
+  std::vector<uint8_t> result_data_;
 
   // Set when a register value is pushed on the stack and cleared when anything else happens. This
   // allows the user of the expression to determine if the result of the expression is directly from

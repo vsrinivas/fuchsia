@@ -32,6 +32,9 @@ DwarfExprEval::~DwarfExprEval() {
 DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
   FXL_DCHECK(is_complete_);
   FXL_DCHECK(is_success_);
+
+  if (!result_data_.empty())
+    return ResultType::kData;
   return result_type_;
 }
 
@@ -77,7 +80,7 @@ bool DwarfExprEval::ContinueEval() {
       data_provider_.reset();
       is_complete_ = true;
       Err err;
-      if (stack_.empty()) {
+      if (stack_.empty() && result_data_.empty()) {
         // Failure to compute any values.
         err = Err("DWARF expression produced no results.");
         is_success_ = false;
@@ -231,15 +234,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_bregx:
       return OpBregx();
     case llvm::dwarf::DW_OP_piece:
-      // TODO(brettw) implement this. An example oif LLVM building a 80-bit constant:
-      //   DW_OP_constu 0x9851eb851eb85000, DW_OP_stack_value, DW_OP_piece 0x8,
-      //   DW_OP_constu 0x4000, DW_OP_stack_value, DW_OP_bit_piece 0x10 0x40, DW_OP_stack_value
-      // For the code:
-      //   long double ld = 2.38;
-      //   ld += argc;  // Force non-constant.
-      // Which in binary is 0x04009851eb851eb85000
-      ReportUnimplementedOpcode(op);
-      return Completion::kSync;
+      return OpPiece();
     case llvm::dwarf::DW_OP_deref:
       return OpDeref(sizeof(TargetPointer));
     case llvm::dwarf::DW_OP_deref_size:
@@ -261,8 +256,17 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_call_frame_cfa:
       return OpCFA();
     case llvm::dwarf::DW_OP_bit_piece:  // ULEB128 size + ULEB128 offset.
-      // TODO(brettw) implement this, see DW_OP_piece.
-      ReportUnimplementedOpcode(op);
+      // Clang will generate bit_piece operations to make 80-bit long double constants, but
+      // the expressions are invalid: https://bugs.llvm.org/show_bug.cgi?id=43682
+      // We were able to get GCC to generate a piece operation for:
+      //   void foo(int x, int y) {
+      //     struct { int x:3, :3, y:3; } s = {x, y};
+      //   }
+      // That also seems invalid. So we're waiting for a clearly valid example in the wild before
+      // spending time trying to implement this.
+      ReportError(
+          "The DWARF encoding for this symbol uses DW_OP_bit_piece which is unimplemented.\n"
+          "Please file a bit with a repro case so we can implement it properly.");
       return Completion::kSync;
     case llvm::dwarf::DW_OP_implicit_value:  // ULEB128 size + block of size.
       return OpImplicitValue();
@@ -271,6 +275,13 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_GNU_push_tls_address:
       // TODO(DX-694) support TLS.
       ReportError("TLS not currently supported. See DX-694.");
+      return Completion::kSync;
+
+    case llvm::dwarf::DW_OP_implicit_pointer:
+    case 0xf2:  // DW_OP_GNU_implicit_pointer (pre-DWARF5 GNU extension for this).
+      // GCC generates this when a pointer has been optimized out, but it still can provide the
+      // value of the thing that it pointed to. We don't implement this.
+      ReportError("Optimized out (DW_OP_implicit_pointer)");
       return Completion::kSync;
 
     case 0xf3:  // DW_OP_GNU_entry_value
@@ -286,7 +297,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
       // separately. This isn't something that we currently do, and can't be
       // done in general (it could be implemented if you previously single-
       // stepped into that function though).
-      ReportError("Optimized out");
+      ReportError("Optimized out (DW_OP_GNU_entry_value)");
       return Completion::kSync;
 
     default:
@@ -397,6 +408,32 @@ bool DwarfExprEval::ReadLEBUnsigned(StackEntry* output) {
     return false;
   }
   return true;
+}
+
+void DwarfExprEval::ReadMemory(
+    TargetPointer address, uint32_t byte_size,
+    fit::callback<void(DwarfExprEval* eval, std::vector<uint8_t> value)> on_success) {
+  // Reading memory means the result is not constant.
+  result_is_constant_ = false;
+
+  data_provider_->GetMemoryAsync(
+      address, byte_size,
+      [address, byte_size, weak_eval = weak_factory_.GetWeakPtr(),
+       on_success = std::move(on_success)](const Err& err, std::vector<uint8_t> value) mutable {
+        if (!weak_eval) {
+          return;
+        } else if (err.has_error()) {
+          weak_eval->ReportError(err);
+        } else if (value.size() != byte_size) {
+          weak_eval->ReportError(
+              fxl::StringPrintf("Invalid pointer 0x%" PRIx64 ".", static_cast<uint64_t>(address)));
+        } else {
+          on_success(weak_eval.get(), std::move(value));
+
+          // Picks up processing at the next instruction.
+          weak_eval->ContinueEval();
+        }
+      });
 }
 
 void DwarfExprEval::ReportError(const std::string& msg) { ReportError(Err(msg)); }
@@ -626,9 +663,6 @@ DwarfExprEval::Completion DwarfExprEval::OpBregx() {
 
 // Pops the stack and pushes an given-sized value from memory at that location.
 DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size) {
-  // Reading memory means the result is not constant.
-  result_is_constant_ = false;
-
   if (stack_.empty()) {
     ReportStackUnderflow();
     return Completion::kSync;
@@ -641,27 +675,14 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size) {
 
   StackEntry addr = stack_.back();
   stack_.pop_back();
-  data_provider_->GetMemoryAsync(
-      addr, byte_size,
-      [addr, byte_size, weak_eval = weak_factory_.GetWeakPtr()](const Err& err,
-                                                                std::vector<uint8_t> value) {
-        if (!weak_eval) {
-          return;
-        } else if (err.has_error()) {
-          weak_eval->ReportError(err);
-        } else if (value.size() != byte_size) {
-          weak_eval->ReportError(
-              fxl::StringPrintf("Invalid pointer 0x%" PRIx64 ".", static_cast<uint64_t>(addr)));
-        } else {
-          // Success (this assumes little-endian and copies starting from the low bytes).
-          StackEntry to_push = 0;
-          memcpy(&to_push, &value[0], byte_size);
-          weak_eval->Push(to_push);
-
-          // Picks up processing at the next instruction.
-          weak_eval->ContinueEval();
-        }
-      });
+  ReadMemory(addr, byte_size, [](DwarfExprEval* eval, std::vector<uint8_t> data) {
+    // Success. This assumes little-endian and copies starting from the low bytes. The data will
+    // have already been validated to be the correct size so we know it will fit in a StackEntry.
+    FXL_DCHECK(data.size() <= sizeof(StackEntry));
+    StackEntry to_push = 0;
+    memcpy(&to_push, &data[0], data.size());
+    eval->Push(to_push);
+  });
   return Completion::kAsync;
 }
 
@@ -716,6 +737,53 @@ DwarfExprEval::Completion DwarfExprEval::OpPick() {
   // Index is from end (0 = last item).
   Push(stack_[stack_.size() - 1 - index]);
   return Completion::kSync;
+}
+
+// 1 paramter: ULEB size of item in bytes.
+DwarfExprEval::Completion DwarfExprEval::OpPiece() {
+  StackEntry byte_size = 0;
+  if (!ReadLEBUnsigned(&byte_size))
+    return Completion::kSync;
+
+  if (stack_.empty()) {
+    ReportStackUnderflow();
+    return Completion::kSync;
+  }
+
+  StackEntry source = stack_.back();
+  stack_.pop_back();
+
+  if (result_type_ == ResultType::kValue) {
+    // Simple case where the source of the "piece" is the value at the top of the stack.
+    if (byte_size > sizeof(StackEntry)) {
+      ReportError(fxl::StringPrintf("DWARF expression listed a data size of %d which is too large.",
+                                    static_cast<int>(byte_size)));
+      return Completion::kSync;
+    }
+
+    // We want the low bytes, this assumes little-endian.
+    uint8_t source_as_bytes[sizeof(StackEntry)];
+    memcpy(&source_as_bytes, &source, sizeof(StackEntry));
+    result_data_.insert(result_data_.end(), std::begin(source_as_bytes),
+                        &source_as_bytes[byte_size]);
+
+    // Reset the expression state to start a new one.
+    result_type_ = ResultType::kPointer;
+    return Completion::kSync;
+  }
+
+  // This is the more complex case where the top of the stack is a pointer to the value in memory.
+  // We read that many bytes from memory and add it to the result data.
+  ReadMemory(source, byte_size, [](DwarfExprEval* eval, std::vector<uint8_t> data) {
+    // Success. Copy to the result.
+    eval->result_data_.insert(eval->result_data_.end(), data.begin(), data.end());
+
+    // Reset the expression state to start a new one.
+    eval->result_type_ = ResultType::kPointer;
+  });
+
+  // The ReadMemory call will complete asynchronously.
+  return Completion::kAsync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpPlusUconst() {
@@ -794,11 +862,6 @@ DwarfExprEval::Completion DwarfExprEval::OpStackValue() {
   // constant value. The value from the top of the stack is the value to be
   // used. This is the actual object value and not the location."
   result_type_ = ResultType::kValue;
-
-  // This operation also implicitly terminates the computation. Jump to the
-  // end to indicate this.
-  expr_index_ = expr_.size();
-
   return Completion::kSync;
 }
 

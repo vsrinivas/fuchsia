@@ -16,7 +16,33 @@ namespace zxdb {
 class ExprValueSource {
  public:
   // Where this value came from.
-  enum class Type { kTemporary, kMemory, kRegister, kConstant };
+  enum class Type {
+    // No source, this is the result of some computation.
+    kTemporary,
+
+    // The value lived in memory at the specified address.
+    kMemory,
+
+    // The value came from the specified CPU register.
+    kRegister,
+
+    // The value is known to be constant and can not be changed. The difference between this and
+    // "temporary" is really just messaging since neither can be modified.
+    kConstant,
+
+    // This value came from more than one place. The optimizer can sometimes split things up,
+    // for example, a pair might be put into two CPU registers, one for each value. There can also
+    // be composite CPU/memory ones if something is in memory, but a modification to that is
+    // only stored in a register.
+    //
+    // We currently don't support this and this enum indicates that the value can't be modified.
+    // But we can message that it could be with additional feature work.
+    //
+    // TODO(bug 39630) the ExprValueSource should probably have a vector of sub-regions, each with
+    // their own ExprValueSource. When we extract structure members, also extract the correct
+    // sub-region(s).
+    kComposite,
+  };
 
   // Indicates an unknown, temporary (the output of "i + 4"), or constant source.
   explicit ExprValueSource(Type type = Type::kTemporary) : type_(type) {}

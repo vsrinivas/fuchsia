@@ -57,6 +57,11 @@ void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left
   if (dest.type() == ExprValueSource::Type::kConstant)
     return cb(Err("Can't assign to a constant."));
 
+  if (dest.type() == ExprValueSource::Type::kConstant) {
+    // TODO(bug 39630) implement composite variable locations.
+    return cb(Err("Can't assign to a composite variable location (see bug 39630)."));
+  }
+
   // TODO(bug 39589) implement register assignment.
   if (dest.type() == ExprValueSource::Type::kRegister)
     return cb(Err("Assignment to registers is not currently supported."));

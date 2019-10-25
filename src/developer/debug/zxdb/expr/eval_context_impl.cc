@@ -401,10 +401,7 @@ void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
   if (err.has_error())  // Error decoding.
     return state->callback(err, state->symbol);
 
-  uint64_t result_int = state->dwarf_eval.GetResult();
-
-  // The DWARF expression will produce either the address of the value or the
-  // value itself.
+  // The DWARF expression can produce different forms we need to handle/
   if (state->dwarf_eval.GetResultType() == DwarfExprEval::ResultType::kValue) {
     // Get the concrete type since we need the byte size. But don't use this
     // to actually construct the variable since it will strip "const" and
@@ -429,12 +426,25 @@ void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
     else if (state->dwarf_eval.result_is_constant())
       source = ExprValueSource(ExprValueSource::Type::kConstant);
 
+    uint64_t result_int = state->dwarf_eval.GetResult();
+
     std::vector<uint8_t> data;
     data.resize(type_size);
     memcpy(&data[0], &result_int, type_size);
     state->callback(ExprValue(state->type, std::move(data), source), state->symbol);
+  } else if (state->dwarf_eval.GetResultType() == DwarfExprEval::ResultType::kData) {
+    // The DWARF result is a block of data.
+    //
+    // Here we assume the data size is correct. If it doesn't match the type, that should be
+    // caught later when it's interpreted.
+    //
+    // TODO(bug 39630) we have no source locations for this case.
+    state->callback(ExprValue(state->type, state->dwarf_eval.result_data(),
+                              ExprValueSource(ExprValueSource::Type::kComposite)),
+                    state->symbol);
   } else {
     // The DWARF result is a pointer to the value.
+    uint64_t result_int = state->dwarf_eval.GetResult();
     ResolvePointer(RefPtrTo(this), result_int, state->type,
                    [state, weak_this = weak_factory_.GetWeakPtr()](ErrOrValue value) {
                      if (weak_this)
