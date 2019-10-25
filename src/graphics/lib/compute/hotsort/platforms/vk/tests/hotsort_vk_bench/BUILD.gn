@@ -20,12 +20,14 @@ graphics_compute_vulkan_executable("hotsort_vk_bench") {
   deps = [
     ":hs_amd_gcn3_u32",
     ":hs_amd_gcn3_u64",
+    ":hs_arm_bifrost8_u32",
+    ":hs_arm_bifrost8_u64",
+    ":hs_google_swiftshader_u32",
+    ":hs_google_swiftshader_u64",
     ":hs_intel_gen8_u32",
     ":hs_intel_gen8_u64",
     ":hs_nvidia_sm35_u32",
     ":hs_nvidia_sm35_u64",
-    ":hs_google_swiftshader_u32",
-    ":hs_google_swiftshader_u64",
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",
     "${graphics_compute_dir}/hotsort/platforms/vk",
@@ -76,6 +78,18 @@ hotsort_target("hs_google_swiftshader_u32") {
 
 hotsort_target("hs_google_swiftshader_u64") {
   gpu_arch = "google_swiftshader"
+  type_dwords = 2
+  glsl_bindings = "0,1,0,0"
+}
+
+hotsort_target("hs_arm_bifrost8_u32") {
+  gpu_arch = "arm_bifrost8"
+  type_dwords = 1
+  glsl_bindings = "0,1,0,0"
+}
+
+hotsort_target("hs_arm_bifrost8_u64") {
+  gpu_arch = "arm_bifrost8"
   type_dwords = 2
   glsl_bindings = "0,1,0,0"
 }

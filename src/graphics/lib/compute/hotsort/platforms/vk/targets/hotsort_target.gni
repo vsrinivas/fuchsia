@@ -19,6 +19,7 @@ _hotsort_gpu_archs = [
   "intel_gen8",
   "nvidia_sm35",
   "google_swiftshader",
+  "arm_bifrost8",
 ]
 
 # This template is used indirectly from hotsort_target(), it should be called
@@ -362,6 +363,36 @@ template("hotsort_target_gpu_arch_google_swiftshader") {
     warps_per_group = 16
     smem_bs = 32768
     smem_bc = 32768
+    merge_flip_lo = 1
+    merge_flip_hi = 1
+    merge_half_lo = 1
+    merge_half_hi = 1
+    autotune = true
+  }
+}
+
+# ARM Mali Bifrost8
+#
+# Configurations (32-bit + 64-bit):
+#
+# NOTE(allanmac):
+#
+#  * these appear to be reasonable configuration values but more time
+#    could be spent determining if they're optimal.
+#
+template("hotsort_target_gpu_arch_arm_bifrost8") {
+  hotsort_target_internal(target_name) {
+    forward_variables_from(invoker, _hotsort_target_forward_variables)
+    vendor_config = "arm/bifrost8"
+    if (type_dwords == 2) {
+      thread_regs = 8
+    } else {
+      thread_regs = 16
+    }
+    warp_lanes = 8
+    warps_per_group = 8
+    smem_bs = 4096
+    smem_bc = 4096
     merge_flip_lo = 1
     merge_flip_hi = 1
     merge_half_lo = 1

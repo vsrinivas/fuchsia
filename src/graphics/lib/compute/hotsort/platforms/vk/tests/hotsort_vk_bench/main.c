@@ -43,6 +43,8 @@
 
 #include "hs_amd_gcn3_u32/hs_target.h"
 #include "hs_amd_gcn3_u64/hs_target.h"
+#include "hs_arm_bifrost8_u32/hs_target.h"
+#include "hs_arm_bifrost8_u64/hs_target.h"
 #include "hs_google_swiftshader_u32/hs_target.h"
 #include "hs_google_swiftshader_u64/hs_target.h"
 #include "hs_intel_gen8_u32/hs_target.h"
@@ -354,6 +356,16 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
         *hs_target = hs_google_swiftshader_u32;
       else
         *hs_target = hs_google_swiftshader_u64;
+    }
+  else if ((phy_device_props->vendorID == 0x13B5) && (phy_device_props->deviceID == 0x72120000))
+    {
+      //
+      // ARM BIFROST8
+      //
+      if (key_val_words == 1)
+        *hs_target = hs_arm_bifrost8_u32;
+      else
+        *hs_target = hs_arm_bifrost8_u64;
     }
   else
     {
