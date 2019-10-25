@@ -95,20 +95,20 @@ enum AuthStateSummary {
 /// under the provided scenario, including the system's confidence in that
 /// assessment and its timeliness.
 [MaxHandles = "0"]
-table AuthState {
+struct AuthState {
     /// The scenario that was considered when creating this authentication
     /// state.
-    1: Scenario scenario;
+    Scenario scenario;
 
     /// A high level assessment of whether the account owner is present and
     /// engaged.
-    2: AuthStateSummary summary;
+    AuthStateSummary summary;
 
     /// An assessment of whether the account owner is present.
-    3: Presence presence;
+    Presence presence;
 
     /// An assessment of whether the account owner is engaged.
-    4: Engagement engagement;
+    Engagement engagement;
 
     // TODO(jsankey): Add additional fields to express timeliness and
     // confidence.
@@ -117,16 +117,16 @@ table AuthState {
 /// An expression of the types of changes to an auth state that should be
 /// reported over listener interfaces. By default no changes will be reported.
 [MaxHandles = "0"]
-table AuthChangeGranularity {
+struct AuthChangeGranularity {
     /// If true, any changes in the `AuthStateSummary` enumeration will be
     /// reported.
-    1: bool summary_changes;
+    bool summary_changes;
 
     /// If true, any changes in the `AuthState.presence` enumeration will
     /// be reported.
-    2: bool presence_changes;
+    bool presence_changes;
 
     /// If true, any changes in the `AuthState.engagement` enumeration will
     /// be reported.
-    3: bool engagement_changes;
+    bool engagement_changes;
 };
