@@ -18,6 +18,7 @@
 #include <random>
 #include <unordered_map>
 #include <variant>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>
@@ -67,14 +68,18 @@ auto CreateBufferCollectionConstraints(uint32_t cpu_usage) {
   return collection_constraints;
 }
 
-auto CreateInputFormatDetails(const std::string& mode, const fuchsia::media::KeyId& key_id,
+auto CreateInputFormatDetails(const std::string& scheme, const std::vector<uint8_t>& key_id,
                               const std::vector<uint8_t>& init_vector) {
   constexpr uint64_t kFormatDetailsVersionOrdinal = 0;
 
   fuchsia::media::FormatDetails details;
   details.set_format_details_version_ordinal(kFormatDetailsVersionOrdinal);
-  details.mutable_domain()->crypto().encrypted().set_mode(mode).set_key_id(key_id).set_init_vector(
-      init_vector);
+  details.mutable_domain()
+      ->crypto()
+      .encrypted()
+      .set_scheme(scheme)
+      .set_key_id_temp(key_id)
+      .set_init_vector(init_vector);
 
   return details;
 }
@@ -440,8 +445,8 @@ TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
 
   ConfigureInputPackets();
 
-  decryptor_->QueueInputFormatDetails(
-      kStreamLifetimeOrdinal, CreateInputFormatDetails("clear", fuchsia::media::KeyId{}, {}));
+  decryptor_->QueueInputFormatDetails(kStreamLifetimeOrdinal,
+                                      CreateInputFormatDetails("clear", {}, {}));
 
   PumpInput();
 
@@ -470,8 +475,8 @@ TEST_F(ClearDecryptorAdapterTest, NoKeys) {
 
   ConfigureInputPackets();
 
-  decryptor_->QueueInputFormatDetails(
-      kStreamLifetimeOrdinal, CreateInputFormatDetails("clear", fuchsia::media::KeyId{}, {}));
+  decryptor_->QueueInputFormatDetails(kStreamLifetimeOrdinal,
+                                      CreateInputFormatDetails("clear", {}, {}));
 
   PumpInput();
 
@@ -495,8 +500,8 @@ TEST_F(SecureDecryptorAdapterTest, FailsToAcquireSecureBuffers) {
 
   ConfigureInputPackets();
 
-  decryptor_->QueueInputFormatDetails(
-      kStreamLifetimeOrdinal, CreateInputFormatDetails("secure", fuchsia::media::KeyId{}, {}));
+  decryptor_->QueueInputFormatDetails(kStreamLifetimeOrdinal,
+                                      CreateInputFormatDetails("secure", {}, {}));
 
   PumpInput();
 

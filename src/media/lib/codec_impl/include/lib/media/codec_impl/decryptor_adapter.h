@@ -66,8 +66,10 @@ class DecryptorAdapter : public CodecAdapter {
 
  protected:
   struct EncryptionParams {
+    // TODO(38438): Remove mode once implementations use scheme
     std::string mode;
-    std::array<uint8_t, fuchsia::media::KEY_ID_SIZE> key_id;
+    std::string scheme;
+    std::vector<uint8_t> key_id;
     std::vector<uint8_t> init_vector;
     std::optional<fuchsia::media::EncryptionPattern> pattern;
     std::vector<fuchsia::media::SubsampleEntry> subsamples;

@@ -521,14 +521,21 @@ void DecryptorAdapter::ProcessInput() {
 
 bool DecryptorAdapter::UpdateEncryptionParams(
     const fuchsia::media::EncryptedFormat& encrypted_format) {
-  if (encrypted_format.has_mode()) {
-    if (!encryption_params_.mode.empty() && encryption_params_.mode != encrypted_format.mode()) {
-      return false;
-    }
-    encryption_params_.mode = encrypted_format.mode();
+  if (encrypted_format.has_scheme()) {
+    encryption_params_.mode = encrypted_format.scheme();
+    encryption_params_.scheme = encrypted_format.scheme();
   }
-  if (encrypted_format.has_key_id()) {
-    encryption_params_.key_id = encrypted_format.key_id().data;
+  // TODO(38438): Remove once clients stop sending
+  else if (encrypted_format.has_mode()) {
+    encryption_params_.mode = encrypted_format.mode();
+    encryption_params_.scheme = encrypted_format.mode();
+  }
+  // TODO(38522): Remove once clients stop sending
+  if (encrypted_format.has_key_id_temp()) {
+    encryption_params_.key_id = encrypted_format.key_id_temp();
+  } else if (encrypted_format.has_key_id()) {
+    encryption_params_.key_id = std::vector<uint8_t>(encrypted_format.key_id().data.begin(),
+                                                     encrypted_format.key_id().data.end());
   }
   if (encrypted_format.has_init_vector()) {
     encryption_params_.init_vector = encrypted_format.init_vector();
