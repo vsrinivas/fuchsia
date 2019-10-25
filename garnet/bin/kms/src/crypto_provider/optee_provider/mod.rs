@@ -13,7 +13,7 @@ use crate::crypto_provider::{
 use crate::tee::*;
 use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
 use byteorder::{ByteOrder, LittleEndian};
-use fidl_fuchsia_kms::AsymmetricKeyAlgorithm;
+use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, KeyProvider};
 
 /// We use 1024 for default output buffer size since all outputs from Keysafe is
 /// currently less than 1024 bytes.
@@ -41,7 +41,7 @@ impl ProviderKey for OpteeAsymmetricPrivateKey {
     fn get_key_data(&self) -> Vec<u8> {
         self.key_data.clone()
     }
-    fn get_provider_name(&self) -> &'static str {
+    fn get_key_provider(&self) -> KeyProvider {
         (OpteeProvider {}).get_name()
     }
 }
@@ -58,7 +58,7 @@ impl ProviderKey for OpteeSealingKey {
     fn get_key_data(&self) -> Vec<u8> {
         self.key_data.clone()
     }
-    fn get_provider_name(&self) -> &'static str {
+    fn get_key_provider(&self) -> KeyProvider {
         (OpteeProvider {}).get_name()
     }
 }
@@ -85,8 +85,8 @@ impl CryptoProvider for OpteeProvider {
             AsymmetricKeyAlgorithm::RsaSsaPkcs1Sha5124096,
         ]
     }
-    fn get_name(&self) -> &'static str {
-        "OpteeProvider"
+    fn get_name(&self) -> KeyProvider {
+        KeyProvider::OpteeProvider
     }
     fn box_clone(&self) -> Box<dyn CryptoProvider> {
         Box::new(OpteeProvider {})

@@ -12,8 +12,8 @@ mod tee;
 
 use crate::key_manager::KeyManager;
 
-use failure::{Error, ResultExt};
-use fidl_fuchsia_kms::KeyManagerRequestStream;
+use failure::{format_err, Error, ResultExt};
+use fidl_fuchsia_kms::{KeyManagerRequestStream, KeyProvider};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog as syslog;
@@ -31,12 +31,14 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let key_manager_ref = Arc::new({
         let mut key_manager = KeyManager::new();
-        let config_result = get_provider_from_config();
-        if let Ok(provider) = config_result {
-            info!("Config found, using provider: {} for KMS", &provider);
-            key_manager.set_provider(&provider)?;
-        } else {
-            info!("No config found, use default crypto provider for KMS");
+        match get_provider_from_config() {
+            Ok(provider) => {
+                info!("Config found, using provider: {:?} for KMS", &provider);
+                key_manager.set_provider(provider)?;
+            }
+            Err(err) => {
+                info!("Failed to read config, err: {:?} use default crypto provider for KMS", err);
+            }
         }
         key_manager
     });
@@ -52,10 +54,15 @@ pub struct Config<'a> {
     pub crypto_provider: &'a str,
 }
 
-fn get_provider_from_config() -> Result<String, Error> {
+fn get_provider_from_config() -> Result<KeyProvider, Error> {
     let json = fs::read_to_string(CONFIG_PATH)?;
     let config: Config = serde_json::from_str(&json)?;
-    Ok(config.crypto_provider.to_string())
+    match config.crypto_provider {
+        "OpteeProvider" => Ok(KeyProvider::OpteeProvider),
+        "SoftwareProvider" => Ok(KeyProvider::SoftwareProvider),
+        "SoftwareAsymmetricOnlyProvider" => Ok(KeyProvider::SoftwareAsymmetricOnlyProvider),
+        _ => Err(format_err!("Unsupported provider {:?}", config.crypto_provider)),
+    }
 }
 
 fn spawn(mut stream: KeyManagerRequestStream, key_manager: Arc<KeyManager>) {
