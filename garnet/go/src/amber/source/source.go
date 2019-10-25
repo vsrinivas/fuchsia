@@ -586,6 +586,10 @@ func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
 	var src io.Reader = resp.Body
 	gotLength := resp.ContentLength
 	if f.cfg.Config.BlobKey != nil {
+		if length > -1 && length == gotLength {
+			return fmt.Errorf("blob %q may not be encrypted: expected %d, got %d", blob, length+aes.BlockSize, length)
+		}
+
 		gotLength -= aes.BlockSize
 		block, err := aes.NewCipher(f.cfg.Config.BlobKey.Data[:])
 		if err != nil {

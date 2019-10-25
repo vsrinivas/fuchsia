@@ -151,6 +151,7 @@ func (i packageInstaller) GetPkg(merkle string, length int64) error {
 		// If the needs dir now exists, ignore a failure to write the meta FAR
 		// and move on to processing the package's needs.
 		if _, e := os.Stat(filepath.Join(i.pkgfs.PkgNeedsDir(), merkle)); e == nil {
+			log.Printf("error writing pkg %q but needs dir exists, so continuing: %s", merkle, err)
 			err = nil
 		}
 	}
@@ -191,11 +192,8 @@ func (i packageInstaller) GetPkg(merkle string, length int64) error {
 	}
 
 	// XXX(raggi): further triage as to the cause of, and recovery from this condition required:
-	log.Printf("error fetching pkg %q: %v - package was incomplete after all needs fulfilled", merkle, err)
-	if err == nil {
-		err = fmt.Errorf("package install incomplete")
-	}
-	return err
+	log.Printf("error fetching pkg %q - package was incomplete after all needs fulfilled", merkle)
+	return fmt.Errorf("package install incomplete")
 }
 
 func (r Repository) MerkleFor(name, version, merkle string) (string, int64, error) {
