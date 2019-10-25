@@ -92,16 +92,10 @@ class DecryptorAdapter : public CodecAdapter {
   using OutputBuffer = std::variant<ClearOutputBuffer, SecureOutputBuffer>;
 
   // Decryptor interface
-
-  // TODO(38644): Remove this function once all clients are transitioned.
-  virtual std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
-                                                             const InputBuffer& input,
-                                                             const OutputBuffer& output);
-
   virtual std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                              const InputBuffer& input,
                                                              const OutputBuffer& output,
-                                                             CodecPacket* output_packet);
+                                                             CodecPacket* output_packet) = 0;
 
   // GetSecureOutputMemoryConstraints
   //

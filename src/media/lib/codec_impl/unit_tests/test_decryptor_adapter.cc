@@ -104,7 +104,8 @@ class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
 
   std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                      const InputBuffer& input,
-                                                     const OutputBuffer& output) override {
+                                                     const OutputBuffer& output,
+                                                     CodecPacket* output_packet) override {
     if (!std::holds_alternative<ClearOutputBuffer>(output)) {
       return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
     }
@@ -131,7 +132,8 @@ class FakeSecureDecryptorAdapter : public FakeDecryptorAdapter {
 
   std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                      const InputBuffer& input,
-                                                     const OutputBuffer& output) override {
+                                                     const OutputBuffer& output,
+                                                     CodecPacket* output_packet) override {
     // We should not get here, so just return an error.
     return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
   }

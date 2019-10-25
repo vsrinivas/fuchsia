@@ -519,19 +519,6 @@ void DecryptorAdapter::ProcessInput() {
   }
 }
 
-std::optional<fuchsia::media::StreamError> DecryptorAdapter::Decrypt(const EncryptionParams& params,
-                                                                     const InputBuffer& input,
-                                                                     const OutputBuffer& output) {
-  return fuchsia::media::StreamError::DECRYPTOR_UNKNOWN;
-}
-
-std::optional<fuchsia::media::StreamError> DecryptorAdapter::Decrypt(const EncryptionParams& params,
-                                                                     const InputBuffer& input,
-                                                                     const OutputBuffer& output,
-                                                                     CodecPacket* output_packet) {
-  return Decrypt(params, input, output);
-}
-
 bool DecryptorAdapter::UpdateEncryptionParams(
     const fuchsia::media::EncryptedFormat& encrypted_format) {
   if (encrypted_format.has_mode()) {
