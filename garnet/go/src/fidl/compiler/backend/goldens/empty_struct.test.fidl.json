@@ -29,7 +29,8 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 1,
@@ -38,7 +39,8 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 1,
@@ -47,7 +49,8 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],

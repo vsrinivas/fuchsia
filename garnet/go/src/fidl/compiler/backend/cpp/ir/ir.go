@@ -284,6 +284,7 @@ type Method struct {
 	RequestMaxOutOfLine  int
 	RequestPadding       bool
 	RequestFlexible      bool
+	RequestContainsUnion bool
 	HasResponse          bool
 	Response             []Parameter
 	ResponseSize         int
@@ -294,6 +295,7 @@ type Method struct {
 	ResponseMaxOutOfLine int
 	ResponsePadding      bool
 	ResponseFlexible     bool
+	ResponseContainsUnion bool
 	CallbackType         string
 	ResponseHandlerType  string
 	ResponderType        string
@@ -966,6 +968,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			RequestMaxOutOfLine:  c.maxOutOfLineFromParameterArray(v.Request),
 			RequestPadding:       v.RequestPadding,
 			RequestFlexible:      v.RequestFlexible,
+			RequestContainsUnion: v.RequestTypeShapeV1NoEE.ContainsUnion,
 			HasResponse:          v.HasResponse,
 			Response:             c.compileParameterArray(v.Response),
 			ResponseSize:         v.ResponseSize,
@@ -976,6 +979,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			ResponseMaxOutOfLine: c.maxOutOfLineFromParameterArray(v.Response),
 			ResponsePadding:      v.ResponsePadding,
 			ResponseFlexible:     v.ResponseFlexible,
+			ResponseContainsUnion:v.ResponseTypeShapeV1NoEE.ContainsUnion,
 			CallbackType:         callbackType,
 			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),

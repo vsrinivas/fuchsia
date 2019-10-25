@@ -54,6 +54,9 @@ struct TypeShape {
   bool has_padding;
 
   bool has_flexible_envelope;
+  // Whether this type transitively contains a union. If this is false, union/xunion transformations
+  // can be avoided
+  bool contains_union;
 
   // TODO(fxb/36337): These accessors are for backward compatibility with current code, and could be
   // removed in the future.
@@ -64,6 +67,7 @@ struct TypeShape {
   uint32_t MaxOutOfLine() const { return max_out_of_line; }
   bool HasPadding() const { return has_padding; }
   bool HasFlexibleEnvelope() const { return has_flexible_envelope; }
+  bool ContainsUnion() const { return contains_union; }
 };
 
 // |FieldShape| describes the offset and padding information for members that are contained within

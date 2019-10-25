@@ -164,7 +164,8 @@ struct Simple {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 2,
@@ -173,7 +174,8 @@ struct Simple {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 2,
@@ -182,7 +184,8 @@ struct Simple {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -288,7 +291,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
@@ -297,7 +301,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -306,7 +311,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": false,
           "is_composed": false
@@ -365,7 +371,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
@@ -374,7 +381,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -383,7 +391,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "is_composed": false
         },
@@ -440,7 +449,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
@@ -449,7 +459,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -458,7 +469,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": true,
           "maybe_response": [
@@ -504,7 +516,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
@@ -513,7 +526,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -522,7 +536,8 @@ protocol EmptyProtocol {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "is_composed": false
         }
@@ -552,7 +567,8 @@ protocol EmptyProtocol {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 1,
@@ -561,7 +577,8 @@ protocol EmptyProtocol {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 1,
@@ -570,7 +587,8 @@ protocol EmptyProtocol {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -700,7 +718,8 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 4,
@@ -709,7 +728,8 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 4,
@@ -718,7 +738,8 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -831,7 +852,8 @@ table Simple {
         "max_handles": 0,
         "max_out_of_line": 48,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 16,
@@ -840,7 +862,8 @@ table Simple {
         "max_handles": 0,
         "max_out_of_line": 48,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 16,
@@ -849,7 +872,8 @@ table Simple {
         "max_handles": 0,
         "max_out_of_line": 48,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       }
     }
   ],
@@ -964,7 +988,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 16,
@@ -973,7 +998,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 16,
@@ -982,7 +1008,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     },
     {
@@ -1037,7 +1064,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 16,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 16,
@@ -1046,7 +1074,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 16,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 16,
@@ -1055,7 +1084,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 16,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -1119,7 +1149,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -1128,7 +1159,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -1137,7 +1169,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       }
     },
     {
@@ -1198,7 +1231,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -1207,7 +1241,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -1216,7 +1251,8 @@ union ExplicitPizzaOrPasta {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       }
     }
   ],
@@ -1342,7 +1378,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -1351,7 +1388,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -1360,7 +1398,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       }
     },
     {
@@ -1420,7 +1459,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -1429,7 +1469,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -1438,7 +1479,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     },
     {
@@ -1498,7 +1540,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -1507,7 +1550,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -1516,7 +1560,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       }
     },
     {
@@ -1576,7 +1621,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -1585,7 +1631,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -1594,7 +1641,8 @@ strict xunion ExplicitStrictFoo {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -1711,7 +1759,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 40,
@@ -1720,7 +1769,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 40,
@@ -1729,7 +1779,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": true,
           "maybe_response": [
@@ -1775,7 +1826,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": true
+            "has_flexible_envelope": true,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
@@ -1784,7 +1836,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": true
+            "has_flexible_envelope": true,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 40,
@@ -1793,7 +1846,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": true
+            "has_flexible_envelope": true,
+            "contains_union": false
           },
           "is_composed": false
         },
@@ -1850,7 +1904,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": true
+            "has_flexible_envelope": true,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 40,
@@ -1859,7 +1914,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": true
+            "has_flexible_envelope": true,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 40,
@@ -1868,7 +1924,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": true
+            "has_flexible_envelope": true,
+            "contains_union": false
           },
           "has_response": true,
           "maybe_response": [
@@ -1914,7 +1971,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
@@ -1923,7 +1981,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 40,
@@ -1932,7 +1991,8 @@ protocol Protocol {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "is_composed": false
         }
@@ -2001,7 +2061,8 @@ protocol Protocol {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -2010,7 +2071,8 @@ protocol Protocol {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -2019,7 +2081,8 @@ protocol Protocol {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       }
     },
     {
@@ -2079,7 +2142,8 @@ protocol Protocol {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -2088,7 +2152,8 @@ protocol Protocol {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -2097,7 +2162,8 @@ protocol Protocol {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -2213,7 +2279,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
@@ -2222,7 +2289,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 32,
@@ -2231,7 +2299,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": true,
           "maybe_response": [
@@ -2276,7 +2345,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
@@ -2285,7 +2355,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -2294,7 +2365,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "is_composed": false
         }
@@ -2360,7 +2432,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
@@ -2369,7 +2442,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 32,
@@ -2378,7 +2452,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": true,
           "maybe_response": [
@@ -2423,7 +2498,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
@@ -2432,7 +2508,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -2441,7 +2518,8 @@ protocol sub {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "is_composed": true
         }
@@ -2563,7 +2641,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
@@ -2572,7 +2651,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -2581,7 +2661,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": false,
           "is_composed": false
@@ -2649,7 +2730,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
@@ -2658,7 +2740,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -2667,7 +2750,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": false,
           "is_composed": true
@@ -2725,7 +2809,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
@@ -2734,7 +2819,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -2743,7 +2829,8 @@ protocol Child {
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": false,
           "is_composed": false
@@ -2853,7 +2940,8 @@ protocol Example {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
@@ -2862,7 +2950,8 @@ protocol Example {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 32,
@@ -2871,7 +2960,8 @@ protocol Example {
             "max_handles": 0,
             "max_out_of_line": 4294967295,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": true,
           "maybe_response": [
@@ -2917,7 +3007,8 @@ protocol Example {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": true
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
@@ -2926,7 +3017,8 @@ protocol Example {
             "max_handles": 0,
             "max_out_of_line": 8,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": true
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 40,
@@ -2935,7 +3027,8 @@ protocol Example {
             "max_handles": 0,
             "max_out_of_line": 8,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": true
           },
           "is_composed": false
         }
@@ -2995,7 +3088,8 @@ protocol Example {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 8,
@@ -3004,7 +3098,8 @@ protocol Example {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 8,
@@ -3013,7 +3108,8 @@ protocol Example {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -3082,7 +3178,8 @@ protocol Example {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -3091,7 +3188,8 @@ protocol Example {
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -3100,7 +3198,8 @@ protocol Example {
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       }
     }
   ],
@@ -3301,7 +3400,8 @@ struct ByteAndBytes {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 56,
@@ -3310,7 +3410,8 @@ struct ByteAndBytes {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 56,
@@ -3319,7 +3420,8 @@ struct ByteAndBytes {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -4188,7 +4290,8 @@ struct Struct {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 40,
@@ -4197,7 +4300,8 @@ struct Struct {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 40,
@@ -4206,7 +4310,8 @@ struct Struct {
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -4379,7 +4484,8 @@ struct Baz {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 4,
@@ -4388,7 +4494,8 @@ struct Baz {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 4,
@@ -4397,7 +4504,8 @@ struct Baz {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -4519,7 +4627,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 16,
@@ -4528,7 +4637,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 16,
@@ -4537,7 +4647,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": true,
           "maybe_response": [
@@ -4583,7 +4694,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
@@ -4592,7 +4704,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -4601,7 +4714,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "is_composed": true
         }
@@ -4722,7 +4836,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 16,
@@ -4731,7 +4846,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 16,
@@ -4740,7 +4856,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": true,
           "maybe_response": [
@@ -4786,7 +4903,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
@@ -4795,7 +4913,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_response_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -4804,7 +4923,8 @@ protocol Top {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "is_composed": true
         }
@@ -5115,7 +5235,8 @@ xunion ExampleXUnion {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
@@ -5124,7 +5245,8 @@ xunion ExampleXUnion {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 24,
@@ -5133,7 +5255,8 @@ xunion ExampleXUnion {
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "contains_union": false
           },
           "has_response": false,
           "is_composed": false
@@ -5206,7 +5329,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 4,
@@ -5215,7 +5339,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 4,
@@ -5224,7 +5349,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],
@@ -5280,7 +5406,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 24,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 16,
@@ -5289,7 +5416,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 24,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 16,
@@ -5298,7 +5426,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 24,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       }
     }
   ],
@@ -5353,7 +5482,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -5362,7 +5492,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -5371,7 +5502,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": true
       }
     }
   ],
@@ -5427,7 +5559,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 24,
@@ -5436,7 +5569,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 24,
@@ -5445,7 +5579,8 @@ xunion ExampleXUnion {
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": true
+        "has_flexible_envelope": true,
+        "contains_union": false
       }
     }
   ],
@@ -5962,7 +6097,8 @@ struct ExampleOfUseOfAliases {
         "max_handles": 3,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1": {
         "inline_size": 120,
@@ -5971,7 +6107,8 @@ struct ExampleOfUseOfAliases {
         "max_handles": 3,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       },
       "type_shape_v1_no_ee": {
         "inline_size": 120,
@@ -5980,7 +6117,8 @@ struct ExampleOfUseOfAliases {
         "max_handles": 3,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "contains_union": false
       }
     }
   ],

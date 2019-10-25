@@ -89,6 +89,7 @@ class {{ .Name }} final {
     static constexpr uint32_t PrimarySize = {{ .ResponseSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .ResponseMaxOutOfLine }};
     static constexpr bool HasFlexibleEnvelope = {{ .ResponseFlexible }};
+    static constexpr bool ContainsUnion = {{ .ResponseContainsUnion }};
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -112,6 +113,7 @@ class {{ .Name }} final {
     static constexpr uint32_t PrimarySize = {{ .RequestSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .RequestMaxOutOfLine }};
     static constexpr bool HasFlexibleEnvelope = {{ .RequestFlexible }};
+    static constexpr bool ContainsUnion = {{ .RequestContainsUnion }};
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
 

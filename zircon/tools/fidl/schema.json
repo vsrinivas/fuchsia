@@ -797,6 +797,10 @@
                 "has_flexible_envelope": {
                     "description": "Flag indicating if this declaration contains flexible envelopes (in xunions or tables)",
                     "type": "boolean"
+                },
+                "contains_union": {
+                    "description": "Flag indicating if this type transitively contains a static union",
+                    "type": "boolean"
                 }
             }
         },

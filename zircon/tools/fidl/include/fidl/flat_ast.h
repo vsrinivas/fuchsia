@@ -496,7 +496,9 @@ struct Decl {
 struct Object {
   virtual ~Object() = default;
 
-  TypeShape typeshape(fidl::WireFormat wire_format) const { return TypeShape(*this, wire_format); }
+  TypeShape typeshape(fidl::WireFormat wire_format) const {
+    return TypeShape(*this, wire_format);
+  }
 
   // |Visitor|, and the corresponding |Accept()| method below, enable the visitor pattern to be used
   // for derived classes of Object. See <https://en.wikipedia.org/wiki/Visitor_pattern> for

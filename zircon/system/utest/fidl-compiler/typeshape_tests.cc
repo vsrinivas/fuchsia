@@ -21,6 +21,7 @@ struct Expected {
   uint32_t depth = 0;
   bool has_padding = false;
   bool has_flexible_envelope = false;
+  bool contains_union = false;
 };
 
 bool CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
@@ -32,6 +33,7 @@ bool CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
   EXPECT_EQ(actual.Depth(), expected.depth);
   EXPECT_EQ(actual.HasPadding(), expected.has_padding);
   EXPECT_EQ(actual.HasFlexibleEnvelope(), expected.has_flexible_envelope);
+  EXPECT_EQ(actual.ContainsUnion(), expected.contains_union);
   END_HELPER;
 }
 
@@ -48,6 +50,14 @@ bool CheckTypeShape(const fidl::flat::Object* actual, Expected expected_old,
 
 bool CheckTypeShape(const fidl::flat::Object* actual, Expected expected) {
   return CheckTypeShape(actual, expected, expected);
+}
+
+bool CheckContainsUnion(const fidl::flat::Object* object, bool expected) {
+  // contains_union will be the same for both wire formats, just check v1
+  auto typeshape = fidl::TypeShape(object, fidl::WireFormat::kV1NoEe);
+  BEGIN_HELPER;
+  EXPECT_EQ(typeshape.ContainsUnion(), expected);
+  END_HELPER;
 }
 
 struct ExpectedField {
@@ -839,6 +849,7 @@ table TableWithOptionalUnion {
                                  .max_out_of_line = 8,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 24,
@@ -846,6 +857,7 @@ table TableWithOptionalUnion {
                                  .max_out_of_line = 16,
                                  .depth = 2,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
 
   auto a_union = test_library.LookupUnion("UnionOfThings");
@@ -855,6 +867,7 @@ table TableWithOptionalUnion {
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .has_padding = true,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 24,
@@ -862,6 +875,7 @@ table TableWithOptionalUnion {
                                  .max_out_of_line = 16,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
   ASSERT_EQ(a_union->members.size(), 2);
   ASSERT_NONNULL(a_union->members[0].maybe_used);
@@ -892,6 +906,7 @@ table TableWithOptionalUnion {
                                  .max_out_of_line = 24,
                                  .depth = 1,
                                  .has_padding = true,  // because |UnionOfThings| has padding
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 8,
@@ -899,6 +914,7 @@ table TableWithOptionalUnion {
                                  .max_out_of_line = 40,
                                  .depth = 2,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
 
   auto table_with_optional_union = test_library.LookupTable("TableWithOptionalUnion");
@@ -911,6 +927,7 @@ table TableWithOptionalUnion {
                                  .depth = 2,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 16,
@@ -919,6 +936,7 @@ table TableWithOptionalUnion {
                                  .depth = 3,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
+                                 .contains_union = true,
                              }));
 
   END_TEST;
@@ -953,6 +971,7 @@ union ManyHandleUnion {
                                  .alignment = 4,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 24,
@@ -961,6 +980,7 @@ union ManyHandleUnion {
                                  .max_handles = 1,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
   ASSERT_EQ(one_handle_union->members.size(), 3);
   ASSERT_NONNULL(one_handle_union->members[0].maybe_used);
@@ -1004,6 +1024,7 @@ union ManyHandleUnion {
                                  .max_handles = 8,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 24,
@@ -1012,6 +1033,7 @@ union ManyHandleUnion {
                                  .max_handles = 8,
                                  .depth = 2,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
   ASSERT_EQ(many_handle_union->members.size(), 3);
   ASSERT_NONNULL(many_handle_union->members[1].maybe_used);
@@ -2385,6 +2407,7 @@ struct Sandwich {
                                  .alignment = 4,
                                  .max_handles = 0,
                                  .has_padding = false,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 40,
@@ -2393,6 +2416,7 @@ struct Sandwich {
                                  .max_handles = 0,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
   ASSERT_EQ(sandwich->members.size(), 3);
   EXPECT_TRUE(CheckFieldShape(sandwich->members[0],  // before
@@ -2452,6 +2476,7 @@ struct Sandwich {
                                  .alignment = 4,
                                  .max_handles = 0,
                                  .has_padding = true,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 40,
@@ -2460,6 +2485,7 @@ struct Sandwich {
                                  .max_handles = 0,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
   ASSERT_EQ(sandwich->members.size(), 3);
   EXPECT_TRUE(CheckFieldShape(sandwich->members[0],  // before
@@ -2524,6 +2550,7 @@ struct Sandwich {
                                  .alignment = 8,
                                  .max_handles = 0,
                                  .has_padding = true,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 40,
@@ -2532,6 +2559,7 @@ struct Sandwich {
                                  .max_handles = 0,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
   ASSERT_EQ(sandwich->members.size(), 3);
   EXPECT_TRUE(CheckFieldShape(sandwich->members[0],  // before
@@ -2591,6 +2619,7 @@ struct Sandwich {
                                  .alignment = 4,
                                  .max_handles = 0,
                                  .has_padding = false,
+                                 .contains_union = true,
                              },
                              Expected{
                                  .inline_size = 40,
@@ -2599,6 +2628,7 @@ struct Sandwich {
                                  .max_handles = 0,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .contains_union = true,
                              }));
   ASSERT_EQ(sandwich->members.size(), 3);
   EXPECT_TRUE(CheckFieldShape(sandwich->members[0],  // before
@@ -2628,6 +2658,218 @@ struct Sandwich {
                                   .offset = 32,
                                   .padding = 4,
                               }));
+
+  END_TEST;
+}
+
+bool no_transitive_unions() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union NotUsed {
+  int32 foo;
+};
+
+struct ChildStruct {
+  int32 bar;
+};
+
+struct MiddleStruct {
+  ChildStruct child;
+  array<uint8>:32 foo;
+};
+
+struct RootStruct {
+  MiddleStruct child;
+  ChildStruct leaf;
+  vector<int8>:10 foo;
+};
+
+table SomeTable {
+  1: RootStruct child;
+};
+
+enum SomeEnum : uint32 {
+  FOO = 1;
+  BAR = 2;
+};
+
+bits SomeBits : uint64 {
+  kOne = 1;
+  kTwo = 2;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  auto child_struct = library.LookupStruct("ChildStruct");
+  ASSERT_NONNULL(child_struct);
+  EXPECT_TRUE(CheckContainsUnion(child_struct, false));
+
+  auto middle_struct = library.LookupStruct("MiddleStruct");
+  ASSERT_NONNULL(middle_struct);
+  EXPECT_TRUE(CheckContainsUnion(middle_struct, false));
+
+  auto root_struct = library.LookupStruct("RootStruct");
+  ASSERT_NONNULL(root_struct);
+  EXPECT_TRUE(CheckContainsUnion(root_struct, false));
+
+  auto some_table = library.LookupTable("SomeTable");
+  ASSERT_NONNULL(some_table);
+  EXPECT_TRUE(CheckContainsUnion(some_table, false));
+
+  auto some_enum = library.LookupEnum("SomeEnum");
+  ASSERT_NONNULL(some_enum);
+  EXPECT_TRUE(CheckContainsUnion(some_enum, false));
+
+  auto some_bits = library.LookupBits("SomeBits");
+  ASSERT_NONNULL(some_bits);
+  EXPECT_TRUE(CheckContainsUnion(some_bits, false));
+  END_TEST;
+}
+
+bool transitive_union_result_type() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+protocol Foo {
+  WithError(int8 x, int8 y) -> (int32 out) error int32;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  auto result_type = library.LookupUnion("Foo_WithError_Result");
+  ASSERT_NONNULL(result_type);
+  EXPECT_TRUE(CheckContainsUnion(result_type, true));
+
+  END_TEST;
+}
+
+bool transitive_union_nested() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+union DeepUnion {
+  int32 foo;
+};
+
+struct Level1 {
+  DeepUnion child;
+};
+
+struct Level2 {
+  Level1 child;
+};
+
+table Mixed {
+  1: DeepUnion foo;
+  2: Level2 bar;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto inner_union = library.LookupUnion("DeepUnion");
+  ASSERT_NONNULL(inner_union);
+  EXPECT_TRUE(CheckContainsUnion(inner_union, true));
+
+  auto level1 = library.LookupStruct("Level1");
+  ASSERT_NONNULL(level1);
+  EXPECT_TRUE(CheckContainsUnion(level1, true));
+
+  auto level2 = library.LookupStruct("Level2");
+  ASSERT_NONNULL(level2);
+  EXPECT_TRUE(CheckContainsUnion(level2, true));
+
+  auto mixed_table = library.LookupTable("Mixed");
+  ASSERT_NONNULL(mixed_table);
+  EXPECT_TRUE(CheckContainsUnion(mixed_table, true));
+
+  END_TEST;
+}
+
+bool transitive_union_layered() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+enum DeepestEnum {
+  FOO = 1;
+  BAR = 2;
+};
+
+table InsideUnion {
+  1: DeepestEnum child;
+};
+
+union InnerUnion {
+  int32 foo;
+  InsideUnion bar;
+};
+
+struct ContainsUnion {
+  InnerUnion foo;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto deepest_enum = library.LookupEnum("DeepestEnum");
+  ASSERT_NONNULL(deepest_enum);
+  EXPECT_TRUE(CheckContainsUnion(deepest_enum, false));
+
+  auto inside_union = library.LookupTable("InsideUnion");
+  ASSERT_NONNULL(inside_union);
+  EXPECT_TRUE(CheckContainsUnion(inside_union, false));
+
+  auto inner_union = library.LookupUnion("InnerUnion");
+  ASSERT_NONNULL(inner_union);
+  EXPECT_TRUE(CheckContainsUnion(inner_union, true));
+
+  auto contains_union = library.LookupStruct("ContainsUnion");
+  ASSERT_NONNULL(contains_union);
+  EXPECT_TRUE(CheckContainsUnion(contains_union, true));
+
+  END_TEST;
+}
+
+bool transitive_union_xunion() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+xunion InnerXUnion {
+  int32 foo;
+};
+
+union MiddleUnion {
+  int32 foo;
+  InnerXUnion bar;
+};
+
+xunion OuterXUnion {
+  MiddleUnion foo;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto inner_xunion = library.LookupXUnion("InnerXUnion");
+  ASSERT_NONNULL(inner_xunion);
+  EXPECT_TRUE(CheckContainsUnion(inner_xunion, false));
+
+  auto middle_union = library.LookupUnion("MiddleUnion");
+  ASSERT_NONNULL(middle_union);
+  EXPECT_TRUE(CheckContainsUnion(middle_union, true));
+
+  auto outer_xunion = library.LookupXUnion("OuterXUnion");
+  ASSERT_NONNULL(outer_xunion);
+  EXPECT_TRUE(CheckContainsUnion(outer_xunion, true));
 
   END_TEST;
 }
@@ -2672,4 +2914,9 @@ RUN_TEST(union_size8alignment4_sandwich)
 RUN_TEST(union_size12alignment4_sandwich)
 RUN_TEST(union_size24alignment8_sandwich)
 RUN_TEST(union_size36alignment4_sandwich)
+RUN_TEST(no_transitive_unions)
+RUN_TEST(transitive_union_result_type)
+RUN_TEST(transitive_union_nested)
+RUN_TEST(transitive_union_layered)
+RUN_TEST(transitive_union_xunion)
 END_TEST_CASE(typeshape_tests)
