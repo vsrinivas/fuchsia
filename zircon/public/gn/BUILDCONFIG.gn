@@ -728,7 +728,7 @@ template("library") {
               {
                 label = get_label_info(":$target_name", "label_with_toolchain")
                 name = "lib.$_library_name"
-                if (toolchain.variant_suffix != ".clang") {
+                if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] != toolchain.tags) {
                   name += toolchain.variant_suffix
                 }
                 toolchain = toolchain_label

@@ -27,6 +27,7 @@ template("zx_binary") {
   binary_target_name = "$target_name.binary"
   manifest_target_name = "$target_name.manifest"
 
+  # The actual executable target.
   target(invoker.type, binary_target_name) {
     forward_variables_from(invoker, "*", local_params)
 
@@ -35,46 +36,154 @@ template("zx_binary") {
     }
   }
 
+  # This name is the name under which the binary appears in the final list of
+  # manifests.
+  _binary_name = "${invoker.prefix}."
+  if (defined(invoker.output_name)) {
+    _binary_name += invoker.output_name
+  } else {
+    _binary_name += main_target_name
+  }
+  if (defined(toolchain.shlib) && current_toolchain == toolchain.shlib) {
+    _binary_name += ".shlib"
+  }
+
+  # Two manifest targets are needed here, to ensure that they depend on the
+  # exact spelling of the binary target as expected given the rules of variant
+  # selection. If that target ends up included in the dependency graph under
+  # two different labels, metadata generation is affected with potentially
+  # build-breaking effects.
+
   zx_manifest(manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
     target = ":$binary_target_name"
 
-    name = "${invoker.prefix}.$main_target_name"
-    if (defined(invoker.output_name)) {
-      name = "${invoker.prefix}.${invoker.output_name}"
-    }
-    if (toolchain.variant_suffix != ".clang") {
-      name += toolchain.variant_suffix
-    }
-    if (defined(toolchain.shlib) && current_toolchain == toolchain.shlib) {
-      name += ".shlib"
-    }
+    name = _binary_name
   }
 
-  group(main_target_name) {
+  zx_manifest("$manifest_target_name${toolchain.variant_suffix}") {
     forward_variables_from(invoker, [ "testonly" ])
 
-    public_deps = [ ":$binary_target_name" ]
+    target = ":$binary_target_name${toolchain.variant_suffix}"
 
-    deps = [ ":$manifest_target_name" ]
+    name = "$_binary_name${toolchain.variant_suffix}"
   }
 
-  # Provide redirects to other variants.
-  foreach(variant, toolchain.other_variants) {
-    group("$main_target_name${variant.suffix}") {
+  # Perform variant selection.
+  # This logic is duplicated from //zircon/public/gn/BUILDCONFIG.gn. It is
+  # necessary to push the awareness of variants all the way up to this template
+  # as this ensures that the right version of binary_target_name gets inserted
+  # into the dependency graph.
+  _builder_toolchain = false
+  foreach(selector, toolchain.variant_selectors) {
+    selector_matches = true
+
+    if (selector.cpu != []) {
+      if (selector.cpu + [ current_cpu ] - [ current_cpu ] == selector.cpu) {
+        selector_matches = false
+      }
+    }
+    if (selector.dir != []) {
+      dir = get_label_info(":$main_target_name", "dir")
+      if (selector.dir + [ dir ] - [ dir ] == selector.dir) {
+        selector_matches = false
+      }
+    }
+    if (selector.environment != []) {
+      if (selector.environment + [ toolchain.environment ] -
+          [ toolchain.environment ] == selector.environment &&
+          selector.environment + [ toolchain.base_environment ] -
+          [ toolchain.base_environment ] == selector.environment) {
+        selector_matches = false
+      }
+    }
+    if (selector.label != []) {
+      label = get_label_info(":$main_target_name", "label_no_toolchain")
+      if (selector.label + [ label ] - [ label ] == selector.label) {
+        selector_matches = false
+      }
+    }
+    if (selector.name != []) {
+      name = main_target_name
+      if (selector.name + [ name ] - [ name ] == selector.name) {
+        selector_matches = false
+      }
+    }
+    if (selector.os != []) {
+      if (selector.os + [ current_os ] - [ current_os ] == selector.os) {
+        selector_matches = false
+      }
+    }
+    if (selector.output_name != []) {
+      _output_name = main_target_name
+      if (defined(invoker.output_name)) {
+        _output_name = invoker.output_name
+      }
+      if (selector.output_name + [ _output_name ] - [ _output_name ] ==
+          selector.output_name) {
+        selector_matches = false
+      }
+    }
+    if (selector.target_type != []) {
+      if (selector.target_type + [ invoker._type ] - [ invoker._type ] ==
+          selector.target_type) {
+        selector_matches = false
+      }
+    }
+    if (defined(selector.host) && selector.host != is_host) {
+      selector_matches = false
+    }
+    if (defined(selector.kernel) && selector.kernel != is_kernel) {
+      selector_matches = false
+    }
+
+    if (selector_matches && _builder_toolchain == false) {
+      _builder_toolchain = selector.toolchain
+    }
+  }
+  assert(_builder_toolchain != false)
+
+  if (current_toolchain == _builder_toolchain) {
+    # In the builder toolchain... build.
+    group(main_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      data_deps = [
-        ":$binary_target_name${variant.suffix}(${variant.label})",
+      public_deps = [
+        ":$binary_target_name",
       ]
 
       deps = [
-        ":$manifest_target_name(${variant.label})",
+        ":$manifest_target_name",
+      ]
+    }
+  } else {
+    # In other toolchains, simply redirect to the builder toolchain.
+    group(main_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      public_deps = [
+        ":$main_target_name($_builder_toolchain)",
       ]
     }
   }
 
+  # Provide redirects to other variants in their own toolchains.
+  foreach(variant, toolchain.other_variants) {
+    variant_target_name = "$main_target_name${variant.suffix}"
+    group(variant_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      public_deps = [
+        ":$variant_target_name(${variant.label})",
+      ]
+    }
+  }
+
+  # Provide a way to reference this variant explicitly.
+  # Note that this does not go through variant selection and therefore needs to
+  # depend on the exact version of the binary, meaning that the manifest also
+  # needs to depend on that exact version.
   group("$main_target_name${toolchain.variant_suffix}") {
     forward_variables_from(invoker, [ "testonly" ])
 
@@ -83,7 +192,7 @@ template("zx_binary") {
     ]
 
     deps = [
-      ":$manifest_target_name",
+      ":$manifest_target_name${toolchain.variant_suffix}",
     ]
   }
 }
