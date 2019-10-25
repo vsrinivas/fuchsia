@@ -34,6 +34,7 @@ enum LaunchStatus {
   FAILED_NONZERO_RETURN_CODE,
   FAILED_COLLECTING_SINK_DATA,
   FAILED_UNKNOWN,
+  TIMED_OUT,
 };
 
 // Represents a single dumpfile element.
@@ -63,16 +64,19 @@ struct Result {
 
 // Function that invokes a test binary and writes its output to a file.
 //
-// |argv| is the commandline to use to run the test program; must be
-//   null-terminated.
-// |output_dir| is the output directory for test's data sinks. May be nullptr, in which case
-//   no data sinks will be saved.
+// |argv| is a null-terminated array of argument strings passed to the test
+//   program.
+// |output_dir| is the name of a directory where debug data
+//   will be written. If nullptr, no debug data will be collected.
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
-// |test_name| is the name of the test.
+// |test_name| is used to populate Result and in log messages.
+// |timeout_millis| is a number of milliseconds to wait for the test. If 0,
+//   will wait indefinitely.
 typedef std::unique_ptr<Result> (*RunTestFn)(const char* argv[], const char* output_dir,
-                                             const char* output_filename, const char* test_name);
+                                             const char* output_filename, const char* test_name,
+                                             uint64_t timeout_millis);
 
 // A means of measuring how long it takes to run tests.
 class Stopwatch {

@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <runtests-utils/posix-run-test.h>
-
-#include <chrono>
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <spawn.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <chrono>
+#include <string>
+#include <thread>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <runtests-utils/posix-run-test.h>
 #include <unittest/unittest.h>
 
 namespace runtests {
@@ -36,11 +38,23 @@ constexpr const char* const kAllowedEnvironmentVars[] = {
     TEST_ENV_NAME,
 };
 
+// How long to sleep between checking to see if a test is finished.
+// We do have tests that take >10 ms to run, so it's good for this
+// to be on the smaller side.
+constexpr std::chrono::milliseconds kPollingInterval(2);
+
 }  // namespace
+
+int64_t msec_since(std::chrono::steady_clock::time_point start_time) {
+  const auto end_time = std::chrono::steady_clock::now();
+  const auto duration = end_time - start_time;
+  return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+}
 
 std::unique_ptr<Result> PosixRunTest(const char* argv[],
                                      const char*,  // output_dir
-                                     const char* output_filename, const char* test_name) {
+                                     const char* output_filename, const char* test_name,
+                                     uint64_t timeout_msec) {
   int status;
   const char* path = argv[0];
   FILE* output_file = nullptr;
@@ -103,17 +117,26 @@ std::unique_ptr<Result> PosixRunTest(const char* argv[],
     return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
   }
 
-  if (waitpid(test_pid, &status, WUNTRACED | WCONTINUED) == -1) {
+  pid_t wait_ret = 0;
+  // WNOHANG means return 0 immediately if the process hasn't exited.
+  while ((wait_ret = waitpid(test_pid, &status, WUNTRACED | WCONTINUED | WNOHANG)) == 0) {
+    const int64_t waited_msec = msec_since(start_time);
+    if (timeout_msec && waited_msec > 0 && static_cast<uint64_t>(waited_msec) >= timeout_msec) {
+      fprintf(stderr, "FAILURE: test did not finish within timeout of %" PRIu64 " milliseconds\n",
+              timeout_msec);
+      kill(test_pid, SIGKILL);
+      return std::make_unique<Result>(test_name, TIMED_OUT, 0, waited_msec);
+    }
+    std::this_thread::sleep_for(kPollingInterval);
+  }
+  if (wait_ret == -1) {
     fprintf(stderr, "FAILURE: waitpid failed: %s\n", strerror(errno));
     return std::make_unique<Result>(test_name, FAILED_TO_WAIT, 0, 0);
   }
   if (WIFEXITED(status)) {
     int return_code = WEXITSTATUS(status);
     LaunchStatus launch_status = return_code ? FAILED_NONZERO_RETURN_CODE : SUCCESS;
-    const auto end_time = std::chrono::steady_clock::now();
-    const auto duration = end_time - start_time;
-    const int64_t millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-    return std::make_unique<Result>(test_name, launch_status, return_code, millis);
+    return std::make_unique<Result>(test_name, launch_status, return_code, msec_since(start_time));
   }
   if (WIFSIGNALED(status)) {
     fprintf(stderr, "FAILURE: test process killed by signal %d\n", WTERMSIG(status));

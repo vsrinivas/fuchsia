@@ -393,7 +393,7 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
           output_test_name.c_str());
       fflush(stdout);
       std::unique_ptr<Result> result =
-          RunTest(argv.data(), output_dir_for_test, output_filename, output_test_name.c_str());
+          RunTest(argv.data(), output_dir_for_test, output_filename, output_test_name.c_str(), 0);
       if (result->launch_status != SUCCESS) {
         *failed_count += 1;
       }

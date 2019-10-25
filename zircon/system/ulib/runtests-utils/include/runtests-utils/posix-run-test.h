@@ -14,11 +14,17 @@ namespace runtests {
 
 // Invokes a POSIX test binary and writes its output to a file.
 //
-// |argv| is an array of argument strings passed to the test program.
+// |argv| is a null-terminated array of argument strings passed to the test
+//   program.
+// |output_dir| is currently ignored.
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
+// |test_name| is used to populate Result properly and in log messages.
+// |timeout_millis| is a number of milliseconds to wait for the test. If 0,
+//   will wait indefinitely.
 std::unique_ptr<Result> PosixRunTest(const char* argv[], const char* output_dir,
-                                     const char* output_filename, const char* test_name);
+                                     const char* output_filename, const char* test_name,
+                                     uint64_t timeout_millis);
 
 }  // namespace runtests

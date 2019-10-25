@@ -330,7 +330,8 @@ bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_com
 }
 
 std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_dir,
-                                       const char* output_filename, const char* test_name) {
+                                       const char* output_filename, const char* test_name,
+                                       uint64_t timeout_msec) {
   // The arguments passed to fdio_spawn_etc. May be overridden.
   const char** args = argv;
   // calculate size of argv
@@ -555,11 +556,18 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
     }
   }
 
-  status = process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+  zx::time deadline = zx::time::infinite();
+  if (timeout_msec) {
+    deadline = zx::deadline_after(zx::msec(timeout_msec));
+  }
+  status = process.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
   const zx::time end_time = zx::clock::get_monotonic();
   const int64_t duration_milliseconds = (end_time - start_time).to_msecs();
   if (status != ZX_OK) {
     fprintf(stderr, "FAILURE: Failed to wait for process exiting %s: %d\n", test_name, status);
+    if (status == ZX_ERR_TIMED_OUT) {
+      return std::make_unique<Result>(test_name, TIMED_OUT, 0, duration_milliseconds);
+    }
     return std::make_unique<Result>(test_name, FAILED_TO_WAIT, 0, duration_milliseconds);
   }
 

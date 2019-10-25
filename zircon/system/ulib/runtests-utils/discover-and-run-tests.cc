@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <runtests-utils/runtests-utils.h>
-
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -14,12 +12,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fbl/string.h>
-#include <fbl/vector.h>
-#include <unittest/unittest.h>
-
 #include <algorithm>
 #include <utility>
+
+#include <fbl/string.h>
+#include <fbl/vector.h>
+#include <runtests-utils/runtests-utils.h>
+#include <unittest/unittest.h>
 
 namespace runtests {
 namespace {
@@ -368,6 +367,9 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
         break;
       case FAILED_NONZERO_RETURN_CODE:
         printf("%s: returned nonzero: %" PRId64 "\n", result->name.c_str(), result->return_code);
+        break;
+      case TIMED_OUT:
+        printf("%s: timed out\n", result->name.c_str());
         break;
       default:
         printf("%s: unknown result\n", result->name.c_str());

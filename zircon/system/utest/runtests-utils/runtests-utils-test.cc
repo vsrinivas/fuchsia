@@ -305,8 +305,34 @@ bool RunTestSuccess() {
   fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
   const char* argv[] = {test_name.c_str(), nullptr};
   ScopedScriptFile script(argv[0], "exit 0");
-  std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, test_name.c_str());
+  std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, test_name.c_str(), 0);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
+  EXPECT_EQ(SUCCESS, result->launch_status);
+  EXPECT_EQ(0, result->return_code);
+
+  END_TEST;
+}
+
+bool RunTestTimeout() {
+  BEGIN_TEST;
+
+  // Test timeout is enforced if the test runs too long.
+  ScopedTestDir test_dir;
+  fbl::String inf_loop_name = JoinPath(test_dir.path(), "inf_loop.sh");
+  const char* inf_loop_argv[] = {inf_loop_name.c_str(), nullptr};
+  ScopedScriptFile inf_loop_script(inf_loop_argv[0], "while true; do echo \"\"; done");
+  std::unique_ptr<Result> result =
+      PlatformRunTest(inf_loop_argv, nullptr, nullptr, inf_loop_name.c_str(), 1);
+  EXPECT_STR_EQ(inf_loop_argv[0], result->name.c_str());
+  EXPECT_EQ(TIMED_OUT, result->launch_status);
+  EXPECT_EQ(0, result->return_code);
+
+  // Test timeout is not enforced if the test finishes quickly.
+  fbl::String succeed_name = JoinPath(test_dir.path(), "succeed.sh");
+  const char* succeed_argv[] = {succeed_name.c_str(), nullptr};
+  ScopedScriptFile succeed_script(succeed_argv[0], "exit 0");
+  result = PlatformRunTest(succeed_argv, nullptr, nullptr, succeed_name.c_str(), 100000);
+  EXPECT_STR_EQ(succeed_argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
 
@@ -326,7 +352,7 @@ bool RunTestSuccessWithStdout() {
 
   fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
   std::unique_ptr<Result> result =
-      PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str());
+      PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
 
   FILE* output_file = fopen(output_filename.c_str(), "r");
   ASSERT_TRUE(output_file);
@@ -355,7 +381,7 @@ bool RunTestFailureWithStderr() {
 
   fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
   std::unique_ptr<Result> result =
-      PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str());
+      PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
 
   FILE* output_file = fopen(output_filename.c_str(), "r");
   ASSERT_TRUE(output_file);
@@ -376,7 +402,7 @@ bool RunTestFailureToLoadFile() {
 
   const char* argv[] = {"i/do/not/exist/", nullptr};
 
-  std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, argv[0]);
+  std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, argv[0], 0);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(FAILED_TO_LAUNCH, result->launch_status);
 
@@ -819,6 +845,7 @@ END_TEST_CASE(ResolveGlobs)
 
 BEGIN_TEST_CASE(RunTest)
 RUN_TEST(RunTestSuccess)
+RUN_TEST(RunTestTimeout)
 RUN_TEST(RunTestSuccessWithStdout)
 RUN_TEST(RunTestFailureWithStderr)
 RUN_TEST(RunTestFailureToLoadFile)
