@@ -163,7 +163,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
         } else if self.ht_cap.is_some() && self.ht_op.is_some() {
             Standard::Dot11N
         } else if self.chan.primary <= 14 {
-            if self.basic_rate_set.iter().any(|r| match r {
+            if self.rates.iter().any(|r| match ie::SupportedRate(*r).rate() {
                 12 | 18 | 24 | 36 | 48 | 72 | 96 | 108 => true,
                 _ => false,
             }) {
@@ -323,7 +323,7 @@ mod tests {
     fn test_get_latest_standard_g() {
         let mut bss = bss(ProtectionCfg::Open);
         bss.chan.primary = 1;
-        bss.basic_rate_set = vec![12];
+        bss.rates = vec![12];
         assert_eq!(Standard::Dot11G, bss.get_latest_standard());
     }
 
@@ -331,7 +331,9 @@ mod tests {
     fn test_get_latest_standard_b() {
         let mut bss = bss(ProtectionCfg::Open);
         bss.chan.primary = 1;
-        bss.basic_rate_set = vec![2];
+        bss.rates = vec![2];
+        assert_eq!(Standard::Dot11B, bss.get_latest_standard());
+        bss.rates = vec![ie::SupportedRate(2).with_basic(true).0];
         assert_eq!(Standard::Dot11B, bss.get_latest_standard());
     }
 

@@ -12,6 +12,8 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
+using SR = SupportedRate;
+
 VhtOperation make_vht_op(VhtOperation::VhtChannelBandwidth cbw, uint8_t seg0, uint8_t seg1) {
   VhtOperation vht_op;
   vht_op.vht_cbw = to_enum_type(cbw);
@@ -81,66 +83,60 @@ TEST(ParseBeaconTest, FillRates) {
   struct TestVector {
     std::vector<SupportedRate> supp_rates;
     std::vector<SupportedRate> ext_supp_rates;
-    std::vector<uint8_t> want_basic;
-    std::vector<uint8_t> want_op;
+    std::vector<uint8_t> want_rates;
   };
 
   std::vector<TestVector> tvs{
       // clang-format off
-        {{SupportedRate{111},},        {},                           {},         {111,},    },
-        {{},                           {SupportedRate{111},},        {},         {111,},    },
-        {{SupportedRate::basic(111),}, {},                           {111,},     {111,},    },
-        {{},                           {SupportedRate::basic(111),}, {111,},     {111,},    },
-        {{SupportedRate{97},},         {SupportedRate::basic(111),}, {111,},     {97, 111,},},
-        {{SupportedRate::basic(97),},  {SupportedRate{111},},        {97,},      {97, 111,},},
-        {{SupportedRate::basic(97),},  {SupportedRate::basic(111),}, {97, 111,}, {97, 111,},},
+    {{SR{111},},        {},                           {111,} },
+    {{},                           {SR{111},},        {111,} },
+    {{SR::basic(111),}, {},                           {SR::basic(111)}},
+    {{},                           {SR::basic(111),}, {SR::basic(111)}},
+    {{SR{97},},         {SR::basic(111),}, {97, SR::basic(111)}},
+    {{SR::basic(97),},  {SR{111},},        {SR::basic(97), 111}},
+    {{SR::basic(97),},  {SR::basic(111),}, {SR::basic(97), SR::basic(111)}},
       // clang-format on
   };
   for (auto tv : tvs) {
-    std::vector<uint8_t> got_basic{};
-    std::vector<uint8_t> got_op{};
-    FillRates(tv.supp_rates, tv.ext_supp_rates, &got_basic, &got_op);
-    EXPECT_EQ(got_basic, tv.want_basic);
-    EXPECT_EQ(got_op, tv.want_op);
+    std::vector<uint8_t> got_rates{};
+    FillRates(tv.supp_rates, tv.ext_supp_rates, &got_rates);
+    EXPECT_EQ(got_rates, tv.want_rates);
   }
 }
 
 TEST(ParseBeaconTest, ParseBeaconElements) {
-  // clang-format off
-    const uint8_t ies[] = {
-        0, 3, 'f', 'o', 'o', // SSID
-        1, 8, 0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08, // Supported Rates
-        3, 1, 13, // DSSS Param Set
-        7, 3, 'A', 'B', 'C', // Country
-        50, 3, 0x09, 0x0a, 0x0b, // Ext Supp Rates
-        48, 2, 0xaa, 0xbb, // RSN
-        45, 26, // HT Caps
-            0xaa, 0xbb, // ht cap info
-            0xff, // ampdu params
-            0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
-            0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, // mcs
-            0xdd, 0xee, // ext caps
-            0x11, 0x22, 0x33, 0x44, // beamforming
-            0x77, // asel
-        61, 22, // HT Operation
-            36, // primary channel
-            0x11, 0x22, 0x33, 0x44, 0x55, // HT Op Info
-            0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
-            0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, // mcs
-        191, 12, // Vht Caps
-            0xaa, 0xbb, 0xcc, 0xdd,
-            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-        192, 5, // Vht Operation
-            1, 155, 42, 0x33, 0x55,
-    };
-  // clang-format on
+  const uint8_t ies[] = {
+      0,    3,    'f',  'o',  'o',                                 // SSID
+      1,    8,    0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08,  // Supported Rates
+      3,    1,    13,                                              // DSSS Param Set
+      7,    3,    'A',  'B',  'C',                                 // Country
+      50,   3,    0x09, 0x0a, 0x0b,                                // Ext Supp Rates
+      48,   2,    0xaa, 0xbb,                                      // RSN
+      45,   26,                                                    // HT Caps
+      0xaa, 0xbb,                                                  // ht cap info
+      0xff,                                                        // ampdu params
+      0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,               // mcs
+      0x8,  0x9,  0xa,  0xb,  0xc,  0xd,  0xe,  0xf,               // mcs
+      0xdd, 0xee,                                                  // ext caps
+      0x11, 0x22, 0x33, 0x44,                                      // beamforming
+      0x77,                                                        // asel
+      61,   22,                                                    // HT Operation
+      36,                                                          // primary channel
+      0x11, 0x22, 0x33, 0x44, 0x55,                                // HT Op Info
+      0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,               // mcs
+      0x8,  0x9,  0xa,  0xb,  0xc,  0xd,  0xe,  0xf,               // mcs
+      191,  12,                                                    // Vht Caps id and length
+      0xaa, 0xbb, 0xcc, 0xdd,                                      // vht cap
+      0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,              // vht cap
+      192,  5,                                                     // Vht Operation
+      1,    155,  42,   0x33, 0x55,                                // vht op
+  };
   wlan_mlme::BSSDescription bss_desc;
   ParseBeaconElements(ies, 40, &bss_desc);
 
   EXPECT_EQ(bss_desc.ssid, std::vector<uint8_t>({'f', 'o', 'o'}));
-  EXPECT_EQ(bss_desc.basic_rate_set, std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04}));
-  EXPECT_EQ(bss_desc.op_rate_set, std::vector<uint8_t>({0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                                                        0x08, 0x09, 0x0a, 0x0b}));
+  EXPECT_EQ(bss_desc.rates, std::vector<uint8_t>({0x81, 0x82, 0x83, 0x84, 0x05, 0x06, 0x07, 0x08,
+                                                  0x09, 0x0a, 0x0b}));
   EXPECT_EQ(bss_desc.chan.primary, 36);
   EXPECT_EQ(*bss_desc.country, std::vector<uint8_t>({'A', 'B', 'C'}));
   EXPECT_EQ(*bss_desc.rsn, std::vector<uint8_t>({48, 2, 0xaa, 0xbb}));

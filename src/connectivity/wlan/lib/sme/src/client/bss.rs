@@ -300,8 +300,7 @@ mod tests {
                     _ => true,
                 })
                 .0,
-            basic_rate_set: vec![],
-            op_rate_set: vec![],
+            rates: vec![],
             country: None,
             rsn: match protection {
                 ProtectionCfg::Wpa2Legacy => Some(fake_wpa2_legacy_rsne()),

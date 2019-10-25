@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 #include <src/connectivity/wlan/drivers/wlanif/convert.h>
+#include <wlan/common/element.h>
 
 namespace wlanif {
 namespace {
@@ -62,24 +63,20 @@ TEST(ConvertTest, ToFidlBSSDescription_SsidTooLong) {
 }
 
 TEST(ConvertTest, ToVectorRateSets_InvalidRateCount) {
-  wlanif_bss_description bss_desc = {};
-
-  constexpr uint8_t kBasicRateMask = 0b10000000;
-  size_t basic_rate_count = 0;
+  wlanif_bss_description bss_desc{};
+  std::vector<uint8_t> expected;
 
   bss_desc.num_rates = WLAN_MAC_MAX_RATES + 1;
-  for (unsigned i = 0; i < WLAN_MAC_MAX_RATES; i++) {
+  for (unsigned i = 0; i < WLAN_MAC_MAX_RATES + 1; i++) {
     bss_desc.rates[i] = i;
-    if (i & kBasicRateMask) {
-      basic_rate_count++;
-    }
+    expected.push_back(i);
   }
-  std::vector<uint8_t> basic_rates;
-  std::vector<uint8_t> op_rates;
-  ConvertRateSets(&basic_rates, &op_rates, bss_desc);
+  std::vector<uint8_t> rates;
 
-  EXPECT_EQ(basic_rates.size(), basic_rate_count);
-  EXPECT_EQ(op_rates.size(), (size_t)WLAN_MAC_MAX_RATES);
+  ConvertRates(&rates, bss_desc);
+
+  expected.resize(WLAN_MAC_MAX_RATES);  // ConvertRates will truncate rates
+  EXPECT_EQ(rates, expected);
 }
 
 }  // namespace

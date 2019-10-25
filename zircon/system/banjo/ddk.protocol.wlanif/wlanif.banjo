@@ -76,7 +76,7 @@ struct WlanifJoinReq {
     uint32 join_failure_timeout;
     uint32 nav_sync_delay;
     usize num_op_rates;
-    array<uint16>:WLAN_MAX_OP_RATES op_rates;
+    array<uint8>:WLAN_MAX_OP_RATES op_rates;
 };
 
 enum WlanAuthType : uint8 {

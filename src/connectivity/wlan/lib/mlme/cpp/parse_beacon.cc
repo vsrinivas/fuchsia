@@ -172,23 +172,13 @@ static void DoParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_chann
   }
 }
 
-static void ClassifyRates(fbl::Span<const SupportedRate> rates, ::std::vector<uint8_t>* basic,
-                          ::std::vector<uint8_t>* op) {
-  for (SupportedRate r : rates) {
-    if (r.is_basic()) {
-      basic->push_back(r.rate());
-    }
-    op->push_back(r.rate());
-  }
-}
-
 void FillRates(fbl::Span<const SupportedRate> supp_rates,
-               fbl::Span<const SupportedRate> ext_supp_rates, ::std::vector<uint8_t>* basic,
-               ::std::vector<uint8_t>* op) {
-  basic->resize(0);
-  op->resize(0);
-  ClassifyRates(supp_rates, basic, op);
-  ClassifyRates(ext_supp_rates, basic, op);
+               fbl::Span<const SupportedRate> ext_supp_rates, ::std::vector<uint8_t>* rates) {
+  rates->insert(rates->end(), supp_rates.cbegin(), supp_rates.cend());
+  rates->insert(rates->end(), ext_supp_rates.cbegin(), ext_supp_rates.cend());
+  if (rates->size() > wlan_mlme::RATES_MAX_LEN) {
+    rates->resize(wlan_mlme::RATES_MAX_LEN);
+  }
 }
 
 void ParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_channel,
@@ -198,7 +188,7 @@ void ParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_channel,
   fbl::Span<const SupportedRate> ext_supp_rates;
 
   DoParseBeaconElements(ies, rx_channel, bss_desc, &dsss_chan, &supp_rates, &ext_supp_rates);
-  FillRates(supp_rates, ext_supp_rates, &bss_desc->basic_rate_set, &bss_desc->op_rate_set);
+  FillRates(supp_rates, ext_supp_rates, &bss_desc->rates);
 
   std::optional<uint8_t> vht_cbw{};
   if (bss_desc->vht_op) {

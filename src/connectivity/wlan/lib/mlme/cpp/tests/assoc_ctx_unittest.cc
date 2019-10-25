@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <lib/fidl/cpp/vector.h>
+
 #include <optional>
 #include <vector>
 
 #include <fbl/span.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/fidl/cpp/vector.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/element.h>
 #include <wlan/common/mac_frame.h>
@@ -25,8 +26,7 @@ namespace wlan {
 namespace {
 
 struct TestVector {
-  std::vector<uint8_t> ap_basic_rate_set;
-  std::vector<uint8_t> ap_op_rate_set;
+  std::vector<uint8_t> ap_rates;
   std::vector<SupportedRate> client_rates;
   std::optional<std::vector<SupportedRate>> want_rates;
 };
@@ -43,10 +43,7 @@ constexpr auto SR_b = SupportedRate::basic;
 // preserved.
 
 void TestOnce(const TestVector& tv) {
-  auto basic = ::std::vector(tv.ap_basic_rate_set);
-  auto op = ::std::vector(tv.ap_op_rate_set);
-
-  auto got_rates = BuildAssocReqSuppRates(basic, op, tv.client_rates);
+  auto got_rates = BuildAssocReqSuppRates(tv.ap_rates, tv.client_rates);
 
   ASSERT_EQ(tv.want_rates.has_value(), got_rates.has_value());
   if (!got_rates.has_value()) {
@@ -82,8 +79,7 @@ fbl::Span<const uint8_t> WriteAssocRespElements(fbl::Span<uint8_t> buffer) {
 
 TEST(AssociationRatesTest, Success) {
   TestOnce({
-      .ap_basic_rate_set = {1},
-      .ap_op_rate_set = {1, 2},
+      .ap_rates = {SR_b(1).val(), 2},
       .client_rates = {SR{1}, SR{2}, SR{3}},
       .want_rates = {{SR_b(1), SR(2)}},
   });
@@ -91,8 +87,7 @@ TEST(AssociationRatesTest, Success) {
 
 TEST(AssociationRatesTest, SuccessWithDuplicateRates) {
   TestOnce({
-      .ap_basic_rate_set = {1, 1},
-      .ap_op_rate_set = {1},
+      .ap_rates = {SR_b(1).val(), 1},
       .client_rates = {SR{1}, SR{2}, SR{3}},
       .want_rates = {{SR_b(1)}},
   });
@@ -100,8 +95,7 @@ TEST(AssociationRatesTest, SuccessWithDuplicateRates) {
 
 TEST(AssociationRatesTest, FailureNoApBasicRatesSupported) {
   TestOnce({
-      .ap_basic_rate_set = {1},
-      .ap_op_rate_set = {1},
+      .ap_rates = {SR_b(1).val()},
       .client_rates = {SR{2}, SR{3}},
       .want_rates = {},
   });
@@ -109,8 +103,7 @@ TEST(AssociationRatesTest, FailureNoApBasicRatesSupported) {
 
 TEST(AssociationRatesTest, FailureApBasicRatesPartiallySupported) {
   TestOnce({
-      .ap_basic_rate_set = {1, 4},
-      .ap_op_rate_set = {1, 4},
+      .ap_rates = {SR_b(1).val(), SR_b(4).val()},
       .client_rates = {SR{1}, SR{2}, SR{3}},
       .want_rates = {},
   });

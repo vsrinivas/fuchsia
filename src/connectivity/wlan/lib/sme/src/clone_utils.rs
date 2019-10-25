@@ -32,8 +32,7 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
         local_time: d.local_time,
 
         cap: d.cap,
-        basic_rate_set: d.basic_rate_set.clone(),
-        op_rate_set: d.op_rate_set.clone(),
+        rates: d.rates.clone(),
         country: d.country.clone(),
 
         rsn: d.rsn.clone(),
@@ -60,7 +59,7 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
 pub fn clone_band_cap(b: &BandCapabilities) -> BandCapabilities {
     BandCapabilities {
         band_id: b.band_id,
-        basic_rates: b.basic_rates.clone(),
+        rates: b.rates.clone(),
         base_frequency: b.base_frequency,
         channels: b.channels.clone(),
         ht_cap: b.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),

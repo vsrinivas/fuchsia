@@ -917,7 +917,8 @@ TEST_F(ClientTest, FailureToAssociateWithAPWithUnsupportedBasicRate) {
   // to SME.
   auto join_msg = CreateJoinRequest(false);
   // The AP contains basic_rate that the client does not support.
-  const_cast<wlan_mlme::JoinRequest*>(join_msg.body())->selected_bss.basic_rate_set = {7};
+  const_cast<wlan_mlme::JoinRequest*>(join_msg.body())->selected_bss.rates = {
+      SupportedRate::basic(7)};
   ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(join_msg));
 
   Authenticate();
@@ -942,7 +943,7 @@ TEST_F(ClientTest, FailureToAssociateWithAPWithoutAnySupportedRate) {
   // to SME.
   auto join_msg = CreateJoinRequest(false);
   // The client does not support any rate that this AP announces.
-  const_cast<wlan_mlme::JoinRequest*>(join_msg.body())->selected_bss.op_rate_set = {7};
+  const_cast<wlan_mlme::JoinRequest*>(join_msg.body())->selected_bss.rates = {7};
   ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(join_msg));
 
   Authenticate();

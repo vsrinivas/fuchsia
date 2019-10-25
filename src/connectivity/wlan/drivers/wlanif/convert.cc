@@ -11,7 +11,6 @@
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/band.h>
-#include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
 
@@ -112,24 +111,12 @@ void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_specific,
 
 void ConvertRateSets(wlanif_bss_description_t* wlanif_desc,
                      const wlan_mlme::BSSDescription& fidl_desc) {
-  std::vector<uint8_t> basic_rates(fidl_desc.basic_rate_set);
-  std::vector<uint8_t> op_rates(fidl_desc.op_rate_set);
-
-  if (op_rates.size() > WLAN_MAC_MAX_RATES) {
-    warnf("op_rates.size() is %lu > max allowed size: %d\n", op_rates.size(), WLAN_MAC_MAX_RATES);
-    ZX_DEBUG_ASSERT(op_rates.size() <= WLAN_MAC_MAX_RATES);
+  if (fidl_desc.rates.size() > WLAN_MAC_MAX_RATES) {
+    warnf("rates.size() %lu > max allowed size: %d\n", fidl_desc.rates.size(), WLAN_MAC_MAX_RATES);
+    ZX_DEBUG_ASSERT(fidl_desc.rates.size() <= WLAN_MAC_MAX_RATES);
   }
-
-  std::sort(basic_rates.begin(), basic_rates.end());
-  std::sort(op_rates.begin(), op_rates.end());
-  wlanif_desc->num_rates = 0;
-  for (const auto& r : op_rates) {
-    if (wlanif_desc->num_rates == WLAN_MAC_MAX_RATES) {
-      break;
-    }
-    const bool is_basic = std::binary_search(basic_rates.cbegin(), basic_rates.cend(), r);
-    wlanif_desc->rates[wlanif_desc->num_rates++] = is_basic ? (r | 0b10000000) : (r & 0b01111111);
-  }
+  wlanif_desc->num_rates = fidl_desc.rates.size();
+  std::copy(fidl_desc.rates.cbegin(), fidl_desc.rates.cend(), std::begin(wlanif_desc->rates));
 }
 
 void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
@@ -233,11 +220,7 @@ static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, const T* data, size_t le
   }
 }
 
-void ConvertRateSets(::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op,
-                     const wlanif_bss_description_t& wlanif_desc) {
-  (*basic).resize(0);
-  (*op).resize(0);
-
+void ConvertRates(::std::vector<uint8_t>* rates, const wlanif_bss_description_t& wlanif_desc) {
   uint16_t total_rate_count = wlanif_desc.num_rates;
   if (total_rate_count > WLAN_MAC_MAX_RATES) {
 #if !WLANIF_TEST
@@ -247,18 +230,7 @@ void ConvertRateSets(::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op,
     total_rate_count = WLAN_MAC_MAX_RATES;
   }
 
-  // TODO(eyw): Use WlanRate data structure when it is available.
-
-  constexpr uint8_t kBasicRateMask = 0b10000000;
-  constexpr uint8_t kHalfMbpsMask = 0b01111111;
-
-  for (uint16_t i = 0; i < total_rate_count; ++i) {
-    uint8_t rate = wlanif_desc.rates[i];
-    if (rate & kBasicRateMask) {
-      basic->push_back(rate & kHalfMbpsMask);
-    }
-    op->push_back(rate & kHalfMbpsMask);
-  }
+  *rates = {wlanif_desc.rates, wlanif_desc.rates + total_rate_count};
 }
 
 void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
@@ -291,7 +263,7 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
   fidl_desc->cap = wlanif_desc.cap;
 
   // basic_rate_set and op_rate_set
-  ConvertRateSets(&fidl_desc->basic_rate_set, &fidl_desc->op_rate_set, wlanif_desc);
+  ConvertRates(&fidl_desc->rates, wlanif_desc);
 
   // rsne
   ArrayToVector(&fidl_desc->rsn, wlanif_desc.rsne, wlanif_desc.rsne_len);
@@ -828,14 +800,12 @@ void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
   fidl_band->band_id = ::wlan::common::BandToFidl(band.band_id);
 
   // basic_rates
-  fidl_band->basic_rates.resize(0);
-  fidl_band->basic_rates.assign(band.basic_rates, band.basic_rates + band.num_basic_rates);
+  fidl_band->rates.assign(band.basic_rates, band.basic_rates + band.num_basic_rates);
 
   // base_frequency
   fidl_band->base_frequency = band.base_frequency;
 
   // channels
-  fidl_band->channels.resize(0);
   fidl_band->channels.assign(band.channels, band.channels + band.num_channels);
 
   if (band.ht_supported) {
@@ -879,7 +849,6 @@ void ConvertDispatcherStats(wlan_stats::DispatcherStats* fidl_stats,
 }
 
 void ConvertRssiStats(wlan_stats::RssiStats* fidl_stats, const wlanif_rssi_stats& stats) {
-  fidl_stats->hist.resize(0);
   fidl_stats->hist.assign(stats.hist_list, stats.hist_list + stats.hist_count);
 }
 

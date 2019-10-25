@@ -567,7 +567,7 @@ impl State {
             selected_bss,
             join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
             nav_sync_delay: 0,
-            op_rate_set: vec![],
+            op_rates: vec![],
             phy: phy_to_use,
             cbw: cbw_to_use,
         }));
@@ -755,15 +755,14 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
     };
     format!(
         "ConnectCmd {{ \
-         bssid: {bssid}, ssid: {ssid:?}, cap: {cap:?}, basic_rate_set: {basic_rate_set:?}, \
-         op_rate_set: {op_rate_set:?}, protected: {protected:?}, chan: {chan:?}, \
+         bssid: {bssid}, ssid: {ssid:?}, cap: {cap:?}, rates: {rates:?}, \
+         protected: {protected:?}, chan: {chan:?}, \
          rcpi: {rcpi:?}, rsni: {rsni:?}, rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
          vht_cap: {vht_cap:?}, vht_op: {vht_op:?} }}",
         bssid = bss.bssid.to_mac_str(),
         ssid = ssid,
         cap = bss.cap,
-        basic_rate_set = bss.basic_rate_set,
-        op_rate_set = bss.op_rate_set,
+        rates = bss.rates,
         protected = bss.rsn.is_some(),
         chan = bss.chan,
         rcpi = bss.rcpi_dbmh,

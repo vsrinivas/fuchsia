@@ -286,8 +286,7 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
   auto cap_info = OverrideCapability(client_capability.cap);
   join_ctx_->set_listen_interval(0);
 
-  auto rates = BuildAssocReqSuppRates(join_ctx_->bss()->basic_rate_set,
-                                      join_ctx_->bss()->op_rate_set, client_capability.rates);
+  auto rates = BuildAssocReqSuppRates(join_ctx_->bss()->rates, client_capability.rates);
   if (!rates.has_value()) {
     service::SendAssocConfirm(device_,
                               wlan_mlme::AssociateResultCodes::REFUSED_BASIC_RATES_MISMATCH);

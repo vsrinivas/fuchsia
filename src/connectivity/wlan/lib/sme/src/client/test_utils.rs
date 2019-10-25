@@ -38,8 +38,7 @@ fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescr
         timestamp: 0,
         local_time: 0,
         cap: mac::CapabilityInfo(0).with_privacy(rsn.is_some()).0,
-        basic_rate_set: vec![],
-        op_rate_set: vec![],
+        rates: vec![],
         country: None,
         rsn,
         vendor_ies: None,
@@ -60,8 +59,8 @@ pub fn fake_bss_with_bssid(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescript
     fidl_mlme::BssDescription { bssid, ..fake_unprotected_bss_description(ssid) }
 }
 
-pub fn fake_bss_with_rates(ssid: Ssid, basic_rate_set: Vec<u8>) -> fidl_mlme::BssDescription {
-    fidl_mlme::BssDescription { basic_rate_set, ..fake_unprotected_bss_description(ssid) }
+pub fn fake_bss_with_rates(ssid: Ssid, rates: Vec<u8>) -> fidl_mlme::BssDescription {
+    fidl_mlme::BssDescription { rates, ..fake_unprotected_bss_description(ssid) }
 }
 
 pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {

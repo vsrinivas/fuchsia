@@ -299,7 +299,7 @@ fn create_peering_params(
             return None;
         }
     };
-    let rates = peer.rates.iter().filter(|x| band_caps.basic_rates.contains(x)).cloned().collect();
+    let rates = peer.rates.iter().filter(|x| band_caps.rates.contains(x)).cloned().collect();
     Some(fidl_mlme::MeshPeeringParams { peer_sta_address: peer.peer_sta_address, local_aid, rates })
 }
 

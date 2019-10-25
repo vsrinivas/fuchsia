@@ -74,8 +74,7 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
   bss_desc.dtim_period = kDtimPeriodTu;
   bss_desc.timestamp = 0;
   bss_desc.local_time = 0;
-  bss_desc.basic_rate_set.resize(0);
-  bss_desc.op_rate_set.resize(0);
+  bss_desc.rates.resize(0);
 
   CapabilityInfo cap{};
   cap.set_ess(true);
@@ -143,11 +142,11 @@ MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
   auto req = wlan_mlme::JoinRequest::New();
   req->join_failure_timeout = kJoinTimeout;
   req->nav_sync_delay = 20;
-  req->op_rate_set = {12, 24, 48};
+  req->op_rates = {12, 24, 48};
   req->phy = wlan::common::ToFidl(kBssPhy);
   req->cbw = wlan::common::ToFidl(kBssChannel).cbw;
   req->selected_bss = CreateBssDescription(rsn);
-  req->selected_bss.op_rate_set = {12, 24, 48};
+  req->selected_bss.rates = {12, 24, 48};
 
   return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_JoinReq_Ordinal};
 }

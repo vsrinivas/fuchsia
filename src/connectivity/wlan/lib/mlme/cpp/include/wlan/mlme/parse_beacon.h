@@ -17,8 +17,7 @@ void ParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_channel,
 
 // The following functions are visible for testing only
 void FillRates(fbl::Span<const SupportedRate> supp_rates,
-               fbl::Span<const SupportedRate> ext_supp_rates, ::std::vector<uint8_t>* basic,
-               ::std::vector<uint8_t>* op);
+               fbl::Span<const SupportedRate> ext_supp_rates, ::std::vector<uint8_t>* rates);
 std::optional<wlan_channel_bandwidth_t> GetVhtCbw(const VhtOperation& vht_op);
 wlan_channel_t DeriveChannel(uint8_t rx_channel, std::optional<uint8_t> dsss_chan,
                              const HtOperation* ht_op,

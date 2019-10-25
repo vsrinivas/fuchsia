@@ -298,14 +298,14 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
   impl_req.nav_sync_delay = req.nav_sync_delay;
 
   // op_rates
-  if (req.op_rate_set.size() > WLAN_MAX_OP_RATES) {
-    warnf("wlanif: truncating operational rates set from %zu to %d members\n",
-          req.op_rate_set.size(), WLAN_MAX_OP_RATES);
+  if (req.op_rates.size() > WLAN_MAX_OP_RATES) {
+    warnf("wlanif: truncating operational rates set from %zu to %d members\n", req.op_rates.size(),
+          WLAN_MAX_OP_RATES);
     impl_req.num_op_rates = WLAN_MAX_OP_RATES;
   } else {
-    impl_req.num_op_rates = req.op_rate_set.size();
+    impl_req.num_op_rates = req.op_rates.size();
   }
-  std::memcpy(impl_req.op_rates, req.op_rate_set.data(), impl_req.num_op_rates);
+  std::memcpy(impl_req.op_rates, req.op_rates.data(), impl_req.num_op_rates);
 
   wlanif_impl_join_req(&wlanif_impl_, &impl_req);
 }
@@ -798,8 +798,7 @@ void Device::AssociateInd(const wlanif_assoc_ind_t* ind) {
   // ssid
 
   if (ind->ssid.len) {
-    fidl_ind.ssid =
-        {std::vector<uint8_t>(ind->ssid.data, ind->ssid.data + ind->ssid.len)};
+    fidl_ind.ssid = {std::vector<uint8_t>(ind->ssid.data, ind->ssid.data + ind->ssid.len)};
   }
   // rsne
   bool is_protected = ind->rsne_len != 0;

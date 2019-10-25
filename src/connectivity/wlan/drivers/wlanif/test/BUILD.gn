@@ -118,5 +118,9 @@ unittest_package("wlanif_unittest") {
       name = "wlanif_impl_unittest"
       environments = basic_envs
     },
+    {
+      name = "wlanif_convert_unittest"
+      environments = basic_envs
+    },
   ]
 }

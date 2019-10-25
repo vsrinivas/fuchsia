@@ -246,10 +246,10 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
     const wlan_info_band_info_t& band_info = info.bands[band_idx];
     wlan_mlme::BandCapabilities band;
     band.band_id = wlan::common::BandToFidl(band_info.band);
-    band.basic_rates.resize(0);
+    band.rates.resize(0);
     for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates); rate_idx++) {
       if (band_info.basic_rates[rate_idx] != 0) {
-        band.basic_rates.push_back(band_info.basic_rates[rate_idx]);
+        band.rates.push_back(band_info.basic_rates[rate_idx]);
       }
     }
     const wlan_info_channel_list_t& chan_list = band_info.supported_channels;
