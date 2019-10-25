@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use run_test_suite_lib::{run_test, TestOutcome};
+use std::collections::HashSet;
 use std::str::from_utf8;
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -143,7 +144,12 @@ Example.Test1
 Example.Test3
 ";
 
-    assert_eq!(from_utf8(&output), Ok(expected_output));
+    // split and sort output because for incomplete tests output can be in any order because of
+    // async calls. This will make sure we got all expected output lines.
+    let expected_output: HashSet<_> = expected_output.split("\n").collect();
+    let output: HashSet<_> = from_utf8(&output).unwrap().split("\n").collect();
+
+    assert_eq!(output, expected_output);
 
     assert_eq!(result, TestOutcome::Inconclusive);
 
