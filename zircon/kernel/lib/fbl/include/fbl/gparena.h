@@ -14,7 +14,7 @@
 
 namespace fbl {
 
-// Growable Peristant Arena (GPArena) is an arena that allows for fast allocation and deallocation
+// Growable Persistant Arena (GPArena) is an arena that allows for fast allocation and deallocation
 // of a single kind of object. Compared to other arena style allocators it additionally guarantees
 // that a portion of the objects memory will be preserved between calls to Free+Alloc.
 template <size_t PersistSize, size_t ObjectSize>
