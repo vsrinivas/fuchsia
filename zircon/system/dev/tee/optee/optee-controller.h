@@ -11,6 +11,8 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 
+#include <memory>
+
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
@@ -20,7 +22,6 @@
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 
 #include "optee-message.h"
 #include "optee-smc.h"
@@ -92,7 +93,7 @@ class OpteeController : public OpteeControllerBase,
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;
   fuchsia_tee::OsRevision os_revision_ = {};
-  fbl::unique_ptr<SharedMemoryManager> shared_memory_manager_;
+  std::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 };
 
 }  // namespace optee

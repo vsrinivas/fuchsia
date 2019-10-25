@@ -458,7 +458,7 @@ zx_status_t OpteeClient::AllocateSharedMemory(size_t size,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::unique_ptr<SharedMemory> sh_mem;
+  std::unique_ptr<SharedMemory> sh_mem;
   zx_status_t status = memory_pool->Allocate(size, &sh_mem);
   if (status != ZX_OK) {
     return status;

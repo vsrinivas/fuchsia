@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -18,7 +19,6 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <tee-client-api/tee-client-types.h>
 
 #include "optee-client.h"
@@ -192,12 +192,7 @@ zx_status_t OpteeController::DiscoverSharedMemoryConfig(zx_paddr_t* out_start_ad
 }
 
 zx_status_t OpteeController::Create(void* ctx, zx_device_t* parent) {
-  fbl::AllocChecker ac;
-  auto tee = fbl::make_unique_checked<OpteeController>(&ac, parent);
-
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  auto tee = std::make_unique<OpteeController>(parent);
 
   auto status = tee->Bind();
   if (status == ZX_OK) {

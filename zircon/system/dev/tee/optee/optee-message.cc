@@ -327,7 +327,7 @@ zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param
 }
 
 Message::TemporarySharedMemory::TemporarySharedMemory(zx::vmo vmo, uint64_t vmo_offset, size_t size,
-                                                      fbl::unique_ptr<SharedMemory> shared_memory)
+                                                      std::unique_ptr<SharedMemory> shared_memory)
     : vmo_(std::move(vmo)),
       vmo_offset_(vmo_offset),
       size_(size),

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_TEE_SMC_H_
+#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_TEE_SMC_H_
 
 #include <inttypes.h>
-
 #include <zircon/syscalls/smc.h>
 
 #define __DEFINE_SMC_RESULT_ARG_5(type0, name0, type1, name1, type2, name2, type3, name3, type6, \
@@ -172,3 +172,5 @@ constexpr uint32_t kTrustedOsCallRevisionFuncId =
 DEFINE_SMC_RESULT_STRUCT(TrustedOsCallRevisionResult, 2, uint32_t, major, uint32_t, minor)
 
 }  // namespace tee_smc
+
+#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_TEE_SMC_H_

@@ -32,7 +32,7 @@ std::optional<SharedMemoryView> SharedMemoryRangeTraits::SliceByPaddr(zx_paddr_t
 
 zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start, size_t shared_mem_size,
                                         ddk::MmioBuffer secure_world_memory, zx::bti bti,
-                                        fbl::unique_ptr<SharedMemoryManager>* out_manager) {
+                                        std::unique_ptr<SharedMemoryManager>* out_manager) {
   ZX_DEBUG_ASSERT(out_manager != nullptr);
 
   // Round the start and end to the nearest page boundaries within the range and calculate a
@@ -73,14 +73,9 @@ zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start, size_t shar
 
   const zx_off_t shared_mem_offset = shared_mem_start - secure_world_paddr;
 
-  fbl::AllocChecker ac;
-  fbl::unique_ptr<SharedMemoryManager> manager(new (&ac) SharedMemoryManager(
+  std::unique_ptr<SharedMemoryManager> manager(new SharedMemoryManager(
       secure_world_vaddr + shared_mem_offset, secure_world_paddr + shared_mem_offset,
       shared_mem_size, std::move(secure_world_memory), *std::move(pinned)));
-
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
 
   *out_manager = std::move(manager);
   return ZX_OK;

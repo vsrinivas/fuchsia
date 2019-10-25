@@ -10,11 +10,11 @@
 #include <zircon/assert.h>
 
 #include <cinttypes>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
 #include <fbl/array.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <tee-client-api/tee-client-types.h>
 
@@ -142,7 +142,7 @@ class MessageParamList {
 template <typename PtrType>
 class MessageBase {
   static_assert(std::is_same<PtrType, SharedMemory*>::value ||
-                    std::is_same<PtrType, fbl::unique_ptr<SharedMemory>>::value,
+                    std::is_same<PtrType, std::unique_ptr<SharedMemory>>::value,
                 "Template type of MessageBase must be a pointer (raw or smart) to SharedMemory!");
 
  public:
@@ -181,7 +181,7 @@ class MessageBase {
 // Message
 //
 // A normal message from the rich world (REE).
-class Message : public MessageBase<fbl::unique_ptr<SharedMemory>> {
+class Message : public MessageBase<std::unique_ptr<SharedMemory>> {
  public:
   enum Command : uint32_t {
     kOpenSession = 0,
@@ -223,7 +223,7 @@ class Message : public MessageBase<fbl::unique_ptr<SharedMemory>> {
   class TemporarySharedMemory {
    public:
     explicit TemporarySharedMemory(zx::vmo vmo, uint64_t vmo_offset, size_t size,
-                                   fbl::unique_ptr<SharedMemory>);
+                                   std::unique_ptr<SharedMemory>);
 
     TemporarySharedMemory(TemporarySharedMemory&&) = default;
     TemporarySharedMemory& operator=(TemporarySharedMemory&&) = default;
@@ -240,7 +240,7 @@ class Message : public MessageBase<fbl::unique_ptr<SharedMemory>> {
     zx::vmo vmo_;
     uint64_t vmo_offset_;
     size_t size_;
-    fbl::unique_ptr<SharedMemory> shared_memory_;
+    std::unique_ptr<SharedMemory> shared_memory_;
   };
 
   fuchsia_tee::Value CreateOutputValueParameter(const MessageParam& optee_param);

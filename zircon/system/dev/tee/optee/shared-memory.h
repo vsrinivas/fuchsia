@@ -11,11 +11,11 @@
 #include <climits>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <utility>
 
 #include <fbl/intrusive_double_list.h>
-#include <fbl/unique_ptr.h>
 #include <region-alloc/region-alloc.h>
 
 namespace optee {
@@ -99,7 +99,7 @@ class SharedMemoryRangeTraits {
 };
 
 class SharedMemory : public SharedMemoryRangeTraits,
-                     public fbl::DoublyLinkedListable<fbl::unique_ptr<SharedMemory>> {
+                     public fbl::DoublyLinkedListable<std::unique_ptr<SharedMemory>> {
  public:
   using RegionPtr = RegionAllocator::Region::UPtr;
 
@@ -143,7 +143,7 @@ class SharedMemoryPool {
     region_allocator_.AddRegion({.base = 0, .size = size});
   }
 
-  zx_status_t Allocate(size_t size, fbl::unique_ptr<SharedMemory>* out_shared_memory) {
+  zx_status_t Allocate(size_t size, std::unique_ptr<SharedMemory>* out_shared_memory) {
     // The RegionAllocator provides thread safety around allocations, so we currently don't
     // require any additional locking.
 
@@ -153,12 +153,7 @@ class SharedMemoryPool {
       return ZX_ERR_NO_RESOURCES;
     }
 
-    fbl::AllocChecker ac;
-    auto shared_memory =
-        fbl::make_unique_checked<SharedMemory>(&ac, vaddr_, paddr_, std::move(region));
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
+    auto shared_memory = std::make_unique<SharedMemory>(vaddr_, paddr_, std::move(region));
 
     *out_shared_memory = std::move(shared_memory);
     return ZX_OK;
@@ -187,7 +182,7 @@ class SharedMemoryManager {
 
   static zx_status_t Create(zx_paddr_t shared_mem_start, size_t shared_mem_size,
                             ddk::MmioBuffer secure_world_memory, zx::bti bti,
-                            fbl::unique_ptr<SharedMemoryManager>* out_manager);
+                            std::unique_ptr<SharedMemoryManager>* out_manager);
   ~SharedMemoryManager() = default;
 
   DriverMemoryPool* driver_pool() { return &driver_pool_; }

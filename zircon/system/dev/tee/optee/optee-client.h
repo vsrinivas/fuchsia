@@ -65,7 +65,7 @@ class OpteeClient : public OpteeClientBase,
   void CloseSession(uint32_t session_id, CloseSessionCompleter::Sync completer) override;
 
  private:
-  using SharedMemoryList = fbl::DoublyLinkedList<fbl::unique_ptr<SharedMemory>>;
+  using SharedMemoryList = fbl::DoublyLinkedList<std::unique_ptr<SharedMemory>>;
 
   zx_status_t CloseSession(uint32_t session_id);
 
