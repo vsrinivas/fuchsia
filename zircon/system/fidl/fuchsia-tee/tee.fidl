@@ -6,8 +6,8 @@ library fuchsia.tee;
 
 // Trusted Execution Environment (TEE) Interface
 
-// UUID identifiers are used to identify the TEE Operating System and individual Trusted
-// Applications. This structure matches the UUID type as defined by RFC4122.
+/// UUID identifiers are used to identify the TEE Operating System and individual Trusted
+/// Applications. This structure matches the UUID type as defined by RFC4122.
 struct Uuid {
     uint32 time_low;
     uint16 time_mid;
@@ -15,96 +15,107 @@ struct Uuid {
     array<uint8>:8 clock_seq_and_node;
 };
 
-struct OsRevision {
-    uint32 major;
-    uint32 minor;
+table OsRevision {
+    1: uint32 major;
+    2: uint32 minor;
 };
 
-struct OsInfo {
-    Uuid uuid;
-    OsRevision revision;
-    bool is_global_platform_compliant;
+table OsInfo {
+    1: Uuid uuid;
+    2: OsRevision revision;
+    3: bool is_global_platform_compliant;
 };
 
-// Operation Parameters
-//
-// Communication with the TEE OS and Trusted Applications is performed using opaque parameters.
-// These parameters can be a mix of small values (Value type) or a buffer reference (Buffer type).
-// A parameter will be tagged as either an input, output or both (inout).
+/// Communication with the TEE OS and Trusted Applications is performed using opaque parameters.
+/// These parameters can be a mix of small values (Value type) or a buffer reference (Buffer type).
+/// A parameter will be tagged as either an input, output or both (inout).
 enum Direction : uint32 {
     INPUT = 0;
     OUTPUT = 1;
     INOUT = 2;
 };
 
-// An empty parameter type is used as a placeholder for elements in the parameter set that are not
-// used.
-struct Empty {
+/// An empty parameter type is used as a placeholder for elements in the parameter set that are not
+/// used.
+// TODO(8031): Consider making this a table once empty tables do not cause binding issues.
+struct None {
 };
 
-struct Buffer {
-    Direction direction;
-    // The VMO is allowed to be null for situations where the TEE allows for buffer size checks.
-    // For example, if the operation to be performed needs an output buffer, but the user cannot
-    // calculate how large that output buffer should be, they can attempt the operation with a
-    // null vmo and the Trusted Application will populate the size field so that the operation can
-    // be performed again with an appropriately sized buffer.
-    handle<vmo>? vmo;
-    uint64 offset;
-    uint64 size;
+/// Represents a buffer parameter.
+table Buffer {
+    1: Direction direction;
+
+    /// The VMO is allowed to be not present for situations where the TEE allows for buffer size
+    /// checks.
+    ///
+    /// For example, if the operation to be performed needs an output buffer, but the user cannot
+    /// calculate how large that output buffer should be, they can attempt the operation without
+    /// a vmo and the Trusted Application will populate the size field so that the operation can
+    /// be performed again with an appropriately sized buffer.
+    2: handle<vmo> vmo;
+    3: uint64 offset;
+    4: uint64 size;
 };
 
-struct Value {
-    Direction direction;
-    uint64 a;
-    uint64 b;
-    uint64 c;
+/// Represents a direct value parameter.
+table Value {
+    1: Direction direction;
+
+    /// This value is optional. If not set, a zero value is sent in its place if it is required by
+    /// the calling convention.
+    2: uint64 a;
+
+    /// This value is optional. If not set, a zero value is sent in its place if it is required by
+    /// the calling convention.
+    3: uint64 b;
+
+    /// This value is optional. If not set, a zero value is sent in its place if it is required by
+    /// the calling convention.
+    4: uint64 c;
 };
 
-union Parameter {
-    Empty empty;
+xunion Parameter {
+    None none;
     Buffer buffer;
     Value value;
 };
 
-struct ParameterSet {
-    uint16 count;
-    array<Parameter>:4 parameters;
-};
+const uint32 MAX_PARAMETERSET_COUNT = 4;
+using ParameterSet = vector<Parameter>:MAX_PARAMETERSET_COUNT;
 
-// Each operation must flow through the device driver and the trusted operating system before
-// reaching the trusted application (and back). The ReturnOrigin indicates which layer provided the
-// return code.
+/// Each operation must flow through the device driver and the trusted operating system before
+/// reaching the trusted application (and back). The ReturnOrigin indicates which layer provided the
+/// return code.
 enum ReturnOrigin : uint32 {
     COMMUNICATION = 0;
     TRUSTED_OS = 1;
     TRUSTED_APPLICATION = 2;
 };
 
-// The result of an operation will include a return code, the origin of the result, and the return
-// of the parameter set. The returned parameter set will be a copy of the input parameter set, but
-// with the INOUT and OUTPUT parameters updated. If the parameter is a Buffer, it will update the
-// Buffer.size to the number of bytes written.
-struct OpResult {
-    uint64 return_code;
-    ReturnOrigin return_origin;
-    ParameterSet parameter_set;
+/// The result of an operation will include a return code, the origin of the result, and the return
+/// of the parameter set. The returned parameter set will be a copy of the input parameter set, but
+/// with the INOUT and OUTPUT parameters updated. If the parameter is a Buffer, it will update the
+/// Buffer.size to the number of bytes written.
+table OpResult {
+    1: uint64 return_code;
+    2: ReturnOrigin return_origin;
+    3: ParameterSet parameter_set;
 };
 
 [Discoverable]
 protocol Device {
-    // Obtain information about the TEE OS
+    /// Obtain information about the TEE OS
     GetOsInfo() -> (OsInfo info);
 
-    // Initiates a communication session with the specified trusted application.
+    /// Initiates a communication session with the specified trusted application.
     OpenSession(Uuid trusted_app, ParameterSet parameter_set)
         -> (uint32 session_id, OpResult op_result);
 
-    // Requests the trusted application perform the provided command. The command is unique to the
-    // trusted application.
+    /// Requests the trusted application perform the provided command. The command is unique to the
+    /// trusted application.
     InvokeCommand(uint32 session_id, uint32 command_id, ParameterSet parameter_set)
         -> (OpResult op_result);
 
-    // Closes an established session.
+    /// Closes an established session.
     CloseSession(uint32 session_id) -> ();
 };

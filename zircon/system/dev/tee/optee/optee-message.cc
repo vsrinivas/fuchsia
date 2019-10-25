@@ -11,6 +11,8 @@
 
 #include <ddk/debug.h>
 
+#include "optee-llcpp.h"
+
 namespace optee {
 
 namespace {
@@ -29,12 +31,12 @@ void ConvertMessageParamToUuid(const MessageParam::Value& src, TEEC_UUID* dst) {
          sizeof(src.uuid_big_endian.clockSeqAndNode));
 }
 
-constexpr bool IsParameterInput(fuchsia_tee::Direction direction) {
+constexpr bool IsDirectionInput(fuchsia_tee::Direction direction) {
   return (direction == fuchsia_tee::Direction::INPUT) ||
          (direction == fuchsia_tee::Direction::INOUT);
 }
 
-constexpr bool IsParameterOutput(fuchsia_tee::Direction direction) {
+constexpr bool IsDirectionOutput(fuchsia_tee::Direction direction) {
   return (direction == fuchsia_tee::Direction::OUTPUT) ||
          (direction == fuchsia_tee::Direction::INOUT);
 }
@@ -42,27 +44,22 @@ constexpr bool IsParameterOutput(fuchsia_tee::Direction direction) {
 }  // namespace
 
 zx_status_t Message::TryInitializeParameters(
-    size_t starting_param_index, fuchsia_tee::ParameterSet& parameter_set,
+    size_t starting_param_index, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
     SharedMemoryManager::ClientMemoryPool* temp_memory_pool) {
-  // If we don't have any parameters to parse, then we can just skip this
-  if (parameter_set.count == 0) {
-    return ZX_OK;
-  }
-
   zx_status_t status = ZX_OK;
-  for (size_t i = 0; i < parameter_set.count; i++) {
+  for (size_t i = 0; i < parameter_set.count(); i++) {
     MessageParam& optee_param = params()[starting_param_index + i];
-    fuchsia_tee::Parameter& zx_param = parameter_set.parameters[i];
+    fuchsia_tee::Parameter& zx_param = parameter_set[i];
 
     switch (zx_param.which()) {
-      case fuchsia_tee::Parameter::Tag::kEmpty:
+      case fuchsia_tee::Parameter::Tag::kNone:
         optee_param.attribute = MessageParam::kAttributeTypeNone;
         break;
       case fuchsia_tee::Parameter::Tag::kValue:
         status = TryInitializeValue(zx_param.value(), &optee_param);
         break;
       case fuchsia_tee::Parameter::Tag::kBuffer:
-        status = TryInitializeBuffer(zx_param.mutable_buffer(), temp_memory_pool, &optee_param);
+        status = TryInitializeBuffer(&zx_param.buffer(), temp_memory_pool, &optee_param);
         break;
       default:
         return ZX_ERR_INVALID_ARGS;
@@ -79,7 +76,11 @@ zx_status_t Message::TryInitializeParameters(
 zx_status_t Message::TryInitializeValue(const fuchsia_tee::Value& value, MessageParam* out_param) {
   ZX_DEBUG_ASSERT(out_param != nullptr);
 
-  switch (value.direction) {
+  if (!value.has_direction()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  switch (value.direction()) {
     case fuchsia_tee::Direction::INPUT:
       out_param->attribute = MessageParam::kAttributeTypeValueInput;
       break;
@@ -92,25 +93,36 @@ zx_status_t Message::TryInitializeValue(const fuchsia_tee::Value& value, Message
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-  out_param->payload.value.generic.a = value.a;
-  out_param->payload.value.generic.b = value.b;
-  out_param->payload.value.generic.c = value.c;
+
+  if (IsDirectionInput(value.direction())) {
+    out_param->payload.value.generic.a = value.has_a() ? value.a() : 0;
+    out_param->payload.value.generic.b = value.has_b() ? value.b() : 0;
+    out_param->payload.value.generic.c = value.has_c() ? value.c() : 0;
+  }
 
   return ZX_OK;
 }
 
-zx_status_t Message::TryInitializeBuffer(fuchsia_tee::Buffer& buffer,
+zx_status_t Message::TryInitializeBuffer(fuchsia_tee::Buffer* buffer,
                                          SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                          MessageParam* out_param) {
+  ZX_DEBUG_ASSERT(buffer != nullptr);
   ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
   ZX_DEBUG_ASSERT(out_param != nullptr);
 
+  if (!buffer->has_direction() || !buffer->has_size() || !buffer->has_offset()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // Take ownership of the provided VMO. If we have to return early for any reason, this will
   // take care of closing the VMO.
-  zx::vmo vmo(std::move(buffer.vmo));
+  zx::vmo vmo;
+  if (buffer->has_vmo()) {
+    vmo = std::move(buffer->vmo());
+  }
 
   MessageParam::AttributeType attribute;
-  switch (buffer.direction) {
+  switch (buffer->direction()) {
     case fuchsia_tee::Direction::INPUT:
       attribute = MessageParam::kAttributeTypeTempMemInput;
       break;
@@ -129,7 +141,7 @@ zx_status_t Message::TryInitializeBuffer(fuchsia_tee::Buffer& buffer,
     // No need to allocate a temporary buffer from the shared memory pool,
     out_param->attribute = attribute;
     out_param->payload.temporary_memory.buffer = 0;
-    out_param->payload.temporary_memory.size = buffer.size;
+    out_param->payload.temporary_memory.size = buffer->size();
     out_param->payload.temporary_memory.shared_memory_reference = 0;
     return ZX_OK;
   }
@@ -139,20 +151,21 @@ zx_status_t Message::TryInitializeBuffer(fuchsia_tee::Buffer& buffer,
   // looked up upon return from TEE and to tie the lifetimes of the Message and the temporary
   // shared memory together.
   SharedMemoryPtr shared_mem;
-  zx_status_t status = temp_memory_pool->Allocate(buffer.size, &shared_mem);
+  zx_status_t status = temp_memory_pool->Allocate(buffer->size(), &shared_mem);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Failed to allocate temporary shared memory (%" PRIu64 ")\n", buffer.size);
+    zxlogf(ERROR, "optee: Failed to allocate temporary shared memory (%" PRIu64 ")\n",
+           buffer->size());
     return status;
   }
 
   uint64_t paddr = static_cast<uint64_t>(shared_mem->paddr());
 
-  TemporarySharedMemory temp_shared_mem{std::move(vmo), buffer.offset, buffer.size,
+  TemporarySharedMemory temp_shared_mem{std::move(vmo), buffer->offset(), buffer->size(),
                                         std::move(shared_mem)};
 
   // Input buffers should be copied into the shared memory buffer. Output only buffers can skip
   // this step.
-  if (IsParameterInput(buffer.direction)) {
+  if (IsDirectionInput(buffer->direction())) {
     status = temp_shared_mem.SyncToSharedMemory();
     if (status != ZX_OK) {
       zxlogf(ERROR, "optee: shared memory sync failed (%d)\n", status);
@@ -165,24 +178,14 @@ zx_status_t Message::TryInitializeBuffer(fuchsia_tee::Buffer& buffer,
 
   out_param->attribute = attribute;
   out_param->payload.temporary_memory.buffer = paddr;
-  out_param->payload.temporary_memory.size = buffer.size;
+  out_param->payload.temporary_memory.size = buffer->size();
   out_param->payload.temporary_memory.shared_memory_reference = index;
   return ZX_OK;
 }
 
 zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
-                                              fuchsia_tee::ParameterSet* out_parameter_set) {
+                                              ParameterSet* out_parameter_set) {
   ZX_DEBUG_ASSERT(out_parameter_set != nullptr);
-
-  // Use a temporary parameter set to avoid populating the output until we're sure it's valid.
-  fuchsia_tee::ParameterSet parameter_set;
-
-  // Below code assumes that we can fit all of the parameters from optee into the FIDL parameter
-  // set. This static assert ensures that the FIDL parameter set can always fit the number of
-  // parameters into the count.
-  static_assert(fbl::count_of(parameter_set.parameters.data_) <=
-                    std::numeric_limits<decltype(parameter_set.count)>::max(),
-                "The size of the tee parameter set has outgrown the count");
 
   if (header()->num_params < starting_param_index) {
     zxlogf(ERROR, "optee: Message contained fewer parameters (%" PRIu32 ") than required %zd\n",
@@ -193,37 +196,37 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
   // Ensure that the number of parameters returned by the TEE does not exceed the parameter set
   // array of parameters.
   const size_t count = header()->num_params - starting_param_index;
-  if (count > fbl::count_of(parameter_set.parameters.data_)) {
+  if (count > fuchsia_tee::MAX_PARAMETERSET_COUNT) {
     zxlogf(ERROR, "optee: Message contained more parameters (%zd) than allowed\n", count);
     return ZX_ERR_INVALID_ARGS;
   }
 
-  parameter_set.count = static_cast<uint16_t>(count);
+  std::vector<Parameter> parameters;
+  parameters.reserve(count);
+
   for (size_t i = 0; i < count; i++) {
     const MessageParam& optee_param = params()[i + starting_param_index];
-    fuchsia_tee::Parameter& zx_param = parameter_set.parameters[i];
+    Parameter parameter;
 
     switch (optee_param.attribute) {
       case MessageParam::kAttributeTypeNone: {
-        fuchsia_tee::Empty empty;
-        zx_param.set_empty(std::move(empty));
+        parameter.set_none();
         break;
       }
       case MessageParam::kAttributeTypeValueInput:
       case MessageParam::kAttributeTypeValueOutput:
       case MessageParam::kAttributeTypeValueInOut:
-        zx_param.set_value(CreateOutputValueParameter(optee_param));
+        parameter.set_value(CreateOutputValueParameter(optee_param));
         break;
       case MessageParam::kAttributeTypeTempMemInput:
       case MessageParam::kAttributeTypeTempMemOutput:
       case MessageParam::kAttributeTypeTempMemInOut: {
-        fuchsia_tee::Buffer buffer;
-        zx_param.set_buffer(std::move(buffer));
-        if (zx_status_t status =
-                CreateOutputBufferParameter(optee_param, &zx_param.mutable_buffer());
+        Buffer buffer;
+        if (zx_status_t status = CreateOutputBufferParameter(optee_param, &buffer);
             status != ZX_OK) {
           return status;
         }
+        parameter.set_buffer(std::move(buffer));
         break;
       }
       case MessageParam::kAttributeTypeRegMemInput:
@@ -232,24 +235,28 @@ zx_status_t Message::CreateOutputParameterSet(size_t starting_param_index,
       default:
         break;
     }
+
+    parameters.push_back(std::move(parameter));
   }
 
-  *out_parameter_set = std::move(parameter_set);
+  out_parameter_set->set_parameters(std::move(parameters));
   return ZX_OK;
 }
 
-fuchsia_tee::Value Message::CreateOutputValueParameter(const MessageParam& optee_param) {
-  fuchsia_tee::Value zx_value;
+Value Message::CreateOutputValueParameter(const MessageParam& optee_param) {
+  Value zx_value;
+
+  fuchsia_tee::Direction direction;
 
   switch (optee_param.attribute) {
     case MessageParam::kAttributeTypeValueInput:
-      zx_value.direction = fuchsia_tee::Direction::INPUT;
+      direction = fuchsia_tee::Direction::INPUT;
       break;
     case MessageParam::kAttributeTypeValueOutput:
-      zx_value.direction = fuchsia_tee::Direction::OUTPUT;
+      direction = fuchsia_tee::Direction::OUTPUT;
       break;
     case MessageParam::kAttributeTypeValueInOut:
-      zx_value.direction = fuchsia_tee::Direction::INOUT;
+      direction = fuchsia_tee::Direction::INOUT;
       break;
     default:
       ZX_PANIC("Invalid OP-TEE attribute specified\n");
@@ -257,42 +264,44 @@ fuchsia_tee::Value Message::CreateOutputValueParameter(const MessageParam& optee
 
   const MessageParam::Value& optee_value = optee_param.payload.value;
 
-  if (IsParameterOutput(zx_value.direction)) {
-    zx_value.a = optee_value.generic.a;
-    zx_value.b = optee_value.generic.b;
-    zx_value.c = optee_value.generic.c;
+  if (IsDirectionOutput(direction)) {
+    // Only transmit value parameter members if the parameter is marked as output.
+    zx_value.set_a(optee_value.generic.a);
+    zx_value.set_b(optee_value.generic.b);
+    zx_value.set_c(optee_value.generic.c);
   }
+  zx_value.set_direction(direction);
+
   return zx_value;
 }
 
 zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param,
-                                                 fuchsia_tee::Buffer* out_buffer) {
+                                                 Buffer* out_buffer) {
   ZX_DEBUG_ASSERT(out_buffer != nullptr);
 
-  // Use a temporary buffer to avoid populating the output until we're sure it's valid.
-  fuchsia_tee::Buffer zx_buffer;
-
+  fuchsia_tee::Direction direction;
   switch (optee_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput:
-      zx_buffer.direction = fuchsia_tee::Direction::INPUT;
+      direction = fuchsia_tee::Direction::INPUT;
       break;
     case MessageParam::kAttributeTypeTempMemOutput:
-      zx_buffer.direction = fuchsia_tee::Direction::OUTPUT;
+      direction = fuchsia_tee::Direction::OUTPUT;
       break;
     case MessageParam::kAttributeTypeTempMemInOut:
-      zx_buffer.direction = fuchsia_tee::Direction::INOUT;
+      direction = fuchsia_tee::Direction::INOUT;
       break;
     default:
       ZX_PANIC("Invalid OP-TEE attribute specified\n");
   }
+  out_buffer->set_direction(direction);
 
   const MessageParam::TemporaryMemory& optee_temp_mem = optee_param.payload.temporary_memory;
 
-  zx_buffer.size = optee_temp_mem.size;
+  const size_t size = optee_temp_mem.size;
+  out_buffer->set_size(size);
 
   if (optee_temp_mem.buffer == 0) {
     // If there was no buffer and this was just a size check, just return the size.
-    *out_buffer = std::move(zx_buffer);
     return ZX_OK;
   }
 
@@ -311,17 +320,15 @@ zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param
 
   // For output buffers, we need to sync the shared memory buffer back to the VMO. It's possible
   // that the returned size is smaller or larger than the originally provided buffer.
-  if (IsParameterOutput(zx_buffer.direction)) {
-    if (zx_status_t status = temp_shared_memory.SyncToVmo(zx_buffer.size); status != ZX_OK) {
+  if (IsDirectionOutput(direction)) {
+    if (zx_status_t status = temp_shared_memory.SyncToVmo(size); status != ZX_OK) {
       zxlogf(ERROR, "optee: SharedMemory writeback to vmo failed (%d)\n", status);
       return status;
     }
   }
 
-  zx_buffer.vmo = zx::vmo(temp_shared_memory.ReleaseVmo());
-  zx_buffer.offset = temp_shared_memory.vmo_offset();
-
-  *out_buffer = std::move(zx_buffer);
+  out_buffer->set_vmo(zx::vmo(temp_shared_memory.ReleaseVmo()));
+  out_buffer->set_offset(temp_shared_memory.vmo_offset());
 
   return ZX_OK;
 }
@@ -357,11 +364,11 @@ zx_handle_t Message::TemporarySharedMemory::ReleaseVmo() { return vmo_.release()
 fit::result<OpenSessionMessage, zx_status_t> OpenSessionMessage::TryCreate(
     SharedMemoryManager::DriverMemoryPool* message_pool,
     SharedMemoryManager::ClientMemoryPool* temp_memory_pool, const Uuid& trusted_app,
-    fuchsia_tee::ParameterSet& parameter_set) {
+    fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
   ZX_DEBUG_ASSERT(message_pool != nullptr);
   ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
 
-  const size_t num_params = parameter_set.count + kNumFixedOpenSessionParams;
+  const size_t num_params = parameter_set.count() + kNumFixedOpenSessionParams;
   ZX_DEBUG_ASSERT(num_params <= std::numeric_limits<uint32_t>::max());
 
   SharedMemoryPtr memory;
@@ -421,11 +428,13 @@ fit::result<CloseSessionMessage, zx_status_t> CloseSessionMessage::TryCreate(
 fit::result<InvokeCommandMessage, zx_status_t> InvokeCommandMessage::TryCreate(
     SharedMemoryManager::DriverMemoryPool* message_pool,
     SharedMemoryManager::ClientMemoryPool* temp_memory_pool, uint32_t session_id,
-    uint32_t command_id, fuchsia_tee::ParameterSet& parameter_set) {
+    uint32_t command_id, fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
   ZX_DEBUG_ASSERT(message_pool != nullptr);
 
+  const size_t num_params = parameter_set.count();
+
   SharedMemoryPtr memory;
-  zx_status_t status = message_pool->Allocate(CalculateSize(parameter_set.count), &memory);
+  zx_status_t status = message_pool->Allocate(CalculateSize(num_params), &memory);
   if (status != ZX_OK) {
     return fit::error(status);
   }
@@ -436,7 +445,7 @@ fit::result<InvokeCommandMessage, zx_status_t> InvokeCommandMessage::TryCreate(
   message.header()->session_id = session_id;
   message.header()->app_function = command_id;
   message.header()->cancel_id = 0;
-  message.header()->num_params = parameter_set.count;
+  message.header()->num_params = static_cast<uint32_t>(num_params);
 
   status = message.TryInitializeParameters(0, parameter_set, temp_memory_pool);
   if (status != ZX_OK) {

@@ -11,6 +11,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "optee-llcpp.h"
 #include "shared-memory.h"
 
 namespace optee {
@@ -26,11 +27,11 @@ class MockMessage : public Message {
   static fit::result<MockMessage, zx_status_t> TryCreate(
       SharedMemoryManager::DriverMemoryPool* message_pool,
       SharedMemoryManager::ClientMemoryPool* temp_memory_pool, size_t start_index,
-      fuchsia_tee::ParameterSet& parameter_set) {
+      fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
     ZX_DEBUG_ASSERT(message_pool != nullptr);
     ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
 
-    const size_t num_params = parameter_set.count + start_index;
+    const size_t num_params = parameter_set.count() + start_index;
     ZX_DEBUG_ASSERT(num_params <= std::numeric_limits<uint32_t>::max());
 
     SharedMemoryPtr memory;
@@ -59,27 +60,41 @@ class MockMessage : public Message {
 };
 
 // Fill a ParameterSet with a particular pattern of values.
-static void InitializeParameterSet(fuchsia_tee::ParameterSet* parameter_set) {
-  parameter_set->count = 4;
+static ParameterSet CreateParameterSet(size_t num_params) {
   uint8_t byte_val = 0;
   auto inc = [&byte_val]() { return byte_val++; };
 
-  for (size_t i = 0; i < parameter_set->count; i++) {
-    fuchsia_tee::Value value;
-    value.direction = fuchsia_tee::Direction::INOUT;
-    parameter_set->parameters[i].set_value(std::move(value));
+  std::vector<Parameter> parameters;
+  parameters.reserve(num_params);
 
-    auto a = reinterpret_cast<uint8_t*>(&parameter_set->parameters[i].mutable_value().a);
-    auto b = reinterpret_cast<uint8_t*>(&parameter_set->parameters[i].mutable_value().b);
-    auto c = reinterpret_cast<uint8_t*>(&parameter_set->parameters[i].mutable_value().c);
-    auto asz = sizeof(parameter_set->parameters[i].value().a);
-    auto bsz = sizeof(parameter_set->parameters[i].value().b);
-    auto csz = sizeof(parameter_set->parameters[i].value().c);
+  for (size_t i = 0; i < num_params; i++) {
+    Value value;
+    value.set_direction(fuchsia_tee::Direction::INOUT);
 
-    std::generate(a, a + asz, inc);
-    std::generate(b, b + bsz, inc);
-    std::generate(c, c + csz, inc);
+    uint64_t a, b, c;
+
+    auto a_ptr = reinterpret_cast<uint8_t*>(&a);
+    auto b_ptr = reinterpret_cast<uint8_t*>(&b);
+    auto c_ptr = reinterpret_cast<uint8_t*>(&c);
+
+    std::generate(a_ptr, a_ptr + sizeof(a), inc);
+    std::generate(b_ptr, b_ptr + sizeof(b), inc);
+    std::generate(c_ptr, c_ptr + sizeof(c), inc);
+
+    value.set_a(a);
+    value.set_b(b);
+    value.set_c(c);
+
+    Parameter param;
+    param.set_value(std::move(value));
+
+    parameters.push_back(std::move(param));
   }
+
+  ParameterSet parameter_set;
+  parameter_set.set_parameters(std::move(parameters));
+
+  return parameter_set;
 }
 
 class MessageTest : public zxtest::Test {
@@ -103,22 +118,45 @@ class MessageTest : public zxtest::Test {
   std::unique_ptr<SharedMemoryManager::ClientMemoryPool> cpool_;
 };
 
-// Tests that independent of the starting index in the particular Message variant,
-// the ParameterSet can be converted to a message and back.
+// Tests that the ParameterSet can be converted to a message and back.
 TEST_F(MessageTest, ParameterSetInvertabilityTest) {
-  fuchsia_tee::ParameterSet parameter_set_in = {};
-  fuchsia_tee::ParameterSet parameter_set_out = {};
+  constexpr size_t kParameterSetSize = 4;
 
-  InitializeParameterSet(&parameter_set_in);
+  ParameterSet parameter_set_in = CreateParameterSet(kParameterSetSize);
+  ParameterSet parameter_set_out{};
 
-  for (size_t starting_index = 0; starting_index < 4; starting_index++) {
-    auto result =
-        MockMessage::TryCreate(dpool_.get(), cpool_.get(), starting_index, parameter_set_in);
-    ASSERT_TRUE(result.is_ok(),
-                "Creating a MockMessage with starting_index=%zu has failed with error %d\n",
-                starting_index, result.error());
-    result.take_value().CreateOutputParameterSet(starting_index, &parameter_set_out);
-    ASSERT_EQ(0, memcmp(&parameter_set_in, &parameter_set_out, sizeof(fuchsia_tee::ParameterSet)));
+  fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_in = parameter_set_in.to_llcpp();
+
+  auto result = MockMessage::TryCreate(dpool_.get(), cpool_.get(), 0, llcpp_parameter_set_in);
+  ASSERT_TRUE(result.is_ok(), "Creating a MockMessage with has failed with error %d\n",
+              result.error());
+
+  result.take_value().CreateOutputParameterSet(0, &parameter_set_out);
+
+  fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_out = parameter_set_out.to_llcpp();
+
+  ASSERT_EQ(llcpp_parameter_set_in.count(), llcpp_parameter_set_out.count());
+
+  for (size_t i = 0; i < llcpp_parameter_set_in.count(); i++) {
+    auto& param_in = llcpp_parameter_set_in[i];
+    auto& param_out = llcpp_parameter_set_out[i];
+
+    ASSERT_TRUE(param_in.is_value());
+    ASSERT_TRUE(param_out.is_value());
+
+    auto& value_in = param_in.value();
+    auto& value_out = param_out.value();
+
+    ASSERT_TRUE(value_in.has_a());
+    ASSERT_TRUE(value_out.has_a());
+    ASSERT_TRUE(value_in.has_b());
+    ASSERT_TRUE(value_out.has_b());
+    ASSERT_TRUE(value_in.has_c());
+    ASSERT_TRUE(value_out.has_c());
+
+    ASSERT_EQ(value_in.a(), value_out.a());
+    ASSERT_EQ(value_in.b(), value_out.b());
+    ASSERT_EQ(value_in.c(), value_out.c());
   }
 }
 

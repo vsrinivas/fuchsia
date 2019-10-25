@@ -33,7 +33,7 @@ enum class ReturnOrigin : uint32_t {
 
 struct OsRevision;
 struct OsInfo;
-struct Empty;
+struct None;
 enum class Direction : uint32_t {
   INPUT = 0u,
   OUTPUT = 1u,
@@ -44,12 +44,555 @@ enum class Direction : uint32_t {
 struct Value;
 struct Buffer;
 struct Parameter;
-struct ParameterSet;
 struct OpResult;
 class Device;
 
+extern "C" const fidl_type_t fuchsia_tee_OsRevisionTable;
+
+struct OsRevision final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const uint32_t& major() const {
+    ZX_ASSERT(has_major());
+    return *reinterpret_cast<const uint32_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  uint32_t& major() {
+    ZX_ASSERT(has_major());
+    return *reinterpret_cast<uint32_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_major() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  const uint32_t& minor() const {
+    ZX_ASSERT(has_minor());
+    return *reinterpret_cast<const uint32_t*>(EnvelopesView::at(2 - 1).data);
+  }
+  uint32_t& minor() {
+    ZX_ASSERT(has_minor());
+    return *reinterpret_cast<uint32_t*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_minor() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  OsRevision() = default;
+  ~OsRevision() = default;
+  OsRevision(OsRevision&& other) noexcept = default;
+  OsRevision& operator=(OsRevision&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_tee_OsRevisionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 48;
+
+ private:
+  OsRevision(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class OsRevision::Builder {
+ public:
+  OsRevision view() { return OsRevision(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_major(uint32_t* elem);
+
+  Builder&& set_minor(uint32_t* elem);
+
+ private:
+  Builder() = default;
+  friend Builder OsRevision::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 2> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_tee_OsInfoTable;
+
+struct OsInfo final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const ::llcpp::fuchsia::tee::Uuid& uuid() const {
+    ZX_ASSERT(has_uuid());
+    return *reinterpret_cast<const ::llcpp::fuchsia::tee::Uuid*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::llcpp::fuchsia::tee::Uuid& uuid() {
+    ZX_ASSERT(has_uuid());
+    return *reinterpret_cast<::llcpp::fuchsia::tee::Uuid*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_uuid() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  const ::llcpp::fuchsia::tee::OsRevision& revision() const {
+    ZX_ASSERT(has_revision());
+    return *reinterpret_cast<const ::llcpp::fuchsia::tee::OsRevision*>(EnvelopesView::at(2 - 1).data);
+  }
+  ::llcpp::fuchsia::tee::OsRevision& revision() {
+    ZX_ASSERT(has_revision());
+    return *reinterpret_cast<::llcpp::fuchsia::tee::OsRevision*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_revision() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  const bool& is_global_platform_compliant() const {
+    ZX_ASSERT(has_is_global_platform_compliant());
+    return *reinterpret_cast<const bool*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool& is_global_platform_compliant() {
+    ZX_ASSERT(has_is_global_platform_compliant());
+    return *reinterpret_cast<bool*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_is_global_platform_compliant() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  OsInfo() = default;
+  ~OsInfo() = default;
+  OsInfo(OsInfo&& other) noexcept = default;
+  OsInfo& operator=(OsInfo&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_tee_OsInfoTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 136;
+
+ private:
+  OsInfo(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class OsInfo::Builder {
+ public:
+  OsInfo view() { return OsInfo(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_uuid(::llcpp::fuchsia::tee::Uuid* elem);
+
+  Builder&& set_revision(::llcpp::fuchsia::tee::OsRevision* elem);
+
+  Builder&& set_is_global_platform_compliant(bool* elem);
+
+ private:
+  Builder() = default;
+  friend Builder OsInfo::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_tee_ValueTable;
+
+// Represents a direct value parameter.
+struct Value final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const ::llcpp::fuchsia::tee::Direction& direction() const {
+    ZX_ASSERT(has_direction());
+    return *reinterpret_cast<const ::llcpp::fuchsia::tee::Direction*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::llcpp::fuchsia::tee::Direction& direction() {
+    ZX_ASSERT(has_direction());
+    return *reinterpret_cast<::llcpp::fuchsia::tee::Direction*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_direction() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  // This value is optional. If not set, a zero value is sent in its place if it is required by
+  // the calling convention.
+  const uint64_t& a() const {
+    ZX_ASSERT(has_a());
+    return *reinterpret_cast<const uint64_t*>(EnvelopesView::at(2 - 1).data);
+  }
+  uint64_t& a() {
+    ZX_ASSERT(has_a());
+    return *reinterpret_cast<uint64_t*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_a() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  // This value is optional. If not set, a zero value is sent in its place if it is required by
+  // the calling convention.
+  const uint64_t& b() const {
+    ZX_ASSERT(has_b());
+    return *reinterpret_cast<const uint64_t*>(EnvelopesView::at(3 - 1).data);
+  }
+  uint64_t& b() {
+    ZX_ASSERT(has_b());
+    return *reinterpret_cast<uint64_t*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_b() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  // This value is optional. If not set, a zero value is sent in its place if it is required by
+  // the calling convention.
+  const uint64_t& c() const {
+    ZX_ASSERT(has_c());
+    return *reinterpret_cast<const uint64_t*>(EnvelopesView::at(4 - 1).data);
+  }
+  uint64_t& c() {
+    ZX_ASSERT(has_c());
+    return *reinterpret_cast<uint64_t*>(EnvelopesView::at(4 - 1).data);
+  }
+  bool has_c() const {
+    return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
+  }
+
+  Value() = default;
+  ~Value() = default;
+  Value(Value&& other) noexcept = default;
+  Value& operator=(Value&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_tee_ValueTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 96;
+
+ private:
+  Value(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class Value::Builder {
+ public:
+  Value view() { return Value(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_direction(::llcpp::fuchsia::tee::Direction* elem);
+
+  // This value is optional. If not set, a zero value is sent in its place if it is required by
+  // the calling convention.
+  Builder&& set_a(uint64_t* elem);
+
+  // This value is optional. If not set, a zero value is sent in its place if it is required by
+  // the calling convention.
+  Builder&& set_b(uint64_t* elem);
+
+  // This value is optional. If not set, a zero value is sent in its place if it is required by
+  // the calling convention.
+  Builder&& set_c(uint64_t* elem);
+
+ private:
+  Builder() = default;
+  friend Builder Value::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_tee_BufferTable;
+
+// Represents a buffer parameter.
+struct Buffer final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const ::llcpp::fuchsia::tee::Direction& direction() const {
+    ZX_ASSERT(has_direction());
+    return *reinterpret_cast<const ::llcpp::fuchsia::tee::Direction*>(EnvelopesView::at(1 - 1).data);
+  }
+  ::llcpp::fuchsia::tee::Direction& direction() {
+    ZX_ASSERT(has_direction());
+    return *reinterpret_cast<::llcpp::fuchsia::tee::Direction*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_direction() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  // The VMO is allowed to be not present for situations where the TEE allows for buffer size
+  // checks.
+  //
+  // For example, if the operation to be performed needs an output buffer, but the user cannot
+  // calculate how large that output buffer should be, they can attempt the operation without
+  // a vmo and the Trusted Application will populate the size field so that the operation can
+  // be performed again with an appropriately sized buffer.
+  const ::zx::vmo& vmo() const {
+    ZX_ASSERT(has_vmo());
+    return *reinterpret_cast<const ::zx::vmo*>(EnvelopesView::at(2 - 1).data);
+  }
+  ::zx::vmo& vmo() {
+    ZX_ASSERT(has_vmo());
+    return *reinterpret_cast<::zx::vmo*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_vmo() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  const uint64_t& offset() const {
+    ZX_ASSERT(has_offset());
+    return *reinterpret_cast<const uint64_t*>(EnvelopesView::at(3 - 1).data);
+  }
+  uint64_t& offset() {
+    ZX_ASSERT(has_offset());
+    return *reinterpret_cast<uint64_t*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_offset() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  const uint64_t& size() const {
+    ZX_ASSERT(has_size());
+    return *reinterpret_cast<const uint64_t*>(EnvelopesView::at(4 - 1).data);
+  }
+  uint64_t& size() {
+    ZX_ASSERT(has_size());
+    return *reinterpret_cast<uint64_t*>(EnvelopesView::at(4 - 1).data);
+  }
+  bool has_size() const {
+    return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
+  }
+
+  Buffer() = default;
+  ~Buffer() = default;
+  Buffer(Buffer&& other) noexcept = default;
+  Buffer& operator=(Buffer&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_tee_BufferTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 96;
+
+ private:
+  Buffer(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class Buffer::Builder {
+ public:
+  Buffer view() { return Buffer(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_direction(::llcpp::fuchsia::tee::Direction* elem);
+
+  // The VMO is allowed to be not present for situations where the TEE allows for buffer size
+  // checks.
+  //
+  // For example, if the operation to be performed needs an output buffer, but the user cannot
+  // calculate how large that output buffer should be, they can attempt the operation without
+  // a vmo and the Trusted Application will populate the size field so that the operation can
+  // be performed again with an appropriately sized buffer.
+  Builder&& set_vmo(::zx::vmo* elem);
+
+  Builder&& set_offset(uint64_t* elem);
+
+  Builder&& set_size(uint64_t* elem);
+
+ private:
+  Builder() = default;
+  friend Builder Buffer::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_tee_ParameterTable;
+
+struct Parameter {
+  Parameter() : ordinal_(Tag::kUnknown), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+    kNone = 614881370,  // 0x24a6585a
+    kBuffer = 526330047,  // 0x1f5f28bf
+    kValue = 483243862,  // 0x1ccdb756
+  };
+
+  bool is_none() const { return ordinal_ == Tag::kNone; }
+
+  static Parameter WithNone(::llcpp::fuchsia::tee::None* val) {
+    Parameter result;
+    result.set_none(val);
+    return result;
+  }
+
+  void set_none(::llcpp::fuchsia::tee::None* elem) {
+    ordinal_ = Tag::kNone;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::tee::None& none() const {
+    ZX_ASSERT(ordinal_ == Tag::kNone);
+    return *static_cast<::llcpp::fuchsia::tee::None*>(envelope_.data);
+  }
+
+  bool is_buffer() const { return ordinal_ == Tag::kBuffer; }
+
+  static Parameter WithBuffer(::llcpp::fuchsia::tee::Buffer* val) {
+    Parameter result;
+    result.set_buffer(val);
+    return result;
+  }
+
+  void set_buffer(::llcpp::fuchsia::tee::Buffer* elem) {
+    ordinal_ = Tag::kBuffer;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::tee::Buffer& buffer() const {
+    ZX_ASSERT(ordinal_ == Tag::kBuffer);
+    return *static_cast<::llcpp::fuchsia::tee::Buffer*>(envelope_.data);
+  }
+
+  bool is_value() const { return ordinal_ == Tag::kValue; }
+
+  static Parameter WithValue(::llcpp::fuchsia::tee::Value* val) {
+    Parameter result;
+    result.set_value(val);
+    return result;
+  }
+
+  void set_value(::llcpp::fuchsia::tee::Value* elem) {
+    ordinal_ = Tag::kValue;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::tee::Value& value() const {
+    ZX_ASSERT(ordinal_ == Tag::kValue);
+    return *static_cast<::llcpp::fuchsia::tee::Value*>(envelope_.data);
+  }
+
+  Tag which() const;
+
+  static constexpr const fidl_type_t* Type = &fuchsia_tee_ParameterTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 112;
+
+ private:
+  static void SizeAndOffsetAssertionHelper();
+  Tag ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_tee_OpResultTable;
+
+// The result of an operation will include a return code, the origin of the result, and the return
+// of the parameter set. The returned parameter set will be a copy of the input parameter set, but
+// with the INOUT and OUTPUT parameters updated. If the parameter is a Buffer, it will update the
+// Buffer.size to the number of bytes written.
+struct OpResult final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  const uint64_t& return_code() const {
+    ZX_ASSERT(has_return_code());
+    return *reinterpret_cast<const uint64_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  uint64_t& return_code() {
+    ZX_ASSERT(has_return_code());
+    return *reinterpret_cast<uint64_t*>(EnvelopesView::at(1 - 1).data);
+  }
+  bool has_return_code() const {
+    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+  }
+
+  const ::llcpp::fuchsia::tee::ReturnOrigin& return_origin() const {
+    ZX_ASSERT(has_return_origin());
+    return *reinterpret_cast<const ::llcpp::fuchsia::tee::ReturnOrigin*>(EnvelopesView::at(2 - 1).data);
+  }
+  ::llcpp::fuchsia::tee::ReturnOrigin& return_origin() {
+    ZX_ASSERT(has_return_origin());
+    return *reinterpret_cast<::llcpp::fuchsia::tee::ReturnOrigin*>(EnvelopesView::at(2 - 1).data);
+  }
+  bool has_return_origin() const {
+    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+  }
+
+  const ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter>& parameter_set() const {
+    ZX_ASSERT(has_parameter_set());
+    return *reinterpret_cast<const ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter>*>(EnvelopesView::at(3 - 1).data);
+  }
+  ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter>& parameter_set() {
+    ZX_ASSERT(has_parameter_set());
+    return *reinterpret_cast<::fidl::VectorView<::llcpp::fuchsia::tee::Parameter>*>(EnvelopesView::at(3 - 1).data);
+  }
+  bool has_parameter_set() const {
+    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  OpResult() = default;
+  ~OpResult() = default;
+  OpResult(OpResult&& other) noexcept = default;
+  OpResult& operator=(OpResult&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &fuchsia_tee_OpResultTable;
+  static constexpr uint32_t MaxNumHandles = 4;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 624;
+
+ private:
+  OpResult(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class OpResult::Builder {
+ public:
+  OpResult view() { return OpResult(max_ordinal_, envelopes_.data_); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder&& set_return_code(uint64_t* elem);
+
+  Builder&& set_return_origin(::llcpp::fuchsia::tee::ReturnOrigin* elem);
+
+  Builder&& set_parameter_set(::fidl::VectorView<::llcpp::fuchsia::tee::Parameter>* elem);
+
+ private:
+  Builder() = default;
+  friend Builder OpResult::Build();
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
+};
 
 
+
+// UUID identifiers are used to identify the TEE Operating System and individual Trusted
+// Applications. This structure matches the UUID type as defined by RFC4122.
 struct Uuid {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -68,37 +611,9 @@ struct Uuid {
 
 
 
-struct OsRevision {
-  static constexpr const fidl_type_t* Type = nullptr;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  uint32_t major = {};
-
-  uint32_t minor = {};
-};
-
-extern "C" const fidl_type_t fuchsia_tee_OsInfoTable;
-
-struct OsInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_OsInfoTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 28;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  ::llcpp::fuchsia::tee::Uuid uuid = {};
-
-  ::llcpp::fuchsia::tee::OsRevision revision = {};
-
-  bool is_global_platform_compliant = {};
-};
-
-
-
-struct Empty {
+// An empty parameter type is used as a placeholder for elements in the parameter set that are not
+// used.
+struct None {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
@@ -108,192 +623,7 @@ struct Empty {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_tee_ValueTable;
-
-struct Value {
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_ValueTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  ::llcpp::fuchsia::tee::Direction direction = {};
-
-  uint64_t a = {};
-
-  uint64_t b = {};
-
-  uint64_t c = {};
-};
-
-extern "C" const fidl_type_t fuchsia_tee_BufferTable;
-
-struct Buffer {
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_BufferTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  ::llcpp::fuchsia::tee::Direction direction = {};
-
-  ::zx::vmo vmo = {};
-
-  uint64_t offset = {};
-
-  uint64_t size = {};
-};
-
-extern "C" const fidl_type_t fuchsia_tee_ParameterTable;
-
-struct Parameter {
-  enum class Tag : fidl_union_tag_t {
-    kEmpty = 0,
-    kBuffer = 1,
-    kValue = 2,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  Parameter();
-  ~Parameter();
-
-  Parameter(Parameter&& other) {
-    tag_ = Tag::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Parameter& operator=(Parameter&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
-
-  bool is_empty() const { return tag_ == Tag::kEmpty; }
-
-  static Parameter WithEmpty(::llcpp::fuchsia::tee::Empty&& val) {
-    Parameter result;
-    result.set_empty(std::move(val));
-    return result;
-  }
-
-  ::llcpp::fuchsia::tee::Empty& mutable_empty();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Empty>::value && std::is_copy_assignable<T>::value>
-  set_empty(const T& v) {
-    mutable_empty() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Empty>::value && std::is_move_assignable<T>::value>
-  set_empty(T&& v) {
-    mutable_empty() = std::move(v);
-  }
-
-  ::llcpp::fuchsia::tee::Empty const & empty() const { return empty_; }
-
-  bool is_buffer() const { return tag_ == Tag::kBuffer; }
-
-  static Parameter WithBuffer(::llcpp::fuchsia::tee::Buffer&& val) {
-    Parameter result;
-    result.set_buffer(std::move(val));
-    return result;
-  }
-
-  ::llcpp::fuchsia::tee::Buffer& mutable_buffer();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Buffer>::value && std::is_copy_assignable<T>::value>
-  set_buffer(const T& v) {
-    mutable_buffer() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Buffer>::value && std::is_move_assignable<T>::value>
-  set_buffer(T&& v) {
-    mutable_buffer() = std::move(v);
-  }
-
-  ::llcpp::fuchsia::tee::Buffer const & buffer() const { return buffer_; }
-
-  bool is_value() const { return tag_ == Tag::kValue; }
-
-  static Parameter WithValue(::llcpp::fuchsia::tee::Value&& val) {
-    Parameter result;
-    result.set_value(std::move(val));
-    return result;
-  }
-
-  ::llcpp::fuchsia::tee::Value& mutable_value();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Value>::value && std::is_copy_assignable<T>::value>
-  set_value(const T& v) {
-    mutable_value() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::tee::Value>::value && std::is_move_assignable<T>::value>
-  set_value(T&& v) {
-    mutable_value() = std::move(v);
-  }
-
-  ::llcpp::fuchsia::tee::Value const & value() const { return value_; }
-
-  Tag which() const { return tag_; }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_ParameterTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 40;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
- private:
-  void Destroy();
-  void MoveImpl_(Parameter&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
-  union {
-    ::llcpp::fuchsia::tee::Empty empty_;
-    ::llcpp::fuchsia::tee::Buffer buffer_;
-    ::llcpp::fuchsia::tee::Value value_;
-  };
-};
-
-extern "C" const fidl_type_t fuchsia_tee_ParameterSetTable;
-
-struct ParameterSet {
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_ParameterSetTable;
-  static constexpr uint32_t MaxNumHandles = 4;
-  static constexpr uint32_t PrimarySize = 168;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  uint16_t count = {};
-
-  ::fidl::Array<::llcpp::fuchsia::tee::Parameter, 4> parameters = {};
-};
-
-extern "C" const fidl_type_t fuchsia_tee_OpResultTable;
-
-struct OpResult {
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_OpResultTable;
-  static constexpr uint32_t MaxNumHandles = 4;
-  static constexpr uint32_t PrimarySize = 184;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  uint64_t return_code = {};
-
-  ::llcpp::fuchsia::tee::ReturnOrigin return_origin = {};
-
-  ::llcpp::fuchsia::tee::ParameterSet parameter_set = {};
-};
+constexpr uint32_t MAX_PARAMETERSET_COUNT = 4u;
 
 extern "C" const fidl_type_t fuchsia_tee_DeviceGetOsInfoResponseTable;
 extern "C" const fidl_type_t fuchsia_tee_DeviceOpenSessionRequestTable;
@@ -314,9 +644,9 @@ class Device final {
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceGetOsInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 136;
+    static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -331,10 +661,10 @@ class Device final {
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceOpenSessionResponseTable;
     static constexpr uint32_t MaxNumHandles = 4;
-    static constexpr uint32_t PrimarySize = 208;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 624;
+    static constexpr bool HasFlexibleEnvelope = true;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -342,14 +672,14 @@ class Device final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::tee::Uuid trusted_app;
-    ::llcpp::fuchsia::tee::ParameterSet parameter_set;
+    ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set;
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceOpenSessionRequestTable;
     static constexpr uint32_t MaxNumHandles = 4;
-    static constexpr uint32_t PrimarySize = 200;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 544;
+    static constexpr bool HasFlexibleEnvelope = true;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = OpenSessionResponse;
@@ -362,10 +692,10 @@ class Device final {
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceInvokeCommandResponseTable;
     static constexpr uint32_t MaxNumHandles = 4;
-    static constexpr uint32_t PrimarySize = 200;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 624;
+    static constexpr bool HasFlexibleEnvelope = true;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -374,14 +704,14 @@ class Device final {
     fidl_message_header_t _hdr;
     uint32_t session_id;
     uint32_t command_id;
-    ::llcpp::fuchsia::tee::ParameterSet parameter_set;
+    ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set;
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceInvokeCommandRequestTable;
     static constexpr uint32_t MaxNumHandles = 4;
-    static constexpr uint32_t PrimarySize = 192;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 544;
+    static constexpr bool HasFlexibleEnvelope = true;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = InvokeCommandResponse;
@@ -428,7 +758,7 @@ class Device final {
     class OpenSession_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      OpenSession_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
+      OpenSession_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
       ~OpenSession_Impl() = default;
       OpenSession_Impl(OpenSession_Impl&& other) = default;
       OpenSession_Impl& operator=(OpenSession_Impl&& other) = default;
@@ -444,7 +774,7 @@ class Device final {
     class InvokeCommand_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      InvokeCommand_Impl(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
+      InvokeCommand_Impl(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
       ~InvokeCommand_Impl() = default;
       InvokeCommand_Impl(InvokeCommand_Impl&& other) = default;
       InvokeCommand_Impl& operator=(InvokeCommand_Impl&& other) = default;
@@ -505,7 +835,7 @@ class Device final {
     class OpenSession_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      OpenSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+      OpenSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
       ~OpenSession_Impl() = default;
       OpenSession_Impl(OpenSession_Impl&& other) = default;
       OpenSession_Impl& operator=(OpenSession_Impl&& other) = default;
@@ -521,7 +851,7 @@ class Device final {
     class InvokeCommand_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      InvokeCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+      InvokeCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
       ~InvokeCommand_Impl() = default;
       InvokeCommand_Impl(InvokeCommand_Impl&& other) = default;
       InvokeCommand_Impl& operator=(InvokeCommand_Impl&& other) = default;
@@ -568,27 +898,37 @@ class Device final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Obtain information about the TEE OS
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetOsInfo GetOsInfo();
 
+    // Obtain information about the TEE OS
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetOsInfo GetOsInfo(::fidl::BytePart _response_buffer);
 
-    // Allocates 408 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::OpenSession OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
+    // Initiates a communication session with the specified trusted application.
+    // Request is heap-allocated. Response is heap-allocated.
+    ResultOf::OpenSession OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
 
+    // Initiates a communication session with the specified trusted application.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::OpenSession OpenSession(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::OpenSession OpenSession(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
 
-    // Allocates 392 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::InvokeCommand InvokeCommand(uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
+    // Requests the trusted application perform the provided command. The command is unique to the
+    // trusted application.
+    // Request is heap-allocated. Response is heap-allocated.
+    ResultOf::InvokeCommand InvokeCommand(uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
 
+    // Requests the trusted application perform the provided command. The command is unique to the
+    // trusted application.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::InvokeCommand InvokeCommand(::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::InvokeCommand InvokeCommand(::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
 
+    // Closes an established session.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CloseSession CloseSession(uint32_t session_id);
 
+    // Closes an established session.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::CloseSession CloseSession(::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer);
 
@@ -601,27 +941,37 @@ class Device final {
     Call() = delete;
    public:
 
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Obtain information about the TEE OS
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetOsInfo GetOsInfo(zx::unowned_channel _client_end);
 
+    // Obtain information about the TEE OS
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetOsInfo GetOsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Allocates 408 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
+    // Initiates a communication session with the specified trusted application.
+    // Request is heap-allocated. Response is heap-allocated.
+    static ResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
 
+    // Initiates a communication session with the specified trusted application.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
 
-    // Allocates 392 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set);
+    // Requests the trusted application perform the provided command. The command is unique to the
+    // trusted application.
+    // Request is heap-allocated. Response is heap-allocated.
+    static ResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
 
+    // Requests the trusted application perform the provided command. The command is unique to the
+    // trusted application.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
 
+    // Closes an established session.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CloseSession CloseSession(zx::unowned_channel _client_end, uint32_t session_id);
 
+    // Closes an established session.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::CloseSession CloseSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer);
 
@@ -633,12 +983,17 @@ class Device final {
     InPlace() = delete;
    public:
 
+    // Obtain information about the TEE OS
     static ::fidl::DecodeResult<GetOsInfoResponse> GetOsInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
+    // Initiates a communication session with the specified trusted application.
     static ::fidl::DecodeResult<OpenSessionResponse> OpenSession(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenSessionRequest> params, ::fidl::BytePart response_buffer);
 
+    // Requests the trusted application perform the provided command. The command is unique to the
+    // trusted application.
     static ::fidl::DecodeResult<InvokeCommandResponse> InvokeCommand(zx::unowned_channel _client_end, ::fidl::DecodedMessage<InvokeCommandRequest> params, ::fidl::BytePart response_buffer);
 
+    // Closes an established session.
     static ::fidl::DecodeResult<CloseSessionResponse> CloseSession(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSessionRequest> params, ::fidl::BytePart response_buffer);
 
   };
@@ -677,7 +1032,7 @@ class Device final {
 
     using OpenSessionCompleter = ::fidl::Completer<OpenSessionCompleterBase>;
 
-    virtual void OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, OpenSessionCompleter::Sync _completer) = 0;
+    virtual void OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, OpenSessionCompleter::Sync _completer) = 0;
 
     class InvokeCommandCompleterBase : public _Base {
      public:
@@ -691,7 +1046,7 @@ class Device final {
 
     using InvokeCommandCompleter = ::fidl::Completer<InvokeCommandCompleterBase>;
 
-    virtual void InvokeCommand(uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, InvokeCommandCompleter::Sync _completer) = 0;
+    virtual void InvokeCommand(uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, InvokeCommandCompleter::Sync _completer) = 0;
 
     class CloseSessionCompleterBase : public _Base {
      public:
@@ -759,60 +1114,32 @@ static_assert(sizeof(::llcpp::fuchsia::tee::Uuid) == ::llcpp::fuchsia::tee::Uuid
 template <>
 struct IsFidlType<::llcpp::fuchsia::tee::OsRevision> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::OsRevision>);
-static_assert(offsetof(::llcpp::fuchsia::tee::OsRevision, major) == 0);
-static_assert(offsetof(::llcpp::fuchsia::tee::OsRevision, minor) == 4);
-static_assert(sizeof(::llcpp::fuchsia::tee::OsRevision) == ::llcpp::fuchsia::tee::OsRevision::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::tee::OsInfo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::OsInfo>);
-static_assert(offsetof(::llcpp::fuchsia::tee::OsInfo, uuid) == 0);
-static_assert(offsetof(::llcpp::fuchsia::tee::OsInfo, revision) == 16);
-static_assert(offsetof(::llcpp::fuchsia::tee::OsInfo, is_global_platform_compliant) == 24);
-static_assert(sizeof(::llcpp::fuchsia::tee::OsInfo) == ::llcpp::fuchsia::tee::OsInfo::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::tee::Empty> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::Empty>);
-static_assert(offsetof(::llcpp::fuchsia::tee::Empty, __reserved) == 0);
-static_assert(sizeof(::llcpp::fuchsia::tee::Empty) == ::llcpp::fuchsia::tee::Empty::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::tee::None> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::None>);
+static_assert(offsetof(::llcpp::fuchsia::tee::None, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::tee::None) == ::llcpp::fuchsia::tee::None::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::tee::Value> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::Value>);
-static_assert(offsetof(::llcpp::fuchsia::tee::Value, direction) == 0);
-static_assert(offsetof(::llcpp::fuchsia::tee::Value, a) == 8);
-static_assert(offsetof(::llcpp::fuchsia::tee::Value, b) == 16);
-static_assert(offsetof(::llcpp::fuchsia::tee::Value, c) == 24);
-static_assert(sizeof(::llcpp::fuchsia::tee::Value) == ::llcpp::fuchsia::tee::Value::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::tee::Buffer> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::Buffer>);
-static_assert(offsetof(::llcpp::fuchsia::tee::Buffer, direction) == 0);
-static_assert(offsetof(::llcpp::fuchsia::tee::Buffer, vmo) == 4);
-static_assert(offsetof(::llcpp::fuchsia::tee::Buffer, offset) == 8);
-static_assert(offsetof(::llcpp::fuchsia::tee::Buffer, size) == 16);
-static_assert(sizeof(::llcpp::fuchsia::tee::Buffer) == ::llcpp::fuchsia::tee::Buffer::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::tee::Parameter> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::Parameter>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::tee::ParameterSet> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::ParameterSet>);
-static_assert(offsetof(::llcpp::fuchsia::tee::ParameterSet, count) == 0);
-static_assert(offsetof(::llcpp::fuchsia::tee::ParameterSet, parameters) == 8);
-static_assert(sizeof(::llcpp::fuchsia::tee::ParameterSet) == ::llcpp::fuchsia::tee::ParameterSet::PrimarySize);
-
-template <>
 struct IsFidlType<::llcpp::fuchsia::tee::OpResult> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::tee::OpResult>);
-static_assert(offsetof(::llcpp::fuchsia::tee::OpResult, return_code) == 0);
-static_assert(offsetof(::llcpp::fuchsia::tee::OpResult, return_origin) == 8);
-static_assert(offsetof(::llcpp::fuchsia::tee::OpResult, parameter_set) == 16);
-static_assert(sizeof(::llcpp::fuchsia::tee::OpResult) == ::llcpp::fuchsia::tee::OpResult::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::tee::Device::GetOsInfoResponse> : public std::true_type {};

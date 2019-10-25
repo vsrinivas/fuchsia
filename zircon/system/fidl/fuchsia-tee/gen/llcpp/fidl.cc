@@ -8,83 +8,186 @@ namespace llcpp {
 namespace fuchsia {
 namespace tee {
 
-::llcpp::fuchsia::tee::Parameter::Parameter() {
-  tag_ = Tag::Invalid;
+::llcpp::fuchsia::tee::OsRevision::Builder OsRevision::Build() {
+  return OsRevision::Builder();
 }
 
-::llcpp::fuchsia::tee::Parameter::~Parameter() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::tee::Parameter::Destroy() {
-  switch (which()) {
-  case Tag::kEmpty:
-    empty_.~Empty();
-    break;
-  case Tag::kBuffer:
-    buffer_.~Buffer();
-    break;
-  case Tag::kValue:
-    value_.~Value();
-    break;
-  default:
-    break;
+auto ::llcpp::fuchsia::tee::OsRevision::Builder::set_major(uint32_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
   }
-  tag_ = Tag::Invalid;
+  return std::move(*this);
 }
 
-void ::llcpp::fuchsia::tee::Parameter::MoveImpl_(Parameter&& other) {
-  switch (other.which()) {
-  case Tag::kEmpty:
-    mutable_empty() = std::move(other.mutable_empty());
-    break;
-  case Tag::kBuffer:
-    mutable_buffer() = std::move(other.mutable_buffer());
-    break;
-  case Tag::kValue:
-    mutable_value() = std::move(other.mutable_value());
-    break;
-  default:
-    break;
+auto ::llcpp::fuchsia::tee::OsRevision::Builder::set_minor(uint32_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
   }
-  other.Destroy();
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::tee::OsInfo::Builder OsInfo::Build() {
+  return OsInfo::Builder();
+}
+
+auto ::llcpp::fuchsia::tee::OsInfo::Builder::set_uuid(::llcpp::fuchsia::tee::Uuid* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::OsInfo::Builder::set_revision(::llcpp::fuchsia::tee::OsRevision* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::OsInfo::Builder::set_is_global_platform_compliant(bool* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::tee::Value::Builder Value::Build() {
+  return Value::Builder();
+}
+
+auto ::llcpp::fuchsia::tee::Value::Builder::set_direction(::llcpp::fuchsia::tee::Direction* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::Value::Builder::set_a(uint64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::Value::Builder::set_b(uint64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::Value::Builder::set_c(uint64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::tee::Buffer::Builder Buffer::Build() {
+  return Buffer::Builder();
+}
+
+auto ::llcpp::fuchsia::tee::Buffer::Builder::set_direction(::llcpp::fuchsia::tee::Direction* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::Buffer::Builder::set_vmo(::zx::vmo* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::Buffer::Builder::set_offset(uint64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::Buffer::Builder::set_size(uint64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::tee::Parameter::which() const -> Tag {
+  switch (ordinal_) {
+  case Tag::kNone:
+  case Tag::kBuffer:
+  case Tag::kValue:
+    return ordinal_;
+  default:
+    return Tag::kUnknown;
+  }
 }
 
 void ::llcpp::fuchsia::tee::Parameter::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::tee::Parameter, empty_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::tee::Parameter, buffer_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::tee::Parameter, value_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::tee::Parameter) == ::llcpp::fuchsia::tee::Parameter::PrimarySize);
+  static_assert(sizeof(Parameter) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Parameter, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Parameter, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
+::llcpp::fuchsia::tee::OpResult::Builder OpResult::Build() {
+  return OpResult::Builder();
+}
 
-::llcpp::fuchsia::tee::Empty& ::llcpp::fuchsia::tee::Parameter::mutable_empty() {
-  if (which() != Tag::kEmpty) {
-    Destroy();
-    new (&empty_) ::llcpp::fuchsia::tee::Empty;
+auto ::llcpp::fuchsia::tee::OpResult::Builder::set_return_code(uint64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
   }
-  tag_ = Tag::kEmpty;
-  return empty_;
+  return std::move(*this);
 }
 
-::llcpp::fuchsia::tee::Buffer& ::llcpp::fuchsia::tee::Parameter::mutable_buffer() {
-  if (which() != Tag::kBuffer) {
-    Destroy();
-    new (&buffer_) ::llcpp::fuchsia::tee::Buffer;
+auto ::llcpp::fuchsia::tee::OpResult::Builder::set_return_origin(::llcpp::fuchsia::tee::ReturnOrigin* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
   }
-  tag_ = Tag::kBuffer;
-  return buffer_;
+  return std::move(*this);
 }
 
-::llcpp::fuchsia::tee::Value& ::llcpp::fuchsia::tee::Parameter::mutable_value() {
-  if (which() != Tag::kValue) {
-    Destroy();
-    new (&value_) ::llcpp::fuchsia::tee::Value;
+auto ::llcpp::fuchsia::tee::OpResult::Builder::set_parameter_set(::fidl::VectorView<::llcpp::fuchsia::tee::Parameter>* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
   }
-  tag_ = Tag::kValue;
-  return value_;
+  return std::move(*this);
 }
-
 
 namespace {
 
@@ -174,50 +277,55 @@ Device::UnownedResultOf::GetOsInfo Device::Call::GetOsInfo(zx::unowned_channel _
 }
 
 template <>
-Device::ResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set) {
+Device::ResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OpenSessionRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, OpenSessionRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<OpenSessionRequest*>(_write_bytes);
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  OpenSessionRequest _request = {};
   _request.trusted_app = std::move(trusted_app);
   _request.parameter_set = std::move(parameter_set);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(OpenSessionRequest));
-  ::fidl::DecodedMessage<OpenSessionRequest> _decoded_request(std::move(_request_bytes));
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<OpenSessionRequest> _decoded_request = std::move(_linearize_result.message);
   Super::SetResult(
       Device::InPlace::OpenSession(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::OpenSession Device::SyncClient::OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set) {
+Device::ResultOf::OpenSession Device::SyncClient::OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   return ResultOf::OpenSession(zx::unowned_channel(this->channel_), std::move(trusted_app), std::move(parameter_set));
 }
 
-Device::ResultOf::OpenSession Device::Call::OpenSession(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set) {
+Device::ResultOf::OpenSession Device::Call::OpenSession(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   return ResultOf::OpenSession(std::move(_client_end), std::move(trusted_app), std::move(parameter_set));
 }
 
 template <>
-Device::UnownedResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < OpenSessionRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<OpenSessionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, OpenSessionRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<OpenSessionRequest*>(_request_buffer.data());
+  OpenSessionRequest _request = {};
   _request.trusted_app = std::move(trusted_app);
   _request.parameter_set = std::move(parameter_set);
-  _request_buffer.set_actual(sizeof(OpenSessionRequest));
-  ::fidl::DecodedMessage<OpenSessionRequest> _decoded_request(std::move(_request_buffer));
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<OpenSessionRequest> _decoded_request = std::move(_linearize_result.message);
   Super::SetResult(
       Device::InPlace::OpenSession(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::OpenSession Device::SyncClient::OpenSession(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::OpenSession Device::SyncClient::OpenSession(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::OpenSession(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(trusted_app), std::move(parameter_set), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::OpenSession Device::Call::OpenSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::OpenSession Device::Call::OpenSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::OpenSession(std::move(_client_end), std::move(_request_buffer), std::move(trusted_app), std::move(parameter_set), std::move(_response_buffer));
 }
 
@@ -238,52 +346,57 @@ Device::UnownedResultOf::OpenSession Device::Call::OpenSession(zx::unowned_chann
 }
 
 template <>
-Device::ResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeCommand_Impl(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set) {
+Device::ResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeCommand_Impl(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InvokeCommandRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, InvokeCommandRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<InvokeCommandRequest*>(_write_bytes);
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  InvokeCommandRequest _request = {};
   _request.session_id = std::move(session_id);
   _request.command_id = std::move(command_id);
   _request.parameter_set = std::move(parameter_set);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(InvokeCommandRequest));
-  ::fidl::DecodedMessage<InvokeCommandRequest> _decoded_request(std::move(_request_bytes));
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<InvokeCommandRequest> _decoded_request = std::move(_linearize_result.message);
   Super::SetResult(
       Device::InPlace::InvokeCommand(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Device::ResultOf::InvokeCommand Device::SyncClient::InvokeCommand(uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set) {
+Device::ResultOf::InvokeCommand Device::SyncClient::InvokeCommand(uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   return ResultOf::InvokeCommand(zx::unowned_channel(this->channel_), std::move(session_id), std::move(command_id), std::move(parameter_set));
 }
 
-Device::ResultOf::InvokeCommand Device::Call::InvokeCommand(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set) {
+Device::ResultOf::InvokeCommand Device::Call::InvokeCommand(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   return ResultOf::InvokeCommand(std::move(_client_end), std::move(session_id), std::move(command_id), std::move(parameter_set));
 }
 
 template <>
-Device::UnownedResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < InvokeCommandRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<InvokeCommandResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, InvokeCommandRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<InvokeCommandRequest*>(_request_buffer.data());
+  InvokeCommandRequest _request = {};
   _request.session_id = std::move(session_id);
   _request.command_id = std::move(command_id);
   _request.parameter_set = std::move(parameter_set);
-  _request_buffer.set_actual(sizeof(InvokeCommandRequest));
-  ::fidl::DecodedMessage<InvokeCommandRequest> _decoded_request(std::move(_request_buffer));
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<InvokeCommandRequest> _decoded_request = std::move(_linearize_result.message);
   Super::SetResult(
       Device::InPlace::InvokeCommand(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Device::UnownedResultOf::InvokeCommand Device::SyncClient::InvokeCommand(::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::InvokeCommand Device::SyncClient::InvokeCommand(::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::InvokeCommand(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(session_id), std::move(command_id), std::move(parameter_set), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::InvokeCommand Device::Call::InvokeCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::llcpp::fuchsia::tee::ParameterSet parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::InvokeCommand Device::Call::InvokeCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::InvokeCommand(std::move(_client_end), std::move(_request_buffer), std::move(session_id), std::move(command_id), std::move(parameter_set), std::move(_response_buffer));
 }
 
@@ -443,16 +556,22 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 void Device::Interface::GetOsInfoCompleterBase::Reply(::llcpp::fuchsia::tee::OsInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetOsInfoResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetOsInfoResponse*>(_write_bytes);
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  GetOsInfoResponse _response = {};
   Device::SetTransactionHeaderFor::GetOsInfoResponse(
       ::fidl::DecodedMessage<GetOsInfoResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetOsInfoResponse::PrimarySize,
               GetOsInfoResponse::PrimarySize)));
   _response.info = std::move(info);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetOsInfoResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetOsInfoResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Device::Interface::GetOsInfoCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::tee::OsInfo info) {
@@ -460,15 +579,19 @@ void Device::Interface::GetOsInfoCompleterBase::Reply(::fidl::BytePart _buffer, 
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetOsInfoResponse*>(_buffer.data());
+  GetOsInfoResponse _response = {};
   Device::SetTransactionHeaderFor::GetOsInfoResponse(
       ::fidl::DecodedMessage<GetOsInfoResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetOsInfoResponse::PrimarySize,
               GetOsInfoResponse::PrimarySize)));
   _response.info = std::move(info);
-  _buffer.set_actual(sizeof(GetOsInfoResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetOsInfoResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Device::Interface::GetOsInfoCompleterBase::Reply(::fidl::DecodedMessage<GetOsInfoResponse> params) {
@@ -479,8 +602,9 @@ void Device::Interface::GetOsInfoCompleterBase::Reply(::fidl::DecodedMessage<Get
 
 void Device::Interface::OpenSessionCompleterBase::Reply(uint32_t session_id, ::llcpp::fuchsia::tee::OpResult op_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OpenSessionResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<OpenSessionResponse*>(_write_bytes);
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  OpenSessionResponse _response = {};
   Device::SetTransactionHeaderFor::OpenSessionResponse(
       ::fidl::DecodedMessage<OpenSessionResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
@@ -488,8 +612,13 @@ void Device::Interface::OpenSessionCompleterBase::Reply(uint32_t session_id, ::l
               OpenSessionResponse::PrimarySize)));
   _response.session_id = std::move(session_id);
   _response.op_result = std::move(op_result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OpenSessionResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<OpenSessionResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Device::Interface::OpenSessionCompleterBase::Reply(::fidl::BytePart _buffer, uint32_t session_id, ::llcpp::fuchsia::tee::OpResult op_result) {
@@ -497,7 +626,7 @@ void Device::Interface::OpenSessionCompleterBase::Reply(::fidl::BytePart _buffer
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<OpenSessionResponse*>(_buffer.data());
+  OpenSessionResponse _response = {};
   Device::SetTransactionHeaderFor::OpenSessionResponse(
       ::fidl::DecodedMessage<OpenSessionResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
@@ -505,8 +634,12 @@ void Device::Interface::OpenSessionCompleterBase::Reply(::fidl::BytePart _buffer
               OpenSessionResponse::PrimarySize)));
   _response.session_id = std::move(session_id);
   _response.op_result = std::move(op_result);
-  _buffer.set_actual(sizeof(OpenSessionResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<OpenSessionResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Device::Interface::OpenSessionCompleterBase::Reply(::fidl::DecodedMessage<OpenSessionResponse> params) {
@@ -517,16 +650,22 @@ void Device::Interface::OpenSessionCompleterBase::Reply(::fidl::DecodedMessage<O
 
 void Device::Interface::InvokeCommandCompleterBase::Reply(::llcpp::fuchsia::tee::OpResult op_result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InvokeCommandResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<InvokeCommandResponse*>(_write_bytes);
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  InvokeCommandResponse _response = {};
   Device::SetTransactionHeaderFor::InvokeCommandResponse(
       ::fidl::DecodedMessage<InvokeCommandResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               InvokeCommandResponse::PrimarySize,
               InvokeCommandResponse::PrimarySize)));
   _response.op_result = std::move(op_result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(InvokeCommandResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<InvokeCommandResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Device::Interface::InvokeCommandCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::tee::OpResult op_result) {
@@ -534,15 +673,19 @@ void Device::Interface::InvokeCommandCompleterBase::Reply(::fidl::BytePart _buff
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<InvokeCommandResponse*>(_buffer.data());
+  InvokeCommandResponse _response = {};
   Device::SetTransactionHeaderFor::InvokeCommandResponse(
       ::fidl::DecodedMessage<InvokeCommandResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               InvokeCommandResponse::PrimarySize,
               InvokeCommandResponse::PrimarySize)));
   _response.op_result = std::move(op_result);
-  _buffer.set_actual(sizeof(InvokeCommandResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<InvokeCommandResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Device::Interface::InvokeCommandCompleterBase::Reply(::fidl::DecodedMessage<InvokeCommandResponse> params) {

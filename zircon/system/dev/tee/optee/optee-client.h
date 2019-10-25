@@ -24,6 +24,8 @@
 
 namespace optee {
 
+namespace fuchsia_tee = ::llcpp::fuchsia::tee;
+
 class OpteeClient;
 using OpteeClientBase =
     ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable, ddk::UnbindableNew>;
@@ -57,10 +59,11 @@ class OpteeClient : public OpteeClientBase,
 
   // FIDL Handlers
   void GetOsInfo(GetOsInfoCompleter::Sync completer) override;
-  void OpenSession(fuchsia_tee::Uuid trusted_app, fuchsia_tee::ParameterSet parameter_set,
+  void OpenSession(fuchsia_tee::Uuid trusted_app,
+                   fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
                    OpenSessionCompleter::Sync completer) override;
   void InvokeCommand(uint32_t session_id, uint32_t command_id,
-                     fuchsia_tee::ParameterSet parameter_set,
+                     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
                      InvokeCommandCompleter::Sync completer) override;
   void CloseSession(uint32_t session_id, CloseSessionCompleter::Sync completer) override;
 

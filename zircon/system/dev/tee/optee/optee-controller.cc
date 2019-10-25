@@ -88,8 +88,7 @@ zx_status_t OpteeController::GetOsRevision() {
     return status;
   }
 
-  os_revision_.major = result.revision.major;
-  os_revision_.minor = result.revision.minor;
+  os_revision_ = result.revision;
 
   return ZX_OK;
 }
@@ -335,17 +334,22 @@ void OpteeController::ConnectTee(
   TeeConnect(std::move(tee_request), std::move(service_provider));
 }
 
-fuchsia_tee::OsInfo OpteeController::GetOsInfo() const {
-  fuchsia_tee::OsInfo os_info;
+OsInfo OpteeController::GetOsInfo() const {
+  fuchsia_tee::Uuid uuid;
+  uuid.time_low = kOpteeOsUuid.timeLow;
+  uuid.time_mid = kOpteeOsUuid.timeMid;
+  uuid.time_hi_and_version = kOpteeOsUuid.timeHiAndVersion;
+  std::memcpy(uuid.clock_seq_and_node.data(), kOpteeOsUuid.clockSeqAndNode,
+              sizeof(uuid.clock_seq_and_node));
 
-  os_info.uuid.time_low = kOpteeOsUuid.timeLow;
-  os_info.uuid.time_mid = kOpteeOsUuid.timeMid;
-  os_info.uuid.time_hi_and_version = kOpteeOsUuid.timeHiAndVersion;
-  ::memcpy(os_info.uuid.clock_seq_and_node.data(), kOpteeOsUuid.clockSeqAndNode,
-           sizeof(os_info.uuid.clock_seq_and_node));
+  OsRevision os_revision;
+  os_revision.set_major(os_revision_.major);
+  os_revision.set_minor(os_revision_.minor);
 
-  os_info.revision = os_revision_;
-  os_info.is_global_platform_compliant = true;
+  OsInfo os_info;
+  os_info.set_uuid(uuid);
+  os_info.set_revision(std::move(os_revision));
+  os_info.set_is_global_platform_compliant(true);
   return os_info;
 }
 

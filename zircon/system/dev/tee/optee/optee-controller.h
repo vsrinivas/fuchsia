@@ -29,6 +29,8 @@
 
 namespace optee {
 
+namespace fuchsia_hardware_tee = ::llcpp::fuchsia::hardware::tee;
+
 class OpteeClient;
 
 class OpteeController;
@@ -68,7 +70,7 @@ class OpteeController : public OpteeControllerBase,
                   ConnectTeeCompleter::Sync completer) override;
 
   // Client FIDL commands
-  fuchsia_tee::OsInfo GetOsInfo() const;
+  OsInfo GetOsInfo() const;
 
   uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler);
 
@@ -92,7 +94,7 @@ class OpteeController : public OpteeControllerBase,
   sysmem_protocol_t sysmem_proto_ = {};
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;
-  fuchsia_tee::OsRevision os_revision_ = {};
+  GetOsRevisionResult os_revision_;
   std::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 };
 
