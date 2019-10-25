@@ -11,7 +11,7 @@ fidl("echo") {
   name = "fidl.examples.echo"
 
   sources = [
-    "echo.fidl",
+    "echo.test.fidl",
   ]
 
   fuzzers = [
