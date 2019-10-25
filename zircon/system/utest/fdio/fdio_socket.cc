@@ -11,13 +11,18 @@
 #include <lib/zxs/protocol.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include <array>
 #include <cerrno>
+#include <chrono>
 #include <cstring>
+#include <future>
 #include <vector>
 
+#include <fbl/array.h>
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -299,5 +304,121 @@ TEST(SocketTest, DatagramSendMsg) {
   EXPECT_EQ(actual - sizeof(fdio_socket_msg_t), sizeof(buf));
   EXPECT_EQ(close(fd), 0, "%s", strerror(errno));
 }
+
+auto timeout = [](int optname) {
+  ASSERT_TRUE(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO);
+
+  zx::channel client_channel, server_channel;
+  ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
+
+  zx::socket client_socket, server_socket;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
+
+  if (optname == SO_SNDTIMEO) {
+    zx_info_socket_t info;
+    ASSERT_OK(client_socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+    size_t tx_buf_available = info.tx_buf_max - info.tx_buf_size;
+    std::unique_ptr<uint8_t[]> buf(new uint8_t[tx_buf_available + 1]);
+    size_t actual;
+    ASSERT_OK(client_socket.write(0, buf.get(), tx_buf_available, &actual));
+    ASSERT_EQ(actual, tx_buf_available);
+  }
+
+  Server server(std::move(client_socket));
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
+  ASSERT_OK(loop.StartThread("fake-socket-server"));
+
+  fbl::unique_fd client_fd;
+  ASSERT_OK(fdio_fd_create(client_channel.release(), client_fd.reset_and_get_address()));
+
+  // We want this to be a small number so the test is fast, but at least 1
+  // second so that we exercise `tv_sec`.
+  const auto timeout = std::chrono::seconds(1) + std::chrono::milliseconds(50);
+  {
+    const auto sec = std::chrono::duration_cast<std::chrono::seconds>(timeout);
+    const struct timeval tv = {
+        .tv_sec = sec.count(),
+        .tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(timeout - sec).count(),
+    };
+    ASSERT_EQ(setsockopt(client_fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s",
+              strerror(errno));
+    struct timeval actual_tv;
+    socklen_t optlen = sizeof(actual_tv);
+    ASSERT_EQ(getsockopt(client_fd.get(), SOL_SOCKET, optname, &actual_tv, &optlen), 0, "%s",
+              strerror(errno));
+    ASSERT_EQ(optlen, sizeof(actual_tv));
+    ASSERT_EQ(actual_tv.tv_sec, tv.tv_sec);
+    ASSERT_EQ(actual_tv.tv_usec, tv.tv_usec);
+  }
+
+  const auto margin = std::chrono::milliseconds(50);
+
+  uint8_t buf[16];
+
+  // Perform the read/write. This is the core of the test - we expect the operation to time out
+  // per our setting of the timeout above.
+  //
+  // The operation is performed asynchronously so that in the event of regression, this test can
+  // fail gracefully rather than deadlocking.
+  {
+    const auto fut = std::async(std::launch::async, [&]() {
+      const auto start = std::chrono::steady_clock::now();
+
+      switch (optname) {
+        case SO_RCVTIMEO:
+          ASSERT_EQ(read(client_fd.get(), buf, sizeof(buf)), -1);
+          break;
+        case SO_SNDTIMEO:
+          ASSERT_EQ(write(client_fd.get(), buf, sizeof(buf)), -1);
+          break;
+      }
+      ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK, "%s", strerror(errno));
+
+      const auto elapsed = std::chrono::steady_clock::now() - start;
+
+      // Check that the actual time waited was close to the expectation.
+      const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+      EXPECT_LT(elapsed, timeout + margin,
+                "elapsed=%lld ms (which is not within %lld ms of %lld ms)", elapsed_ms.count(),
+                margin.count(), std::chrono::milliseconds(timeout).count());
+      EXPECT_GT(elapsed, timeout - margin,
+                "elapsed=%lld ms (which is not within %lld ms of %lld ms)", elapsed_ms.count(),
+                margin.count(), std::chrono::milliseconds(timeout).count());
+    });
+    EXPECT_EQ(fut.wait_for(timeout + 2 * margin), std::future_status::ready);
+  }
+
+  // Remove the timeout
+  const struct timeval tv = {};
+  ASSERT_EQ(setsockopt(client_fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s",
+            strerror(errno));
+  // Wrap the read/write in a future to enable a timeout. We expect the future
+  // to time out.
+  {
+    const auto fut = std::async(std::launch::async, [&]() {
+      switch (optname) {
+        case SO_RCVTIMEO:
+          EXPECT_EQ(read(client_fd.get(), buf, sizeof(buf)), 0, "%s", strerror(errno));
+          break;
+        case SO_SNDTIMEO:
+          EXPECT_EQ(write(client_fd.get(), buf, sizeof(buf)), -1);
+          ASSERT_EQ(errno, EPIPE, "%s", strerror(errno));
+          break;
+      }
+    });
+    EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
+
+    // Destroying the remote end socket should cause the read/write to complete.
+    server_socket.~socket();
+    EXPECT_EQ(fut.wait_for(margin), std::future_status::ready);
+  }
+
+  ASSERT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
+};
+
+TEST(TimeoutSockoptsTest, RcvTimeout) { timeout(SO_RCVTIMEO); }
+
+TEST(TimeoutSockoptsTest, SndTimeout) { timeout(SO_SNDTIMEO); }
 
 }  // namespace
