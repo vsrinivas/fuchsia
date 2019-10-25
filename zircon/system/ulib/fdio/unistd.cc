@@ -1027,24 +1027,6 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   }
 }
 
-// If return true, send operation should break the loop.
-static bool break_wait_send(fdio_t* io, zx_status_t* status, zx_time_t deadline) {
-  zx_signals_t signals;
-  zx_status_t wait_status =
-      fdio_wait_signals(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr, &signals);
-  switch (wait_status) {
-    case ZX_OK:
-      if (signals & ZX_SOCKET_PEER_CLOSED) {
-        *status = ZX_ERR_CONNECTION_RESET;
-        return true;
-      }
-      return false;
-    case ZX_ERR_TIMED_OUT:
-      return true;
-    default:
-      return false;
-  }
-}
 __EXPORT
 ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   fdio_t* io = fd_to_io(fd);
