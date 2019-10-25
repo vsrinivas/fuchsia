@@ -4,7 +4,9 @@
 
 //! The User Datagram Protocol (UDP).
 
-use std::num::NonZeroU16;
+use std::collections::HashSet;
+use std::num::{NonZeroU16, NonZeroUsize};
+use std::ops::RangeInclusive;
 
 use log::trace;
 use net_types::ip::{Ip, IpAddress};
@@ -21,8 +23,6 @@ use crate::ip::{
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
 use crate::{BufferDispatcher, Context, EventDispatcher};
-use std::num::NonZeroUsize;
-use std::ops::RangeInclusive;
 
 /// The state associated with the UDP protocol.
 #[derive(Default)]
@@ -43,6 +43,70 @@ struct UdpConnectionState<I: Ip> {
     wildcard_listeners: ListenerAddrMap<NonZeroU16>,
 }
 
+impl<I: Ip> UdpConnectionState<I> {
+    /// Collects the currently used local ports into a [`HashSet`].
+    ///
+    /// If `addrs` is empty, `collect_used_local_ports` returns all the local
+    /// ports currently in use, otherwise it returns all the local ports in use
+    /// for the addresses in `addrs`.
+    fn collect_used_local_ports<'a>(
+        &self,
+        addrs: impl ExactSizeIterator<Item = &'a SpecifiedAddr<I::Addr>> + Clone,
+    ) -> HashSet<NonZeroU16> {
+        let mut ports = HashSet::new();
+        ports.extend(self.wildcard_listeners.addr_to_listener.keys());
+        if addrs.len() == 0 {
+            // for wildcard addresses, collect ALL local ports
+            ports.extend(self.listeners.addr_to_listener.keys().map(|l| l.port));
+            ports.extend(self.conns.addr_to_id.keys().map(|c| c.local_port));
+        } else {
+            // if `addrs` is not empty, just collect the ones that use the same
+            // local addresses.
+            ports.extend(self.listeners.addr_to_listener.keys().filter_map(|l| {
+                if addrs.clone().any(|a| a == &l.addr) {
+                    Some(l.port)
+                } else {
+                    None
+                }
+            }));
+            ports.extend(self.conns.addr_to_id.keys().filter_map(|c| {
+                if addrs.clone().any(|a| a == &c.local_addr) {
+                    Some(c.local_port)
+                } else {
+                    None
+                }
+            }));
+        }
+        ports
+    }
+
+    /// Checks whether the provided port is available to be used for a listener.
+    ///
+    /// If `addr` is `None`, `is_listen_port_available` will only return `true`
+    /// if *no* connections or listeners bound to any addresses are using the
+    /// provided `port`.
+    fn is_listen_port_available(
+        &self,
+        addr: Option<SpecifiedAddr<I::Addr>>,
+        port: NonZeroU16,
+    ) -> bool {
+        self.wildcard_listeners.get_by_addr(&port).is_none()
+            && addr
+                .map(|addr| {
+                    self.listeners.get_by_addr(&Listener { addr, port }).is_none()
+                        && !self
+                            .conns
+                            .addr_to_id
+                            .keys()
+                            .any(|c| c.local_addr == addr && c.local_port == port)
+                })
+                .unwrap_or_else(|| {
+                    !(self.listeners.addr_to_listener.keys().any(|l| l.port == port)
+                        || self.conns.addr_to_id.keys().any(|c| c.local_port == port))
+                })
+    }
+}
+
 /// Helper function to allocate a local port.
 ///
 /// Attempts to allocate a new unused local port with the given flow identifier
@@ -60,6 +124,26 @@ fn try_alloc_local_port<I: Ip, C: UdpContext<I>>(
     // lazily init port_alloc if it hasn't been inited yet.
     let port_alloc = state.lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(&mut rng));
     port_alloc.try_alloc(&id, &state.conn_state).and_then(NonZeroU16::new)
+}
+
+/// Helper function to allocate a listen port.
+///
+/// Finds a random ephemeral port that is not in the provided `used_ports` set.
+fn try_alloc_listen_port<I: Ip, C: UdpContext<I>>(
+    ctx: &mut C,
+    used_ports: &HashSet<NonZeroU16>,
+) -> Option<NonZeroU16> {
+    let mut port = UdpConnectionState::<I>::rand_ephemeral(ctx.rng());
+    for _ in UdpConnectionState::<I>::EPHEMERAL_RANGE {
+        // we can unwrap here because we know that the EPHEMERAL_RANGE doesn't
+        // include 0.
+        let tryport = NonZeroU16::new(port.get()).unwrap();
+        if !used_ports.contains(&tryport) {
+            return Some(tryport);
+        }
+        port.next();
+    }
+    None
 }
 
 impl<I: Ip> PortAllocImpl for UdpConnectionState<I> {
@@ -497,6 +581,11 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
     };
 
     let local_addr = local_addr.unwrap_or(default_local);
+
+    if !ctx.is_local_addr(local_addr.get()) {
+        // TODO(brunodalbo) return error.
+        panic!("connect_udp: Can't bind to address");
+    }
     let local_port = if let Some(local_port) = local_port {
         local_port
     } else {
@@ -521,14 +610,14 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
 /// Listen on for incoming UDP packets.
 ///
 /// `listen_udp` registers `listener` as a listener for incoming UDP packets on
-/// the given `port`. If `addrs` is empty, the listener is a "wildcard
+/// the given `port`. If `addr` is `None`, the listener is a "wildcard
 /// listener", and is bound to all local addresses. See the `transport` module
 /// documentation for more details.
 ///
-/// If `addrs` is not empty, and any of the addresses in `addrs` is already
-/// bound on the given port (either by a listener or a connection), `listen_udp`
-/// will fail. If `addrs` is empty, and a wildcard listener is already bound to
-/// the given port, `listen_udp` will fail.
+/// If `addr` is `Some``, and `addr` is already bound on the given port (either
+/// by a listener or a connection), `listen_udp` will fail. If `addr` is `None`,
+/// and a wildcard listener is already bound to the given port, `listen_udp`
+/// will fail.
 ///
 /// # Panics
 ///
@@ -537,31 +626,36 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
 #[allow(dead_code)]
 pub(crate) fn listen_udp<A: IpAddress, C: UdpContext<A::Version>>(
     ctx: &mut C,
-    addrs: Vec<SpecifiedAddr<A>>,
-    port: NonZeroU16,
+    addr: Option<SpecifiedAddr<A>>,
+    port: Option<NonZeroU16>,
 ) -> UdpListenerId<A::Version> {
-    let state = ctx.get_state_mut();
-    if addrs.is_empty() {
-        if state.conn_state.wildcard_listeners.get_by_addr(&port).is_some() {
-            // TODO(joshlf): Return error
-            panic!("UDP listener address in use");
+    let port = if let Some(port) = port {
+        if !ctx.get_state().conn_state.is_listen_port_available(addr, port) {
+            // TODO(brunodalbo) return error
+            panic!("UDP listen port already in use")
         }
-        // TODO(joshlf): Check for connections bound to this IP:port.
-        UdpListenerId::new_wildcard(state.conn_state.wildcard_listeners.insert(vec![port]))
+        port
     } else {
-        for addr in &addrs {
-            let listener = Listener { addr: *addr, port };
-            if state.conn_state.listeners.get_by_addr(&listener).is_some() {
-                // TODO(joshlf): Return error
-                panic!("UDP listener address in use");
-            }
+        let used_ports =
+            ctx.get_state_mut().conn_state.collect_used_local_ports(addr.as_ref().into_iter());
+        // TODO(brunodalbo) return error
+        try_alloc_listen_port(ctx, &used_ports).expect("UDP failed to alloc local port")
+    };
+    match addr {
+        None => {
+            let state = ctx.get_state_mut();
+            UdpListenerId::new_wildcard(state.conn_state.wildcard_listeners.insert(vec![port]))
         }
-        UdpListenerId::new_specified(
-            state
-                .conn_state
-                .listeners
-                .insert(addrs.into_iter().map(|addr| Listener { addr, port }).collect()),
-        )
+        Some(addr) => {
+            if !ctx.is_local_addr(addr.get()) {
+                // TODO(brunodalbo) return error
+                panic!("UDP can't bind to address");
+            }
+            let state = ctx.get_state_mut();
+            UdpListenerId::new_specified(
+                state.conn_state.listeners.insert(vec![Listener { addr, port }]),
+            )
+        }
     }
 }
 
@@ -598,6 +692,7 @@ mod tests {
         listen_data: Vec<ListenData<I>>,
         conn_data: Vec<ConnData<I>>,
         rng: FakeCryptoRng<XorShiftRng>,
+        extra_local_addrs: Vec<I::Addr>,
     }
 
     impl<I: Ip> Default for DummyUdpContext<I> {
@@ -607,6 +702,7 @@ mod tests {
                 listen_data: Default::default(),
                 conn_data: Default::default(),
                 rng: new_fake_crypto_rng(0),
+                extra_local_addrs: Vec::new(),
             }
         }
     }
@@ -620,6 +716,7 @@ mod tests {
     impl<I: Ip> TransportIpContext<I> for DummyContext<I> {
         fn is_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
             local_addr::<I>().into_addr() == addr
+                || self.get_ref().extra_local_addrs.contains(&addr)
         }
 
         fn local_address_for_remote(
@@ -708,8 +805,7 @@ mod tests {
         let local_ip = local_addr::<I>();
         let remote_ip = remote_addr::<I>();
         // Create a listener on local port 100, bound to the local IP:
-        let listener =
-            listen_udp::<I::Addr, _>(&mut ctx, vec![local_ip], NonZeroU16::new(100).unwrap());
+        let listener = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), NonZeroU16::new(100));
         assert_eq!(listener.listener_type, ListenerType::Specified);
 
         // Inject a packet and check that the context receives it:
@@ -869,9 +965,9 @@ mod tests {
             remote_ip_b,
             remote_port_a,
         );
-        let list1 = listen_udp::<I::Addr, _>(&mut ctx, vec![local_ip], local_port_a);
-        let list2 = listen_udp::<I::Addr, _>(&mut ctx, vec![local_ip], local_port_b);
-        let wildcard_list = listen_udp::<I::Addr, _>(&mut ctx, vec![], local_port_c);
+        let list1 = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port_a));
+        let list2 = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port_b));
+        let wildcard_list = listen_udp::<I::Addr, _>(&mut ctx, None, Some(local_port_c));
 
         // now inject UDP packets that each of the created connections should
         // receive:
@@ -965,7 +1061,7 @@ mod tests {
         let remote_ip_b = get_other_ip_address::<I::Addr>(72);
         let listener_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
-        let listener = listen_udp::<I::Addr, _>(&mut ctx, vec![], listener_port);
+        let listener = listen_udp::<I::Addr, _>(&mut ctx, None, Some(listener_port));
         assert_eq!(listener.listener_type, ListenerType::Wildcard);
 
         let body = [1, 2, 3, 4, 5];
@@ -1078,5 +1174,92 @@ mod tests {
         let port_d = conns.get_conn_by_id(conn_d.into()).unwrap().local_port.get();
         assert!(valid_range.contains(&port_d));
         assert_ne!(port_a, port_d);
+    }
+
+    /// Tests [`UdpConnectionState::collect_used_local_ports`]
+    #[ip_test]
+    fn test_udp_collect_local_ports<I: Ip>() {
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+        let local_ip_2 = get_other_ip_address::<I::Addr>(10);
+        let remote_ip = remote_addr::<I>();
+        ctx.get_mut().extra_local_addrs.push(local_ip_2.get());
+
+        let pa = NonZeroU16::new(10).unwrap();
+        let pb = NonZeroU16::new(11).unwrap();
+        let pc = NonZeroU16::new(12).unwrap();
+        let pd = NonZeroU16::new(13).unwrap();
+        let pe = NonZeroU16::new(14).unwrap();
+        let pf = NonZeroU16::new(15).unwrap();
+        let remote_port = NonZeroU16::new(100).unwrap();
+
+        // create some listeners and connections:
+        // wildcard listeners:
+        listen_udp::<I::Addr, _>(&mut ctx, None, Some(pa));
+        listen_udp::<I::Addr, _>(&mut ctx, None, Some(pb));
+        // specified address listeners:
+        listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(pc));
+        listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip_2), Some(pd));
+        // connections:
+        connect_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(pe), remote_ip, remote_port);
+        connect_udp::<I::Addr, _>(&mut ctx, Some(local_ip_2), Some(pf), remote_ip, remote_port);
+
+        let conn_state = &ctx.get_state().conn_state;
+
+        // collect all used local ports:
+        assert_eq!(
+            conn_state.collect_used_local_ports(None.into_iter()),
+            [pa, pb, pc, pd, pe, pf].iter().copied().collect()
+        );
+        // collect all local ports for local_ip:
+        assert_eq!(
+            conn_state.collect_used_local_ports(Some(local_ip).iter()),
+            [pa, pb, pc, pe].iter().copied().collect()
+        );
+        // collect all local ports for local_ip_2:
+        assert_eq!(
+            conn_state.collect_used_local_ports(Some(local_ip_2).iter()),
+            [pa, pb, pd, pf].iter().copied().collect()
+        );
+        // collect all local ports for local_ip and local_ip_2:
+        assert_eq!(
+            conn_state.collect_used_local_ports(vec![local_ip, local_ip_2].iter()),
+            [pa, pb, pc, pd, pe, pf].iter().copied().collect()
+        );
+    }
+
+    /// Tests local port allocation for [`listen_udp`].
+    ///
+    /// Tests that calling [`listen_udp`] causes a valid local port to be
+    /// allocated when no local port is passed.
+    #[ip_test]
+    fn test_udp_listen_port_alloc<I: Ip>() {
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+
+        let wildcard_list = listen_udp::<I::Addr, _>(&mut ctx, None, None);
+        let specified_list = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), None);
+
+        let wildcard_port = ctx
+            .get_state()
+            .conn_state
+            .wildcard_listeners
+            .get_by_listener(wildcard_list.id)
+            .unwrap()
+            .first()
+            .unwrap()
+            .clone();
+        let specified_port = ctx
+            .get_state()
+            .conn_state
+            .listeners
+            .get_by_listener(specified_list.id)
+            .unwrap()
+            .first()
+            .unwrap()
+            .port;
+        assert!(UdpConnectionState::<I>::EPHEMERAL_RANGE.contains(&wildcard_port.get()));
+        assert!(UdpConnectionState::<I>::EPHEMERAL_RANGE.contains(&specified_port.get()));
+        assert_ne!(wildcard_port, specified_port);
     }
 }

@@ -12,6 +12,7 @@ pub(crate) use port_alloc::*;
 /// ephemeral port allocations in transport protocols.
 mod port_alloc {
     use std::hash::Hash;
+    use std::marker::PhantomData;
     use std::num::{NonZeroU16, NonZeroUsize};
     use std::ops::RangeInclusive;
 
@@ -103,6 +104,11 @@ mod port_alloc {
             usize::from(Self::EPHEMERAL_RANGE.end() - Self::EPHEMERAL_RANGE.start()) + 1
         }
 
+        /// Returns a random ephemeral port in `EPHEMERAL_RANGE`
+        fn rand_ephemeral<R: RngCore>(rng: &mut R) -> EphemeralPort<Self> {
+            EphemeralPort::new_random(rng)
+        }
+
         /// Checks if `port` is available to be used for the flow `id`.
         ///
         /// Implementers return `true` if the provided `port` is available to be
@@ -143,6 +149,42 @@ mod port_alloc {
         secret_a: [u8; SECRET_LEN],
         secret_b: [u8; SECRET_LEN],
         _marker: std::marker::PhantomData<I>,
+    }
+
+    /// A witness type for a port within some ephemeral port range.
+    ///
+    /// `EphemeralPort` is always guaranteed to contain a port that is within
+    /// `I::EPHEMERAL_RANGE`.
+    pub(crate) struct EphemeralPort<I: PortAllocImpl + ?Sized> {
+        port: PortNumber,
+        _marker: PhantomData<I>,
+    }
+
+    impl<I: PortAllocImpl + ?Sized> EphemeralPort<I> {
+        /// Creates a new `EphemeralPort` with a port chosen randomly in
+        /// `range`.
+        pub(crate) fn new_random<R: RngCore>(rng: &mut R) -> Self {
+            let num_ephemeral =
+                u32::from(I::EPHEMERAL_RANGE.end() - I::EPHEMERAL_RANGE.start()) + 1;
+            let port =
+                I::EPHEMERAL_RANGE.start() + ((rng.next_u32() % num_ephemeral) as PortNumber);
+            Self { port, _marker: PhantomData }
+        }
+
+        /// Increments the current [`PortNumber`] to the next value in the
+        /// contained range, wrapping around to the start of the range.
+        pub(crate) fn next(&mut self) {
+            if self.port == *I::EPHEMERAL_RANGE.end() {
+                self.port = *I::EPHEMERAL_RANGE.start();
+            } else {
+                self.port += 1;
+            }
+        }
+
+        /// Gets the `PortNumber` value.
+        pub(crate) fn get(&self) -> PortNumber {
+            self.port
+        }
     }
 
     impl<I: PortAllocImpl> PortAlloc<I> {
@@ -360,6 +402,31 @@ mod port_alloc {
             // now offset b should've moved, and a remained just one forward:
             assert_eq!(table_a.wrapping_add(1), alloc.table[0]);
             assert_eq!(table_b.wrapping_add(1), alloc.table[1]);
+        }
+
+        #[test]
+        fn test_ephemeral_port_random() {
+            // test that random ephemeral ports are always in range
+            let mut rng = new_fake_crypto_rng(0);
+            for _ in 0..1000 {
+                let rnd_port = EphemeralPort::<MockImpl>::new_random(&mut rng);
+                assert!(MockImpl::EPHEMERAL_RANGE.contains(&rnd_port.port));
+            }
+        }
+
+        #[test]
+        fn test_ephemeral_port_next() {
+            let mut port = EphemeralPort::<MockImpl> {
+                port: *MockImpl::EPHEMERAL_RANGE.start(),
+                _marker: PhantomData,
+            };
+            // loop over all the range twice so we see the wrap-around
+            for _ in 0..=1 {
+                for x in MockImpl::EPHEMERAL_RANGE {
+                    assert_eq!(port.port, x);
+                    port.next();
+                }
+            }
         }
     }
 }
