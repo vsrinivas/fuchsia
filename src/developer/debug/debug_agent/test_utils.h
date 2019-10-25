@@ -27,6 +27,13 @@ namespace debug_agent {
                                 << "Got: " << zx_status_get_string(status);                   \
   }
 
+#define EXPECT_ZX_EQ(stmt, expected)                                                          \
+  {                                                                                           \
+    zx_status_t status = (stmt);                                                              \
+    EXPECT_EQ(status, expected) << "Expected " << zx_status_get_string(expected) << std::endl \
+                                << "Got: " << zx_status_get_string(status);                   \
+  }
+
 }  // namespace debug_agent
 
 #endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_UTILS_H_

@@ -129,7 +129,7 @@ DebuggedThread::DebuggedThread(DebugAgent* debug_agent, CreateInfo&& create_info
       handle_(std::move(create_info.handle)),
       debug_agent_(debug_agent),
       process_(create_info.process),
-      exception_token_(std::move(create_info.exception)),
+      exception_handle_(std::move(create_info.exception)),
       arch_provider_(std::move(create_info.arch_provider)),
       object_provider_(std::move(create_info.object_provider)),
       weak_factory_(this) {
@@ -152,9 +152,9 @@ DebuggedThread::~DebuggedThread() = default;
 
 fxl::WeakPtr<DebuggedThread> DebuggedThread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void DebuggedThread::OnException(zx::exception exception_token,
+void DebuggedThread::OnException(zx::exception exception_handle,
                                  zx_exception_info_t exception_info) {
-  exception_token_ = std::move(exception_token);
+  exception_handle_ = std::move(exception_handle);
 
   debug_ipc::NotifyException exception;
   exception.type = arch_provider_->DecodeExceptionType(*this, exception_info.type);
@@ -194,7 +194,7 @@ void DebuggedThread::OnException(zx::exception exception_token,
   // The exception was unhandled, so we close it so that the system can run its
   // course. The destructor would've done it anyway, but being explicit helps
   // readability.
-  exception_token_.reset();
+  exception_handle_.reset();
 }
 
 void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
@@ -327,14 +327,12 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
 
 void DebuggedThread::ResumeException() {
   // We need to mark that this token is correctly handled before closing it.
-  if (exception_token_.is_valid()) {
+  if (exception_handle_.is_valid()) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming exception handle.";
     uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-    zx_status_t status =
-        exception_token_.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
-    FXL_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
+    exception_handle_.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
   }
-  exception_token_.reset();
+  exception_handle_.reset();
 }
 
 void DebuggedThread::ResumeSuspension() {

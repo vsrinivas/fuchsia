@@ -8,6 +8,19 @@
 
 namespace debug_agent {
 
+namespace {
+
+template <typename T>
+MockObject* SearchForKoid(const std::vector<std::unique_ptr<T>>& objects, zx_koid_t koid) {
+  for (auto& object : objects) {
+    if (object->koid == koid)
+      return object.get();
+  }
+  return nullptr;
+}
+
+}  // namespace
+
 std::vector<zx::job> MockObjectProvider::GetChildJobs(zx_handle_t job_handle) const {
   zx_koid_t job_koid = static_cast<zx_koid_t>(job_handle);
 
@@ -44,6 +57,47 @@ std::vector<zx::process> MockObjectProvider::GetChildProcesses(zx_handle_t job_h
   return child_processes;
 }
 
+std::vector<zx_koid_t> MockObjectProvider::GetChildKoids(zx_handle_t parent,
+                                                         uint32_t child_kind) const {
+  MockObject* object = ObjectByKoid(parent);
+  if (!object)
+    return {};
+
+  std::vector<zx_koid_t> koids;
+  if (child_kind == ZX_INFO_PROCESS_THREADS) {
+    MockProcessObject* process = object->AsProcess();
+    FXL_DCHECK(process);
+
+    koids.reserve(process->child_threads.size());
+    for (auto& thread : process->child_threads) {
+      koids.push_back(thread->koid);
+    }
+  }
+
+  // Write the other cases as needed by tests.
+  return koids;
+}
+
+zx_status_t MockObjectProvider::GetChild(zx_handle_t parent, zx_koid_t koid, uint32_t rights,
+                                         zx_handle_t* child) const {
+  MockObject* object = ObjectByKoid(parent);
+  FXL_DCHECK(object);
+
+  // Add as needed by tests.
+  MockObject* child_object = nullptr;
+  if (object->type == MockObject::Type::kProcess) {
+    MockProcessObject* process = object->AsProcess();
+    FXL_DCHECK(process);
+    child_object = SearchForKoid(process->child_threads, koid);
+  }
+
+  if (!child_object)
+    return ZX_ERR_NOT_FOUND;
+
+  *child = child_object->koid;
+  return ZX_OK;
+}
+
 std::string MockObjectProvider::NameForObject(zx_handle_t object_handle) const {
   zx_koid_t koid = static_cast<zx_koid_t>(object_handle);
   DEBUG_LOG(Test) << "Getting name for: " << object_handle;
@@ -65,13 +119,9 @@ zx_koid_t MockObjectProvider::KoidForObject(zx_handle_t object_handle) const {
   return it->second->koid;
 };
 
-zx::job MockObjectProvider::GetRootJob() const {
-  return zx::job(GetRootJobKoid());
-}
+zx::job MockObjectProvider::GetRootJob() const { return zx::job(GetRootJobKoid()); }
 
-zx_koid_t MockObjectProvider::GetRootJobKoid() const {
-  return root()->koid;
-}
+zx_koid_t MockObjectProvider::GetRootJobKoid() const { return root()->koid; }
 
 // Test Setup Implementation.
 

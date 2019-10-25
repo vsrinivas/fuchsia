@@ -11,6 +11,7 @@
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/system_info.h"
+#include "src/developer/debug/debug_agent/test_utils.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/message_loop_target.h"
@@ -100,12 +101,41 @@ class MockLimboProvider : public LimboProvider {
   MockLimboProvider() : LimboProvider(nullptr) {}
 
   zx_status_t ListProcessesOnLimbo(std::vector<ProcessExceptionMetadata>* out) override {
-    *out = std::move(processes_);
+    out->clear();
+    out->reserve(processes_.size());
+    for (auto& [process_koid, process_metadata] : processes_) {
+      ProcessExceptionMetadata metadata = {};
+      metadata.set_info(process_metadata.info());
+      metadata.set_process(zx::process(process_metadata.process().get()));
+      metadata.set_thread(zx::thread(process_metadata.thread().get()));
+
+      out->push_back(std::move(metadata));
+    }
+
+    return ZX_OK;
+  }
+
+  zx_status_t RetrieveException(zx_koid_t process_koid,
+                                fuchsia::exception::ProcessException* out) override {
+    auto it = processes_.find(process_koid);
+    if (it == processes_.end())
+      return ZX_ERR_NOT_FOUND;
+
+    ProcessException exception;
+    exception.set_info(it->second.info());
+    exception.set_exception(zx::exception(exception_koids_[process_koid]));
+    exception.set_process(std::move(*it->second.mutable_process()));
+    exception.set_thread(std::move(*it->second.mutable_thread()));
+
+    *out = std::move(exception);
+
+    exception_koids_.erase(process_koid);
+    processes_.erase(it);
     return ZX_OK;
   }
 
   void AppendException(const MockProcessObject* process, const MockThreadObject* thread,
-                       ExceptionType exception_type) {
+                       ExceptionType exception_type, zx_koid_t exception_koid) {
     ExceptionInfo info = {};
     info.process_koid = process->koid;
     info.thread_koid = thread->koid;
@@ -116,13 +146,15 @@ class MockLimboProvider : public LimboProvider {
     metadata.set_process(process->GetHandle());
     metadata.set_thread(thread->GetHandle());
 
-    processes_.push_back(std::move(metadata));
+    exception_koids_[process->koid] = exception_koid;
+    processes_[process->koid] = std::move(metadata);
   }
 
-  const std::vector<ProcessExceptionMetadata>& processes() const { return processes_; }
+  const std::map<zx_koid_t, ProcessExceptionMetadata>& processes() const { return processes_; }
 
  private:
-  std::vector<ProcessExceptionMetadata> processes_;
+  std::map<zx_koid_t, zx_koid_t> exception_koids_;
+  std::map<zx_koid_t, ProcessExceptionMetadata> processes_;
 };
 
 std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
@@ -243,8 +275,8 @@ TEST(DebugAgent, OnGlobalStatus) {
   auto [limbo_proc2, limbo_thread2] =
       GetProcessThread(object_provider, kLimboProcess2, kLimboProcess2Thread);
 
-  test_context->limbo_provider->AppendException(limbo_proc1, limbo_thread1, kLimboException1);
-  test_context->limbo_provider->AppendException(limbo_proc2, limbo_thread2, kLimboException2);
+  test_context->limbo_provider->AppendException(limbo_proc1, limbo_thread1, kLimboException1, 1);
+  test_context->limbo_provider->AppendException(limbo_proc2, limbo_thread2, kLimboException2, 2);
 
   reply = {};
   remote_api->OnStatus(request, &reply);
@@ -327,6 +359,51 @@ TEST(DebugAgent, OnProcessStatus) {
   ASSERT_EQ(modules[0].modules[1].build_id, modules_to_send.modules[1].build_id);
 }
 
+TEST(DebugAgent, OnAttachNotFound) {
+  uint32_t transaction_id = 1u;
+
+  auto test_context = CreateTestContext();
+  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  debug_agent.Connect(&test_context->stream_backend.stream());
+  RemoteAPI* remote_api = &debug_agent;
+
+  debug_ipc::AttachRequest attach_request;
+  attach_request.type = debug_ipc::TaskType::kProcess;
+  attach_request.koid = -1;
+
+  remote_api->OnAttach(transaction_id++, attach_request);
+
+  {
+    // Should've gotten an attach reply.
+    auto& attach_replies = test_context->stream_backend.attach_replies();
+    ASSERT_EQ(attach_replies.size(), 1u);
+    EXPECT_ZX_EQ(attach_replies[0].status, ZX_ERR_NOT_FOUND);
+
+    // There should be no attach watch.
+    auto& watches = test_context->loop.watches();
+    ASSERT_EQ(watches.size(), 0u);
+  }
+
+  auto [proc_object, thread_object] =
+      GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
+  test_context->limbo_provider->AppendException(proc_object, thread_object,
+                                                ExceptionType::FATAL_PAGE_FAULT, 1);
+
+  // Even with limbo it should fail.
+  remote_api->OnAttach(transaction_id++, attach_request);
+
+  {
+    // Should've gotten an attach reply.
+    auto& attach_replies = test_context->stream_backend.attach_replies();
+    ASSERT_EQ(attach_replies.size(), 2u);
+    EXPECT_ZX_EQ(attach_replies[1].status, ZX_ERR_NOT_FOUND);
+
+    // There should be no attach watch.
+    auto& watches = test_context->loop.watches();
+    ASSERT_EQ(watches.size(), 0u);
+  }
+}
+
 TEST(DebugAgent, OnAttach) {
   uint32_t transaction_id = 1u;
 
@@ -352,7 +429,7 @@ TEST(DebugAgent, OnAttach) {
   auto& attach_replies = test_context->stream_backend.attach_replies();
   auto reply = attach_replies.back();
   ASSERT_EQ(attach_replies.size(), 1u);
-  EXPECT_EQ(reply.status, ZX_OK) << zx_status_get_string(reply.status);
+  EXPECT_ZX_EQ(reply.status, ZX_OK);
   EXPECT_EQ(reply.koid, 11u);
   EXPECT_EQ(reply.name, "job1-p2");
 
@@ -363,7 +440,7 @@ TEST(DebugAgent, OnAttach) {
   // We should've gotten an error reply.
   ASSERT_EQ(attach_replies.size(), 2u);
   reply = attach_replies.back();
-  EXPECT_EQ(reply.status, ZX_ERR_NOT_FOUND) << zx_status_get_string(reply.status);
+  EXPECT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
 
   // Attaching to a third process should work.
   attach_request.koid = 21u;
@@ -371,7 +448,7 @@ TEST(DebugAgent, OnAttach) {
 
   ASSERT_EQ(attach_replies.size(), 3u);
   reply = attach_replies.back();
-  EXPECT_EQ(reply.status, ZX_OK) << zx_status_get_string(reply.status);
+  EXPECT_ZX_EQ(reply.status, ZX_OK);
   EXPECT_EQ(reply.koid, 21u);
   EXPECT_EQ(reply.name, "job121-p2");
 
@@ -380,7 +457,62 @@ TEST(DebugAgent, OnAttach) {
 
   ASSERT_EQ(attach_replies.size(), 4u);
   reply = attach_replies.back();
-  EXPECT_EQ(reply.status, ZX_ERR_ALREADY_BOUND) << zx_status_get_string(reply.status);
+  EXPECT_ZX_EQ(reply.status, ZX_ERR_ALREADY_BOUND);
+}
+
+TEST(DebugAgent, AttachToLimbo) {
+  uint32_t transaction_id = 1u;
+
+  auto test_context = CreateTestContext();
+  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  debug_agent.Connect(&test_context->stream_backend.stream());
+  RemoteAPI* remote_api = &debug_agent;
+
+  constexpr zx_koid_t kExceptionKoid = 0x1234;
+  auto [proc_object, thread_object] =
+      GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
+  test_context->limbo_provider->AppendException(proc_object, thread_object,
+                                                ExceptionType::FATAL_PAGE_FAULT, kExceptionKoid);
+
+  debug_ipc::AttachRequest attach_request = {};
+  attach_request.type = debug_ipc::TaskType::kProcess;
+  attach_request.koid = proc_object->koid;
+  remote_api->OnAttach(transaction_id++, attach_request);
+
+  // We should've received a watch command (which does the low level exception watching).
+  auto& watches = test_context->loop.watches();
+  ASSERT_EQ(watches.size(), 1u);
+  EXPECT_EQ(watches[0].process_name, proc_object->name);
+  EXPECT_EQ(watches[0].process_handle, proc_object->koid);
+  EXPECT_EQ(watches[0].process_koid, proc_object->koid);
+
+  // We should've gotten an attach reply.
+  auto& attach_replies = test_context->stream_backend.attach_replies();
+  auto reply = attach_replies.back();
+  ASSERT_EQ(attach_replies.size(), 1u);
+  EXPECT_ZX_EQ(reply.status, ZX_OK);
+  EXPECT_EQ(reply.koid, proc_object->koid);
+  EXPECT_EQ(reply.name, proc_object->name);
+
+  {
+    DebuggedProcess* process = debug_agent.GetDebuggedProcess(proc_object->koid);
+    ASSERT_TRUE(process);
+    auto threads = process->GetThreads();
+    ASSERT_EQ(threads.size(), 2u);
+
+    // Search for the exception thread.
+    DebuggedThread* exception_thread = nullptr;
+    for (DebuggedThread* thread : threads) {
+      if (thread->koid() == thread_object->koid) {
+        exception_thread = thread;
+        break;
+      }
+    }
+
+    ASSERT_TRUE(exception_thread);
+    ASSERT_TRUE(exception_thread->IsInException());
+    EXPECT_EQ(exception_thread->exception_handle().get(), kExceptionKoid);
+  }
 }
 
 }  // namespace

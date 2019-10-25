@@ -18,6 +18,10 @@ namespace debug_agent {
 // that will come out of doing this is the zx_handle_close (called by the zx::object destructor)
 // will error out with ZX_ERR_BAD_HANDLE, which is harmless.
 
+struct MockJobObject;
+struct MockProcessObject;
+struct MockThreadObject;
+
 struct MockObject {
   enum class Type {
     kJob,
@@ -30,24 +34,36 @@ struct MockObject {
   std::string name;
   Type type = Type::kLast;
 
+  ~MockObject() = default;
+
+  virtual MockJobObject* AsJob() { return nullptr; }
+  virtual MockProcessObject* AsProcess() { return nullptr; }
+  virtual MockThreadObject* AsThread() { return nullptr; }
+
   bool is_valid() const { return type != Type::kLast; }
 };
 
-struct MockThreadObject : public MockObject {
+struct MockThreadObject final : public MockObject {
   zx::thread GetHandle() const { return zx::thread(koid); }
+
+  MockThreadObject* AsThread() override { return this; }
 };
 
-struct MockProcessObject : public MockObject {
+struct MockProcessObject final : public MockObject {
   std::vector<std::unique_ptr<MockThreadObject>> child_threads;
+
+  MockProcessObject* AsProcess() override { return this; }
 
   zx::process GetHandle() const { return zx::process(koid); }
   const MockThreadObject* GetThread(const std::string& thread_name) const;
 };
 
-struct MockJobObject : public MockObject {
+struct MockJobObject final : public MockObject {
   // Unique pointers so that they're fixed in memory and can cache the pointers.
   std::vector<std::unique_ptr<MockJobObject>> child_jobs;
   std::vector<std::unique_ptr<MockProcessObject>> child_processes;
+
+  MockJobObject* AsJob() override { return this; }
 
   zx::job GetHandle() const { return zx::job(koid); }
 };
@@ -60,6 +76,11 @@ class MockObjectProvider : public ObjectProvider {
   // Object Provider Interface.
   std::vector<zx::job> GetChildJobs(zx_handle_t job) const override;
   std::vector<zx::process> GetChildProcesses(zx_handle_t job) const override;
+
+  std::vector<zx_koid_t> GetChildKoids(zx_handle_t parent, uint32_t child_kind) const override;
+
+  zx_status_t GetChild(zx_handle_t parent, zx_koid_t koid, uint32_t rights,
+                       zx_handle_t* child) const override;
 
   std::string NameForObject(zx_handle_t object) const override;
   zx_koid_t KoidForObject(zx_handle_t object) const override;

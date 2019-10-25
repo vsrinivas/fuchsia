@@ -118,6 +118,11 @@ std::vector<zx_koid_t> ObjectProvider::GetChildKoids(zx_handle_t parent,
   return result;
 }
 
+zx_status_t ObjectProvider::GetChild(zx_handle_t parent, zx_koid_t koid, uint32_t rights,
+                                     zx_handle_t* child) const {
+  return zx_object_get_child(parent, koid, ZX_RIGHT_SAME_RIGHTS, child);
+}
+
 std::vector<zx::job> ObjectProvider::GetChildJobs(zx_handle_t job) const {
   return GetChildObjects<zx::job>(*this, job, ZX_INFO_JOB_CHILDREN);
 }

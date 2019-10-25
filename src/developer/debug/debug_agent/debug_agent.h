@@ -78,6 +78,10 @@ class DebugAgent : public RemoteAPI,
 
   bool should_quit() const { return configuration_.quit_on_exit; }
 
+  DebuggedJob* GetDebuggedJob(zx_koid_t koid);
+  DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
+  DebuggedThread* GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid);
+
  private:
   // RemoteAPI implementation.
   void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
@@ -141,16 +145,13 @@ class DebugAgent : public RemoteAPI,
   // Job/Process/Thread Management -----------------------------------------------------------------
 
   zx_status_t AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
-  DebuggedJob* GetDebuggedJob(zx_koid_t koid);
-
   zx_status_t AddDebuggedProcess(DebuggedProcessCreateInfo&&, DebuggedProcess** added);
-  DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
-
-  DebuggedThread* GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid);
 
   // Attempts to attach to the given process and sends a AttachReply message
   // to the client with the result.
-  void AttachToProcess(uint32_t transaction_id, zx_koid_t process_koid);
+  void AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id);
+  zx_status_t AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id);
+  zx_status_t AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id);
 
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
 
@@ -161,7 +162,6 @@ class DebugAgent : public RemoteAPI,
   debug_ipc::StreamBuffer* stream_ = nullptr;
 
   std::shared_ptr<sys::ServiceDirectory> services_;
-
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;

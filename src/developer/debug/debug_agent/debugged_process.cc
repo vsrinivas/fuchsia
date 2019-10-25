@@ -315,7 +315,7 @@ void DebuggedProcess::PopulateCurrentThreads() {
       continue;
 
     zx_handle_t handle;
-    if (zx_object_get_child(handle_.get(), koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK) {
+    if (object_provider_->GetChild(handle_.get(), koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK) {
       DebuggedThread::CreateInfo create_info = {};
       create_info.process = this;
       create_info.koid = koid;

@@ -84,9 +84,13 @@ class DebuggedThread {
   zx::thread& handle() { return handle_; }
   const zx::thread& handle() const { return handle_; }
 
+  zx::exception& exception_handle() { return exception_handle_; }
+  const zx::exception& exception_handle() const { return exception_handle_; }
+  void set_exception_handle(zx::exception exception) { exception_handle_ = std::move(exception); }
+
   fxl::WeakPtr<DebuggedThread> GetWeakPtr();
 
-  void OnException(zx::exception exception_token, zx_exception_info_t exception_info);
+  void OnException(zx::exception exception_handle, zx_exception_info_t exception_info);
 
   // Resumes execution of the thread. The thread should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
@@ -96,7 +100,7 @@ class DebuggedThread {
   void ResumeForRunMode();
 
   // Resume the thread from an exception.
-  // If |exception_token_| is not valid, this will no-op.
+  // If |exception_handle_| is not valid, this will no-op.
   virtual void ResumeException();
 
   // Resume the thread from a suspension.
@@ -160,7 +164,7 @@ class DebuggedThread {
   bool running() const { return !IsSuspended() && !IsInException(); }
 
   virtual bool IsSuspended() const { return ref_counted_suspend_token_.is_valid(); }
-  virtual bool IsInException() const { return exception_token_.is_valid(); }
+  virtual bool IsInException() const { return exception_handle_.is_valid(); }
 
   int ref_counted_suspend_count() const { return suspend_count_; }
 
@@ -244,7 +248,7 @@ class DebuggedThread {
   zx::suspend_token ref_counted_suspend_token_;
 
   // Active if the thread is currently on an exception.
-  zx::exception exception_token_;
+  zx::exception exception_handle_;
 
   // Whether this thread is currently stepping over.
   bool stepping_over_breakpoint_ = false;

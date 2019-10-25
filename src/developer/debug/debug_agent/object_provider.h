@@ -53,6 +53,9 @@ class ObjectProvider {
   // ZX_INFO_JOB_PROCESSES.
   virtual std::vector<zx_koid_t> GetChildKoids(zx_handle_t parent, uint32_t child_kind) const;
 
+  virtual zx_status_t GetChild(zx_handle_t parent, zx_koid_t koid, uint32_t rights,
+                               zx_handle_t* child) const;
+
   // Returns the specified kind of child objects.
   virtual std::vector<zx::job> GetChildJobs(zx_handle_t job) const;
   virtual std::vector<zx::process> GetChildProcesses(zx_handle_t job) const;
