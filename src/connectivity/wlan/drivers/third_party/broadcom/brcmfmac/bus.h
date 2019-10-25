@@ -26,7 +26,7 @@
 #include "netbuf.h"
 
 // HW/SW bus in use
-enum brcmf_bus_type { BRCMF_BUS_TYPE_SDIO, BRCMF_BUS_TYPE_SIM, BRCMF_BUS_TYPE_USB };
+enum brcmf_bus_type { BRCMF_BUS_TYPE_SDIO, BRCMF_BUS_TYPE_SIM };
 
 /* The level of bus communication with the dongle */
 enum brcmf_bus_state {
