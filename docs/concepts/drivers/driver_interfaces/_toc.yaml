@@ -3,8 +3,8 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path:  /docs/zircon/driver_interfaces/audio_overview.md
+  path: /docs/concepts/drivers/driver_interfaces/audio_overview.md
 - title: "Audio codec"
-  path: /docs/zircon/driver_interfaces/audio_codec.md
+  path: /docs/concepts/drivers/driver_interfaces/audio_codec.md
 - title: "Audio streaming"
-  path: /docs/zircon/driver_interfaces/audio_streaming.md
+  path: /docs/concepts/drivers/driver_interfaces/audio_streaming.md

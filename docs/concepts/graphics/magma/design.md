@@ -90,7 +90,7 @@ Magma provides semaphores as a general signalling mechanism that can be used to 
 
 The thread model used for each installed GPU device and driver is as follows:
 
-The msd is typically loaded by the [platform bus driver](/docs/zircon/ddk/platform-bus.md) and a msd main devhost thread is created.  The msd main thread in turn creates a device thread to talk to the GPU and a driver-dependent number of interrupt threads to service GPU interrupts.
+The msd is typically loaded by the [platform bus driver](/docs/concepts/drivers/platform-bus.md) and a msd main devhost thread is created.  The msd main thread in turn creates a device thread to talk to the GPU and a driver-dependent number of interrupt threads to service GPU interrupts.
 
 A client driver library that implements the Vulkan api is referred to as a **vcd** (Vulkan Client Driver).  When a Vulkan application starts and makes a new VkDevice, the vcd makes a request to the msd to establish a connection for the device over which all Vulkan commands will be communicated.  The msd main thread responds to this call by creating a new connection thread to service all client commands. The connection thread in turn creates two zircon communication channels: the primary channel and the notification channel.
 

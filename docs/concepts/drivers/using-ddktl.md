@@ -294,7 +294,7 @@ This usage is typical.
 <!-- xref table -->
 [bti]: /docs/concepts/objects/bus_transaction_initiator.md
 [crtp]: https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
-[ddk-tutorial]: /docs/zircon/ddk/ddk-tutorial.md
+[ddk-tutorial]: /docs/concepts/drivers/ddk-tutorial.md
 [dev/block/zxcrypt/device.cpp]: /zircon/system/dev/block/zxcrypt/device.cc
 [dev/block/zxcrypt/device.h]: /zircon/system/dev/block/zxcrypt/device.h
 [dev/block/zxcrypt]: /zircon/system/dev/block/zxcrypt

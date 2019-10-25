@@ -738,7 +738,7 @@ For further information on component manifests, see
 
 # References
 
-* [Adding Tracing to Device Drivers](/docs/zircon/ddk/tracing.md)
+* [Adding Tracing to Device Drivers](/docs/concepts/drivers/tracing.md)
   gives details on source code additions (e.g., what `#include` files to add)
   and Makefile additions required by the trace provider in order to add
   tracing, or disable it completely.

@@ -296,7 +296,7 @@ Directory capability is a [components v2](#components-v2) concept.
 A driver is a dynamic shared library which [DevMgr](#devmgr) can load into a
 [DevHost](#devhost) and that enables, and controls one or more devices.
 
--   [Reference](/docs/zircon/ddk/driver-development.md)
+-   [Reference](/docs/concepts/drivers/driver-development.md)
 -   [Driver Sources](/zircon/system/dev)
 
 #### **Environment** {#environment}

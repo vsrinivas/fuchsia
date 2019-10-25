@@ -47,7 +47,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [zxcrypt](/docs/zircon/zxcrypt.md)
 
 + [Driver Development Kit](/docs/concepts/drivers/overview.md)
-+ [Driver interfaces - audio overview](/docs/zircon/driver_interfaces/audio_overview.md)
++ [Driver interfaces - audio overview](/docs/concepts/drivers/driver_interfaces/audio_overview.md)
 
 + [libc](/docs/development/languages/c-cpp/libc.md)
 + [C++ fit::promise<> guide](/docs/development/languages/c-cpp/fit_promise_guide.md)

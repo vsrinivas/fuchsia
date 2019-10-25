@@ -133,7 +133,7 @@ driver, see `driver.\<name>.enable_tests`. The default is disabled.
 ## driver.tracing.enable=\<bool>
 
 Enable or disable support for tracing drivers.
-When enabled drivers may participate in [Fuchsia tracing](/docs/zircon/ddk/tracing.md).
+When enabled drivers may participate in [Fuchsia tracing](/docs/concepts/drivers/tracing.md).
 
 Implementation-wise, what this option does is tell each devhost whether to
 register as "trace provider".
