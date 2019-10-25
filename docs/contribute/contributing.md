@@ -35,7 +35,7 @@ incomplete and will be expanded over time.
 
 * Documentation is one honking great idea &mdash; let's do more of that!
 
-    - Documentation should be in Markdown files. Zircon documentation is located in [/docs/zircon][googlesource-docs].
+    - Documentation should be in Markdown files. Zircon documentation is located in [/docs/concepts/kernel][googlesource-docs].
       Please check how your docs are rendered.
 
     - Some notable docs: there's a list of syscalls in [/docs/reference/syscalls/README.md][syscall-doc] and a list of
@@ -55,7 +55,7 @@ typedef int ZX_RESUME_NOT_HANDLED_DEPRECATION __attribute__((deprecated));
 #define ZX_RESUME_NOT_HANDLED ((ZX_RESUME_NOT_HANDLED_DEPRECATION)(2))
 ```
 
-[googlesource-docs]: /docs/zircon/
+[googlesource-docs]: /docs/concepts/kernel
 [syscall-doc]: /docs/reference/syscalls/README.md
 [cmdline-doc]: /docs/reference/kernel/kernel_cmdline.md
 

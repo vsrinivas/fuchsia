@@ -3,8 +3,10 @@
 # team as reviewer.
 toc:
 - title: "Jitterentropy library"
-  path: /docs/zircon/jitterentropy/README.md
+  path: /docs/concepts/system/jitterentropy/README.md
 - title: "Basic configuration"
-  path: /docs/zircon/jitterentropy/config-basic.md
+  path: /docs/concepts/system/jitterentropy/config-basic.md
 - title: "Tuning the configuration"
-  path: /docs/zircon/jitterentropy/config-tuning.md
+  path: /docs/concepts/system/jitterentropy/config-tuning.md
+- title: "Entropy collection TODOs"
+  path: /docs/concepts/system/jitterentropy/entropy_collection_todos.md

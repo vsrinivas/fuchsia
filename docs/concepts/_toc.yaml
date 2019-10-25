@@ -16,6 +16,9 @@ toc:
 - title: "Drivers"
   section:
   - include: /docs/concepts/drivers/_toc.yaml
+- title: "Filesystems"
+  section:
+  - include: /docs/concepts/filesystems/_toc.yaml
 - title: "Framework"
   section:
   - include: /docs/concepts/framework/_toc.yaml

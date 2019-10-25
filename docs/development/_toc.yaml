@@ -66,3 +66,5 @@ toc:
 - title: "Tools"
   section:
   - include: /docs/development/tools/_toc.yaml
+- title: "Reference"
+  path: /docs/reference/README.md

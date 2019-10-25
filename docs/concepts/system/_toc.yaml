@@ -8,3 +8,6 @@ toc:
   path: /docs/concepts/system/life_of_an_open.md
 - title: "Software Update System"
   path: /docs/concepts/system/software_update_system.md
+- title: "Jitterentropy"
+  section:
+  - include: /docs/concepts/system/jitterentropy/_toc.yaml
