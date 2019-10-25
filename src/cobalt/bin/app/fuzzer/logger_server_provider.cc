@@ -14,7 +14,6 @@
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
-#include "third_party/cobalt/src/lib/clearcut/curl_http_client.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/logger/event_aggregator.h"
 #include "third_party/cobalt/src/logger/observation_writer.h"
@@ -24,8 +23,7 @@
 #include "third_party/cobalt/src/system_data/client_secret.h"
 #include "third_party/cobalt/src/uploader/shipping_manager.h"
 #include "third_party/cobalt/src/uploader/upload_scheduler.h"
-#include "third_party/cobalt/third_party/clearcut/http_client.h"
-#include "third_party/cobalt/third_party/clearcut/uploader.h"
+#include "third_party/cobalt/src/lib/clearcut/uploader.h"
 
 // Source of cobalt::logger::kConfig
 #include "third_party/cobalt/src/logger/internal_metrics_config.cb.h"
