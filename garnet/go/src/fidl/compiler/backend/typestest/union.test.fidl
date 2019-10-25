@@ -9,3 +9,9 @@ union Union {
 union FieldCollision {
     int32 field_collision_tag;
 };
+
+union ExplicitUnion {
+    2: reserved;
+    1: int32 Primitive;
+    3: string StringNeedsConstructor;
+};

@@ -102,6 +102,22 @@ fidl_xunion! {
 	],
 }
 
+fidl_xunion! {
+	#[derive(Debug, PartialEq)]
+	name: ExplicitXUnion,
+	members: [
+		I {
+			ty: i64,
+			ordinal: 1,
+		},
+		F {
+			ty: f32,
+			ordinal: 4,
+		},
+	],
+	unknown_member: __UnknownVariant,
+}
+
 
 fidl_empty_struct!(
 	Empty

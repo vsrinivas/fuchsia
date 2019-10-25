@@ -324,6 +324,165 @@ zx_status_t FieldCollision::Clone(FieldCollision* _result) const {
 void FieldCollision::set_field_collision_tag(int32_t value) {
   value_.emplace<static_cast<size_t>(Tag::kFieldCollisionTag) + 1>(std::move(value));
 }
+ExplicitUnion::ExplicitUnion() : value_() {}
+
+ExplicitUnion::~ExplicitUnion() {
+}
+
+ExplicitUnion::ExplicitUnion(ExplicitUnion&& other) : value_(std::move(other.value_)) {
+}
+
+ExplicitUnion& ExplicitUnion::operator=(ExplicitUnion&& other) {
+  if (this != &other) {
+    value_ = std::move(other.value_);
+  }
+  return *this;
+}
+
+void ExplicitUnion::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    EncodeAsXUnionBytes(_encoder, _offset);
+    return;
+  }
+
+  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
+  ::fidl::Encode(_encoder, &_tag, _offset);
+  switch (_tag) {
+   case 0:
+    ::fidl::Encode(_encoder, &Primitive(), _offset + 8);
+    break;
+   case 1:
+    ::fidl::Encode(_encoder, &StringNeedsConstructor(), _offset + 8);
+    break;
+   default:
+    break;
+  }
+}
+
+void ExplicitUnion::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
+  const size_t length_before = _encoder->CurrentLength();
+  const size_t handles_before = _encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kPrimitive: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &Primitive(), envelope_offset);
+      break;
+    }
+    case Tag::kStringNeedsConstructor: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &StringNeedsConstructor(), envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = WhichXUnionTag();
+    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void ExplicitUnion::Decode(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset) {
+  if (_decoder->ShouldDecodeUnionFromXUnion()) {
+    DecodeFromXUnionBytes(_decoder, _value, _offset);
+    return;
+  }
+
+  fidl_union_tag_t _tag;
+  ::fidl::Decode(_decoder, &_tag, _offset);
+  switch (_tag) {
+   case 0:
+    {
+      int32_t _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + 8);
+      _value->set_Primitive(std::move(_member));
+      break;
+    }
+   case 1:
+    {
+      ::std::string _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + 8);
+      _value->set_StringNeedsConstructor(std::move(_member));
+      break;
+    }
+   default:
+    _value->value_.emplace<0>();
+  }
+}
+
+void ExplicitUnion::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
+
+  uint32_t ordinal;
+  ::fidl::Decode(_decoder, &ordinal, _offset);
+
+
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+
+
+switch (ordinal) {
+    case 1: {
+      int32_t _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_Primitive(std::move(_member));
+      break;
+    }
+    case 3: {
+      ::std::string _member{};
+      ::fidl::Decode(_decoder, &_member, envelope_offset);
+      _value->set_StringNeedsConstructor(std::move(_member));
+      break;
+    }
+  default:
+    _value->value_.emplace<0>();
+    break;
+  }
+}
+
+zx_status_t ExplicitUnion::Clone(ExplicitUnion* _result) const {
+  zx_status_t _status = ZX_OK;
+  switch (Which()) {
+    case Tag::kPrimitive:
+      {
+        int32_t _member{};
+        _status = ::fidl::Clone(Primitive(), &_member);
+        if (_status == ZX_OK) {
+          _result->set_Primitive(std::move(_member));
+        }
+      }
+      break;
+    case Tag::kStringNeedsConstructor:
+      {
+        ::std::string _member{};
+        _status = ::fidl::Clone(StringNeedsConstructor(), &_member);
+        if (_status == ZX_OK) {
+          _result->set_StringNeedsConstructor(std::move(_member));
+        }
+      }
+      break;
+    case Tag::Invalid:
+      _result->value_.emplace<0>();
+      break;
+  }
+  return _status;
+}
+
+void ExplicitUnion::set_Primitive(int32_t value) {
+  value_.emplace<static_cast<size_t>(Tag::kPrimitive) + 1>(std::move(value));
+}
+
+void ExplicitUnion::set_StringNeedsConstructor(::std::string value) {
+  value_.emplace<static_cast<size_t>(Tag::kStringNeedsConstructor) + 1>(std::move(value));
+}
 }  // namespace name
 }  // namespace test
 

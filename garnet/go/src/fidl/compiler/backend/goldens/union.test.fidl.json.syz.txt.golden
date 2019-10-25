@@ -25,4 +25,14 @@ test_name_FieldCollisionOutOfLine [
 test_name_FieldCollisionHandles [
        void void
 ][varlen]
+test_name_ExplicitUnionInLine [
+       primitive fidl_union_member[test_name_ExplicitUnionTag_Primitive, int32]
+       string_needs_constructorInLine fidl_union_member[test_name_ExplicitUnionTag_StringNeedsConstructor, fidl_string]
+]
+test_name_ExplicitUnionOutOfLine [
+       string_needs_constructorOutOfLine fidl_aligned[stringnoz]
+][varlen]
+test_name_ExplicitUnionHandles [
+       void void
+][varlen]
 

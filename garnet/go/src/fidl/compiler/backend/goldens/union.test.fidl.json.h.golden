@@ -10,6 +10,7 @@ namespace name {
 
 class Union;
 class FieldCollision;
+class ExplicitUnion;
 
 class Union final {
  public:
@@ -174,6 +175,88 @@ inline zx_status_t Clone(const ::test::name::FieldCollision& value,
 }
 
 using FieldCollisionPtr = ::std::unique_ptr<FieldCollision>;
+
+class ExplicitUnion final {
+ public:
+  ExplicitUnion();
+  ~ExplicitUnion();
+
+  ExplicitUnion(ExplicitUnion&&);
+  ExplicitUnion& operator=(ExplicitUnion&&);
+
+  enum class Tag : fidl_union_tag_t {
+    kPrimitive = 0,
+    kStringNeedsConstructor = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kPrimitive = 1,  // 0x1
+    kStringNeedsConstructor = 3,  // 0x3
+  };
+
+  static inline ::std::unique_ptr<ExplicitUnion> New() { return ::std::make_unique<ExplicitUnion>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset);
+  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset);
+  zx_status_t Clone(ExplicitUnion* result) const;
+
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
+
+  bool is_Primitive() const { return Which() == Tag(0); }
+  
+  int32_t& Primitive() {
+    if (!is_Primitive()) {
+      value_.emplace<0 + 1>();
+    }
+    return value_.template get<0 + 1>();
+  }
+  
+  const int32_t& Primitive() const { return value_.template get<0 + 1>(); }
+  void set_Primitive(int32_t value);
+
+  bool is_StringNeedsConstructor() const { return Which() == Tag(1); }
+  
+  ::std::string& StringNeedsConstructor() {
+    if (!is_StringNeedsConstructor()) {
+      value_.emplace<1 + 1>();
+    }
+    return value_.template get<1 + 1>();
+  }
+  
+  const ::std::string& StringNeedsConstructor() const { return value_.template get<1 + 1>(); }
+  void set_StringNeedsConstructor(::std::string value);
+
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
+
+ private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kPrimitive: return XUnionTag::kPrimitive;
+    case Tag::kStringNeedsConstructor: return XUnionTag::kStringNeedsConstructor;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
+
+  using Variant = fit::internal::variant<fit::internal::monostate, int32_t, ::std::string>;
+  Variant value_;
+};
+
+inline zx_status_t Clone(const ::test::name::ExplicitUnion& value,
+                         ::test::name::ExplicitUnion* result) {
+  return value.Clone(result);
+}
+
+using ExplicitUnionPtr = ::std::unique_ptr<ExplicitUnion>;
 }  // namespace name
 }  // namespace test
 namespace fidl {
@@ -226,6 +309,33 @@ struct Equality<::test::name::FieldCollision> {
       case ::test::name::FieldCollision::Tag::kFieldCollisionTag:
 	return ::fidl::Equals(_lhs.field_collision_tag(), _rhs.field_collision_tag());
       case ::test::name::FieldCollision::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::name::ExplicitUnion>
+    : public EncodableCodingTraits<::test::name::ExplicitUnion, 24, 24> {};
+
+inline zx_status_t Clone(const ::test::name::ExplicitUnion& value,
+                         ::test::name::ExplicitUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::ExplicitUnion> {
+  static inline bool Equals(const ::test::name::ExplicitUnion& _lhs, const ::test::name::ExplicitUnion& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      case ::test::name::ExplicitUnion::Tag::kPrimitive:
+	return ::fidl::Equals(_lhs.Primitive(), _rhs.Primitive());
+      case ::test::name::ExplicitUnion::Tag::kStringNeedsConstructor:
+	return ::fidl::Equals(_lhs.StringNeedsConstructor(), _rhs.StringNeedsConstructor());
+      case ::test::name::ExplicitUnion::Tag::Invalid:
 	return true;
       default:
 	return false;

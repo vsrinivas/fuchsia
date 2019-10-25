@@ -378,6 +378,7 @@ type Union struct {
 // UnionMember represents the declaration of a field in a FIDL union.
 type UnionMember struct {
 	Attributes
+	Reserved      bool       `json:"reserved"`
 	XUnionOrdinal int        `json:"xunion_ordinal"`
 	Type          Type       `json:"type"`
 	Name          Identifier `json:"name"`
@@ -404,6 +405,7 @@ type XUnion struct {
 // xunion.
 type XUnionMember struct {
 	Attributes
+	Reserved     bool       `json:"reserved"`
 	Ordinal      int        `json:"ordinal"`
 	Type         Type       `json:"type"`
 	Name         Identifier `json:"name"`

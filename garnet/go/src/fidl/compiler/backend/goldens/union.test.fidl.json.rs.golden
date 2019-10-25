@@ -57,3 +57,20 @@ fidl_union! {
   size: 8,
   align: 4,
 }
+
+fidl_union! {
+  #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+  name: ExplicitUnion,
+  members: [
+    Primitive {
+      ty: i32,
+      offset: 8,
+    },
+    StringNeedsConstructor {
+      ty: String,
+      offset: 8,
+    },
+  ],
+  size: 24,
+  align: 8,
+}

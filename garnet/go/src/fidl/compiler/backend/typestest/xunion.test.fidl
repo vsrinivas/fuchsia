@@ -43,3 +43,10 @@ protocol TestProtocol {
 struct StructWithNullableXUnion {
     OlderSimpleUnion? x1;
 };
+
+xunion ExplicitXUnion {
+    3: reserved;
+    2: reserved;
+    1: int64 i;
+    4: float32 f;
+};

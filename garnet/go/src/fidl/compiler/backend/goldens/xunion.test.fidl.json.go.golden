@@ -279,6 +279,59 @@ func StrictBoundedXUnionWithV(v []uint8) StrictBoundedXUnion {
 }
 
 
+type I_explicitXUnionTag uint32
+const (
+	ExplicitXUnion_unknownData = 0  // 0x00000000
+	ExplicitXUnionI = 1 // 0x00000001
+	ExplicitXUnionF = 4 // 0x00000004
+)
+
+
+type ExplicitXUnion struct {
+	I_explicitXUnionTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unknownData []byte
+	I int64  `fidl:"1"`
+	F float32  `fidl:"4"`
+}
+
+func (_m *ExplicitXUnion) Which() I_explicitXUnionTag {
+	switch _m.I_explicitXUnionTag {
+	case 1:
+		return ExplicitXUnionI
+	case 4:
+		return ExplicitXUnionF
+	default:
+		return ExplicitXUnion_unknownData
+	}
+}
+
+func (_m *ExplicitXUnion) Ordinal() uint32 {
+	return uint32(_m.I_explicitXUnionTag)
+}
+
+func (_m *ExplicitXUnion) SetI(i int64) {
+	_m.I_explicitXUnionTag = ExplicitXUnionI
+	_m.I = i
+}
+
+func ExplicitXUnionWithI(i int64) ExplicitXUnion {
+	var _u ExplicitXUnion
+	_u.SetI(i)
+	return _u
+}
+
+func (_m *ExplicitXUnion) SetF(f float32) {
+	_m.I_explicitXUnionTag = ExplicitXUnionF
+	_m.F = f
+}
+
+func ExplicitXUnionWithF(f float32) ExplicitXUnion {
+	var _u ExplicitXUnion
+	_u.SetF(f)
+	return _u
+}
+
+
 const (
 	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal uint64 = 0x71a1b4b700000000
 	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal uint64 = 0x2b158c786064d0de

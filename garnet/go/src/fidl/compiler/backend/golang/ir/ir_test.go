@@ -897,9 +897,14 @@ func TestCompileXUnion(t *testing.T) {
 			},
 			Members: []types.XUnionMember{
 				{
-					Ordinal: 2,
-					Name:    "second",
-					Type:    VectorType(PrimitiveType(types.Uint32), &seven),
+					Reserved: false,
+					Ordinal:  2,
+					Name:     "second",
+					Type:     VectorType(PrimitiveType(types.Uint32), &seven),
+				},
+				{
+					Reserved: true,
+					Ordinal:  11,
 				},
 			},
 		},
@@ -939,6 +944,11 @@ func TestCompileUnion(t *testing.T) {
 			},
 			Members: []types.UnionMember{
 				{
+					Reserved:      true,
+					XUnionOrdinal: 1,
+				},
+				{
+					Reserved:      false,
 					XUnionOrdinal: 2,
 					Name:          "second",
 					Type:          VectorType(PrimitiveType(types.Uint32), &seven),

@@ -830,6 +830,9 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	}
 
 	for _, v := range val.Members {
+		if v.Reserved {
+			continue
+		}
 		r.Members = append(r.Members, c.compileXUnionMember(v))
 	}
 
@@ -886,6 +889,9 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	}
 
 	for _, v := range val.Members {
+		if v.Reserved {
+			continue
+		}
 		r.Members = append(r.Members, c.compileUnionMember(v))
 	}
 

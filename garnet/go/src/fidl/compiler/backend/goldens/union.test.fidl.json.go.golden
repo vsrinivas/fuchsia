@@ -84,3 +84,42 @@ func FieldCollisionWithFieldCollisionTag(fieldCollisionTag int32) FieldCollision
 	_u.SetFieldCollisionTag(fieldCollisionTag)
 	return _u
 }
+type I_explicitUnionTag uint32
+const (
+	_ I_explicitUnionTag = iota
+	ExplicitUnionPrimitive
+	ExplicitUnionStringNeedsConstructor
+)
+
+
+type ExplicitUnion struct {
+	I_explicitUnionTag `fidl:"u,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	Primitive int32  `fidl:"1"`
+	StringNeedsConstructor string  `fidl:"3,"`
+}
+
+func (u *ExplicitUnion) Which() I_explicitUnionTag {
+	return u.I_explicitUnionTag
+}
+
+func (u *ExplicitUnion) SetPrimitive(primitive int32) {
+	u.I_explicitUnionTag = ExplicitUnionPrimitive
+	u.Primitive = primitive
+}
+
+func ExplicitUnionWithPrimitive(primitive int32) ExplicitUnion {
+	var _u ExplicitUnion
+	_u.SetPrimitive(primitive)
+	return _u
+}
+
+func (u *ExplicitUnion) SetStringNeedsConstructor(stringNeedsConstructor string) {
+	u.I_explicitUnionTag = ExplicitUnionStringNeedsConstructor
+	u.StringNeedsConstructor = stringNeedsConstructor
+}
+
+func ExplicitUnionWithStringNeedsConstructor(stringNeedsConstructor string) ExplicitUnion {
+	var _u ExplicitUnion
+	_u.SetStringNeedsConstructor(stringNeedsConstructor)
+	return _u
+}

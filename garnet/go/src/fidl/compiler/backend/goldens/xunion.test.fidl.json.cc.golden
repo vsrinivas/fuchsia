@@ -1011,6 +1011,182 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+extern "C" const fidl_type_t test_name_ExplicitXUnionTable;
+const fidl_type_t* ExplicitXUnion::FidlType = &test_name_ExplicitXUnionTable;
+
+ExplicitXUnion::ExplicitXUnion() {}
+
+ExplicitXUnion::~ExplicitXUnion() {
+  Destroy();
+}
+
+ExplicitXUnion::ExplicitXUnion(ExplicitXUnion&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case Tag::kI:
+      i_ = std::move(other.i_);
+      break;
+    case Tag::kF:
+      f_ = std::move(other.f_);
+      break;
+    case kEmpty:
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+ExplicitXUnion& ExplicitXUnion::operator=(ExplicitXUnion&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kI:
+        i_ = std::move(other.i_);
+        break;
+      case Tag::kF:
+        f_ = std::move(other.f_);
+        break;
+      case kEmpty:
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+ExplicitXUnion ExplicitXUnion::WithI(int64_t&& val) {
+  ExplicitXUnion result;
+  result.set_i(std::move(val));
+  return result;
+}
+ExplicitXUnion ExplicitXUnion::WithF(float&& val) {
+  ExplicitXUnion result;
+  result.set_f(std::move(val));
+  return result;
+}
+
+
+void ExplicitXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (tag_) {
+    case Tag::kI: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &i_, envelope_offset);
+      break;
+    }
+    case Tag::kF: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<float, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &f_, envelope_offset);
+      break;
+    }
+    case Tag::kUnknown:
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void ExplicitXUnion::Decode(::fidl::Decoder* decoder, ExplicitXUnion* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(kEmpty);
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
+    case Tag::kI:
+      ::fidl::Decode(decoder, &value->i_, envelope_offset);
+      break;
+    case Tag::kF:
+      ::fidl::Decode(decoder, &value->f_, envelope_offset);
+      break;
+  default:
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      memcpy(value->unknown_data_.data(), xunion->envelope.data, xunion->envelope.num_bytes);
+      break;
+  }
+
+}
+
+zx_status_t ExplicitXUnion::Clone(ExplicitXUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kI:
+      return ::fidl::Clone(i_, &result->i_);
+    case Tag::kF:
+      return ::fidl::Clone(f_, &result->f_);
+    default:
+      return ZX_OK;
+  }
+}
+
+ExplicitXUnion& ExplicitXUnion::set_i(int64_t value) {
+  EnsureStorageInitialized(Tag::kI);
+  i_ = std::move(value);
+  return *this;
+}
+
+ExplicitXUnion& ExplicitXUnion::set_f(float value) {
+  EnsureStorageInitialized(Tag::kF);
+  f_ = std::move(value);
+  return *this;
+}
+
+void ExplicitXUnion::Destroy() {
+  switch (tag_) {
+    case Tag::kI:
+      break;
+    case Tag::kF:
+      break;
+  
+    case kEmpty:
+      break;
+    default:
+      unknown_data_.~vector();
+      break;
+  
+  }
+  tag_ = kEmpty;
+}
+
+void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case kEmpty:
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
 extern "C" const fidl_type_t test_name_EmptyTable;
 const fidl_type_t* Empty::FidlType = &test_name_EmptyTable;
 

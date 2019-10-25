@@ -120,6 +120,62 @@ int32_t& ::llcpp::test::name::FieldCollision::mutable_field_collision_tag() {
 }
 
 
+::llcpp::test::name::ExplicitUnion::ExplicitUnion() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::test::name::ExplicitUnion::~ExplicitUnion() {
+  Destroy();
+}
+
+void ::llcpp::test::name::ExplicitUnion::Destroy() {
+  switch (which()) {
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::test::name::ExplicitUnion::MoveImpl_(ExplicitUnion&& other) {
+  switch (other.which()) {
+  case Tag::kPrimitive:
+    mutable_Primitive() = std::move(other.mutable_Primitive());
+    break;
+  case Tag::kStringNeedsConstructor:
+    mutable_StringNeedsConstructor() = std::move(other.mutable_StringNeedsConstructor());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::test::name::ExplicitUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::name::ExplicitUnion, Primitive_) == 8);
+  static_assert(offsetof(::llcpp::test::name::ExplicitUnion, StringNeedsConstructor_) == 8);
+  static_assert(sizeof(::llcpp::test::name::ExplicitUnion) == ::llcpp::test::name::ExplicitUnion::PrimarySize);
+}
+
+
+int32_t& ::llcpp::test::name::ExplicitUnion::mutable_Primitive() {
+  if (which() != Tag::kPrimitive) {
+    Destroy();
+    new (&Primitive_) int32_t;
+  }
+  tag_ = Tag::kPrimitive;
+  return Primitive_;
+}
+
+::fidl::StringView& ::llcpp::test::name::ExplicitUnion::mutable_StringNeedsConstructor() {
+  if (which() != Tag::kStringNeedsConstructor) {
+    Destroy();
+    new (&StringNeedsConstructor_) ::fidl::StringView;
+  }
+  tag_ = Tag::kStringNeedsConstructor;
+  return StringNeedsConstructor_;
+}
+
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp

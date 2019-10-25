@@ -753,6 +753,75 @@
         "has_padding": true,
         "has_flexible_envelope": false
       }
+    },
+    {
+      "name": "test.name/ExplicitXUnion",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+        "line": 47,
+        "column": 8
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "i",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+            "line": 50,
+            "column": 14
+          },
+          "size": 8,
+          "max_out_of_line": 0,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 4,
+          "reserved": false,
+          "name": "f",
+          "type": {
+            "kind": "primitive",
+            "subtype": "float32"
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+            "line": 51,
+            "column": 16
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 8,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
     }
   ],
   "type_alias_declarations": [],
@@ -763,6 +832,7 @@
     "test.name/OlderSimpleUnion",
     "test.name/TestProtocol",
     "test.name/NewerSimpleUnion",
+    "test.name/ExplicitXUnion",
     "test.name/Empty",
     "test.name/XUnionContainingEmptyStruct"
   ],
@@ -774,6 +844,7 @@
     "test.name/NewerSimpleUnion": "xunion",
     "test.name/StrictSimpleXUnion": "xunion",
     "test.name/XUnionContainingEmptyStruct": "xunion",
-    "test.name/StrictBoundedXUnion": "xunion"
+    "test.name/StrictBoundedXUnion": "xunion",
+    "test.name/ExplicitXUnion": "xunion"
   }
 }

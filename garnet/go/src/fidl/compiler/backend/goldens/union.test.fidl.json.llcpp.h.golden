@@ -23,6 +23,7 @@ namespace name {
 
 struct Union;
 struct FieldCollision;
+struct ExplicitUnion;
 
 extern "C" const fidl_type_t test_name_UnionTable;
 
@@ -214,6 +215,101 @@ struct FieldCollision {
   };
 };
 
+extern "C" const fidl_type_t test_name_ExplicitUnionTable;
+
+struct ExplicitUnion {
+  enum class Tag : fidl_union_tag_t {
+    kPrimitive = 0,
+    kStringNeedsConstructor = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  ExplicitUnion();
+  ~ExplicitUnion();
+
+  ExplicitUnion(ExplicitUnion&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  ExplicitUnion& operator=(ExplicitUnion&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+
+  static ExplicitUnion WithPrimitive(int32_t&& val) {
+    ExplicitUnion result;
+    result.set_Primitive(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_Primitive();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_Primitive(const T& v) {
+    mutable_Primitive() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_Primitive(T&& v) {
+    mutable_Primitive() = std::move(v);
+  }
+
+  int32_t const & Primitive() const { return Primitive_; }
+
+  bool is_StringNeedsConstructor() const { return tag_ == Tag::kStringNeedsConstructor; }
+
+  static ExplicitUnion WithStringNeedsConstructor(::fidl::StringView&& val) {
+    ExplicitUnion result;
+    result.set_StringNeedsConstructor(std::move(val));
+    return result;
+  }
+
+  ::fidl::StringView& mutable_StringNeedsConstructor();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
+  set_StringNeedsConstructor(const T& v) {
+    mutable_StringNeedsConstructor() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
+  set_StringNeedsConstructor(T&& v) {
+    mutable_StringNeedsConstructor() = std::move(v);
+  }
+
+  ::fidl::StringView const & StringNeedsConstructor() const { return StringNeedsConstructor_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &test_name_ExplicitUnionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 4294967295;
+
+ private:
+  void Destroy();
+  void MoveImpl_(ExplicitUnion&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    int32_t Primitive_;
+    ::fidl::StringView StringNeedsConstructor_;
+  };
+};
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp
@@ -227,5 +323,9 @@ static_assert(std::is_standard_layout_v<::llcpp::test::name::Union>);
 template <>
 struct IsFidlType<::llcpp::test::name::FieldCollision> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::FieldCollision>);
+
+template <>
+struct IsFidlType<::llcpp::test::name::ExplicitUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::ExplicitUnion>);
 
 }  // namespace fidl

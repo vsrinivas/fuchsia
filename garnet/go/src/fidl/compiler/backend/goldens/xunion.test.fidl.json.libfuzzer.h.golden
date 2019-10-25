@@ -19,6 +19,7 @@ using StrictSimpleXUnion = ::test::name::StrictSimpleXUnion;
 using StrictBoundedXUnion = ::test::name::StrictBoundedXUnion;
 using OlderSimpleUnion = ::test::name::OlderSimpleUnion;
 using NewerSimpleUnion = ::test::name::NewerSimpleUnion;
+using ExplicitXUnion = ::test::name::ExplicitXUnion;
 using Empty = ::test::name::Empty;
 using XUnionContainingEmptyStruct = ::test::name::XUnionContainingEmptyStruct;
 
@@ -170,6 +171,39 @@ struct Allocate<NewerSimpleUnion> {
       }
       case 2: {
         out.set_v(Allocate<::std::vector<::std::string>>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template<>
+struct MinSize<ExplicitXUnion> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<int64_t>(), MinSize<float>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template<>
+struct Allocate<ExplicitXUnion> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  ExplicitXUnion operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExplicitXUnion>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    ExplicitXUnion out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_i(Allocate<int64_t>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_f(Allocate<float>{}(src, size));
         break;
       }
     }

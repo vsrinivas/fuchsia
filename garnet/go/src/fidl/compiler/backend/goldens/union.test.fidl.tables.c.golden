@@ -8,6 +8,7 @@ extern "C" {
 
 extern const fidl_type_t test_name_UnionTable;
 extern const fidl_type_t test_name_FieldCollisionTable;
+extern const fidl_type_t test_name_ExplicitUnionTable;
 
 
 static const fidl_type_t String4294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedString(4294967295u, ::fidl::kNonnullable));
@@ -90,5 +91,11 @@ constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_UnionAltTypeP
   return &test_name_UnionTable.coded_union;
 }
 
+
+static const ::fidl::FidlUnionField Fields23test_name_ExplicitUnion[] = {
+    ::fidl::FidlUnionField(nullptr, 12u),
+    ::fidl::FidlUnionField(&String4294967295nonnullableTable, 0u)
+};
+const fidl_type_t test_name_ExplicitUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields23test_name_ExplicitUnion, 2u, 8u, 24u, "test.name/ExplicitUnion"));
 
 } // extern "C"

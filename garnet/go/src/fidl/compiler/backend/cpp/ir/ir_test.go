@@ -1158,7 +1158,6 @@ func TestCompileTableLlcppNamespaceShouldBeRenamed(t *testing.T) {
 func addrOf(x int) *int {
 	return &x
 }
-
 func TestCompileXUnion(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -1179,6 +1178,11 @@ func TestCompileXUnion(t *testing.T) {
 				Name: types.EncodedCompoundIdentifier("Test"),
 				Members: []types.XUnionMember{
 					{
+						Reserved: true,
+						Ordinal:  0xbeefbabe,
+					},
+					{
+						Reserved:   false,
 						Attributes: types.Attributes{},
 						Ordinal:    0xdeadbeef,
 						Type: types.Type{
@@ -1329,6 +1333,100 @@ func TestCompileXUnion(t *testing.T) {
 				t.Fatalf("decls[0] not a xunion, was instead %T", result.Decls[0])
 			}
 			if diff := cmp.Diff(ex.expected, *actual, cmp.AllowUnexported(types.Ordinals{})); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestCompileUnion(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    types.Union
+		expected Union
+	}{
+		{
+			name: "SingleInt64",
+			input: types.Union{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name:  types.Identifier("Foo"),
+							Value: "Bar",
+						},
+					},
+				},
+				Name: types.EncodedCompoundIdentifier("Test"),
+				Members: []types.UnionMember{
+					{
+						Reserved:      true,
+						XUnionOrdinal: 0xbeefbabe,
+					},
+					{
+						Reserved:      false,
+						Attributes:    types.Attributes{},
+						XUnionOrdinal: 0xdeadbeef,
+						Type: types.Type{
+							Kind:             types.PrimitiveType,
+							PrimitiveSubtype: types.Int64,
+						},
+						Name:         types.Identifier("i"),
+						Offset:       0,
+						MaxOutOfLine: 0,
+					},
+				},
+				Size:         24,
+				MaxHandles:   0,
+				MaxOutOfLine: 4294967295,
+			},
+			expected: Union{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name:  types.Identifier("Foo"),
+							Value: "Bar",
+						},
+					},
+				},
+				Namespace: "::",
+				Name:      "Test",
+				TableType: "_TestTable",
+				Members: []UnionMember{
+					{
+						Attributes:    types.Attributes{},
+						XUnionOrdinal: 0xdeadbeef,
+						Type: Type{
+							Decl:        "int64_t",
+							LLDecl:      "int64_t",
+							IsPrimitive: true,
+						},
+						Name:        "i",
+						StorageName: "i_",
+						TagName:     "kI",
+						Offset:      0,
+					},
+				},
+				Size:         24,
+				MaxHandles:   0,
+				MaxOutOfLine: 4294967295,
+			},
+		},
+	}
+	for _, ex := range cases {
+		t.Run(ex.name, func(t *testing.T) {
+			root := types.Root{
+				Unions: []types.Union{ex.input},
+				DeclOrder: []types.EncodedCompoundIdentifier{
+					ex.input.Name,
+				},
+			}
+			result := Compile(root)
+			actual, ok := result.Decls[0].(*Union)
+
+			if !ok || actual == nil {
+				t.Fatalf("decls[0] not a union, was instead %T", result.Decls[0])
+			}
+			if diff := cmp.Diff(ex.expected, *actual); diff != "" {
 				t.Errorf("expected != actual (-want +got)\n%s", diff)
 			}
 		})

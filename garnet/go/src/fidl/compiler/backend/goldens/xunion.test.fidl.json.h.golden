@@ -30,6 +30,7 @@ constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_
 }  // namespace
 #endif // __Fuchsia__
 class NewerSimpleUnion;
+class ExplicitXUnion;
 class Empty;
 class XUnionContainingEmptyStruct;
 
@@ -636,6 +637,105 @@ inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
 
 using NewerSimpleUnionPtr = ::std::unique_ptr<NewerSimpleUnion>;
 
+class ExplicitXUnion final {
+ public:
+ static const fidl_type_t* FidlType;
+
+  ExplicitXUnion();
+  ~ExplicitXUnion();
+
+  ExplicitXUnion(ExplicitXUnion&&);
+  ExplicitXUnion& operator=(ExplicitXUnion&&);
+
+  
+  static ExplicitXUnion WithI(int64_t&&);
+  static ExplicitXUnion WithF(float&&);
+
+  enum : fidl_xunion_tag_t {
+    kEmpty = kFidlXUnionEmptyTag,
+  };
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+  kUnknown = 0,
+    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+  
+    kI = 1,  // 0x1
+    kF = 4,  // 0x4
+  };
+
+  static inline ::std::unique_ptr<ExplicitXUnion> New() { return ::std::make_unique<ExplicitXUnion>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, ExplicitXUnion* value, size_t offset);
+  zx_status_t Clone(ExplicitXUnion* result) const;
+
+  bool is_i() const { return tag_ == Tag::kI; }
+  
+  int64_t& i() {
+    EnsureStorageInitialized(Tag::kI);
+    return i_;
+  }
+  
+  const int64_t& i() const { return i_; }
+  ExplicitXUnion& set_i(int64_t value);
+
+  bool is_f() const { return tag_ == Tag::kF; }
+  
+  float& f() {
+    EnsureStorageInitialized(Tag::kF);
+    return f_;
+  }
+  
+  const float& f() const { return f_; }
+  ExplicitXUnion& set_f(float value);
+
+  Tag Which() const {
+    
+    switch (tag_) {
+      case Tag::kI:
+      case Tag::kF:
+        return Tag(tag_);
+      default:
+        return Tag::kUnknown;
+    }
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::test::name::ExplicitXUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = kEmpty;
+  union {
+    int64_t i_;
+    float f_;
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::name::ExplicitXUnion& value,
+                         ::test::name::ExplicitXUnion* result) {
+  return value.Clone(result);
+}
+
+using ExplicitXUnionPtr = ::std::unique_ptr<ExplicitXUnion>;
+
 class Empty final {
  public:
   static const fidl_type_t* FidlType;
@@ -973,6 +1073,59 @@ struct Equality<::test::name::NewerSimpleUnion> {
         return ::fidl::Equals(_lhs.s_, _rhs.s_);
       case ::test::name::NewerSimpleUnion::Tag::kV:
         return ::fidl::Equals(_lhs.v_, _rhs.v_);
+      default:
+        return *_lhs.UnknownData() == *_rhs.UnknownData();
+      }
+    }
+};
+template <>
+struct CodingTraits<::test::name::ExplicitXUnion>
+    : public EncodableCodingTraits<::test::name::ExplicitXUnion, 24, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::ExplicitXUnion>> {
+  static constexpr size_t inline_size_old = 24;
+  static constexpr size_t inline_size_v1_no_ee = 24;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::ExplicitXUnion>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::ExplicitXUnion>* value, size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::ExplicitXUnion);
+
+    ::test::name::ExplicitXUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::name::ExplicitXUnion& value,
+                         ::test::name::ExplicitXUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::ExplicitXUnion> {
+  static inline bool Equals(const ::test::name::ExplicitXUnion& _lhs, const ::test::name::ExplicitXUnion& _rhs) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case ::test::name::ExplicitXUnion::kEmpty:
+        return true;
+      case ::test::name::ExplicitXUnion::Tag::kI:
+        return ::fidl::Equals(_lhs.i_, _rhs.i_);
+      case ::test::name::ExplicitXUnion::Tag::kF:
+        return ::fidl::Equals(_lhs.f_, _rhs.f_);
       default:
         return *_lhs.UnknownData() == *_rhs.UnknownData();
       }

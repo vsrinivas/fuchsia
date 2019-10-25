@@ -807,6 +807,9 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		AlignmentV1:   val.TypeShapeV1NoEE.Alignment,
 	}
 	for _, member := range val.Members {
+		if member.Reserved {
+			continue
+		}
 		r.Members = append(r.Members, c.compileUnionMember(r.Name, member))
 	}
 	return r
@@ -815,6 +818,9 @@ func (c *compiler) compileUnion(val types.Union) Union {
 func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	var members []XUnionMember
 	for _, member := range val.Members {
+		if member.Reserved {
+			continue
+		}
 		ty, tag := c.compileType(member.Type)
 		tag.reverseOfBounds = append(tag.reverseOfBounds, member.Ordinal)
 		members = append(members, XUnionMember{

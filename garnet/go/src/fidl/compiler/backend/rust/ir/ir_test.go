@@ -7,6 +7,8 @@ package ir
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"fidl/compiler/backend/types"
 )
 
@@ -24,6 +26,190 @@ func makePrimitiveType(subtype types.PrimitiveSubtype) types.Type {
 	return types.Type{
 		Kind:             types.PrimitiveType,
 		PrimitiveSubtype: subtype,
+	}
+}
+
+func TestCompileXUnion(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    types.XUnion
+		expected XUnion
+	}{
+		{
+			name: "SingleInt64",
+			input: types.XUnion{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name:  types.Identifier("Foo"),
+							Value: "Bar",
+						},
+					},
+				},
+				Name: types.EncodedCompoundIdentifier("Test"),
+				Members: []types.XUnionMember{
+					{
+						Reserved: true,
+						Ordinal:  1,
+					},
+					{
+						Reserved:   false,
+						Attributes: types.Attributes{},
+						Ordinal:    2,
+						Type: types.Type{
+							Kind:             types.PrimitiveType,
+							PrimitiveSubtype: types.Int64,
+						},
+						Name:         types.Identifier("i"),
+						Offset:       0,
+						MaxOutOfLine: 0,
+					},
+				},
+				Size:         24,
+				MaxHandles:   0,
+				MaxOutOfLine: 4294967295,
+				Strictness:   types.IsFlexible,
+			},
+			expected: XUnion{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name:  types.Identifier("Foo"),
+							Value: "Bar",
+						},
+					},
+				},
+				Derives: derivesDebug | derivesPartialEq,
+				ECI:     types.EncodedCompoundIdentifier("Test"),
+				Name:    "Test",
+				Members: []XUnionMember{
+					{
+						Attributes: types.Attributes{},
+						Ordinal:    2,
+						Type:       "i64",
+						OGType: types.Type{
+							Kind:             types.PrimitiveType,
+							PrimitiveSubtype: types.Int64,
+						},
+						Name: "I",
+					},
+				},
+				Strictness: types.IsFlexible,
+			},
+		},
+	}
+	for _, ex := range cases {
+		t.Run(ex.name, func(t *testing.T) {
+			root := types.Root{
+				XUnions: []types.XUnion{ex.input},
+				DeclOrder: []types.EncodedCompoundIdentifier{
+					ex.input.Name,
+				},
+				Decls: map[types.EncodedCompoundIdentifier]types.DeclType{
+					ex.input.Name: types.XUnionDeclType,
+				},
+			}
+			result := Compile(root)
+			actual := result.XUnions[0]
+
+			if diff := cmp.Diff(ex.expected, actual); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestCompileUnion(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    types.Union
+		expected Union
+	}{
+		{
+			name: "SingleInt64",
+			input: types.Union{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name:  types.Identifier("Foo"),
+							Value: "Bar",
+						},
+					},
+				},
+				Name: types.EncodedCompoundIdentifier("Test"),
+				Members: []types.UnionMember{
+					{
+						Reserved:      true,
+						XUnionOrdinal: 1,
+					},
+					{
+						Reserved:      false,
+						Attributes:    types.Attributes{},
+						XUnionOrdinal: 2,
+						Type: types.Type{
+							Kind:             types.PrimitiveType,
+							PrimitiveSubtype: types.Int64,
+						},
+						Name:         types.Identifier("i"),
+						Offset:       0,
+						MaxOutOfLine: 0,
+					},
+				},
+				Size:         24,
+				MaxHandles:   0,
+				MaxOutOfLine: 4294967295,
+			},
+			expected: Union{
+				Attributes: types.Attributes{
+					Attributes: []types.Attribute{
+						{
+							Name:  types.Identifier("Foo"),
+							Value: "Bar",
+						},
+					},
+				},
+				ECI:     types.EncodedCompoundIdentifier("Test"),
+				Derives: derivesAll,
+				Name:    "Test",
+				Members: []UnionMember{
+					{
+						Attributes: types.Attributes{},
+						Derives:    0,
+						OGType: types.Type{
+							Kind:             types.PrimitiveType,
+							PrimitiveSubtype: types.Int64,
+						},
+						Type: Type{
+							Decl:    "i64",
+							Derives: 0,
+						},
+						Name:   "I",
+						Offset: 0,
+					},
+				},
+				Size:      24,
+				Alignment: 0,
+			},
+		},
+	}
+	for _, ex := range cases {
+		t.Run(ex.name, func(t *testing.T) {
+			root := types.Root{
+				Unions: []types.Union{ex.input},
+				DeclOrder: []types.EncodedCompoundIdentifier{
+					ex.input.Name,
+				},
+				Decls: map[types.EncodedCompoundIdentifier]types.DeclType{
+					ex.input.Name: types.UnionDeclType,
+				},
+			}
+			result := Compile(root)
+			actual := result.Unions[0]
+
+			if diff := cmp.Diff(ex.expected, actual); diff != "" {
+				t.Errorf("expected != actual (-want +got)\n%s", diff)
+			}
+		})
 	}
 }
 
