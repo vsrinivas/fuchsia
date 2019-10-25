@@ -10,6 +10,9 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/time.h>
 
+#include <string>
+#include <vector>
+
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -45,9 +48,10 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
   // Useful to guarantee there is a component within the environment that exposes Inspect data as
   // we are excluding system_objects paths from the Inspect discovery and the test component itself
   // only has a system_objects Inspect node.
-  void InjectInspectTestApp(const zx::duration timeout = zx::sec(1)) {
+  void InjectInspectTestApp(const std::vector<std::string>& args = {}) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
+    launch_info.arguments = args;
     environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
     environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
     bool ready = false;
@@ -147,6 +151,16 @@ TEST_F(CollectInspectDataTest, Succeed_OneComponentExposesInspectData) {
 
 TEST_F(CollectInspectDataTest, Fail_NoComponentExposesInspectData) {
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+
+  ASSERT_TRUE(result.is_error());
+}
+
+TEST_F(CollectInspectDataTest, Fail_InspectDiscoveryTimeout) {
+  // The test app exposes some Inspect data, but will be too busy to answer.
+  InjectInspectTestApp({"--busy"});
+
+  // The test will need to actually wait for the timeout so we don't put a value too high.
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData(/*timeout=*/zx::msec(50));
 
   ASSERT_TRUE(result.is_error());
 }
