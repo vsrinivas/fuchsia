@@ -112,7 +112,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [bluetooth]: /garnet/bin/bluetooth/README.md
 [telephony]: /src/connectivity/telephony/
 [magma]: /docs/concepts/graphics/magma/README.md
-[escher]: /src/ui/lib/escher/README.md
+[escher]: /docs/concepts/graphics/escher/README.md
 [ui-overview]: /docs/concepts/graphics/ui/README.md
 [scenic]: /docs/concepts/graphics/ui/scenic.md
 [input-manager]: /docs/concepts/graphics/ui/input.md

@@ -9,7 +9,8 @@ toc:
   section:
   - include: /docs/concepts/graphics/ui/_toc.yaml
 - title: "Escher (physically-based renderer)"
-  path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/lib/escher/README.md
+  section:
+  - include: /docs/concepts/graphics/escher/_toc.yaml
 - title: "Flutter (UI toolkit)"
   path: //flutter.io/
   status: external
