@@ -34,9 +34,12 @@ def main():
         'a given compiler error')
     parser.add_argument('--error', help='Compiler error marker')
     parser.add_argument('--config', help='Config to add')
+    parser.add_argument(
+        '--zircon', help='//zircon build (ZN)', action='store_true')
     args = parser.parse_args()
     error = args.error
     config = args.config
+    zircon = args.zircon
 
     # Harvest all compilation errors
     print 'Building...'
@@ -52,7 +55,10 @@ def main():
     for line in build_out.split('\n'):
         match = error_regex.match(line)
         if match:
-            error_files.add(os.path.normpath(match.group(1)))
+            path = os.path.normpath(match.group(1))
+            if zircon:
+              path = '//' + os.path.relpath(path, 'zircon')
+            error_files.add(path)
     print 'Sources with compilation errors:'
     print '\n'.join(sorted(error_files))
     print
@@ -60,19 +66,32 @@ def main():
     # Collect all BUILD.gn files with failing targets
     print 'Resolving failing targets...'
     # TODO support for zircon build
-    # --root=zircon refs out/default.zircon <target
+    # --root=zircon refs out/default.zircon <target>
     # --all-toolchains
     # //:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-arm64-clang)
     # //:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-x64-clang)
-    refs_out = run_command([GN, 'refs', 'out/default'] + sorted(error_files))
+    outdir = 'out/default.zircon' if zircon else 'out/default'
+    refs_command = [GN, 'refs']
+    if zircon:
+        refs_command += [
+            'out/default.zircon', '--root=zircon', '--all-toolchains',
+            '//:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-arm64-clang)',
+            '//:instrumented-ulib-redirect.asan(//public/gn/toolchain:user-x64-clang)'
+        ]
+    else:
+        refs_command += ['out/default']
+    refs_command += sorted(error_files)
+    refs_out = run_command(refs_command)
     error_targets = set(refs_out.strip().split('\n'))
     print 'Failing BUILD.gn files:'
     print '\n'.join(sorted(error_targets))
     print
 
     # Fix failing targets
+    ref_regex = re.compile('//([^:]*):([^.(]*).*')
     for target in error_targets:
-        build_dir, target_name = target.strip(' /').split(':')
+        match = ref_regex.match(target)
+        build_dir, target_name = match.groups()
         target_regex = re.compile('\w*\("' + target_name + '"\) {')
         build_file = os.path.join(build_dir, 'BUILD.gn')
         # Format file before processing
@@ -84,7 +103,11 @@ def main():
         # Python lexer and parser code to properly process these files.
         in_target = False
         config_printed = False
+        in_public_configs = False
         curly_brace_depth = 0
+        if zircon:
+            build_file = os.path.join('zircon', build_file)
+        build_file = os.path.join(FUCHSIA_ROOT, build_file)
         for line in fileinput.FileInput(build_file, inplace=True):
             # TODO: make this robust to escaping
             curly_brace_depth += line.count('{') - line.count('}')
@@ -106,11 +129,21 @@ def main():
                 print 'public_configs = [ "' + config + '" ]'
                 config_printed = True
                 in_target = False
+            elif 'public_configs = [ "' in line and config in line:
+                config_printed = True
             elif 'public_configs = [ "' in line:
                 line = line[:-3] + ', "' + config + '" ]\n'
                 config_printed = True
             elif 'public_configs = [' in line:
-                line += '"' + config + '",\n'
+                in_public_configs = True
+            elif in_public_configs and line.strip() == '"' + config + '",':
+                sys.stderr.write('Case 1 ' + line)
+                in_public_configs = False
+                config_printed = True
+            elif in_public_configs and line.strip() == ']':
+                sys.stderr.write('Case 2 ' + line)
+                print '"' + config + '",'
+                in_public_configs = False
                 config_printed = True
             print line,
             if config_printed and not in_target:
