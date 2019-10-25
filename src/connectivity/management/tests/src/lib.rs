@@ -1,10 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#![cfg(test)]
 
 extern crate network_manager_cli_lib as network_manager_cli;
 
-#[cfg(test)]
 use failure::{Error, ResultExt};
 use fidl::endpoints::{create_proxy, ServiceMarker};
 use fidl_fuchsia_netemul_environment::{
