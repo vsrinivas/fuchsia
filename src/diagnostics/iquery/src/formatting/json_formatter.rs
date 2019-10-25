@@ -70,11 +70,6 @@ impl Formatter for JsonFormatter {
         self.output(values)
     }
 
-    fn format_health(&self, _results: Vec<IqueryResult>) -> Result<String, Error> {
-        // TODO
-        Ok("".to_string())
-    }
-
     fn format_child_listing(&self, results: Vec<IqueryResult>) -> Result<String, Error> {
         let children_names = get_child_listing(results, self.sort, &self.path_format);
         self.output(children_names)

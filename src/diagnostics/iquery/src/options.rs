@@ -33,7 +33,6 @@ pub struct FormattingOptions {
 pub enum ModeCommand {
     Cat,
     Find,
-    Health,
     Ls,
     Report,
 }
@@ -80,8 +79,6 @@ pub fn usage() -> String {
             Specifying --recursive will also output the children for that object.
   --find:   find all objects under PATH. For each sub-path, will stop at finding
             the first object. Specifying --recursive will search the whole tree.
-  --health: Output a report that scans the system looking for health nodes and
-            showing the status of them.
   --ls:     List the children of the object(s) given by PATH. Specifying
             --recursive has no effect.
   --report: Output a default report for all components on the system. Ignores all
@@ -154,7 +151,6 @@ impl Options {
                     "--absolute_paths" => opts.formatting.path_format = PathFormat::Absolute,
                     "--cat" => opts.mode = ModeCommand::Cat,
                     "--find" => opts.mode = ModeCommand::Find,
-                    "--health" => opts.mode = ModeCommand::Health,
                     "--ls" => opts.mode = ModeCommand::Ls,
                     "--report" => opts.mode = ModeCommand::Report,
                     flag => bail!("Unknown flag: {}", flag),
@@ -199,7 +195,6 @@ impl Options {
             // the number doesn't matter, it'll recursively search all directories
             // but will stop when the roots are found.
             ModeCommand::Find => Some(0).filter(|_| !self.recursive),
-            ModeCommand::Health => Some(1).filter(|_| self.recursive),
             ModeCommand::Ls => None,
             ModeCommand::Report => None,
         }

@@ -21,9 +21,7 @@ mod result;
 /// Exceute the command specified in the |options|.
 async fn execute(options: &Options) -> Vec<IqueryResult> {
     match options.mode {
-        ModeCommand::Cat | ModeCommand::Health | ModeCommand::Ls => {
-            commands::cat(&options.path).await
-        }
+        ModeCommand::Cat | ModeCommand::Ls => commands::cat(&options.path).await,
         ModeCommand::Find => commands::find(&options.path, options.recursive).await,
         ModeCommand::Report => {
             // REPORT is a CAT and Options takes care of treating it as such.
@@ -37,7 +35,6 @@ fn output(results: Vec<IqueryResult>, options: &Options) {
     let output = match options.mode {
         ModeCommand::Cat | ModeCommand::Report => options.formatter().format_recursive(results),
         ModeCommand::Find => options.formatter().format_locations(results),
-        ModeCommand::Health => options.formatter().format_health(results),
         ModeCommand::Ls => options.formatter().format_child_listing(results),
     };
     match output {

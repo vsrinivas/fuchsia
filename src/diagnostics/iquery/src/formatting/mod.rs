@@ -19,7 +19,6 @@ pub trait Formatter {
         Self: Sized;
     fn format_recursive(&self, results: Vec<IqueryResult>) -> Result<String, Error>;
     fn format_locations(&self, results: Vec<IqueryResult>) -> Result<String, Error>;
-    fn format_health(&self, results: Vec<IqueryResult>) -> Result<String, Error>;
     fn format_child_listing(&self, results: Vec<IqueryResult>) -> Result<String, Error>;
 }
 
