@@ -104,7 +104,6 @@ func (idx *DynamicIndex) addLocked(p pkg.Package, root string) error {
 		// be updated dynamically in future.
 		err := idx.static.Set(p, root)
 
-		idx.Notify(root)
 		return err
 	}
 
@@ -121,7 +120,6 @@ func (idx *DynamicIndex) addLocked(p pkg.Package, root string) error {
 		return err
 	}
 
-	idx.Notify(root)
 	return nil
 }
 
@@ -292,9 +290,6 @@ func (idx *DynamicIndex) IsInstalling(merkle string) bool {
 
 	_, found := idx.installing[merkle]
 	return found
-}
-
-func (idx *DynamicIndex) Notify(roots ...string) {
 }
 
 // GetRoot looks for a package by merkleroot, returning the matching package and
