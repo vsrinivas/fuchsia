@@ -4,6 +4,8 @@
 
 library fuchsia.tracing.controller;
 
+using zx;
+
 /// The maximum number of providers supported.
 const uint32 MAX_NUM_PROVIDERS = 100;
 
@@ -21,8 +23,8 @@ const uint32 MAX_CATEGORY_NAME_LENGTH = 100;
 protocol Controller {
     // Requests to start tracing with the specified `options`.
     //
-    // The trace controller acknowledges the request when all
-    // registered providers have been started or after `options.start_timeout_milliseconds` milliseconds.
+    // The trace controller acknowledges the request when all registered providers have been
+    // started or after `options.start_timeout_milliseconds` milliseconds.
     //
     // The trace controller emits trace data to `output` as a sequence of
     // binary formatted trace records.  Traces obtained from different providers
@@ -44,6 +46,9 @@ protocol Controller {
     // The trace controller continues to transfer any remaining data to the
     // output until finished, then closes the output.
     StopTracing();
+
+    /// Return the set of registered providers.
+    GetProviders() -> (vector<ProviderInfo>:MAX_NUM_PROVIDERS providers);
 
     // Gets the known categories.
     GetKnownCategories() -> (vector<KnownCategory> categories);
@@ -85,4 +90,16 @@ table TraceOptions {
 
     /// Overrides for particular providers.
     5: vector<ProviderSpec>:MAX_NUM_PROVIDERS provider_specs;
+};
+
+/// Result of |GetProviders|.
+table ProviderInfo {
+    /// The provider's ID, assigned by trace-manager.
+    1: uint32 id;
+
+    /// The provider's pid.
+    2: zx.koid pid;
+
+    /// The name of the provider.
+    3: string:MAX_PROVIDER_NAME_LENGTH name;
 };

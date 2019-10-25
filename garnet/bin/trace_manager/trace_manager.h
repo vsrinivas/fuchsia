@@ -31,11 +31,15 @@ class TraceManager : public controller::Controller, public provider::Registry {
   TraceManager(sys::ComponentContext* context, const Config& config);
   ~TraceManager() override;
 
+  // For testing.
+  const TraceSession* session() const { return session_.get(); }
+
  private:
   // |Controller| implementation.
   void StartTracing(TraceConfig config, zx::socket output,
                     StartTracingCallback cb) override;
   void StopTracing() override;
+  void GetProviders(GetProvidersCallback cb) override;
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;
 
   // |TraceRegistry| implementation.

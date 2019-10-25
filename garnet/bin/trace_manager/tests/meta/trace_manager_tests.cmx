@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/trace_manager_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.controller.Controller",
+            "fuchsia.tracing.controller.Director",
+            "fuchsia.tracing.controller.ConsumerRegistry",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

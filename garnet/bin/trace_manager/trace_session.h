@@ -32,6 +32,8 @@ namespace provider = ::fuchsia::tracing::provider;
 // are active for a tracing session.
 class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
  public:
+  enum class State { kReady, kStarted, kStopping, kStopped };
+
   // Initializes a new instances that streams results
   // to |destination|. Every provider active in this
   // session is handed |categories| and a vmo of size
@@ -47,6 +49,9 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   ~TraceSession();
 
   const zx::socket& destination() const { return destination_; }
+
+  // For testing.
+  State state() const { return state_; }
 
   // Invokes |callback| when all providers in this session have acknowledged
   // the start request, or after |timeout| has elapsed.
@@ -70,8 +75,6 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   void Stop(fit::closure done_callback, zx::duration timeout);
 
  private:
-  enum class State { kReady, kStarted, kStopping, kStopped };
-
   friend std::ostream& operator<<(std::ostream& out, TraceSession::State state);
 
   void OnProviderStarted(TraceProviderBundle* bundle);

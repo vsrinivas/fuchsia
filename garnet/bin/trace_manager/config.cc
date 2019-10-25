@@ -29,7 +29,7 @@ bool Config::ReadFrom(const std::string& config_file) {
   rapidjson::IStreamWrapper isw(in);
   rapidjson::Document document;
 
-  if (!document.ParseStream(isw).IsObject()) {
+  if (!document.ParseStream<rapidjson::kParseCommentsFlag>(isw).IsObject()) {
     FXL_LOG(ERROR) << "Failed to parse JSON object from: " << config_file;
     if (document.HasParseError()) {
       FXL_LOG(ERROR) << "Parse error " << GetParseError_En(document.GetParseError()) << " ("

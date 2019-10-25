@@ -4,15 +4,12 @@
 
 import("//build/package.gni")
 
-executable("bin") {
-  output_name = "trace_manager"
-
+source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
     "config.cc",
     "config.h",
-    "main.cc",
     "trace_manager.cc",
     "trace_manager.h",
     "trace_provider_bundle.cc",
@@ -26,19 +23,37 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.tracing.controller",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
+    "//src/lib/fsl",
     "//third_party/rapidjson",
-    "//zircon/system/fidl/fuchsia-tracing-provider",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace-provider-with-fdio",
-    "//zircon/public/lib/trace-reader",
+    "//zircon/public/lib/trace-provider",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.tracing.controller",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-reader",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-tracing-provider",
+  ]
+}
+
+executable("bin") {
+  output_name = "trace_manager"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

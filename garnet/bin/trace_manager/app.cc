@@ -10,8 +10,9 @@
 
 namespace tracing {
 
-TraceManagerApp::TraceManagerApp(const Config& config)
-    : context_(sys::ComponentContext::Create()), trace_manager_(context_.get(), config) {
+TraceManagerApp::TraceManagerApp(std::unique_ptr<sys::ComponentContext> context,
+                                 const Config& config)
+    : context_(std::move(context)), trace_manager_(context_.get(), config) {
   [[maybe_unused]] zx_status_t status;
 
   status =

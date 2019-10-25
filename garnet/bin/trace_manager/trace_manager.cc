@@ -43,8 +43,11 @@ TraceManager::TraceManager(sys::ComponentContext* context, const Config& config)
 
 TraceManager::~TraceManager() = default;
 
+// fidl
 void TraceManager::StartTracing(TraceConfig config, zx::socket output,
                                 StartTracingCallback start_callback) {
+  FXL_VLOG(2) << "StartTracing";
+
   if (session_) {
     FXL_LOG(ERROR) << "Trace already in progress";
     return;
@@ -123,7 +126,10 @@ void TraceManager::StartTracing(TraceConfig config, zx::socket output,
                                     zx::msec(start_timeout_milliseconds));
 }
 
+// fidl
 void TraceManager::StopTracing() {
+  FXL_VLOG(2) << "StopTracing";
+
   if (!session_)
     return;
   trace_running_ = false;
@@ -137,7 +143,23 @@ void TraceManager::StopTracing() {
       kStopTimeout);
 }
 
+// fidl
+void TraceManager::GetProviders(GetProvidersCallback callback) {
+  FXL_VLOG(2) << "GetProviders";
+  std::vector<controller::ProviderInfo> provider_info;
+  for (const auto& provider : providers_) {
+    controller::ProviderInfo info;
+    info.set_id(provider.id);
+    info.set_pid(provider.pid);
+    info.set_name(provider.name);
+    provider_info.push_back(std::move(info));
+  }
+  callback(std::move(provider_info));
+}
+
+// fidl
 void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
+  FXL_VLOG(2) << "GetKnownCategories";
   std::vector<controller::KnownCategory> known_categories;
   for (const auto& it : config_.known_categories()) {
     known_categories.push_back(controller::KnownCategory{it.first, it.second});
@@ -161,11 +183,13 @@ void TraceManager::RegisterProviderWorker(fidl::InterfaceHandle<provider::Provid
     session_->AddProvider(&(*it));
 }
 
+// fidl
 void TraceManager::RegisterProvider(fidl::InterfaceHandle<provider::Provider> provider,
                                     uint64_t pid, std::string name) {
   RegisterProviderWorker(std::move(provider), pid, std::move(name));
 }
 
+// fidl
 void TraceManager::RegisterProviderSynchronously(fidl::InterfaceHandle<provider::Provider> provider,
                                                  uint64_t pid, std::string name,
                                                  RegisterProviderSynchronouslyCallback callback) {
