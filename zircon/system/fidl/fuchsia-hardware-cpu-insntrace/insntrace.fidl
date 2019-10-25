@@ -80,6 +80,7 @@ struct BufferState {
 
 using BufferDescriptor = uint32;
 
+[Layout = "Simple"]
 protocol Controller {
     /// Initialize the trace.
     /// This does not include allocating space for the trace buffers, that is
