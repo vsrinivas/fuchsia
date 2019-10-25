@@ -249,7 +249,8 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
         dot_or_dotdot = true;
         dotdot = true;
         if (de->ino != parent) {
-          FS_TRACE_ERROR("check: ino#%u: de[%u]: '..' ino=%u (not parent!)\n", ino, eno, de->ino);
+          FS_TRACE_ERROR("check: ino#%u: de[%u]: '..' ino=%u (not parent (ino#%u)!)\n", ino, eno,
+                         de->ino, parent);
         }
       }
       // TODO: check for cycles (non-dot/dotdot dir ref already in checked bitmap)
