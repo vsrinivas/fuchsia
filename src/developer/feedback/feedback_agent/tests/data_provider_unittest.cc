@@ -770,27 +770,6 @@ class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
   fuchsia::sys::ComponentControllerPtr controller_;
 };
 
-constexpr char kInspectJsonSchema[] = R"({
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "path": {
-        "type": "string"
-      },
-      "contents": {
-        "type": "object"
-      }
-    },
-    "required": [
-      "path",
-      "contents"
-    ],
-    "additionalProperties": false
-  },
-  "uniqueItems": true
-})";
-
 TEST_F(DataProviderTestWithEnv, GetData_Inspect) {
   InjectInspectTestApp();
 
@@ -812,41 +791,6 @@ TEST_F(DataProviderTestWithEnv, GetData_Inspect) {
 
     ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_json));
     ASSERT_FALSE(inspect_json.empty());
-
-    // JSON verification.
-    // We check that the output is a valid JSON and that it matches the schema.
-    rapidjson::Document json;
-    ASSERT_FALSE(json.Parse(inspect_json.c_str()).HasParseError());
-    rapidjson::Document schema_json;
-    ASSERT_FALSE(schema_json.Parse(kInspectJsonSchema).HasParseError());
-    rapidjson::SchemaDocument schema(schema_json);
-    rapidjson::SchemaValidator validator(schema);
-    EXPECT_TRUE(json.Accept(validator));
-
-    // We then check that we get the expected Inspect data for the injected test app.
-    bool has_entry_for_test_app = false;
-    for (const auto& obj : json.GetArray()) {
-      const std::string path = obj["path"].GetString();
-      if (path.find("inspect_test_app.cmx") != std::string::npos) {
-        has_entry_for_test_app = true;
-        const auto contents = obj["contents"].GetObject();
-        ASSERT_TRUE(contents.HasMember("root"));
-        const auto root = contents["root"].GetObject();
-        ASSERT_TRUE(root.HasMember("obj1"));
-        ASSERT_TRUE(root.HasMember("obj2"));
-        const auto obj1 = root["obj1"].GetObject();
-        const auto obj2 = root["obj2"].GetObject();
-        ASSERT_TRUE(obj1.HasMember("version"));
-        ASSERT_TRUE(obj2.HasMember("version"));
-        EXPECT_STREQ(obj1["version"].GetString(), "1.0");
-        EXPECT_STREQ(obj2["version"].GetString(), "1.0");
-        ASSERT_TRUE(obj1.HasMember("value"));
-        ASSERT_TRUE(obj2.HasMember("value"));
-        EXPECT_EQ(obj1["value"].GetUint(), 100u);
-        EXPECT_EQ(obj2["value"].GetUint(), 200u);
-      }
-    }
-    EXPECT_TRUE(has_entry_for_test_app);
   }
   EXPECT_TRUE(found_inspect_attachment);
 

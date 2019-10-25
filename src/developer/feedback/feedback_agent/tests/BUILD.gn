@@ -41,9 +41,6 @@ test_package("feedback_agent_tests") {
       dest = "config_unittest"
     },
     {
-      name = "kernel_log_ptr_integration_test"
-    },
-    {
       name = "feedback_agent_integration_test"
 
       # We need to also test on real devices as we talk to a real Scenic service.
@@ -54,6 +51,12 @@ test_package("feedback_agent_tests") {
     },
     {
       name = "feedback_agent_integration_test_invalid_override_config"
+    },
+    {
+      name = "inspect_ptr_unittest"
+    },
+    {
+      name = "kernel_log_ptr_integration_test"
     },
     {
       name = "ref_counted_delayed_task_unittest"
@@ -67,7 +70,7 @@ test_package("feedback_agent_tests") {
   ]
 
   binaries = [
-    # needed for data_provider_unittest
+    # needed for data_provider_unittest and inspect_ptr_unittest
     {
       name = "inspect_exe"
     },
@@ -126,28 +129,11 @@ test_package("feedback_agent_tests") {
     ":feedback_agent_integration_test_invalid_override_config",
     ":feedback_agent_integration_test_valid_override_config",
     ":inspect_exe",
+    ":inspect_ptr_unittest",
     ":kernel_log_ptr_integration_test",
     ":ref_counted_delayed_task_unittest",
     ":screenshot_ptr_unittest",
     ":system_log_ptr_unittest",
-  ]
-}
-
-executable("ref_counted_delayed_task_unittest") {
-  testonly = true
-
-  sources = [
-    "ref_counted_delayed_task_unittest.cc",
-  ]
-
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//src/developer/feedback/feedback_agent:data_provider_src",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -225,27 +211,6 @@ executable("data_provider_unittest") {
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/public/lib/zx",
-  ]
-}
-
-executable("kernel_log_ptr_integration_test") {
-  testonly = true
-
-  sources = [
-    "kernel_log_ptr_integration_test.cc",
-  ]
-
-  deps = [
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/developer/feedback/feedback_agent:data_provider_src",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
   ]
 }
 
@@ -337,6 +302,64 @@ executable("inspect_exe") {
     "//sdk/lib/sys/inspect/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+executable("inspect_ptr_unittest") {
+  testonly = true
+
+  sources = [
+    "inspect_ptr_unittest.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+  ]
+}
+
+executable("kernel_log_ptr_integration_test") {
+  testonly = true
+
+  sources = [
+    "kernel_log_ptr_integration_test.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
+  ]
+}
+
+executable("ref_counted_delayed_task_unittest") {
+  testonly = true
+
+  sources = [
+    "ref_counted_delayed_task_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
   ]
 }
 
