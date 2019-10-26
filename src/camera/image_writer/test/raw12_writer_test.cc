@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../raw12_writer.h"
-
 #include <array>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include <src/camera/drivers/isp/modules/dma-format.h>
+#include <src/camera/image_writer/raw12_writer.h>
 
 namespace camera {
 namespace {
@@ -42,10 +41,10 @@ constexpr uint32_t kPadding = 1000;
 TEST(Raw12WriterTest, Constructor) { Raw12Writer::Create(kWidth, kHeight); }
 
 TEST(Raw12WriterTest, ConstructorCheckFailsWithZeroWidth) {
-  ASSERT_DEATH(Raw12Writer::Create(0, kHeight), "Invalid dimensions passed in.");
+  ASSERT_DEATH(Raw12Writer::Create(0, kHeight), "");
 }
 TEST(Raw12WriterTest, ConstructorCheckFailsWithZeroHeight) {
-  ASSERT_DEATH(Raw12Writer::Create(kWidth, 0), "Invalid dimensions passed in.");
+  ASSERT_DEATH(Raw12Writer::Create(kWidth, 0), "");
 }
 
 // Helper method to initialize a Raw12Writer and write an image of specified width/height.

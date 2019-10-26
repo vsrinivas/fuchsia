@@ -3,6 +3,8 @@
         "binary": "test/simple_camera_unittests"
     },
     "sandbox": {
-        "services": []
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

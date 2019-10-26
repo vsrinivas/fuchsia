@@ -13,9 +13,7 @@
 #include <memory>
 #include <utility>
 
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace simple_camera {
 
@@ -51,7 +49,7 @@ BufferFence::~BufferFence() { release_fence_waiter_.Cancel(); }
 void BufferFence::OnReleaseFenceSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                           zx_status_t status, const zx_packet_signal* /*signal*/) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "AsyncWaiter received an error (" << zx_status_get_string(status)
+    FX_LOGS(ERROR) << "AsyncWaiter received an error (" << zx_status_get_string(status)
                    << ").  Exiting.";
     // TODO(CAM-7): Store the error state and allow it to be queried somehow.
     return;
@@ -63,7 +61,7 @@ void BufferFence::OnReleaseFenceSignalled(async_dispatcher_t* dispatcher, async:
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "AsyncWaiter failed to wait (" << zx_status_get_string(status)
+    FX_LOGS(ERROR) << "AsyncWaiter failed to wait (" << zx_status_get_string(status)
                    << ").  Exiting.";
     // TODO(CAM-7): Store the error state and allow it to be queried somehow.
   }
@@ -71,7 +69,7 @@ void BufferFence::OnReleaseFenceSignalled(async_dispatcher_t* dispatcher, async:
 
 void BufferFence::SetReleaseFenceHandler(BufferCallback callback) {
   if (!callback) {
-    FXL_LOG(ERROR) << "callback is nullptr";
+    FX_LOGS(ERROR) << "callback is nullptr";
     return;
   }
   release_fence_callback_ = std::move(callback);
@@ -80,7 +78,7 @@ void BufferFence::SetReleaseFenceHandler(BufferCallback callback) {
   // Clear the release fence, so we don't just trigger ourselves
   release_fence_.signal(ZX_EVENT_SIGNALED, 0);
   auto status = release_fence_waiter_.Begin(async_get_default_dispatcher());
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 }
 
 void BufferFence::Reset() {

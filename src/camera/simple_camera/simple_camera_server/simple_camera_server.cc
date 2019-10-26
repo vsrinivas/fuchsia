@@ -6,8 +6,11 @@
 #include <lib/async-loop/default.h>
 
 #include "simple_camera_server_app.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 int main() {
+  syslog::InitLogger({"simple_camera_server"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   simple_camera::SimpleCameraApp app;
   loop.Run();

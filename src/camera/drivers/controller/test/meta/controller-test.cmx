@@ -15,7 +15,8 @@
         ],
         "services": [
             "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

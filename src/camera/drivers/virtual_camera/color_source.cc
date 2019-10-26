@@ -9,9 +9,7 @@
 
 #include <array>
 
-#include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/log_level.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
@@ -40,12 +38,12 @@ static constexpr uint8_t kBluePhaseOffset = 3;
 
 void ColorSource::FillARGB(void* start, size_t buffer_size) {
   if (!start) {
-    FXL_LOG(ERROR) << "Must pass a valid buffer pointer";
+    FX_LOGS(ERROR) << "Must pass a valid buffer pointer";
     return;
   }
   uint8_t r, g, b;
   hsv_color(frame_color_, &r, &g, &b);
-  FXL_VLOG(4) << "Filling with " << static_cast<int>(r) << " " << static_cast<int>(g) << " "
+  FX_VLOGS(4) << "Filling with " << static_cast<int>(r) << " " << static_cast<int>(g) << " "
               << static_cast<int>(b);
   uint32_t color = kAlphaValue << kAlphaShift | r << kRedShift | g << kGreenShift | b;
   ZX_DEBUG_ASSERT(buffer_size % 4 == 0);

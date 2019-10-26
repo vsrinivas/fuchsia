@@ -11,7 +11,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 static constexpr const char* kDevicePath = "/dev/camera-controller/camera-controller-device";
 
@@ -19,13 +19,13 @@ ControllerStreamProvider::~ControllerStreamProvider() {
   if (controller_ && streaming_) {
     zx_status_t status = controller_->DisableStreaming();
     if (status != ZX_OK) {
-      FXL_PLOG(WARNING, status) << "Failed to stop streaming via the controller";
+      FX_PLOGS(WARNING, status) << "Failed to stop streaming via the controller";
     }
   }
   if (buffer_collection_) {
     zx_status_t status = buffer_collection_->Close();
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status);
+      FX_PLOGS(ERROR, status);
     }
   }
 }
@@ -37,25 +37,25 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
   zx_status_t status =
       sys::ComponentContext::Create()->svc()->Connect(provider->allocator_.NewRequest());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to connect to sysmem allocator service";
+    FX_PLOGS(ERROR, status) << "Failed to connect to sysmem allocator service";
     return nullptr;
   }
   if (!provider->allocator_) {
-    FXL_LOG(ERROR) << "Failed to connect to sysmem allocator service";
+    FX_LOGS(ERROR) << "Failed to connect to sysmem allocator service";
     return nullptr;
   }
 
   // Connect to the controller device.
   int result = open(kDevicePath, O_RDONLY);
   if (result < 0) {
-    FXL_LOG(ERROR) << "Error opening " << kDevicePath;
+    FX_LOGS(ERROR) << "Error opening " << kDevicePath;
     return nullptr;
   }
   fbl::unique_fd controller_fd(result);
   zx::channel channel;
   status = fdio_get_service_handle(controller_fd.get(), channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to get service handle";
+    FX_PLOGS(ERROR, status) << "Failed to get service handle";
     return nullptr;
   }
   fuchsia::hardware::camera::DevicePtr device;
@@ -64,14 +64,14 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
   // Connect to the controller interface.
   device->GetChannel2(provider->controller_.NewRequest().TakeChannel());
   if (!provider->controller_) {
-    FXL_LOG(ERROR) << "Failed to get controller interface from device";
+    FX_LOGS(ERROR) << "Failed to get controller interface from device";
     return nullptr;
   }
 
   // Immediately enable streaming.
   status = provider->controller_->EnableStreaming();
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to start streaming via the controller";
+    FX_LOGS(WARNING) << "Failed to start streaming via the controller";
   }
   provider->streaming_ = true;
 
@@ -92,7 +92,7 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
   static constexpr const uint32_t kImageFormatIndex = 0;
 
   if (buffer_collection_.is_bound()) {
-    FXL_PLOG(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound by caller.";
+    FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound by caller.";
     return ZX_ERR_ALREADY_BOUND;
   }
 
@@ -101,52 +101,52 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
   zx_status_t status_return = ZX_OK;
   zx_status_t status = controller_->GetConfigs(&configs, &status_return);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to call GetConfigs";
+    FX_PLOGS(ERROR, status) << "Failed to call GetConfigs";
     return status;
   }
   if (status_return != ZX_OK) {
-    FXL_PLOG(ERROR, status_return) << "Failed to get configs";
+    FX_PLOGS(ERROR, status_return) << "Failed to get configs";
     return status_return;
   }
   if (configs->size() <= kConfigIndex) {
-    FXL_LOG(ERROR) << "Invalid config index " << kConfigIndex;
+    FX_LOGS(ERROR) << "Invalid config index " << kConfigIndex;
     return ZX_ERR_BAD_STATE;
   }
   auto& config = configs->at(kConfigIndex);
   if (config.stream_configs.size() <= kStreamConfigIndex) {
-    FXL_LOG(ERROR) << "Invalid stream config index " << kStreamConfigIndex;
+    FX_LOGS(ERROR) << "Invalid stream config index " << kStreamConfigIndex;
     return ZX_ERR_BAD_STATE;
   }
   auto& stream_config = config.stream_configs[kStreamConfigIndex];
   if (stream_config.image_formats.size() <= kImageFormatIndex) {
-    FXL_LOG(ERROR) << "Invalid image format index " << kImageFormatIndex;
+    FX_LOGS(ERROR) << "Invalid image format index " << kImageFormatIndex;
     return ZX_ERR_BAD_STATE;
   }
   auto& image_format = stream_config.image_formats[kImageFormatIndex];
 
   // Attempt to create a buffer collection using controller-provided constraints.
   if (!allocator_) {
-    FXL_LOG(ERROR) << "Allocator is dead!";
+    FX_LOGS(ERROR) << "Allocator is dead!";
   }
   status = allocator_->AllocateNonSharedCollection(buffer_collection_.NewRequest());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to allocate new collection";
+    FX_PLOGS(ERROR, status) << "Failed to allocate new collection";
     return status;
   }
   status = buffer_collection_->SetConstraints(true, stream_config.constraints);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to set constraints to those reported by the controller";
+    FX_PLOGS(ERROR, status) << "Failed to set constraints to those reported by the controller";
     return status;
   }
   status_return = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   status = buffer_collection_->WaitForBuffersAllocated(&status_return, &buffers);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to call WaitForBuffersAllocated";
+    FX_PLOGS(ERROR, status) << "Failed to call WaitForBuffersAllocated";
     return status;
   }
   if (status_return != ZX_OK) {
-    FXL_PLOG(ERROR, status_return) << "Failed to allocate buffers";
+    FX_PLOGS(ERROR, status_return) << "Failed to allocate buffers";
     return status_return;
   }
 
@@ -158,7 +158,7 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
     status = mapper.Map(buffers.buffers[i].vmo, 0, buffers.settings.buffer_settings.size_bytes,
                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Error mapping vmo";
+      FX_PLOGS(ERROR, status) << "Error mapping vmo";
       return status;
     }
     memset(mapper.start(), 128, mapper.size());
@@ -169,7 +169,7 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
   fuchsia::sysmem::BufferCollectionInfo_2 buffers_for_caller;
   status = buffers.Clone(&buffers_for_caller);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to clone buffer collection";
+    FX_PLOGS(ERROR, status) << "Failed to clone buffer collection";
     return status;
   }
 
@@ -177,7 +177,7 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
   status = controller_->CreateStream(kConfigIndex, kStreamConfigIndex, kImageFormatIndex,
                                      std::move(buffers), std::move(request));
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to create stream";
+    FX_PLOGS(ERROR, status) << "Failed to create stream";
     return status;
   }
 

@@ -18,6 +18,8 @@
 */
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"video_display"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 

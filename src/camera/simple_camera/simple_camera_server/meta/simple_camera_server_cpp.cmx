@@ -8,7 +8,8 @@
         ],
         "services": [
             "fuchsia.sys.Launcher",
-            "fuchsia.camera.Manager"
+            "fuchsia.camera.Manager",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

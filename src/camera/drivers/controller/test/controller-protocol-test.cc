@@ -11,8 +11,6 @@
 
 #include <fbl/auto_call.h>
 
-#include "src/lib/fxl/logging.h"
-
 // NOTE: In this test, we are actually just unit testing the ControllerImpl class
 
 namespace camera {

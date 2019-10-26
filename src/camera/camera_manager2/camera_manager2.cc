@@ -6,11 +6,12 @@
 #include <lib/async-loop/default.h>
 
 #include "src/camera/camera_manager2/camera_manager_app.h"
-#include "src/lib/fxl/log_level.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 int main() {
-  FXL_LOG(INFO) << "Camera Manager Starting";
+  syslog::InitLogger({"camera_manager"});
+
+  FX_LOGS(INFO) << "Camera Manager Starting";
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   camera::CameraManagerApp app(std::move(context));

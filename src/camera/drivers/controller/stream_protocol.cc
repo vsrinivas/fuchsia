@@ -6,7 +6,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 camera::StreamImpl::StreamImpl(async_dispatcher_t* dispatcher,
                                std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol)
@@ -19,16 +19,16 @@ camera::StreamImpl::~StreamImpl() { Shutdown(ZX_OK); }
 
 zx_status_t camera::StreamImpl::Attach(zx::channel channel,
                                        fit::function<void(void)> disconnect_handler) {
-  FXL_DCHECK(!binding_.is_bound());
+  FX_DCHECK(!binding_.is_bound());
   disconnect_handler_ = std::move(disconnect_handler);
   binding_.set_error_handler([this](zx_status_t status) {
-    FXL_PLOG(ERROR, status) << "Client disconnected";
+    FX_PLOGS(ERROR, status) << "Client disconnected";
     Shutdown(status);
     disconnect_handler_();
   });
   zx_status_t status = binding_.Bind(std::move(channel));
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status);
+    FX_PLOGS(ERROR, status);
     return status;
   }
   return ZX_OK;
@@ -86,23 +86,23 @@ void camera::StreamImpl::ReleaseFrame(uint32_t buffer_id) {
 }
 
 void camera::StreamImpl::AcknowledgeFrameError() {
-  FXL_LOG(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
+  FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
 void camera::StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
                                              SetRegionOfInterestCallback callback) {
-  FXL_LOG(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
+  FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
 void camera::StreamImpl::SetImageFormat(uint32_t image_format_index,
                                         SetImageFormatCallback callback) {
-  FXL_LOG(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
+  FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
 void camera::StreamImpl::GetImageFormats(GetImageFormatsCallback callback) {
-  FXL_LOG(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
+  FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
