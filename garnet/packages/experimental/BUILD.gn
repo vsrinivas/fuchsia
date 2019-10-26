@@ -51,7 +51,6 @@ group("kms") {
   testonly = true
   public_deps = [
     "//garnet/bin/kms:kms",
-    "//garnet/bin/kms:kms",
   ]
 }
 
