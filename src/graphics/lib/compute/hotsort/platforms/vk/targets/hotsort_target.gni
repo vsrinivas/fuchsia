@@ -49,7 +49,7 @@ template("hotsort_target_internal") {
   _hs_public_include_dirs = target_gen_dir
 
   #
-  # Either dump a binary or produce a source set
+  # Either dump a binary or produce a static library
   #
   _hs_target_dump =
       defined(invoker.hotsort_target_dump) && invoker.hotsort_target_dump
@@ -66,7 +66,7 @@ template("hotsort_target_internal") {
   _hs_target_gen_inlines = [ "${_hs_output_dir}/hs_modules.inl" ]
 
   #
-  # define source set sources
+  # define static library sources
   #
   _hs_target_include_dirs = [
     _hs_output_dir,
@@ -153,7 +153,7 @@ template("hotsort_target_internal") {
   }
 
   #
-  # either dump a binary or return a source set
+  # either dump a binary or return a static library
   #
   if (_hs_target_dump) {
     #
@@ -196,14 +196,15 @@ template("hotsort_target_internal") {
     }
   } else {
     #
-    # target is a source set
+    # target is a static library
     #
     _config_name = "${target_name}_public_config"
     config(_config_name) {
       include_dirs = [ _hs_public_include_dirs ]
     }
 
-    source_set(target_name) {
+    static_library(target_name) {
+      output_name = "hotsort_vk_${_hs_target_name}"
       public = [
         "${_hs_output_dir}/hs_config.h",
         "${_hs_output_dir}/hs_target.h",
@@ -369,7 +370,6 @@ template("hotsort_target_gpu_arch_google_swiftshader") {
   }
 }
 
-
 #
 # Generates a "HotSort target", which contains a compiled compute kernel to
 # perform sorting of 32-bit or 64-bit integers, highly optimized for a given
@@ -418,8 +418,8 @@ template("hotsort_target_gpu_arch_google_swiftshader") {
 #
 #  hotsort_target_dump:
 #    Boolean, if true the generated GN target is a group that references a
-#    target binary produced by the host toolchain.  Otherwise, a source set is
-#    produced on the current toolchain.
+#    target binary produced by the host toolchain.  Otherwise, a static library
+#    is produced on the current toolchain.
 #
 #  hotsort_target_args:
 #    Extra arguments passed to the 'hotsort_gen' HotSort algorithm code

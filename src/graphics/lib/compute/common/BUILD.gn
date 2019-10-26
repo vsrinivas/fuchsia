@@ -9,7 +9,8 @@ config("common_public_config") {
   include_dirs = [ ".." ]
 }
 
-source_set("common") {
+static_library("common") {
+  output_name = "compute_common"
   public = [
     "file_utils.h",
     "macros.h",

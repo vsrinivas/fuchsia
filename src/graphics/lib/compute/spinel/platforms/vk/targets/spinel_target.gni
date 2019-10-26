@@ -17,7 +17,7 @@ import("../../../../gn/glsl_shader_rules.gni")
 #   4. Remap SPIR-V modules.
 #
 #   5. Return the target as either:
-#      - a source set
+#      - a static library
 #      - a binary image produced by the host toolchain
 #
 # Upon completion, the root of $target_gen_dir contains the Spinel
@@ -33,21 +33,24 @@ template("spinel_target") {
   #
   # Expects:
   #
-  #   $spinel_target_config:
+  #   $spinel_target_name:
   #
-  #   The path of the C99 file containing the target configuration.
+  #   The filename (without .c extension) of the C99 file containing the
+  #   target configuration.
   #
   #   $spinel_target_dump:
   #
   #   If defined the target is group that references a target binary
-  #   produced by the host toolchain.  Otherwise, a source set is
+  #   produced by the host toolchain.  Otherwise, a static library is
   #   produced on the current toolchain.
   #
-  assert(defined(invoker.spinel_target_config),
-         "file must be defined for spinel_target")
+  assert(defined(invoker.spinel_target_name),
+         "name must be defined for spinel_target")
+  _spn_target_name = invoker.spinel_target_name
+  _spn_target_config = _spn_target_name + ".c"
 
   #
-  # Either dump a binary or produce a source set
+  # Either dump a binary or produce a static library
   #
   _spn_target_dump = false
 
@@ -58,7 +61,7 @@ template("spinel_target") {
   #
   # define sources and includes
   #
-  _spn_target_dir = get_path_info(invoker.spinel_target_config, "dir")
+  _spn_target_dir = get_path_info(_spn_target_config, "dir")
 
   _spn_target_includes_public = [ _spn_target_dir + "/spn_target.h" ]
   _spn_target_gen_includes_dir = target_gen_dir
@@ -76,10 +79,10 @@ template("spinel_target") {
                          ] + _spn_target_gen_includes
 
   _spn_target_sources = _spn_target_includes_public + _spn_target_includes +
-                        [ invoker.spinel_target_config ]
+                        [ _spn_target_config ]
 
   #
-  # define source set include dirs
+  # define static library include dirs
   #
   _spn_target_include_dirs = [
     target_gen_dir,
@@ -160,7 +163,7 @@ template("spinel_target") {
   }
 
   #
-  # either dump a binary or return a source set
+  # either dump a binary or return a static library
   #
   if (_spn_target_dump) {
     #
@@ -203,13 +206,14 @@ template("spinel_target") {
     }
   } else {
     #
-    # target is a source set
+    # target is a static library
     #
     _config_name = "${target_name}_public_config"
     config(_config_name) {
       include_dirs = [ _spn_target_gen_includes_dir ]
     }
-    source_set(target_name) {
+    static_library(target_name) {
+      output_name = "spinel_vk_${_spn_target_name}"
       public = _spn_target_includes_public
       sources = _spn_target_sources
       include_dirs = _spn_target_include_dirs

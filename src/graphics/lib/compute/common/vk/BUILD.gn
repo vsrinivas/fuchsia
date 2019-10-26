@@ -9,7 +9,8 @@ config("vk_common_public_config") {
   include_dirs = [ graphics_compute_dir ]
 }
 
-source_set("vk") {
+static_library("vk") {
+  output_name = "compute_common_vk"
   public = [
     "assert.h",
     "barrier.h",

@@ -9,7 +9,8 @@ config("spinel_vk_public_config") {
   include_dirs = [ "${graphics_compute_dir}/spinel/include/spinel" ]
 }
 
-source_set("vk") {
+static_library("vk") {
+  output_name = "spinel_vk"
   public = [
     #
     # FIXME(allanmac): I do not want to make allocator_device.h public
@@ -86,7 +87,8 @@ config("spinel_vk_ext_public_config") {
 # filesystem, or customize the link to only include the targets required to
 # run on the final device that will run the client application.
 #
-source_set("vk_find_target") {
+static_library("vk_find_target") {
+  output_name = "spinel_vk_find_target"
   public = [
     "ext/spinel_vk_find_target.h",
   ]

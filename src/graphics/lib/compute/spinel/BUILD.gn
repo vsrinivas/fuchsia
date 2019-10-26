@@ -6,6 +6,7 @@ import("../gn/build_rules.gni")
 
 config("spinel_public_config") {
   include_dirs = [ "include" ]
+
   # The clients should use spinel/spinel_xxx.h, but some still use spinel_xxx.h
   # directly.
   include_dirs += [ "include/spinel" ]  # TO BE REMOVED.
@@ -31,11 +32,12 @@ source_set("spinel_headers") {
   public_configs = [ ":spinel_public_config" ]
 }
 
-source_set("spinel") {
+static_library("spinel") {
   friend = [
     "platforms/vk",
     "platforms/vk/tests",
   ]
+
   # The source files include "spinel_xxx.h" directly.
   include_dirs = [ "include/spinel" ]
   public = [
