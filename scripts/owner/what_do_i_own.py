@@ -13,22 +13,20 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(  # scripts
         SCRIPT_DIR))  # unification
 
-# TODO this assumes all OWNERS are @google.com
-owner_exp = re.compile('^\s*([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)')
-perfile_exp = re.compile(
-    '^\s*per-file ([^\s=]*)=\s*([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.'
-    '[a-zA-Z0-9-.]+)')
-
 
 def main():
     parser = argparse.ArgumentParser(
         description='Finds all OWNERS of given paths')
+    parser.add_argument('owner')
     parser.add_argument('paths', nargs='+')
     args = parser.parse_args()
+    owner = args.owner
     abspaths = [os.path.abspath(path) for path in args.paths]
 
+    perfile_exp = re.compile('^\s*per-file ([^\s=]*)\s*=\s*' + owner)
+
     # Find all OWNERS files
-    owners_paths = set()
+    path_to_owners = {}
     for path in abspaths:
         dir = path if os.path.isdir(path) else os.path.dirname(path)
         dir = os.path.abspath(dir)
@@ -36,27 +34,28 @@ def main():
                os.path.commonprefix([dir, FUCHSIA_ROOT]) == FUCHSIA_ROOT):
             owners_path = os.path.join(dir, 'OWNERS')
             if os.path.exists(owners_path):
-                owners_paths.add(owners_path)
+                path_to_owners[path] = owners_path
                 break
             dir = os.path.dirname(dir)
 
     # Parse all OWNERS files
-    owners = set()
-    for path in owners_paths:
-        with open(path) as f:
+    owned = set()
+    for path, owners in path_to_owners.iteritems():
+        with open(owners) as f:
             for line in f.readlines():
-                match = owner_exp.match(line)
-                if match:
-                    owners.add(match.group(1))
+                if line.strip().startswith(owner):
+                    owned.add(path)
                     continue
                 match = perfile_exp.match(line)
                 if match:
                     filename = os.path.abspath(
-                        os.path.join(os.path.dirname(path), match.group(1)))
+                        os.path.join(os.path.dirname(owners), match.group(1)))
                     if filename in abspaths:
-                        owners.add(match.group(2))
+                        owned.add(path)
 
-    print ','.join(sorted(owners))
+    # Print owned files
+    for owned_path in sorted(owned):
+        print os.path.relpath(owned_path)
 
     return 0
 
