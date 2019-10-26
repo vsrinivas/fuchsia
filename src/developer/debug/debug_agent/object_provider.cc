@@ -216,4 +216,40 @@ zx::job ObjectProvider::GetRootJob() const {
   return zx::job(root_job);
 }
 
+zx_status_t ObjectProvider::ListHandleRights(zx_handle_t handle, std::string* out) const {
+  zx_info_handle_basic info;
+  zx_status_t status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK)
+    return status;
+
+  // clang-format off
+  std::stringstream ss;
+  if (info.rights & ZX_RIGHT_DUPLICATE) { ss << "ZX_RIGHT_DUPLICATE" << std::endl; }
+  if (info.rights & ZX_RIGHT_TRANSFER) { ss << "ZX_RIGHT_TRANSFER" << std::endl; }
+  if (info.rights & ZX_RIGHT_READ) { ss << "ZX_RIGHT_READ" << std::endl; }
+  if (info.rights & ZX_RIGHT_WRITE) { ss << "ZX_RIGHT_WRITE" << std::endl; }
+  if (info.rights & ZX_RIGHT_EXECUTE) { ss << "ZX_RIGHT_EXECUTE" << std::endl; }
+  if (info.rights & ZX_RIGHT_MAP) { ss << "ZX_RIGHT_MAP" << std::endl; }
+  if (info.rights & ZX_RIGHT_GET_PROPERTY) { ss << "ZX_RIGHT_GET_PROPERTY" << std::endl; }
+  if (info.rights & ZX_RIGHT_SET_PROPERTY) { ss << "ZX_RIGHT_SET_PROPERTY" << std::endl; }
+  if (info.rights & ZX_RIGHT_ENUMERATE) { ss << "ZX_RIGHT_ENUMERATE" << std::endl; }
+  if (info.rights & ZX_RIGHT_DESTROY) { ss << "ZX_RIGHT_DESTROY" << std::endl; }
+  if (info.rights & ZX_RIGHT_SET_POLICY) { ss << "ZX_RIGHT_SET_POLICY" << std::endl; }
+  if (info.rights & ZX_RIGHT_GET_POLICY) { ss << "ZX_RIGHT_GET_POLICY" << std::endl; }
+  if (info.rights & ZX_RIGHT_SIGNAL) { ss << "ZX_RIGHT_SIGNAL" << std::endl; }
+  if (info.rights & ZX_RIGHT_SIGNAL_PEER) { ss << "ZX_RIGHT_SIGNAL_PEER" << std::endl; }
+  if (info.rights & ZX_RIGHT_WAIT) { ss << "ZX_RIGHT_WAIT" << std::endl; }
+  if (info.rights & ZX_RIGHT_INSPECT) { ss << "ZX_RIGHT_INSPECT" << std::endl; }
+  if (info.rights & ZX_RIGHT_MANAGE_JOB) { ss << "ZX_RIGHT_MANAGE_JOB" << std::endl; }
+  if (info.rights & ZX_RIGHT_MANAGE_PROCESS) { ss << "ZX_RIGHT_MANAGE_PROCESS" << std::endl; }
+  if (info.rights & ZX_RIGHT_MANAGE_THREAD) { ss << "ZX_RIGHT_MANAGE_THREAD" << std::endl; }
+  if (info.rights & ZX_RIGHT_APPLY_PROFILE) { ss << "ZX_RIGHT_APPLY_PROFILE" << std::endl; }
+  if (info.rights & ZX_RIGHT_SAME_RIGHTS) { ss << "ZX_RIGHT_SAME_RIGHTS" << std::endl; }
+  // clang-format on
+
+  *out = ss.str();
+  return ZX_OK;
+}
+
 }  // namespace debug_agent

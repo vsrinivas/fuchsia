@@ -63,6 +63,13 @@ class ObjectProvider {
 
   virtual zx::process GetProcessFromException(zx_handle_t exception_token) const;
   virtual zx::thread GetThreadFromException(zx_handle_t exception_token) const;
+
+  virtual zx_status_t ListHandleRights(zx_handle_t handle, std::string* out) const;
+
+  template <typename T>
+  zx_status_t ListHandleRights(const zx::object<T>& object, std::string* out) const {
+    return ListHandleRights(object.get(), out);
+  }
 };
 
 }  // namespace debug_agent
