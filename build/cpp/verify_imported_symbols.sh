@@ -77,7 +77,7 @@ if ! [[ -e "$ALLOWLIST" ]]; then
   usage
 fi
 
-VIOLATIONS=$(comm -23 <(cat ${CURRENT}) <(cat ${ALLOWLIST}))
+VIOLATIONS=$(comm -23 <(cat ${CURRENT} | sort) <(cat ${ALLOWLIST} | sort))
 if ! [[ -z "${VIOLATIONS}" ]]; then
   echo
   echo "Error: Library $LIBRARY_NAME contains symbols not on the allowlist"
