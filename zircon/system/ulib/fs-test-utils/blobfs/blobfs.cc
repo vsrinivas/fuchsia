@@ -17,7 +17,8 @@
 namespace fs_test_utils {
 
 using digest::Digest;
-using digest::MerkleTree;
+using digest::MerkleTreeCreator;
+using digest::MerkleTreeVerifier;
 using BlobSrcFunction = void (*)(char* data, size_t length);
 
 void RandomFill(char* data, size_t length) {
@@ -39,15 +40,11 @@ bool GenerateBlob(BlobSrcFunction sourceCb, fbl::String mount_path, size_t size_
   info->size_data = size_data;
 
   // Generate the Merkle Tree
-  info->size_merkle = MerkleTree::GetTreeLength(size_data);
-  if (info->size_merkle == 0) {
-    info->merkle = nullptr;
-  } else {
-    info->merkle.reset(new char[info->size_merkle]);
-  }
   Digest digest;
-  zx_status_t status = MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0],
-                                          info->size_merkle, &digest);
+  std::unique_ptr<uint8_t[]> tree;
+  zx_status_t status = MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree,
+                                                 &info->size_merkle, &digest);
+  info->merkle.reset(reinterpret_cast<char *>(tree.release()));
   if (status != ZX_OK) {
     printf("Couldn't create Merkle Tree\n");
     return false;
@@ -55,8 +52,8 @@ bool GenerateBlob(BlobSrcFunction sourceCb, fbl::String mount_path, size_t size_
   snprintf(info->path, sizeof(info->path), "%s/%s", mount_path.c_str(), digest.ToString().c_str());
 
   // Sanity-check the merkle tree
-  status = MerkleTree::Verify(&info->data[0], info->size_data, &info->merkle[0], info->size_merkle,
-                              0, info->size_data, digest);
+  status = MerkleTreeVerifier::Verify(info->data.get(), info->size_data, 0, info->size_data,
+                                      info->merkle.get(), info->size_merkle, digest);
   if (status != ZX_OK) {
     printf("Failed to validate Merkle Tree\n");
     return false;

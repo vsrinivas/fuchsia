@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,198 +6,108 @@
 #define DIGEST_MERKLE_TREE_H_
 
 #include <stddef.h>
+#include <stdint.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
-#ifdef __cplusplus
-
-#include <stdint.h>
-
 #include <digest/digest.h>
-#include <fbl/array.h>
+#include <digest/hash-list.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 
 namespace digest {
+namespace internal {
 
-// digest::MerkleTree represents a hash tree that can be used to independently
-// verify subsets of a set data associated with a trusted digest.
-//
-// A Merkle tree is typically created for a given |data| and |data_len| using
-// the following (error checking is omitted):
-//      size_t tree_len = digest::MerkleTree::GetTreeLength(data_len);
-//      uint8_t *tree = malloc(tree_len); // or other allocation routine
-//      digest::Digest digest;
-//      digest::MerkleTree::Create(data, data_len, tree, tree_len, &digest);
-//
-// At this point, |digest| contains the root digest for the Merkle tree
-// corresponding to the data. If this digest is trusted (e.g. the creator signs
-// it), other parties can use it to verify any portion of the data, chosen by
-// |offset| and |length| using the following:
-//      zx_status_t rc = digest::MerkleTree::Verify(data,
-//          data_len, tree, tree_len, offset, length, digest);
-//
-// If |s| is NO_ERROR, the |data| between |offset| and |offset + length| is the
-// same as when "Create" was called. If it is ERR_IO_DATA_INTEGRITY, either the
-// data, tree, or root digest have been altered.
-class MerkleTree final {
+// |digest::internal::MerkleTree| contains common Merkle tree code. Callers MUST NOT use this
+// class directly. See |digest::MerkleTreeCreator| and |digest::MerkleTreeVerifier| below.
+template <typename T, typename VP, class MT, class HL>
+class MerkleTree {
  public:
-  // This sets the size that the tree uses to chunk up the data and digests.
-  // TODO(aarongreen): Tune this to optimize performance.
-  static constexpr size_t kNodeSize = 8192;
-
-  // Returns the minimum size needed to hold a Merkle tree for the given
-  // |data_len|. The tree consists of all the nodes containing the digests of
-  // child nodes.  It does NOT include the root digest, which must be passed
-  // to |Verify| after a trust decision has been made.  This means that when
-  // the |data_len| is less than |kNodeSize|, this method will return 0.
-  static size_t GetTreeLength(size_t data_len);
-
-  // Writes a Merkle tree for the given data and saves its root digest.
-  // |tree_len| must be at least as much as returned by GetTreeLength().
-  static zx_status_t Create(const void* data, size_t data_len, void* tree, size_t tree_len,
-                            Digest* digest);
-
-  // Checks the integrity of a the region of data given by the offset and
-  // length.  It checks integrity using the given Merkle tree and trusted root
-  // digest. |tree_len| must be at least as much as returned by
-  // GetTreeLength().  |offset| and |length| must describe a range wholly
-  // within |data_len|.
-  static zx_status_t Verify(const void* data, size_t data_len, const void* tree, size_t tree_len,
-                            size_t offset, size_t length, const Digest& digest);
-
-  // The stateful instance methods below are only needed when creating a
-  // Merkle tree using the Init/Update/Final methods.
-  MerkleTree();
-  ~MerkleTree();
-
-  // Initializes |tree| to hold a the Merkle tree for |data_len| bytes of
-  // data.  This must be called before |CreateUpdate|.
-  zx_status_t CreateInit(size_t data_len, size_t tree_len);
-
-  // Processes an additional |length| bytes of |data| and writes digests to
-  // the Merkle |tree|.  It is an error to process more data in total than was
-  // specified by |data_len| in |CreateInit|.  |tree| must have room for at
-  // least |GetTreeLength(data_len)| bytes.
-  zx_status_t CreateUpdate(const void* data, size_t length, void* tree);
-
-  // Completes the Merkle |tree|, from the data leaves up to the |root|, which
-  // it writes out if not null.  This must only be called after the total
-  // number of bytes processed by |CreateUpdate| equals the |data_len| set by
-  // |CreateInit|.  |tree| must have room for at least
-  // |GetTreeLength(data_len)| bytes.
-  zx_status_t CreateFinal(void* tree, Digest* digest);
-
- private:
+  MerkleTree() = default;
+  virtual ~MerkleTree() = default;
   DISALLOW_COPY_ASSIGN_AND_MOVE(MerkleTree);
 
-  // Checks the integrity of the top level of a Merkle tree.  It checks
-  // integrity using the given root digest. |data_len| must be at no more than
-  // |kNodeSize|.
-  static zx_status_t VerifyRoot(const void* data, size_t data_len, uint64_t level,
-                                const Digest& root);
+  size_t GetNodeSize() const { return hash_list_.GetNodeSize(); }
+  void SetNodeSize(size_t node_size) { hash_list_.SetNodeSize(); }
 
-  // Checks the integrity of portion of a Merkle tree level given by the
-  // offset and length.  It checks integrity using next level up of the given
-  // Merkle tree. |tree_len| must be at least as much as returned by
-  // |GetTreeLength(data_len)|.  |offset| and |length| must describe a range
-  // wholly within |data_len|.
-  static zx_status_t VerifyLevel(const void* data, size_t data_len, const void* tree, size_t offset,
-                                 size_t length, uint64_t level);
+  // Returns true if |data_off| is aligned to a node boundary.
+  bool IsAligned(size_t data_off) const { return hash_list_.IsAligned(data_off); }
 
-  // See CreateFinal.  This implements that method, with an extra parameter to
-  // allow levels other than the bottommost to be padded.
-  zx_status_t CreateFinalInternal(const void* data, void* tree, Digest* root);
+  // Modifies |data_off| and |buf_len| to be aligned to the minimum number of nodes that covered
+  // their original range.
+  zx_status_t Align(size_t *data_off, size_t *buf_len) const {
+    return hash_list_.Align(data_off, buf_len);
+  }
 
-  // All of the following fields are used to save state when creating the
-  // Merkle tree using the Init/Update/Final methods.  These methods use a
-  // chain of Tree objects, one for each level of the tree.
+  // Sets the length of data this hash list will represent. This will allocate all levels of the
+  // Merkle tree, including the root digest.
+  zx_status_t SetDataLength(size_t data_len);
 
-  // Indicates whether CreateInit has been called without a corresponding call
-  // to CreateFinal.
-  bool initialized_;
+  // Returns the minimum size needed to hold a Merkle tree for the given |data_len|. The tree
+  // consists of all the nodes containing the digests of child nodes.  It does NOT include the root
+  // digest, which must be passed to |Verify| after a trust decision has been made.  This means that
+  // when the |data_len| is less than |NodeSize|, this method will return 0.
+  size_t GetTreeLength();
 
-  // For each Tree object in the chain, the Tree object managing the next
-  // level up is given by |next_|.
-  fbl::unique_ptr<MerkleTree> next_;
+  // Registers |tree| as a Merkle tree for |data_len_| bytes of data, rooted by a digest of given by
+  // |root|.
+  zx_status_t SetTree(VP tree, size_t tree_len, VP root, size_t root_len);
 
-  // Indicates the height in the tree of this Tree object, and equals the
-  // number of preceding Tree objects in the chain.
-  uint64_t level_;
+ protected:
+  // The Merkle tree can be thought of as a singly linked list of HashLists. Each |hash_list_| reads
+  // data to produce a list of digests, which in turn becomes the data for the |hash_list_| in the
+  // |next_| layer of the tree, until the last layer, which produces the root digest.
+  HL hash_list_;
+  fbl::unique_ptr<MT> next_;
+};
 
-  // Indicates the amount of data consumed so far by |CreateUpdate| for this
-  // level.
-  size_t offset_;
+}  // namespace internal
 
-  // Indicates the total amount of data to be consumed by |CreateUpdate| for
-  // this level, as set in |CreateInit|.
-  size_t length_;
+// |digest::MerkleTreeCreator| creates Merkle trees for data.
+// Example (without error checking):
+//   MerkleTreeCreator creator;
+//   creator.SetDataLength(data_len);
+//   size_t tree_len = creator.GetTreeLength();
+//   uint8_t *tree = malloc(tree_len); // or other allocation routine
+//   uint8_t root[Digest::kLength]; // for storing the resulting root digest
+//   creator.SetTree(tree, tree_len, root, sizeof(root));
+//   creator.Append(&data[0], partial_len1);
+//   creator.Append(&data[partial_len1], partial_len2);
+class MerkleTreeCreator
+    : public internal::MerkleTree<uint8_t, void *, MerkleTreeCreator, HashListCreator> {
+ public:
+  // Convenience method to create and return a Merkle tree for the given |data| via |out_tree| and
+  // |out_root|.
+  static zx_status_t Create(const void *data, size_t data_len, fbl::unique_ptr<uint8_t[]> *out_tree,
+                            size_t *out_tree_len, Digest *out_root);
 
-  // Used to calculate digest, and save the hash state across calls to
-  // |CreateUpdate|.
-  Digest digest_;
+  // Reads |buf_len| bytes of data from |buf| and appends digests to the hash |list|.
+  zx_status_t Append(const void *buf, size_t buf_len);
+};
+
+// |digest::MerkleTreeVerifier| verifies data against a Merkle tree.
+// Example (without error checking):
+//   MerkleTreeVerifier verifier;
+//   verifier.SetDataLength(data_len);
+//   verifier.SetTree(tree, tree_len, root.get(), root.len());
+//   verifier.Align(&data_off, &partial_len);
+//   return verifier.Verify(&data[data_off], partial_len) == ZX_OK;
+class MerkleTreeVerifier : public internal::MerkleTree<const uint8_t, const void *,
+                                                       MerkleTreeVerifier, HashListVerifier> {
+ public:
+  // Convenience method to verify the integrity of the node-aligned |buf| at |data_off| using the
+  // Merkle |tree| and |root|.
+  static zx_status_t Verify(const void *buf, size_t buf_len, size_t data_off, size_t data_len,
+                            const void *tree, size_t tree_len, const Digest &root);
+
+  // Reads |buf_len| bytes of data from |buf|, calculates digests for each node of data, and
+  // compares them to the digests stored in the Merkle tree. |data_off| must be node-aligned.
+  // |buf_len| must be node-aligned, or reach the end of the data. See also |Align|.
+  zx_status_t Verify(const void *buf, size_t buf_len, size_t data_off);
 };
 
 }  // namespace digest
-#endif  // __cplusplus
-
-__BEGIN_CDECLS
-typedef struct merkle_tree_t merkle_tree_t;
-
-// C API for MerkleTree.  The methods below are directly equivalent to the C++
-// methods above, i.e. "merkle_tree_some_method" below would correspond to
-// "MerkleTree::SomeMethod" above.  The parameters differ in only two ways:
-//      - The stateful creation methods (Init/Update/Final) include a
-//        'merkle_tree_t' handle to wrap the Tree object.
-//      - Digest arguments have been replace with a void*/size_t pair that
-//        indicate the buffer to use to read or save the digest.
-//
-// The typical flow is similar to using the C++ methods to create a tree is:
-//      size_t tree_len = merkle_tree_get_tree_length(data_len);
-//      uint8_t *tree = malloc(tree_len);
-//      uint8_t *root = malloc(32);
-//      return merkle_tree_create(data, data_len, tree, tree_len, out, 32);
-//
-// An example flow using the stateful creation methods is:
-//      size_t tree_len = merkle_tree_get_tree_length(total_data_len);
-//      uint8_t *tree = malloc(tree_len);
-//      uint8_t root[32];
-//      merkle_tree_t *mt;
-//      if (merkle_tree_create_init(data_len, tree_len, &mt) != NO_ERROR)
-//          return;
-//      merkle_tree_create_update(mt, some_data, some_data_len);
-//      merkle_tree_create_update(mt, more_data, more_data_len);
-//      return merkle_tree_create_final(mt, tree, root, sizeof(root));
-//
-// The typical flow is similar to using the C++ methods to verify a tree is:
-//      return merkle_tree_verify(data, data_len, tree, tree_len, offset,
-//                                length, root, sizeof(root));
-
-// C wrapper for |MerkleTree::GetTreeLength|.
-size_t merkle_tree_get_tree_length(size_t data_len);
-
-// C wrapper function for |MerkleTree::Create|.
-zx_status_t merkle_tree_create(const void* data, size_t data_len, void* tree, size_t tree_len,
-                               void* out, size_t out_len);
-
-// C wrapper for |MerkleTree::CreateInit|.  On success, this function
-//  allocates memory for |out|.  The caller must free this memory by calling
-//  |merkle_tree_create_final|, even if an intervening call to
-//  |merkle_tree_create_update| returns an error.
-zx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len, merkle_tree_t** out);
-
-// C wrapper function for |MerkleTree::CreateUpdate|.
-zx_status_t merkle_tree_create_update(merkle_tree_t* mt, const void* data, size_t length,
-                                      void* tree);
-
-// C wrapper function for |MerkleTree::CreateFinal|.  This function consumes
-// |mt| and frees it.
-zx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out, size_t out_len);
-
-// C wrapper function for |MerkleTree::Verify|.
-zx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree, size_t tree_len,
-                               size_t offset, size_t length, const void* root, size_t root_len);
-
-__END_CDECLS
 
 #endif  // DIGEST_MERKLE_TREE_H_

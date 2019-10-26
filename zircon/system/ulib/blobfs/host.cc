@@ -34,7 +34,8 @@
 #include "compression/zstd.h"
 
 using digest::Digest;
-using digest::MerkleTree;
+using digest::MerkleTreeCreator;
+using digest::MerkleTreeVerifier;
 
 constexpr uint32_t kExtentCount = 5;
 
@@ -69,10 +70,10 @@ zx_status_t WriteBlockOffset(int fd, uint64_t bno, off_t offset, const void* dat
 // Merkle digest and the output merkle tree as a uint8_t array.
 zx_status_t buffer_create_merkle(const FileMapping& mapping, MerkleInfo* out_info) {
   zx_status_t status;
-  size_t merkle_size = MerkleTree::GetTreeLength(mapping.length());
-  auto merkle_tree = fbl::unique_ptr<uint8_t[]>(new uint8_t[merkle_size]);
-  if ((status = MerkleTree::Create(mapping.data(), mapping.length(), merkle_tree.get(), merkle_size,
-                                   &out_info->digest)) != ZX_OK) {
+  std::unique_ptr<uint8_t []> merkle_tree;
+  size_t merkle_size;
+  if ((status = MerkleTreeCreator::Create(mapping.data(), mapping.length(), &merkle_tree,
+                                          &merkle_size, &out_info->digest)) != ZX_OK) {
     return status;
   }
   out_info->merkle.reset(merkle_tree.release(), merkle_size);
@@ -795,9 +796,15 @@ zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
 
   // Verify the contents of the blob.
   uint8_t* data_ptr = data.get() + (merkle_blocks * kBlobfsBlockSize);
-  Digest digest(&inode.merkle_root_hash[0]);
-  return MerkleTree::Verify(data_ptr, inode.blob_size, data.get(),
-                            MerkleTree::GetTreeLength(inode.blob_size), 0, inode.blob_size, digest);
+  MerkleTreeVerifier mtv;
+  zx_status_t status;
+  if ((status = mtv.SetDataLength(inode.blob_size)) != ZX_OK ||
+      (status = mtv.SetTree(data.get(), mtv.GetTreeLength(), inode.merkle_root_hash,
+                            sizeof(inode.merkle_root_hash))) != ZX_OK ||
+      (status = mtv.Verify(data_ptr, inode.blob_size, 0)) != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
 }
 
 }  // namespace blobfs

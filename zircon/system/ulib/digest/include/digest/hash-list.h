@@ -148,7 +148,7 @@ class HashListVerifier : public internal::HashList<const uint8_t> {
  private:
   // Used to store the verification result. The verification logic intentionally does NOT short
   // circuit; we want the hash checks to be as close to constant time as possible.
-  bool verified_;
+  bool verified_ = false;
 };
 
 }  // namespace digest

@@ -23,7 +23,7 @@
 #include <blobfs/common.h>
 
 using digest::Digest;
-using digest::MerkleTree;
+using digest::MerkleTreeCreator;
 
 namespace blobfs {
 
@@ -78,9 +78,22 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
 
 // Number of blocks reserved for the Merkle Tree
 uint32_t MerkleTreeBlocks(const Inode& blobNode) {
-  uint64_t size_merkle = MerkleTree::GetTreeLength(blobNode.blob_size);
-  ZX_DEBUG_ASSERT(size_merkle <= std::numeric_limits<uint32_t>::max());
-  return fbl::round_up(static_cast<uint32_t>(size_merkle), kBlobfsBlockSize) / kBlobfsBlockSize;
+  MerkleTreeCreator mtc;
+  // If this fails, omit the Merkle tree. This will cause subsequent Merkle tree creation and/or
+  // verification to fail.
+  zx_status_t status = mtc.SetDataLength(blobNode.blob_size);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Merkle tree blocks (%s) Failure: %d\n",
+                   Digest(blobNode.merkle_root_hash).ToString().c_str(), status);
+    return 0;
+  }
+  size_t merkle_size = mtc.GetTreeLength();
+  if (merkle_size > std::numeric_limits<uint32_t>::max()) {
+    FS_TRACE_ERROR("blobfs: Merkle tree blocks (%s) max exceeded: %zu\n",
+                   Digest(blobNode.merkle_root_hash).ToString().c_str(), merkle_size);
+    return 0;
+  }
+  return fbl::round_up(static_cast<uint32_t>(merkle_size), kBlobfsBlockSize) / kBlobfsBlockSize;
 }
 
 // Validate the metadata for the superblock, given a maximum number of

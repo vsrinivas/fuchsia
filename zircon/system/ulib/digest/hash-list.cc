@@ -92,7 +92,8 @@ zx_status_t HashList<T>::SetList(T *list, size_t list_len) {
   if (list_len < GetListLength()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  SetDataLength(data_len());  // Reset
+  // Reset the state of the list.
+  SetDataLength(data_len());
   list_ = list;
   set_list_len(list_len);
   if (data_len() == 0) {
@@ -123,8 +124,13 @@ template zx_status_t internal::HashList<const uint8_t>::SetList(const uint8_t *l
                                                                 size_t list_len);
 
 zx_status_t HashListVerifier::Verify(const void *buf, size_t buf_len, size_t data_off) {
+  zx_status_t rc;
   verified_ = true;
-  zx_status_t rc = this->ProcessData(static_cast<const uint8_t *>(buf), buf_len, data_off);
+  if (data_len() == 0) {
+    rc = SetList(list(), list_len());
+  } else {
+    rc = this->ProcessData(static_cast<const uint8_t *>(buf), buf_len, data_off);
+  }
   if (rc != ZX_OK) {
     return rc;
   }

@@ -45,7 +45,6 @@
 
 using block_client::RemoteBlockDevice;
 using digest::Digest;
-using digest::MerkleTree;
 using fs::Journal;
 using fs::JournalSuperblock;
 using id_allocator::IdAllocator;

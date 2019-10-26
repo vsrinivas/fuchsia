@@ -13,7 +13,6 @@ zx_test("digest") {
   sources = [
     "digest.cc",
     "hash-list.cc",
-    "merkle-tree-new.cc",
     "merkle-tree.cc",
     "node-digest.cc",
   ]

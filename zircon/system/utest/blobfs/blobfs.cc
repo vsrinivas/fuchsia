@@ -57,7 +57,6 @@
 
 namespace {
 using digest::Digest;
-using digest::MerkleTree;
 
 // Indicates whether we should enable ramdisk failure tests for the current test run.
 bool gEnableRamdiskFailure = false;

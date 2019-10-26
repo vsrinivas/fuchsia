@@ -10,29 +10,20 @@
 #include <digest/merkle-tree.h>
 #include <zxtest/zxtest.h>
 
-namespace {
-
-////////////////
-// Test support.
-
-// These unit tests are for the MerkleTree object in ulib/digest.
-using digest::Digest;
-using digest::MerkleTree;
+namespace digest {
+namespace testing {
 
 // The MerkleTree tests below are naturally sensitive to the shape of the Merkle
-// tree. These determine those sizes in a consistent way.  The only requirement
-// here is that |kSmall * digest::kSha256Length| should be less than |kNodeSize|.
-const uint64_t kNodeSize = MerkleTree::kNodeSize;
-const uint64_t kSmall = 8 * kNodeSize;
-const uint64_t kLarge = ((kNodeSize / digest::kSha256Length) + 1) * kNodeSize;
-const uint64_t kUnalignedLarge = kLarge + (kNodeSize / 2);
+// tree. These determine those sizes in a consistent way.
+const uint64_t kNodeSize = kDefaultNodeSize;
+const uint64_t kDigestsPerNode = kNodeSize / kSha256Length;
 
 // The hard-coded trees used for testing were created by using sha256sum on
 // files generated using echo -ne, dd, and xxd
 struct TreeParam {
   size_t data_len;
   size_t tree_len;
-  const char digest[digest::kSha256HexLength];
+  const char digest[(kSha256Length * 2) + 1];
 } kTreeParams[] = {
     {0, 0, "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"},
     {1, 0, "0967e0f62a104d1595610d272dfab3d2fa2fe07be0eebce13ef5d79db142610e"},
@@ -40,416 +31,186 @@ struct TreeParam {
     {kNodeSize - 1, 0, "f2abd690381bab3ce485c814d05c310b22c34a7441418b5c1a002c344a80e730"},
     {kNodeSize, 0, "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737"},
     {kNodeSize + 1, kNodeSize, "374781f7d770b6ee9c1a63e186d2d0ccdad10d6aef4fd027e82b1be5b70a2a0c"},
-    {kSmall, kNodeSize, "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf"},
-    {kLarge, kNodeSize * 3, "7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67"},
-    {kUnalignedLarge, kNodeSize * 3,
+    {kNodeSize * 8, kNodeSize, "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf"},
+    {kNodeSize * (kDigestsPerNode + 1), kNodeSize * 3,
+     "7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67"},
+    {kNodeSize * (kDigestsPerNode + 1) + (kNodeSize / 2), kNodeSize * 3,
      "7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43"},
 };
 const size_t kNumTreeParams = sizeof(kTreeParams) / sizeof(struct TreeParam);
 
-// These tests use a text fixture to reduce the amount of repetitive setup.
-class MerkleTreeTestCase : public zxtest::Test {
- protected:
-  void SetUp() override {
-    memset(data_, 0xff, sizeof(data_));
-    index_ = 0;
+template <class MT>
+void TestGetTreeLength() {
+  MT mt;
+  for (size_t i = 0; i < kNumTreeParams; ++i) {
+    EXPECT_OK(mt.SetDataLength(kTreeParams[i].data_len));
+    EXPECT_EQ(mt.GetTreeLength(), kTreeParams[i].tree_len);
   }
+}
+TEST(MerkleTree, GetTreeLength) {
+  TestGetTreeLength<MerkleTreeCreator>();
+  TestGetTreeLength<MerkleTreeVerifier>();
+}
 
-  zx_status_t InitCreate(size_t data_len) {
-    size_t tree_len = MerkleTree::GetTreeLength(data_len);
-    if (data_len > sizeof(data_) || tree_len > sizeof(tree_)) {
-      return ZX_ERR_OUT_OF_RANGE;
+template <class MT>
+void TestSetTree() {
+  MT mt;
+  uint8_t tree[kNodeSize * 3];
+  uint8_t root[kSha256Length];
+  for (size_t i = 0; i < kNumTreeParams; ++i) {
+    size_t tree_len = kTreeParams[i].tree_len;
+    ASSERT_OK(mt.SetDataLength(kTreeParams[i].data_len));
+    if (tree_len > 0) {
+      EXPECT_STATUS(mt.SetTree(nullptr, tree_len, root, sizeof(root)), ZX_ERR_INVALID_ARGS);
+      EXPECT_STATUS(mt.SetTree(tree, tree_len - 1, root, sizeof(root)), ZX_ERR_BUFFER_TOO_SMALL);
     }
-    data_len_ = data_len;
-    tree_len_ = tree_len;
-    return ZX_OK;
-  }
-
-  zx_status_t InitVerify(size_t data_len) {
-    zx_status_t rc;
-    if ((rc = InitCreate(data_len)) != ZX_OK ||
-        (rc = MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_)) != ZX_OK) {
-      return rc;
-    }
-    return ZX_OK;
-  }
-
-  zx_status_t NextCreate() {
-    zx_status_t rc;
-    if (index_ >= kNumTreeParams) {
-      return ZX_ERR_STOP;
-    }
-    if ((rc = InitCreate(kTreeParams[index_].data_len)) != ZX_OK ||
-        (rc = expected_.Parse(kTreeParams[index_].digest, strlen(kTreeParams[index_].digest))) !=
-            ZX_OK) {
-      return rc;
-    }
-    index_++;
-    return ZX_ERR_NEXT;
-  }
-
-  zx_status_t NextVerify() {
-    zx_status_t rc;
-    if ((rc = NextCreate()) != ZX_ERR_NEXT ||
-        (rc = MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_)) != ZX_OK) {
-      return rc;
-    }
-    return ZX_ERR_NEXT;
-  }
-
-  size_t index_;
-
-  uint8_t data_[kUnalignedLarge];
-  uint8_t tree_[kNodeSize * 3];
-  size_t data_len_;
-  size_t tree_len_;
-  MerkleTree mt_;
-  Digest actual_;
-  Digest expected_;
-};
-
-////////////////
-// Test cases
-
-TEST_F(MerkleTreeTestCase, GetTreeLength) {
-  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
-    ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    EXPECT_EQ(tree_len_, MerkleTree::GetTreeLength(data_len_));
+    EXPECT_STATUS(mt.SetTree(tree, tree_len, nullptr, sizeof(root)), ZX_ERR_INVALID_ARGS);
+    EXPECT_STATUS(mt.SetTree(tree, tree_len, root, sizeof(root) - 1), ZX_ERR_BUFFER_TOO_SMALL);
+    EXPECT_OK(mt.SetTree(tree, tree_len, root, sizeof(root)));
   }
 }
+TEST(MerkleTree, SetTree) {
+  TestSetTree<MerkleTreeCreator>();
+  TestSetTree<MerkleTreeVerifier>();
+}
 
-TEST_F(MerkleTreeTestCase, GetTreeLengthC) {
-  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
-    ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    EXPECT_EQ(tree_len_, merkle_tree_get_tree_length(data_len_));
+void MaxDataAndTree(std::unique_ptr<uint8_t[]> *out_data, std::unique_ptr<uint8_t[]> *out_tree) {
+  size_t data_len = 0;
+  size_t tree_len = 0;
+  for (size_t i = 0; i < kNumTreeParams; ++i) {
+    data_len = fbl::max(data_len, kTreeParams[i].data_len);
+    tree_len = fbl::max(tree_len, kTreeParams[i].tree_len);
   }
+  fbl::AllocChecker ac;
+  ASSERT_NE(data_len, 0);
+  std::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[data_len]);
+  ASSERT_TRUE(ac.check());
+  ASSERT_NE(tree_len, 0);
+  std::unique_ptr<uint8_t[]> tree(new (&ac) uint8_t[tree_len]);
+  ASSERT_TRUE(ac.check());
+  memset(data.get(), 0xff, data_len);
+  memset(tree.get(), 0x00, tree_len);
+  *out_data = std::move(data);
+  *out_tree = std::move(tree);
 }
 
-TEST_F(MerkleTreeTestCase, CreateInit) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-}
-
-TEST_F(MerkleTreeTestCase, CreateInitWithoutData) {
-  EXPECT_OK(mt_.CreateInit(0, MerkleTree::GetTreeLength(kLarge)));
-  EXPECT_OK(mt_.CreateInit(0, 0));
-}
-
-TEST_F(MerkleTreeTestCase, CreateInitWithoutTree) { EXPECT_OK(mt_.CreateInit(kNodeSize, 0)); }
-
-TEST_F(MerkleTreeTestCase, CreateInitTreeTooSmall) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_STATUS(mt_.CreateInit(kLarge, tree_len_ - 1), ZX_ERR_BUFFER_TOO_SMALL);
-}
-
-TEST_F(MerkleTreeTestCase, CreateUpdate) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-  EXPECT_OK(mt_.CreateUpdate(data_, data_len_, tree_));
-}
-
-TEST_F(MerkleTreeTestCase, CreateUpdateMissingInit) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_STATUS(mt_.CreateUpdate(data_, data_len_, tree_), ZX_ERR_BAD_STATE);
-}
-
-TEST_F(MerkleTreeTestCase, CreateUpdateMissingData) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-  EXPECT_STATUS(mt_.CreateUpdate(nullptr, data_len_, tree_), ZX_ERR_INVALID_ARGS);
-}
-
-TEST_F(MerkleTreeTestCase, CreateUpdateMissingTree) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-  EXPECT_STATUS(mt_.CreateUpdate(data_, data_len_, nullptr), ZX_ERR_INVALID_ARGS);
-}
-
-TEST_F(MerkleTreeTestCase, CreateUpdateWithoutData) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-  EXPECT_OK(mt_.CreateUpdate(data_, 0, tree_));
-  EXPECT_OK(mt_.CreateUpdate(nullptr, 0, tree_));
-}
-
-TEST_F(MerkleTreeTestCase, CreateUpdateWithoutTree) {
-  ASSERT_OK(InitCreate(kNodeSize));
-  EXPECT_OK(mt_.CreateInit(data_len_, 0));
-  EXPECT_OK(mt_.CreateUpdate(data_, data_len_, nullptr));
-}
-
-TEST_F(MerkleTreeTestCase, CreateUpdateTooMuchData) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-  EXPECT_STATUS(mt_.CreateUpdate(data_, data_len_ + 1, tree_), ZX_ERR_OUT_OF_RANGE);
-}
-
-TEST_F(MerkleTreeTestCase, CreateFinalMissingInit) {
-  EXPECT_STATUS(mt_.CreateFinal(tree_, &actual_), ZX_ERR_BAD_STATE);
-}
-
-TEST_F(MerkleTreeTestCase, CreateFinal) {
-  size_t no_data = 0;
-  size_t no_tree = 0;
-  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
-    ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    if (data_len_ == 0) {
-      no_data++;
-    } else if (data_len_ < kNodeSize) {
-      no_tree++;
-    }
-    EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-    EXPECT_OK(mt_.CreateUpdate(data_, data_len_, tree_));
-    EXPECT_OK(mt_.CreateFinal(tree_, &actual_));
-    EXPECT_BYTES_EQ(actual_.get(), expected_.get(), digest::kSha256Length);
-  }
-  EXPECT_NE(no_data, 0);
-  EXPECT_NE(no_tree, 0);
-}
-
-TEST_F(MerkleTreeTestCase, CreateFinalMissingDigest) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-  EXPECT_OK(mt_.CreateUpdate(data_, data_len_, tree_));
-  EXPECT_STATUS(mt_.CreateFinal(tree_, nullptr), ZX_ERR_INVALID_ARGS);
-}
-
-TEST_F(MerkleTreeTestCase, CreateFinalIncompleteData) {
-  ASSERT_OK(InitCreate(kLarge));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-  EXPECT_OK(mt_.CreateUpdate(data_, kLarge - 1, tree_));
-  EXPECT_STATUS(mt_.CreateFinal(tree_, &actual_), ZX_ERR_BAD_STATE);
-}
-
-TEST_F(MerkleTreeTestCase, Create) {
-  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
-    ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    EXPECT_OK(MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_));
-    EXPECT_BYTES_EQ(actual_.get(), expected_.get(), digest::kSha256Length);
-  }
-}
-
-TEST_F(MerkleTreeTestCase, CreateFinalCAll) {
-  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
-    ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    // Init
-    merkle_tree_t* mt = nullptr;
-    EXPECT_OK(merkle_tree_create_init(data_len_, tree_len_, &mt));
-    // Update
-    size_t i = 0;
-    while (i + kNodeSize < data_len_) {
-      EXPECT_OK(merkle_tree_create_update(mt, data_ + i, kNodeSize, tree_));
-      i += kNodeSize;
-    }
-    EXPECT_OK(merkle_tree_create_update(mt, data_ + i, data_len_ - i, tree_));
-    // Final
-    uint8_t actual[digest::kSha256Length];
-    EXPECT_OK(merkle_tree_create_final(mt, tree_, &actual, sizeof(actual)));
-    EXPECT_BYTES_EQ(expected_.get(), actual, digest::kSha256Length);
-  }
-}
-
-TEST_F(MerkleTreeTestCase, CreateC) {
-  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
-    ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    uint8_t actual[digest::kSha256Length];
-    EXPECT_OK(merkle_tree_create(data_, data_len_, tree_, tree_len_, &actual, sizeof(actual)));
-    EXPECT_BYTES_EQ(expected_.get(), actual, digest::kSha256Length);
-  }
-}
-
-TEST_F(MerkleTreeTestCase, CreateByteByByte) {
-  ASSERT_OK(InitCreate(kSmall));
-  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
-  for (uint64_t i = 0; i < data_len_; ++i) {
-    EXPECT_OK(mt_.CreateUpdate(data_ + i, 1, tree_));
-  }
-  EXPECT_OK(mt_.CreateFinal(tree_, &actual_));
-  EXPECT_OK(MerkleTree::Create(data_, data_len_, tree_, tree_len_, &expected_));
-  EXPECT_BYTES_EQ(actual_.get(), expected_.get(), digest::kSha256Length);
-}
-
-TEST_F(MerkleTreeTestCase, CreateMissingData) {
-  ASSERT_OK(InitCreate(kSmall));
-  EXPECT_STATUS(MerkleTree::Create(nullptr, data_len_, tree_, tree_len_, &actual_),
-                ZX_ERR_INVALID_ARGS);
-}
-
-TEST_F(MerkleTreeTestCase, CreateMissingTree) {
-  ASSERT_OK(InitCreate(kSmall));
-  EXPECT_STATUS(MerkleTree::Create(data_, data_len_, nullptr, kNodeSize, &actual_),
-                ZX_ERR_INVALID_ARGS);
-}
-
-TEST_F(MerkleTreeTestCase, CreateTreeTooSmall) {
-  ASSERT_OK(InitCreate(kSmall));
-  EXPECT_STATUS(MerkleTree::Create(data_, data_len_, nullptr, 0, &actual_),
-                ZX_ERR_BUFFER_TOO_SMALL);
-
-  // The maximum amount of data representable by a one-node tree.
-  size_t max_data_one_node = kNodeSize * (kNodeSize / digest::kSha256Length);
-  EXPECT_STATUS(MerkleTree::Create(data_, max_data_one_node + 1, tree_, kNodeSize, &actual_),
-                ZX_ERR_BUFFER_TOO_SMALL);
-}
-
-TEST_F(MerkleTreeTestCase, Verify) {
-  for (auto rc = NextVerify(); rc != ZX_ERR_STOP; rc = NextVerify()) {
-    ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, expected_));
-  }
-}
-
-TEST_F(MerkleTreeTestCase, VerifyC) {
-  for (auto rc = NextVerify(); rc != ZX_ERR_STOP; rc = NextVerify()) {
-    ASSERT_STATUS(rc, ZX_ERR_NEXT);
-    EXPECT_OK(merkle_tree_verify(data_, data_len_, tree_, tree_len_, 0, data_len_, expected_.get(),
-                                 digest::kSha256Length));
-  }
-}
-
-TEST_F(MerkleTreeTestCase, VerifyNodeByNode) {
-  ASSERT_OK(InitVerify(kSmall));
-  for (uint64_t i = 0; i < data_len_; i += kNodeSize) {
-    EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, i, kNodeSize, actual_));
-  }
-}
-
-TEST_F(MerkleTreeTestCase, VerifyMissingData) {
-  ASSERT_OK(InitVerify(kSmall));
-  EXPECT_STATUS(MerkleTree::Verify(nullptr, data_len_, tree_, tree_len_, 0, data_len_, actual_),
-                ZX_ERR_INVALID_ARGS);
-}
-
-TEST_F(MerkleTreeTestCase, VerifyMissingTree) {
-  ASSERT_OK(InitVerify(kLarge));
-  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, nullptr, tree_len_, 0, data_len_, actual_),
-                ZX_ERR_INVALID_ARGS);
-}
-
-TEST_F(MerkleTreeTestCase, VerifyUnalignedTreeLength) {
-  ASSERT_OK(InitVerify(kSmall));
-  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_ + 1, 0, data_len_, actual_));
-}
-
-TEST_F(MerkleTreeTestCase, VerifyUnalignedDataLength) {
-  ASSERT_OK(InitVerify(kSmall - 1));
-  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_));
-}
-
-TEST_F(MerkleTreeTestCase, VerifyTreeTooSmall) {
-  ASSERT_OK(InitVerify(kSmall));
-  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_ - 1, 0, data_len_, actual_),
-                ZX_ERR_BUFFER_TOO_SMALL);
-}
-
-TEST_F(MerkleTreeTestCase, VerifyUnalignedOffset) {
-  ASSERT_OK(InitVerify(kSmall));
-  EXPECT_OK(
-      MerkleTree::Verify(data_, data_len_, tree_, tree_len_, kNodeSize - 1, kNodeSize, actual_));
-}
-
-TEST_F(MerkleTreeTestCase, VerifyUnalignedLength) {
-  ASSERT_OK(InitVerify(kSmall));
-  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_ - 1, actual_));
-}
-
-TEST_F(MerkleTreeTestCase, VerifyOutOfBounds) {
-  ASSERT_OK(InitVerify(kSmall));
-  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, data_len_ - kNodeSize,
-                                   kNodeSize * 2, actual_),
-                ZX_ERR_OUT_OF_RANGE);
-}
-
-TEST_F(MerkleTreeTestCase, VerifyZeroLength) {
-  ASSERT_OK(InitVerify(kSmall));
-  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, 0, actual_));
-}
-
-TEST_F(MerkleTreeTestCase, VerifyBadRoot) {
-  ASSERT_OK(InitVerify(kLarge));
-  // Modify digest
-  uint8_t buf[digest::kSha256Length];
-  memcpy(buf, actual_.get(), sizeof(buf));
-  buf[0] ^= 1;
-  Digest modified(buf);
-  // Verify
-  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, modified),
-                ZX_ERR_IO_DATA_INTEGRITY);
-}
-
-TEST_F(MerkleTreeTestCase, VerifyGoodPartOfBadTree) {
-  ASSERT_OK(InitVerify(kLarge));
-  tree_[0] ^= 1;
-  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, data_len_ - kNodeSize, kNodeSize,
-                               actual_));
-}
-
-TEST_F(MerkleTreeTestCase, VerifyBadTree) {
-  ASSERT_OK(InitVerify(kLarge));
-  tree_[0] ^= 1;
-  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, 1, actual_),
-                ZX_ERR_IO_DATA_INTEGRITY);
-}
-
-TEST_F(MerkleTreeTestCase, VerifyGoodPartOfBadLeaves) {
-  ASSERT_OK(InitVerify(kSmall));
-  data_[0] ^= 1;
-  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, kNodeSize, data_len_ - kNodeSize,
-                               actual_));
-}
-
-TEST_F(MerkleTreeTestCase, VerifyBadLeaves) {
-  ASSERT_OK(InitVerify(kSmall));
-  data_[0] ^= 1;
-  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
-                ZX_ERR_IO_DATA_INTEGRITY);
-}
-
-TEST_F(MerkleTreeTestCase, CreateAndVerifyHugePRNGData) {
-  uint8_t buffer[digest::kSha256Length];
-  for (size_t data_len = kNodeSize; data_len <= sizeof(data_); data_len <<= 1) {
-    ASSERT_OK(InitCreate(data_len));
-    // Generate random data
-    for (uint64_t i = 0; i < data_len; ++i) {
-      data_[i] = static_cast<uint8_t>(rand());
-    }
-    ASSERT_OK(MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_));
-    // Randomly pick one of the four cases below.
-    uint8_t flip = static_cast<uint8_t>(1 << (rand() % 8));
-
-    switch (rand() % 4) {
-      case 1: {
-        EXPECT_OK(actual_.CopyTo(buffer, sizeof(buffer)));
-        // Flip a bit in root digest
-        buffer[rand() % digest::kSha256Length] ^= flip;
-        actual_ = buffer;
-        EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
-                      ZX_ERR_IO_DATA_INTEGRITY);
-        break;
+TEST(MerkleTree, Create) {
+  MerkleTreeCreator creator;
+  std::unique_ptr<uint8_t[]> data;
+  std::unique_ptr<uint8_t[]> tree;
+  ASSERT_NO_FATAL_FAILURES(MaxDataAndTree(&data, &tree));
+  uint8_t root[kSha256Length];
+  Digest digest;
+  for (size_t i = 0; i < kNumTreeParams; ++i) {
+    size_t data_len = kTreeParams[i].data_len;
+    size_t tree_len = kTreeParams[i].tree_len;
+    ASSERT_OK(digest.Parse(kTreeParams[i].digest));
+    // Valid, added all at once
+    memset(root, 0, sizeof(root));
+    ASSERT_OK(creator.SetDataLength(data_len));
+    ASSERT_OK(creator.SetTree(tree.get(), tree_len, root, sizeof(root)));
+    EXPECT_OK(creator.Append(data.get(), data_len));
+    EXPECT_BYTES_EQ(root, digest.get(), sizeof(root));
+    // Can reuse creator
+    memset(root, 0, sizeof(root));
+    ASSERT_OK(creator.SetDataLength(data_len));
+    ASSERT_OK(creator.SetTree(tree.get(), tree_len, root, sizeof(root)));
+    // Adding zero length has no effect
+    EXPECT_OK(creator.Append(nullptr, 0));
+    if (data_len != 0) {
+      EXPECT_BYTES_NE(root, digest.get(), sizeof(root));
+      // Not enough data
+      for (size_t j = 0; j < data_len - 1; ++j) {
+        EXPECT_OK(creator.Append(&data[j], 1));
       }
-      case 2: {
-        // Flip a bit in data
-        data_[rand() % data_len_] ^= flip;
-        EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
-                      ZX_ERR_IO_DATA_INTEGRITY);
-        break;
-      }
-      case 3: {
-        // Flip a bit in tree (if large enough to have a tree)
-        if (tree_len_ != 0) {
-          tree_[rand() % ((data_len_ / kNodeSize) * digest::kSha256Length)] ^= flip;
-          EXPECT_STATUS(
-              MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
-              ZX_ERR_IO_DATA_INTEGRITY);
-        }
-        break;
-      }
-      default:
-        // Normal verification without modification
-        EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_));
-        break;
+      // Valid, added byte by byte
+      EXPECT_OK(creator.Append(&data[data_len - 1], 1));
+    }
+    EXPECT_BYTES_EQ(root, digest.get(), sizeof(root));
+    // Adding zero length has no effect
+    EXPECT_OK(creator.Append(nullptr, 0));
+    EXPECT_BYTES_EQ(root, digest.get(), sizeof(root));
+    // Too much
+    EXPECT_STATUS(creator.Append(data.get(), 1), ZX_ERR_INVALID_ARGS);
+    // Static
+    std::unique_ptr<uint8_t[]> tmp_tree;
+    EXPECT_OK(MerkleTreeCreator::Create(data.get(), data_len, &tmp_tree, &tree_len, &digest));
+    EXPECT_EQ(tree_len, kTreeParams[i].tree_len);
+    EXPECT_BYTES_EQ(digest.get(), root, sizeof(root));
+  }
+}
+
+TEST(MerkleTree, Verify) {
+  srand(zxtest::Runner::GetInstance()->random_seed());
+  MerkleTreeCreator creator;
+  MerkleTreeVerifier verifier;
+  std::unique_ptr<uint8_t[]> data;
+  std::unique_ptr<uint8_t[]> tree;
+  ASSERT_NO_FATAL_FAILURES(MaxDataAndTree(&data, &tree));
+  uint8_t root[kSha256Length];
+  Digest digest;
+  size_t flip;
+  for (size_t i = 0; i < kNumTreeParams; ++i) {
+    size_t data_len = kTreeParams[i].data_len;
+    size_t tree_len = kTreeParams[i].tree_len;
+    ASSERT_OK(digest.Parse(kTreeParams[i].digest));
+    ASSERT_OK(creator.SetDataLength(data_len));
+    ASSERT_OK(creator.SetTree(tree.get(), tree_len, root, sizeof(root)));
+    ASSERT_OK(creator.Append(data.get(), data_len));
+    // Verify all
+    EXPECT_OK(verifier.SetDataLength(data_len));
+    EXPECT_OK(verifier.SetTree(tree.get(), tree_len, root, sizeof(root)));
+    EXPECT_OK(verifier.Verify(data.get(), data_len, 0));
+    // Empty range is trivially true
+    EXPECT_OK(verifier.Verify(nullptr, 0, 0));
+    // Flip a byte in the root
+    flip = rand() % sizeof(root);
+    root[flip] ^= 0xff;
+    EXPECT_STATUS(verifier.Verify(data.get(), data_len, 0), ZX_ERR_IO_DATA_INTEGRITY);
+    root[flip] ^= 0xff;
+    // Flip a byte in the tree
+    if (tree_len > 0) {
+      flip = rand() % tree_len;
+      tree[flip] ^= 0xff;
+      EXPECT_STATUS(verifier.Verify(data.get(), data_len, 0), ZX_ERR_IO_DATA_INTEGRITY);
+      tree[flip] ^= 0xff;
+    }
+
+    for (size_t data_off = 0; data_off < data_len; data_off += kNodeSize) {
+      // Unaligned ( +2 doesn't line up with any node boundarys or data ends in kTreeParams)
+      uint8_t *buf = &data[data_off];
+      size_t buf_len = fbl::min(data_len - data_off, kNodeSize);
+      EXPECT_STATUS(verifier.Verify(buf, buf_len + 2, data_off), ZX_ERR_INVALID_ARGS);
+      // Verify each node
+      EXPECT_OK(verifier.Verify(buf, buf_len, data_off));
+      // Flip a byte in the root
+      flip = rand() % sizeof(root);
+      root[flip] ^= 0xff;
+      EXPECT_STATUS(verifier.Verify(buf, buf_len, data_off), ZX_ERR_IO_DATA_INTEGRITY);
+      root[flip] ^= 0xff;
+    }
+    // Flip a byte in data; (statically) verify only that node fails
+    if (data_len != 0) {
+      flip = rand() % data_len;
+      data[flip] ^= 0xff;
+      size_t data_off = flip;
+      size_t buf_len = 1;
+      EXPECT_OK(verifier.Align(&data_off, &buf_len));
+      uint8_t *buf = &data[data_off];
+      const uint8_t *after = buf + buf_len;
+      size_t after_off = data_off + buf_len;
+      size_t after_len = data_len - after_off;
+      EXPECT_OK(MerkleTreeVerifier::Verify(data.get(), data_off, 0, data_len, tree.get(), tree_len,
+                                           digest));
+      EXPECT_STATUS(MerkleTreeVerifier::Verify(buf, buf_len, data_off, data_len, tree.get(),
+                                               tree_len, digest),
+                    ZX_ERR_IO_DATA_INTEGRITY);
+      EXPECT_OK(MerkleTreeVerifier::Verify(after, after_len, after_off, data_len, tree.get(),
+                                           tree_len, digest));
+      data[flip] ^= 0xff;
     }
   }
 }
 
-}  // namespace
+}  // namespace testing
+}  // namespace digest

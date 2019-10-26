@@ -27,7 +27,8 @@
 namespace {
 
 using digest::Digest;
-using digest::MerkleTree;
+using digest::MerkleTreeCreator;
+using digest::MerkleTreeVerifier;
 using fs_test_utils::Fixture;
 using fs_test_utils::FixtureOptions;
 using fs_test_utils::PerformanceTestOptions;
@@ -136,22 +137,17 @@ bool MakeBlob(fbl::String fs_path, size_t blob_size, unsigned int* seed,
   info->size_data = blob_size;
 
   // Generate the Merkle Tree
-  info->size_merkle = MerkleTree::GetTreeLength(blob_size);
-  if (info->size_merkle == 0) {
-    info->merkle = nullptr;
-  } else {
-    info->merkle.reset(new (&ac) char[info->size_merkle]);
-    ASSERT_EQ(ac.check(), true);
-  }
   Digest digest;
-  ASSERT_EQ(MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0], info->size_merkle,
-                               &digest),
+  fbl::unique_ptr<uint8_t[]> tree;
+  ASSERT_EQ(MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree,
+                                      &info->size_merkle, &digest),
             ZX_OK, "Couldn't create Merkle Tree");
+  info->merkle.reset(reinterpret_cast<char *>(tree.release()));
   info->path.AppendPrintf("%s/%s", fs_path.c_str(), digest.ToString().c_str());
 
   // Sanity-check the merkle tree
-  ASSERT_EQ(MerkleTree::Verify(&info->data[0], info->size_data, &info->merkle[0], info->size_merkle,
-                               0, info->size_data, digest),
+  ASSERT_EQ(MerkleTreeVerifier::Verify(info->data.get(), info->size_data, 0, info->size_data,
+                                       info->merkle.get(), info->size_merkle, digest),
             ZX_OK, "Failed to validate Merkle Tree");
 
   *out = std::move(info);
@@ -357,7 +353,7 @@ bool RunBenchmark(int argc, char** argv) {
                                         size.c_str(), blob_count);
       // There should be enough space for each blob, the merkle tree nodes, and the inodes.
       api_test.required_disk_space =
-          blob_count * (blob_size + 2 * MerkleTree::kNodeSize + blobfs::kBlobfsInodeSize);
+          blob_count * (blob_size + 2 * digest::kDefaultNodeSize + blobfs::kBlobfsInodeSize);
       api_test.test_fn = [test_index, &blobfs_tests](perftest::RepeatState* state,
                                                      fs_test_utils::Fixture* fixture) {
         return blobfs_tests[test_index].ApiTest(state, fixture);
@@ -375,7 +371,7 @@ bool RunBenchmark(int argc, char** argv) {
             return blobfs_tests[test_index].ReadTest(order, state, fixture);
           };
           read_test.required_disk_space =
-              blob_count * (blob_size + 2 * MerkleTree::kNodeSize + blobfs::kBlobfsInodeSize);
+              blob_count * (blob_size + 2 * digest::kDefaultNodeSize + blobfs::kBlobfsInodeSize);
           testcase.tests.push_back(std::move(read_test));
         }
       }

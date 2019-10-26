@@ -25,7 +25,7 @@
 namespace {
 
 using digest::Digest;
-using digest::MerkleTree;
+using digest::MerkleTreeCreator;
 
 struct FileEntry {
   std::string filename;
@@ -86,15 +86,6 @@ void handle_entry(FileEntry* entry) {
   }
 
   // Buffer one intermediate node's worth at a time.
-  fbl::unique_ptr<uint8_t[]> tree;
-  Digest digest;
-  size_t len = MerkleTree::GetTreeLength(info.st_size);
-  fbl::AllocChecker ac;
-  tree.reset(new (&ac) uint8_t[len]);
-  if (!ac.check()) {
-    perror("cannot allocate");
-    exit(1);
-  }
   void* data = nullptr;
   if (info.st_size != 0) {
     data = mmap(NULL, info.st_size, PROT_READ, MAP_SHARED, fd.get(), 0);
@@ -103,7 +94,10 @@ void handle_entry(FileEntry* entry) {
     perror("mmap");
     exit(1);
   }
-  zx_status_t rc = MerkleTree::Create(data, info.st_size, tree.get(), len, &digest);
+  std::unique_ptr<uint8_t[]> tree;
+  size_t len;
+  Digest digest;
+  zx_status_t rc = MerkleTreeCreator::Create(data, info.st_size, &tree, &len, &digest);
   if (info.st_size != 0 && munmap(data, info.st_size) != 0) {
     perror("munmap");
     exit(1);

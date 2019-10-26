@@ -42,7 +42,8 @@ namespace blobfs {
 namespace {
 
 using digest::Digest;
-using digest::MerkleTree;
+using digest::MerkleTreeCreator;
+using digest::MerkleTreeVerifier;
 
 // Blob's vmo names have following pattern
 // "blob-1abc8" or "compressedBlob-5c"
@@ -63,19 +64,22 @@ zx_status_t Blob::Verify() const {
   const void* data = inode_.blob_size ? GetData() : nullptr;
   const void* tree = inode_.blob_size ? GetMerkle() : nullptr;
   const uint64_t data_size = inode_.blob_size;
-  const uint64_t merkle_size = MerkleTree::GetTreeLength(data_size);
+
   // TODO(smklein): We could lazily verify more of the VMO if
   // we could fault in pages on-demand.
   //
   // For now, we aggressively verify the entire VMO up front.
-  Digest digest(GetKey());
-  zx_status_t status = MerkleTree::Verify(data, data_size, tree, merkle_size, 0, data_size, digest);
-  blobfs_->Metrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
-
-  if (status != ZX_OK) {
+  MerkleTreeVerifier mtv;
+  zx_status_t status = mtv.SetDataLength(data_size);
+  size_t merkle_size = mtv.GetTreeLength();
+  if (status != ZX_OK ||
+      (status = mtv.SetTree(tree, merkle_size, GetKey(), digest::kSha256Length)) != ZX_OK ||
+      (status = mtv.Verify(data, data_size, 0)) != ZX_OK) {
+    Digest digest(GetKey());
     FS_TRACE_ERROR("blobfs verify(%s) Failure: %s\n", digest.ToString().c_str(),
                    zx_status_get_string(status));
   }
+  blobfs_->Metrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
 
   return status;
 }
@@ -517,25 +521,30 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     VectorExtentIterator extent_iter(write_info_->extents);
     BlockIterator block_iter(&extent_iter);
 
-    // TODO(smklein): As an optimization, use the CreateInit/Update/Final
-    // methods to create the merkle tree as we write data, rather than
-    // waiting until the data is fully downloaded to create the tree.
-    size_t merkle_size = MerkleTree::GetTreeLength(inode_.blob_size);
     fs::Duration generation_time;
     std::vector<fit::promise<void, zx_status_t>> promises;
     fs::DataStreamer streamer(blobfs_->journal(), blobfs_->WritebackCapacity());
 
+    MerkleTreeCreator mtc;
+    if ((status = mtc.SetDataLength(inode_.blob_size)) != ZX_OK) {
+      return status;
+    }
+    size_t merkle_size = mtc.GetTreeLength();
     if (merkle_size > 0) {
-      Digest digest;
-      void* merkle_data = GetMerkle();
-      const void* blob_data = GetData();
       // Tracking generation time.
       fs::Ticker ticker(blobfs_->Metrics().Collecting());
 
-      if ((status = MerkleTree::Create(blob_data, inode_.blob_size, merkle_data, merkle_size,
-                                       &digest)) != ZX_OK) {
+      // TODO(smklein): As an optimization, use the Append method to create the merkle tree as we
+      // write data, rather than waiting until the data is fully downloaded to create the tree.
+      uint8_t root[digest::kSha256Length];
+      if ((status = mtc.SetTree(GetMerkle(), merkle_size, root, sizeof(root))) != ZX_OK ||
+          (status = mtc.Append(GetData(), inode_.blob_size)) != ZX_OK) {
         return status;
-      } else if (digest != GetKey()) {
+      }
+
+      Digest expected(GetKey());
+      Digest actual(root);
+      if (expected != actual) {
         // Downloaded blob did not match provided digest.
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
