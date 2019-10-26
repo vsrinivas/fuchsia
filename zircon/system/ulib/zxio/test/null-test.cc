@@ -49,12 +49,13 @@ TEST(NullTest, Basic) {
 
   zxio_t* result = nullptr;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_open(&io, 0u, 0u, "hello", &result));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_open_async(&io, 0u, 0u, "hello", ZX_HANDLE_INVALID));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zxio_open_async(&io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_unlink(&io, "hello"));
 
   zxio_t io2;
   zxio_null_init(&io2);
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_rename(&io, "one", &io2, "two"));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_rename(&io, "one", ZX_HANDLE_INVALID, "two"));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, "one", &io2, "two"));
 
   zxio_dirent_iterator_t iter = {};

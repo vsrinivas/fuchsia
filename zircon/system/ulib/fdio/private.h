@@ -196,6 +196,40 @@ int fdio_pipe_pair(fdio_t** a, fdio_t** b);
 
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
 
+// Validates a |path| argument.
+//
+// Returns ZX_OK if |path| is non-null and less than |PATH_MAX| in length
+// (excluding the null terminator). Upon success, the length of the path is
+// returned via |out_length|.
+//
+// Otherwise, returns |ZX_ERR_INVALID_ARGS|.
+zx_status_t fdio_validate_path(const char* path, size_t* out_length);
+
+// Create an |fdio_t| from a |handle| and an |info|.
+//
+// Uses |info| to determine what kind of |fdio_t| to create.
+//
+// Upon success, |out_io| receives ownership of all handles.
+//
+// Upon failure, consumes all handles.
+zx_status_t fdio_from_node_info(zx::channel handle, llcpp::fuchsia::io::NodeInfo info,
+                                fdio_t** out_io);
+
+// Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
+//
+// Uses the contents of the event to determine what kind of |fdio_t| to create.
+//
+// Upon success, |out_io| receives ownership of all handles.
+//
+// Upon failure, consumes all handles.
+zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io);
+
+// Clones the |node| connection and packages the new connection into a |fdio_t|.
+// The new connection has the same |fuchsia.io| rights as the original connection.
+//
+// Upon failure, |out_io| is not updated and |node| is not consumed.
+zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io);
+
 // Open |path| relative to |dir| as an |fdio_t|.
 //
 // |dir| must be a channel that implements the |fuchsia.io.Directory| protocol.

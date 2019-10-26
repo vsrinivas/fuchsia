@@ -12,6 +12,7 @@
 #include <poll.h>
 #include <stdarg.h>
 #include <sys/ioctl.h>
+#include <zircon/device/vfs.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -19,6 +20,38 @@
 #include "private.h"
 
 namespace fio = ::llcpp::fuchsia::io;
+
+static zx_status_t fdio_zxio_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
+                                  fdio_t** out_io) {
+  size_t length;
+  zx_status_t status = fdio_validate_path(path, &length);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::channel handle, request;
+  status = zx::channel::create(0, &handle, &request);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zxio_t* z = fdio_get_zxio(io);
+  status = zxio_open_async(z, flags, mode, path, length, request.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (flags & ZX_FS_FLAG_DESCRIBE) {
+    return fdio_from_on_open_event(std::move(handle), out_io);
+  }
+
+  fdio_t* remote_io = fdio_remote_create(handle.release(), 0);
+  if (remote_io == nullptr) {
+    return ZX_ERR_NO_RESOURCES;
+  }
+  *out_io = remote_io;
+  return ZX_OK;
+}
 
 zx_status_t fdio_zxio_close(fdio_t* io) {
   zxio_t* z = fdio_get_zxio(io);
@@ -99,6 +132,29 @@ static zx_status_t fdio_zxio_set_flags(fdio_t* io, uint32_t flags) {
   return zxio_flags_set(z, flags);
 }
 
+static zx_status_t fdio_zxio_get_token(fdio_t* io, zx_handle_t* out_token) {
+  zxio_t* z = fdio_get_zxio(io);
+  return zxio_token_get(z, out_token);
+}
+
+static zx_status_t fdio_zxio_rename(fdio_t* io, const char* src, size_t srclen,
+                                    zx_handle_t dst_token, const char* dst, size_t dstlen) {
+  zxio_t* z = fdio_get_zxio(io);
+  return zxio_rename(z, src, dst_token, dst);
+}
+
+static zx_status_t fdio_zxio_get_vmo(fdio_t* io, int flags, zx::vmo* out_vmo) {
+  zxio_t* z = fdio_get_zxio(io);
+  zx::vmo vmo;
+  size_t vmo_size;
+  zx_status_t status = zxio_vmo_get(z, flags, vmo.reset_and_get_address(), &vmo_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_vmo = std::move(vmo);
+  return ZX_OK;
+}
+
 // Generic ---------------------------------------------------------------------
 
 static fdio_ops_t fdio_zxio_ops = {
@@ -155,12 +211,6 @@ fdio_t* fdio_null_create(void) {
 
 static zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) { return (zxio_remote_t*)fdio_get_zxio(io); }
 
-static zx_status_t fdio_zxio_remote_open(fdio_t* io, const char* path, uint32_t flags,
-                                         uint32_t mode, fdio_t** out) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  return fdio_remote_open_at(rio->control, path, flags, mode, out);
-}
-
 static void fdio_zxio_remote_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
                                         zx_signals_t* _signals) {
   zxio_remote_t* rio = fdio_get_zxio_remote(io);
@@ -183,41 +233,6 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
     events |= POLLRDHUP;
   }
   *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
-}
-
-static zx_status_t fdio_zxio_remote_get_vmo(fdio_t* io, int flags, zx::vmo* out_vmo) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  auto result = fio::File::Call::GetBuffer(zx::unowned_channel(rio->control), flags);
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
-    return status;
-  }
-  fio::File::GetBufferResponse* response = result.Unwrap();
-  status = response->s;
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (response->buffer == nullptr) {
-    return ZX_ERR_IO;
-  }
-  *out_vmo = std::move(response->buffer->vmo);
-  return ZX_OK;
-}
-
-static zx_status_t fdio_zxio_remote_get_token(fdio_t* io, zx_handle_t* out_token) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  auto result = fio::Directory::Call::GetToken(zx::unowned_channel(rio->control));
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
-    return status;
-  }
-  fio::Directory::GetTokenResponse* response = result.Unwrap();
-  status = response->s;
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out_token = response->token.release();
-  return ZX_OK;
 }
 
 static zx_status_t fdio_zxio_remote_readdir(fdio_t* io, void* ptr, size_t max, size_t* out_actual) {
@@ -261,15 +276,6 @@ static zx_status_t fdio_zxio_remote_unlink(fdio_t* io, const char* path, size_t 
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
-static zx_status_t fdio_zxio_remote_rename(fdio_t* io, const char* src, size_t srclen,
-                                           zx_handle_t dst_token, const char* dst, size_t dstlen) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  auto result =
-      fio::Directory::Call::Rename(zx::unowned_channel(rio->control), fidl::StringView(src, srclen),
-                                   zx::handle(dst_token), fidl::StringView(dst, dstlen));
-  return result.ok() ? result.Unwrap()->s : result.status();
-}
-
 static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t srclen,
                                          zx_handle_t dst_token, const char* dst, size_t dstlen) {
   zxio_remote_t* rio = fdio_get_zxio_remote(io);
@@ -281,21 +287,21 @@ static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t src
 
 static fdio_ops_t fdio_zxio_remote_ops = {
     .close = fdio_zxio_close,
-    .open = fdio_zxio_remote_open,
+    .open = fdio_zxio_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
     .wait_begin = fdio_zxio_remote_wait_begin,
     .wait_end = fdio_zxio_remote_wait_end,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_zxio_remote_get_vmo,
-    .get_token = fdio_zxio_remote_get_token,
+    .get_vmo = fdio_zxio_get_vmo,
+    .get_token = fdio_zxio_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
     .readdir = fdio_zxio_remote_readdir,
     .rewind = fdio_zxio_remote_rewind,
     .unlink = fdio_zxio_remote_unlink,
     .truncate = fdio_zxio_truncate,
-    .rename = fdio_zxio_remote_rename,
+    .rename = fdio_zxio_rename,
     .link = fdio_zxio_remote_link,
     .get_flags = fdio_zxio_get_flags,
     .set_flags = fdio_zxio_set_flags,

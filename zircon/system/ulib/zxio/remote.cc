@@ -297,10 +297,10 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo
 }
 
 zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
-                                   zx_handle_t request) {
+                                   size_t path_len, zx_handle_t request) {
   Remote rio(io);
   auto result = fio::Directory::Call::Open(
-      rio.control(), flags, mode, fidl::StringView(path, strlen(path)), zx::channel(request));
+      rio.control(), flags, mode, fidl::StringView(path, path_len), zx::channel(request));
   return result.status();
 }
 
@@ -490,6 +490,7 @@ static constexpr zxio_ops_t zxio_file_ops = []() {
   ops.truncate = zxio_remote_truncate;
   ops.flags_get = zxio_remote_flags_get;
   ops.flags_set = zxio_remote_flags_set;
+  ops.vmo_get = zxio_remote_vmo_get;
   return ops;
 }();
 

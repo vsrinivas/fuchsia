@@ -184,6 +184,16 @@ zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags) {
   return zio->ops->flags_set(io, flags);
 }
 
+zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token) {
+  zxio_internal_t* zio = (zxio_internal_t*)io;
+  return zio->ops->token_get(io, out_token);
+}
+
+zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_t* out_size) {
+  zxio_internal_t* zio = (zxio_internal_t*)io;
+  return zio->ops->vmo_get(io, flags, out_vmo, out_size);
+}
+
 zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -203,9 +213,9 @@ zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const ch
 }
 
 zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
-                            zx_handle_t request) {
+                            size_t path_len, zx_handle_t request) {
   zxio_internal_t* zio = (zxio_internal_t*)directory;
-  return zio->ops->open_async(directory, flags, mode, path, request);
+  return zio->ops->open_async(directory, flags, mode, path, path_len, request);
 }
 
 zx_status_t zxio_unlink(zxio_t* directory, const char* path) {
@@ -213,9 +223,10 @@ zx_status_t zxio_unlink(zxio_t* directory, const char* path) {
   return zio->ops->unlink(directory, path);
 }
 
-zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path, zxio_t* new_directory,
-                        const char* new_path) {
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
+                        zx_handle_t new_directory_token, const char* new_path) {
+  zxio_internal_t* zio = (zxio_internal_t*)old_directory;
+  return zio->ops->rename(old_directory, old_path, new_directory_token, new_path);
 }
 
 zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zxio_t* dst_directory,

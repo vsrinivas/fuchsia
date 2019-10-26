@@ -51,14 +51,7 @@ static_assert(fio::DEVICE_SIGNAL_HANGUP == fdevice::DEVICE_SIGNAL_HANGUP);
 // The |mode| argument used for |fuchsia.io.Directory/Open| calls.
 #define FDIO_CONNECT_MODE ((uint32_t)0755)
 
-// Validates a |path| argument.
-//
-// Returns ZX_OK if |path| is non-null and less than |PATH_MAX| in length
-// (excluding the null terminator). Upon success, the length of the path is
-// returned via |out_length|.
-//
-// Otherwise, returns |ZX_ERR_INVALID_ARGS|.
-static zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
+zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
   if (path == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -248,14 +241,7 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
   return fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request)).status();
 }
 
-// Create an |fdio_t| from a |handle| and an |info|.
-//
-// Uses |info| to determine what kind of |fdio_t| to create.
-//
-// Upon success, |out_io| receives ownership of all handles.
-//
-// Upon failure, consumes all handles.
-static zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t** out_io) {
+zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t** out_io) {
   if (!handle.is_valid()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -381,6 +367,48 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
   return ZX_OK;
 }
 
+// Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
+zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
+  fio::NodeInfo node_info;
+  zx_status_t on_open_status = ZX_OK;
+  zx_status_t status = fio::Directory::Call::HandleEvents(
+      zx::unowned_channel(channel),
+      fio::Directory::EventHandlers{
+          .on_open =
+              [&node_info, &on_open_status](zx_status_t status, fio::NodeInfo* info) {
+                on_open_status = status;
+                if (info) {
+                  node_info = std::move(*info);
+                }
+                return ZX_OK;
+              },
+          .unknown = [] { return ZX_ERR_IO; }});
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (on_open_status != ZX_OK) {
+    return on_open_status;
+  }
+  return fdio_from_node_info(std::move(channel), std::move(node_info), out_io);
+}
+
+zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io) {
+  zx::channel handle, request;
+  zx_status_t status = zx::channel::create(0, &handle, &request);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = fio::Node::Call::Clone(zx::unowned_channel(node),
+                                  fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
+                                  std::move(request)).status();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return fdio_from_on_open_event(std::move(handle), out_io);
+}
+
 zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flags, uint32_t mode,
                                 fdio_t** out_io) {
   size_t length;
@@ -403,27 +431,7 @@ zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flag
   }
 
   if (flags & ZX_FS_FLAG_DESCRIBE) {
-    fio::NodeInfo node_info;
-    zx_status_t on_open_status = ZX_OK;
-    status = fio::Directory::Call::HandleEvents(
-        zx::unowned_channel(handle),
-        fio::Directory::EventHandlers{
-            .on_open =
-                [&node_info, &on_open_status](zx_status_t status, fio::NodeInfo* info) {
-                  on_open_status = status;
-                  if (info) {
-                    node_info = std::move(*info);
-                  }
-                  return ZX_OK;
-                },
-            .unknown = [] { return ZX_ERR_IO; }});
-    if (status != ZX_OK) {
-      return status;
-    }
-    if (on_open_status != ZX_OK) {
-      return on_open_status;
-    }
-    return fdio_from_node_info(std::move(handle), std::move(node_info), out_io);
+    return fdio_from_on_open_event(std::move(handle), out_io);
   }
 
   fdio_t* io = fdio_remote_create(handle.release(), 0);

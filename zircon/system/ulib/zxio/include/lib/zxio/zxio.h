@@ -190,6 +190,20 @@ zx_status_t zxio_flags_get(zxio_t* io, uint32_t* out_flags);
 // See io.fidl for the available |flags|.
 zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags);
 
+// Gets a token associated with a directory connection.
+//
+// This token can be used to identify a directory at a later time, for use
+// in operations involving multiple nodes e.g. rename.
+//
+// See the io.fidl documentation on |fuchsia.io/Directory.GetToken|.
+zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token);
+
+// Acquires a VMO representing this file, if there is one, with the requested
+// access rights.
+//
+// |flags| are |fuchsia.io/VMO_FLAG_*|.
+zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_t* out_size);
+
 // Get a read-only VMO containing the whole contents of the file.
 //
 // This function creates a clone of the underlying VMO when possible. If the
@@ -229,17 +243,17 @@ zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const ch
 //
 // See io.fidl for the available |flags| and |mode|.
 zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
-                            zx_handle_t request);
+                            size_t path_len, zx_handle_t request);
 
 // Remove an file relative to the given directory.
 zx_status_t zxio_unlink(zxio_t* directory, const char* path);
 
 // Attempts to rename |old_path| relative to |old_directory| to |new_path|
-// relative to |new_directory|.
+// relative to the directory represented by |new_directory_token|.
 //
-// |old_directory| and |new_directory| may be aliased.
-zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path, zxio_t* new_directory,
-                        const char* new_path);
+// |old_directory| and |new_directory_token| may be aliased.
+zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
+                        zx_handle_t new_directory_token, const char* new_path);
 
 // Attempts to link |dst_path| relative to |dst_directory| to |src_path|
 // relative to |src_directory|.

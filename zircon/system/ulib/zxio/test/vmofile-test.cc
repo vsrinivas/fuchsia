@@ -69,7 +69,8 @@ TEST(VmoFileTest, Basic) {
 
   zxio_t* result = nullptr;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_open(io, 0u, 0u, "hello", &result));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_open_async(io, 0u, 0u, "hello", ZX_HANDLE_INVALID));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zxio_open_async(io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_unlink(io, "hello"));
 
   ASSERT_OK(zxio_close(io));

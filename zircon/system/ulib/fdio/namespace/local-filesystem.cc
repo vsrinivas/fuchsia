@@ -381,7 +381,7 @@ fdio_t* fdio_namespace::OpenRoot() const {
   lock.release();
 
   fdio_t* io;
-  zx_status_t status = fdio_remote_open_at(remote.get(), "", O_RDWR, 0, &io);
+  zx_status_t status = fdio_remote_clone(remote.get(), &io);
   if (status != ZX_OK) {
     return nullptr;
   }

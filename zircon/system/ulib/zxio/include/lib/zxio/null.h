@@ -51,7 +51,7 @@ zx_status_t zxio_default_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vm
 zx_status_t zxio_default_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                               zxio_t** out_io);
 zx_status_t zxio_default_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
-                                    zx_handle_t request);
+                                    size_t path_len, zx_handle_t request);
 zx_status_t zxio_default_unlink(zxio_t* io, const char* path);
 zx_status_t zxio_default_token_get(zxio_t* io, zx_handle_t* out_token);
 zx_status_t zxio_default_rename(zxio_t* io, const char* src_path, zx_handle_t dst_token,
