@@ -162,6 +162,12 @@ void Bus::Subscribe(const std::string& clientName, fidl::InterfaceRequest<Bus::F
     clients_.erase(clientName);
   });
 
+  // For every currently existing client, fire an OnClientAttachedEvent, so the client can get a
+  // view on all the other clients that are on the bus:
+  for (auto& c : clients_) {
+    binding->OnClientAttached(c.first);
+  }
+
   // notify other clients of new client
   NotifyClientAttached(clientName);
 

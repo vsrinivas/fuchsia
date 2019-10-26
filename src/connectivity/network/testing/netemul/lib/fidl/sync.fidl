@@ -27,6 +27,8 @@ protocol Bus {
     /// Get list of named clients.
     GetClients() -> (vector<string> clients);
     /// Notifies a client is now attached.
+    /// Upon subscribing to a bus, a client will always receive an `OnClientAttached` event for each
+    /// client present on the bus at the moment it joined.
     -> OnClientAttached(string client);
     /// Notifies a client was detached.
     -> OnClientDetached(string client);

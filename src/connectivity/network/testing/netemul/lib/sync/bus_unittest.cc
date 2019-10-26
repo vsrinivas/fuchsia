@@ -10,7 +10,7 @@
 #define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
 #define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
 
-#define WAIT_FOR_OK(ok) ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))
+#define WAIT_FOR_OK(ok) RunLoopUntil([&ok]() { return ok; })
 #define WAIT_FOR_OK_AND_RESET(ok) \
   WAIT_FOR_OK(ok);                \
   ok = false
@@ -176,9 +176,9 @@ class BusTest : public TestWithEnvironment {
     bool published = false;
     // send whatever on the bus to make sure wait is in effect.
     (*c2)->EnsurePublish(Bus::FEvent(), [&published]() { published = true; });
-    WAIT_FOR_OK(published) << test_caller;
+    WAIT_FOR_OK(published);
     ASSERT_OK((*c1)->EnsurePublish(std::move(publish)));
-    WAIT_FOR_OK(got_callback) << test_caller;
+    WAIT_FOR_OK(got_callback);
   }
 
   std::unique_ptr<EnclosingEnvironment> test_env_;
@@ -267,8 +267,11 @@ TEST_F(BusTest, ClientObservation) {
 
   bool ok = false;
   cli1.events().OnClientAttached = [&ok](fidl::StringPtr client) {
-    ASSERT_EQ(client, "c2");
-    ok = true;
+    if (client == "c2") {
+      ok = true;
+    } else {
+      ASSERT_EQ(client, "c3");
+    }
   };
   cli1.events().OnClientDetached = [&ok](fidl::StringPtr client) {
     ASSERT_EQ(client, "c2");
@@ -296,7 +299,7 @@ TEST_F(BusTest, ClientObservation) {
   ASSERT_OK(cli3->GetClients(&clients));
   ASSERT_TRUE(VectorSetEquals(clients, {"c1", "c3"}));
 
-  // make sure to unbind cli1 first
+  // make sure to unbind cli1 first so we don't get the detaching event of cli3
   cli1.Unbind();
 }
 
@@ -476,6 +479,36 @@ TEST_F(BusTest, EventWaitingEquality) {
 
   EXPECT_EQ(evt_counter,
             8);  // check that all events actually made into the event callback
+}
+
+TEST_F(BusTest, OnClientAttachedFiresForPreviousClients) {
+  SyncManagerSync bm;
+  GetSyncManager(bm.NewRequest());
+
+  BusSync b1;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "b1", b1.NewRequest()));
+  BusSync b2;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "b2", b2.NewRequest()));
+
+  bool saw_b1 = false;
+  bool saw_b2 = false;
+  bool ok = false;
+  BusAsync cli;
+  cli.events().OnClientAttached = [&saw_b1, &saw_b2, &ok](fidl::StringPtr client) {
+    if (client == "b1") {
+      ASSERT_FALSE(saw_b1);
+      saw_b1 = true;
+    } else if (client == "b2") {
+      ASSERT_FALSE(saw_b2);
+      saw_b2 = true;
+    } else {
+      FAIL() << "Unexpected client " << client;
+    }
+
+    ok = saw_b1 && saw_b2;
+  };
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "cli", cli.NewRequest()));
+  WAIT_FOR_OK(ok);
 }
 
 }  // namespace testing
