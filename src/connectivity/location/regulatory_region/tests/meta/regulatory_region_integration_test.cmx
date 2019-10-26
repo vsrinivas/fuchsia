@@ -1,17 +1,13 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.location.namedplace.RegulatoryRegionConfigurator": "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx"
-            }
-        }
-    },
     "program": {
         "binary": "test/regulatory_region_integration_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.location.namedplace.RegulatoryRegionConfigurator"
+            "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+            "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

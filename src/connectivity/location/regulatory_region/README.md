@@ -1,8 +1,10 @@
 # Regulatory Region Service
 
-Reviewed on: 2019-09-27
+Reviewed on: 2019-10-18
 
-The Regulatory Region Service provides the ability to _set_ the regulatory region for a device.
+The Regulatory Region Service provides the abilities to
+* set the regulatory region, and
+* get updates to the value of the regulatory region.
 
 ## Building
 
@@ -12,16 +14,20 @@ The Regulatory Region Service provides the ability to _set_ the regulatory regio
 
 ## Running
 
-The Regulatory Region Service provides the `fuchsia.location.named_place.RegulatoryRegionConfigurator` service.
+The Regulatory Region Service provides the following protocols:
+* `fuchsia.location.named_place.RegulatoryRegionConfigurator`
+* `fuchsia.location.named_place.RegulatoryRegionWatcher`
 
 ## Testing
 
-* This component does not have any logic, so it doesn't have unit tests.
+* Unit tests can be run with `fx run-test regulatory_region_tests`.
 * Integration tests can be run with `fx run-test regulatory_region_integration_test`.
 
 ## Source layout
 
 * The entrypoint is located in `src/main.rs`.
+* Modules are enumerated in `src/lib.rs`.
+* Unit tests are placed in the same file as the implementation code that they exercise.
 * Integration tests are located in `tests/`.
 
 ## Editing
