@@ -5,6 +5,8 @@
 use std::convert::TryInto;
 use std::os::unix::io::AsRawFd;
 
+use failure::ResultExt;
+use fuchsia_zircon as zx;
 use futures::io::{AsyncReadExt, AsyncWriteExt};
 use futures::stream::{StreamExt, TryStreamExt};
 use net2::TcpStreamExt;
@@ -84,33 +86,25 @@ async fn main() -> Result<(), failure::Error> {
 
     match sub_command {
         SubCommand::Client(Client { remote }) => {
+            println!("Running client.");
             let bus = bus_subscribe(&sync_manager, CLIENT_NAME)?;
-            let stream = bus.take_event_stream().try_filter_map(|event| {
-                async move {
-                    Ok(match event {
-                        fidl_fuchsia_netemul_sync::BusEvent::OnClientAttached { client } => {
-                            match client.as_str() {
-                                SERVER_NAME => Some(()),
-                                _client => None,
-                            }
-                        }
-                        fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data: _ }
-                        | fidl_fuchsia_netemul_sync::BusEvent::OnClientDetached { client: _ } => {
-                            None
-                        }
-                    })
-                }
-            });
-            futures::pin_mut!(stream);
-            let () = stream
-                .next()
+            // Wait for the server to be attached to the event bus, meaning it's
+            // already bound and listening.
+            let _ = bus
+                .wait_for_clients(
+                    &mut Some(SERVER_NAME).into_iter(),
+                    zx::Time::INFINITE.into_nanos(),
+                )
                 .await
-                .ok_or(failure::err_msg("stream ended before server attached"))??;
+                .context("Failed to observe server joining the bus")?;
 
             let sockaddr = std::net::SocketAddr::from((remote, PORT));
 
+            println!("Connecting keepalive and retransmit sockets...");
             let keepalive_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
+            println!("Connected keepalive.");
             let mut retransmit_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
+            println!("Connected retransmit.");
 
             // Now that we have our connections, partition the network.
             {
@@ -142,6 +136,7 @@ async fn main() -> Result<(), failure::Error> {
                     .await?;
                 let () = fuchsia_zircon::ok(status)?;
             }
+            println!("Network partitioned.");
 
             let connect_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?;
             let connect_timeout = async {
@@ -164,6 +159,7 @@ async fn main() -> Result<(), failure::Error> {
             //
             // TODO(tamird): use into_iter after
             // https://github.com/rust-lang/rust/issues/25725.
+            println!("Setting keepalive options.");
             for name in [libc::TCP_KEEPCNT, libc::TCP_KEEPINTVL].iter().cloned() {
                 let value = 1u32;
                 // This is safe because `setsockopt` does not retain memory passed to it.
@@ -203,6 +199,7 @@ async fn main() -> Result<(), failure::Error> {
                     ))
                 });
 
+            println!("Waiting for all three timeouts...");
             let timeouts =
                 futures::future::try_join3(connect_timeout, keepalive_timeout, retransmit_timeout);
             futures::pin_mut!(timeouts);
@@ -218,11 +215,12 @@ async fn main() -> Result<(), failure::Error> {
             Ok(())
         }
         SubCommand::Server(Server {}) => {
+            println!("Starting server...");
             let _listener = std::net::TcpListener::bind(&std::net::SocketAddr::from((
                 std::net::Ipv4Addr::UNSPECIFIED,
                 PORT,
             )))?;
-
+            println!("Server bound.");
             let bus = bus_subscribe(&sync_manager, SERVER_NAME)?;
             let stream = bus.take_event_stream().try_filter_map(|event| {
                 async move {
@@ -240,6 +238,7 @@ async fn main() -> Result<(), failure::Error> {
                     })
                 }
             });
+            println!("Waiting for client to detach.");
             futures::pin_mut!(stream);
             let () = stream
                 .next()
