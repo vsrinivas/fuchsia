@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### start Fuchsia System Recovery in qem
+### start Fuchsia System Recovery in qemu
 ##
 ## Run "fx build recovery_image" first.
 
