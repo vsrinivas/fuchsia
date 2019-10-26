@@ -59,6 +59,7 @@ else
 encoder
 ensure_values_instantiated
 enum
+empty
 err
 explicit
 export
@@ -97,6 +98,7 @@ int32
 int64
 int8
 interface
+internal_tag
 is
 let
 lhs

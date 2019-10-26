@@ -25,6 +25,11 @@ HOST_PLARFORM = "{}-{}".format(
 
 # Where is gn?
 GN = os.path.realpath(os.path.join(DIR, '../../../prebuilt/third_party/gn', HOST_PLARFORM, 'gn'))
+ZIRCON_TOOLS_DIR = os.environ.get('ZIRCON_TOOLS_DIR')
+if ZIRCON_TOOLS_DIR is None:
+    print('Run "fx exec %s".' % sys.argv[0])
+    sys.exit(1)
+FIDL_FORMAT = os.path.join(ZIRCON_TOOLS_DIR, 'fidl-format')
 
 # Define ways that identifiers may be rendered
 STYLES = []
@@ -273,10 +278,12 @@ def generate_fidl(identifiers: List[str]) -> List[str]:
   for style_name, style_func in STYLES:
     for use_name, use_func in USES:
       library_name = '%s.%s.%s' % (prefix, use_name, style_name)
-      with open(os.path.join(directory, '%s.test.fidl' % library_name), 'w') as f:
+      fidl_file = os.path.join(directory, '%s.test.fidl' % library_name)
+      with open(fidl_file, 'w') as f:
         f.write(generated('//'))
         f.write('library %s;\n' % library_name)
         use_func(f, [style_func(r) for r in identifiers])
+      subprocess.check_output([FIDL_FORMAT, '-i', fidl_file])
       library_names.append(library_name)
 
   # generate BUILD.gn for FIDL libraries
