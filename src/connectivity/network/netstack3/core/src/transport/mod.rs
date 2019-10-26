@@ -124,6 +124,14 @@ impl<A: Eq + Hash> ListenerAddrMap<A> {
     fn get_by_listener(&self, listener: usize) -> Option<&Vec<A>> {
         self.listener_to_addrs.get(listener)
     }
+
+    fn remove_by_listener(&mut self, listener: usize) -> Option<Vec<A>> {
+        let addrs = self.listener_to_addrs.remove(listener)?;
+        for addr in &addrs {
+            self.addr_to_listener.remove(addr).unwrap();
+        }
+        Some(addrs)
+    }
 }
 
 impl<A: Eq + Hash> Default for ListenerAddrMap<A> {
@@ -170,6 +178,12 @@ impl<A: Eq + Hash, C> ConnAddrMap<A, C>
 where
     for<'a> &'a C: Into<A>,
 {
+    fn remove_by_id(&mut self, id: usize) -> Option<C> {
+        let conn = self.id_to_conn.remove(id)?;
+        self.addr_to_id.remove(&(&conn).into()).unwrap();
+        Some(conn)
+    }
+
     /// Update the elements of the map in-place, retaining only the elements for
     /// which `f` returns true.
     ///

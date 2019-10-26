@@ -175,6 +175,12 @@ struct Conn<A: IpAddress> {
     remote_port: NonZeroU16,
 }
 
+impl<'a, A: IpAddress> From<&'a Conn<A>> for Conn<A> {
+    fn from(c: &'a Conn<A>) -> Self {
+        c.clone()
+    }
+}
+
 impl<A: IpAddress> Conn<A> {
     /// Construct a `Conn` from an incoming packet.
     ///
@@ -204,10 +210,50 @@ impl<A: IpAddress> Conn<A> {
     }
 }
 
+/// Information associated with a UDP connection
+pub struct UdpConnInfo<A: IpAddress> {
+    /// The local address associated with a UDP connection.
+    pub local_addr: SpecifiedAddr<A>,
+    /// The local port associated with a UDP connection.
+    pub local_port: NonZeroU16,
+    /// The remote address associated with a UDP connection.
+    pub remote_addr: SpecifiedAddr<A>,
+    /// The remote port associated with a UDP connection.
+    pub remote_port: NonZeroU16,
+}
+
+impl<A: IpAddress> From<Conn<A>> for UdpConnInfo<A> {
+    fn from(c: Conn<A>) -> Self {
+        let Conn { local_addr, local_port, remote_addr, remote_port } = c;
+        Self { local_addr, local_port, remote_addr, remote_port }
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 struct Listener<A: IpAddress> {
     addr: SpecifiedAddr<A>,
     port: NonZeroU16,
+}
+
+/// Information associated with a UDP listener
+pub struct UdpListenerInfo<A: IpAddress> {
+    /// The local address associated with a UDP listener, or `None` for any
+    /// address.
+    pub local_addr: Option<SpecifiedAddr<A>>,
+    /// The local port associated with a UDP listener.
+    pub local_port: NonZeroU16,
+}
+
+impl<A: IpAddress> From<Listener<A>> for UdpListenerInfo<A> {
+    fn from(l: Listener<A>) -> Self {
+        Self { local_addr: Some(l.addr), local_port: l.port }
+    }
+}
+
+impl<A: IpAddress> From<NonZeroU16> for UdpListenerInfo<A> {
+    fn from(local_port: NonZeroU16) -> Self {
+        Self { local_addr: None, local_port }
+    }
 }
 
 impl<A: IpAddress> Listener<A> {
@@ -607,6 +653,23 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
     UdpConnId::new(state.conn_state.conns.insert(c.clone(), c))
 }
 
+/// Removes a previously registered UDP connection.
+///
+/// `remove_udp_conn` removes a previously registered UDP connection indexed by
+/// the [`UpConnId`] `id`. It returns the [`UdpConnInfo`] information that was
+/// associated with that UDP connection.
+///
+/// # Panics
+///
+/// `remove_udp_conn` panics if `id` is not a valid `UdpConnId`.
+pub fn remove_udp_conn<I: Ip, C: UdpContext<I>>(
+    ctx: &mut C,
+    id: UdpConnId<I>,
+) -> UdpConnInfo<I::Addr> {
+    let state = ctx.get_state_mut();
+    state.conn_state.conns.remove_by_id(id.into()).expect("UDP listener not found").into()
+}
+
 /// Listen on for incoming UDP packets.
 ///
 /// `listen_udp` registers `listener` as a listener for incoming UDP packets on
@@ -622,9 +685,7 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
 /// # Panics
 ///
 /// `listen_udp` panics if `listener` is already in use.
-// TODO(rheacock): remove `allow(dead_code)` when this is used.
-#[allow(dead_code)]
-pub(crate) fn listen_udp<A: IpAddress, C: UdpContext<A::Version>>(
+pub fn listen_udp<A: IpAddress, C: UdpContext<A::Version>>(
     ctx: &mut C,
     addr: Option<SpecifiedAddr<A>>,
     port: Option<NonZeroU16>,
@@ -656,6 +717,46 @@ pub(crate) fn listen_udp<A: IpAddress, C: UdpContext<A::Version>>(
                 state.conn_state.listeners.insert(vec![Listener { addr, port }]),
             )
         }
+    }
+}
+
+/// Removes a previously registered UDP listener.
+///
+/// `remove_udp_listener` removes a previously registered UDP listener indexed
+/// by the [`UdpListenerId`] `id`. It returns the [`UdpListenerInfo`]
+/// information that was associated with that UDP listener.
+///
+/// # Panics
+///
+/// `remove_listener` panics if `id` is not a valid `UdpListenerId`.
+pub fn remove_udp_listener<I: Ip, C: UdpContext<I>>(
+    ctx: &mut C,
+    id: UdpListenerId<I>,
+) -> UdpListenerInfo<I::Addr> {
+    let state = ctx.get_state_mut();
+    match id.listener_type {
+        ListenerType::Specified => state
+            .conn_state
+            .listeners
+            .remove_by_listener(id.id)
+            .expect("Invalid UDP listener ID")
+            // NOTE(brunodalbo) ListenerAddrMap keeps vecs internally, but we
+            // always only add a single address, so unwrap the first one
+            .first()
+            .expect("Unexpected empty UDP listener")
+            .clone()
+            .into(),
+        ListenerType::Wildcard => state
+            .conn_state
+            .wildcard_listeners
+            .remove_by_listener(id.id)
+            .expect("Invalid UDP listener ID")
+            // NOTE(brunodalbo) ListenerAddrMap keeps vecs internally, but we
+            // always only add a single address, so unwrap the first one
+            .first()
+            .expect("Unexpected empty UDP listener")
+            .clone()
+            .into(),
     }
 }
 
@@ -1261,5 +1362,54 @@ mod tests {
         assert!(UdpConnectionState::<I>::EPHEMERAL_RANGE.contains(&wildcard_port.get()));
         assert!(UdpConnectionState::<I>::EPHEMERAL_RANGE.contains(&specified_port.get()));
         assert_ne!(wildcard_port, specified_port);
+    }
+
+    /// Tests [`remove_udp_conn`]
+    #[ip_test]
+    fn test_remove_udp_conn<I: Ip>() {
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+        let remote_ip = remote_addr::<I>();
+        let local_port = NonZeroU16::new(100).unwrap();
+        let remote_port = NonZeroU16::new(200).unwrap();
+        let conn = connect_udp::<I::Addr, _>(
+            &mut ctx,
+            Some(local_ip),
+            Some(local_port),
+            remote_ip,
+            remote_port,
+        );
+        let info = remove_udp_conn(&mut ctx, conn);
+        // assert that the info gotten back matches what was expected:
+        assert_eq!(info.local_addr, local_ip);
+        assert_eq!(info.local_port, local_port);
+        assert_eq!(info.remote_addr, remote_ip);
+        assert_eq!(info.remote_port, remote_port);
+
+        // assert that that connection id was removed from the connections
+        // state:
+        assert!(ctx.get_state().conn_state.conns.get_conn_by_id(conn.0).is_none());
+    }
+
+    /// Tests [`remove_udp_listener`]
+    #[ip_test]
+    fn test_remove_udp_listener<I: Ip>() {
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+        let local_port = NonZeroU16::new(100).unwrap();
+
+        // test removing a specified listener:
+        let list = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port));
+        let info = remove_udp_listener(&mut ctx, list);
+        assert_eq!(info.local_addr.unwrap(), local_ip);
+        assert_eq!(info.local_port, local_port);
+        assert!(ctx.get_state().conn_state.listeners.get_by_listener(list.id).is_none());
+
+        // test removing a wildcard listener:
+        let list = listen_udp::<I::Addr, _>(&mut ctx, None, Some(local_port));
+        let info = remove_udp_listener(&mut ctx, list);
+        assert!(info.local_addr.is_none());
+        assert_eq!(info.local_port, local_port);
+        assert!(ctx.get_state().conn_state.wildcard_listeners.get_by_listener(list.id).is_none());
     }
 }
