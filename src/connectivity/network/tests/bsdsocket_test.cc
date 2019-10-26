@@ -7,6 +7,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <net/if.h>
 #include <netdb.h>
 #include <netinet/if_ether.h>
 #include <netinet/tcp.h>
@@ -39,6 +40,80 @@ TEST(LocalhostTest, DatagramSocketIgnoresMsgWaitAll) {
   ASSERT_EQ(errno, EAGAIN) << strerror(errno);
 
   ASSERT_EQ(close(recvfd.release()), 0) << strerror(errno);
+}
+
+#if !defined(__Fuchsia__)
+bool IsRoot() {
+  uid_t ruid, euid, suid;
+  EXPECT_EQ(getresuid(&ruid, &euid, &suid), 0) << strerror(errno);
+  if (ruid != 0 || euid != 0 || suid != 0) {
+    return false;
+  }
+  gid_t rgid, egid, sgid;
+  EXPECT_EQ(getresgid(&rgid, &egid, &sgid), 0) << strerror(errno);
+  if (rgid != 0 || egid != 0 || sgid != 0) {
+    return false;
+  }
+  return true;
+}
+#endif
+
+TEST(LocalhostTest, BindToDevice) {
+#if !defined(__Fuchsia__)
+  if (!IsRoot()) {
+    GTEST_SKIP() << "This test requires root";
+  }
+#endif
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
+
+  {
+    // The default is that a socket is not bound to a device.
+    char get_dev[IFNAMSIZ] = {};
+    socklen_t get_dev_length = sizeof(get_dev);
+    EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, get_dev, &get_dev_length), 0)
+        << strerror(errno);
+    EXPECT_EQ(get_dev_length, socklen_t(0));
+    EXPECT_STREQ(get_dev, "");
+  }
+
+  const char set_dev[IFNAMSIZ] = "lo\0blahblah";
+
+  // Bind to "lo" with null termination should work even if the size is too big.
+  ASSERT_EQ(setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, set_dev, sizeof(set_dev)), 0)
+      << strerror(errno);
+
+  const char set_dev_unknown[] = "loblahblahblah";
+  // Bind to "lo" without null termination but with accurate length should work.
+  EXPECT_EQ(setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, set_dev_unknown, 2), 0)
+      << strerror(errno);
+
+  // Bind to unknown name should fail.
+  EXPECT_EQ(setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, "loblahblahblah", sizeof(set_dev_unknown)), -1);
+  EXPECT_EQ(errno, ENODEV) << strerror(errno);
+
+  {
+    // Reading it back should work.
+    char get_dev[IFNAMSIZ] = {};
+    socklen_t get_dev_length = sizeof(get_dev);
+    EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, get_dev, &get_dev_length), 0)
+        << strerror(errno);
+    EXPECT_EQ(get_dev_length, strlen(set_dev) + 1);
+    EXPECT_STREQ(get_dev, set_dev);
+  }
+
+  {
+    // Reading it back without enough space in the buffer should fail.
+    char get_dev[] = "";
+    socklen_t get_dev_length = sizeof(get_dev);
+    EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, get_dev, &get_dev_length), -1);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
+    EXPECT_EQ(get_dev_length, sizeof(get_dev));
+    EXPECT_STREQ(get_dev, "");
+  }
+
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
 // Raw sockets are typically used for implementing custom protocols. We intend to support custom

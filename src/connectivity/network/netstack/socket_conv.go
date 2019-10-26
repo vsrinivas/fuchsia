@@ -5,6 +5,7 @@
 package netstack
 
 import (
+	"bytes"
 	"encoding/binary"
 	"math"
 	"net"
@@ -31,14 +32,14 @@ import "C"
 //
 // At the time of writing, this command produces a reasonable diff:
 //
-// curl -sfSL https://raw.githubusercontent.com/google/gvisor/master/pkg/sentry/socket/epsocket/epsocket.go |
+// curl -sfSL https://raw.githubusercontent.com/google/gvisor/master/pkg/sentry/socket/netstack/netstack.go |
 //   sed s/linux/C/g | \
 //   sed 's/, outLen)/)/g' | \
 //   sed 's/(t, /(/g' | \
 //   sed 's/(s, /(/g' | \
 //   sed 's/, family,/,/g' | \
 //   sed 's/, skType,/, transProto,/g' | \
-//   diff --color --ignore-all-space --unified - go/src/netstack/socket_conv.go
+//   diff --color --ignore-all-space --unified - src/connectivity/network/netstack/socket_conv.go
 
 const sizeOfInt32 int = 4
 
@@ -153,6 +154,16 @@ func getSockOptSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, t
 		}
 
 		return int32(v), nil
+
+	case C.SO_BINDTODEVICE:
+		var v tcpip.BindToDeviceOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+		if len(v) == 0 {
+			return []byte(nil), nil
+		}
+		return append([]byte(v), 0), nil
 
 	case C.SO_BROADCAST:
 		var v tcpip.BroadcastOption
@@ -389,6 +400,13 @@ func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error
 
 		v := binary.LittleEndian.Uint32(optVal)
 		return ep.SetSockOpt(tcpip.ReusePortOption(v))
+
+	case C.SO_BINDTODEVICE:
+		n := bytes.IndexByte(optVal, 0)
+		if n == -1 {
+			n = len(optVal)
+		}
+		return ep.SetSockOpt(tcpip.BindToDeviceOption(optVal[:n]))
 
 	case C.SO_BROADCAST:
 		if len(optVal) < sizeOfInt32 {
