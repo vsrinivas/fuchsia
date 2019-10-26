@@ -44,6 +44,11 @@ Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
 The clock will be set by the device coordinator at boot time, and then later,
 if an RTC is present, the RTC clock will be sanitized to at least this time.
 
+## cpu\.hwp=\<bool\>
+
+This settings enables HWP (hardware P-states) on supported chips. This feature
+lets Intel CPUs automatically scale their own clock speed. Defaults to false.
+
 ## devmgr\.require-system=\<bool\>
 
 Instructs the devmgr that a /system volume is required. Without this, devmgr

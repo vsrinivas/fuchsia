@@ -14,6 +14,7 @@
 #include <arch/x86/platform_access.h>
 #include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
+#include <lib/cmdline.h>
 #include <lib/code_patching.h>
 
 static SpinLock g_microcode_lock;
@@ -202,7 +203,9 @@ void x86_intel_init_percpu(void) {
     x86_intel_cpu_set_ssbd(&cpuid, &msr);
   }
 
-  x86_intel_hwp_init();
+  if (gCmdline.GetBool("cpu.hwp", false)) {
+    x86_intel_hwp_init();
+  }
 }
 
 extern "C" void x86_mds_flush_select(const CodePatchInfo* patch) {
