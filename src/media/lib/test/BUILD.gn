@@ -19,7 +19,10 @@ source_set("frame_sink") {
 
   include_dirs = [ "include" ]
 
-  public_configs = [ ":media_test_include_config" ]
+  public_configs = [
+    ":media_test_include_config",
+    "//build/config:Wno-reorder-init-list",
+  ]
 
   public = [
     "include/lib/media/test/frame_sink.h",

@@ -95,6 +95,7 @@ test("base_view_ime_test") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 # Each e2e test must run in its own executable.

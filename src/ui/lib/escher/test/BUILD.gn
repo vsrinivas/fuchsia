@@ -16,6 +16,7 @@ if (is_mac) {
     deps = [
       "//src/lib/fxl/test:gtest_main",
     ]
+    public_configs = [ "//build/config:Wno-reorder-init-list" ]
   }
 } else {
   test("escher_unittests") {
@@ -118,6 +119,7 @@ if (is_mac) {
       "//src/ui/lib/escher",
       "//third_party/glm",
     ]
+    public_configs = [ "//build/config:Wno-reorder-init-list" ]
   }
 }
 

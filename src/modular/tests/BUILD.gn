@@ -324,6 +324,7 @@ executable("stories_share_session_runners_test") {
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gtest_main",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("module_with_fake_runner_bin") {

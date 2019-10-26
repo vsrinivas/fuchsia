@@ -44,6 +44,7 @@ executable("system_time_updater_test_bin") {
     "//zircon/system/fidl/fuchsia-hardware-rtc",
     "//zircon/system/fidl/fuchsia-io",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test_package("system_time_updater_test") {

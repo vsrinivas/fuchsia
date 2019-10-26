@@ -24,10 +24,9 @@ executable("vkcube_on_scenic") {
     "//src/graphics/lib/vulkan",
     "//zircon/public/lib/syslog",
   ]
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
+
 executable("vkcube_on_fb") {
   sources = [
     "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
@@ -49,6 +48,7 @@ executable("vkcube_on_fb") {
   public_deps = [
     "//zircon/public/lib/fit",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 executable("vkcube_skip_present") {
   sources = [
@@ -74,4 +74,5 @@ executable("vkcube_skip_present") {
   public_deps = [
     "//zircon/public/lib/fit",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

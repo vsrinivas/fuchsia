@@ -210,6 +210,7 @@ source_set("gfx") {
   ]
 
   public_configs = [
+    "//build/config:Wno-reorder-init-list",
     ":common_include_dirs",
     ":feature_flags",
   ]

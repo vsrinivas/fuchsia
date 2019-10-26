@@ -146,6 +146,7 @@ source_set("lib") {
   if (auto_login_to_guest) {
     public_configs = [ ":auto_login_to_guest" ]
   }
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable_package("dev_base_shell") {

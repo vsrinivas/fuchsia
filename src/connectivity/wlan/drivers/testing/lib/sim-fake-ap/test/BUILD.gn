@@ -19,6 +19,7 @@ executable("beacon_unittests") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/lib/fxl/test:gtest_main",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 unittest_package("wlan-sim-fake-ap-test") {

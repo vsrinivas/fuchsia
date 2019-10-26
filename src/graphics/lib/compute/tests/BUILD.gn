@@ -94,6 +94,7 @@ graphics_compute_unittests("common_vk_unittests") {
   deps = [
     ":common_vk",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 # Skia test application helper library.

@@ -41,6 +41,7 @@ test("elflib_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test_package("elflib_tests") {

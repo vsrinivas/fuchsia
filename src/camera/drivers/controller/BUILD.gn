@@ -55,6 +55,7 @@ source_set("controller-source") {
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 package("controller") {

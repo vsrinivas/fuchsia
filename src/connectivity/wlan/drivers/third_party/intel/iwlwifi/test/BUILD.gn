@@ -64,6 +64,7 @@ executable("dummy_test") {
 
   defines = testing_defines
   deps = testing_deps
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("iwl-phy-db_test") {
@@ -89,6 +90,7 @@ executable("mvm_test") {
 
   defines = testing_defines
   deps = testing_deps
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("notif-wait_test") {
@@ -101,6 +103,7 @@ executable("notif-wait_test") {
 
   defines = testing_defines
   deps = testing_deps
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("pcie_test") {
@@ -157,6 +160,7 @@ executable("wlan-device_test") {
 
   defines = testing_defines
   deps = testing_deps
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 unittest_package("iwlwifi_test") {

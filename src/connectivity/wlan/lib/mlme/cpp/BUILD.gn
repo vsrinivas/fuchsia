@@ -116,6 +116,9 @@ source_set("mlme") {
     "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
 
-  public_configs = [ ":wlan_mlme_config" ]
+  public_configs = [
+    ":wlan_mlme_config",
+    "//build/config:Wno-reorder-init-list",
+  ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }

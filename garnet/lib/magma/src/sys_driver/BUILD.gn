@@ -54,6 +54,7 @@ source_set("entry") {
   ]
 
   libs = [ "zircon" ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 source_set("pci_driver_gtest") {
@@ -101,6 +102,7 @@ source_set("test_entry_pci") {
   ]
 
   libs = [ "zircon" ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 source_set("test_entry_pdev") {
@@ -133,4 +135,5 @@ source_set("test_entry_pdev") {
   ]
 
   libs = [ "zircon" ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

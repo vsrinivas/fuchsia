@@ -159,6 +159,7 @@ executable("mediaplayer_tests_bin") {
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test_package("mediaplayer_tests") {

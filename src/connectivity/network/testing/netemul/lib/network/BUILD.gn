@@ -101,4 +101,5 @@ executable("network_test_bin") {
   public_deps = [
     "//zircon/system/fidl/fuchsia-hardware-ethertap",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

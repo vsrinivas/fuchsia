@@ -93,6 +93,7 @@ source_set("src") {
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("bin") {
@@ -143,6 +144,7 @@ executable("sandbox_unittest") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/memfs-cpp",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 package("netemul_sandbox") {

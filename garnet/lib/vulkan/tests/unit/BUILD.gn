@@ -17,6 +17,7 @@ executable("test_image_pipe_swapchain") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/zx",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("test_vk_validation") {

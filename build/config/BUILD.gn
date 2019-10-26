@@ -249,7 +249,6 @@ config("default_warnings") {
     # and we do some cleanup, this will be re-enabled.
     "-Wno-unknown-warning-option",
     "-Wno-c99-designator",
-    "-Wno-reorder-init-list",
 
     # TODO(37215): Temporarily disable this warning until we roll toolchain.
     # Then we can re-enable it and cleanup instances it appears.
@@ -264,6 +263,10 @@ config("default_warnings") {
     # flags unified.
     "-Wno-deprecated-copy",
   ]
+}
+
+config("Wno-reorder-init-list") {
+  cflags = [ "-Wno-reorder-init-list" ]
 }
 
 config("symbol_visibility_hidden") {

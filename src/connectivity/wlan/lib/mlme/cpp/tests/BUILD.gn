@@ -50,6 +50,7 @@ source_set("test_main") {
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("ap_mlme_tests") {
@@ -71,6 +72,7 @@ executable("ap_mlme_tests") {
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("client_mlme_tests") {
@@ -252,6 +254,7 @@ executable("common_tests") {
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 package("wlanphy-testdev-driver") {

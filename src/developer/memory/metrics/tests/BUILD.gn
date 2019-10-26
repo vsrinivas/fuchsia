@@ -44,6 +44,7 @@ executable("memory_metrics_unittests") {
     "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test_package("memory_metrics_tests") {

@@ -394,6 +394,7 @@ executable("device_tests") {
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 source_set("qcow_test_data") {

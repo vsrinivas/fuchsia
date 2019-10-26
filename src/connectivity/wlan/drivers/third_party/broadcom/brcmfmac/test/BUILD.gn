@@ -106,6 +106,7 @@ executable("scan_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("sdio_test") {
