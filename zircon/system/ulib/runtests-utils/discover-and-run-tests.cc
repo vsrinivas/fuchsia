@@ -109,7 +109,7 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
 }
 }  // namespace
 
-int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* argv,
+int DiscoverAndRunTests(int argc, const char* const* argv,
                         const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
                         const fbl::StringPiece syslog_file_name) {
   unsigned int test_types = TEST_DEFAULT;
@@ -320,7 +320,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
   stopwatch->Start();
   int failed_count = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
-  if (!RunTests(RunTest, test_paths, test_args, repeat, output_dir, kOutputFileName, verbosity,
+  if (!RunTests(test_paths, test_args, repeat, output_dir, kOutputFileName, verbosity,
                 &failed_count, &results)) {
     return EXIT_FAILURE;
   }

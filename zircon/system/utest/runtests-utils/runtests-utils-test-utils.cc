@@ -22,8 +22,6 @@
 #include <runtests-utils/runtests-utils.h>
 #include <unittest/unittest.h>
 
-#include "runtests-utils-test-globals.h"
-
 namespace runtests {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -142,11 +140,11 @@ bool ScopedDirsAndFilesAreIndeedScoped() {
   BEGIN_TEST;
 
   // Entering a test case, test_dir.path() should be empty.
-  EXPECT_EQ(0, NumEntriesInDir(TestFsRoot()));
+  EXPECT_EQ(0, NumEntriesInDir(kMemFsRoot));
 
   {
     ScopedTestDir dir;
-    EXPECT_EQ(1, NumEntriesInDir(TestFsRoot()));
+    EXPECT_EQ(1, NumEntriesInDir(kMemFsRoot));
     EXPECT_EQ(0, NumEntriesInDir(dir.path()));
     {
       fbl::String file_name1 = JoinPath(dir.path(), "a.sh");
@@ -162,16 +160,16 @@ bool ScopedDirsAndFilesAreIndeedScoped() {
     EXPECT_EQ(0, NumEntriesInDir(dir.path()));
   }
 
-  EXPECT_EQ(0, NumEntriesInDir(TestFsRoot()));
+  EXPECT_EQ(0, NumEntriesInDir(kMemFsRoot));
 
   {
     ScopedTestDir dir1;
     ScopedTestDir dir2;
     ScopedTestDir dir3;
-    EXPECT_EQ(3, NumEntriesInDir(TestFsRoot()));
+    EXPECT_EQ(3, NumEntriesInDir(kMemFsRoot));
   }
 
-  EXPECT_EQ(0, NumEntriesInDir(TestFsRoot()));
+  EXPECT_EQ(0, NumEntriesInDir(kMemFsRoot));
 
   END_TEST;
 }

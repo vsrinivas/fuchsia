@@ -320,9 +320,9 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
   return 0;
 }
 
-bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
-              const fbl::Vector<fbl::String>& test_args, int repeat, const char* output_dir,
-              const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
+bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
+              int repeat, const char* output_dir, const fbl::StringPiece output_file_basename,
+              signed char verbosity, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results) {
   std::map<fbl::String, int> test_name_to_count;
   for (int i = 1; i <= repeat; ++i) {

@@ -47,7 +47,6 @@ foreach(host, standard_build_hosts) {
       "merkleroot",
       "minfs",
       "netprotocol",
-      "runtests",
       "xdc-server",
       "zbi",
     ]

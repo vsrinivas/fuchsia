@@ -22,7 +22,6 @@
 #include <runtests-utils/runtests-utils.h>
 #include <unittest/unittest.h>
 
-#include "runtests-utils-test-globals.h"
 #include "runtests-utils-test-utils.h"
 
 namespace runtests {
@@ -205,7 +204,7 @@ bool RunTestDontPublishData() {
   auto file = NewPublishFile(test_name);
 
   const char* argv[] = {test_name.c_str(), nullptr};
-  std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, test_name.c_str(), 0);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -226,8 +225,8 @@ bool RunTestsPublishData() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests(PlatformRunTest, {test_name}, {}, 1, output_dir.c_str(),
-                       output_file_base_name, verbosity, &num_failed, &results));
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, output_dir.c_str(), output_file_base_name, verbosity,
+                       &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
   EXPECT_LE(1, results[0]->data_sinks.size());
@@ -247,9 +246,8 @@ bool RunDuplicateTestsPublishData() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests(PlatformRunTest, {test_name, test_name, test_name}, {}, 1,
-                       output_dir.c_str(), output_file_base_name, verbosity, &num_failed,
-                       &results));
+  EXPECT_TRUE(RunTests({test_name, test_name, test_name}, {}, 1, output_dir.c_str(),
+                       output_file_base_name, verbosity, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
   EXPECT_STR_EQ(test_name.c_str(), results[0]->name.c_str());
@@ -271,7 +269,7 @@ bool RunAllTestsPublishData() {
 
   const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), test_dir.path()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(PlatformRunTest, 4, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(4, argv, {}, &stopwatch, ""));
 
   // Prepare the expected output.
   fbl::String test_output_rel_path;
@@ -339,7 +337,7 @@ bool RunTestRootDir() {
     ScopedScriptFile script(argv[0], script_contents);
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
     std::unique_ptr<Result> result =
-        PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
+        RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
     ASSERT_TRUE(output_file);
@@ -361,13 +359,13 @@ BEGIN_TEST_CASE(FuchsiaComponentInfo)
 RUN_TEST_SMALL(TestFileComponentInfoTest)
 END_TEST_CASE(FuchsiaComponentInfo)
 
-BEGIN_TEST_CASE(PlatformRunTests)
+BEGIN_TEST_CASE(RunTests)
 RUN_TEST(RunTestDontPublishData)
 RUN_TEST_MEDIUM(RunTestsPublishData)
 RUN_TEST_MEDIUM(RunDuplicateTestsPublishData)
 RUN_TEST_MEDIUM(RunAllTestsPublishData)
 RUN_TEST_MEDIUM(RunTestRootDir)
-END_TEST_CASE(PlatformRunTests)
+END_TEST_CASE(RunTests)
 
 }  // namespace
 }  // namespace runtests

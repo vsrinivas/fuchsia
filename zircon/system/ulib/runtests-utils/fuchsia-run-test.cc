@@ -329,9 +329,9 @@ bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_com
   return true;
 }
 
-std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_dir,
-                                       const char* output_filename, const char* test_name,
-                                       uint64_t timeout_msec) {
+std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
+                                const char* output_filename, const char* test_name,
+                                uint64_t timeout_msec) {
   // The arguments passed to fdio_spawn_etc. May be overridden.
   const char** args = argv;
   // calculate size of argv

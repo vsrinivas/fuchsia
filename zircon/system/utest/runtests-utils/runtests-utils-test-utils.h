@@ -23,9 +23,11 @@
 #include <runtests-utils/runtests-utils.h>
 #include <unittest/unittest.h>
 
-#include "runtests-utils-test-globals.h"
-
 namespace runtests {
+// Root directory of memfs installed for duration of test.
+static constexpr char kMemFsRoot[] = "/test-memfs";
+
+const char kScriptShebang[32] = "#!/boot/bin/sh\n\n";
 
 static constexpr char kExpectedJSONOutputPrefix[] = "{\n  \"tests\": [\n";
 // We don't want to count the null terminator.
@@ -60,11 +62,11 @@ class ScopedTestFile {
   const fbl::StringPiece path_;
 };
 
-// Creates a subdirectory of TestFsRoot() in its constructor and deletes it in
+// Creates a subdirectory of kMemFsRoot in its constructor and deletes it in
 // its destructor.
 class ScopedTestDir {
  public:
-  ScopedTestDir() : basename_(NextBasename()), path_(JoinPath(TestFsRoot(), basename_)) {
+  ScopedTestDir() : basename_(NextBasename()), path_(JoinPath(kMemFsRoot, basename_)) {
     if (mkdir(path_.c_str(), 0755)) {
       printf("FAILURE: mkdir failed to open %s: %s\n", path_.c_str(), strerror(errno));
       exit(1);
@@ -111,7 +113,7 @@ class ScopedTestDir {
   const fbl::String basename_;
   const fbl::String path_;
 
-  // Used to generate unique subdirectories of TestFsRoot().
+  // Used to generate unique subdirectories of kMemFsRoot.
   static int num_test_dirs_created_;
 };
 

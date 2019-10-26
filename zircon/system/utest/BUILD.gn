@@ -293,8 +293,8 @@ if (current_cpu != "") {
       "sysinfo",
       "sysmem",
       "task-utils",
-      "thread-safe-deleter",
       "thread-initial-state",
+      "thread-safe-deleter",
       "thread-state",
       "time",
       "timers",
@@ -357,7 +357,6 @@ if (current_cpu != "") {
       "fit",
       "fs-host",
       "fvm-host",
-      "runtests-utils",
       "util",
     ]
     if (current_os == "linux") {

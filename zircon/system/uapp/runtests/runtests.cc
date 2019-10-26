@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/clock.h>
+
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <lib/zx/clock.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/log-exporter.h>
 #include <runtests-utils/runtests-utils.h>
@@ -44,7 +45,7 @@ class FuchsiaStopwatch final : public runtests::Stopwatch {
   int64_t DurationInMsecs() override { return (Now() - start_time_).to_msecs(); }
 
  private:
-  static zx::time Now()  { return zx::clock::get_monotonic(); }
+  static zx::time Now() { return zx::clock::get_monotonic(); }
 
   zx::time start_time_;
 };
@@ -87,11 +88,10 @@ int main(int argc, char** argv) {
   }
 
   fbl::Vector<fbl::String> default_test_dirs;
-  for (auto & kDefaultTestDir : kDefaultTestDirs) {
+  for (auto& kDefaultTestDir : kDefaultTestDirs) {
     default_test_dirs.push_back(kDefaultTestDir);
   }
 
   FuchsiaStopwatch stopwatch;
-  return runtests::DiscoverAndRunTests(&runtests::FuchsiaRunTest, argc, argv, default_test_dirs,
-                                       &stopwatch, kSyslogFileName);
+  return runtests::DiscoverAndRunTests(argc, argv, default_test_dirs, &stopwatch, kSyslogFileName);
 }

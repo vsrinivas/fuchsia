@@ -62,7 +62,7 @@ struct Result {
         duration_milliseconds(duration_milliseconds_arg) {}
 };
 
-// Function that invokes a test binary and writes its output to a file.
+// Invokes a test binary and writes its output to a file.
 //
 // |argv| is a null-terminated array of argument strings passed to the test
 //   program.
@@ -72,11 +72,11 @@ struct Result {
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
 // |test_name| is used to populate Result and in log messages.
-// |timeout_millis| is a number of milliseconds to wait for the test. If 0,
+// |timeout_msec| is a number of milliseconds to wait for the test. If 0,
 //   will wait indefinitely.
-typedef std::unique_ptr<Result> (*RunTestFn)(const char* argv[], const char* output_dir,
-                                             const char* output_filename, const char* test_name,
-                                             uint64_t timeout_millis);
+std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
+                                const char* output_filename, const char* test_name,
+                                uint64_t timeout_msec);
 
 // A means of measuring how long it takes to run tests.
 class Stopwatch {
@@ -130,7 +130,6 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 
 // Executes all specified binaries.
 //
-// |run_test| is the function used to invoke the test binaries.
 // |test_paths| are the paths of the binaries to execute.
 // |test_args| are arguments passed into the binaries under test.
 // |repeat| runs the entire test suite this many times. The entire suite is repeated rather than
@@ -151,9 +150,9 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 // |results| is an output parameter to which run results will be appended.
 //
 // Returns false if any test binary failed, true otherwise.
-bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
-              const fbl::Vector<fbl::String>& test_args, int repeat, const char* output_dir,
-              const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
+bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
+              int repeat, const char* output_dir, const fbl::StringPiece output_file_basename,
+              signed char verbosity, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results);
 
 // Expands |dir_globs| and searches those directories for files.
@@ -176,7 +175,6 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
 
 // Discovers and runs tests based on command line arguments.
 //
-// |RunTest|: function to run each test.
 // |argc|: length of |argv|.
 // |argv|: see //system/ulib/runtests-utils/discover-and-run-tests.cpp,
 //    specifically the 'Usage()' function, for documentation.
@@ -187,7 +185,7 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
 //    will be written to a file under that directory and this name.
 //
 // Returns EXIT_SUCCESS if all tests passed; else, returns EXIT_FAILURE.
-int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* argv,
+int DiscoverAndRunTests(int argc, const char* const* argv,
                         const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
                         const fbl::StringPiece syslog_file_name);
 

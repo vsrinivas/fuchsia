@@ -5,6 +5,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/memfs/memfs.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
@@ -22,7 +25,6 @@
 #include <runtests-utils/runtests-utils.h>
 #include <unittest/unittest.h>
 
-#include "runtests-utils-test-globals.h"
 #include "runtests-utils-test-utils.h"
 
 namespace runtests {
@@ -305,7 +307,7 @@ bool RunTestSuccess() {
   fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
   const char* argv[] = {test_name.c_str(), nullptr};
   ScopedScriptFile script(argv[0], "exit 0");
-  std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, test_name.c_str(), 0);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -322,7 +324,7 @@ bool RunTestTimeout() {
   const char* inf_loop_argv[] = {inf_loop_name.c_str(), nullptr};
   ScopedScriptFile inf_loop_script(inf_loop_argv[0], "while true; do echo \"\"; done");
   std::unique_ptr<Result> result =
-      PlatformRunTest(inf_loop_argv, nullptr, nullptr, inf_loop_name.c_str(), 1);
+      RunTest(inf_loop_argv, nullptr, nullptr, inf_loop_name.c_str(), 1);
   EXPECT_STR_EQ(inf_loop_argv[0], result->name.c_str());
   EXPECT_EQ(TIMED_OUT, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -331,7 +333,7 @@ bool RunTestTimeout() {
   fbl::String succeed_name = JoinPath(test_dir.path(), "succeed.sh");
   const char* succeed_argv[] = {succeed_name.c_str(), nullptr};
   ScopedScriptFile succeed_script(succeed_argv[0], "exit 0");
-  result = PlatformRunTest(succeed_argv, nullptr, nullptr, succeed_name.c_str(), 100000);
+  result = RunTest(succeed_argv, nullptr, nullptr, succeed_name.c_str(), 100000);
   EXPECT_STR_EQ(succeed_argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -352,7 +354,7 @@ bool RunTestSuccessWithStdout() {
 
   fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
   std::unique_ptr<Result> result =
-      PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
+      RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
 
   FILE* output_file = fopen(output_filename.c_str(), "r");
   ASSERT_TRUE(output_file);
@@ -381,7 +383,7 @@ bool RunTestFailureWithStderr() {
 
   fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
   std::unique_ptr<Result> result =
-      PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
+      RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
 
   FILE* output_file = fopen(output_filename.c_str(), "r");
   ASSERT_TRUE(output_file);
@@ -402,7 +404,7 @@ bool RunTestFailureToLoadFile() {
 
   const char* argv[] = {"i/do/not/exist/", nullptr};
 
-  std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, argv[0], 0);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, argv[0], 0);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(FAILED_TO_LAUNCH, result->launch_status);
 
@@ -448,7 +450,7 @@ bool DiscoverTestsInDirGlobsFilter() {
   const fbl::String other_file_name = JoinPath(test_dir.path(), "foo.sh");
   ScopedScriptFile fail_file(other_file_name, "");
   fbl::Vector<fbl::String> discovered_paths;
-  EXPECT_EQ(0, DiscoverTestsInDirGlobs({JoinPath(TestFsRoot(), "*")}, nullptr,
+  EXPECT_EQ(0, DiscoverTestsInDirGlobs({JoinPath(kMemFsRoot, "*")}, nullptr,
                                        {kHopefullyUniqueFileBasename}, &discovered_paths));
   EXPECT_EQ(1, discovered_paths.size());
   EXPECT_STR_EQ(unique_file_name.c_str(), discovered_paths[0].c_str());
@@ -504,8 +506,8 @@ bool RunTestsWithVerbosity() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests(PlatformRunTest, {succeed_file_name}, {}, 1, output_dir.c_str(),
-                       output_file_base_name, verbosity, &num_failed, &results));
+  EXPECT_TRUE(RunTests({succeed_file_name}, {}, 1, output_dir.c_str(), output_file_base_name,
+                       verbosity, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
 
@@ -535,8 +537,8 @@ bool RunTestsWithArguments() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests(PlatformRunTest, {succeed_file_name}, args, 1, output_dir.c_str(),
-                       output_file_base_name, verbosity, &num_failed, &results));
+  EXPECT_TRUE(RunTests({succeed_file_name}, args, 1, output_dir.c_str(), output_file_base_name,
+                       verbosity, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
 
@@ -565,8 +567,8 @@ bool RunTestsCreatesOutputFile() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests(PlatformRunTest, {does_not_exist_file_name}, {}, 1, output_dir.c_str(),
-                       output_file_base_name, verbosity, &num_failed, &results));
+  EXPECT_TRUE(RunTests({does_not_exist_file_name}, {}, 1, output_dir.c_str(), output_file_base_name,
+                       verbosity, &num_failed, &results));
   EXPECT_EQ(1, num_failed);
   EXPECT_EQ(1, results.size());
 
@@ -592,7 +594,7 @@ bool DiscoverAndRunTestsBasicPass() {
   ScopedScriptFile succeed_file2(succeed_file_name2, kEchoSuccessAndArgs);
   const char* const argv[] = {"./runtests", test_dir.path()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(PlatformRunTest, 2, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(2, argv, {}, &stopwatch, ""));
 
   END_TEST;
 }
@@ -607,7 +609,7 @@ bool DiscoverAndRunTestsBasicFail() {
   ScopedScriptFile fail_file(fail_file_name, kEchoFailureAndArgs);
   const char* const argv[] = {"./runtests", test_dir.path()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 2, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(2, argv, {}, &stopwatch, ""));
 
   END_TEST;
 }
@@ -620,8 +622,7 @@ bool DiscoverAndRunTestsFallsBackToDefaultDirs() {
   ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
   const char* const argv[] = {"./runtests"};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_SUCCESS,
-            DiscoverAndRunTests(PlatformRunTest, 1, argv, {test_dir.path()}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(1, argv, {test_dir.path()}, &stopwatch, ""));
 
   END_TEST;
 }
@@ -634,7 +635,7 @@ bool DiscoverAndRunTestsFailsWithNoTestGlobsOrDefaultDirs() {
   ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
   const char* const argv[] = {"./runtests"};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 1, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(1, argv, {}, &stopwatch, ""));
 
   END_TEST;
 }
@@ -647,7 +648,7 @@ bool DiscoverAndRunTestsFailsWithBadArgs() {
   ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
   const char* const argv[] = {"./runtests", "-?", "unknown-arg", test_dir.path()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 4, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {}, &stopwatch, ""));
 
   END_TEST;
 }
@@ -672,7 +673,7 @@ bool DiscoverAndRunTestsWithGlobs() {
   fbl::String glob = JoinPath(test_dir.path(), "A/*/C");
   const char* const argv[] = {"./runtests", test_dir.path(), glob.c_str()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(PlatformRunTest, 3, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(3, argv, {}, &stopwatch, ""));
 
   END_TEST;
 }
@@ -693,7 +694,7 @@ bool DiscoverAndRunTestsWithOutput() {
 
   const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), test_dir.path()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(PlatformRunTest, 4, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {}, &stopwatch, ""));
 
   // Prepare the expected output.
   fbl::String success_output_rel_path;
@@ -767,8 +768,7 @@ bool DiscoverAndRunTestsWithSyslogOutput() {
 
   const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), test_dir.path()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_FAILURE,
-            DiscoverAndRunTests(PlatformRunTest, 4, argv, {}, &stopwatch, "syslog.txt"));
+  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {}, &stopwatch, "syslog.txt"));
 
   // Prepare the expected output.
   fbl::String success_output_rel_path;
@@ -879,3 +879,16 @@ RUN_TEST_MEDIUM(DiscoverAndRunTestsWithSyslogOutput)
 END_TEST_CASE(DiscoverAndRunTests)
 }  // namespace
 }  // namespace runtests
+
+int main(int argc, char** argv) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  if (loop.StartThread() != ZX_OK) {
+    fprintf(stderr, "Error: Cannot initialize local memfs loop\n");
+    return -1;
+  }
+  if (memfs_install_at(loop.dispatcher(), runtests::kMemFsRoot) != ZX_OK) {
+    fprintf(stderr, "Error: Cannot install local memfs\n");
+    return -1;
+  }
+  return unittest_run_all_tests(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
+}

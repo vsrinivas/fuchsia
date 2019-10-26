@@ -6,54 +6,45 @@ import("$zx/public/gn/resource.gni")
 
 zx_test("runtests-utils") {
   sources = [
+    "fuchsia-run-test.cc",
+    "log-exporter-test.cc",
     "runtests-utils-test-utils.cc",
     "runtests-utils-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/memfs",
     "$zx/system/ulib/runtests-utils",
     "$zx/system/ulib/unittest",
   ]
-  if (is_fuchsia) {
-    sources += [
-      "fuchsia-run-test.cc",
-      "fuchsia-test-main.cc",
-      "log-exporter-test.cc",
-    ]
-    deps += [ "$zx/system/ulib/memfs" ]
-    data_deps = [
-      ":publish-data-helper",
-      ":test-data",
-    ]
-  } else {
-    sources += [ "posix-test-main.cc" ]
-  }
+  data_deps = [
+    ":publish-data-helper",
+    ":test-data",
+  ]
 }
 
-if (is_fuchsia) {
-  zx_executable("publish-data-helper") {
-    testonly = true
-    visibility = [ ":*" ]
-    sources = [
-      "helper/publish-data-helper.cc",
-    ]
-    deps = [
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxtest",
-    ]
+zx_executable("publish-data-helper") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "helper/publish-data-helper.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
 
-    # TODO: Don't instrument the helper until we have a way to route sinks
-    # from the inner runtests instance to the outer one so they make it
-    # into summary.json.
-  }
+  # TODO: Don't instrument the helper until we have a way to route sinks
+  # from the inner runtests instance to the outer one so they make it
+  # into summary.json.
+}
 
-  generated_resource("test-data") {
-    testonly = true
-    contents = [ "Hello world!" ]
-    outputs = [
-      "testdata/runtests-utils/test-data",
-    ]
-  }
+generated_resource("test-data") {
+  testonly = true
+  contents = [ "Hello world!" ]
+  outputs = [
+    "testdata/runtests-utils/test-data",
+  ]
 }
