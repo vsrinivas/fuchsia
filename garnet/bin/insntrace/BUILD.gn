@@ -17,6 +17,8 @@ executable("bin") {
       "main.cc",
       "server.cc",
       "server.h",
+      "utils.cc",
+      "utils.h",
     ]
   } else {
     sources = [

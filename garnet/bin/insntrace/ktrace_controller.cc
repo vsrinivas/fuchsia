@@ -12,9 +12,9 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
-#include <src/lib/files/unique_fd.h>
-
+#include "garnet/bin/insntrace/utils.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -32,33 +32,24 @@ bool OpenKtraceChannel(fuchsia::tracing::kernel::ControllerSyncPtr* out_controll
   return true;
 }
 
-static void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status,
-                           zx_status_t rqst_status) {
-  if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name << " failed: status=" << fidl_status;
-  } else if (rqst_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace " << rqst_name << " failed: error=" << rqst_status;
-  }
-}
-
 bool RequestKtraceStart(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace,
                         uint32_t group_mask) {
   zx_status_t start_status;
   zx_status_t status = ktrace->Start(group_mask, &start_status);
-  LogFidlFailure("start", status, start_status);
+  LogFidlFailure("Ktrace start", status, start_status);
   return status == ZX_OK && start_status == ZX_OK;
 }
 
 void RequestKtraceStop(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace) {
   zx_status_t stop_status;
   zx_status_t status = ktrace->Stop(&stop_status);
-  LogFidlFailure("stop", status, stop_status);
+  LogFidlFailure("Ktrace stop", status, stop_status);
 }
 
 void RequestKtraceRewind(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace) {
   zx_status_t rewind_status;
   zx_status_t status = ktrace->Rewind(&rewind_status);
-  LogFidlFailure("rewind", status, rewind_status);
+  LogFidlFailure("Ktrace rewind", status, rewind_status);
 }
 
 void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_suffix) {

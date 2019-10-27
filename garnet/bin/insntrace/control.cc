@@ -35,8 +35,9 @@
 #include "garnet/lib/inferior_control/arch.h"
 #include "garnet/lib/inferior_control/arch_x64.h"
 
-#include "ktrace_controller.h"
-#include "server.h"
+#include "garnet/bin/insntrace/ktrace_controller.h"
+#include "garnet/bin/insntrace/server.h"
+#include "garnet/bin/insntrace/utils.h"
 
 namespace insntrace {
 
@@ -66,15 +67,6 @@ static ControllerSyncPtr OpenDevice() {
     return ControllerSyncPtr();
   }
   return controller_ptr;
-}
-
-static void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status,
-                           zx_status_t rqst_status = ZX_OK) {
-  if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "IPT FIDL " << rqst_name << " failed: status=" << fidl_status;
-  } else if (rqst_status != ZX_OK) {
-    FXL_LOG(ERROR) << "IPT " << rqst_name << " failed: error=" << rqst_status;
-  }
 }
 
 bool AllocTrace(const IptConfig& config) {
@@ -130,7 +122,7 @@ bool InitTrace(const IptConfig& config) {
     ::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result result;
     zx_status_t status = ipt->AllocateBuffer(ipt_config, &result);
     if (status != ZX_OK || result.is_err()) {
-      LogFidlFailure("AllocateBuffer", status, result.is_err());
+      LogFidlFailure("AllocateBuffer", status, result.err());
       return false;
     }
     // Buffers are automagically assigned to cpus, descriptor == cpu#,
@@ -155,7 +147,7 @@ bool InitThreadTrace(inferior_control::Thread* thread, const IptConfig& config) 
   ::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result result;
   zx_status_t status = ipt->AllocateBuffer(ipt_config, &result);
   if (status != ZX_OK || result.is_err()) {
-    LogFidlFailure("AllocateBuffer", status, result.is_err());
+    LogFidlFailure("AllocateBuffer", status, result.err());
     return false;
   }
 
@@ -253,7 +245,7 @@ bool StartThreadTrace(inferior_control::Thread* thread, const IptConfig& config)
   ::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result result;
   status = ipt->AssignThreadBuffer(thread->ipt_buffer(), std::move(thread_handle), &result);
   if (status != ZX_OK || result.is_err()) {
-    LogFidlFailure("AssignThreadBuffer", status, result.is_err());
+    LogFidlFailure("AssignThreadBuffer", status, result.err());
     return false;
   }
 
@@ -299,7 +291,7 @@ void StopThreadTrace(inferior_control::Thread* thread, const IptConfig& config) 
   ::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result result;
   status = ipt->ReleaseThreadBuffer(thread->ipt_buffer(), std::move(thread_handle), &result);
   if (status != ZX_OK || result.is_err()) {
-    LogFidlFailure("AssignThreadBuffer", status, result.is_err());
+    LogFidlFailure("AssignThreadBuffer", status, result.err());
   }
 }
 
@@ -576,7 +568,7 @@ void FreeTrace(const IptConfig& config) {
   ::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result result;
   zx_status_t status = ipt->Terminate(&result);
   if (status != ZX_OK || result.is_err()) {
-    LogFidlFailure("Terminate", status, result.is_err());
+    LogFidlFailure("Terminate", status, result.err());
   }
 
   // TODO(dje): Resume original ktracing? Need ability to get old value.
