@@ -50,6 +50,7 @@ std::string NameTable(std::string_view table_name);
 std::string NamePointer(std::string_view name, const WireFormat wire_format);
 std::string NameMembers(std::string_view name);
 std::string NameFields(std::string_view name);
+std::string NameFieldsAltField(std::string_view name, uint32_t field_num);
 
 std::string NameNullableXUnion(std::string_view name, const WireFormat wire_format);
 
