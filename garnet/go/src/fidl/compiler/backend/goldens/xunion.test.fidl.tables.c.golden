@@ -33,9 +33,8 @@ constexpr static inline const ::fidl::FidlCodedStruct* test_name_TestProtocolStr
 const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields73test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest, 0u, 16u, "test.name/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest", test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestAltTypePointerTable()));
 
 extern const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
-constexpr static inline const ::fidl::FidlStructField* Fields74test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse_field0_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields74test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[] = {
-    ::fidl::FidlStructField(&test_name_StrictBoundedXUnionTable, 16u, 0u, Fields74test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse_field0_alt_field())
+    ::fidl::FidlStructField(&test_name_StrictBoundedXUnionTable, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseAltTypePointerTable() __attribute__((unused));
 const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields74test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, 1u, 40u, "test.name/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse", test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseAltTypePointerTable()));
@@ -46,9 +45,8 @@ constexpr static inline const ::fidl::FidlCodedStruct* test_name_TestProtocolFle
 const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields75test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest, 0u, 16u, "test.name/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest", test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestAltTypePointerTable()));
 
 extern const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
-constexpr static inline const ::fidl::FidlStructField* Fields76test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse_field0_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields76test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[] = {
-    ::fidl::FidlStructField(&test_name_OlderSimpleUnionTable, 16u, 0u, Fields76test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse_field0_alt_field())
+    ::fidl::FidlStructField(&test_name_OlderSimpleUnionTable, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseAltTypePointerTable() __attribute__((unused));
 const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields76test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, 1u, 40u, "test.name/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse", test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseAltTypePointerTable()));
@@ -57,9 +55,8 @@ constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullab
 static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedVector(&String4294967295nonnullableTable, 4294967295u, 16u, ::fidl::kNonnullable, Vector4294967295nonnullable27String4294967295nonnullableAltTypePointerTable()));
 
 
-constexpr static inline const ::fidl::FidlStructField* Fields34test_name_StructWithNullableXUnion_field0_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields34test_name_StructWithNullableXUnion[] = {
-    ::fidl::FidlStructField(&test_name_OlderSimpleUnionNullableRefTable, 0u, 0u, Fields34test_name_StructWithNullableXUnion_field0_alt_field())
+    ::fidl::FidlStructField(&test_name_OlderSimpleUnionNullableRefTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_StructWithNullableXUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t test_name_StructWithNullableXUnionTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34test_name_StructWithNullableXUnion, 1u, 24u, "test.name/StructWithNullableXUnion", test_name_StructWithNullableXUnionAltTypePointerTable()));
@@ -167,9 +164,8 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_TestProtocol
 const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields76v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest, 0u, 16u, "test.name/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest", v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
-constexpr static inline const ::fidl::FidlStructField* Fields77v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse_field0_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields77v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[] = {
-    ::fidl::FidlStructField(&v1_test_name_StrictBoundedXUnionTable, 16u, 0u, Fields77v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse_field0_alt_field())
+    ::fidl::FidlStructField(&v1_test_name_StrictBoundedXUnionTable, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields77v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, 1u, 40u, "test.name/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse", v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseAltTypePointerTable()));
@@ -180,9 +176,8 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_TestProtocol
 const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields78v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest, 0u, 16u, "test.name/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest", v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
-constexpr static inline const ::fidl::FidlStructField* Fields79v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse_field0_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields79v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[] = {
-    ::fidl::FidlStructField(&v1_test_name_OlderSimpleUnionTable, 16u, 0u, Fields79v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse_field0_alt_field())
+    ::fidl::FidlStructField(&v1_test_name_OlderSimpleUnionTable, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields79v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, 1u, 40u, "test.name/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse", v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseAltTypePointerTable()));
@@ -191,9 +186,8 @@ constexpr static inline const ::fidl::FidlCodedVector* v1_Vector4294967295nonnul
 static const fidl_type_t v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedVector(&v1_String4294967295nonnullableTable, 4294967295u, 16u, ::fidl::kNonnullable, v1_Vector4294967295nonnullable30v1_String4294967295nonnullableAltTypePointerTable()));
 
 
-constexpr static inline const ::fidl::FidlStructField* Fields37v1_test_name_StructWithNullableXUnion_field0_alt_field() __attribute__((unused));
 static const ::fidl::FidlStructField Fields37v1_test_name_StructWithNullableXUnion[] = {
-    ::fidl::FidlStructField(&v1_v1_test_name_OlderSimpleUnionNullableRefTable, 0u, 0u, Fields37v1_test_name_StructWithNullableXUnion_field0_alt_field())
+    ::fidl::FidlStructField(&v1_v1_test_name_OlderSimpleUnionNullableRefTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_StructWithNullableXUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_test_name_StructWithNullableXUnionTable = fidl_type_t(::fidl::FidlCodedStruct(Fields37v1_test_name_StructWithNullableXUnion, 1u, 24u, "test.name/StructWithNullableXUnion", v1_test_name_StructWithNullableXUnionAltTypePointerTable()));
@@ -297,10 +291,6 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_TestProtocol
 }
 
 
-constexpr static inline const ::fidl::FidlStructField* Fields74test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields74test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse_field0_alt_field() { return &Fields77v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[0]; }
-constexpr static inline const ::fidl::FidlStructField* Fields77v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields77v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse_field0_alt_field() { return &Fields74test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[0]; }
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestAltTypePointerTable() {
   return &v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable.coded_struct;
@@ -323,10 +313,6 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_TestProtocol
 }
 
 
-constexpr static inline const ::fidl::FidlStructField* Fields76test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields76test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse_field0_alt_field() { return &Fields79v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[0]; }
-constexpr static inline const ::fidl::FidlStructField* Fields79v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields79v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse_field0_alt_field() { return &Fields76test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[0]; }
 constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullable27String4294967295nonnullableAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullable27String4294967295nonnullableAltTypePointerTable() {
   return &v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable.coded_vector;
@@ -360,8 +346,4 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_StructWithNu
 }
 
 
-constexpr static inline const ::fidl::FidlStructField* Fields34test_name_StructWithNullableXUnion_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields34test_name_StructWithNullableXUnion_field0_alt_field() { return &Fields37v1_test_name_StructWithNullableXUnion[0]; }
-constexpr static inline const ::fidl::FidlStructField* Fields37v1_test_name_StructWithNullableXUnion_field0_alt_field() __attribute__((unused));
-constexpr static inline const ::fidl::FidlStructField* Fields37v1_test_name_StructWithNullableXUnion_field0_alt_field() { return &Fields34test_name_StructWithNullableXUnion[0]; }
 } // extern "C"

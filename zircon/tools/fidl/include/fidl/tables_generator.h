@@ -74,8 +74,6 @@ class TablesGenerator {
   void GenerateForward(const coded::XUnionType& xunion_type);
 
   void Produce(CodedTypesGenerator* coded_types_generator, const WireFormat wire_format);
-  template <typename T>
-  void ProduceStructFieldLinking(const T& old, const T& v1);
 
   const flat::Library* library_;
 
