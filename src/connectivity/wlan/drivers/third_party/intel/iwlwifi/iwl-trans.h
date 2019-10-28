@@ -113,17 +113,19 @@ struct iwl_rx_packet {
    * 22:    Checksum enabled
    * 21-16: RX queue
    * 15-14: Reserved
-   * 13-00: RX frame size
+   * 13-00: RX frame size (not including the first 4 bytes)
    */
   __le32 len_n_flags;
   struct iwl_cmd_header hdr;
   uint8_t data[];
 } __packed;
 
+// The length including pkt->hdr and pkt->data[] (but not including len_n_flags).
 static inline uint32_t iwl_rx_packet_len(const struct iwl_rx_packet* pkt) {
   return le32_to_cpu(pkt->len_n_flags) & FH_RSCSR_FRAME_SIZE_MSK;
 }
 
+// The length of pkt->data[].
 static inline uint32_t iwl_rx_packet_payload_len(const struct iwl_rx_packet* pkt) {
   return iwl_rx_packet_len(pkt) - sizeof(pkt->hdr);
 }
