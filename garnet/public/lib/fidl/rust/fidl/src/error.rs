@@ -67,6 +67,10 @@ pub enum Error {
     )]
     NotNullable,
 
+    /// A FIDL object reference with nonzero byte length had a null data pointer.
+    #[fail(display = "A FIDL object reference with nonzero byte length had a null data pointer.")]
+    UnexpectedNullRef,
+
     /// Incorrectly encoded UTF8.
     #[fail(display = "A FIDL message contained incorrectly encoded UTF8.")]
     Utf8Error,

@@ -24,7 +24,7 @@ product configuration and `x64` architecture:
 
 To re-generate all of GIDL's conformance tests:
 
-    fx build tools/fidl/gidl
+    fx build host-tools/gidl
     fx exec $FUCHSIA_DIR/tools/fidl/gidl-conformance-suite/regen.sh
 
 After generating the conformance tests, you must run them to validate that the
@@ -50,9 +50,15 @@ conformance test passes. This is dependent on the language:
     * Build: `fx build garnet/public/lib/fidl/llcpp:fidl_llcpp_conformance_test`
     * Run: `fx run-test fidl_llcpp_conformance_test`
 
+* Rust:
+    * Bindings: <out/default/fidling/gen/tools/fidl/gidl-conformance-suite/fidl_conformance.rs>
+    * Test: <garnet/public/lib/fidl/rust/fidl_tests/src/conformance_test.rs>
+    * Build: `fx build garnet/public/lib/fidl/rust/fidl_tests:fidl_external_tests`
+    * Run: `fx run-test rust_fidl_tests`
+
 * Dart:
-    * Bindings: <bin/fidl_bindings_test/test/test/conformance_test_types.dart>
-    * Test: <bin/fidl_bindings_test/test/test/conformance_test.dart>
+    * Bindings: <topaz/bin/fidl_bindings_test/test/test/conformance_test_types.dart>
+    * Test: <topaz/bin/fidl_bindings_test/test/test/conformance_test.dart>
     * Build: `fx build topaz/bin/fidl_bindings_test/test:fidl_bindings_test`
     * Run: `fx run-test fidl_bindings_test`
 

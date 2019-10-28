@@ -167,7 +167,7 @@ func cppType(gidlTypeString string) string {
 	return "conformance::" + gidlTypeString
 }
 
-// extract out to common library (this is the same code as golang.go)
+// TODO(fxb/39685) extract out to common library
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
 	for i, b := range bytes {
@@ -226,17 +226,14 @@ func (b *cppValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) 
 		panic("unknown floating point type")
 	}
 	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %f;\n", typename, newVar, value))
+	b.Builder.WriteString(fmt.Sprintf("%s %s = %g;\n", typename, newVar, value))
 	b.lastVar = newVar
 }
 
 func (b *cppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	newVar := b.newVar()
 
-	// strconv.Quote() below produces a quoted _Go_ string (not C string), which
-	// isn't technically correct since Go & C strings will have different escape
-	// characters, etc. However, this should be OK until we we find a use-case
-	// that breaks it.
+	// TODO(fxb/39686) Consider Go/C++ escape sequence differences
 	b.Builder.WriteString(fmt.Sprintf(
 		"%s %s(%s);\n", typeName(decl), newVar, strconv.Quote(value)))
 

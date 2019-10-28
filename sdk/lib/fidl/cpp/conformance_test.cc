@@ -1260,7 +1260,7 @@ TEST(Conformance, Uint64Max_Encode) {
 TEST(Conformance, Float32Zero_Encode) {
   conformance::MyFloat32 v1;
 
-  float v2 = 0.000000;
+  float v2 = 0;
   v1.value = std::move(v2);
 
   auto expected = std::vector<uint8_t>{
@@ -1274,7 +1274,7 @@ TEST(Conformance, Float32Zero_Encode) {
 TEST(Conformance, Float32One_Encode) {
   conformance::MyFloat32 v1;
 
-  float v2 = 1.000000;
+  float v2 = 1;
   v1.value = std::move(v2);
 
   auto expected = std::vector<uint8_t>{
@@ -1288,7 +1288,7 @@ TEST(Conformance, Float32One_Encode) {
 TEST(Conformance, Float32MinusOne_Encode) {
   conformance::MyFloat32 v1;
 
-  float v2 = -1.000000;
+  float v2 = -1;
   v1.value = std::move(v2);
 
   auto expected = std::vector<uint8_t>{
@@ -1302,7 +1302,7 @@ TEST(Conformance, Float32MinusOne_Encode) {
 TEST(Conformance, Float32Max_Encode) {
   conformance::MyFloat32 v1;
 
-  float v2 = 340282346638528859811704183484516925440.000000;
+  float v2 = 3.4028234663852886e+38;
   v1.value = std::move(v2);
 
   auto expected = std::vector<uint8_t>{
@@ -1316,7 +1316,7 @@ TEST(Conformance, Float32Max_Encode) {
 TEST(Conformance, Float64Zero_Encode) {
   conformance::MyFloat64 v1;
 
-  double v2 = 0.000000;
+  double v2 = 0;
   v1.value = std::move(v2);
 
   auto expected = std::vector<uint8_t>{
@@ -1330,7 +1330,7 @@ TEST(Conformance, Float64Zero_Encode) {
 TEST(Conformance, Float64One_Encode) {
   conformance::MyFloat64 v1;
 
-  double v2 = 1.000000;
+  double v2 = 1;
   v1.value = std::move(v2);
 
   auto expected = std::vector<uint8_t>{
@@ -1344,7 +1344,7 @@ TEST(Conformance, Float64One_Encode) {
 TEST(Conformance, Float64MinusOne_Encode) {
   conformance::MyFloat64 v1;
 
-  double v2 = -1.000000;
+  double v2 = -1;
   v1.value = std::move(v2);
 
   auto expected = std::vector<uint8_t>{
@@ -1358,8 +1358,7 @@ TEST(Conformance, Float64MinusOne_Encode) {
 TEST(Conformance, Float64Max_Encode) {
   conformance::MyFloat64 v1;
 
-  double v2 =
-      179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.000000;
+  double v2 = 1.7976931348623157e+308;
   v1.value = std::move(v2);
 
   auto expected = std::vector<uint8_t>{
@@ -2695,7 +2694,7 @@ TEST(Conformance, Float32Zero_Decode) {
 
   conformance::MyFloat32 v1;
 
-  float v2 = 0.000000;
+  float v2 = 0;
   v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -2710,7 +2709,7 @@ TEST(Conformance, Float32One_Decode) {
 
   conformance::MyFloat32 v1;
 
-  float v2 = 1.000000;
+  float v2 = 1;
   v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -2725,7 +2724,7 @@ TEST(Conformance, Float32MinusOne_Decode) {
 
   conformance::MyFloat32 v1;
 
-  float v2 = -1.000000;
+  float v2 = -1;
   v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -2740,7 +2739,7 @@ TEST(Conformance, Float32Max_Decode) {
 
   conformance::MyFloat32 v1;
 
-  float v2 = 340282346638528859811704183484516925440.000000;
+  float v2 = 3.4028234663852886e+38;
   v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -2755,7 +2754,7 @@ TEST(Conformance, Float64Zero_Decode) {
 
   conformance::MyFloat64 v1;
 
-  double v2 = 0.000000;
+  double v2 = 0;
   v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -2770,7 +2769,7 @@ TEST(Conformance, Float64One_Decode) {
 
   conformance::MyFloat64 v1;
 
-  double v2 = 1.000000;
+  double v2 = 1;
   v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -2785,7 +2784,7 @@ TEST(Conformance, Float64MinusOne_Decode) {
 
   conformance::MyFloat64 v1;
 
-  double v2 = -1.000000;
+  double v2 = -1;
   v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
@@ -2800,8 +2799,7 @@ TEST(Conformance, Float64Max_Decode) {
 
   conformance::MyFloat64 v1;
 
-  double v2 =
-      179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.000000;
+  double v2 = 1.7976931348623157e+308;
   v1.value = std::move(v2);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);

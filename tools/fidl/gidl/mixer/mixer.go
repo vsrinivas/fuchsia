@@ -65,11 +65,11 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 	case bool:
 		visitor.OnBool(value)
 	case int64:
-		visitor.OnInt64(value, extractSubtype(decl))
+		visitor.OnInt64(value, decl.(PrimitiveDeclaration).Subtype())
 	case uint64:
-		visitor.OnUint64(value, extractSubtype(decl))
+		visitor.OnUint64(value, decl.(PrimitiveDeclaration).Subtype())
 	case float64:
-		visitor.OnFloat64(value, extractSubtype(decl))
+		visitor.OnFloat64(value, decl.(PrimitiveDeclaration).Subtype())
 	case string:
 		switch decl := decl.(type) {
 		case *StringDecl:
@@ -109,17 +109,6 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 	}
 }
 
-func extractSubtype(decl Declaration) fidlir.PrimitiveSubtype {
-	switch decl := decl.(type) {
-	case *NumberDecl:
-		return decl.Typ
-	case *FloatDecl:
-		return decl.Typ
-	default:
-		panic("should not be reachable, there must be a bug somewhere")
-	}
-}
-
 // Declaration describes a FIDL declaration.
 type Declaration interface {
 	// IsNullable returns true for nullable types. For example, it returns false
@@ -138,9 +127,23 @@ var _ = []Declaration{
 	&StringDecl{},
 	&StructDecl{},
 	&TableDecl{},
+	&UnionDecl{},
 	&XUnionDecl{},
 	&ArrayDecl{},
 	&VectorDecl{},
+}
+
+type PrimitiveDeclaration interface {
+	Declaration
+	// Subtype returns the primitive subtype (bool, uint32, float64, etc.).
+	Subtype() fidlir.PrimitiveSubtype
+}
+
+// Assert that wrappers conform to the PrimitiveDeclaration interface.
+var _ = []Declaration{
+	&BoolDecl{},
+	&NumberDecl{},
+	&FloatDecl{},
 }
 
 type KeyedDeclaration interface {
@@ -179,6 +182,10 @@ type BoolDecl struct {
 	NeverNullable
 }
 
+func (decl *BoolDecl) Subtype() fidlir.PrimitiveSubtype {
+	return fidlir.Bool
+}
+
 func (decl *BoolDecl) conforms(value interface{}) error {
 	switch value.(type) {
 	default:
@@ -193,6 +200,10 @@ type NumberDecl struct {
 	Typ   fidlir.PrimitiveSubtype
 	lower int64
 	upper uint64
+}
+
+func (decl *NumberDecl) Subtype() fidlir.PrimitiveSubtype {
+	return decl.Typ
 }
 
 func (decl *NumberDecl) conforms(value interface{}) error {
@@ -221,6 +232,10 @@ func (decl *NumberDecl) conforms(value interface{}) error {
 type FloatDecl struct {
 	NeverNullable
 	Typ fidlir.PrimitiveSubtype
+}
+
+func (decl *FloatDecl) Subtype() fidlir.PrimitiveSubtype {
+	return decl.Typ
 }
 
 func (decl *FloatDecl) conforms(value interface{}) error {

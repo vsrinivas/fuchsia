@@ -255,6 +255,7 @@ func goType(irType string) string {
 	return "conformance." + irType
 }
 
+// TODO(fxb/39685) extract out to common library
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("[]byte{\n")
@@ -305,7 +306,7 @@ func (b *goValueBuilder) OnUint64(value uint64, typ fidlir.PrimitiveSubtype) {
 func (b *goValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
-		"var %s %s = %f\n", newVar, typ, value))
+		"var %s %s = %g\n", newVar, typ, value))
 	b.lastVar = newVar
 }
 
@@ -439,10 +440,10 @@ func elemName(parent gidlmixer.ListDeclaration) string {
 
 // Go errors are defined in third_party/go/src/syscall/zx/fidl/errors.go
 var goErrorCodeNames = map[gidlir.ErrorCode]string{
-	gidlir.StringTooLong:               "ErrStringTooLong",
-	gidlir.NullEmptyStringWithNullBody: "ErrUnexpectedNullRef",
-	gidlir.StrictXUnionFieldNotSet:     "ErrInvalidXUnionTag",
-	gidlir.StrictXUnionUnknownField:    "ErrInvalidXUnionTag",
+	gidlir.StringTooLong:              "ErrStringTooLong",
+	gidlir.NonEmptyStringWithNullBody: "ErrUnexpectedNullRef",
+	gidlir.StrictXUnionFieldNotSet:    "ErrInvalidXUnionTag",
+	gidlir.StrictXUnionUnknownField:   "ErrInvalidXUnionTag",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

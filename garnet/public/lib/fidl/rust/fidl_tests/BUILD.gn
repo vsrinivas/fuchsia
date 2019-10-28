@@ -10,5 +10,6 @@ rustc_test("fidl_external_tests") {
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
+    "//tools/fidl/gidl-conformance-suite:conformance_fidl-rustc",
   ]
 }

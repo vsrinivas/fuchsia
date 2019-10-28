@@ -108,6 +108,8 @@ success("SimpleTableXAndY") {
 			67, 0, 0, 0, 0, 0, 0, 0, // field Y
 		),
 	],
+	// TODO(fxb/39778) Fix table decoding bug in Rust.
+	bindings_denylist = [rust],
 }
 
 success("SimpleTableJustY") {
@@ -133,6 +135,8 @@ success("SimpleTableJustY") {
 			67, 0, 0, 0, 0, 0, 0, 0, // field Y
 		),
 	],
+	// TODO(fxb/39778) Fix table decoding bug in Rust.
+	bindings_denylist = [rust],
 }
 
 success("TableWithStringAndVectorNoVectorContent") {
@@ -187,6 +191,8 @@ success("SimpleTableThenUint64") {
 			67, 0, 0, 0, 0, 0, 0, 0, // field Y
 		),
 	],
+	// TODO(fxb/39778) Fix table decoding bug in Rust.
+	bindings_denylist = [rust],
 }
 
 success("InlineXUnionInStruct") {
@@ -642,9 +648,11 @@ success("Vectors") {
 
 encode_failure("StringExceedsLimit") {
 	value = Length2StringWrapper {
-		length_2_string: "abc", // exceeeds the string length
+		length_2_string: "abc", // exceeds the string length
 	},
 	err = STRING_TOO_LONG,
+	// TODO(fxb/37304) Enforce size bounds in rust
+	bindings_denylist = [rust],
 }
 
 decode_failure("NonEmptyStringWithNullPtrBody") {

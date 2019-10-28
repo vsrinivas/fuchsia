@@ -805,7 +805,9 @@ fn decode_string(decoder: &mut Decoder, string: &mut String) -> Result<bool> {
     present.decode(decoder)?;
 
     match present {
-        ALLOC_ABSENT_U64 => return Ok(false),
+        ALLOC_ABSENT_U64 => {
+            return if len == 0 { Ok(false) } else { Err(Error::UnexpectedNullRef) }
+        }
         ALLOC_PRESENT_U64 => {}
         _ => return Err(Error::Invalid),
     };
@@ -827,7 +829,9 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<b
     present.decode(decoder)?;
 
     match present {
-        ALLOC_ABSENT_U64 => return Ok(false),
+        ALLOC_ABSENT_U64 => {
+            return if len == 0 { Ok(false) } else { Err(Error::UnexpectedNullRef) }
+        }
         ALLOC_PRESENT_U64 => {}
         _ => return Err(Error::Invalid),
     }
@@ -1811,6 +1815,9 @@ macro_rules! fidl_table {
                                     )?;
                                 }
                                 $crate::encoding::ALLOC_ABSENT_U64 => {
+                                    if num_bytes != 0 {
+                                        return Err($crate::Error::UnexpectedNullRef);
+                                    }
                                     self.$member_name = None;
                                 }
                                 _ => return Err($crate::Error::Invalid),

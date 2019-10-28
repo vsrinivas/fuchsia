@@ -129,7 +129,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 	return decodeSuccessCases, nil
 }
 
-// extract out to common library (this is the same code as golang.go)
+// TODO(fxb/39685) extract out to common library
 func bytesBuilder(bytes []byte) string {
 	var builder strings.Builder
 	for i, b := range bytes {
@@ -210,12 +210,13 @@ func (b *llcppValueBuilder) OnFloat64(value float64, subtype fidlir.PrimitiveSub
 		panic("unknown floating point type")
 	}
 	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %f;\n", typename, newVar, value))
+	b.Builder.WriteString(fmt.Sprintf("%s %s = %g;\n", typename, newVar, value))
 	b.lastVar = newVar
 }
 
 func (b *llcppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
 	newVar := b.newVar()
+	// TODO(fxb/39686) Consider Go/C++ escape sequence differences
 	b.Builder.WriteString(fmt.Sprintf(
 		"fidl::StringView %s(%s, %d)\n;", newVar, strconv.Quote(value), len(value)))
 	b.lastVar = newVar

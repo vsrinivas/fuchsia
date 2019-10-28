@@ -61,6 +61,8 @@ readonly \
     DART_TEST_PATH="${FUCHSIA_DIR}/topaz/bin/fidl_bindings_test/test/test/conformance_test.dart"
 readonly \
     LLCPP_TEST_PATH="${FUCHSIA_DIR}/garnet/public/lib/fidl/llcpp/conformance_test.cc"
+readonly \
+    RUST_TEST_PATH="${FUCHSIA_DIR}/garnet/public/lib/fidl/rust/fidl_tests/src/conformance_test.rs"
 
 readonly tmpbackup="$( mktemp -d 2>/dev/null || mktemp -d -t 'tmpbackup' )"
 readonly tmpout="$( mktemp -d 2>/dev/null || mktemp -d -t 'tmpout' )"
@@ -70,7 +72,8 @@ cp ${GO_TEST_PATH} ${tmpbackup}/conformance_test.go
 cp ${CPP_TEST_PATH} ${tmpbackup}/conformance_test.cc
 cp ${DART_DEFINITION_PATH} ${tmpbackup}/conformance_test_types.dart
 cp ${DART_TEST_PATH} ${tmpbackup}/conformance_test.dart
-cp ${LLCPP_TEST_PATH} ${tmpbackup}/llcpp_conformance_test.go
+cp ${LLCPP_TEST_PATH} ${tmpbackup}/llcpp_conformance_test.cc
+cp ${RUST_TEST_PATH} ${tmpbackup}/conformance_test.rs
 
 function cleanup {
     readonly EXIT_CODE=$?
@@ -80,7 +83,8 @@ function cleanup {
         cp ${tmpbackup}/conformance_test.cc ${CPP_TEST_PATH}
         cp ${tmpbackup}/conformance_test_types.dart ${DART_DEFINITION_PATH}
         cp ${tmpbackup}/conformance_test.dart ${DART_TEST_PATH}
-        cp ${tmpbackup}/llcpp_conformance_test.go ${LLCPP_TEST_PATH}
+        cp ${tmpbackup}/llcpp_conformance_test.cc ${LLCPP_TEST_PATH}
+        cp ${tmpbackup}/conformance_test.rs ${RUST_TEST_PATH}
     fi
     rm -rf ${tmpout}
     rm -rf ${tmpbackup}
@@ -162,3 +166,11 @@ ${GIDL} \
     -json "${json_path}" \
     ${GIDL_SRCS} >> "${LLCPP_TEST_PATH}"
 fx format-code --files=${LLCPP_TEST_PATH}
+
+# Rust
+echo "$generated_source_header" > "${RUST_TEST_PATH}"
+${GIDL} \
+    -language rust \
+    -json "${json_path}" \
+    ${GIDL_SRCS} >> "${RUST_TEST_PATH}"
+fx format-code --files="$RUST_TEST_PATH"
