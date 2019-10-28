@@ -34,8 +34,9 @@ class LocaleSource {
       return _fromProfile(await _stub.getProfile());
     } on FidlError catch (e, s) {
       log.warning(
-          'Could not get locale from fuchsia.intl.ProfileProvider: $e: $s');
-      // In case of an error, use the default locale and proceed.
+          'Could not get locale from fuchsia.intl.ProfileProvider for the shell. '
+          'This is nonfatal, but the shell will not support any locale '
+          'except for the system default: $e: $s');
       return _defaultLocale;
     }
   }

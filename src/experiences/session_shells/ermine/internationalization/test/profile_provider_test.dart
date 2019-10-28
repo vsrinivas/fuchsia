@@ -76,8 +76,6 @@ void main() {
     expect((await source.initial()).toString(), equals('sr_RS'));
     expect(await source.stream().join(','), equals('ru_RU,nl_NL'));
   });
-
-  log.info('this is over folks, thank you');
 }
 
 class MockPropertyProvider extends Mock implements fidl_intl.PropertyProvider {}
