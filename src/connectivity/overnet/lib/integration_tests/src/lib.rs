@@ -15,6 +15,7 @@ use {
     futures::prelude::*,
     overnet_core::{LinkId, Node, NodeId, NodeOptions, NodeRuntime, RouterTime, SendHandle},
     parking_lot::Mutex,
+    std::collections::VecDeque,
     std::sync::Arc,
 };
 
@@ -209,7 +210,7 @@ async fn run_overnet(
                 node.connect_to_service(node_id, &service_name, channel)
             }
             Some(OvernetCommand::AttachSocketLink(socket, options)) => {
-                node.attach_socket_link(options.connection_label, socket)
+                node.attach_socket_link(socket, options)
             }
         };
         if let Err(e) = r {
@@ -332,6 +333,77 @@ pub fn connect(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
     a.attach_socket_link(sa, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
     b.attach_socket_link(sb, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
     Ok(())
+}
+
+pub fn connect_with_interspersed_log_messages(
+    spawner: TestSpawner,
+    a: &Arc<Overnet>,
+    b: &Arc<Overnet>,
+) -> Result<(), Error> {
+    let mut log_messages = VecDeque::from(vec![
+"[00001.245] 00000:00000> INIT: cpu 0, calling hook 0xffffffff100a1900 (arm64_perfmon) at level 0x90000, flags 0x1\n",
+"[00001.245] 00000:00000> Trying to start cpu 1 returned: 0\n",
+"[00001.245] 00000:00000> Trying to start cpu 2 returned: 0\n",
+"[00001.245] 00000:00000> Trying to start cpu 3 returned: 0\n",
+"[00001.245] 00000:00000> Trying to start cpu 4 returned: 0\n",
+"[00001.245] 00000:00000> Trying to start cpu 5 returned: 0\n",
+"[00001.245] 00000:00000> Trying to start cpu 6 returned: 0\n",
+"[00001.245] 00000:00000> Trying to start cpu 7 returned: 0\n",
+"[00001.245] 00000:00000> initializing target\n",
+"[00001.245] 00000:00000> INIT: cpu 0, calling hook 0xffffffff10092fc0 (platform_dev_init) at level 0xa0000, flags 0x1\n",
+"[00001.245] 00000:00000> UART: started IRQ driven TX\n",
+"[00001.245] 00000:00000> moving to last init level\n",
+"[00001.245] 00000:00000> INIT: cpu 0, calling hook 0xffffffff10030204 (debuglog) at level 0xb0000, flags 0x1\n",
+"[00001.245] 00000:00000> INIT: cpu 0, calling hook 0xffffffff10098934 (kcounters) at level 0xb0000, flags 0x1\n",
+"[00001.245] 00000:00000> INIT: cpu 0, calling hook 0xffffffff10104270 (ktrace) at level 0xbffff, flags 0x1\n",
+"[00001.246] 00000:00000> OOM: memory availability state 1\n",
+"[00001.300] 00000:00000> INIT: cpu 3, calling hook 0xffffffff10097ac8 (arm_generic_timer_init_secondary_cpu) at level 0x7ffff, flags 0x2\n",
+"[00001.300] 00000:00000> ARM cpu 3: midr 0x431f0af1 'Cavium CN99XX r1p1' mpidr 0x80000003 aff 0:0:0:3\n",
+"[00001.300] 00000:00000> entering scheduler on cpu 3\n",
+"[00001.314] 00000:00000> INIT: cpu 2, calling hook 0xffffffff10097ac8 (arm_generic_timer_init_secondary_cpu) at level 0x7ffff, flags 0x2\n",
+"[00001.315] 00000:00000> ARM cpu 2: midr 0x431f0af1 'Cavium CN99XX r1p1' mpidr 0x80000002 aff 0:0:0:2\n",
+"[00001.315] 00000:00000> entering scheduler on cpu 2\n",
+"[00001.330] 00000:00000> INIT: cpu 7, calling hook 0xffffffff10097ac8 (arm_generic_timer_init_secondary_cpu) at level 0x7ffff, flags 0x2\n",
+"[00001.330] 00000:00000> ARM cpu 7: midr 0x431f0af1 'Cavium CN99XX r1p1' mpidr 0x80000007 aff 0:0:0:7\n",
+"[00001.330] 00000:00000> entering scheduler on cpu 7\n",
+"[00001.345] 00000:00000> INIT: cpu 5, calling hook 0xffffffff10097ac8 (arm_generic_timer_init_secondary_cpu) at level 0x7ffff, flags 0x2\n",
+"[00001.345] 00000:00000> ARM cpu 5: midr 0x431f0af1 'Cavium CN99XX r1p1' mpidr 0x80000005 aff 0:0:0:5\n",
+"[00001.345] 00000:00000> entering scheduler on cpu 5\n",
+"[00001.363] 00000:00000> INIT: cpu 4, calling hook 0xffffffff10097ac8 (arm_generic_timer_init_secondary_cpu) at level 0x7ffff, flags 0x2\n",
+"[00001.363] 00000:00000> ARM cpu 4: midr 0x431f0af1 'Cavium CN99XX r1p1' mpidr 0x80000004 aff 0:0:0:4\n",
+"[00001.363] 00000:00000> entering scheduler on cpu 4\n",
+"[00001.378] 00000:00000> INIT: cpu 1, calling hook 0xffffffff10097ac8 (arm_generic_timer_init_secondary_cpu) at level 0x7ffff, flags 0x2\n",
+"[00001.378] 00000:00000> ARM cpu 1: midr 0x431f0af1 'Cavium CN99XX r1p1' mpidr 0x80000001 aff 0:0:0:1\n",
+"[00001.378] 00000:00000> entering scheduler on cpu 1\n",
+"[00001.393] 00000:00000> INIT: cpu 6, calling hook 0xffffffff10097ac8 (arm_generic_timer_init_secondary_cpu) at level 0x7ffff, flags 0x2\n",
+"[00001.393] 00000:00000> ARM cpu 6: midr 0x431f0af1 'Cavium CN99XX r1p1' mpidr 0x80000006 aff 0:0:0:6\n",
+"[00001.393] 00000:00000> entering scheduler on cpu 6\n",
+"[00001.721] 00000:00000> ktrace: buffer at 0xffff008713666000 (33554432 bytes)\n",
+"[00001.721] 00000:00000> INIT: cpu 0, calling hook 0xffffffff100047f8 (kernel_shell) at level 0xc0000, flags 0x1\n",
+    ]);
+    let mut last_was_nl = false;
+    let mutator = move |mut bytes: Vec<u8>| {
+        let mutate = last_was_nl;
+        if bytes.len() > 0 {
+            last_was_nl = bytes[bytes.len() - 1] == 10;
+        };
+        if mutate {
+            eprintln!("Mutate bytes: {:?}", bytes);
+            let prefix = log_messages.pop_front().unwrap();
+            let mut output = prefix.to_string().into_bytes();
+            output.append(&mut bytes);
+            log_messages.push_back(prefix);
+            output
+        } else {
+            bytes
+        }
+    };
+    connect_with_mutator(spawner, a, b, Box::new(|v| v), Box::new(mutator), || {
+        fidl_fuchsia_overnet::SocketLinkOptions {
+            bytes_per_second: Some(1000),
+            ..fidl_fuchsia_overnet::SocketLinkOptions::empty()
+        }
+    })
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

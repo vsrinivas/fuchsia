@@ -35,7 +35,7 @@ protocol ServicePublisher {
 /// Interfaces applicable to controlling an Overnet mesh
 [Discoverable]
 protocol MeshController {
-    /// Attach a socket as a new link.
+    /// Attach a socket as a new link. Bad socket options will result in the channel being closed.
     AttachSocketLink(handle<socket> socket, SocketLinkOptions options);
 };
 
@@ -68,6 +68,11 @@ struct Peer {
 table SocketLinkOptions {
     /// A label that might be used for debugging purposes.
     1: string:32 connection_label;
+    /// How many bytes per second are transferable on this link (used to tune error recovery).
+    /// If unset, error recovery will be disabled.
+    /// If set, must not be 0, or else the receiving MeshController service will close the channel
+    /// (as discussed in that protocol's documentation).
+    2: uint32 bytes_per_second;
 };
 
 /// Information provided to a ServiceProvider about an incoming connection.

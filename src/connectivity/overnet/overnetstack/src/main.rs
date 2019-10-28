@@ -312,7 +312,7 @@ async fn run_mesh_controller_server(mut stream: MeshControllerRequestStream) -> 
     while let Some(request) = stream.try_next().await.context("error running overnet server")? {
         let result = with_app_mut(|app| match request {
             MeshControllerRequest::AttachSocketLink { socket, options, .. } => {
-                app.node.attach_socket_link(options.connection_label, socket)
+                app.node.attach_socket_link(socket, options)
             }
         });
         if let Err(e) = result {

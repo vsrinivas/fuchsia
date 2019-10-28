@@ -36,6 +36,7 @@ use {
         fmt::Debug,
         path::Path,
         rc::Rc,
+        time::Duration,
     },
 };
 
@@ -565,16 +566,27 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     /// Implementation of AttachToSocket fidl method.
     pub fn attach_socket_link(
         &self,
-        connection_label: Option<String>,
         socket: fidl::Socket,
+        options: fidl_fuchsia_overnet::SocketLinkOptions,
     ) -> Result<(), Error> {
+        let duration_per_byte = if let Some(n) = options.bytes_per_second {
+            Some(std::cmp::max(
+                Duration::from_micros(10),
+                Duration::from_secs(1)
+                    .checked_div(n)
+                    .ok_or_else(|| failure::format_err!("Division failed: 1 second / {}", n))?,
+            ))
+        } else {
+            None
+        };
         let this = &mut *self.inner.borrow_mut();
         let node_link_id = this.next_node_link_id.into();
         this.next_node_link_id += 1;
         this.runtime.spawn_local(self.clone().handshake_socket(
             node_link_id,
-            connection_label,
+            options.connection_label,
             socket,
+            duration_per_byte,
         ));
         Ok(())
     }
@@ -584,9 +596,65 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         node_link_id: NodeLinkId,
         connection_label: Option<String>,
         socket: fidl::Socket,
+        duration_per_byte: Option<Duration>,
     ) {
-        if let Err(e) = self.handshake_socket_inner(node_link_id, connection_label, socket).await {
+        if let Err(e) = self
+            .handshake_socket_inner(node_link_id, connection_label, socket, duration_per_byte)
+            .await
+        {
             log::warn!("Socket handshake failed: {}", e);
+        }
+    }
+
+    async fn read_or_unstick(
+        &mut self,
+        buf: &mut [u8],
+        deframer: &mut StreamDeframer,
+        rx_bytes: &mut futures::io::ReadHalf<fidl::AsyncSocket>,
+        duration_per_byte: Option<Duration>,
+    ) -> Result<Option<usize>, Error> {
+        if let Some(duration_per_byte) = duration_per_byte {
+            if deframer.is_stuck() {
+                let (tx_timeout, rx_timeout) = futures::channel::oneshot::channel();
+                let mut rx_timeout = rx_timeout.fuse();
+                self.inner.borrow_mut().runtime.at(
+                    Runtime::Time::after(Runtime::Time::now(), duration_per_byte.into()),
+                    move || {
+                        let _ = tx_timeout.send(());
+                    },
+                );
+                let mut rx_read_bytes = rx_bytes.read(buf).fuse();
+                return futures::select! {
+                    r = rx_read_bytes => r.map_err(|e| e.into()).map(Some),
+                    _ = rx_timeout => {
+                        deframer.skip_byte();
+                        Ok(None)
+                    }
+                };
+            }
+        }
+        rx_bytes.read(buf).await.map_err(|e| e.into()).map(Some)
+    }
+
+    async fn socket_deframer(
+        mut self,
+        mut rx_bytes: futures::io::ReadHalf<fidl::AsyncSocket>,
+        mut tx_frames: futures::channel::mpsc::Sender<Vec<u8>>,
+        duration_per_byte: Option<Duration>,
+    ) -> Result<(), Error> {
+        let mut deframer = StreamDeframer::new();
+        let mut buf = [0u8; 1024];
+
+        loop {
+            if let Some(n) = self
+                .read_or_unstick(&mut buf, &mut deframer, &mut rx_bytes, duration_per_byte)
+                .await?
+            {
+                deframer.queue_recv(&buf[..n]);
+            }
+            while let Some(frame) = deframer.next_incoming_frame() {
+                tx_frames.send(frame).await?;
+            }
         }
     }
 
@@ -595,6 +663,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         node_link_id: NodeLinkId,
         connection_label: Option<String>,
         socket: fidl::Socket,
+        duration_per_byte: Option<Duration>,
     ) -> Result<(), Error> {
         log::info!(
             "Begin handshake: node_link_id:{:?} connection_label:{:?} socket:{:?}",
@@ -621,17 +690,18 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         assert_eq!(send.len(), socket.write(&send)?);
 
         // Wait for first frame
-        let (mut rx, tx) =
+        let (rx_bytes, tx_bytes) =
             futures::io::AsyncReadExt::split(fidl::AsyncSocket::from_socket(socket)?);
-        let mut deframer = StreamDeframer::new();
-        let mut buf = [0u8; 1024];
-        let mut greeting_bytes = loop {
-            let n = rx.read(&mut buf).await?;
-            deframer.queue_recv(&buf[..n]);
-            if let Some(greeting) = deframer.next_incoming_frame() {
-                break greeting;
+        let (tx_frames, mut rx_frames) = futures::channel::mpsc::channel(1);
+        let node = self.clone();
+        self.inner.borrow_mut().runtime.spawn_local(async move {
+            match node.socket_deframer(rx_bytes, tx_frames, duration_per_byte).await {
+                Ok(()) => (),
+                Err(e) => log::warn!("Error reading/deframing socket: {:?}", e),
             }
-        };
+        });
+        let mut greeting_bytes =
+            rx_frames.next().await.ok_or(failure::format_err!("No greeting received on socket"))?;
         let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())?;
         let node_id = match greeting {
             StreamSocketGreeting { magic_string: None, .. } => failure::bail!(
@@ -652,7 +722,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         let (router_id, id) = {
             let this = &mut *self.inner.borrow_mut();
             let id = this.socket_links.insert(SocketLink {
-                writes: Some(tx),
+                writes: Some(tx_bytes),
                 router_id: LinkId::invalid(),
                 framer,
             });
@@ -674,27 +744,18 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
             (router_id, id)
         };
 
-        let result = self.socket_link_read_loop(router_id, deframer, rx).await;
+        self.socket_link_read_loop(router_id, rx_frames).await;
         self.inner.borrow_mut().socket_links.remove(id);
-        result
+        Ok(())
     }
 
     async fn socket_link_read_loop(
         &self,
         rtr_id: LinkId<PhysLinkId<Runtime::LinkId>>,
-        mut deframer: StreamDeframer,
-        mut rx: futures::io::ReadHalf<fidl::AsyncSocket>,
-    ) -> Result<(), Error> {
-        let mut buf = [0u8; 1024];
-        loop {
-            while let Some(mut frame) = deframer.next_incoming_frame() {
-                self.queue_recv(rtr_id, frame.as_mut());
-            }
-            let n = rx.read(&mut buf).await?;
-            if n == 0 {
-                return Ok(());
-            }
-            deframer.queue_recv(&buf[..n]);
+        mut rx: futures::channel::mpsc::Receiver<Vec<u8>>,
+    ) {
+        while let Some(mut frame) = rx.next().await {
+            self.queue_recv(rtr_id, frame.as_mut());
         }
     }
 
@@ -1035,7 +1096,14 @@ mod test {
         let node_id = n.id();
         let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         let mut c = fidl::AsyncSocket::from_socket(c).unwrap();
-        n.attach_socket_link(Some("test".to_string()), s).unwrap();
+        n.attach_socket_link(
+            s,
+            fidl_fuchsia_overnet::SocketLinkOptions {
+                connection_label: Some("test".to_string()),
+                bytes_per_second: None,
+            },
+        )
+        .unwrap();
         pool.run_until(async move {
             let mut deframer = StreamDeframer::new();
             let mut buf = [0u8; 1024];
@@ -1051,5 +1119,27 @@ mod test {
             assert_eq!(greeting.node_id, Some(node_id.into()));
             assert_eq!(greeting.connection_label, Some("test".to_string()));
         });
+    }
+
+    #[test]
+    #[cfg(not(target_os = "fuchsia"))]
+    fn attach_with_zero_bytes_per_second() {
+        init();
+        let pool = futures::executor::LocalPool::new();
+        let n = Node::new(
+            TestRuntime(pool.spawner()),
+            NodeOptions::from_router_options(test_router_options()).export_diagnostics(false),
+        )
+        .unwrap();
+        let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
+        n.attach_socket_link(
+            s,
+            fidl_fuchsia_overnet::SocketLinkOptions {
+                connection_label: Some("test".to_string()),
+                bytes_per_second: Some(0),
+            },
+        )
+        .expect_err("bytes_per_second == 0 should fail");
+        drop(c);
     }
 }

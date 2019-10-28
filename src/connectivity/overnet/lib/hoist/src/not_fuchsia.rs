@@ -394,7 +394,7 @@ async fn run_overnet_inner(
                 node.connect_to_service(node_id, &service_name, channel)
             }
             Some(OvernetCommand::AttachSocketLink(socket, options)) => {
-                node.attach_socket_link(options.connection_label, socket)
+                node.attach_socket_link(socket, options)
             }
         };
         if let Err(e) = r {
