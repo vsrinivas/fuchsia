@@ -84,7 +84,10 @@ const char* BreakpointEnabledToString(bool enabled);
 
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 
-OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* breakpoint);
+// The |show_context| flag will cause some source code to be included annotated with the breakpoint,
+// or a message about pending breakpoints if there is no location.
+OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* breakpoint,
+                              bool show_context);
 
 OutputBuffer FormatInputLocation(const InputLocation& location);
 OutputBuffer FormatInputLocations(const std::vector<InputLocation>& location);

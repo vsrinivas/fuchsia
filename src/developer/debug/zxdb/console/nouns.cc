@@ -611,7 +611,7 @@ bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd, Err* err)
   // would have been rejected before here).
   FXL_DCHECK(cmd.breakpoint());
   context->SetActiveBreakpoint(cmd.breakpoint());
-  Console::get()->Output(FormatBreakpoint(context, cmd.breakpoint()));
+  Console::get()->Output(FormatBreakpoint(context, cmd.breakpoint(), true));
   return true;
 }
 

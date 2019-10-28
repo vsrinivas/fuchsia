@@ -10,19 +10,23 @@
 #include <limits>
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/breakpoint_location.h"
 #include "src/developer/debug/zxdb/client/client_eval_context_impl.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
+#include "src/developer/debug/zxdb/console/format_context.h"
 #include "src/developer/debug/zxdb/console/format_function.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/source_util.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
@@ -255,7 +259,8 @@ std::string DescribeThread(const ConsoleContext* context, const Thread* thread) 
       thread->GetKoid(), thread->GetName().c_str());
 }
 
-OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* breakpoint) {
+OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* breakpoint,
+                              bool show_context) {
   BreakpointSettings settings = breakpoint->GetSettings();
 
   std::string scope = BreakpointScopeToString(context, settings);
@@ -273,6 +278,34 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
                                   enabled, stop.c_str(), matched_locs, locations_str));
 
   result.Append(std::move(location));
+  result.Append("\n");
+
+  if (!settings.locations.empty() && show_context) {
+    // Append the source code location.
+    //
+    // There is a question of how to show the breakpoint enabled state. The breakpoint has a main
+    // enabled bit and each location (it can apply to more than one address -- think templates and
+    // inlined functions) within that breakpoint has its own. But each location normally resolves to
+    // the same source code location so we can't practically show the individual location's enabled
+    // state separately.
+    //
+    // For simplicity, just base it on the main enabled bit. Most people won't use location-specific
+    // enabling anyway.
+    //
+    // Ignore errors from printing the source, it doesn't matter that much. Since breakpoints are in
+    // the global scope we have to use the global settings for the build dir. We could use the
+    // process build dir for process-specific breakpoints but both process-specific breakpoints and
+    // process-specific build settings are rare.
+    if (auto locs = breakpoint->GetLocations(); !locs.empty()) {
+      FormatBreakpointContext(locs[0]->GetLocation(),
+                              SourceFileProviderImpl(breakpoint->session()->system().settings()),
+                              settings.enabled, &result);
+    } else {
+      // When the breakpoint resolved to nothing, warn the user, they may have made a typo.
+      result.Append(Syntax::kWarning, "Pending");
+      result.Append(": No matches for location, it will be pending library loads.\n");
+    }
+  }
   return result;
 }
 
