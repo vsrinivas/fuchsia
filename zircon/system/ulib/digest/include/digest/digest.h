@@ -10,8 +10,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#ifdef __cplusplus
-
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 
@@ -90,42 +88,5 @@ class Digest final {
 };
 
 }  // namespace digest
-#endif  // __cplusplus
-
-__BEGIN_CDECLS
-typedef struct digest_t digest_t;
-
-// C API for Digest.  It's called in a similar manner as the corresponding C++
-// code, namely, the caller should do roughly the following (with additional
-// error checking):
-//     digest_t *digest = NULL;
-//     digest_init(&digest);
-//     while(true) {
-//         // Fill buf with len bytes somehow or break if no more data
-//         digest_update(digest, buf, len);
-//     }
-//     uint8_t result[DIGEST_LENGTH];
-//     digest_final(digest, result, sizeof(result));
-//
-// Then |result| will have the result of the hashing the data.
-
-// C wrapper for |Digest::Init|.  On success this function allocates memory and
-// returns it in |out|.  The caller must make a call to |digest_final| to free
-// this memory.
-zx_status_t digest_init(digest_t** out);
-
-// C wrapper for |Digest::Update|.
-void digest_update(digest_t* digest, const void* buf, size_t len);
-
-// C wrapper for |Digest::Final|. |out| must point to a buffer with room for at
-// least |DIGEST_LENGTH| bytes.  This method frees |digest|, which must not be
-// used again after this call.
-zx_status_t digest_final(digest_t* digest, void* out, size_t out_len);
-
-// C wrapper for |Digest::Hash|.  |out| must point to a buffer with room for at
-// least |DIGEST_LENGTH| bytes.
-zx_status_t digest_hash(const void* buf, size_t len, void* out, size_t out_len);
-
-__END_CDECLS
 
 #endif  // DIGEST_DIGEST_H_

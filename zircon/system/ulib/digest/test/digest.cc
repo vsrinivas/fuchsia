@@ -74,21 +74,6 @@ TEST(DigestTestCase, Split) {
   }
 }
 
-TEST(DigestTestCase, CWrappers) {
-  uint8_t buf[kSha256Length];
-  EXPECT_STATUS(digest_hash(nullptr, 0, buf, sizeof(buf) - 1), ZX_ERR_BUFFER_TOO_SMALL);
-  ASSERT_OK(digest_hash(nullptr, 0, buf, sizeof(buf)));
-  Digest expected;
-  ASSERT_OK(expected.Parse(kZeroDigest));
-  EXPECT_BYTES_EQ(buf, expected.get(), kSha256Length);
-  digest_t* digest = nullptr;
-  ASSERT_OK(digest_init(&digest));
-  expected.Hash(buf, sizeof(buf));
-  digest_update(digest, buf, sizeof(buf));
-  ASSERT_OK(digest_final(digest, buf, sizeof(buf)));
-  EXPECT_BYTES_EQ(buf, expected.get(), kSha256Length);
-}
-
 TEST(DigestTestCase, Equality) {
   Digest actual, expected;
   ASSERT_OK(expected.Parse(kZeroDigest));

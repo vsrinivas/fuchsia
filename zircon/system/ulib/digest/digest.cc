@@ -131,35 +131,3 @@ bool Digest::operator==(const uint8_t* rhs) const {
 bool Digest::operator!=(const uint8_t* rhs) const { return !(*this == rhs); }
 
 }  // namespace digest
-
-using digest::Digest;
-
-// C-style wrapper functions
-struct digest_t {
-  Digest obj;
-};
-
-zx_status_t digest_init(digest_t** out) {
-  fbl::AllocChecker ac;
-  fbl::unique_ptr<digest_t> uptr(new (&ac) digest_t);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  uptr->obj.Init();
-  *out = uptr.release();
-  return ZX_OK;
-}
-
-void digest_update(digest_t* digest, const void* buf, size_t len) { digest->obj.Update(buf, len); }
-
-zx_status_t digest_final(digest_t* digest, void* out, size_t out_len) {
-  fbl::unique_ptr<digest_t> uptr(digest);
-  uptr->obj.Final();
-  return uptr->obj.CopyTo(static_cast<uint8_t*>(out), out_len);
-}
-
-zx_status_t digest_hash(const void* buf, size_t len, void* out, size_t out_len) {
-  Digest digest;
-  digest.Hash(buf, len);
-  return digest.CopyTo(static_cast<uint8_t*>(out), out_len);
-}

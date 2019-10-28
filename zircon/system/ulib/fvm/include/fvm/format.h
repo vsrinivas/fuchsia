@@ -5,7 +5,6 @@
 #ifndef __LIB_FVM_FORMAT_H__
 #define __LIB_FVM_FORMAT_H__
 
-#include <digest/digest.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,6 +13,7 @@
 #include <limits>
 #include <type_traits>
 
+#include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <gpt/gpt.h>
 
