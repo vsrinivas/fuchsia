@@ -1,29 +1,47 @@
-Fuchsia Source
-==============
+# Fuchsia Source
 
-Fuchsia uses the `jiri` tool to manage git repositories
+Fuchsia uses the `jiri` tool to manage git repositories. This tool manages
+a set of repositories specified by a manifest. Jiri is located at
 [https://fuchsia.googlesource.com/jiri](https://fuchsia.googlesource.com/jiri).
-This tool manages a set of repositories specified by a manifest.
 
-See [Source code layout](layout.md) for an overview of how the code is organized.
+See [Source code layout](layout.md) for an overview of how the Fuchsia repository
+is organized.
 
-For how to build, see Fuchsia's [Getting Started](/docs/getting_started.md) doc.
+For how to prepare your developer environment and build Fuchsia,
+see Fuchsia's [Getting Started](/docs/getting_started.md) doc.
 
-## Creating a new checkout
+## Creating a new Fuchsia checkout
 
-The bootstrap procedure requires that you have Go 1.6 or newer and Git
-installed and on your PATH.
+Fuchsia provides a bootstrap script that sets up your development environment
+and syncs with the Fuchsia source repository. It requires that you have the
+following installed and up to date:
 
-This script will bootstrap a development environment for by first creating
-directories `fuchsia`.
+ * Curl
+ * Python
+ * Unzip
+ * Git
 
-```
-curl -s "https://fuchsia.googlesource.com/fuchsia/+/master/scripts/bootstrap?format=TEXT" | base64 --decode | bash
-```
+ 1. To install these tools, run the following script. This command will install them if they are missing or update if they exist.
 
-This script will set up your development environment to track the Global
-Integration version for all repositories. If you wish to track a specific
-repository at top-of-tree/HEAD, you can use the `fx set-petal` command.
+    ```
+    sudo apt-get install build-essential curl git python unzip
+    ```
+
+ 1. Go to the directory where you want to set up your workspace foer the Fuchsia
+    codebase. This can be anywhere, but this example uses your home directory.
+
+    ```
+    cd ~
+    ```
+
+ 1. Run the script to bootstrap your development environment. This script
+    automatically creates a `fuchsia` directory for the source code:
+
+    ```
+    curl -s "https://fuchsia.googlesource.com/fuchsia/+/master/scripts/bootstrap?format=TEXT" | base64 --decode | bash
+    ```
+
+Downloading Fuchsia source can take up to 60 minutes.
 
 ### Setting up environment variables
 
