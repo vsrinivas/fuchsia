@@ -43,11 +43,11 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	if err := update.Run(cfg, []string{}); err != nil {
-		return err
+		return fmt.Errorf("failed to update the merkle roots: %s", err)
 	}
 
 	if err := seal.Run(cfg, []string{}); err != nil {
-		return err
+		return fmt.Errorf("failed to seal the package: %s", err)
 	}
 
 	if *depfile {
@@ -57,7 +57,7 @@ func Run(cfg *build.Config, args []string) error {
 
 		content, err := buildDepfile(cfg)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to build dep file", err)
 		}
 		if err := ioutil.WriteFile(cfg.MetaFAR()+".d", content, 0644); err != nil {
 			return err
