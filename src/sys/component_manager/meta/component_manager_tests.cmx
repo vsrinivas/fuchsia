@@ -1,17 +1,11 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.io.Directory": "fuchsia-pkg://fuchsia.com/component_manager_tests#meta/memfs.cmx"
-            }
-        }
-    },
     "program": {
         "binary": "test/component_manager_tests"
     },
     "sandbox": {
         "features": [
-            "deprecated-ambient-replace-as-executable"
+            "deprecated-ambient-replace-as-executable",
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",

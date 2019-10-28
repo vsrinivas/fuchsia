@@ -22,7 +22,6 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
-    io_util,
     std::env,
     std::ffi::{CStr, CString},
     std::fs,
@@ -46,15 +45,6 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
     let root_resource_path = PathBuf::from(format!("/svc/{}", fboot::RootResourceMarker::NAME));
     if root_resource_path.exists() {
         fs.add_proxy_service::<fboot::RootResourceMarker, _>();
-    }
-
-    let memfs_dir_path = PathBuf::from("/svc/fuchsia.io.Directory");
-    if memfs_dir_path.exists() {
-        let dir_proxy = io_util::open_directory_in_namespace(
-            memfs_dir_path.to_str().unwrap(),
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-        )?;
-        fs.add_remote("fuchsia.io.Directory", dir_proxy);
     }
 
     let (client, server) = zx::Channel::create().expect("Failed to create channel");
@@ -83,6 +73,13 @@ async fn main() -> Result<(), Error> {
         fdio::SpawnAction::add_namespace_entry(&svc_str, serve_proxy_svc_dir()?.into_handle()),
         fdio::SpawnAction::add_namespace_entry(&pkg_str, fdio::transfer_fd(pkg_dir)?),
     ];
+
+    // Also pass through /tmp if it exists, as it's needed for some component manager tests
+    let tmp_str = CString::new("/tmp")?;
+    if Path::new("/tmp").exists() {
+        let tmp_dir = fs::File::open("/tmp")?;
+        actions.push(fdio::SpawnAction::add_namespace_entry(&tmp_str, fdio::transfer_fd(tmp_dir)?));
+    }
 
     let root_job = get_root_job().await?;
     let argv: Vec<CString> =

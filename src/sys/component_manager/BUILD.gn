@@ -133,7 +133,6 @@ test_package("component_manager_tests") {
     "//examples/components/basic:hello_world_bin",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",
-    "//src/sys/component_manager/tests/memfs",
   ]
 
   components =
@@ -164,10 +163,6 @@ test_package("component_manager_tests") {
       path = rebase_path("meta/component_manager_tests_hello_world.cml")
       dest = "component_manager_tests_hello_world.cm"
     },
-    {
-      path = rebase_path("meta/memfs.cmx")
-      dest = "memfs.cmx"
-    },
   ]
 
   binaries = [
@@ -179,9 +174,6 @@ test_package("component_manager_tests") {
     },
     {
       name = "root_job_test_runner"
-    },
-    {
-      name = "memfs"
     },
   ]
 }

@@ -1,9 +1,6 @@
 {
     "facets": {
         "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.io.Directory": "fuchsia-pkg://fuchsia.com/component_manager_tests#meta/memfs.cmx"
-            },
             "system-services": [
                 "fuchsia.boot.RootJob",
                 "fuchsia.boot.RootResource"
@@ -18,7 +15,8 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-ambient-replace-as-executable"
+            "deprecated-ambient-replace-as-executable",
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.boot.RootJob",
