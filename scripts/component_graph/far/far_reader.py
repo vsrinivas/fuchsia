@@ -118,24 +118,6 @@ def far_read(far_buffer):
         export[path.decode()] = entry_bytes
     return export
 
-# TODO(benwright) - Move to a different file when the component_graph lands.
-def read_package(far_buffer):
-    """Performs a raw_read then intelligently restructures known package structures."""
-    files = far_read(far_buffer)
-
-    if "meta/contents" in files:
-      content = files["meta/contents"].decode()
-      files["meta/contents"] = dict(
-            [tuple(e.rsplit("=", maxsplit=1)) for e in content.split("\n") if e])
-    if "meta/package" in files:
-      files["meta/package"] = json.loads(files["meta/package"].decode())
-    json_extensions = [".cm", ".cmx"]
-    for ext in json_extensions:
-        for path in files.keys():
-            if path.endswith(ext):
-                files[path] = json.loads(files[path])
-    return files
-
 # Utility to allow using
 if __name__ == "__main__":
   import sys
