@@ -44,7 +44,7 @@ unsigned ReadPixelFormat(FuzzedDataProvider* input) {
       ZX_PIXEL_FORMAT_GRAY_8,    ZX_PIXEL_FORMAT_NV12,     ZX_PIXEL_FORMAT_RGB_888,
   };
   return LEGAL_PIXEL_FORMATS[input->ConsumeIntegralInRange<uint8_t>(
-      0, sizeof(LEGAL_PIXEL_FORMATS) / sizeof(*LEGAL_PIXEL_FORMATS))];
+      0, sizeof(LEGAL_PIXEL_FORMATS) / sizeof(*LEGAL_PIXEL_FORMATS) - 1)];
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
@@ -67,8 +67,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if (surfaces.count(id)) {
           break;
         }
-        auto width = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-        auto height = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
+        auto width = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
+        auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
         auto stride = width + input.ConsumeIntegral<uint8_t>();
         auto pixel_format = ReadPixelFormat(&input);
         auto flags = input.ConsumeIntegral<unsigned>() & (GFX_FLAG_FLUSH_CPU_CACHE);
@@ -100,8 +100,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if (auto* surface = LookupSurface(&input, &surfaces)) {
           auto x = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           auto y = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-          auto width = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-          auto height = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
+          auto width = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
+          auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
           auto x2 = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           auto y2 = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           gfx_copyrect(surface, x, y, width, height, x2, y2);
@@ -112,8 +112,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if (auto* surface = LookupSurface(&input, &surfaces)) {
           auto x = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           auto y = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-          auto width = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-          auto height = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
+          auto width = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
+          auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
           auto color = input.ConsumeIntegral<unsigned>();
           gfx_fillrect(surface, x, y, width, height, color);
         }
@@ -160,8 +160,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             auto srcx = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
             auto srcy = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-            auto width = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-            auto height = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
+            auto width = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
+            auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
             auto destx = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
             auto desty = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
             gfx_blend(surface1, surface2, srcx, srcy, width, height, destx, desty);
@@ -174,7 +174,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
           if (auto* surface2 = LookupSurface(&input, &surfaces)) {
             auto srcy = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
             auto desty = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-            auto height = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
+            auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
             gfx_copylines(surface1, surface2, srcy, desty, height);
           }
         }
