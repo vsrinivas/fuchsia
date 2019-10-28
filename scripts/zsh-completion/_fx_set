@@ -31,7 +31,7 @@ _fx_set__with() {
 
   local -a fx_packages
   if ! _retrieve_cache fx_packages ; then
-    fx_packages=( $(${fuchsia_dir}/buildtools/gn ls ${fuchsia_dir}/${fuchsia_build_dir} ${package_patterns[@]} ) )
+    fx_packages=( $(${fuchsia_dir}/prebuilt/third_party/gn/${prebuilt_os}/gn ls ${fuchsia_dir}/${fuchsia_build_dir} ${package_patterns[@]} ) )
     _store_cache fx_packages fx_packages
   fi
 
@@ -59,7 +59,7 @@ _fx_set__gn_args() {
 
   local -a gn_args
   if ! _retrieve_cache gn_args ; then
-    gn_args=( $(${fuchsia_dir}/buildtools/gn args ${fuchsia_dir}/${fuchsia_build_dir} --list --short|sed -e 's/ .*//') )
+    gn_args=( $(${fuchsia_dir}/prebuilt/third_party/gn/${prebuilt_os}/gn args ${fuchsia_dir}/${fuchsia_build_dir} --list --short|sed -e 's/ .*//') )
     _store_cache gn_args gn_args
   fi
 

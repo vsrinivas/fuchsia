@@ -23,7 +23,7 @@ __fx_gn_target() {
   local -r ninja_file="${absolute_build_dir}/build.ninja"
   if [ ! -e "${targets_file}" -o ${ninja_file} -nt ${targets_file} ]; then
     local -r tmp_targets_file="$(mktemp -p "${absolute_build_dir}")"
-    "${fuchsia_dir}/buildtools/gn" ls "${absolute_build_dir}" > "${tmp_targets_file}"
+    "${fuchsia_dir}/prebuilt/third_party/gn/${prebuilt_os}/gn" ls "${absolute_build_dir}" > "${tmp_targets_file}"
     mv "${tmp_targets_file}" "${targets_file}"
   fi
   _values $(cat ${absolute_build_dir}/.gn_ls)
@@ -75,6 +75,20 @@ _fx() {
   if [[ -z "$fuchsia_build_dir" && -f "${fuchsia_dir}/.fx-build-dir" ]]; then
     fuchsia_build_dir="$(<"${fuchsia_dir}/.fx-build-dir")"
   fi
+
+  # the host os id for prebuilts
+  case "$(uname -s)" in
+    Linux)
+      local prebuilt_os=linux-x64
+      ;;
+    Darwin)
+      local prebuilt_os=mac-x64
+      ;;
+    *)
+      # Unknown OS, don't complete
+      exit
+      ;;
+  esac
 
   # look for a completion function
   local f
