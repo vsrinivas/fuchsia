@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "local_roughtime_server.h"
+
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -10,9 +12,8 @@
 #include <sys/types.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
-#include "local_roughtime_server.h"
 #include "settable_time_source.h"
+#include "src/lib/fxl/logging.h"
 #include "third_party/roughtime/protocol.h"
 #include "third_party/roughtime/simple_server.h"
 #include "third_party/roughtime/udp_processor.h"
@@ -75,12 +76,12 @@ void LocalRoughtimeServer::SetTime(roughtime::rough_time_t server_time_micros) {
 
 void LocalRoughtimeServer::SetTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour,
                                    uint8_t min, uint8_t sec) {
-  struct tm time = {.tm_year = year - 1900,
-                    .tm_mon = month - 1,
-                    .tm_mday = day,
-                    .tm_hour = hour,
+  struct tm time = {.tm_sec = sec,
                     .tm_min = min,
-                    .tm_sec = sec};
+                    .tm_hour = hour,
+                    .tm_mday = day,
+                    .tm_mon = month - 1,
+                    .tm_year = year - 1900};
   time_t epoch_seconds = timegm(&time);
   SetTime(static_cast<roughtime::rough_time_t>(epoch_seconds * 1'000'000));
 }
