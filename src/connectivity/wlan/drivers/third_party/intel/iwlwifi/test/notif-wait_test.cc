@@ -29,16 +29,16 @@ enum FakeCommandId : uint16_t {
 #define FAKE_PKT_1         \
   {                        \
     .hdr = {               \
-        .group_id = 0,     \
         .cmd = FAKE_CMD_1, \
+        .group_id = 0,     \
     },                     \
   }
 
 #define FAKE_PKT_2         \
   {                        \
     .hdr = {               \
-        .group_id = 0,     \
         .cmd = FAKE_CMD_2, \
+        .group_id = 0,     \
     },                     \
   }
 
