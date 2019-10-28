@@ -503,14 +503,36 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
     }
 }
 
+/// Sends a single UDP frame without creating a connection or listener.
+///
+/// `send_udp` is equivalent to creating a UDP connection with [`connect_udp`]
+/// with the same arguments provided to `send_udp`, sending `body` over the
+/// created connection and, finally, destroying the connection.
+///
+/// `send_udp` fails if the selected 4-tuple conflicts with any existing socket.
+// TODO(brunodalbo) we may need more arguments here to express REUSEADDR and
+// BIND_TO_DEVICE options
+pub fn send_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
+    ctx: &mut C,
+    local_addr: Option<SpecifiedAddr<A>>,
+    local_port: Option<NonZeroU16>,
+    remote_addr: SpecifiedAddr<A>,
+    remote_port: NonZeroU16,
+    body: B,
+) {
+    // TODO(brunodalbo) this can be faster if we just perform the checks but
+    // don't actually create a UDP connection.
+    let tmp_conn = connect_udp(ctx, local_addr, local_port, remote_addr, remote_port);
+    send_udp_conn(ctx, tmp_conn, body);
+    remove_udp_conn(ctx, tmp_conn);
+}
+
 /// Send a UDP packet on an existing connection.
 ///
 /// # Panics
 ///
 /// `send_udp_conn` panics if `conn` is not associated with a connection for this IP version.
-// TODO(rheacock): remove `allow(dead_code)` when this is used.
-#[allow(dead_code)]
-pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
+pub fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx: &mut C,
     conn: UdpConnId<I>,
     body: B,
@@ -545,16 +567,25 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
-// TODO(rheacock): remove `allow(dead_code)` when this is used.
-#[allow(dead_code)]
-pub(crate) fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
+pub fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     ctx: &mut C,
     listener: UdpListenerId<A::Version>,
-    local_addr: SpecifiedAddr<A>,
+    local_addr: Option<SpecifiedAddr<A>>,
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
     body: B,
 ) {
+    let local_addr = match local_addr {
+        Some(a) => a,
+        // TODO(brunodalbo) this may cause problems when we don't match the
+        // bound listener addresses, we should revisit whether that check is
+        // actually necessary.
+        // Also, if the local address is a multicast address this function
+        // should probably fail and `send_udp` must be used instead
+        None => ctx
+            .local_address_for_remote(remote_addr)
+            .expect("send_udp_listener: Can't route remote address"),
+    };
     if !ctx.is_local_addr(local_addr.get()) {
         // TODO(joshlf): Return error.
         panic!("transport::udp::send_udp::listener: invalid local addr");
@@ -667,7 +698,25 @@ pub fn remove_udp_conn<I: Ip, C: UdpContext<I>>(
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
     let state = ctx.get_state_mut();
-    state.conn_state.conns.remove_by_id(id.into()).expect("UDP listener not found").into()
+    state.conn_state.conns.remove_by_id(id.into()).expect("UDP connection not found").into()
+}
+
+/// Gets the [`UdpConnInfo`] associated with the UDP connection referenced by [`id`].
+///
+/// # Panics
+///
+/// `get_udp_conn_info` panics if `id` is not a valid `UdpConnId`.
+pub fn get_udp_conn_info<I: Ip, C: UdpContext<I>>(
+    ctx: &C,
+    id: UdpConnId<I>,
+) -> UdpConnInfo<I::Addr> {
+    ctx.get_state()
+        .conn_state
+        .conns
+        .get_conn_by_id(id.into())
+        .expect("UDP connection not found")
+        .clone()
+        .into()
 }
 
 /// Listen on for incoming UDP packets.
@@ -757,6 +806,41 @@ pub fn remove_udp_listener<I: Ip, C: UdpContext<I>>(
             .expect("Unexpected empty UDP listener")
             .clone()
             .into(),
+    }
+}
+
+/// Gets the [`UdpListenerInfo`] associated with the UDP listener referenced by
+/// [`id`].
+///
+/// # Panics
+///
+/// `get_udp_conn_info` panics if `id` is not a valid `UdpListenerId`.
+pub fn get_udp_listener_info<I: Ip, C: UdpContext<I>>(
+    ctx: &C,
+    id: UdpListenerId<I>,
+) -> UdpListenerInfo<I::Addr> {
+    let state = ctx.get_state();
+    match id.listener_type {
+        ListenerType::Specified => state
+            .conn_state
+            .listeners
+            .get_by_listener(id.id)
+            .expect("UDP listener not found")
+            // NOTE(brunodalbo) ListenerAddrMap keeps vecs internally, but we
+            // always only add a single address, so unwrap the first one
+            .first()
+            .map(|l| l.clone().into())
+            .expect("Unexpected empty UDP listener"),
+        ListenerType::Wildcard => state
+            .conn_state
+            .wildcard_listeners
+            .get_by_listener(id.id)
+            .expect("UDP listener not found")
+            // NOTE(brunodalbo) ListenerAddrMap keeps vecs internally, but we
+            // always only add a single address, so unwrap the first one
+            .first()
+            .map(|l| l.clone().into())
+            .expect("Unexpected empty UDP listener"),
     }
 }
 
@@ -929,31 +1013,42 @@ mod tests {
         assert_eq!(pkt.src_port.unwrap().get(), 200);
         assert_eq!(pkt.body, &body[..]);
 
-        // Now send a packet using the listener reference and check that it came
-        // out as expected:
+        // Send a packet providing a local ip:
         send_udp_listener(
             &mut ctx,
             listener,
-            local_ip,
+            Some(local_ip),
+            remote_ip,
+            NonZeroU16::new(200).unwrap(),
+            Buf::new(body.to_owned(), ..),
+        );
+        // And send a packet that doesn't:
+        send_udp_listener(
+            &mut ctx,
+            listener,
+            None,
             remote_ip,
             NonZeroU16::new(200).unwrap(),
             Buf::new(body.to_owned(), ..),
         );
         let frames = ctx.frames();
-        assert_eq!(frames.len(), 1);
-        let (meta, frame_body) = &frames[0];
-        assert_eq!(meta.src_ip, local_ip);
-        assert_eq!(meta.dst_ip, remote_ip);
-        assert_eq!(meta.proto, IpProto::Udp);
-        let mut buf = &frame_body[..];
-        let packet = UdpPacket::parse(
-            &mut buf,
-            UdpParseArgs::new(meta.src_ip.into_addr(), meta.dst_ip.into_addr()),
-        )
-        .expect("Parsed sent UDP packet");
-        assert_eq!(packet.src_port().unwrap().get(), 100);
-        assert_eq!(packet.dst_port().get(), 200);
-        assert_eq!(packet.body(), &body[..]);
+        assert_eq!(frames.len(), 2);
+        let check_frame = |(meta, frame_body): &(IpPacketFromArgs<I::Addr>, Vec<u8>)| {
+            assert_eq!(meta.src_ip, local_ip);
+            assert_eq!(meta.dst_ip, remote_ip);
+            assert_eq!(meta.proto, IpProto::Udp);
+            let mut buf = &frame_body[..];
+            let packet = UdpPacket::parse(
+                &mut buf,
+                UdpParseArgs::new(meta.src_ip.into_addr(), meta.dst_ip.into_addr()),
+            )
+            .expect("Parsed sent UDP packet");
+            assert_eq!(packet.src_port().unwrap().get(), 100);
+            assert_eq!(packet.dst_port().get(), 200);
+            assert_eq!(packet.body(), &body[..]);
+        };
+        check_frame(&frames[0]);
+        check_frame(&frames[1]);
     }
 
     /// Helper function to test that UDP packets without a connection are
@@ -1019,8 +1114,49 @@ mod tests {
 
         // Now try to send something over this new connection:
         send_udp_conn(&mut ctx, conn, Buf::new(body.to_owned(), ..));
+
         let frames = ctx.frames();
         assert_eq!(frames.len(), 1);
+
+        // check first frame:
+        let (meta, frame_body) = &frames[0];
+        assert_eq!(meta.src_ip, local_ip);
+        assert_eq!(meta.dst_ip, remote_ip);
+        assert_eq!(meta.proto, IpProto::Udp);
+        let mut buf = &frame_body[..];
+        let packet = UdpPacket::parse(
+            &mut buf,
+            UdpParseArgs::new(meta.src_ip.into_addr(), meta.dst_ip.into_addr()),
+        )
+        .expect("Parsed sent UDP packet");
+        assert_eq!(packet.src_port().unwrap().get(), 100);
+        assert_eq!(packet.dst_port().get(), 200);
+        assert_eq!(packet.body(), &body[..]);
+    }
+
+    #[ip_test]
+    fn test_send_udp<I: Ip>() {
+        set_logger_for_test();
+
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+        let remote_ip = remote_addr::<I>();
+
+        let body = [1, 2, 3, 4, 5];
+        // Try to send something with send_udp
+        send_udp(
+            &mut ctx,
+            Some(local_ip),
+            NonZeroU16::new(100),
+            remote_ip,
+            NonZeroU16::new(200).unwrap(),
+            Buf::new(body.to_vec(), ..),
+        );
+
+        let frames = ctx.frames();
+        assert_eq!(frames.len(), 1);
+
+        // check first frame:
         let (meta, frame_body) = &frames[0];
         assert_eq!(meta.src_ip, local_ip);
         assert_eq!(meta.dst_ip, remote_ip);
@@ -1411,5 +1547,43 @@ mod tests {
         assert!(info.local_addr.is_none());
         assert_eq!(info.local_port, local_port);
         assert!(ctx.get_state().conn_state.wildcard_listeners.get_by_listener(list.id).is_none());
+    }
+
+    #[ip_test]
+    fn test_get_conn_info<I: Ip>() {
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+        let remote_ip = remote_addr::<I>();
+        // create a UDP connection with a specified local port and local ip:
+        let conn = connect_udp::<I::Addr, _>(
+            &mut ctx,
+            Some(local_ip),
+            NonZeroU16::new(100),
+            remote_ip,
+            NonZeroU16::new(200).unwrap(),
+        );
+        let info = get_udp_conn_info(&ctx, conn);
+        assert_eq!(info.local_addr, local_ip);
+        assert_eq!(info.local_port.get(), 100);
+        assert_eq!(info.remote_addr, remote_ip);
+        assert_eq!(info.remote_port.get(), 200);
+    }
+
+    #[ip_test]
+    fn test_get_listener_info<I: Ip>() {
+        let mut ctx = DummyContext::<I>::default();
+        let local_ip = local_addr::<I>();
+
+        // check getting info on specified listener:
+        let list = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), NonZeroU16::new(100));
+        let info = get_udp_listener_info(&ctx, list);
+        assert_eq!(info.local_addr.unwrap(), local_ip);
+        assert_eq!(info.local_port.get(), 100);
+
+        // check getting info on wildcard listener:
+        let list = listen_udp::<I::Addr, _>(&mut ctx, None, NonZeroU16::new(200));
+        let info = get_udp_listener_info(&ctx, list);
+        assert!(info.local_addr.is_none());
+        assert_eq!(info.local_port.get(), 200);
     }
 }
