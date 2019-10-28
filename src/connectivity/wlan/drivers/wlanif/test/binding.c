@@ -5,12 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 #define _ALL_SOURCE
+#include <threads.h>
+#include <zircon/types.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/wlanif.h>
-#include <threads.h>
-#include <zircon/types.h>
 
 wlanif_impl_ifc_t wlanif_ifc = {};
 void* wlanif_cookie = NULL;
@@ -127,12 +128,12 @@ void wlanif_query(void* ctx, wlanif_query_info_t* info) {
   // num_bands
   info->num_bands = 1;
 
-  // basic_rates
-  const uint16_t basic_rates[] = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
-  static_assert(countof(basic_rates) <= WLAN_BASIC_RATES_MAX_LEN, "too many basic rates");
-  size_t num_rates = countof(basic_rates);
-  info->bands[0].num_basic_rates = num_rates;
-  memcpy(info->bands[0].basic_rates, basic_rates, sizeof(basic_rates));
+  // rates
+  const uint16_t rates[] = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
+  static_assert(countof(rates) <= WLAN_RATES_MAX_LEN, "too many rates");
+  size_t num_rates = countof(rates);
+  info->bands[0].num_rates = num_rates;
+  memcpy(info->bands[0].rates, rates, sizeof(rates));
 
   // base_frequency
   info->bands[0].base_frequency = 2407;

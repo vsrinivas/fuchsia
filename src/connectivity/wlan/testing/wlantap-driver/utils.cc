@@ -139,9 +139,8 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_info_band_info_t* out
     out->vht_supported = false;
   }
 
-  std::copy_n(in.basic_rates.data(),
-              std::min<size_t>(in.basic_rates.size(), WLAN_INFO_BAND_INFO_MAX_BASIC_RATES),
-              out->basic_rates);
+  std::copy_n(in.rates.data(), std::min<size_t>(in.rates.size(), WLAN_INFO_BAND_INFO_MAX_RATES),
+              out->rates);
 
   out->supported_channels.base_freq = in.supported_channels.base_freq;
   std::copy_n(

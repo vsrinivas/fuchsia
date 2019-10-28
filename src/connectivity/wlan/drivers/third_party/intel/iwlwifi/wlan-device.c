@@ -221,8 +221,8 @@ static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   // See IEEE Std 802.11-2016, 9.4.2.3 for encoding. Those values are:
   //   [1Mbps, 2Mbps, 5.5Mbps, 11Mbps, 6Mbps, 9Mbps, 12Mbps, 18Mbps, 24Mbps, 36Mbps, 48Mbps, 54Mbps]
   uint8_t rates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
-  static_assert(sizeof(rates) <= sizeof(wlan_band->basic_rates), "Too many basic_rates to copy");
-  memcpy(wlan_band->basic_rates, rates, sizeof(rates));
+  static_assert(sizeof(rates) <= sizeof(wlan_band->rates), "Too many basic_rates to copy");
+  memcpy(wlan_band->rates, rates, sizeof(rates));
   wlan_band->supported_channels.base_freq = 2407;
   wlan_band->supported_channels.channels[0] = 11;
 

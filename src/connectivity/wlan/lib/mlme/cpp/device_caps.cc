@@ -27,9 +27,8 @@ const fbl::Span<const uint8_t> GetRatesByChannel(const wlan_info_t& device_info,
     return {};
   }
 
-  size_t num_rates =
-      strnlen(reinterpret_cast<const char*>(band->basic_rates), sizeof(band->basic_rates));
-  return {band->basic_rates, num_rates};
+  size_t num_rates = strnlen(reinterpret_cast<const char*>(band->rates), sizeof(band->rates));
+  return {band->rates, num_rates};
 }
 
 }  // namespace wlan

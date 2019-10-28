@@ -76,7 +76,7 @@ struct ath10k_band {
   bool ht_supported;
   bool vht_supported;
   ieee80211_vht_capabilities_t vht_caps;
-  uint8_t basic_rates[12];
+  uint8_t rates[12];
   uint16_t base_freq;
   size_t n_channels;
   const struct ath10k_channel* channels;

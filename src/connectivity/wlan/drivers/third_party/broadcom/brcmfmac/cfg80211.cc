@@ -510,8 +510,10 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
   args.code = scan_result_code;
   if (ndev->if_proto.ops != NULL) {
     BRCMF_DBG(SCAN, "Signaling on_scan_end with txn_id %ld and code %d", args.txn_id, args.code);
-    BRCMF_DBG(WLANIF, "Sending scan end event to SME. txn_id: %" PRIu64 ", result: %s"
-                      ", APs seen: %" PRIu32 "\n",
+    BRCMF_DBG(WLANIF,
+              "Sending scan end event to SME. txn_id: %" PRIu64
+              ", result: %s"
+              ", APs seen: %" PRIu32 "\n",
               args.txn_id,
               args.code == WLAN_SCAN_RESULT_SUCCESS
                   ? "success"
@@ -3373,13 +3375,13 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
   }
   BRCMF_INFO("brcmfmac:   band_id: %s\n", band_id_str);
 
-  ZX_ASSERT(band->num_basic_rates <= WLAN_INFO_BAND_INFO_MAX_BASIC_RATES);
-  char basic_rates_str[WLAN_INFO_BAND_INFO_MAX_BASIC_RATES * 6 + 1];
-  char* str = basic_rates_str;
-  for (unsigned i = 0; i < band->num_basic_rates; i++) {
-    str += sprintf(str, "%s%d", i > 0 ? " " : "", band->basic_rates[i]);
+  ZX_ASSERT(band->num_rates <= WLAN_INFO_BAND_INFO_MAX_RATES);
+  char rates_str[WLAN_INFO_BAND_INFO_MAX_RATES * 6 + 1];
+  char* str = rates_str;
+  for (unsigned i = 0; i < band->num_rates; i++) {
+    str += sprintf(str, "%s%d", i > 0 ? " " : "", band->rates[i]);
   }
-  BRCMF_INFO("brcmfmac:     basic_rates: %s\n", basic_rates_str);
+  BRCMF_INFO("brcmfmac:     basic_rates: %s\n", rates_str);
 
   BRCMF_INFO("brcmfmac:     base_frequency: %d\n", band->base_frequency);
 
@@ -3469,16 +3471,14 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
     wlanif_band_capabilities_t* band = &info->bands[i - 1];
     if (bandlist[i] == WLC_BAND_2G) {
       band->band_id = WLAN_INFO_BAND_2GHZ;
-      band->num_basic_rates =
-          std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES, wl_g_rates_size);
-      memcpy(band->basic_rates, wl_g_rates, band->num_basic_rates * sizeof(uint16_t));
+      band->num_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_RATES, wl_g_rates_size);
+      memcpy(band->rates, wl_g_rates, band->num_rates * sizeof(uint16_t));
       band->base_frequency = 2407;
       band_2ghz = band;
     } else if (bandlist[i] == WLC_BAND_5G) {
       band->band_id = WLAN_INFO_BAND_5GHZ;
-      band->num_basic_rates =
-          std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES, wl_a_rates_size);
-      memcpy(band->basic_rates, wl_a_rates, band->num_basic_rates * sizeof(uint16_t));
+      band->num_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_RATES, wl_a_rates_size);
+      memcpy(band->rates, wl_a_rates, band->num_rates * sizeof(uint16_t));
       band->base_frequency = 5000;
       band_5ghz = band;
     }

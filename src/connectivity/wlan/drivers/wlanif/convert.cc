@@ -800,7 +800,7 @@ void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
   fidl_band->band_id = ::wlan::common::BandToFidl(band.band_id);
 
   // basic_rates
-  fidl_band->rates.assign(band.basic_rates, band.basic_rates + band.num_basic_rates);
+  fidl_band->rates.assign(band.rates, band.rates + band.num_rates);
 
   // base_frequency
   fidl_band->base_frequency = band.base_frequency;

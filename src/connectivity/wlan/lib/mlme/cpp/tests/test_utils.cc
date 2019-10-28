@@ -61,7 +61,7 @@ wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band) {
   // Construct a base
   wlan_info_band_info_t bi = {
       .band = static_cast<uint8_t>(band),
-      .basic_rates = {12, 24, 48, 54, 96, 108},
+      .rates = {12, 24, 48, 54, 96, 108},
       .supported_channels =
           {
               .base_freq = 0,

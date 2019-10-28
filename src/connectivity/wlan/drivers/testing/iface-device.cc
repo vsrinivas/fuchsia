@@ -4,10 +4,10 @@
 
 #include "iface-device.h"
 
+#include <stdio.h>
+
 #include <ddk/debug.h>
 #include <ddk/hw/wlan/wlaninfo.h>
-
-#include <stdio.h>
 
 namespace wlan {
 namespace testing {
@@ -104,7 +104,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
         .ht_caps = {},
         .vht_supported = false,
         .vht_caps = {},
-        .basic_rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108},
+        .rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108},
         .supported_channels =
             {
                 .base_freq = 2417,
@@ -117,7 +117,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
         .ht_caps = {},
         .vht_supported = false,
         .vht_caps = {},
-        .basic_rates = {12, 18, 24, 36, 48, 72, 96, 108},
+        .rates = {12, 18, 24, 36, 48, 72, 96, 108},
         .supported_channels =
             {
                 .base_freq = 5000,

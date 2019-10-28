@@ -136,7 +136,7 @@ wlan_device::PhyInfo get_info() {
   static_assert(sizeof(band24.ht_caps->bytes) == sizeof(ht_caps));
   memcpy(band24.ht_caps->bytes.data(), &ht_caps, sizeof(ht_caps));
 
-  band24.basic_rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
+  band24.rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
   band24.supported_channels.base_freq = 2417;
   band24.supported_channels.channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 
@@ -155,7 +155,7 @@ wlan_device::PhyInfo get_info() {
   static_assert(sizeof(band5.ht_caps->bytes) == sizeof(ht_caps));
   memcpy(band5.ht_caps->bytes.data(), &ht_caps, sizeof(ht_caps));
 
-  band5.basic_rates = {12, 18, 24, 36, 48, 72, 96, 108};
+  band5.rates = {12, 18, 24, 36, 48, 72, 96, 108};
   band5.supported_channels.base_freq = 5000;
   band5.supported_channels.channels = {36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
                                        60,  62,  64,  100, 102, 104, 106, 108, 110, 112, 114, 116,

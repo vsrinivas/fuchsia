@@ -411,8 +411,8 @@ struct WlanifEapolIndication {
 struct WlanifBandCapabilities {
     /// Values from enum Band (WLAN_BAND_*)
     uint8 band_id;
-    usize num_basic_rates;
-    array<uint16>:WLAN_INFO_BAND_INFO_MAX_BASIC_RATES basic_rates;
+    usize num_rates;
+    array<uint16>:WLAN_INFO_BAND_INFO_MAX_RATES rates;
     uint16 base_frequency;
     usize num_channels;
     array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;

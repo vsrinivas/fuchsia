@@ -3104,9 +3104,9 @@ static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* 
     wlan_band->vht_supported = false;
   }
 
-  // basic_rates
-  ZX_DEBUG_ASSERT(sizeof(wlan_band->basic_rates) == sizeof(dev_band->basic_rates));
-  memcpy(&wlan_band->basic_rates, &dev_band->basic_rates, sizeof(wlan_band->basic_rates));
+  // rates
+  ZX_DEBUG_ASSERT(sizeof(wlan_band->rates) == sizeof(dev_band->rates));
+  memcpy(&wlan_band->rates, &dev_band->rates, sizeof(wlan_band->rates));
 
   // base_freq
   wlan_band->supported_channels.base_freq = dev_band->base_freq;

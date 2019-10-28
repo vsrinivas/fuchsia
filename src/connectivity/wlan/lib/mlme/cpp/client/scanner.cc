@@ -320,13 +320,13 @@ void Scanner::SendProbeRequest(wlan_channel_t channel) {
   auto band_info = FindBand(device_->GetWlanInfo().ifc_info, common::Is5Ghz(channel));
   ZX_DEBUG_ASSERT(band_info != nullptr);
   if (band_info) {
-    SupportedRate rates[WLAN_INFO_BAND_INFO_MAX_BASIC_RATES];
+    SupportedRate rates[WLAN_INFO_BAND_INFO_MAX_RATES];
     uint8_t num_rates = 0;
-    for (uint8_t rate : band_info->basic_rates) {
+    for (uint8_t rate : band_info->rates) {
       if (rate == 0) {
         break;
       }
-      rates[num_rates] = SupportedRate(band_info->basic_rates[num_rates]);
+      rates[num_rates] = SupportedRate(band_info->rates[num_rates]);
       num_rates++;
     }
     ZX_DEBUG_ASSERT(num_rates > 0);

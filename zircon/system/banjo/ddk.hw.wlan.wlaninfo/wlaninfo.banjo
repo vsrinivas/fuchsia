@@ -114,8 +114,9 @@ struct WlanInfoChannelList {
     array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
 };
 
-/// The maximum number of basic rates in WlanInfoBandInfo.
-const usize WLAN_INFO_BAND_INFO_MAX_BASIC_RATES = 12;
+/// The maximum number of rates in WlanInfoBandInfo.
+// IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable
+const usize WLAN_INFO_BAND_INFO_MAX_RATES = 12;
 
 /// Information about a particular WLAN band. Capabilities are grouped by band, by
 /// de facto industry standard.
@@ -131,9 +132,9 @@ struct WlanInfoBandInfo {
     bool vht_supported;
     ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities vht_caps;
 
-    /// Basic rates supported in this band, in units of 500 kbit/s (as defined in
+    /// Rates supported in this band, in units of 500 kbit/s (as defined in
     /// IEEE Std 802.11-2016, 9.4.2.3). For example, 1 Mbit/s is represented as 0x02.
-    array<uint8>:WLAN_INFO_BAND_INFO_MAX_BASIC_RATES basic_rates;
+    array<uint8>:WLAN_INFO_BAND_INFO_MAX_RATES rates;
 
     /// Channels supported in this band.
     WlanInfoChannelList supported_channels;

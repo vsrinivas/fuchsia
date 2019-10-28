@@ -31,9 +31,7 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::Interface {
  public:
   DeviceConnector(Device* device) : device_(device) {}
-  void Connect(
-      ::zx::channel request,
-      ConnectCompleter::Sync _completer) override {
+  void Connect(::zx::channel request, ConnectCompleter::Sync _completer) override {
     device_->Connect(std::move(request));
   }
 
@@ -217,12 +215,11 @@ static void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo, u
       memcpy(band.vht_caps->bytes.data(), &vht_cap, sizeof(vht_cap));
     }
 
-    // basic_rates
-    band.basic_rates.resize(0);
+    // rates
+    band.rates.resize(0);
     size_t rate_ndx = 0;
-    while ((rate_ndx < arraysize(phy_bands->basic_rates)) &&
-           (phy_bands->basic_rates[rate_ndx] > 0)) {
-      band.basic_rates.push_back(phy_bands->basic_rates[rate_ndx]);
+    while ((rate_ndx < arraysize(phy_bands->rates)) && (phy_bands->rates[rate_ndx] > 0)) {
+      band.rates.push_back(phy_bands->rates[rate_ndx]);
       rate_ndx++;
     }
 

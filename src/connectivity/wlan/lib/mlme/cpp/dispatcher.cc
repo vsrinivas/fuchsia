@@ -247,9 +247,9 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
     wlan_mlme::BandCapabilities band;
     band.band_id = wlan::common::BandToFidl(band_info.band);
     band.rates.resize(0);
-    for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates); rate_idx++) {
-      if (band_info.basic_rates[rate_idx] != 0) {
-        band.rates.push_back(band_info.basic_rates[rate_idx]);
+    for (size_t rate_idx = 0; rate_idx < sizeof(band_info.rates); rate_idx++) {
+      if (band_info.rates[rate_idx] != 0) {
+        band.rates.push_back(band_info.rates[rate_idx]);
       }
     }
     const wlan_info_channel_list_t& chan_list = band_info.supported_channels;

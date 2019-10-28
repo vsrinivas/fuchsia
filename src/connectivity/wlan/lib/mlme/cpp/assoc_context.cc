@@ -129,7 +129,7 @@ AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info, const wlan_channel_
 
   auto band_info = FindBand(ifc_info, common::Is5Ghz(join_chan));
 
-  for (uint8_t rate : band_info->basic_rates) {
+  for (uint8_t rate : band_info->rates) {
     if (rate == 0) {
       break;
     }  // basic_rates has fixed-length and is "null-terminated".

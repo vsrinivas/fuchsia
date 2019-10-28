@@ -66,26 +66,26 @@ TEST(GetRatesByChannel, SimpleTest) {
                       {
                           .channels = {1, 2, 3},
                       },
-                  .basic_rates = {10, 20, 30},
+                  .rates = {10, 20, 30},
               },
               {
                   .supported_channels =
                       {
                           .channels = {4, 5, 6, 7},
                       },
-                  .basic_rates = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120},
+                  .rates = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120},
               },
           },
       .bands_count = 2,
   };
 
   auto rates = GetRatesByChannel(info, 2);
-  EXPECT_EQ(info.bands[0].basic_rates, rates.data());
+  EXPECT_EQ(info.bands[0].rates, rates.data());
   EXPECT_EQ(3u, rates.size());
 
   rates = GetRatesByChannel(info, 5);
-  EXPECT_EQ(info.bands[1].basic_rates, rates.data());
-  EXPECT_EQ(static_cast<size_t>(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES), rates.size());
+  EXPECT_EQ(info.bands[1].rates, rates.data());
+  EXPECT_EQ(static_cast<size_t>(WLAN_INFO_BAND_INFO_MAX_RATES), rates.size());
 
   rates = GetRatesByChannel(info, 17);
   EXPECT_EQ(nullptr, rates.data());

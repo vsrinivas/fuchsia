@@ -644,7 +644,7 @@ std::string Describe(const wlan_info_band_info& bi) {
   BUFFER("ht_caps:[%s]", Describe(bi.ht_caps).c_str());
   BUFFER("vht_supported:%u", bi.vht_supported);
   BUFFER("vht_caps:[to implement]");
-  BUFFER("basic_rates:[%s]", DescribeArray(bi.basic_rates, 12).c_str());
+  BUFFER("rates:[%s]", DescribeArray(bi.rates, 12).c_str());
   BUFFER("supported_channels:[%s]", Describe(bi.supported_channels).c_str());
   return std::string(buf);
 }
