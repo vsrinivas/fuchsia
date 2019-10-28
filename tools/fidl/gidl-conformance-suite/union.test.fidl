@@ -19,3 +19,59 @@ union SingleVariantUnion {
 struct SingleVariantUnionStruct {
     SingleVariantUnion u;
 };
+
+union UnionSize8Alignment4 {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint32 variant;
+};
+
+struct SandwichUnionSize8Alignment4 {
+    uint32 before;
+    UnionSize8Alignment4 union;
+    uint32 after;
+};
+
+union UnionSize12Alignment4 {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint8 unused3;
+    4: array<uint8>:6 variant;
+};
+
+struct SandwichUnionSize12Alignment4 {
+    uint32 before;
+    UnionSize12Alignment4 union;
+    uint32 after;
+};
+
+struct StructSize16Alignment8 {
+    uint64 f1;
+    uint64 f2;
+};
+
+union UnionSize24Alignment8 {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint8 unused3;
+    4: StructSize16Alignment8 variant;
+};
+
+struct SandwichUnionSize24Alignment8 {
+    uint32 before;
+    UnionSize24Alignment8 union;
+    uint32 after;
+};
+
+union UnionSize36Alignment4 {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint8 unused3;
+    4: array<uint8>:32 variant;
+};
+
+struct SandwichUnionSize36Alignment4 {
+    uint32 before;
+    UnionSize36Alignment4 union;
+    uint32 after;
+};
