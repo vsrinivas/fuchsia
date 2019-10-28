@@ -50,7 +50,7 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
 
     // Startup auto-brightness loop
     let mut auto_brightness_abort_handle =
-        start_auto_brightness_task(sensor.clone(), backlight.clone(), auto_brightness_on);
+        start_auto_brightness_task(sensor.clone(), backlight.clone());
 
     while let Some(request) = stream.try_next().await.context("error running brightness server")? {
         // TODO(kpt): Make each match a testable function when hanging gets are implemented
@@ -61,19 +61,10 @@ async fn run_brightness_server(mut stream: ControlRequestStream) -> Result<(), E
                     if let Some(handle) = set_brightness_abort_handle.as_ref() {
                         handle.abort();
                     }
-                    auto_brightness_abort_handle = start_auto_brightness_task(
-                        sensor.clone(),
-                        backlight.clone(),
-                        auto_brightness_on,
-                    );
+                    auto_brightness_abort_handle =
+                        start_auto_brightness_task(sensor.clone(), backlight.clone());
                     auto_brightness_on = true;
                 }
-                auto_brightness_abort_handle.abort();
-                auto_brightness_abort_handle = start_auto_brightness_task(
-                    sensor.clone(),
-                    backlight.clone(),
-                    auto_brightness_on,
-                );
             }
             BrightnessControlRequest::WatchAutoBrightness { responder } => {
                 // Hanging get is not implemented yet. We want to get autobrightness into team-food.
@@ -139,7 +130,6 @@ fn convert_from_scaled_value_based_on_max_brightness(value: u16) -> f32 {
 fn start_auto_brightness_task(
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
-    auto_brightness_on: bool,
 ) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     fasync::spawn(
@@ -156,7 +146,7 @@ fn start_auto_brightness_task(
                         handle.abort();
                     }
                     set_brightness_abort_handle =
-                        Some(set_brightness(nits, backlight_clone, auto_brightness_on).await);
+                        Some(set_brightness(nits, backlight_clone, true).await);
                     let large_change =
                         (last_nits as i32 - nits as i32).abs() > LARGE_CHANGE_THRESHOLD_NITS;
                     last_nits = nits as i32;
