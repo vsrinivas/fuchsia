@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
 #include <random>
 #include <vector>
 
@@ -29,6 +30,7 @@ using fidl::VectorPtr;
 using fidl::test::compatibility::AllTypesTable;
 using fidl::test::compatibility::AllTypesXunion;
 using fidl::test::compatibility::ArraysStruct;
+using fidl::test::compatibility::Sandwiches;
 using fidl::test::compatibility::Struct;
 using fidl::test::compatibility::this_is_a_struct;
 using fidl::test::compatibility::this_is_a_table;
@@ -106,6 +108,15 @@ class DataGenerator {
     return nullable<fidl::StringPtr>(fidl::StringPtr(), [this, count]() -> fidl::StringPtr {
       return fidl::StringPtr(next<std::string>(count));
     });
+  }
+
+  template <typename T>
+  std::enable_if_t<fidl::IsStdArray<T>::value, T> next() {
+    T array;
+    for (size_t i = 0; i < array.size(); i++) {
+      array[i] = next<typename T::value_type>();
+    }
+    return array;
   }
 
   template <typename T>
@@ -1226,6 +1237,81 @@ void ExpectAllTypesXunionsEq(const std::vector<AllTypesXunion>& a,
   }
 }
 
+void InitializeSandwiches(Sandwiches* value, DataGenerator& gen) {
+  fidl::test::compatibility::SandwichUnionSize8Alignment4 u8a4;
+  u8a4.before = gen.next<uint32_t>();
+  u8a4.union_.set_variant(gen.next<uint32_t>());
+  u8a4.after = gen.next<uint32_t>();
+  value->set_u8a4(std::move(u8a4));
+
+  fidl::test::compatibility::SandwichXUnionSize8Alignment4 x8a4;
+  x8a4.before = gen.next<uint32_t>();
+  x8a4.union_.set_variant(gen.next<uint32_t>());
+  x8a4.after = gen.next<uint32_t>();
+  value->set_x8a4(std::move(x8a4));
+
+  fidl::test::compatibility::SandwichUnionSize12Alignment4 u12a4;
+  u12a4.before = gen.next<uint32_t>();
+  u12a4.union_.set_variant(gen.next<std::array<uint8_t, 6>>());
+  u12a4.after = gen.next<uint32_t>();
+  value->set_u12a4(std::move(u12a4));
+
+  fidl::test::compatibility::SandwichXUnionSize12Alignment4 x12a4;
+  x12a4.before = gen.next<uint32_t>();
+  x12a4.union_.set_variant(gen.next<std::array<uint8_t, 6>>());
+  x12a4.after = gen.next<uint32_t>();
+  value->set_x12a4(std::move(x12a4));
+
+  fidl::test::compatibility::SandwichUnionSize16Alignment8 u16a8;
+  u16a8.before = gen.next<uint32_t>();
+  u16a8.union_.set_variant(fidl::test::compatibility::StructSize16Alignment8{
+      .f1 = gen.next<uint64_t>(), .f2 = gen.next<uint64_t>()});
+  u16a8.after = gen.next<uint32_t>();
+  value->set_u16a8(std::move(u16a8));
+
+  fidl::test::compatibility::SandwichXUnionSize24Alignment8 x24a8;
+  x24a8.before = gen.next<uint32_t>();
+  x24a8.union_.set_variant(fidl::test::compatibility::StructSize16Alignment8{
+      .f1 = gen.next<uint64_t>(), .f2 = gen.next<uint64_t>()});
+  x24a8.after = gen.next<uint32_t>();
+  value->set_x24a8(std::move(x24a8));
+
+  fidl::test::compatibility::SandwichUnionSize36Alignment4 u36a4;
+  u36a4.before = gen.next<uint32_t>();
+  u36a4.union_.set_variant(gen.next<std::array<uint8_t, 32>>());
+  u36a4.after = gen.next<uint32_t>();
+  value->set_u36a4(std::move(u36a4));
+
+  fidl::test::compatibility::SandwichXUnionSize36Alignment4 x36a4;
+  x36a4.before = gen.next<uint32_t>();
+  x36a4.union_.set_variant(gen.next<std::array<uint8_t, 32>>());
+  x36a4.after = gen.next<uint32_t>();
+  value->set_x36a4(std::move(x36a4));
+
+  fidl::test::compatibility::SandwichUnionWithVector uv;
+  uv.before = gen.next<uint32_t>();
+  uv.union_.set_string(gen.next<std::string>());
+  uv.after = gen.next<uint32_t>();
+  value->set_uv(std::move(uv));
+
+  fidl::test::compatibility::SandwichXUnionWithVector xv;
+  xv.before = gen.next<uint32_t>();
+  xv.union_.set_string(gen.next<std::string>());
+  xv.after = gen.next<uint32_t>();
+  value->set_xv(std::move(xv));
+
+  fidl::test::compatibility::SandwichOptionalXUnion ox;
+  ox.before = gen.next<uint32_t>();
+  ox.opt_union = std::make_unique<fidl::test::compatibility::XUnionSize8Alignment4>();
+  ox.opt_union->set_variant(gen.next<uint32_t>());
+  ox.after = gen.next<uint32_t>();
+  value->set_ox(std::move(ox));
+}
+
+void ExpectSandwichesEq(const Sandwiches& a, const Sandwiches& b) {
+  EXPECT_TRUE(fidl::Equals(a, b));
+}
+
 class CompatibilityTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {
  protected:
   void SetUp() override {
@@ -1445,6 +1531,34 @@ TEST(Compatibility, EchoXunions) {
     loop.Run();
     ASSERT_TRUE(called_back);
     ExpectAllTypesXunionsEq(sent_clone, resp_clone);
+  });
+}
+
+TEST(Compatibility, EchoSandwiches) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url) {
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0x1234);
+
+    Sandwiches sent;
+    InitializeSandwiches(&sent, generator);
+
+    Sandwiches sent_clone;
+    fidl::Clone(sent, &sent_clone);
+    Sandwiches resp_clone;
+    bool called_back = false;
+    proxy->EchoSandwiches(std::move(sent), server_url,
+                          [&loop, &resp_clone, &called_back](Sandwiches resp) {
+                            ASSERT_EQ(ZX_OK, fidl::Clone(resp, &resp_clone));
+                            called_back = true;
+                            loop.Quit();
+                          });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectSandwichesEq(sent_clone, resp_clone);
   });
 }
 

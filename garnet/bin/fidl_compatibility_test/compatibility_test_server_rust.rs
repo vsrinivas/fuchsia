@@ -33,7 +33,9 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
                             .context("Error connecting to proxy")?;
-                        value = echo.echo_struct(&mut value, "").await
+                        value = echo
+                            .echo_struct(&mut value, "")
+                            .await
                             .context("Error calling echo_struct on proxy")?;
                         drop(app);
                     }
@@ -50,10 +52,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         echo.echo_struct_no_ret_val(&mut value, "")
                             .context("Error sending echo_struct_no_ret_val to proxy")?;
                         let mut event_stream = echo.take_event_stream();
-                        let EchoEvent::EchoEvent { value: response_val } =
-                            event_stream.try_next().await
-                                .context("Error getting event response from proxy")?
-                                .ok_or_else(|| format_err!("Proxy sent no events"))?;
+                        let EchoEvent::EchoEvent { value: response_val } = event_stream
+                            .try_next()
+                            .await
+                            .context("Error getting event response from proxy")?
+                            .ok_or_else(|| format_err!("Proxy sent no events"))?;
                         value = response_val;
                         drop(app);
                     }
@@ -65,7 +68,9 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
                             .context("Error connecting to proxy")?;
-                        value = echo.echo_arrays(&mut value, "").await
+                        value = echo
+                            .echo_arrays(&mut value, "")
+                            .await
                             .context("Error calling echo_arrays on proxy")?;
                         drop(app);
                     }
@@ -75,7 +80,9 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
                             .context("Error connecting to proxy")?;
-                        value = echo.echo_vectors(&mut value, "").await
+                        value = echo
+                            .echo_vectors(&mut value, "")
+                            .await
                             .context("Error calling echo_vectors on proxy")?;
                         drop(app);
                     }
@@ -110,6 +117,18 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder.send(&mut value.iter_mut()).context("Error responding")?;
                 }
                 */
+                EchoRequest::EchoSandwiches { mut value, forward_to_server, responder } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        value = echo
+                            .echo_sandwiches(value, "")
+                            .await
+                            .context("Error calling echo_sandwiches on proxy")?;
+                        drop(app);
+                    }
+                    responder.send(value).context("Error responding")?;
+                }
             }
             Ok(())
         })

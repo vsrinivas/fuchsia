@@ -341,18 +341,21 @@ enum u64_enum : uint64 {
     kSeven = 7;
     kEight = 8;
 };
+
 bits default_bits {
     kOne = 1;
     kTwo = 2;
 };
-bits u8_bits:uint8 {
+
+bits u8_bits : uint8 {
     kOne = 1;
     kTwo = 2;
     kThree = 4;
     kFour = 8;
     kFive = 16;
 };
-bits u16_bits:uint16 {
+
+bits u16_bits : uint16 {
     kOne = 1;
     kTwo = 2;
     kThree = 4;
@@ -360,7 +363,8 @@ bits u16_bits:uint16 {
     kFive = 16;
     kSix = 32;
 };
-bits u32_bits:uint32 {
+
+bits u32_bits : uint32 {
     kOne = 1;
     kTwo = 2;
     kThree = 4;
@@ -369,7 +373,8 @@ bits u32_bits:uint32 {
     kSix = 32;
     kSeven = 64;
 };
-bits u64_bits:uint64 {
+
+bits u64_bits : uint64 {
     kOne = 1;
     kTwo = 2;
     kThree = 4;
@@ -531,6 +536,187 @@ xunion AllTypesXunion {
     this_is_a_xunion xunion_member;
 };
 
+union UnionSize8Alignment4 {
+    uint8 unused1;
+    uint8 unused2;
+    uint32 variant;
+};
+
+struct SandwichUnionSize8Alignment4 {
+    uint32 before;
+    UnionSize8Alignment4 union;
+    uint32 after;
+};
+
+union UnionSize12Alignment4 {
+    uint8 unused1;
+    uint8 unused2;
+    uint8 unused3;
+    array<uint8>:6 variant;
+};
+
+struct SandwichUnionSize12Alignment4 {
+    uint32 before;
+    UnionSize12Alignment4 union;
+    uint32 after;
+};
+
+struct StructSize16Alignment8 {
+    uint64 f1;
+    uint64 f2;
+};
+
+union UnionSize24Alignment8 {
+    uint8 unused1;
+    uint8 unused2;
+    uint8 unused3;
+    StructSize16Alignment8 variant;
+};
+
+struct SandwichUnionSize16Alignment8 {
+    uint32 before;
+    UnionSize24Alignment8 union;
+    uint32 after;
+};
+
+union UnionSize36Alignment4 {
+    uint8 unused1;
+    uint8 unused2;
+    uint8 unused3;
+    array<uint8>:32 variant;
+};
+
+struct SandwichUnionSize36Alignment4 {
+    uint32 before;
+    UnionSize36Alignment4 union;
+    uint32 after;
+};
+
+xunion XUnionSize8Alignment4 {
+    uint8 unused1;
+    uint8 unused2;
+    uint32 variant;
+};
+
+struct SandwichXUnionSize8Alignment4 {
+    uint32 before;
+    XUnionSize8Alignment4 union;
+    uint32 after;
+};
+
+xunion XUnionSize12Alignment4 {
+    uint8 unused1;
+    uint8 unused2;
+    uint8 unused3;
+    array<uint8>:6 variant;
+};
+
+struct SandwichXUnionSize12Alignment4 {
+    uint32 before;
+    XUnionSize12Alignment4 union;
+    uint32 after;
+};
+
+xunion XUnionSize24Alignment8 {
+    uint8 unused1;
+    uint8 unused2;
+    uint8 unused3;
+    StructSize16Alignment8 variant;
+};
+
+struct SandwichXUnionSize24Alignment8 {
+    uint32 before;
+    XUnionSize24Alignment8 union;
+    uint32 after;
+};
+
+xunion XUnionSize36Alignment4 {
+    uint8 unused1;
+    uint8 unused2;
+    uint8 unused3;
+    array<uint8>:32 variant;
+};
+
+struct SandwichXUnionSize36Alignment4 {
+    uint32 before;
+    XUnionSize36Alignment4 union;
+    uint32 after;
+};
+
+struct StructSize3Alignment1a {
+    array<uint8>:3 three_bytes;
+};
+
+struct StructSize3Alignment1b {
+    array<uint8>:3 three_bytes;
+};
+
+struct StructSize3Alignment2a {
+    uint16 f1;
+    uint8 f2;
+};
+
+struct StructSize3Alignment2b {
+    uint16 f1;
+    uint8 f2;
+};
+
+union UnionWithVector {
+    uint8 unused;
+    vector<uint8> vector_of_uint8;
+    string string;
+    vector<StructSize3Alignment1a> vector_s3_a1;
+    vector<StructSize3Alignment2a> vector_s3_a2;
+    vector<handle> handles;
+    array<StructSize3Alignment1a>:2 array_s3_a1;
+    array<StructSize3Alignment2a>:2 array_s3_a2;
+    vector<UnionSize8Alignment4> vector_union;
+};
+
+struct SandwichUnionWithVector {
+    uint32 before;
+    UnionWithVector union;
+    uint32 after;
+};
+
+xunion XUnionWithVector {
+    uint8 unused;
+    vector<uint8> vector_of_uint8;
+    string string;
+    vector<StructSize3Alignment1b> vector_s3_a1;
+    vector<StructSize3Alignment2b> vector_s3_a2;
+    vector<handle> handles;
+    array<StructSize3Alignment1b>:2 array_s3_a1;
+    array<StructSize3Alignment2b>:2 array_s3_a2;
+    vector<XUnionSize8Alignment4> vector_union;
+};
+
+struct SandwichXUnionWithVector {
+    uint32 before;
+    XUnionWithVector union;
+    uint32 after;
+};
+
+struct SandwichOptionalXUnion {
+    uint32 before;
+    XUnionSize8Alignment4? opt_union;
+    uint32 after;
+};
+
+table Sandwiches {
+    1: SandwichUnionSize8Alignment4 u8a4;
+    2: SandwichXUnionSize8Alignment4 x8a4;
+    3: SandwichUnionSize12Alignment4 u12a4;
+    4: SandwichXUnionSize12Alignment4 x12a4;
+    5: SandwichUnionSize16Alignment8 u16a8;
+    6: SandwichXUnionSize24Alignment8 x24a8;
+    7: SandwichUnionSize36Alignment4 u36a4;
+    8: SandwichXUnionSize36Alignment4 x36a4;
+    9: SandwichUnionWithVector uv;
+    10: SandwichXUnionWithVector xv;
+    11: SandwichOptionalXUnion ox;
+};
+
 [Discoverable]
 protocol Echo {
     // If `forward_to_server` is empty, just returns `value`.
@@ -551,4 +737,7 @@ protocol Echo {
     EchoTable(AllTypesTable value, string forward_to_server) -> (AllTypesTable value);
 
     EchoXunions(vector<AllTypesXunion> value, string forward_to_server) -> (vector<AllTypesXunion> value);
+
+    [Transitional]
+    EchoSandwiches(Sandwiches value, string forward_to_server) -> (Sandwiches value);
 };
