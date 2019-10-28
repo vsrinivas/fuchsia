@@ -234,7 +234,6 @@ executable("unittest_bin") {
     "//zircon/system/fidl/fuchsia-hardware-audio",
     "//zircon/system/fidl/fuchsia-scheduler",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test_package("audio_core_unittests") {

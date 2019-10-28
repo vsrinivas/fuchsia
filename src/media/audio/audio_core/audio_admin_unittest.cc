@@ -21,9 +21,9 @@ static constexpr float kDuckGain = -2.0f;
 static constexpr float kNoneGain = -1.0f;
 
 static constexpr AudioAdmin::BehaviorGain kTestBehaviorGain{
-    .mute_gain_db = kMuteGain,
-    .duck_gain_db = kDuckGain,
     .none_gain_db = kNoneGain,
+    .duck_gain_db = kDuckGain,
+    .mute_gain_db = kMuteGain,
 };
 
 // TODO(turnage): Use UsageGainSettings in this test; remove these functions and local storage for
