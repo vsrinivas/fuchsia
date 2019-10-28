@@ -1,23 +1,23 @@
 {
-  "program": {
-    "binary": "bin/app"
-  },
-  "sandbox": {
-    "dev": [
-      "class/isp-device-test",
-      "camera-controller"
-    ],
-    "features": [
-      "isolated-persistent-storage"
-    ],
-    "services": [
-      "fuchsia.sys.Environment",
-      "fuchsia.sys.Launcher",
-      "fuchsia.sysmem.Allocator",
-      "fuchsia.tracing.provider.Registry",
-      "fuchsia.ui.policy.Presenter",
-      "fuchsia.ui.scenic.Scenic",
-      "fuchsia.logger.LogSink"
-    ]
-  }
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/isp-device-test",
+            "camera-controller"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.logger.LogSink"
+        ]
+    }
 }
