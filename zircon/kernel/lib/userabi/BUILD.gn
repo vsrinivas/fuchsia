@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/kernel/syscalls/abigen.gni")
+import("$zx/kernel/syscalls/kazoo.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
@@ -252,11 +252,11 @@ if (is_kernel) {
     include_dirs = [ target_gen_dir ]
   }
 
-  abigen("gen-categories") {
+  kazoo("gen-categories") {
     visibility = [ ":*" ]
     gen = [
       {
-        args = [ "-category" ]
+        args = [ "--category" ]
         outputs = [
           "$target_gen_dir/zircon/syscall-category.inc",
         ]

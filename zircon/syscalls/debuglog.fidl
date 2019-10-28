@@ -1,0 +1,20 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+[Transport = "Syscall"]
+protocol Debuglog {
+    // TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
+    debuglog_create(handle<resource> resource, uint32 options)
+        -> (status status, handle<debuglog> out);
+
+    /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_WRITE.
+    debuglog_write(handle<debuglog> handle, uint32 options, vector_void buffer) -> (status status);
+
+    /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_READ.
+    debuglog_read(handle<debuglog> handle, uint32 options) -> (status status, vector_void buffer);
+};

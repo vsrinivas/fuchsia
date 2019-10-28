@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+[Transport = "Syscall"]
+protocol Cprng {
+    [Internal]
+    cprng_draw_once() -> (status status, vector_void buffer);
+
+    /// Draw from the kernel's CPRNG.
+    [Vdsocall]
+    cprng_draw() -> (vector_void buffer);
+
+    /// Add entropy to the kernel CPRNG.
+    cprng_add_entropy(vector_void buffer) -> (status status);
+};

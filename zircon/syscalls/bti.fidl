@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+[Transport = "Syscall"]
+protocol Bti {
+    /// Create a new bus transaction initiator.
+    /// Rights: iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.
+    // TODO(ZX-2967): This is an unusual rights spec.
+    bti_create(handle<iommu> iommu, uint32 options, uint64 bti_id) -> (status status, handle<bti> out);
+
+    /// Pin pages and grant devices access to them.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
+    /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
+    /// Rights: If options & ZX_BTI_PERM_READ, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    /// Rights: If options & ZX_BTI_PERM_WRITE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
+    /// Rights: If options & ZX_BTI_PERM_EXECUTE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    // READ is intentional in the EXECUTE condition.
+    bti_pin(handle<bti> handle,
+            uint32 options,
+            handle<vmo> vmo,
+            uint64 offset,
+            uint64 size)
+        -> (status status, vector_paddr addrs, handle<pmt> pmt);
+
+    /// Releases all quarantined PMTs.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_WRITE.
+    bti_release_quarantine(handle<bti> handle) -> (status status);
+};

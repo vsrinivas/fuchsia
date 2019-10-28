@@ -99,26 +99,25 @@ info entry* `PA_HND(PA_VMO_VDSO, 0)`.
 
 ## vDSO Implementation Details
 
-### **abigen** tool
+### **kazoo** tool
 
-The [`abigen` tool](/zircon/tools/abigen/) generates both C/C++ function
-declarations that form the public [system call](/docs/reference/syscalls/README.md) API, and some
-C++ and assembly code used in the implementation of the vDSO.  Both the
-public API and the private interface between the kernel and the vDSO code
-are specified by
-[`syscalls.banjo`](/zircon/system/public/zircon/syscalls.banjo). The output
-of this is processed by `abigen`.
+The [`kazoo` tool](/zircon/tools/kazoo/) generates both C/C++ function
+declarations that form the public [system
+call](/docs/reference/syscalls/README.md) API, and some C++ and assembly code
+used in the implementation of the vDSO.  Both the public API and the private
+interface between the kernel and the vDSO code are specified by the .fidl files
+in [//zircon/syscalls](/zircon/syscalls).
 
-The `syscall` entries in `syscalls.banjo` fall into the following groups,
-distinguished by the presence of attributes after the system call name:
+The syscalls fall into the following groups, distinguished by the presence of
+attributes after the system call name:
 
- * Entries with neither `vdsocall` nor `internal` are the simple cases
+ * Entries with neither `Vdsocall` nor `Internal` are the simple cases
    (which are the majority of the system calls) where the public API and
    the private API are exactly the same.  These are implemented entirely
    by generated code.  The public API functions have names prefixed by
    `_zx_` and `zx_` (aliases).
 
-* `vdsocall` entries are simply declarations for the public API.
+* `Vdsocall` entries are simply declarations for the public API.
   These functions are implemented by normal, hand-written C++ code found
   in [`system/ulib/zircon/`](/zircon/system/ulib/zircon/).  Those source
   files `#include "private.h"` and then define the C++ function for the
@@ -131,7 +130,7 @@ distinguished by the presence of attributes after the system call name:
   the `VDSO_zx_` prefix.  Otherwise the code is normal (minimal) C++,
   but must be stateless and reentrant (use only its stack and registers).
 
- * `internal` entries are declarations of a private API used only by the
+ * `Internal` entries are declarations of a private API used only by the
    vDSO implementation code to enter the kernel (i.e., by other functions
    implementing `vdsocall` system calls).  These produce functions in the
    vDSO implementation with the same C signature that would be declared in

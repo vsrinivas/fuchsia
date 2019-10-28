@@ -1,0 +1,91 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+// These are all aliases that will be subsumed by the future implementation of
+// templating, constraints, etc. in fidlc.
+//
+// The right hand side is completely ignored by kazoo, that is, only the name of
+// the alias is significant. Generally the right hand side is set so that if
+// there were no handling of the alias (and the alias was "expanded" as is the
+// default behaviour), it would result in something sensible.
+
+// TODO(fidlc): (mutable) char*
+using charptr = uint64;
+
+// TODO(fidl)
+using const_futexptr = int32;
+
+// TODO(fidlc): const void*
+using const_voidptr = uint64;
+
+// TODO(fidlc): mutable<string>
+using mutable_string = string;
+
+// TODO(fidlc): mutable<uint32>
+using mutable_uint32 = uint32;
+
+// TODO(fidlc): mutable<usize>
+using mutable_usize = usize;
+
+// TODO(fidlc): uint32 size
+// TODO(fidlc): mutable<vector<HandleDisposition>
+using mutable_vector_HandleDisposition_u32size = vector<HandleDisposition>;
+
+// TODO(fidlc): mutable<vector<WaitItem>>
+using mutable_vector_WaitItem = vector<WaitItem>;
+
+// TODO(fidlc): uint32 size
+// TODO(fidlc): mutable<vector<handle>
+using mutable_vector_handle_u32size = vector<handle>;
+
+// TODO(fidlc): mutable<vector<void>>
+using mutable_vector_void = vector<byte>;
+
+// TODO(fidlc): uint32 size
+// TODO(fidlc): mutable<vector<void>>
+using mutable_vector_void_u32size = vector<byte>;
+
+// TODO(fidlc): optional<PciBar>
+using optional_PciBar = PciBar;
+
+// TODO(fidlc): optional<PortPacket>
+using optional_PortPacket = PortPacket;
+
+// TODO(fidlc): optional<koid>
+using optional_koid = koid;
+
+// TODO(fidlc): optional<signals>
+using optional_signals = signals;
+
+// TODO(fidlc): optional<time>
+using optional_time = time;
+
+// TODO(fidlc): optional<uint32>
+using optional_uint32 = uint32;
+
+// TODO(fidlc): optional<usize>
+using optional_usize = usize;
+
+// TODO(fidlc): uint32 size
+// TODO(fidlc): vector<HandleInfo>
+using vector_HandleInfo_u32size = vector<HandleInfo>;
+
+// TODO(fidlc): vector<handle> uint32 size
+using vector_handle_u32size = vector<handle>;
+
+// TODO(fidlc): vector<paddr>>
+using vector_paddr = vector<paddr>;
+
+// TODO(fidlc): vector<void>
+using vector_void = vector<byte>;
+
+// TODO(fidlc): uint32 size
+// TODO(fidlc): vector<void>
+using vector_void_u32size = vector<byte>;
+
+// TODO(fidlc): (mutable) void*
+using voidptr = uint64;

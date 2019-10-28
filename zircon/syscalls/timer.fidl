@@ -1,0 +1,20 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+[Transport = "Syscall"]
+protocol Timer {
+    /// Create a timer.
+    timer_create(uint32 options, clock clock_id) -> (status status, handle<timer> out);
+
+    /// Start a timer.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.
+    timer_set(handle<timer> handle, time deadline, duration slack) -> (status status);
+
+    /// Cancel a timer.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.
+    timer_cancel(handle<timer> handle) -> (status status);
+};

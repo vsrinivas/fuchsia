@@ -1,0 +1,35 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+[Transport = "Syscall"]
+protocol Syscall {
+    syscall_test_0() -> (status status);
+
+    [TestCategory1]
+    syscall_test_1(int32 a) -> (status status);
+
+    [TestCategory1]
+    syscall_test_2(int32 a, int32 b) -> (status status);
+
+    [TestCategory2]
+    syscall_test_3(int32 a, int32 b, int32 c) -> (status status);
+
+    syscall_test_4(int32 a, int32 b, int32 c, int32 d) -> (status status);
+
+    syscall_test_5(int32 a, int32 b, int32 c, int32 d, int32 e) -> (status status);
+
+    syscall_test_6(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f) -> (status status);
+
+    syscall_test_7(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g) -> (status status);
+
+    syscall_test_8(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g, int32 h)
+        -> (status status);
+
+    syscall_test_wrapper(int32 a, int32 b, int32 c) -> (status status);
+
+    syscall_test_handle_create(status return_value) -> (status status, handle<event> out);
+};

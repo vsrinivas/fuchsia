@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/kernel/syscalls/abigen.gni")
+import("$zx_build/kernel/syscalls/kazoo.gni")
 import("$zx_build/public/gn/config/globals.gni")
 import("$zx_build/public/gn/config/standard.gni")
 import("$zx_build/public/gn/toolchain/environment.gni")
@@ -253,18 +253,18 @@ if (current_toolchain == default_toolchain) {
     include_dirs = [ root_gen_dir ]
   }
 
-  abigen("generate") {
+  kazoo("generate") {
     visibility = [ ":*" ]
     gen = [
       # These are the public headers.
       {
-        args = [ "-user-header" ]
+        args = [ "--user-header" ]
         outputs = [
           "$root_gen_dir/zircon/syscalls/definitions.h",
         ]
       },
       {
-        args = [ "-rust" ]
+        args = [ "--rust" ]
         outputs = [
           "$root_gen_dir/zircon/syscalls/definitions.rs",
         ]
@@ -273,19 +273,19 @@ if (current_toolchain == default_toolchain) {
       # TODO(mcgrathr): Drop the zircon/ prefix from the remaining files.
       # These are private.
       {
-        args = [ "-vdso-header" ]
+        args = [ "--vdso-header" ]
         outputs = [
           "$target_gen_dir/zircon/syscall-vdso-definitions.h",
         ]
       },
       {
-        args = [ "-vdso-wrappers" ]
+        args = [ "--vdso-wrappers" ]
         outputs = [
           "$target_gen_dir/zircon/syscall-vdso-wrappers.inc",
         ]
       },
       {
-        args = [ "-${abigen_cpu}-asm" ]
+        args = [ "--${abigen_cpu}-asm" ]
         outputs = [
           "$target_gen_dir/zircon/syscalls-$zircon_cpu.S",
         ]

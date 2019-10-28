@@ -38,10 +38,10 @@ library that the Zircon kernel provides to userspace, better known as the
 They are C ELF ABI functions of the form `zx_noun_verb()` or
 `zx_noun_verb_direct-object()`.
 
-The system calls are defined by [syscalls.banjo](/zircon/system/public/zircon/syscalls.banjo).
-The output is processed by the [abigen](/zircon/tools/abigen/) tool into include files and glue
-code in libzircon and the kernel's libsyscalls.
-
+The system calls are defined in a customized form of FIDL in [//zircon/syscalls](/zircon/syscalls/).
+Those definitions are first processed by `fidlc`, and then by `kazoo` which takes the IR
+representation from `fidlc` and outputs various formats that are used as glue in the VDSO, kernel,
+etc.
 
 ## [Handles](/docs/concepts/objects/handles.md) and
 [Rights](/docs/concepts/kernel/rights.md)

@@ -1,0 +1,26 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+[Transport = "Syscall"]
+protocol Socket {
+    /// Create a socket.
+    socket_create(uint32 options) -> (status status, handle out0, handle out1);
+
+    /// Write data to a socket.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
+    socket_write(handle<socket> handle, uint32 options, vector_void buffer)
+        -> (status status, optional_usize actual);
+
+    /// Read data from a socket.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.
+    socket_read(handle<socket> handle, uint32 options)
+        -> (status status, vector_void buffer, optional_usize actual);
+
+    /// Prevent reading or writing.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
+    socket_shutdown(handle<socket> handle, uint32 options) -> (status status);
+};

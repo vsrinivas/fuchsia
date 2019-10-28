@@ -21,6 +21,8 @@ DEFAULT_NAMESPACES = [
     'fidl',
     'fuchsia',
     'test',
+    'zx',  # Syscalls definitions are in the zx library.
+    'zz',  # TODO(scottmg): This is a temporary name, equivalent to "zx".
 ]
 
 IGNORED_DIRS = ['scripts', 'tools']

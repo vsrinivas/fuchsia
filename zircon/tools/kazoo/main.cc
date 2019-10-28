@@ -160,7 +160,6 @@ int main(int argc, const char* argv[]) {
       if (!writer.Open(**backend.name) || !backend.output(library, &writer)) {
         return 1;
       }
-      printf("Wrote %s\n", (**backend.name).c_str());
       ++output_count;
     }
   }

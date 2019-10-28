@@ -1,0 +1,57 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+// TODO(scottmg): These syscalls don't match the general naming convention of
+// zx_something_name(), they're just zx_name(), so NoProtocolPrefix tells the
+// generator to exclude putting "Misc" in the name.
+[Transport = "Syscall",
+NoProtocolPrefix]
+protocol Misc {
+    /// High resolution sleep.
+    /// Rights: None.
+    [Blocking]
+    nanosleep(time deadline) -> (status status);
+
+    /// Read the number of high-precision timer ticks since boot.
+    [Vdsocall]
+    ticks_get() -> (ticks ticks);
+
+    /// Read the number of high-precision timer ticks in a second.
+    [Const,
+    Vdsocall]
+    ticks_per_second() -> (ticks ticks);
+
+    /// Convert a time relative to now to an absolute deadline.
+    [Vdsocall]
+    deadline_after(duration nanoseconds) -> (time time);
+
+    /// Unmap memory, close handle, exit.
+    [Vdsocall]
+    vmar_unmap_handle_close_thread_exit(handle<vmar> vmar_handle,
+                                        vaddr addr, usize size,
+                                        handle close_handle)
+        -> (status status);
+
+    /// Write to futex, wake futex, close handle, exit.
+    [Noreturn,
+    Vdsocall]
+    futex_wake_handle_close_thread_exit(const_futexptr value_ptr,
+                                        uint32 wake_count,
+                                        int32 new_value,
+                                        handle close_handle);
+
+    // Read the number of high-precision timer ticks since boot, but demand
+    // that the read be performed using a syscall, instead of a vdso call.
+    //
+    // Note that this is an internal syscall, not meant to be used by
+    // application code.  By default, the vdso version of this syscall will do
+    // the proper thing, either directly reading from the hardware register
+    // backing the tick counter, or by making a syscall if the register is not
+    // accessible from user mode code (for whatever reason).
+    [Internal]
+    ticks_get_via_kernel() -> (ticks ticks);
+};

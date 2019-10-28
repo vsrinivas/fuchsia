@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+[Transport = "Syscall"]
+protocol Ioports {
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
+    ioports_request(handle<resource> resource, uint16 io_addr, uint32 len) -> (status status);
+
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
+    ioports_release(handle<resource> resource, uint16 io_addr, uint32 len) -> (status status);
+};

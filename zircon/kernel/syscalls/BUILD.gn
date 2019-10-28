@@ -3,25 +3,68 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/host_tool_action.gni")
-import("abigen.gni")
+import("kazoo.gni")
 
 if (current_toolchain == default_toolchain) {
-  host_tool_action("generate_syscalls.abigen") {
-    tool = "$zx/tools/banjo:compiler"
+  host_tool_action("generate_syscalls.kazoo") {
+    tool = "$zx/tools/fidl:fidlc"
     sources = [
-      "$zx/system/public/zircon/syscalls.banjo",
+      "$zx/syscalls/alias_workarounds.fidl",
+      "$zx/syscalls/bti.fidl",
+      "$zx/syscalls/cache.fidl",
+      "$zx/syscalls/channel.fidl",
+      "$zx/syscalls/clock.fidl",
+      "$zx/syscalls/cprng.fidl",
+      "$zx/syscalls/debug.fidl",
+      "$zx/syscalls/debuglog.fidl",
+      "$zx/syscalls/event.fidl",
+      "$zx/syscalls/eventpair.fidl",
+      "$zx/syscalls/exception.fidl",
+      "$zx/syscalls/fifo.fidl",
+      "$zx/syscalls/framebuffer.fidl",
+      "$zx/syscalls/futex.fidl",
+      "$zx/syscalls/guest.fidl",
+      "$zx/syscalls/handle.fidl",
+      "$zx/syscalls/interrupt.fidl",
+      "$zx/syscalls/iommu.fidl",
+      "$zx/syscalls/ioports.fidl",
+      "$zx/syscalls/job.fidl",
+      "$zx/syscalls/ktrace.fidl",
+      "$zx/syscalls/misc.fidl",
+      "$zx/syscalls/mtrace.fidl",
+      "$zx/syscalls/object.fidl",
+      "$zx/syscalls/pager.fidl",
+      "$zx/syscalls/pc.fidl",
+      "$zx/syscalls/pci.fidl",
+      "$zx/syscalls/pmt.fidl",
+      "$zx/syscalls/port.fidl",
+      "$zx/syscalls/process.fidl",
+      "$zx/syscalls/profile.fidl",
+      "$zx/syscalls/resource.fidl",
+      "$zx/syscalls/rights.fidl",
+      "$zx/syscalls/smc.fidl",
+      "$zx/syscalls/socket.fidl",
+      "$zx/syscalls/syscall.fidl",
+      "$zx/syscalls/system.fidl",
+      "$zx/syscalls/task.fidl",
+      "$zx/syscalls/thread.fidl",
+      "$zx/syscalls/timer.fidl",
+      "$zx/syscalls/vcpu.fidl",
+      "$zx/syscalls/vmar.fidl",
+      "$zx/syscalls/vmo.fidl",
+      "$zx/syscalls/zx.fidl",
     ]
     outputs = [
-      abigen_source_file,
+      syscall_ir_json,
     ]
     args = [
-      "--backend",
-      "Abigen",
-      "--output",
-      rebase_path(abigen_source_file, root_build_dir),
+      "--json",
+      rebase_path(syscall_ir_json, root_build_dir),
       "--files",
-      rebase_path(sources[0], root_build_dir),
     ]
+    foreach(fidl, sources) {
+      args += [ rebase_path(fidl, root_build_dir) ]
+    }
   }
 } else {
   group("syscall-abi") {
@@ -43,37 +86,37 @@ if (current_toolchain == default_toolchain) {
     include_dirs = [ target_gen_dir ]
   }
 
-  abigen("syscall-abi.generate") {
+  kazoo("syscall-abi.generate") {
     visibility = [ ":syscall-abi" ]
 
     # TODO(mcgrathr): Rename these from <zircon/...> to <lib/syscalls/...>?
     gen = [
       {
-        args = [ "-numbers" ]
+        args = [ "--syscall-numbers" ]
         outputs = [
           "$target_gen_dir/zircon/zx-syscall-numbers.h",
         ]
       },
       {
-        args = [ "-kernel-header" ]
+        args = [ "--kernel-header" ]
         outputs = [
           "$target_gen_dir/zircon/syscall-definitions.h",
         ]
       },
       {
-        args = [ "-kernel-wrappers" ]
+        args = [ "--kernel-wrappers" ]
         outputs = [
           "$target_gen_dir/zircon/syscall-kernel-wrappers.inc",
         ]
       },
       {
-        args = [ "-kernel-branch" ]
+        args = [ "--kernel-branches" ]
         outputs = [
           "$target_gen_dir/zircon/syscall-kernel-branches.S",
         ]
       },
       {
-        args = [ "-json" ]
+        args = [ "--json" ]
         outputs = [
           "$target_gen_dir/zircon/definitions.json",
         ]

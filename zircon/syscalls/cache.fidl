@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+[Transport = "Syscall"]
+protocol Cache {
+    /// Flush CPU data and/or instruction caches.
+    [Vdsocall]
+    cache_flush(const_voidptr addr, usize size, uint32 options) -> (status status);
+};
