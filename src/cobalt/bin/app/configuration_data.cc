@@ -30,6 +30,8 @@ std::vector<config::Environment> LookupCobaltEnvironment(const std::string& conf
   if (files::ReadFileToString(environment_path, &cobalt_environment)) {
     FX_LOGS(INFO) << "Loaded Cobalt environment from config file " << environment_path << ": "
                   << cobalt_environment;
+    if (cobalt_environment == "LOCAL")
+      return std::vector({config::Environment::LOCAL});
     if (cobalt_environment == "PROD")
       return std::vector({config::Environment::PROD});
     if (cobalt_environment == "DEVEL")

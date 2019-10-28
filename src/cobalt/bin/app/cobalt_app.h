@@ -128,15 +128,15 @@ class CobaltApp {
   std::unique_ptr<observation_store::ObservationStore> observation_store_;
   std::unique_ptr<util::EncryptedMessageMaker> encrypt_to_analyzer_;
   std::vector<std::unique_ptr<util::EncryptedMessageMaker>> encrypt_to_shufflers_;
-  encoder::ClearcutV1ShippingManager clearcut_shipping_manager_;
+  std::unique_ptr<encoder::ShippingManager> shipping_manager_;
   TimerManager timer_manager_;
 
   util::ConsistentProtoStore local_aggregate_proto_store_;
   util::ConsistentProtoStore obs_history_proto_store_;
 
   logger::Encoder logger_encoder_;
-  logger::ObservationWriter observation_writer_;
-  logger::EventAggregator event_aggregator_;
+  std::unique_ptr<logger::ObservationWriter> observation_writer_;
+  std::unique_ptr<logger::EventAggregator> event_aggregator_;
   std::shared_ptr<logger::UndatedEventManager> undated_event_manager_;
 
   std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;

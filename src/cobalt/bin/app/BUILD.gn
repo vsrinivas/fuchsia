@@ -9,6 +9,7 @@ import("//third_party/protobuf/proto_library.gni")
 
 declare_args() {
   # Selects the Cobalt environment to send data to. Choices:
+  #   "LOCAL" - record log data locally to a file
   #   "DEVEL" - the non-prod environment for use in testing
   #   "PROD" - the production environment
   #   "DEVEL_AND_PROD" - both the non-prod and production environment
@@ -110,6 +111,8 @@ package("cobalt") {
         path = "configs/devel_and_prod_environment"
       } else if (cobalt_environment == "DEVEL") {
         path = "configs/devel_environment"
+      } else if (cobalt_environment == "LOCAL") {
+        path = "configs/local_environment"
       } else {
         assert(false, "Unknown cobalt_environment: $cobalt_environment")
       }
