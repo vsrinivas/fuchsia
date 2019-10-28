@@ -31,7 +31,6 @@ zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg, zx_txid_t txid = 0) 
   // The coding tables for fidl structs do not include offsets for the message
   // header, so we must run validation starting after this header.
   auto encoded = enc->GetMessage();
-  ZX_ASSERT(encoded.has_header());
   encoded.set_txid(txid);
 
   auto msg_body = encoded.payload();

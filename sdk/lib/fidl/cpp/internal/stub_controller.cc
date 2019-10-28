@@ -20,8 +20,6 @@ zx_status_t StubController::Send(const fidl_type_t* type, Message message) {
 }
 
 zx_status_t StubController::OnMessage(Message message) {
-  if (!message.has_header())
-    return ZX_ERR_INVALID_ARGS;
   zx_txid_t txid = message.txid();
   WeakStubController* weak = nullptr;
   if (txid) {

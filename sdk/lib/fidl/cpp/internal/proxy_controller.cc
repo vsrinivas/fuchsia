@@ -67,8 +67,6 @@ void ProxyController::Reset() {
 }
 
 zx_status_t ProxyController::OnMessage(Message message) {
-  if (!message.has_header())
-    return ZX_ERR_INVALID_ARGS;
   zx_txid_t txid = message.txid();
   if (!txid) {
     if (!proxy_)

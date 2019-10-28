@@ -39,12 +39,7 @@ class Message {
   Message(Message&& other);
   Message& operator=(Message&& other);
 
-  // Whether the message has enough bytes to contain a fidl_message_header_t.
-  bool has_header() const { return bytes_.actual() >= sizeof(fidl_message_header_t); }
-
   // The header at the start of the message.
-  //
-  // Valid only if has_header().
   const fidl_message_header_t& header() const {
     return *reinterpret_cast<fidl_message_header_t*>(bytes_.data());
   }
@@ -53,14 +48,10 @@ class Message {
   }
 
   // The transaction ID in the message header.
-  //
-  // Valid only if has_header().
   zx_txid_t txid() const { return header().txid; }
   void set_txid(zx_txid_t txid) { header().txid = txid; }
 
   // The ordinal in the message header.
-  //
-  // Valid only if has_header().
   uint64_t ordinal() const { return header().ordinal; }
 
   bool should_decode_union_from_xunion() const {
@@ -68,15 +59,11 @@ class Message {
   }
 
   // Whether this message is in a supported version of the wire format.
-  //
-  // Valid only if has_header().
   bool is_supported_version() const {
     return fidl_validate_txn_header(GetBytesAs<fidl_message_header_t>()) == ZX_OK;
   }
 
   // The message payload that follows the header.
-  //
-  // Valid only if has_header().
   BytePart payload() const {
     constexpr uint32_t n = sizeof(fidl_message_header_t);
     return BytePart(bytes_.data() + n, bytes_.capacity() - n, bytes_.actual() - n);
@@ -89,8 +76,6 @@ class Message {
   }
 
   // The message payload that follows the header interpreted as the given type.
-  //
-  // Valid only if has_header().
   template <typename T>
   T* GetPayloadAs() const {
     return reinterpret_cast<T*>(bytes_.data() + sizeof(fidl_message_header_t));

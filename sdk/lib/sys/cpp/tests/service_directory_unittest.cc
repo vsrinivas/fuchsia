@@ -24,7 +24,6 @@ TEST(ServiceDirectoryTest, Control) {
   auto message = buffer.CreateEmptyMessage();
   message.Read(svc_server.get(), 0);
 
-  EXPECT_TRUE(message.has_header());
   EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
 }
 
@@ -40,7 +39,6 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   auto message = buffer.CreateEmptyMessage();
   message.Read(svc_server.get(), 0);
 
-  EXPECT_TRUE(message.has_header());
   EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
 }
 
@@ -56,7 +54,6 @@ TEST(ServiceDirectoryTest, Clone) {
   auto message = buffer.CreateEmptyMessage();
   message.Read(svc_server.get(), 0);
 
-  EXPECT_TRUE(message.has_header());
   EXPECT_EQ(fuchsia_io_DirectoryCloneOrdinal, message.ordinal());
 }
 

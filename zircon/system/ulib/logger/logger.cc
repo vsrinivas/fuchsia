@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/logger/logger.h>
-
-#include <fbl/string_buffer.h>
 #include <fuchsia/logger/c/fidl.h>
 #include <lib/fidl/cpp/message_buffer.h>
+#include <lib/logger/logger.h>
+#include <lib/syslog/logger.h>
+#include <lib/syslog/wire_format.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <lib/syslog/logger.h>
-#include <lib/syslog/wire_format.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
 #include <utility>
+
+#include <fbl/string_buffer.h>
 
 namespace logger {
 namespace {
@@ -165,8 +165,6 @@ zx_status_t LoggerImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer,
   zx_status_t status = message.Read(channel_.get(), 0);
   if (status != ZX_OK)
     return status;
-  if (!message.has_header())
-    return ZX_ERR_INVALID_ARGS;
 
   // This is an if statement because, depending on the state of the ordinal
   // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.

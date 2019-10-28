@@ -68,6 +68,10 @@ zx_status_t Message::Read(zx_handle_t channel, uint32_t flags) {
     bytes_.set_actual(actual_bytes);
     handles_.set_actual(actual_handles);
   }
+  if (actual_bytes < sizeof(fidl_message_header_t)) {
+    // When reading a message, the size should always greater than the header size.
+    return ZX_ERR_INVALID_ARGS;
+  }
   return status;
 }
 

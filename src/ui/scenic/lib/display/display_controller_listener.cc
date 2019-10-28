@@ -127,7 +127,7 @@ void DisplayControllerListener::OnEventMsgAsync(async_dispatcher_t* dispatcher,
   if (signal->observed & ZX_CHANNEL_READABLE) {
     uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
-    if (msg.Read(controller_channel_handle_, 0) != ZX_OK || !msg.has_header()) {
+    if (msg.Read(controller_channel_handle_, 0) != ZX_OK) {
       FXL_LOG(WARNING) << "Display controller callback read failed";
       return;
     }

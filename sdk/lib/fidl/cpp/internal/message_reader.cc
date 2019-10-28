@@ -207,7 +207,7 @@ zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
     return status;
   }
 
-  if (message.has_header() && message.ordinal() == kFidlOrdinalEpitaph) {
+  if (message.ordinal() == kFidlOrdinalEpitaph) {
     // This indicates the message is an epitaph, and that any epitaph-friendly
     // error handlers should be invoked. Note the epitaph error is stored as a
     // struct{int32} in the message payload

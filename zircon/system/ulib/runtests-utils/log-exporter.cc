@@ -98,9 +98,6 @@ zx_status_t LogExporter::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
   if (status != ZX_OK) {
     return status;
   }
-  if (!message.has_header()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
 
   // This is an if statement because, depending on the state of the ordinal
   // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
