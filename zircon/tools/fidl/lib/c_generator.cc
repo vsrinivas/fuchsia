@@ -7,6 +7,7 @@
 #include "fidl/attributes.h"
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
+#include "fidl/type_shape.h"
 
 namespace fidl {
 
@@ -829,6 +830,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
   for (const auto& protocol_info : protocol_infos) {
     NamedProtocol named_protocol;
     named_protocol.c_name = NameCodedName(protocol_info->name, WireFormat::kOld);
+    std::string alt_c_name = NameCodedName(protocol_info->name, WireFormat::kV1NoEe);
     if (protocol_info->HasAttribute("Discoverable")) {
       named_protocol.discoverable_name = NameDiscoverable(*protocol_info);
     }
@@ -838,6 +840,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       const auto& method = *method_with_info.method;
       NamedMethod named_method;
       std::string method_name = NameMethod(named_protocol.c_name, method);
+      std::string alt_method_name = NameMethod(alt_c_name, method);
       named_method.ordinal = static_cast<uint64_t>(method.generated_ordinal32->value) << 32;
       named_method.ordinal_name = NameOrdinal(method_name);
       named_method.generated_ordinal = static_cast<uint64_t>(method.generated_ordinal64->value);
@@ -847,24 +850,24 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       if (method.maybe_request != nullptr) {
         std::string c_name = NameMessage(method_name, types::MessageKind::kRequest);
         std::string coded_name = NameTable(c_name);
-        named_method.request = std::make_unique<NamedMessage>(
-            NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_request->members,
-                         method.maybe_request->typeshape(WireFormat::kOld)});
+        std::string alt_coded_name =
+            NameTable(NameMessage(alt_method_name, types::MessageKind::kRequest));
+        named_method.request = std::make_unique<NamedMessage>(NamedMessage{
+            std::move(c_name), std::move(coded_name), std::move(alt_coded_name),
+            method.maybe_request->members, method.maybe_request->typeshape(WireFormat::kOld),
+            method.maybe_request->typeshape(WireFormat::kV1NoEe)});
       }
       if (method.maybe_response != nullptr) {
-        if (method.maybe_request == nullptr) {
-          std::string c_name = NameMessage(method_name, types::MessageKind::kEvent);
-          std::string coded_name = NameTable(c_name);
-          named_method.response = std::make_unique<NamedMessage>(
-              NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->members,
-                           method.maybe_response->typeshape(WireFormat::kOld)});
-        } else {
-          std::string c_name = NameMessage(method_name, types::MessageKind::kResponse);
-          std::string coded_name = NameTable(c_name);
-          named_method.response = std::make_unique<NamedMessage>(
-              NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->members,
-                           method.maybe_response->typeshape(WireFormat::kOld)});
-        }
+        auto message_kind = method.maybe_request ? types::MessageKind::kResponse
+                                                 : types::MessageKind::kEvent;
+        std::string c_name = NameMessage(method_name, message_kind);
+        std::string coded_name = NameTable(c_name);
+        std::string alt_coded_name =
+            NameTable(NameMessage(alt_method_name, message_kind));
+        named_method.response = std::make_unique<NamedMessage>(NamedMessage{
+            std::move(c_name), std::move(coded_name), std::move(alt_coded_name),
+            method.maybe_response->members, method.maybe_response->typeshape(WireFormat::kOld),
+            method.maybe_response->typeshape(WireFormat::kV1NoEe)});
       }
       named_protocol.methods.push_back(std::move(named_method));
     }
@@ -988,10 +991,18 @@ void CGenerator::ProduceXUnionForwardDeclaration(const NamedXUnion& named_xunion
 
 void CGenerator::ProduceProtocolExternDeclaration(const NamedProtocol& named_protocol) {
   for (const auto& method_info : named_protocol.methods) {
-    if (method_info.request)
+    if (method_info.request) {
       file_ << "extern const fidl_type_t " << method_info.request->coded_name << ";\n";
-    if (method_info.response)
+      if (method_info.request->typeshape.ContainsUnion()) {
+        file_ << "extern const fidl_type_t " << method_info.request->alt_coded_name << ";\n";
+      }
+    }
+    if (method_info.response) {
       file_ << "extern const fidl_type_t " << method_info.response->coded_name << ";\n";
+      if (method_info.response->typeshape.ContainsUnion()) {
+        file_ << "extern const fidl_type_t " << method_info.response->alt_coded_name << ";\n";
+      }
+    }
   }
 }
 
@@ -1175,7 +1186,22 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       file_ << kIndent << "uint32_t _rd_num_bytes = sizeof(" << method_info.response->c_name << ")";
       EmitMeasureOutParams(&file_, response);
       file_ << ";\n";
-      file_ << kIndent << "FIDL_ALIGNDECL char _rd_bytes[_rd_num_bytes];\n";
+
+      file_ << kIndent << "uint32_t _rd_num_bytes_max = _rd_num_bytes;\n";
+      // If the response potentially contains a union, enlarge the receiving buffer to hold the
+      // xunion version if present.
+      if (method_info.response->typeshape.ContainsUnion()) {
+        file_ << kIndent << "uint32_t _rd_num_bytes_alt = "
+              << method_info.response->alt_typeshape.InlineSize() +
+                     method_info.response->alt_typeshape.MaxOutOfLine();
+        file_ << ";\n";
+        file_ << kIndent
+              << "if (_rd_num_bytes_max < _rd_num_bytes_alt) { _rd_num_bytes_max = "
+                 "_rd_num_bytes_alt; }\n";
+      }
+
+      file_ << kIndent << "FIDL_ALIGNDECL uint8_t _rd_bytes_storage[_rd_num_bytes_max];\n";
+      file_ << kIndent << "uint8_t* _rd_bytes = _rd_bytes_storage;\n";
       if (!response.empty())
         file_ << kIndent << method_info.response->c_name << "* _response = ("
               << method_info.response->c_name << "*)_rd_bytes;\n";
@@ -1192,7 +1218,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
           } else {
             file_ << kIndent << kIndent << ".wr_num_handles = 0,\n";
           }
-          file_ << kIndent << kIndent << ".rd_num_bytes = _rd_num_bytes,\n";
+          file_ << kIndent << kIndent << ".rd_num_bytes = _rd_num_bytes_max,\n";
           file_ << kIndent << kIndent << ".rd_num_handles = " << response_hcount << ",\n";
           file_ << kIndent << "};\n";
 
@@ -1245,6 +1271,27 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
           file_ << kIndent << kIndent << "zx_handle_close_many(_handles, _actual_num_handles);\n";
         }
         file_ << kIndent << kIndent << "return ZX_ERR_BUFFER_TOO_SMALL;\n";
+        file_ << kIndent << "}\n";
+      }
+
+      // Perform xunion -> union transformation if necessary.
+      if (method_info.response->typeshape.ContainsUnion()) {
+        file_ << kIndent << "uint8_t* _transformer_dest = NULL;\n";
+        file_ << kIndent << "if (fidl_should_decode_union_from_xunion(&_response->hdr)) {\n";
+        file_ << kIndent << kIndent << "_transformer_dest = alloca(_rd_num_bytes);\n";
+        file_ << kIndent << kIndent << "_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &"
+              << method_info.response->alt_coded_name
+              << ", _rd_bytes, _actual_num_bytes, _transformer_dest, &_actual_num_bytes, NULL);\n";
+        file_ << kIndent << kIndent << "if (_status != ZX_OK) {\n";
+        if (max_hcount > 0) {
+          file_ << kIndent << kIndent << kIndent
+                << "zx_handle_close_many(_handles, _actual_num_handles);\n";
+        }
+        file_ << kIndent << kIndent << kIndent << "return _status;\n";
+        file_ << kIndent << kIndent << "}\n";
+        file_ << kIndent << kIndent << "_rd_bytes = _transformer_dest;\n";
+        file_ << kIndent << kIndent << "_response = (" << method_info.response->c_name
+              << "*)_rd_bytes;\n";
         file_ << kIndent << "}\n";
       }
 
@@ -1726,7 +1773,9 @@ std::ostringstream CGenerator::ProduceHeader() {
 std::ostringstream CGenerator::ProduceClient() {
   EmitFileComment(&file_);
   EmitIncludeHeader(&file_, "<lib/fidl/coding.h>");
+  EmitIncludeHeader(&file_, "<lib/fidl/transformer.h>");
   EmitIncludeHeader(&file_, "<lib/fidl/txn_header.h>");
+  EmitIncludeHeader(&file_, "<alloca.h>");
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
   EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");

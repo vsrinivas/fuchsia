@@ -2,64 +2,78 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("common") {
-  testonly = true
-  visibility = [ ":*" ]
-  sources = [
-    "fidl_align_tests.cc",
-    "fidl_coded_types.cc",
-    "handle_closing_tests.cc",
-    "linearizing_tests.cc",
-    "llcpp_transaction_tests.cc",
-    "llcpp_types_tests.cc",
-    "llcpp_views_tests.cc",
-    "main.cc",
-    "on_error_handle_tests.cc",
+import("$zx/public/gn/fidl.gni")
 
-    # Generated coding table for generated/extra_messages.fidl Cannot yet use
-    # the FIDL_LIBS directive, since FIDL Tables are not supported in the C
-    # generator.  See ./fidl/README.md for details.
-    "generated/extra_messages.cc",
-    "generated/fidl_llcpp_llcpp.test.cc",
-    "generated/fidl_llcpp_tables_llcpp.test.cc",
-  ]
-  include_dirs = [ "generated" ]
-  public_deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl:fidl-llcpp",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
+if (is_fuchsia) {
+  source_set("common") {
+    testonly = true
+    visibility = [ ":*" ]
+    sources = [
+      "fidl_align_tests.cc",
+      "fidl_coded_types.cc",
+      "handle_closing_tests.cc",
+      "linearizing_tests.cc",
+      "llcpp_transaction_tests.cc",
+      "llcpp_types_tests.cc",
+      "llcpp_views_tests.cc",
+      "main.cc",
+      "on_error_handle_tests.cc",
+
+      # Generated coding table for generated/extra_messages.fidl Cannot yet use
+      # the FIDL_LIBS directive, since FIDL Tables are not supported in the C
+      # generator.  See ./fidl/README.md for details.
+      "generated/extra_messages.cc",
+      "generated/fidl_llcpp_llcpp.test.cc",
+      "generated/fidl_llcpp_tables_llcpp.test.cc",
+    ]
+    include_dirs = [ "generated" ]
+    public_deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/fidl:fidl-llcpp",
+      "$zx/system/ulib/fit",
+      "$zx/system/ulib/unittest",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxtest",
+    ]
+  }
+
+  # Run the common tests under a strict invalid handle policy
+  zx_executable("fidl-handle-policy-test-app") {
+    testonly = true
+    sources = []
+    deps = [
+      ":common",
+    ]
+  }
+
+  zx_test("fidl") {
+    sources = [
+      "abi_tests.cc",
+      "cpp_types_tests.cc",
+      "decoding_tests.cc",
+      "encoding_tests.cc",
+      "formatting_tests.cc",
+      "message_tests.cc",
+      "run_with_handle_policy_tests.cc",
+      "transformer_tests.cc",
+      "validating_tests.cc",
+    ]
+    deps = [
+      ":common",
+      ":fidl-handle-policy-test-app",
+    ]
+  }
 }
 
-# Run the common tests under a strict invalid handle policy
-zx_executable("fidl-handle-policy-test-app") {
-  testonly = true
-  sources = []
-  deps = [
-    ":common",
+fidl_library("example") {
+  visibility = [
+    ":*",
+    "$zx/system/utest/fidl-simple:*"
   ]
-}
-
-zx_test("fidl") {
   sources = [
-    "abi_tests.cc",
-    "cpp_types_tests.cc",
-    "decoding_tests.cc",
-    "encoding_tests.cc",
-    "formatting_tests.cc",
-    "message_tests.cc",
-    "run_with_handle_policy_tests.cc",
-    "transformer_tests.cc",
-    "validating_tests.cc",
-  ]
-  deps = [
-    ":common",
-    ":fidl-handle-policy-test-app",
+    "transformer.test.fidl",
   ]
 }
