@@ -108,7 +108,6 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
 
   // Used to access the processing queue.
   fbl::Mutex lock_;
-  fbl::Mutex output_vmo_pool_lock_;
 
   // HHI register block has the clock registers
   ddk::MmioBuffer clock_mmio_;

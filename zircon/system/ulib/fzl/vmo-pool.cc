@@ -44,6 +44,11 @@ zx_paddr_t VmoPool::Buffer::physical_address() const {
   return pool_->buffers_[index_].physical_address();
 }
 
+zx_handle_t VmoPool::Buffer::vmo_handle() const {
+  ZX_ASSERT(valid());
+  return pool_->buffers_[index_].vmo.get();
+}
+
 zx_paddr_t VmoPool::ListableBuffer::physical_address() const {
   ZX_ASSERT_MSG(is_pinned, "Querying physical address of unpinned Buffer.");
   return pinned_buffer.region(0).phys_addr;

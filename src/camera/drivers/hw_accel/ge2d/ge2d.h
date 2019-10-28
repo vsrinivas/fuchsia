@@ -25,6 +25,7 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
@@ -42,6 +43,7 @@ constexpr uint64_t kPortKeyIrqMsg = 0x00;
 constexpr uint64_t kPortKeyDebugFakeInterrupt = 0x01;
 
 }  // namespace
+
 // This provides ZX_PROTOCOL_GE2D.
 class Ge2dDevice;
 using Ge2dDeviceType = ddk::Device<Ge2dDevice, ddk::UnbindableNew>;
@@ -50,12 +52,13 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Ge2dDevice);
   explicit Ge2dDevice(zx_device_t* parent, ddk ::MmioBuffer ge2d_mmio, zx::interrupt ge2d_irq,
-                      zx::bti bti, zx::port port)
+                      zx::bti bti, zx::port port, amlogic_canvas_protocol_t canvas)
       : Ge2dDeviceType(parent),
         port_(std::move(port)),
         ge2d_mmio_(std::move(ge2d_mmio)),
         ge2d_irq_(std::move(ge2d_irq)),
-        bti_(std::move(bti)) {}
+        bti_(std::move(bti)),
+        canvas_(canvas) {}
 
   // Setup() is used to create an instance of Ge2dDevice.
   static zx_status_t Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* out);
@@ -116,8 +119,6 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
 
   // Used to access the processing queue.
   fbl::Mutex lock_;
-  // Will be needed later.
-  fbl::Mutex output_vmo_pool_lock_;
 
   ddk::MmioBuffer ge2d_mmio_;
   zx::interrupt ge2d_irq_;
@@ -128,6 +129,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   thrd_t processing_thread_;
   fbl::ConditionVariable frame_processing_signal_ __TA_GUARDED(lock_);
   bool shutdown_ __TA_GUARDED(lock_) = false;
+  amlogic_canvas_protocol_t canvas_ = {};
 };
 }  // namespace ge2d
 

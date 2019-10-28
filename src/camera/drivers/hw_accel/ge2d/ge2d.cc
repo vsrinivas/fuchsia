@@ -15,6 +15,8 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/amlogiccanvas.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -29,6 +31,7 @@ constexpr uint32_t kGe2d = 0;
 enum {
   COMPONENT_PDEV,
   COMPONENT_SENSOR,
+  COMPONENT_CANVAS,
   COMPONENT_COUNT,
 };
 
@@ -53,7 +56,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
   zx_status_t status =
       task->InitResize(input_buffer_collection, output_buffer_collection, info, input_image_format,
                        output_image_format_table_list, output_image_format_table_count,
-                       output_image_format_index, callback, bti_);
+                       output_image_format_index, callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -63,7 +66,8 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
   task_map_[next_task_index_] = std::move(task);
   *out_task_index = next_task_index_;
   next_task_index_++;
-  return ZX_OK;
+
+  return status;
 }
 
 zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
@@ -86,7 +90,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
   zx_status_t status = task->InitWatermark(
       input_buffer_collection, output_buffer_collection, info, watermark_vmo, input_image_format,
       output_image_format_table_list, output_image_format_table_count, output_image_format_index,
-      callback, bti_);
+      callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -96,7 +100,8 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
   task_map_[next_task_index_] = std::move(task);
   *out_task_index = next_task_index_;
   next_task_index_++;
-  return ZX_OK;
+
+  return status;
 }
 
 void Ge2dDevice::Ge2dRemoveTask(uint32_t task_index) {
@@ -156,10 +161,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
 
   // First lets fetch an unused buffer from the VMO pool.
   uint32_t output_phy_addr;
-  {
-    fbl::AutoLock lock(&output_vmo_pool_lock_);
-    output_phy_addr = task->GetOutputBufferPhysAddr();
-  }
+  output_phy_addr = task->GetOutputBufferPhysAddr();
 
   if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {
     // Invoke the callback function and tell about the output buffer index
@@ -269,9 +271,17 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
     return status;
   }
 
+  ddk::AmlogicCanvasProtocolClient canvas(components[COMPONENT_CANVAS]);
+  if (!canvas.is_valid()) {
+    FX_LOGF(ERROR, "", "%s Could not get Amlogic Canvas protocol\n", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+  amlogic_canvas_protocol_t c;
+  canvas.GetProto(&c);
+
   fbl::AllocChecker ac;
   auto ge2d_device = std::unique_ptr<Ge2dDevice>(new (&ac) Ge2dDevice(
-      parent, std::move(*ge2d_mmio), std::move(ge2d_irq), std::move(bti), std::move(port)));
+      parent, std::move(*ge2d_mmio), std::move(ge2d_irq), std::move(bti), std::move(port), c));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

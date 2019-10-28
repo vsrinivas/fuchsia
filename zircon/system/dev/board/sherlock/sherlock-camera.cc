@@ -192,6 +192,10 @@ static const zx_bind_inst_t root_match[] = {
 static const zx_bind_inst_t camera_sensor_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR),
 };
+
+static const zx_bind_inst_t amlogiccanvas_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
+};
 static const device_component_part_t camera_sensor_component[] = {
     {countof(root_match), root_match},
     {countof(camera_sensor_match), camera_sensor_match},
@@ -205,9 +209,15 @@ static const device_component_t gdc_components[] = {
     {countof(camera_sensor_component), camera_sensor_component},
 };
 
+static const device_component_part_t amlogiccanvas_component[] = {
+    {countof(root_match), root_match},
+    {countof(amlogiccanvas_match), amlogiccanvas_match},
+};
+
 // Composite binding rules for GE2D
 static const device_component_t ge2d_components[] = {
     {countof(camera_sensor_component), camera_sensor_component},
+    {countof(amlogiccanvas_component), amlogiccanvas_component},
 };
 
 // Composite binding rules for IMX227 Sensor.

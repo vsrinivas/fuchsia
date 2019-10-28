@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/device/sysmem.h>
+#include <zircon/pixelformat.h>
 
 #include <src/camera/drivers/isp/modules/dma-format.h>
 
@@ -61,13 +62,25 @@ static void GetFakeBufferSettings(buffer_collection_info_2_t& buffer_collection,
   buffer_collection.settings.has_image_format_constraints = false;
 }
 
-void GetImageFormat2(image_format_2_t& image_format, uint32_t width, uint32_t height) {
-  image_format.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
+zx_status_t GetImageFormat2(uint32_t pixel_format_type, image_format_2_t& image_format,
+                            uint32_t width, uint32_t height) {
+  // Convert fuchsia_sysmem_PixelFormatType to ZX_PIXEL_FORMAT_
+  // So we can use The ZX macro to get bytes.
+  if (fuchsia_sysmem_PixelFormatType_NV12 == pixel_format_type)
+    image_format.pixel_format.type = ZX_PIXEL_FORMAT_NV12;
+  else if (fuchsia_sysmem_PixelFormatType_R8G8B8A8 == pixel_format_type)
+    // XXX: Is this the correct one to pick ?
+    image_format.pixel_format.type = ZX_PIXEL_FORMAT_ARGB_8888;
+  else
+    return ZX_ERR_NOT_SUPPORTED;
   image_format.coded_width = width;
   image_format.coded_height = height;
   image_format.display_width = width;
   image_format.display_height = height;
   image_format.layers = 2;
+  // Only NV12 format is supported.
+  image_format.bytes_per_row = width * ZX_PIXEL_FORMAT_BYTES(image_format.pixel_format.type);
+  return ZX_OK;
 }
 
 zx_status_t CreateContiguousBufferCollectionInfo2(buffer_collection_info_2_t& buffer_collection,

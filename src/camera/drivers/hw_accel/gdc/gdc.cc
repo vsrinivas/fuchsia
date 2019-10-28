@@ -198,10 +198,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   // Now programming the output DMA registers.
   // First lets fetch an unused buffer from the VMO pool.
   uint32_t output_y_addr;
-  {
-    fbl::AutoLock lock(&output_vmo_pool_lock_);
-    output_y_addr = task->GetOutputBufferPhysAddr();
-  }
+  output_y_addr = task->GetOutputBufferPhysAddr();
 
   // Program Data1Out Address Register (Y).
   auto output_line_offset = output_format.bytes_per_row;

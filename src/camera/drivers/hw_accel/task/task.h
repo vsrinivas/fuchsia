@@ -13,6 +13,8 @@
 #include <deque>
 
 #include <ddktl/protocol/gdc.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 
 namespace generictask {
@@ -41,6 +43,7 @@ class GenericTask {
   // Returns the physical address for the output buffer which is
   // picked from the pool of free buffers.
   uint32_t GetOutputBufferPhysAddr() {
+    fbl::AutoLock lock(&output_vmo_pool_lock_);
     auto buffer = output_buffers_.LockBufferForWrite();
     ZX_ASSERT(buffer);
     auto addr = static_cast<uint32_t>(buffer->physical_address());
@@ -48,15 +51,32 @@ class GenericTask {
     return addr;
   }
 
+  fzl::VmoPool::Buffer WriteLockOutputBuffer() {
+    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    auto buffer = output_buffers_.LockBufferForWrite();
+    ZX_ASSERT(buffer);
+    return (std::move(*buffer));
+  }
+
   // Releases the write lock of the output buffer and returns back and index.
   uint32_t GetOutputBufferIndex() {
+    fbl::AutoLock lock(&output_vmo_pool_lock_);
     auto index = write_locked_buffers_.back().ReleaseWriteLockAndGetIndex();
     write_locked_buffers_.pop_back();
     return index;
   }
 
   // Returns the output buffer back to the VMO pool to be reused again.
-  zx_status_t ReleaseOutputBuffer(uint32_t index) { return output_buffers_.ReleaseBuffer(index); }
+  zx_status_t ReleaseOutputBuffer(uint32_t index) {
+    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    return output_buffers_.ReleaseBuffer(index);
+  }
+
+  // Returns the output buffer back to the VMO pool to be reused again.
+  zx_status_t ReleaseOutputBuffer(fzl::VmoPool::Buffer buffer) {
+    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    return buffer.Release();
+  }
 
   image_format_2_t input_format() { return input_format_; }
   image_format_2_t output_format() {
@@ -74,8 +94,10 @@ class GenericTask {
                           size_t output_image_format_table_count,
                           uint32_t output_image_format_index, const zx::bti& bti,
                           const hw_accel_callback_t* callback);
+  // Guards Allocations and Frees of buffers in the output pool.
 
  private:
+  fbl::Mutex output_vmo_pool_lock_;
   size_t output_image_format_count_;
   std::unique_ptr<image_format_2_t[]> output_image_format_list_;
   uint32_t cur_output_image_format_index_;

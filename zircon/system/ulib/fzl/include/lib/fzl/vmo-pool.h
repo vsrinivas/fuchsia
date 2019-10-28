@@ -137,6 +137,10 @@ class VmoPool {
     // valid.
     zx_paddr_t physical_address() const;
 
+    // Return the vmo handle.
+    // Asserts that the Buffer instance is valid.
+    zx_handle_t vmo_handle() const;
+
     bool valid() const { return pool_ != nullptr; }
 
    private:

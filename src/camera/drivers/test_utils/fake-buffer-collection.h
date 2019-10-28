@@ -27,7 +27,8 @@ zx_status_t CreateContiguousBufferCollectionInfo(
     uint32_t height, uint32_t num_buffers);
 
 // Create a fake ImageFormat2.
-void GetImageFormat2(image_format_2_t& image_format, uint32_t width, uint32_t height);
+zx_status_t GetImageFormat2(uint32_t pixel_format_type, image_format_2_t& image_format,
+                            uint32_t width, uint32_t height);
 
 // Creates a BufferCollectionInfo2 that is allocated with contiguous memory, similar
 // to the above.
