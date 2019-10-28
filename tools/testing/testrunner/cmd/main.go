@@ -38,6 +38,10 @@ var (
 
 	// Working directory of the local testing subprocesses.
 	localWD string
+
+	// Whether to use runtests when executing tests on fuchsia. If false, the
+	// default will be run_test_component.
+	useRuntests bool
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
@@ -60,6 +64,7 @@ func init() {
 	flag.BoolVar(&help, "help", false, "Whether to show Usage and exit.")
 	flag.StringVar(&archive, "archive", "", "Optional path where a tar archive containing test results should be created.")
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
+	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
 	flag.Usage = usage
 }
 

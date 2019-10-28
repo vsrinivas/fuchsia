@@ -90,6 +90,13 @@ type RunCommand struct {
 
 	// SerialLogFile, if nonempty, is the file where the system's serial logs will be written.
 	serialLogFile string
+
+	// RepoURL specifies the URL of a package repository.
+	repoURL string
+
+	// BlobURL optionally specifies the URL of where a package repository's blobs may be served from.
+	// Defaults to $repoURL/blobs.
+	blobURL string
 }
 
 func (*RunCommand) Name() string {
@@ -119,6 +126,12 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.syslogFile, "syslog", "", "file to write the systems logs to")
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
+	f.StringVar(&r.repoURL, "repo", "", "URL at which to configure a package repository")
+	var defaultBlobURL string
+	if r.repoURL != "" {
+		defaultBlobURL = fmt.Sprintf("%s/blobs", r.repoURL)
+	}
+	f.StringVar(&r.blobURL, "blobs", defaultBlobURL, "URL at which to serve a package repository's blobs")
 }
 
 func (r *RunCommand) runCmd(ctx context.Context, args []string, t Target) error {
