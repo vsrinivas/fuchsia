@@ -506,7 +506,7 @@ bool RunTestsWithVerbosity() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({succeed_file_name}, {}, 1, output_dir.c_str(), output_file_base_name,
+  EXPECT_TRUE(RunTests({succeed_file_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
                        verbosity, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
@@ -537,7 +537,7 @@ bool RunTestsWithArguments() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({succeed_file_name}, args, 1, output_dir.c_str(), output_file_base_name,
+  EXPECT_TRUE(RunTests({succeed_file_name}, args, 1, 0, output_dir.c_str(), output_file_base_name,
                        verbosity, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
@@ -567,8 +567,8 @@ bool RunTestsCreatesOutputFile() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({does_not_exist_file_name}, {}, 1, output_dir.c_str(), output_file_base_name,
-                       verbosity, &num_failed, &results));
+  EXPECT_TRUE(RunTests({does_not_exist_file_name}, {}, 1, 0, output_dir.c_str(),
+                       output_file_base_name, verbosity, &num_failed, &results));
   EXPECT_EQ(1, num_failed);
   EXPECT_EQ(1, results.size());
 

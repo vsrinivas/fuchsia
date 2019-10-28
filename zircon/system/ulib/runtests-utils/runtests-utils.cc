@@ -321,8 +321,8 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
 }
 
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
-              int repeat, const char* output_dir, const fbl::StringPiece output_file_basename,
-              signed char verbosity, int* failed_count,
+              int repeat, uint64_t timeout_msec, const char* output_dir,
+              const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results) {
   std::map<fbl::String, int> test_name_to_count;
   for (int i = 1; i <= repeat; ++i) {
@@ -392,8 +392,8 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
           "RUNNING TEST: %s\n\n",
           output_test_name.c_str());
       fflush(stdout);
-      std::unique_ptr<Result> result =
-          RunTest(argv.data(), output_dir_for_test, output_filename, output_test_name.c_str(), 0);
+      std::unique_ptr<Result> result = RunTest(argv.data(), output_dir_for_test, output_filename,
+                                               output_test_name.c_str(), timeout_msec);
       if (result->launch_status != SUCCESS) {
         *failed_count += 1;
       }

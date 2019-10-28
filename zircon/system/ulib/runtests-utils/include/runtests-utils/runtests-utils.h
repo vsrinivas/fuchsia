@@ -136,6 +136,8 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 //   each test individually so that:
 //   a) any flakes due to the sequencing of tests can be reproduced
 //   b) we can get an idea of global flake rates without waiting for all runs to complete
+// |timeout_msec| is the number of milliseconds to wait for a test before considering it failed.
+//   ignored if 0.
 // |output_dir| is the output directory for all the tests' output. May be nullptr, in which case
 //   output will not be captured.
 // |output_file_basename| is the basename of the tests' output files. May be nullptr only if
@@ -151,8 +153,8 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 //
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
-              int repeat, const char* output_dir, const fbl::StringPiece output_file_basename,
-              signed char verbosity, int* failed_count,
+              int repeat, uint64_t timeout_msec, const char* output_dir,
+              const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results);
 
 // Expands |dir_globs| and searches those directories for files.

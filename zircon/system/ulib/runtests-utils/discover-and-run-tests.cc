@@ -78,6 +78,7 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "   -w: Watchdog timeout [5]                           \n"
           "       (accepts the timeout value in seconds)         \n"
           "       The default is up to each test.                \n"
+          "   -i: Per-test timeout in seconds. [6]               \n"
           "\n"
           "[1] -v will pass \"v=1\" argument to the test binary. \n"
           "    Not all test frameworks will honor this argument, \n"
@@ -104,7 +105,12 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "\n"
           "[5] The watchdog timeout option -w only works for     \n"
           "    tests that support the RUNTESTS_WATCHDOG_TIMEOUT  \n"
-          "    environment variable.                             \n");
+          "    environment variable.                             \n"
+          "\n"
+          "[6] Will consider tests failed if they don't          \n"
+          "    finish in this time. If > 1, watchdog timeout     \n"
+          "    will be set to (this value - 1) in order to give  \n"
+          "    tests a chance to clean up and fail cleanly.      \n");
   return EXIT_FAILURE;
 }
 }  // namespace
@@ -119,6 +125,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
   const char* output_dir = nullptr;
   signed char verbosity = -1;
   int watchdog_timeout_seconds = -1;
+  unsigned int timeout_seconds = 0;
   const char* test_list_path = nullptr;
   int repeat = 1;
   bool dry_run = false;
@@ -220,9 +227,10 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
         repeat = static_cast<int>(repeatl);
         break;
       }
+      case 'i':  // intentional fall-through
       case 'w': {
         if (optind > argc) {
-          fprintf(stderr, "Missing argument for -w\n");
+          fprintf(stderr, "Missing argument for %s\n", arg.data());
           return EXIT_FAILURE;
         }
         const char* timeout_str = argv[optind++];
@@ -232,7 +240,15 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
           fprintf(stderr, "Error: bad timeout\n");
           return EXIT_FAILURE;
         }
-        watchdog_timeout_seconds = static_cast<int>(timeout);
+        if (arg.data()[1] == 'w') {
+          watchdog_timeout_seconds = static_cast<int>(timeout);
+        } else {
+          timeout_seconds = static_cast<unsigned int>(timeout);
+          if (watchdog_timeout_seconds == -1 && timeout_seconds > 1 && timeout_seconds <= INT_MAX) {
+            // Give tests a chance to exit cleanly before the timeout kills them.
+            watchdog_timeout_seconds = static_cast<int>(timeout_seconds - 1);
+          }
+        }
         break;
       }
       case 'd': {
@@ -320,8 +336,9 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
   stopwatch->Start();
   int failed_count = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
-  if (!RunTests(test_paths, test_args, repeat, output_dir, kOutputFileName, verbosity,
-                &failed_count, &results)) {
+  if (!RunTests(test_paths, test_args, repeat,
+                static_cast<uint64_t>(timeout_seconds) * static_cast<uint64_t>(1000), output_dir,
+                kOutputFileName, verbosity, &failed_count, &results)) {
     return EXIT_FAILURE;
   }
 

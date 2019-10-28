@@ -225,7 +225,7 @@ bool RunTestsPublishData() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, output_dir.c_str(), output_file_base_name, verbosity,
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, verbosity,
                        &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
@@ -246,7 +246,7 @@ bool RunDuplicateTestsPublishData() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({test_name, test_name, test_name}, {}, 1, output_dir.c_str(),
+  EXPECT_TRUE(RunTests({test_name, test_name, test_name}, {}, 1, 0, output_dir.c_str(),
                        output_file_base_name, verbosity, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
