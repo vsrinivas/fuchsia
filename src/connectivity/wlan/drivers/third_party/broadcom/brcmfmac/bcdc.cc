@@ -378,7 +378,13 @@ static zx_status_t brcmf_proto_bcdc_init_done(struct brcmf_pub* drvr) {
 }
 
 zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
-  struct brcmf_bcdc* bcdc;
+  struct brcmf_proto* proto = nullptr;
+  struct brcmf_bcdc* bcdc = nullptr;
+
+  proto = static_cast<decltype(proto)>(calloc(1, sizeof(*proto)));
+  if (!proto) {
+    goto fail;
+  }
 
   bcdc = static_cast<decltype(bcdc)>(calloc(1, sizeof(*bcdc)));
   if (!bcdc) {
@@ -391,6 +397,7 @@ zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
     goto fail;
   }
 
+  drvr->proto = proto;
   drvr->proto->hdrpull = brcmf_proto_bcdc_hdrpull;
   drvr->proto->query_dcmd = brcmf_proto_bcdc_query_dcmd;
   drvr->proto->set_dcmd = brcmf_proto_bcdc_set_dcmd;
@@ -412,13 +419,20 @@ zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
 
 fail:
   free(bcdc);
+  free(proto);
   return ZX_ERR_NO_MEMORY;
 }
 
 void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr) {
-  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
+  if (drvr->proto == nullptr) {
+    return;
+  }
 
-  drvr->proto->pd = NULL;
+  struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
   brcmf_fws_detach(bcdc->fws);
+
+  drvr->proto->pd = nullptr;
   free(bcdc);
+  free(drvr->proto);
+  drvr->proto = nullptr;
 }

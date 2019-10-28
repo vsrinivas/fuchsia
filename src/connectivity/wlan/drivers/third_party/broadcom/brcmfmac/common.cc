@@ -330,16 +330,8 @@ done:
   return err;
 }
 
-struct brcmf_mp_device* brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip,
-                                               uint32_t chiprev) {
-  struct brcmf_mp_device* settings;
-
-  BRCMF_DBG(TEMP, "Enter, bus=%d, chip=%d, rev=%d\n", bus_type, chip, chiprev);
-  settings = static_cast<decltype(settings)>(calloc(1, sizeof(*settings)));
-  if (!settings) {
-    return NULL;
-  }
-
+void brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip, uint32_t chiprev,
+                            brcmf_mp_device* settings) {
   /* start by using the module paramaters */
   settings->p2p_enable = !!brcmf_p2p_enable;
   settings->feature_disable = brcmf_feature_disable;
@@ -349,13 +341,6 @@ struct brcmf_mp_device* brcmf_get_module_param(enum brcmf_bus_type bus_type, uin
   settings->ignore_probe_fail = !!brcmf_ignore_probe_fail;
 #endif  // !defined(NDEBUG)
 
-  if (bus_type == BRCMF_BUS_TYPE_SDIO) {
-    // TODO(cphoenix): Do we really want to use default? (If so, delete =0 lines because calloc)
-    settings->bus.sdio.sd_sgentry_align = 0;      // Use default
-    settings->bus.sdio.sd_head_align = 0;         // Use default
-    settings->bus.sdio.drive_strength = 0;        // Use default
-    settings->bus.sdio.oob_irq_supported = true;  // TODO(cphoenix): Always?
-  }
 #ifdef USE_PLATFORM_DATA
   // TODO(WLAN-731): Do we need to do this?
   struct brcmfmac_pd_device {
@@ -390,7 +375,4 @@ struct brcmf_mp_device* brcmf_get_module_param(enum brcmf_bus_type bus_type, uin
     }
   }
 #endif /* USE_PLATFORM_DATA */
-  return settings;
 }
-
-void brcmf_release_module_param(struct brcmf_mp_device* module_param) { free(module_param); }

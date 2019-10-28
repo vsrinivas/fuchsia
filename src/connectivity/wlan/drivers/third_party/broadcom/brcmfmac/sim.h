@@ -26,7 +26,7 @@
 struct brcmf_simdev {
   std::unique_ptr<::wlan::brcmfmac::SimFirmware> sim_fw;
   ::wlan::simulation::FakeDevMgr* dev_mgr;
-  struct brcmf_mp_device* settings;
+  std::unique_ptr<brcmf_mp_device> settings;
   brcmf_pub* drvr;
 };
 

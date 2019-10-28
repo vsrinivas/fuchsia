@@ -2949,7 +2949,7 @@ static zx_status_t brcmf_sdio_bus_preinit(brcmf_bus* bus_if) {
     err = brcmf_iovar_data_set(sdiodev->drvr, "bus:txglom", &value, sizeof(uint32_t), nullptr);
   } else {
     /* otherwise, set txglomalign */
-    value = sdiodev->settings->bus.sdio.sd_sgentry_align;
+    value = sdiodev->settings->bus.sdio->sd_sgentry_align;
     /* SDIO ADMA requires at least 32 bit alignment */
     value = std::max<uint32_t>(value, DMA_ALIGNMENT);
     err = brcmf_iovar_data_set(sdiodev->drvr, "bus:txglomalign", &value, sizeof(uint32_t), nullptr);
@@ -3365,6 +3365,8 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
   int reg_addr;
   uint32_t reg_val;
   uint32_t drivestrength;
+  brcmf_mp_device* settings = nullptr;
+  brcmf_sdio_pd* sdio_settings = nullptr;
 
   sdiodev = bus->sdiodev;
   sdio_claim_host(sdiodev->func1);
@@ -3420,22 +3422,38 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     goto fail;
   }
 
-  sdiodev->settings = brcmf_get_module_param(BRCMF_BUS_TYPE_SDIO, bus->ci->chip, bus->ci->chiprev);
-  if (!sdiodev->settings) {
-    BRCMF_ERR("Failed to get device parameters\n");
-    err = ZX_ERR_INTERNAL;
+  settings = static_cast<decltype(settings)>(calloc(1, sizeof(*settings)));
+  if (!settings) {
+    BRCMF_ERR("failed to allocate device parameters\n");
+    err = ZX_ERR_NO_MEMORY;
     goto fail;
   }
+  brcmf_get_module_param(BRCMF_BUS_TYPE_SDIO, bus->ci->chip, bus->ci->chiprev, settings);
+  sdiodev->settings = settings;
+
+  sdio_settings = static_cast<decltype(sdio_settings)>(calloc(1, sizeof(*sdio_settings)));
+  if (!sdio_settings) {
+    BRCMF_ERR("failed to allocate SDIO parameters\n");
+    err = ZX_ERR_NO_MEMORY;
+    goto fail;
+  }
+  // TODO(cphoenix): Do we really want to use default? (If so, delete =0 lines because calloc)
+  sdio_settings->sd_sgentry_align = 0;      // Use default
+  sdio_settings->sd_head_align = 0;         // Use default
+  sdio_settings->drive_strength = 0;        // Use default
+  sdio_settings->oob_irq_supported = true;  // TODO(cphoenix): Always?
+  sdiodev->settings->bus.sdio = sdio_settings;
+
   /* platform specific configuration:
    *   alignments must be at least 4 bytes for ADMA
    */
   bus->head_align = DMA_ALIGNMENT;
   bus->sgentry_align = DMA_ALIGNMENT;
-  if (sdiodev->settings->bus.sdio.sd_head_align > DMA_ALIGNMENT) {
-    bus->head_align = sdiodev->settings->bus.sdio.sd_head_align;
+  if (sdiodev->settings->bus.sdio->sd_head_align > DMA_ALIGNMENT) {
+    bus->head_align = sdiodev->settings->bus.sdio->sd_head_align;
   }
-  if (sdiodev->settings->bus.sdio.sd_sgentry_align > DMA_ALIGNMENT) {
-    bus->sgentry_align = sdiodev->settings->bus.sdio.sd_sgentry_align;
+  if (sdiodev->settings->bus.sdio->sd_sgentry_align > DMA_ALIGNMENT) {
+    bus->sgentry_align = sdiodev->settings->bus.sdio->sd_sgentry_align;
   }
 
   err = brcmf_sdio_kso_init(bus);
@@ -3444,8 +3462,8 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     goto fail;
   }
 
-  if (sdiodev->settings->bus.sdio.drive_strength) {
-    drivestrength = sdiodev->settings->bus.sdio.drive_strength;
+  if (sdiodev->settings->bus.sdio->drive_strength) {
+    drivestrength = sdiodev->settings->bus.sdio->drive_strength;
   } else {
     drivestrength = DEFAULT_SDIO_DRIVE_STRENGTH;
   }
@@ -3825,6 +3843,13 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     goto fail;
   }
 
+  /* Attach and link in the protocol */
+  ret = brcmf_proto_bcdc_attach(sdiodev->drvr);
+  if (ret != ZX_OK) {
+    BRCMF_ERR("brcmf_proto_bcdc_attach failed: %s\n", zx_status_get_string(ret));
+    goto fail;
+  }
+
   /* Query the F2 block size, set roundup accordingly */
   sdio_get_block_size(&sdiodev->sdio_proto_fn2, &bus->blocksize);
   bus->roundup = std::min(max_roundup, bus->blocksize);
@@ -3884,6 +3909,7 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
     /* De-register interrupt handler */
     brcmf_sdiod_intr_unregister(bus->sdiodev);
 
+    brcmf_proto_bcdc_detach(bus->sdiodev->drvr);
     brcmf_detach(bus->sdiodev->drvr);
 
     bus->datawork.Cancel();
@@ -3908,7 +3934,10 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
       brcmf_chip_detach(bus->ci);
     }
     if (bus->sdiodev->settings) {
-      brcmf_release_module_param(bus->sdiodev->settings);
+      if (bus->sdiodev->settings->bus.sdio) {
+        free(bus->sdiodev->settings->bus.sdio);
+      }
+      free(bus->sdiodev->settings);
     }
 
     free(bus->rxbuf);

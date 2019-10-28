@@ -660,8 +660,6 @@ void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked) {
 }
 
 zx_status_t brcmf_attach(brcmf_pub* drvr, brcmf_bus* bus_if, brcmf_mp_device* settings) {
-  zx_status_t ret = ZX_OK;
-
   BRCMF_DBG(TRACE, "Enter\n");
 
   /* Link to bus module */
@@ -669,21 +667,9 @@ zx_status_t brcmf_attach(brcmf_pub* drvr, brcmf_bus* bus_if, brcmf_mp_device* se
   drvr->bus_if = bus_if;
   drvr->settings = settings;
 
-  /* Attach and link in the protocol */
-  ret = brcmf_proto_attach(drvr);
-  if (ret != ZX_OK) {
-    BRCMF_ERR("brcmf_prot_attach failed\n");
-    goto fail;
-  }
-
   /* attach firmware event handler */
   brcmf_fweh_attach(drvr);
-  return ret;
-
-fail:
-  brcmf_detach(drvr);
-
-  return ret;
+  return ZX_OK;
 }
 
 zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
@@ -804,8 +790,6 @@ void brcmf_detach(brcmf_pub* drvr) {
   brcmf_cfg80211_detach(drvr->config);
 
   brcmf_bus_stop(drvr->bus_if);
-
-  brcmf_proto_detach(drvr);
 }
 
 zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,

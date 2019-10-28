@@ -191,6 +191,16 @@ struct brcmf_sdreg {
   int value;
 };
 
+/**
+ * struct brcmf_sdio_pd - SDIO-specific device module parameters
+ */
+struct brcmf_sdio_pd {
+  int sd_sgentry_align;
+  int sd_head_align;
+  int drive_strength;
+  int oob_irq_supported;
+};
+
 struct brcmf_sdio;
 
 struct brcmf_sdio_dev {

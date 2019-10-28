@@ -41,6 +41,7 @@ visibility = [ "./*" ]
 #
 # See the targets ":driver_module" and ":driver_sim" to see how this is done.
 
+# Sources for driver debug logging.
 source_set("debug") {
   sources = [
     "debug.cc",
@@ -54,6 +55,7 @@ source_set("debug") {
   ]
 }
 
+# Sources for Linux porting compatibility.
 source_set("linuxisms") {
   sources = [
     "linuxisms.cc",
@@ -74,9 +76,27 @@ source_set("linuxisms") {
   ]
 }
 
-source_set("core") {
+# Sources for the BCDC firmware protocol.
+source_set("bcdc") {
   sources = [
     "bcdc.cc",
+    "fwsignal.cc",
+    "fwsignal.h",
+  ]
+  public = [
+    "bcdc.h",
+  ]
+  deps = [
+    ":core",
+    ":debug",
+    ":linuxisms",
+    "//zircon/system/public",
+  ]
+}
+
+# Sources for the driver core logic.
+source_set("core") {
+  sources = [
     "bits.cc",
     "bits.h",
     "btcoex.cc",
@@ -92,21 +112,16 @@ source_set("core") {
     "firmware.cc",
     "fweh.cc",
     "fwil.cc",
-    "fwsignal.cc",
-    "fwsignal.h",
     "p2p.cc",
     "p2p.h",
     "pno.cc",
     "pno.h",
-    "proto.cc",
-    "proto.h",
     "timer.cc",
     "utils.cc",
     "wlan_interface.cc",
     "wlan_interface.h",
   ]
   public = [
-    "bcdc.h",
     "brcm_hw_ids.h",
     "brcmu_d11.h",
     "brcmu_utils.h",
@@ -123,13 +138,13 @@ source_set("core") {
     "fweh.h",
     "fwil.h",
     "fwil_types.h",
+    "proto.h",
     "soc.h",
     "timer.h",
   ]
   deps = [
     ":debug",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddk",
     "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
@@ -140,6 +155,7 @@ source_set("core") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.ethernet",
@@ -147,6 +163,11 @@ source_set("core") {
   ]
   friend = [ "test/*" ]
 }
+
+# Bus definitions below.  These are:
+#
+# * :sdio
+# * :sim
 
 config("config_sdio") {
   defines = [ "CONFIG_BRCMFMAC_SDIO=1" ]
@@ -163,6 +184,7 @@ source_set("sdio") {
     "sdio_device.h",
   ]
   deps = [
+    ":bcdc",
     ":debug",
     "//zircon/public/lib/broadcom",
     "//zircon/public/lib/sync",
@@ -198,6 +220,7 @@ source_set("sim") {
     "sim_device.h",
   ]
   deps = [
+    ":bcdc",
     ":debug",
     "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddk",
@@ -211,6 +234,26 @@ source_set("sim") {
   public_configs = [ ":config_sim" ]
 }
 
+# Source set including the driver sources, and the bus definitions conditionally compiled in on each
+# platform.
+source_set("driver_sources") {
+  deps = [
+    ":core",
+    ":debug",
+    "//zircon/public/lib/driver",
+  ]
+
+  # The bus target dependencies below are public_deps so that their configs propagate to users of
+  # this target.
+  public_deps = []
+
+  # Assume for now that arm64 boards use the SDIO interface.
+  if (target_cpu == "arm64") {
+    public_deps += [ ":sdio" ]
+  }
+}
+
+# Driver module for the brcmfmac driver.
 driver_module("driver_module") {
   output_name = "brcmfmac"
   sources = [
@@ -218,18 +261,23 @@ driver_module("driver_module") {
   ]
   deps = [
     ":core",
-    ":debug",
-    "//zircon/public/lib/driver",
+    ":driver_sources",
   ]
-
-  # Assume for now that arm64 boards use the SDIO interface.
-  if (target_cpu == "arm64") {
-    deps += [ ":sdio" ]
-  }
-
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
+
+# Firmware file copying below.  There are three targets:
+#
+# * brcmfmac-firmware-copy
+# * brcmfmac-nvram-copy
+# * brcmfmac-clm-copy
+#
+# which copy the firmware, NVRAM definition, and CLM blob respectively.  They are either copy()
+# targets, or empty group() targets, for use in the package() targets below.
+#
+# All files that must be included as libraries in the package() target are added to the
+# driver_library_files list.
 
 driver_library_files = []
 if (internal_access) {
@@ -335,6 +383,9 @@ if (internal_access) {
   }
 }
 
+# Driver packages.
+
+# Driver package for the brcmfmac driver.
 package("brcmfmac") {
   deprecated_system_image = true
   deps = [

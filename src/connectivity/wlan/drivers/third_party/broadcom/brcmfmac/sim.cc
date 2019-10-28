@@ -80,12 +80,7 @@ zx_status_t brcmf_sim_probe(struct brcmf_bus* bus) {
   bus->chip = chip;
   bus->chiprev = chiprev;
 
-  bus->bus_priv.sim->settings = brcmf_get_module_param(BRCMF_BUS_TYPE_SIM, chip, chiprev);
-  if (bus->bus_priv.sim->settings == nullptr) {
-    BRCMF_ERR("Failed to get device parameters\n");
-    return ZX_ERR_INTERNAL;
-  }
-
+  brcmf_get_module_param(BRCMF_BUS_TYPE_SIM, chip, chiprev, bus->bus_priv.sim->settings.get());
   return ZX_OK;
 }
 
@@ -101,6 +96,7 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
   simdev->drvr = drvr;
   simdev->sim_fw = std::make_unique<::wlan::brcmfmac::SimFirmware>(simdev.get(), env);
   simdev->dev_mgr = dev_mgr;
+  simdev->settings = std::make_unique<brcmf_mp_device>();
   bus_if->bus_priv.sim = simdev.get();
 
   BRCMF_DBG(SIM, "Registering simulator target\n");
@@ -111,9 +107,15 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
   }
 
   bus_if->ops = &brcmf_sim_bus_ops;
-  status = brcmf_attach(drvr, bus_if.get(), simdev->settings);
+  status = brcmf_attach(drvr, bus_if.get(), simdev->settings.get());
   if (status != ZX_OK) {
     BRCMF_ERR("brcmf_attach failed\n");
+    return status;
+  }
+
+  status = brcmf_proto_bcdc_attach(drvr);
+  if (status != ZX_OK) {
+    BRCMF_ERR("brcmf_proto_bcdc_attach failed: %s\n", zx_status_get_string(status));
     return status;
   }
 

@@ -94,6 +94,7 @@ TEST(Sdio, IntrRegister) {
   ddk::MockGpio gpio;
   brcmf_bus bus_if = {};
   brcmf_mp_device settings = {};
+  brcmf_sdio_pd sdio_settings = {};
   const struct brcmf_bus_ops sdio_bus_ops = {
       .get_wifi_metadata = get_wifi_metadata,
   };
@@ -106,6 +107,7 @@ TEST(Sdio, IntrRegister) {
   bus_if.ops = &sdio_bus_ops;
   sdio_dev.bus_if = &bus_if;
   sdio_dev.settings = &settings;
+  sdio_dev.settings->bus.sdio = &sdio_settings;
 
   gpio.ExpectConfigIn(ZX_OK, GPIO_NO_PULL)
       .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_LEVEL_LOW, zx::interrupt(ZX_HANDLE_INVALID));

@@ -45,9 +45,6 @@ struct brcmf_proto {
   void* pd;
 };
 
-zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr);
-void brcmf_proto_detach(struct brcmf_pub* drvr);
-
 static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws,
                                       struct brcmf_netbuf* netbuf, struct brcmf_if** ifp) {
   struct brcmf_if* tmp = NULL;

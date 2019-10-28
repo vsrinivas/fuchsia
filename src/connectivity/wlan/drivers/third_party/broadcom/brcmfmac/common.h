@@ -25,16 +25,6 @@
 #define BRCMF_FW_ALTPATH_LEN 256
 
 /**
- * struct brcmfmac_sdio_pd - SDIO-specific device module parameters
- */
-struct brcmfmac_sdio_pd {
-  int sd_sgentry_align;
-  int sd_head_align;
-  int drive_strength;
-  int oob_irq_supported;
-};
-
-/**
  * struct brcmf_mp_device - Device module paramaters.
  *
  * @p2p_enable: Legacy P2P0 enable (old wpa_supplicant).
@@ -53,15 +43,14 @@ struct brcmf_mp_device {
   bool ignore_probe_fail;
   struct brcmfmac_pd_cc* country_codes;
   struct {
-    struct brcmfmac_sdio_pd sdio;
+    struct brcmf_sdio_pd* sdio;
   } bus;
 };
 
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp);
 
-struct brcmf_mp_device* brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip,
-                                               uint32_t chiprev);
-void brcmf_release_module_param(struct brcmf_mp_device* module_param);
+void brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip, uint32_t chiprev,
+                            brcmf_mp_device* settings);
 
 zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_binary);
 

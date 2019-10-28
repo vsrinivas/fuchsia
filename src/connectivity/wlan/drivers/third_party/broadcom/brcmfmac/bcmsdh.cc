@@ -104,12 +104,12 @@ zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, u
 }
 
 zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
-  struct brcmfmac_sdio_pd* pdata;
+  struct brcmf_sdio_pd* pdata;
   zx_status_t ret = ZX_OK;
   uint8_t data;
   uint32_t addr, gpiocontrol;
 
-  pdata = &sdiodev->settings->bus.sdio;
+  pdata = sdiodev->settings->bus.sdio;
   pdata->oob_irq_supported = false;
   wifi_config_t config;
   size_t actual;
@@ -196,9 +196,6 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
   BRCMF_DBG(SDIO, "Entering oob=%d sd=%d\n", sdiodev->oob_irq_requested, sdiodev->sd_irq_requested);
 
   if (sdiodev->oob_irq_requested) {
-    struct brcmfmac_sdio_pd* pdata;
-
-    pdata = &sdiodev->settings->bus.sdio;
     sdio_claim_host(sdiodev->func1);
     brcmf_sdiod_vendor_control_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, 0, NULL);
     sdio_disable_fn_intr(&sdiodev->sdio_proto_fn1);
