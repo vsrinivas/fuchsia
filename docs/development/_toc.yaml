@@ -48,9 +48,6 @@ toc:
   section:
   - include: /docs/development/tracing/_toc.yaml
 - heading: "Guides"
-- title: "ABI"
-  section:
-  - include: /docs/development/abi/_toc.yaml
 - title: "API"
   section:
   - include: /docs/development/api/_toc.yaml

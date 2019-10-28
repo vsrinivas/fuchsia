@@ -102,7 +102,7 @@ language of capability routing consists of the following three keywords:
 
 When you use these keywords together, they express how a capability is routed
 from a component instance's [outgoing
-directory](/docs/development/abi/system.md#outgoing-directory) to another
+directory](/docs/concepts/system/abi/system.md#outgoing-directory) to another
 component instance's namespace:
 
 - `use` describes the capabilities that populate a component instance's
@@ -153,7 +153,7 @@ context:
 #### Storage capabilities {#storage-capabilities}
 
 Storage capabilities are not directly provided from a component instance's
-[outgoing directory](/docs/development/abi/system.md#outgoing-directory), but
+[outgoing directory](/docs/concepts/system/abi/system.md#outgoing-directory), but
 are created from preexisting directory capabilities that are declared in
 [`storage`](#storage) in a component manifest. This declaration describes the
 source for a directory capability and can then be listed as a source for

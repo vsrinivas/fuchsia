@@ -2,6 +2,9 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Application binary interface (ABI)"
+  section:
+  - include: /docs/concepts/system/abi/_toc.yaml
 - title: "C library (libc)"
   path: /docs/concepts/system/libc.md
 - title: "POSIX I/O (libfdio)"

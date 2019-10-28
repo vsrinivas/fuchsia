@@ -382,7 +382,7 @@ as a number of client libraries.
 
 #### **Fuchsia System Interface** {#fuchisa-system-interface}
 
-The [Fuchsia System Interface](development/abi/system.md) is the binary
+The [Fuchsia System Interface](/docs/concepts/system/abi/system.md) is the binary
 interface that the Fuchsia operating system presents to software it runs. For
 example, the entry points into the vDSO as well as all the FIDL protocols are
 part of the Fuchsia System Interface.

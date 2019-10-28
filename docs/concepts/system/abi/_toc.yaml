@@ -3,6 +3,6 @@
 # team as reviewer.
 toc:
 - title: "Drivers ABI"
-  path: /docs/development/abi/drivers.md
+  path: /docs/concepts/system/abi/drivers.md
 - title: "Fuchsia system interface"
-  path: /docs/development/abi/system.md
+  path: /docs/concepts/system/abi/system.md

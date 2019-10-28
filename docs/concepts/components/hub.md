@@ -11,7 +11,7 @@ exposed capabilities.
 The hub’s structure is mostly read-only. It is not possible to create,
 rename, delete, or otherwise modify directories and files which form the
 structure of the hub itself. However, the
-[outgoing](/docs/development/abi/system.md) directories of
+[outgoing](/docs/concepts/system/abi/system.md) directories of
 component instances may include mutable directories, files, and services which
 clients can access through the hub.
 
