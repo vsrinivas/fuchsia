@@ -74,6 +74,9 @@
 //! timers is - see the comment below on race conditions. Particularly, it's a bit tricky that the
 //! timer is not cancelled when the timer trigger message is _sent_, but when it is _received_.
 
+#[macro_use]
+mod macros;
+
 mod icmp;
 #[cfg(test)]
 mod integration_tests;
@@ -87,11 +90,9 @@ use fuchsia_zircon as zx;
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use failure::{bail, Error};
-use fidl::endpoints::{ClientEnd, RequestStream};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
 use fidl_fuchsia_net as fidl_net;
@@ -109,7 +110,7 @@ use futures::prelude::*;
 use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{Ip, IpVersion};
+use net_types::ip::Ip;
 use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, Serializer};
 use rand::rngs::OsRng;
@@ -171,7 +172,7 @@ impl EthernetSetupWorker {
                 sender.unbounded_send(eth_device_event)?;
                 Ok(())
             }
-            .unwrap_or_else(|e: Error| error!("{:?}", e)),
+                .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 }
@@ -198,7 +199,7 @@ impl EthernetWorker {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: Error| error!("{:?}", e)),
+                .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 }
@@ -214,8 +215,8 @@ pub enum Event {
     FidlStackEvent(StackRequest),
     /// A request from the fuchsia.posix.socket.Provider FIDL interface.
     FidlSocketProviderEvent(psocket::ProviderRequest),
-    /// A request from the fuchsia.posix.socket.Control FIDL interface.
-    FidlSocketControlEvent((Arc<Mutex<socket::SocketControlWorkerInner>>, psocket::ControlRequest)),
+    /// A request handled by the `socket` mod.
+    SocketEvent(socket::SocketEvent),
     /// An event from an ethernet interface. Either a status change or a frame.
     EthEvent((BindingId, eth::Event)),
     /// An indication that an ethernet device is ready to be used.
@@ -228,17 +229,6 @@ impl From<timers::TimerEvent<TimerId>> for Event {
     fn from(e: timers::TimerEvent<TimerId>) -> Self {
         Event::TimerEvent(e)
     }
-}
-
-// Errors from `responder.send` can be safely ignored during regular operation, they are handled
-// only by logging to debug.
-macro_rules! responder_send {
-    ($responder:expr, $arg:expr) => {
-        $responder.send($arg).unwrap_or_else(|e| debug!("Responder send error: {:?}", e));
-    };
-    ($responder:expr, $arg1:expr, $arg2:expr) => {
-        $responder.send($arg1, $arg2).unwrap_or_else(|e| debug!("Responder send error: {:?}", e));
-    };
 }
 
 /// The event loop.
@@ -281,6 +271,10 @@ impl EventLoop {
             ),
             event_recv,
         }
+    }
+
+    fn clone_event_sender(&self) -> mpsc::UnboundedSender<Event> {
+        self.ctx.dispatcher().event_send.clone()
     }
 
     async fn handle_event<'a>(
@@ -339,10 +333,10 @@ impl EventLoop {
                 self.handle_fidl_stack_request(req).await;
             }
             Some(Event::FidlSocketProviderEvent(req)) => {
-                self.handle_fidl_socket_provider_request(req).await;
+                socket::handle_fidl_socket_provider_request(self, req);
             }
-            Some(Event::FidlSocketControlEvent((sock, req))) => {
-                sock.lock().unwrap().handle_request(self, req);
+            Some(Event::SocketEvent(req)) => {
+                req.handle_event(self);
             }
             Some(Event::EthEvent((id, eth::Event::StatusChanged))) => {
                 info!("device {:?} status changed signal", id);
@@ -413,51 +407,6 @@ impl EventLoop {
         loop {
             let evt = self.event_recv.next().await;
             self.handle_event(&mut buf, evt).await?;
-        }
-    }
-
-    async fn handle_fidl_socket_provider_request(&mut self, req: psocket::ProviderRequest) {
-        match req {
-            psocket::ProviderRequest::Socket { domain, type_, protocol: _, responder } => {
-                let domain = i32::from(domain);
-                let nonblock = i32::from(type_) & libc::SOCK_NONBLOCK != 0;
-                let type_ = i32::from(type_) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
-                let net_proto = match domain {
-                    libc::AF_INET => IpVersion::V4,
-                    libc::AF_INET6 => IpVersion::V6,
-                    _ => {
-                        responder_send!(responder, libc::EAFNOSUPPORT as i16, None);
-                        return;
-                    }
-                };
-                let trans_proto = match i32::from(type_) {
-                    libc::SOCK_DGRAM => socket::TransProto::UDP,
-                    libc::SOCK_STREAM => socket::TransProto::TCP,
-                    _ => {
-                        responder_send!(responder, libc::EAFNOSUPPORT as i16, None);
-                        return;
-                    }
-                };
-
-                if let Ok((c0, c1)) = zx::Channel::create() {
-                    let worker = socket::SocketControlWorker::new(
-                        psocket::ControlRequestStream::from_channel(
-                            fasync::Channel::from_channel(c0).unwrap(),
-                        ),
-                        net_proto,
-                        trans_proto,
-                        nonblock,
-                    );
-                    if let Ok(worker) = worker {
-                        worker.spawn(self.ctx.dispatcher().event_send.clone());
-                        responder_send!(responder, 0, Some(ClientEnd::new(c1)));
-                    } else {
-                        responder_send!(responder, libc::ENOBUFS as i16, None);
-                    }
-                } else {
-                    responder_send!(responder, libc::ENOBUFS as i16, None);
-                }
-            }
         }
     }
 

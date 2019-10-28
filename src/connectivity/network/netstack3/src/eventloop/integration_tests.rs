@@ -94,7 +94,9 @@ impl TestStack {
         Ok(stack)
     }
 
-    fn connect_socket_provider(&self) -> Result<fidl_fuchsia_posix_socket::ProviderProxy, Error> {
+    pub fn connect_socket_provider(
+        &self,
+    ) -> Result<fidl_fuchsia_posix_socket::ProviderProxy, Error> {
         let (stack, rs) = fidl::endpoints::create_proxy_and_stream::<
             fidl_fuchsia_posix_socket::ProviderMarker,
         >()?;
@@ -237,7 +239,7 @@ impl TestStack {
     }
 
     /// Runs the test stack until the future `fut` completes.
-    async fn run_future<F: Future>(&mut self, fut: F) -> F::Output {
+    pub async fn run_future<F: Future>(&mut self, fut: F) -> F::Output {
         pin_mut!(fut);
         self.event_loop.run_until(fut).await.expect("Stack execution failed")
     }
@@ -367,7 +369,7 @@ impl TestSetup {
     }
 }
 
-fn test_ep_name(i: usize) -> String {
+pub fn test_ep_name(i: usize) -> String {
     format!("test-ep{}", i)
 }
 
@@ -387,7 +389,7 @@ impl TestSetupBuilder {
     ///
     /// Multiple calls to `add_endpoint` will result in the creation of multiple
     /// endpoints with sequential indices.
-    fn add_endpoint(self) -> Self {
+    pub fn add_endpoint(self) -> Self {
         let id = self.endpoints.len() + 1;
         self.add_named_endpoint(test_ep_name(id))
     }
@@ -407,7 +409,7 @@ impl TestSetupBuilder {
 
     /// Adds an empty stack to create upon building. An empty stack contains
     /// no endpoints.
-    fn add_empty_stack(mut self) -> Self {
+    pub fn add_empty_stack(mut self) -> Self {
         self.stacks.push(StackSetupBuilder::new());
         self
     }
