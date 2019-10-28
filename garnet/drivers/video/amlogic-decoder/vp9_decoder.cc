@@ -1005,9 +1005,12 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   uint32_t coded_height = fbl::round_up(params->hw_height, 2u);
   uint32_t stride = fbl::round_up(params->hw_width, 32u);
 
-  if (!is_current_output_buffer_collection_usable_ ||
-      !is_current_output_buffer_collection_usable_(frames_.size(), coded_width, coded_height,
-                                                   stride, display_width, display_height)) {
+  // If !is_current_output_buffer_collection_usable_, then we don't support dynamic dimensions.
+  bool buffers_allocated = !!frames_[0]->frame;
+  if (!buffers_allocated ||
+      (is_current_output_buffer_collection_usable_ &&
+       !is_current_output_buffer_collection_usable_(frames_.size(), coded_width, coded_height,
+                                                    stride, display_width, display_height))) {
     if (params_checked_previously) {
       // If we get here, it means we're seeing rejection of
       // BufferCollectionInfo_2 settings/constraints vs. params on a thread
