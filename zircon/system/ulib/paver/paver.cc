@@ -164,14 +164,16 @@ zx_status_t ValidateKernelPayload(const fzl::ResizeableVmoMapper& mapper, size_t
 
 zx_status_t FvmPave(const DevicePartitioner& partitioner,
                     fbl::unique_ptr<fvm::ReaderInterface> payload) {
-  LOG("Paving partition.\n");
-
   constexpr auto partition_type = Partition::kFuchsiaVolumeManager;
+
+  LOG("Paving partition \"%s\".\n", PartitionName(partition_type));
+
   zx_status_t status;
   std::unique_ptr<PartitionClient> partition;
   if ((status = partitioner.FindPartition(partition_type, &partition)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
-      ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
+      ERROR("Failure looking for partition \"%s\": %s\n", PartitionName(partition_type),
+            zx_status_get_string(status));
       return status;
     }
 
@@ -179,35 +181,38 @@ zx_status_t FvmPave(const DevicePartitioner& partitioner,
         PartitionName(partition_type));
 
     if ((status = partitioner.AddPartition(partition_type, &partition)) != ZX_OK) {
-      ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
+      ERROR("Failure creating partition \"%s\": %s\n", PartitionName(partition_type),
+            zx_status_get_string(status));
       return status;
     }
   } else {
-    LOG("Partition already exists\n");
+    LOG("Partition \"%s\" already exists\n", PartitionName(partition_type));
   }
 
   if (partitioner.IsFvmWithinFtl()) {
-    LOG("Attempting to format FTL...\n");
+    LOG("Attempting to format FTL to \"%s\"...\n", PartitionName(partition_type));
     status = partitioner.WipeFvm();
     if (status != ZX_OK) {
-      ERROR("Failed to format FTL: %s\n", zx_status_get_string(status));
+      ERROR("Failed to format FTL on \"%s\": %s\n", PartitionName(partition_type),
+            zx_status_get_string(status));
     } else {
-      LOG("Formatted successfully!\n");
+      LOG("Formatted partition \"%s\" successfully!\n", PartitionName(partition_type));
     }
   }
-  LOG("Streaming partitions...\n");
+  LOG("Streaming partitions to \"%s\"...\n", PartitionName(partition_type));
   if ((status = FvmStreamPartitions(std::move(partition), std::move(payload))) != ZX_OK) {
-    ERROR("Failed to stream partitions: %s\n", zx_status_get_string(status));
+    ERROR("Failed to stream partitions to \"%s\": %s\n", PartitionName(partition_type),
+          zx_status_get_string(status));
     return status;
   }
-  LOG("Completed successfully\n");
+  LOG("Completed paving \"%s\" successfully\n", PartitionName(partition_type));
   return ZX_OK;
 }
 
 // Reads an image from disk into a vmo.
 zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partition_type,
                           zx::vmo* out_vmo, size_t* out_vmo_size) {
-  LOG("Reading partition.\n");
+  LOG("Reading partition \"%s\".\n", PartitionName(partition_type));
 
   std::unique_ptr<PartitionClient> partition;
   if (zx_status_t status = partitioner.FindPartition(partition_type, &partition); status != ZX_OK) {
@@ -218,20 +223,23 @@ zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partit
 
   uint64_t partition_size;
   if (zx_status_t status = partition->GetPartitionSize(&partition_size); status != ZX_OK) {
-    ERROR("Error getting partition size: %s\n", zx_status_get_string(status));
+    ERROR("Error getting partition \"%s\" size: %s\n", PartitionName(partition_type),
+          zx_status_get_string(status));
     return status;
   }
 
   zx::vmo vmo;
   if (zx_status_t status = zx::vmo::create(fbl::round_up(partition_size, ZX_PAGE_SIZE), 0, &vmo);
       status != ZX_OK) {
-    ERROR("Error creating vmo: %s\n", zx_status_get_string(status));
+    ERROR("Error creating vmo for \"%s\": %s\n", PartitionName(partition_type),
+          zx_status_get_string(status));
     return status;
   }
 
   if (zx_status_t status = partition->Read(vmo, static_cast<size_t>(partition_size));
       status != ZX_OK) {
-    ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
+    ERROR("Error writing partition data for \"%s\": %s\n", PartitionName(partition_type),
+          zx_status_get_string(status));
     return status;
   }
 
@@ -244,13 +252,14 @@ zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partit
 // Paves an image onto the disk.
 zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_vmo,
                           size_t payload_size, Partition partition_type) {
-  LOG("Paving partition.\n");
+  LOG("Paving partition \"%s\".\n", PartitionName(partition_type));
 
   zx_status_t status;
   std::unique_ptr<PartitionClient> partition;
   if ((status = partitioner.FindPartition(partition_type, &partition)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
-      ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
+      ERROR("Failure looking for partition \"%s\": %s\n", PartitionName(partition_type),
+            zx_status_get_string(status));
       return status;
     }
 
@@ -258,28 +267,30 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
         PartitionName(partition_type));
 
     if ((status = partitioner.AddPartition(partition_type, &partition)) != ZX_OK) {
-      ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
+      ERROR("Failure creating partition \"%s\": %s\n", PartitionName(partition_type),
+            zx_status_get_string(status));
       return status;
     }
   } else {
-    LOG("Partition already exists\n");
+    LOG("Partition \"%s\" already exists\n", PartitionName(partition_type));
   }
 
   size_t block_size_bytes;
   if ((status = partition->GetBlockSize(&block_size_bytes)) != ZX_OK) {
-    ERROR("Couldn't get partition block size\n");
+    ERROR("Couldn't get partition \"%s\" block size\n", PartitionName(partition_type));
     return status;
   }
 
   if (CheckIfSame(partition.get(), payload_vmo, payload_size, block_size_bytes)) {
-    LOG("Skipping write as partition contents match payload.\n");
+    LOG("Skipping write as partition \"%s\" contents match payload.\n",
+        PartitionName(partition_type));
   } else {
     // Pad payload with 0s to make it block size aligned.
     if (payload_size % block_size_bytes != 0) {
       const size_t remaining_bytes = block_size_bytes - (payload_size % block_size_bytes);
       size_t vmo_size;
       if ((status = payload_vmo.get_size(&vmo_size)) != ZX_OK) {
-        ERROR("Couldn't get vmo size\n");
+        ERROR("Couldn't get vmo size for \"%s\"\n", PartitionName(partition_type));
         return status;
       }
       // Grow VMO if it's too small.
@@ -287,7 +298,7 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
         const auto new_size = fbl::round_up(payload_size + remaining_bytes, ZX_PAGE_SIZE);
         status = payload_vmo.set_size(new_size);
         if (status != ZX_OK) {
-          ERROR("Couldn't grow vmo\n");
+          ERROR("Couldn't grow vmo for \"%s\"\n", PartitionName(partition_type));
           return status;
         }
       }
@@ -295,23 +306,24 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
       memset(buffer.get(), 0, remaining_bytes);
       status = payload_vmo.write(buffer.get(), payload_size, remaining_bytes);
       if (status != ZX_OK) {
-        ERROR("Failed to write padding to vmo\n");
+        ERROR("Failed to write padding to vmo for \"%s\"\n", PartitionName(partition_type));
         return status;
       }
       payload_size += remaining_bytes;
     }
     if ((status = partition->Write(payload_vmo, payload_size)) != ZX_OK) {
-      ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
+      ERROR("Error writing partition \"%s\" data: %s\n", PartitionName(partition_type),
+            zx_status_get_string(status));
       return status;
     }
   }
 
   if ((status = partitioner.FinalizePartition(partition_type)) != ZX_OK) {
-    ERROR("Failed to finalize partition\n");
+    ERROR("Failed to finalize partition \"%s\"\n", PartitionName(partition_type));
     return status;
   }
 
-  LOG("Completed successfully\n");
+  LOG("Completed paving partition \"%s\" successfully\n", PartitionName(partition_type));
   return ZX_OK;
 }
 
