@@ -4,21 +4,22 @@
 
 #include "stream_protocol.h"
 
+#include <utility>
+
 #include <fbl/auto_lock.h>
 
+#include "controller-processing-node.h"
 #include "src/lib/syslog/cpp/logger.h"
 
-camera::StreamImpl::StreamImpl(async_dispatcher_t* dispatcher,
-                               std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol)
-    : dispatcher_(dispatcher),
-      binding_(this),
-      callbacks_{FrameReady, this},
-      isp_stream_protocol_(std::move(isp_stream_protocol)) {}
+namespace camera {
 
-camera::StreamImpl::~StreamImpl() { Shutdown(ZX_OK); }
+StreamImpl::StreamImpl(async_dispatcher_t* dispatcher,
+                       std::shared_ptr<CameraProcessNode> output_node)
+    : dispatcher_(dispatcher), binding_(this), output_node_(std::move(output_node)) {}
 
-zx_status_t camera::StreamImpl::Attach(zx::channel channel,
-                                       fit::function<void(void)> disconnect_handler) {
+StreamImpl::~StreamImpl() { Shutdown(ZX_OK); }
+
+zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> disconnect_handler) {
   FX_DCHECK(!binding_.is_bound());
   disconnect_handler_ = std::move(disconnect_handler);
   binding_.set_error_handler([this](zx_status_t status) {
@@ -34,12 +35,11 @@ zx_status_t camera::StreamImpl::Attach(zx::channel channel,
   return ZX_OK;
 }
 
-void camera::StreamImpl::FrameReady(uint32_t buffer_id) {
+void StreamImpl::FrameReady(uint32_t buffer_id) {
   // This method is invoked by the ISP in its own thread, so the event must be marshalled to the
   // binding's thread.
   fbl::AutoLock guard(&event_queue_lock_);
   event_queue_.emplace([this, buffer_id]() {
-    held_buffers_.insert(buffer_id);
     fuchsia::camera2::FrameAvailableInfo info;
     info.frame_status = fuchsia::camera2::FrameStatus::OK;
     info.buffer_id = buffer_id;
@@ -50,59 +50,58 @@ void camera::StreamImpl::FrameReady(uint32_t buffer_id) {
   event_queue_.back().Post(dispatcher_);
 }
 
-void camera::StreamImpl::Shutdown(zx_status_t status) {
+void StreamImpl::Shutdown(zx_status_t status) {
   // Close the connection if it's open.
   if (binding_.is_bound()) {
     binding_.Close(status);
   }
 
-  // Stop streaming ISP
+  // Stop streaming if its started
   if (started_) {
-    isp_stream_protocol_->Stop();
+    Stop();
   }
 }
 
-void camera::StreamImpl::Stop() {
+void StreamImpl::Stop() {
   if (!started_) {
     Shutdown(ZX_ERR_BAD_STATE);
     return;
   }
 
-  isp_stream_protocol_->Stop();
+  output_node_->OnStopStreaming();
   started_ = false;
 }
 
-void camera::StreamImpl::Start() {
+void StreamImpl::Start() {
   if (started_) {
     Shutdown(ZX_ERR_BAD_STATE);
     return;
   }
-  isp_stream_protocol_->Start();
+  output_node_->OnStartStreaming();
   started_ = true;
 }
 
-void camera::StreamImpl::ReleaseFrame(uint32_t buffer_id) {
-  isp_stream_protocol_->ReleaseFrame(buffer_id);
-}
+void StreamImpl::ReleaseFrame(uint32_t buffer_id) { output_node_->OnReleaseFrame(buffer_id); }
 
-void camera::StreamImpl::AcknowledgeFrameError() {
+void StreamImpl::AcknowledgeFrameError() {
   FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void camera::StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
-                                             SetRegionOfInterestCallback callback) {
+void StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
+                                     SetRegionOfInterestCallback callback) {
   FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void camera::StreamImpl::SetImageFormat(uint32_t image_format_index,
-                                        SetImageFormatCallback callback) {
+void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) {
   FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void camera::StreamImpl::GetImageFormats(GetImageFormatsCallback callback) {
+void StreamImpl::GetImageFormats(GetImageFormatsCallback callback) {
   FX_LOGS(ERROR) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
+
+}  // namespace camera

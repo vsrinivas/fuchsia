@@ -10,7 +10,8 @@
 
 #include <vector>
 
-#include "src/camera/drivers/controller/controller-processing-node.h"
+#include <ddktl/protocol/gdc.h>
+#include <ddktl/protocol/ge2d.h>
 
 namespace camera {
 
@@ -26,6 +27,7 @@ enum Ge2DConfig {
   GE2D_RESIZE = 1,
   GE2D_COUNT = 2,
 };
+
 struct GdcInfo {
   GdcConfig config_type;
 };
@@ -36,16 +38,23 @@ struct Ge2DInfo {
   resize_info resize;
 };
 
+enum NodeType {
+  kInputStream,
+  kGdc,
+  kGe2d,
+  kOutputStream,
+};
+
 struct InternalConfigNode {
   // To identify the type of the node this is.
   NodeType type;
   // To identify the input frame rate at this node.
-  ::fuchsia::camera2::FrameRate output_frame_rate;
+  fuchsia::camera2::FrameRate output_frame_rate;
   // To indentify the type of streams this node provides.
-  ::fuchsia::camera2::CameraStreamType output_stream_type;
+  fuchsia::camera2::CameraStreamType output_stream_type;
   // This is only valid for Input Stream Type to differentiate
   // between ISP FR/DS/Scalar streams.
-  ::fuchsia::camera2::CameraStreamType input_stream_type;
+  fuchsia::camera2::CameraStreamType input_stream_type;
   // Types of |stream_types| supported by this parent node.
   // Only valid for Input Stream Type
   std::vector<fuchsia::camera2::CameraStreamType> supported_streams;
@@ -76,4 +85,5 @@ struct InternalConfigs {
 };
 
 }  // namespace camera
+
 #endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_INTERNAL_CONFIG_H_

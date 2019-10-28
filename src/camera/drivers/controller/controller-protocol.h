@@ -12,10 +12,10 @@
 
 #include <ddktl/protocol/isp.h>
 
+#include "camera_pipeline_manager.h"
 #include "configs/sherlock/internal-config.h"
+#include "controller-processing-node.h"
 #include "isp_stream_protocol.h"
-#include "memory_allocation.h"
-#include "stream_protocol.h"
 
 namespace camera {
 
@@ -34,9 +34,11 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
 
   explicit ControllerImpl(ddk::IspProtocolClient& isp,
                           fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : binding_(nullptr), isp_(isp), memory_allocator_(std::move(sysmem_allocator)) {}
+      : binding_(nullptr), camera_pipeline_manager_(isp, std::move(sysmem_allocator)) {}
 
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
+  InternalConfigNode* GetStreamConfigNode(InternalConfigInfo* internal_config,
+                                          fuchsia::camera2::CameraStreamType stream_config_type);
 
   void PopulateConfigurations() { configs_ = SherlockConfigs(); }
 
@@ -75,9 +77,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   InternalConfigs internal_configs_;
-  std::unique_ptr<camera::StreamImpl> stream_;
-  ddk::IspProtocolClient& isp_;
-  ControllerMemoryAllocator memory_allocator_;
+  CameraPipelineManager camera_pipeline_manager_;
 };
 
 }  // namespace camera

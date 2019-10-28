@@ -17,23 +17,17 @@
 #include <ddktl/protocol/isp.h>
 #include <fbl/mutex.h>
 
-#include "isp_stream_protocol.h"
-
 namespace camera {
 
+class CameraProcessNode;
 // Server-side implementation of a stream.
 class StreamImpl : public fuchsia::camera2::Stream {
  public:
-  StreamImpl(async_dispatcher_t* dispatcher,
-             std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol);
-  ~StreamImpl();
+  explicit StreamImpl(async_dispatcher_t* dispatcher,
+                      std::shared_ptr<CameraProcessNode> output_node);
+  ~StreamImpl() override;
 
-  // Returns this instance's callback parameter for use with the Stream banjo interface.
-  const output_stream_callback_t* Callbacks() { return &callbacks_; }
-
-  // Returns a pointer to this instance's protocol parameter, to be populated via the Stream banjo
-  // interface.
-  output_stream_protocol_t* Protocol() { return isp_stream_protocol_->protocol(); }
+  void FrameReady(uint32_t buffer_index);
 
   // Binds a channel to the stream.
   // Args:
@@ -56,22 +50,17 @@ class StreamImpl : public fuchsia::camera2::Stream {
     static_cast<StreamImpl*>(ctx)->FrameReady(buffer_id);
   }
 
-  // Invoked by the ISP thread when a new frame is available.
-  void FrameReady(uint32_t buffer_id);
-
   // Closes the Stream connection, sending the given |status| to the client, and cleans up
   // outstanding state with the ISP.
   void Shutdown(zx_status_t status);
 
   async_dispatcher_t* dispatcher_;
   bool started_ = false;
-  std::unordered_set<uint32_t> held_buffers_;
   fidl::Binding<fuchsia::camera2::Stream> binding_;
   fit::function<void(void)> disconnect_handler_;
-  output_stream_callback_t callbacks_;
   fbl::Mutex event_queue_lock_;
+  std::shared_ptr<CameraProcessNode> output_node_;
   std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
-  std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol_;
 };
 
 }  // namespace camera

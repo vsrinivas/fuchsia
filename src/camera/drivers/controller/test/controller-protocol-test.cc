@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../controller-protocol.h"
+#include "src/camera/drivers/controller/controller-protocol.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
@@ -11,6 +11,8 @@
 
 #include <fbl/auto_call.h>
 
+#include "fake_isp.h"
+#include "src/camera/drivers/controller/camera_pipeline_manager.h"
 // NOTE: In this test, we are actually just unit testing the ControllerImpl class
 
 namespace camera {
@@ -28,15 +30,20 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
   void SetUp() override {
     ASSERT_EQ(ZX_OK, loop_.StartThread("camera-controller-loop"));
-    ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator_.NewRequest()));
+    ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator1_.NewRequest()));
+    ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator2_.NewRequest()));
+    isp_ = fake_isp_.client();
     controller_protocol_device_ =
-        std::make_unique<ControllerImpl>(isp_, std::move(sysmem_allocator_));
+        std::make_unique<ControllerImpl>(isp_, std::move(sysmem_allocator1_));
+    camera_pipeline_manager_ =
+        std::make_unique<CameraPipelineManager>(isp_, std::move(sysmem_allocator2_));
   }
 
   void TearDown() override {
     camera_client_ = nullptr;
     context_ = nullptr;
-    sysmem_allocator_ = nullptr;
+    sysmem_allocator1_ = nullptr;
+    sysmem_allocator2_ = nullptr;
     controller_protocol_device_ = nullptr;
     loop_.Shutdown();
   }
@@ -89,14 +96,66 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
               fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   }
 
-  ddk::IspProtocolClient isp_;
+  void TestDebugStreamConfigNode() {
+    controller_protocol_device_->PopulateConfigurations();
+    InternalConfigInfo* info = nullptr;
+    // Get internal configuration for debug config
+    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &info));
+    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
+    auto stream_config = controller_protocol_device_->GetStreamConfigNode(
+        info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    EXPECT_NE(nullptr, stream_config);
+
+    stream_config = controller_protocol_device_->GetStreamConfigNode(
+        info, fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION);
+    EXPECT_EQ(nullptr, stream_config);
+  }
+
+  void TestConfigureInputNode_DebugConfig() {
+    controller_protocol_device_->PopulateConfigurations();
+    InternalConfigInfo* internal_info = nullptr;
+    // Get internal configuration for debug config
+    EXPECT_EQ(ZX_OK,
+              controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &internal_info));
+    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
+    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
+        internal_info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    EXPECT_NE(nullptr, stream_config_node);
+
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+
+    CameraPipelineInfo info;
+    info.output_buffers = std::move(buffer_collection);
+    info.image_format_index = 0;
+    info.node = *stream_config_node;
+    info.stream_config = &stream_config;
+
+    std::shared_ptr<CameraProcessNode> out_processing_node;
+    EXPECT_EQ(ZX_OK, camera_pipeline_manager_->ConfigureInputNode(&info, &out_processing_node));
+
+    EXPECT_NE(nullptr, out_processing_node->isp_stream_protocol());
+    EXPECT_EQ(NodeType::kInputStream, out_processing_node->type());
+  }
+
+  FakeIsp fake_isp_;
   async::Loop loop_;
   std::unique_ptr<ControllerImpl> controller_protocol_device_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
   std::unique_ptr<sys::ComponentContext> context_;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+  std::unique_ptr<camera::CameraPipelineManager> camera_pipeline_manager_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator1_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator2_;
+  ddk::IspProtocolClient isp_;
 };
 
 TEST_F(ControllerProtocolTest, GetConfigs) { TestInternalConfigs(); }
+
+TEST_F(ControllerProtocolTest, GetDebugStreamConfig) { TestDebugStreamConfigNode(); }
+
+TEST_F(ControllerProtocolTest, ConfigureInputNodeDebugConfig) {
+  TestConfigureInputNode_DebugConfig();
+}
 
 }  // namespace camera

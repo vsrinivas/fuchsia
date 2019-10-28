@@ -19,7 +19,9 @@ driver_module("controller-driver") {
 source_set("controller-source") {
   visibility = [ "../*" ]
   sources = [
+    "camera_pipeline_manager.cc",
     "controller-device.cc",
+    "controller-processing-node.cc",
     "controller-protocol.cc",
     "memory_allocation.cc",
     "stream_protocol.cc",
