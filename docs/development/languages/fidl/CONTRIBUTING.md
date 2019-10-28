@@ -246,18 +246,9 @@ fx exec topaz/bin/fidlgen_dart/regen.sh
 ### C runtime
 
 ```sh
-fx set core.x64 --with-base //garnet/packages/tests:zircon
+fx set bringup.x64 --with-base //garnet/packages/tests:zircon
 fx build
-fx qemu -kN
-
-# On Fuchsia device's shell
-$ runtests -t fidl-test
-$ runtests -t fidl-simple-test
-```
-
-You might get lucky with
-```
-fx qemu -kN -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
+fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
 fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test
 ```
 
