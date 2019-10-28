@@ -55,6 +55,9 @@ while [[ "$1" =~ ^- ]]; do
 done
 
 # Post-flag processing.
+if [ -z "${formatter}" ]; then
+  formatter="text"
+fi
 format="--format=${formatter}"
 host="$(get-fuchsia-device-addr)"
 regexps="$@"
