@@ -484,9 +484,9 @@ impl<'a> ValidationContext<'a> {
         // Verify all right tokens are valid.
         let mut rights = HashSet::new();
         for right_token in rights_clause.iter() {
-            match cml::RIGHT_TOKENS.get::<str>(right_token) {
+            match cml::map_cml_right_token(right_token) {
                 Some(rights_expanded) => {
-                    for right in rights_expanded.iter() {
+                    for right in rights_expanded.into_iter() {
                         if !rights.insert(right) {
                             return Err(Error::validate(format!(
                                 "\"{}\" is duplicated in the rights clause.",

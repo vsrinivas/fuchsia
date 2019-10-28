@@ -36,6 +36,26 @@
         "meta"
       ]
     },
+    "rights-clause": {
+        "type": "array",
+        "minItems": 0,
+        "uniqueItems": true,
+        "items": {
+            "type": "string",
+            "enum": [
+                "connect",
+                "read_bytes",
+                "write_bytes",
+                "execute",
+                "get_attributes",
+                "update_attributes",
+                "enumerate",
+                "traverse",
+                "modify_directory",
+                "admin"
+            ]
+        }
+    },
     "reference-clause": {
       "type": "object",
       "oneOf": [
@@ -230,6 +250,10 @@
               "target_path": {
                 "title": "Used directory target path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "rights": {
+                "title": "Used directory rights",
+                "allOf": [{ "$ref": "#/definitions/rights-clause" }]
               }
             }
           },
@@ -369,6 +393,10 @@
               "target_path": {
                 "allOf": [{ "$ref": "#/definitions/path-clause" }],
                 "title": "Exposed directory target path"
+              },
+              "rights": {
+                "title": "Exposed directory rights",
+                "allOf": [{ "$ref": "#/definitions/rights-clause" }]
               }
             }
           },
@@ -435,10 +463,39 @@
             "title": "Offered legacy service",
             "allOf": [{ "$ref": "#/definitions/offer-clause" }]
           },
-          "directory": {
-            "title": "Offered directory",
-            "allOf": [{ "$ref": "#/definitions/offer-clause" }]
-          },
+        "directory": {
+          "type": "object",
+          "title": "Offered directory",
+          "required": [
+            "source",
+            "source_path",
+            "target",
+            "target_path"
+          ],
+          "properties": {
+            "source": {
+              "title": "Offered capability source component",
+              "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+            },
+            "source_path": {
+              "title": "Offered capability source path",
+              "allOf": [{ "$ref": "#/definitions/path-clause" }]
+            },
+            "target": {
+              "title": "Offered capability target",
+              "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+            },
+            "target_path": {
+              "title": "Offered capability target path",
+              "type": "string",
+              "allOf": [{ "$ref": "#/definitions/path-clause" }]
+            },
+            "rights": {
+             "title": "Offered directory rights",
+             "allOf": [{ "$ref": "#/definitions/rights-clause" }]
+           }
+          }
+        },
           "storage": {
             "required": [
               "type",

@@ -131,6 +131,12 @@ impl From<cm::NameValidationError> for Error {
     }
 }
 
+impl From<cm::RightsValidationError> for Error {
+    fn from(err: cm::RightsValidationError) -> Self {
+        Error::validate(err)
+    }
+}
+
 impl From<cm::UrlValidationError> for Error {
     fn from(err: cm::UrlValidationError) -> Self {
         Error::validate(err)

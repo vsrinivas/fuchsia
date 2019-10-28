@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use cm_json::cm;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde_derive::Deserialize;
@@ -9,86 +10,10 @@ use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fmt;
 
-lazy_static! {
-    pub static ref RIGHT_TOKENS: HashMap<&'static str, Vec<Right>> = {
-        let mut tokens = HashMap::new();
-        tokens.insert(
-            "r*",
-            vec![
-                Right::Connect,
-                Right::Enumerate,
-                Right::Traverse,
-                Right::ReadBytes,
-                Right::GetAttributes,
-            ],
-        );
-        tokens.insert(
-            "w*",
-            vec![
-                Right::Connect,
-                Right::Enumerate,
-                Right::Traverse,
-                Right::WriteBytes,
-                Right::ModifyDirectory,
-            ],
-        );
-        tokens
-            .insert("x*", vec![Right::Connect, Right::Enumerate, Right::Traverse, Right::Execute]);
-        tokens.insert(
-            "rw*",
-            vec![
-                Right::Connect,
-                Right::Enumerate,
-                Right::Traverse,
-                Right::ReadBytes,
-                Right::WriteBytes,
-                Right::GetAttributes,
-                Right::UpdateAttributes,
-            ],
-        );
-        tokens.insert(
-            "rx*",
-            vec![
-                Right::Connect,
-                Right::Enumerate,
-                Right::Traverse,
-                Right::ReadBytes,
-                Right::GetAttributes,
-                Right::Execute,
-            ],
-        );
-        tokens.insert("connect", vec![Right::Connect]);
-        tokens.insert("enumerate", vec![Right::Enumerate]);
-        tokens.insert("execute", vec![Right::Execute]);
-        tokens.insert("get_attributes", vec![Right::GetAttributes]);
-        tokens.insert("modify_directory", vec![Right::ModifyDirectory]);
-        tokens.insert("read_bytes", vec![Right::ReadBytes]);
-        tokens.insert("traverse", vec![Right::Traverse]);
-        tokens.insert("update_attributes", vec![Right::UpdateAttributes]);
-        tokens.insert("write_bytes", vec![Right::WriteBytes]);
-        tokens.insert("admin", vec![Right::Admin]);
-        tokens
-    };
-}
-
 pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
-
-#[derive(Debug, Eq, PartialEq, Hash)]
-pub enum Right {
-    Connect,
-    Enumerate,
-    Execute,
-    GetAttributes,
-    ModifyDirectory,
-    ReadBytes,
-    Traverse,
-    UpdateAttributes,
-    WriteBytes,
-    Admin,
-}
 
 /// Name of an object, such as a collection, component, or storage.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Deserialize)]
@@ -184,6 +109,57 @@ pub fn parse_reference<'a>(value: &'a str) -> Option<Ref> {
         "realm" => Some(Ref::Realm),
         "self" => Some(Ref::Self_),
         _ => None,
+    }
+}
+
+/// Converts a valid cml right (including aliases) into a cm::Rights expansion. This function will
+/// expand all valid right aliases and pass through non-aliased rights through to
+/// Rights::map_token. None will be returned for invalid rights.
+pub fn map_cml_right_token(token: &str) -> Option<cm::Rights> {
+    match token {
+        "r*" => Some(cm::Rights(vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::ReadBytes,
+            cm::Right::GetAttributes,
+        ])),
+        "w*" => Some(cm::Rights(vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::WriteBytes,
+            cm::Right::ModifyDirectory,
+        ])),
+        "x*" => Some(cm::Rights(vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::Execute,
+        ])),
+        "rw*" => Some(cm::Rights(vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::ReadBytes,
+            cm::Right::WriteBytes,
+            cm::Right::GetAttributes,
+            cm::Right::UpdateAttributes,
+        ])),
+        "rx*" => Some(cm::Rights(vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::ReadBytes,
+            cm::Right::GetAttributes,
+            cm::Right::Execute,
+        ])),
+        _ => {
+            if let Some(right) = cm::Rights::map_token(token) {
+                return Some(cm::Rights(vec![right]));
+            }
+            None
+        }
     }
 }
 

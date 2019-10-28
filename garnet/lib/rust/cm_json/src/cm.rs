@@ -2,7 +2,9 @@ use failure::Fail;
 use serde::de;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use std::collections::HashSet;
 use std::fmt;
+use std::iter::{FromIterator, IntoIterator};
 use url;
 
 /// The in-memory representation of a binary Component Manifest JSON file.
@@ -54,6 +56,25 @@ pub struct Path(String);
 /// normalization and retain the original representation.
 #[derive(Serialize, Clone, Debug)]
 pub struct Url(String);
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum Right {
+    Connect,
+    Enumerate,
+    Execute,
+    GetAttributes,
+    ModifyDirectory,
+    ReadBytes,
+    Traverse,
+    UpdateAttributes,
+    WriteBytes,
+    Admin,
+}
+
+/// Rights define what permissions are available to exposed, offered or used routes.
+#[derive(Serialize, Clone, Debug)]
+pub struct Rights(pub Vec<Right>);
 
 /// A component instance's startup mode.
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -653,6 +674,113 @@ impl<'de> de::Deserialize<'de> for Url {
     }
 }
 
+/// The error representing a failed validation of a `Path` string.
+#[derive(Debug, Fail)]
+pub enum RightsValidationError {
+    /// A right property was provided but was empty.
+    #[fail(display = "A right property was provided but was empty.")]
+    EmptyRight,
+    /// A right was provided which isn't known. See [`Rights::new`].
+    #[fail(display = "A right was provided which isn't known.")]
+    UnknownRight,
+    /// A right was provided twice. See [`Rights::new`].
+    #[fail(display = "A right was duplicated.")]
+    DuplicateRight,
+}
+
+impl<'de> de::Deserialize<'de> for Rights {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct RightsVisitor;
+        impl<'de> de::Visitor<'de> for RightsVisitor {
+            type Value = Rights;
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("an array of strings representing rights with no duplicates.")
+            }
+            fn visit_seq<S>(self, mut s: S) -> Result<Self::Value, S::Error>
+            where
+                S: de::SeqAccess<'de>,
+            {
+                let mut rights_vec = Vec::new();
+                while let Some(value) = s.next_element()? {
+                    rights_vec.push(value);
+                }
+                Rights::new(rights_vec).map_err(|err| {
+                    let msg = match err {
+                        RightsValidationError::EmptyRight => {
+                            "a right property was provided but was empty"
+                        }
+                        RightsValidationError::UnknownRight => {
+                            "a right in the string is not recognized"
+                        }
+                        RightsValidationError::DuplicateRight => {
+                            "a right is duplicated in the list"
+                        }
+                    };
+                    de::Error::invalid_value(de::Unexpected::Seq, &msg)
+                })
+            }
+        }
+        deserializer.deserialize_seq(RightsVisitor)
+    }
+}
+
+impl Rights {
+    /// Creates a `Rights` from a `Vec<String>, returning an `Err` if the strings fails validation.
+    /// The strings must be non-empty and represent valid keywords. Right aliases are noti
+    /// accepted at the cm level.
+    pub fn new(rights: Vec<String>) -> Result<Self, RightsValidationError> {
+        if rights.is_empty() {
+            return Err(RightsValidationError::EmptyRight);
+        }
+        let mut seen_rights = HashSet::with_capacity(rights.len());
+        for right_token in rights.iter() {
+            match Rights::map_token(right_token) {
+                Some(right) => {
+                    if seen_rights.contains(&right) {
+                        return Err(RightsValidationError::DuplicateRight);
+                    }
+                    seen_rights.insert(right);
+                }
+                None => return Err(RightsValidationError::UnknownRight),
+            }
+        }
+        Ok(Self(Vec::from_iter(seen_rights.iter().cloned())))
+    }
+
+    pub fn value(&self) -> &Vec<Right> {
+        &self.0
+    }
+
+    /// Returns a mapping from a right token string to a Right or None if no mapping can be found.
+    pub fn map_token(token: &str) -> Option<Right> {
+        match token {
+            "admin" => Some(Right::Admin),
+            "connect" => Some(Right::Connect),
+            "enumerate" => Some(Right::Enumerate),
+            "execute" => Some(Right::Execute),
+            "get_attributes" => Some(Right::GetAttributes),
+            "modify_directory" => Some(Right::ModifyDirectory),
+            "read_bytes" => Some(Right::ReadBytes),
+            "traverse" => Some(Right::Traverse),
+            "update_attributes" => Some(Right::UpdateAttributes),
+            "write_bytes" => Some(Right::WriteBytes),
+            _ => None,
+        }
+    }
+}
+
+impl IntoIterator for Rights {
+    type Item = Right;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -719,6 +847,35 @@ mod tests {
     }
 
     #[test]
+    fn test_valid_rights() {
+        expect_ok!(Rights, vec!["read_bytes".to_owned()]);
+        expect_ok!(Rights, vec!["write_bytes".to_owned()]);
+        expect_ok!(Rights, vec!["admin".to_owned()]);
+        expect_ok!(
+            Rights,
+            vec![
+                "admin".to_owned(),
+                "connect".to_owned(),
+                "enumerate".to_owned(),
+                "execute".to_owned(),
+                "get_attributes".to_owned(),
+                "modify_directory".to_owned(),
+                "read_bytes".to_owned(),
+                "traverse".to_owned(),
+                "update_attributes".to_owned(),
+                "write_bytes".to_owned()
+            ]
+        );
+    }
+
+    #[test]
+    fn test_invalid_rights() {
+        expect_err!(Rights, Vec::<String>::new());
+        expect_err!(Rights, vec!["invalid_right".to_owned()]);
+        expect_err!(Rights, vec!["read_bytes".to_owned(), "read_bytes".to_owned()]);
+    }
+
+    #[test]
     fn test_name_error_message() {
         let input = r#"
             "foo$"
@@ -762,5 +919,20 @@ mod tests {
         );
         assert_eq!(err.line(), 2);
         assert_eq!(err.column(), 17);
+    }
+
+    #[test]
+    fn test_rights_error_message() {
+        let input = r#"
+            ["foo"]
+        "#;
+        let err = serde_json::from_str::<Rights>(input).expect_err("must fail");
+        assert_eq!(
+            err.to_string(),
+            "invalid value: sequence, expected a right in the string is not \
+             recognized at line 2 column 19"
+        );
+        assert_eq!(err.line(), 2);
+        assert_eq!(err.column(), 19);
     }
 }
