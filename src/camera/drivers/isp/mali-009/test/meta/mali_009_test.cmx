@@ -10,7 +10,8 @@
         ],
         "services": [
             "fuchsia.sys.Launcher",
-            "fuchsia.camera.test.IspTester"
+            "fuchsia.camera.test.IspTester",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

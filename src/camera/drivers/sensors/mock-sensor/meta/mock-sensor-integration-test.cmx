@@ -7,7 +7,8 @@
             "fuchsia.camera.MockSensorDevmgr",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

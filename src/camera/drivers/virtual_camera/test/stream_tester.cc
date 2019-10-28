@@ -13,7 +13,7 @@
 #include <fbl/function.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
@@ -91,7 +91,7 @@ void StreamTester::TestGetFrames() {
 }
 
 void StreamTester::DefaultOnFrameAvailable(fuchsia::camera2::FrameAvailableInfo frame) {
-  FXL_LOG(INFO) << "Received FrameNotify Event " << frame_counter_
+  FX_LOGS(INFO) << "Received FrameNotify Event " << frame_counter_
                 << " at index: " << frame.buffer_id;
   switch (frame.frame_status) {
     case fuchsia::camera2::FrameStatus::OK:

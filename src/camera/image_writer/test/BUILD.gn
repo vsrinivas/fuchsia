@@ -5,11 +5,12 @@
 executable("image_writer_test") {
   testonly = true
   sources = [
-    "//src/camera/image_writer/raw12_writer.cc",
     "raw12_writer_test.cc",
   ]
   deps = [
     "//src/camera/drivers/test_utils",
+    "//src/camera/image_writer:lib",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
   ]
 }

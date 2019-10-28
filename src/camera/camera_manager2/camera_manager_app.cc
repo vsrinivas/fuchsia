@@ -16,8 +16,7 @@
 #include <fbl/function.h>
 #include <fbl/unique_fd.h>
 
-#include "src/lib/fxl/log_level.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
@@ -29,28 +28,28 @@ CameraManagerApp::~CameraManagerApp() {
 
 CameraManagerApp::CameraManagerApp(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {
-  FXL_LOG(INFO) << "CameraManager: Initializing";
+  FX_LOGS(INFO) << "CameraManager: Initializing";
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
                                             sysmem_allocator_.NewRequest().TakeChannel().release());
 
-  FXL_CHECK(status == ZX_OK) << "Failed to connect to sysmem service. status " << status;
-  FXL_LOG(INFO) << "CameraManager: connected to sysmem service";
+  FX_CHECK(status == ZX_OK) << "Failed to connect to sysmem service. status " << status;
+  FX_LOGS(INFO) << "CameraManager: connected to sysmem service";
 
   // For now, just connect to the one camera directly.
   // TODO(36251): discover devices dynamically with the DeviceWatcher.
   zx::channel local, remote;
   status = zx::channel::create(0u, &local, &remote);
-  FXL_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
+  FX_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
 
   // connect to the device:
   status = fdio_service_connect("/dev/class/camera/000", remote.release());
-  FXL_CHECK(status == ZX_OK) << "Failed to connect to camera. status " << status;
+  FX_CHECK(status == ZX_OK) << "Failed to connect to camera. status " << status;
 
   zx_status_t res = fuchsia_hardware_camera_DeviceGetChannel2(
       local.release(), camera_control_.NewRequest().TakeChannel().release());
-  FXL_CHECK(status == ZX_OK) << "Failed to obtain channel (res " << res << ")";
+  FX_CHECK(status == ZX_OK) << "Failed to obtain channel (res " << res << ")";
 
-  FXL_LOG(INFO) << "CameraManager: connected to camera service";
+  FX_LOGS(INFO) << "CameraManager: connected to camera service";
   context_->outgoing()->AddPublicService<fuchsia::camera2::Manager>(bindings_.GetHandler(this));
 }
 
@@ -63,7 +62,7 @@ void CameraManagerApp::ConnectToStream(
     fuchsia::camera2::Manager::ConnectToStreamCallback callback) {
   // Create a cleanup function, so we can just return if we get an error.
   auto cleanup = fbl::MakeAutoCall([&callback]() {
-    FXL_LOG(ERROR) << "Failed to connect to stream";
+    FX_LOGS(ERROR) << "Failed to connect to stream";
     ::fuchsia::sysmem::ImageFormat_2 ret;
     callback(ret);
   });
@@ -78,7 +77,7 @@ void CameraManagerApp::ConnectToStream(
   zx_status_t fidl_status = camera_control_->GetConfigs(&out_configs, &out_status);
 
   if (fidl_status != ZX_OK || out_status != ZX_OK || !out_configs.has_value()) {
-    FXL_LOG(ERROR) << "Couldn't get Camera Configs. status: " << fidl_status
+    FX_LOGS(ERROR) << "Couldn't get Camera Configs. status: " << fidl_status
                    << "  out_status: " << out_status
                    << "  out_configs.has_value(): " << out_configs.has_value();
     return;
@@ -110,7 +109,7 @@ void CameraManagerApp::ConnectToStream(
       temp_config_index++;
     }
   }
-  FXL_LOG(INFO) << "Picked config " << config_index << " stream index: " << stream_type;
+  FX_LOGS(INFO) << "Picked config " << config_index << " stream index: " << stream_type;
   auto &stream_config = out_configs.value()[config_index].stream_configs[stream_type];
 
   // 4: Now check if the stream is currently being used.  If it is, we could:
@@ -128,25 +127,25 @@ void CameraManagerApp::ConnectToStream(
   zx_status_t status =
       sysmem_allocator_->BindSharedCollection(std::move(token), sysmem_collection_.NewRequest());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to connect to BindSharedCollection.";
+    FX_LOGS(ERROR) << "Failed to connect to BindSharedCollection.";
     return;
   }
 
   status = sysmem_collection_->SetConstraints(true, stream_config.constraints);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to connect to SetConstraints.";
+    FX_LOGS(ERROR) << "Failed to connect to SetConstraints.";
     return;
   }
 
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
-  FXL_LOG(INFO) << "Waiting for buffers to be allocated.";
+  FX_LOGS(INFO) << "Waiting for buffers to be allocated.";
   status = sysmem_collection_->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (status != ZX_OK || allocation_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to allocate buffers.";
+    FX_LOGS(ERROR) << "Failed to allocate buffers.";
     return;
   }
-  FXL_LOG(INFO) << "Buffers are allocated.";
+  FX_LOGS(INFO) << "Buffers are allocated.";
 
   // Now connect the client directly to the device
   camera_control_->CreateStream(config_index, stream_type, image_format_index,

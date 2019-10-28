@@ -18,7 +18,8 @@
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.camera2.Manager",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

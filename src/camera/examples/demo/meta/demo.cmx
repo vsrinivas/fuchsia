@@ -16,7 +16,8 @@
       "fuchsia.sysmem.Allocator",
       "fuchsia.tracing.provider.Registry",
       "fuchsia.ui.policy.Presenter",
-      "fuchsia.ui.scenic.Scenic"
+      "fuchsia.ui.scenic.Scenic",
+      "fuchsia.logger.LogSink"
     ]
   }
 }

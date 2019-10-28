@@ -8,9 +8,7 @@
 
 #include <src/lib/files/unique_fd.h>
 
-#include "src/lib/fxl/log_level.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
@@ -25,7 +23,7 @@ void VideoDisplay::BufferReleased(uint32_t buffer_id) {
 // When an incoming buffer is filled, VideoDisplay releases the acquire fence
 zx_status_t VideoDisplay::IncomingBufferFilled(const fuchsia::camera::FrameAvailableEvent& frame) {
   if (frame.frame_status != fuchsia::camera::FrameStatus::OK) {
-    FXL_LOG(ERROR) << "Error set on incoming frame. Error: "
+    FX_LOGS(ERROR) << "Error set on incoming frame. Error: "
                    << static_cast<int>(frame.frame_status);
     return ZX_OK;  // no reason to stop the channel...
   }
@@ -41,7 +39,7 @@ zx_status_t VideoDisplay::IncomingBufferFilled(const fuchsia::camera::FrameAvail
   acquire_fences.push_back(std::move(acquire_fence));
   std::vector<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
-  FXL_VLOG(4) << "presenting Buffer " << buffer_id << " at " << pres_time;
+  FX_VLOGS(4) << "presenting Buffer " << buffer_id << " at " << pres_time;
 
   image_pipe_->PresentImage(buffer_id + 1, pres_time, std::move(acquire_fences),
                             std::move(release_fences),
@@ -69,7 +67,7 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   for (uint32_t i = 0; i < num_buffers; ++i) {
     status = zx::vmo::create(buffer_size, 0, &buffer_collection->vmos[i]);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Failed to allocate Buffer Collection";
+      FX_PLOGS(ERROR, status) << "Failed to allocate Buffer Collection";
       return status;
     }
   }
@@ -108,14 +106,14 @@ zx_status_t VideoDisplay::SetupBuffers(
   image_info.transform = fuchsia::images::Transform::FLIP_HORIZONTAL;
 
   if (!ConvertFormat(buffer_collection.format.image.pixel_format, &image_info.pixel_format)) {
-    FXL_CHECK(false) << "Unsupported format";
+    FX_CHECK(false) << "Unsupported format";
   }
 
   for (size_t id = 0; id < buffer_collection.buffer_count; ++id) {
     zx::vmo vmo_dup;
     zx_status_t status = buffer_collection.vmos[id].duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Failed to duplicate vmo";
+      FX_PLOGS(ERROR, status) << "Failed to duplicate vmo";
       return status;
     }
     image_pipe_->AddImage(id + 1, image_info, std::move(vmo_dup), 0, buffer_collection.vmo_size,
@@ -177,7 +175,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
       status = camera_client_->manager_->GetFormats(camera_id, format_index, &formats_ptr,
                                                     &total_format_count);
       if (status != ZX_OK) {
-        FXL_PLOG(ERROR, status) << "Couldn't get camera formats";
+        FX_PLOGS(ERROR, status) << "Couldn't get camera formats";
         DisconnectFromCamera();
         return status;
       }
@@ -187,9 +185,9 @@ zx_status_t VideoDisplay::ConnectToCamera(
       format_index += formats_ptr.size();
     } while (formats.size() < total_format_count);
 
-    FXL_LOG(INFO) << "Available formats: " << formats.size();
+    FX_LOGS(INFO) << "Available formats: " << formats.size();
     for (size_t i = 0; i < formats.size(); i++) {
-      FXL_LOG(INFO) << "format[" << i << "] - width: " << formats[i].format.width
+      FX_LOGS(INFO) << "format[" << i << "] - width: " << formats[i].format.width
                     << ", height: " << formats[i].format.height
                     << ", stride: " << formats[i].format.planes[0].bytes_per_row;
     }
@@ -207,14 +205,14 @@ zx_status_t VideoDisplay::ConnectToCamera(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection;
     status = Gralloc(chosen_format, kNumberOfBuffers, &buffer_collection);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Couldn't allocate buffers";
+      FX_PLOGS(ERROR, status) << "Couldn't allocate buffers";
       DisconnectFromCamera();
       return status;
     }
 
     status = SetupBuffers(buffer_collection);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Couldn't set up buffers";
+      FX_PLOGS(ERROR, status) << "Couldn't set up buffers";
       DisconnectFromCamera();
       return status;
     }
@@ -225,7 +223,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
     zx::eventpair driver_token;
     status = zx::eventpair::create(0, &stream_token_, &driver_token);
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Couldn't create driver token";
+      FX_PLOGS(ERROR, status) << "Couldn't create driver token";
       DisconnectFromCamera();
       return status;
     }
@@ -236,7 +234,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
                                                     camera_client_->stream_.NewRequest(),
                                                     std::move(driver_token));
     if (status != ZX_OK) {
-      FXL_PLOG(ERROR, status) << "Couldn't set camera format";
+      FX_PLOGS(ERROR, status) << "Couldn't set camera format";
       DisconnectFromCamera();
       return status;
     }

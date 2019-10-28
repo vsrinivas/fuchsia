@@ -7,7 +7,7 @@
 #include <fbl/auto_call.h>
 
 #include "fuchsia/camera2/cpp/fidl.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
@@ -20,7 +20,7 @@ ControllerImpl::ControllerImpl(fidl::InterfaceRequest<fuchsia::camera2::hal::Con
       isp_(isp),
       memory_allocator_(std::move(sysmem_allocator)) {
   binding_.set_error_handler([occ = std::move(on_connection_closed)](zx_status_t status) {
-    FXL_PLOG(ERROR, status) << "Client disconnected";
+    FX_PLOGS(ERROR, status) << "Client disconnected";
     occ();
   });
   binding_.Bind(std::move(control), dispatcher);
@@ -49,47 +49,47 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   auto cleanup = fbl::MakeAutoCall([&stream, &status]() { stream.Close(status); });
 
   if (stream_) {
-    FXL_PLOG(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
+    FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
     return;
   }
 
   if (config_index >= configs_.size()) {
-    FXL_LOG(ERROR) << "Invalid config index " << config_index;
+    FX_LOGS(ERROR) << "Invalid config index " << config_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
   const auto& config = configs_[config_index];
 
   if (stream_index >= config.stream_configs.size()) {
-    FXL_LOG(ERROR) << "Invalid stream index " << stream_index;
+    FX_LOGS(ERROR) << "Invalid stream index " << stream_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
   const auto& stream_config = config.stream_configs[stream_index];
 
   if (image_format_index >= stream_config.image_formats.size()) {
-    FXL_LOG(ERROR) << "Invalid image format index " << image_format_index;
+    FX_LOGS(ERROR) << "Invalid image format index " << image_format_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
   const auto& image_format = stream_config.image_formats[image_format_index];
 
   if (buffer_collection.buffer_count == 0) {
-    FXL_LOG(ERROR) << "Invalid buffer count " << buffer_collection.buffer_count;
+    FX_LOGS(ERROR) << "Invalid buffer count " << buffer_collection.buffer_count;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
 
   auto isp_stream_impl = std::make_unique<camera::IspStreamProtocol>();
   if (!isp_stream_impl) {
-    FXL_LOG(ERROR) << "Failed to create IspStreamProtocol";
+    FX_LOGS(ERROR) << "Failed to create IspStreamProtocol";
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
 
   auto stream_impl = std::make_unique<camera::StreamImpl>(dispatcher_, std::move(isp_stream_impl));
   if (!stream_impl) {
-    FXL_LOG(ERROR) << "Failed to create StreamImpl";
+    FX_LOGS(ERROR) << "Failed to create StreamImpl";
     status = ZX_ERR_INTERNAL;
     return;
   }
@@ -114,7 +114,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
       &buffers, reinterpret_cast<const frame_rate_t*>(&stream_config.frame_rate),
       STREAM_TYPE_FULL_RESOLUTION, stream_impl->Callbacks(), stream_impl->Protocol());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to create output stream on ISP";
+    FX_PLOGS(ERROR, status) << "Failed to create output stream on ISP";
     return;
   }
 
@@ -122,17 +122,17 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   // duplicated internally), so they must be manually released here.
   status = zx_handle_close_many(buffers.vmos, buffers.buffer_count);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to close buffer handles";
+    FX_PLOGS(ERROR, status) << "Failed to close buffer handles";
     return;
   }
 
   status = stream_impl->Attach(stream.TakeChannel(), []() {
-    FXL_LOG(INFO) << "Stream client disconnected";
+    FX_LOGS(INFO) << "Stream client disconnected";
     // TODO(fxb/37296): allow shutting down the stream
     // stream_ = nullptr;
   });
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to bind output stream";
+    FX_PLOGS(ERROR, status) << "Failed to bind output stream";
     return;
   }
 

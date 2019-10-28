@@ -9,7 +9,7 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 static constexpr const char* kDevicePath = "/dev/class/isp-device-test/000";
 
@@ -19,7 +19,7 @@ std::unique_ptr<StreamProvider> IspStreamProvider::Create() {
 
   int result = open(kDevicePath, O_RDONLY);
   if (result < 0) {
-    FXL_LOG(ERROR) << "Error opening " << kDevicePath;
+    FX_LOGS(ERROR) << "Error opening " << kDevicePath;
     return nullptr;
   }
   provider->isp_fd_.reset(result);
@@ -40,7 +40,7 @@ zx_status_t IspStreamProvider::ConnectToStream(
   zx::channel channel;
   zx_status_t status = fdio_get_service_handle(isp_fd_.get(), channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to get service handle";
+    FX_PLOGS(ERROR, status) << "Failed to get service handle";
     return status;
   }
 
@@ -49,7 +49,7 @@ zx_status_t IspStreamProvider::ConnectToStream(
   tester.Bind(std::move(channel));
   status = tester->CreateStream(std::move(request), buffers_out, format_out);
   if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to create stream";
+    FX_PLOGS(ERROR, status) << "Failed to create stream";
     return status;
   }
 

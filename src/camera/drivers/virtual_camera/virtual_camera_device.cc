@@ -6,7 +6,7 @@
 
 #include "src/camera/drivers/virtual_camera/virtual_camera2_control.h"
 #include "src/camera/drivers/virtual_camera/virtual_camera_control.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
@@ -60,7 +60,7 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
   static std::unique_ptr<VirtualCameraControlImpl> server_ = nullptr;
 
   if (server_ != nullptr) {
-    FXL_LOG(ERROR) << "Camera Control already running";
+    FX_LOGS(ERROR) << "Camera Control already running";
     return ZX_ERR_INTERNAL;
   }
 
@@ -84,7 +84,7 @@ zx_status_t VirtualCameraDevice::GetChannel2(zx_handle_t handle) {
   // CameraStream FIDL interface
   static std::unique_ptr<VirtualCamera2ControllerImpl> server_ = nullptr;
   if (server_ != nullptr) {
-    FXL_LOG(ERROR) << "Camera2 Controller already running";
+    FX_LOGS(ERROR) << "Camera2 Controller already running";
     return ZX_ERR_INTERNAL;
   }
 

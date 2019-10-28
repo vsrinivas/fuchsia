@@ -18,7 +18,7 @@ source_set("camera_client_test_src") {
     "//sdk/fidl/fuchsia.camera:fuchsia.camera",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
   ]
 }
 
