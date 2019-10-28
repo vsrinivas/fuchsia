@@ -143,10 +143,11 @@ source_set("lib") {
     "//src/modular/bin/basemgr/intl_property_provider_impl",
   ]
 
-  if (auto_login_to_guest) {
-    public_configs = [ ":auto_login_to_guest" ]
-  }
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
+
+  if (auto_login_to_guest) {
+    public_configs += [ ":auto_login_to_guest" ]
+  }
 }
 
 executable_package("dev_base_shell") {
