@@ -56,23 +56,53 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual ~Vnode();
   virtual void fbl_recycle() { delete this; }
 
+  // METHODS FOR OPTION VALIDATION AND PROTOCOL NEGOTIATION
+  //
+  // Implementations should override |GetProtocols| to express which representation(s)
+  // are supported by the vnode. Implementations may optionally override |Negotiate| to
+  // insert custom tie-breaking behavior when the vnode supports multiple protocols,
+  // and the client requested multiple at open time.
+
+  // Returns the set of all protocols supported by the vnode.
+  virtual VnodeProtocolSet GetProtocols() const = 0;
+
+  // Returns true iff the vnode supports _any_ protocol requested by |protocols|.
+  bool Supports(VnodeProtocolSet protocols) const;
+
+  // To be overridden by implementations to check that it is valid to access the
+  // vnode with the given |rights|. The default implementation always returns true.
+  // The vnode will only be opened for a particular request if the validation passes.
+  virtual bool ValidateRights(Rights rights);
+
   // Ensures that it is valid to access the vnode with given connection options.
   // The vnode will only be opened for a particular request if the validation
   // returns |ZX_OK|.
-  virtual zx_status_t ValidateOptions(VnodeConnectionOptions options);
+  zx_status_t ValidateOptions(VnodeConnectionOptions options);
 
-  // Opens the vnode. In addition, provides an opportunity to redirect subsequent
-  // I/O operations to a different vnode.
+  // Picks one protocol from |protocols|, when the intersection of the protocols requested
+  // by the client and the ones supported by the vnode has more than one elements i.e.
+  // tie-breaking is required to determine the resultant protocol.
+  //
+  // This method is only called when tie-breaking is required.
+  // |protocols| is guaranteed to be a subset of the supported protocols.
+  // The default implementation performs tie-breaking in the order of element declaration
+  // within |VnodeProtocol|.
+  virtual VnodeProtocol Negotiate(VnodeProtocolSet protocols) const;
+
+  // Opens the vnode. This is a callback to signal that a new connection is about to be
+  // created and I/O operations will follow. In addition, it provides an opportunity to
+  // redirect subsequent I/O operations to a different vnode.
   //
   // |options| contain the flags and rights supplied by the client, parsed into a struct
   // with individual fields. It will have already been validated by |ValidateOptions|.
-  // Open is never invoked if flags includes "node_reference".
+  // Open is never invoked if |options.flags| includes |node_reference|.
   //
   // If the implementation of |Open()| sets |out_redirect| to a non-null value,
   // all following I/O operations on the opened object will be redirected to the
   // indicated vnode instead of being handled by this instance. This is useful
   // when implementing lazy files/pseudo files, where a different vnode may be
-  // used for each new connection to a file.
+  // used for each new connection to a file. Note that the |out_redirect| vnode is not
+  // |Open()|ed further for the purpose of creating this connection.
   virtual zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect);
 
   // METHODS FOR OPENED NODES
@@ -95,9 +125,29 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options);
 
   // Extract handle, type, and extra info from a vnode.
+  //
+  // The |protocol| argument specifies which protocol the connection is negotiated to speak.
+  // For vnodes which only support a single protocol, the method may safely ignore this argument.
+  // Callers should make sure to supply one of the supported protocols, or call |GetNodeInfo|
+  // if the vnode is know to support a single protocol.
+  //
   // The |rights| argument contain the access rights requested by the client, and should determine
   // corresponding access rights on the returned handles if applicable.
-  virtual zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) = 0;
+  //
+  // The returned variant in |info| should correspond to the |protocol|.
+  virtual zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                             VnodeRepresentation* info) = 0;
+
+  // Extract handle, type, and extra info from a vnode. This version differs from
+  // |GetNodeInfoForProtocol| that it is a convenience wrapper for vnodes which only support
+  // a single protocol. If the vnode supports multiple protocols, clients should always call
+  // |GetNodeInfoForProtocol| and specify a protocol.
+  //
+  // The |rights| argument contain the access rights requested by the client, and should determine
+  // corresponding access rights on the returned handles if applicable.
+  //
+  // The returned variant in |info| should correspond to the |protocol|.
+  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info);
 
   virtual zx_status_t WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher);
 #endif

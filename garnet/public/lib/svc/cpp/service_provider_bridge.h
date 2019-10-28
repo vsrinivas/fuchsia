@@ -15,6 +15,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <fs/synchronous_vfs.h>
+#include <fs/vfs_types.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
@@ -69,10 +70,12 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
     ~ServiceProviderDir() final;
 
     // Overridden from |fs::Vnode|:
+    fs::VnodeProtocolSet GetProtocols() const final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
     bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* representation) final;
+    zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
+                                       fs::VnodeRepresentation* representation) final;
 
    private:
     fxl::WeakPtr<ServiceProviderBridge> const bridge_;

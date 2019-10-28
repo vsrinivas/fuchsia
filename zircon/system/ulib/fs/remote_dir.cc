@@ -16,6 +16,8 @@ RemoteDir::RemoteDir(zx::channel remote_dir_client)
 
 RemoteDir::~RemoteDir() = default;
 
+VnodeProtocolSet RemoteDir::GetProtocols() const { return VnodeProtocol::kDirectory; }
+
 zx_status_t RemoteDir::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
@@ -28,8 +30,10 @@ bool RemoteDir::IsRemote() const { return true; }
 
 zx_handle_t RemoteDir::GetRemote() const { return remote_dir_client_.get(); }
 
-zx_status_t RemoteDir::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
-  *info = fs::VnodeRepresentation::Directory();
+zx_status_t RemoteDir::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
+                                              [[maybe_unused]] Rights rights,
+                                              VnodeRepresentation* info) {
+  *info = VnodeRepresentation::Directory();
   return ZX_OK;
 }
 

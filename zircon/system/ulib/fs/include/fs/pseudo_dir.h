@@ -65,6 +65,7 @@ class PseudoDir : public Vnode {
   bool IsEmpty() const;
 
   // |Vnode| implementation:
+  VnodeProtocolSet GetProtocols() const final;
   zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
@@ -72,7 +73,8 @@ class PseudoDir : public Vnode {
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
   zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
   bool IsDirectory() const final { return true; }
-  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) final;
+  zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                     VnodeRepresentation* info) final;
 
  private:
   static constexpr uint64_t kDotId = 1u;
@@ -96,7 +98,7 @@ class PseudoDir : public Vnode {
     // Node states.
     friend IdTreeTraits;
     friend NameTreeTraits;
-    fbl::WAVLTreeNodeState<fbl::unique_ptr<Entry>> id_tree_state_;
+    fbl::WAVLTreeNodeState<std::unique_ptr<Entry>> id_tree_state_;
     fbl::WAVLTreeNodeState<Entry*> name_tree_state_;
   };
 
@@ -113,8 +115,8 @@ class PseudoDir : public Vnode {
   };
 
   struct IdTreeTraits {
-    using PtrTraits = fbl::internal::ContainerPtrTraits<fbl::unique_ptr<Entry>>;
-    static fbl::WAVLTreeNodeState<fbl::unique_ptr<Entry>>& node_state(Entry& entry) {
+    using PtrTraits = fbl::internal::ContainerPtrTraits<std::unique_ptr<Entry>>;
+    static fbl::WAVLTreeNodeState<std::unique_ptr<Entry>>& node_state(Entry& entry) {
       return entry.id_tree_state_;
     }
   };
@@ -126,7 +128,7 @@ class PseudoDir : public Vnode {
     }
   };
 
-  using EntryByIdMap = fbl::WAVLTree<uint64_t, fbl::unique_ptr<Entry>, KeyByIdTraits, IdTreeTraits>;
+  using EntryByIdMap = fbl::WAVLTree<uint64_t, std::unique_ptr<Entry>, KeyByIdTraits, IdTreeTraits>;
   using EntryByNameMap = fbl::WAVLTree<fbl::String, Entry*, KeyByNameTraits, NameTreeTraits>;
 
   mutable fbl::Mutex mutex_;

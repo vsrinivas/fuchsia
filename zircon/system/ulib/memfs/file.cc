@@ -30,12 +30,7 @@ VnodeFile::VnodeFile(Vfs* vfs) : VnodeMemfs(vfs), vmo_size_(0), length_(0) {}
 
 VnodeFile::~VnodeFile() { vfs()->WillFreeVMO(vmo_size_); }
 
-zx_status_t VnodeFile::ValidateOptions(fs::VnodeConnectionOptions options) {
-  if (options.flags.directory) {
-    return ZX_ERR_NOT_DIR;
-  }
-  return ZX_OK;
-}
+fs::VnodeProtocolSet VnodeFile::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
 zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   if ((off >= length_) || (!vmo_.is_valid())) {
@@ -142,8 +137,9 @@ zx_status_t VnodeFile::GetAttributes(fs::VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t VnodeFile::GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                                   fs::VnodeRepresentation* info) {
+zx_status_t VnodeFile::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                              [[maybe_unused]] fs::Rights rights,
+                                              fs::VnodeRepresentation* info) {
   *info = fs::VnodeRepresentation::File();
   return ZX_OK;
 }

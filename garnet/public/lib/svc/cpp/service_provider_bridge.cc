@@ -80,6 +80,10 @@ ServiceProviderBridge::ServiceProviderDir::ServiceProviderDir(
 
 ServiceProviderBridge::ServiceProviderDir::~ServiceProviderDir() = default;
 
+fs::VnodeProtocolSet ServiceProviderBridge::ServiceProviderDir::GetProtocols() const {
+  return fs::VnodeProtocol::kDirectory;
+}
+
 zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out,
                                                               fbl::StringPiece name) {
   *out = fbl::AdoptRef(new fs::Service(
@@ -102,8 +106,9 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::GetAttributes(fs::VnodeAt
 
 bool ServiceProviderBridge::ServiceProviderDir::IsDirectory() const { return true; }
 
-zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfo(
-    [[maybe_unused]] fs::Rights rights, fs::VnodeRepresentation* representation) {
+zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfoForProtocol(
+    [[maybe_unused]] fs::VnodeProtocol protocol, [[maybe_unused]] fs::Rights rights,
+    fs::VnodeRepresentation* representation) {
   *representation = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }

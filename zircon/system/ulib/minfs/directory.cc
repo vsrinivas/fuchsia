@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "directory.h"
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +18,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 #include <fs/debug.h>
+#include <fs/vfs_types.h>
 
 #ifdef __Fuchsia__
 #include <lib/fdio/vfs.h>
@@ -27,7 +30,6 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include "directory.h"
 #include "minfs-private.h"
 #include "vnode.h"
 
@@ -449,14 +451,7 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t Directory::ValidateOptions(fs::VnodeConnectionOptions options) {
-  FS_PRETTY_TRACE_DEBUG("Directory::ValidateOptions(", options, ") ",
-                        "vn=", static_cast<void*>(this), "(#", GetIno(), ")");
-  if (options.flags.not_directory) {
-    return ZX_ERR_NOT_FILE;
-  }
-  return ZX_OK;
-}
+fs::VnodeProtocolSet Directory::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
 zx_status_t Directory::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   return ZX_ERR_NOT_FILE;

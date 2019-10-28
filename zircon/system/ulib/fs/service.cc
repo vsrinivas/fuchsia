@@ -15,12 +15,7 @@ Service::Service(Connector connector) : connector_(std::move(connector)) {}
 
 Service::~Service() = default;
 
-zx_status_t Service::ValidateOptions(VnodeConnectionOptions options) {
-  if (options.flags.directory) {
-    return ZX_ERR_NOT_DIR;
-  }
-  return ZX_OK;
-}
+VnodeProtocolSet Service::GetProtocols() const { return VnodeProtocol::kConnector; }
 
 zx_status_t Service::GetAttributes(VnodeAttributes* attr) {
   // TODO(ZX-1152): V_TYPE_FILE isn't right, we should use a type for services
@@ -40,8 +35,10 @@ zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, fs::VnodeConnectionOpt
 
 bool Service::IsDirectory() const { return false; }
 
-zx_status_t Service::GetNodeInfo([[maybe_unused]] Rights rights, VnodeRepresentation* info) {
-  *info = fs::VnodeRepresentation::Connector();
+zx_status_t Service::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
+                                            [[maybe_unused]] Rights rights,
+                                            VnodeRepresentation* info) {
+  *info = VnodeRepresentation::Connector();
   return ZX_OK;
 }
 

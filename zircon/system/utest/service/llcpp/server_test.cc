@@ -57,7 +57,7 @@ fbl::unique_fd OpenSvcDir(const zx::channel& request) {
   if (!root_fd.is_valid()) {
     return {};
   }
-  return fbl::unique_fd(openat(root_fd.get(), "svc", O_RDWR));
+  return fbl::unique_fd(openat(root_fd.get(), "svc", O_RDONLY));
 }
 
 fbl::unique_fd OpenAt(const fbl::unique_fd& dirfd, const char* path, int flags) {
@@ -175,7 +175,7 @@ TEST_F(ServerTest, ListsMembers) {
   ASSERT_TRUE(svc_fd.is_valid());
 
   // Open the 'default' instance of the test service.
-  fbl::unique_fd instance_fd = OpenAt(svc_fd, "fidl.service.test.EchoService/default", O_RDWR);
+  fbl::unique_fd instance_fd = OpenAt(svc_fd, "fidl.service.test.EchoService/default", O_RDONLY);
   ASSERT_TRUE(instance_fd.is_valid());
 
   // fdopendir takes ownership of `instance_fd`.

@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
 namespace fs_pty {
@@ -36,7 +37,7 @@ class Service : public fs::Vnode {
   SelfType& operator=(SelfType&&) = delete;
 
   // |Vnode| implementation:
-  zx_status_t ValidateOptions(fs::VnodeConnectionOptions) override { return ZX_OK; }
+  fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kTty; }
 
   zx_status_t GetAttributes(fs::VnodeAttributes* attr) override {
     *attr = fs::VnodeAttributes();
@@ -53,8 +54,9 @@ class Service : public fs::Vnode {
 
   [[nodiscard]] bool IsDirectory() const override { return false; }
 
-  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                          fs::VnodeRepresentation* info) override {
+  zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                     [[maybe_unused]] fs::Rights rights,
+                                     fs::VnodeRepresentation* info) override {
     zx::eventpair event;
     zx_status_t status = ConsoleOps::GetEvent(console_, &event);
     if (status != ZX_OK) {

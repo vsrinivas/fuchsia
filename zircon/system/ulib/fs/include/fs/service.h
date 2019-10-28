@@ -32,11 +32,12 @@ class Service : public Vnode {
   ~Service() override;
 
   // |Vnode| implementation:
-  zx_status_t ValidateOptions(VnodeConnectionOptions options) final;
+  VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options) final;
   bool IsDirectory() const final;
-  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) final;
+  zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                     VnodeRepresentation* info) final;
 
  private:
   Connector connector_;

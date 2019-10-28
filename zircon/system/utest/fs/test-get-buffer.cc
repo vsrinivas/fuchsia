@@ -34,12 +34,14 @@ bool TestConnectionRights() {
   // Set up a vnode for the root directory
   class TestVNode : public fs::Vnode {
    public:
-    zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                            fs::VnodeRepresentation* info) override {
+    zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                       [[maybe_unused]] fs::Rights rights,
+                                       fs::VnodeRepresentation* info) override {
       *info = fs::VnodeRepresentation::File();
       return ZX_OK;
     }
     bool IsDirectory() const override { return false; }
+    fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
     zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) override {
       zx::vmo vmo;
       ASSERT_EQ(zx::vmo::create(4096, 0u, &vmo), ZX_OK);

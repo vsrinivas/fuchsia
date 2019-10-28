@@ -36,6 +36,7 @@ class LazyDir : public Vnode {
   virtual ~LazyDir();
 
   // |Vnode| implementation.
+  VnodeProtocolSet GetProtocols() const final;
   zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* out_attr) final;
   // Read the directory contents. Note that cookie->p is used to denote
@@ -43,7 +44,8 @@ class LazyDir : public Vnode {
   zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out_vnode, fbl::StringPiece name) final;
   bool IsDirectory() const final { return true; }
-  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) final;
+  zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                     VnodeRepresentation* info) final;
 
  protected:
   // Get the contents of the directory in an output vector.

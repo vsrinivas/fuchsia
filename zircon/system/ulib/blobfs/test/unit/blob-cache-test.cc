@@ -38,8 +38,11 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
 
   bool IsDirectory() const final { return false; }
 
-  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* representation) {
-    *representation = fs::VnodeRepresentation::Connector();
+  fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
+
+  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
+                                     fs::VnodeRepresentation* representation) {
+    *representation = fs::VnodeRepresentation::File();
     return ZX_OK;
   }
 

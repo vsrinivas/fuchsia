@@ -36,7 +36,7 @@ void SynchronousVfs::Shutdown(ShutdownCallback handler) {
   }
 }
 
-void SynchronousVfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
+void SynchronousVfs::RegisterConnection(std::unique_ptr<Connection> connection) {
   ZX_DEBUG_ASSERT(!is_shutting_down_);
   connections_.push_back(std::move(connection));
 }

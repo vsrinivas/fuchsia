@@ -809,20 +809,16 @@ void Blob::ActivateLowMemory() {
 
 Blob::~Blob() { ActivateLowMemory(); }
 
-zx_status_t Blob::ValidateOptions(fs::VnodeConnectionOptions options) {
-  if (options.flags.directory) {
-    return ZX_ERR_NOT_DIR;
-  }
+fs::VnodeProtocolSet Blob::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
-  if (options.rights.write) {
-    if (GetState() != kBlobStateEmpty) {
-      return ZX_ERR_ACCESS_DENIED;
-    }
-  }
-  return ZX_OK;
+bool Blob::ValidateRights(fs::Rights rights) {
+  // To acquire write access to a blob, it must be empty.
+  return !rights.write || (GetState() == kBlobStateEmpty);
 }
 
-zx_status_t Blob::GetNodeInfo([[maybe_unused]] fs::Rights rights, fs::VnodeRepresentation* info) {
+zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                         [[maybe_unused]] fs::Rights rights,
+                                         fs::VnodeRepresentation* info) {
   zx::event observer;
   zx_status_t status = GetReadableEvent(&observer);
   if (status != ZX_OK) {

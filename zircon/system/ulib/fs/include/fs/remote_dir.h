@@ -32,11 +32,13 @@ class RemoteDir : public Vnode {
   ~RemoteDir() override;
 
   // |Vnode| implementation:
-  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
+  VnodeProtocolSet GetProtocols() const final;
+  zx_status_t GetAttributes(VnodeAttributes* a) final;
   bool IsRemote() const final;
   zx_handle_t GetRemote() const final;
   bool IsDirectory() const final { return true; }
-  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) final;
+  zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                     VnodeRepresentation* info) final;
 
  private:
   zx::channel const remote_dir_client_;

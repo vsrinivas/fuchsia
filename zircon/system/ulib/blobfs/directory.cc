@@ -34,18 +34,14 @@ BlobCache& Directory::Cache() { return blobfs_->Cache(); }
 
 Directory::~Directory() = default;
 
-zx_status_t Directory::GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                                   fs::VnodeRepresentation* info) {
+zx_status_t Directory::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                              [[maybe_unused]] fs::Rights rights,
+                                              fs::VnodeRepresentation* info) {
   *info = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }
 
-zx_status_t Directory::ValidateOptions(fs::VnodeConnectionOptions options) {
-  if (options.flags.not_directory) {
-    return ZX_ERR_NOT_FILE;
-  }
-  return ZX_OK;
-}
+fs::VnodeProtocolSet Directory::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
 zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                                size_t* out_actual) {

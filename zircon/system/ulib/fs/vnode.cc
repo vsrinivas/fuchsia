@@ -4,6 +4,10 @@
 
 #include <fs/vnode.h>
 
+#include <fs/vfs_types.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
+
 #ifdef __Fuchsia__
 #include <utility>
 
@@ -25,11 +29,73 @@ zx_status_t Vnode::Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptio
 zx_status_t Vnode::WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
+  auto maybe_protocol = GetProtocols().which();
+  ZX_DEBUG_ASSERT(maybe_protocol.has_value());
+  VnodeProtocol protocol = *maybe_protocol;
+  zx_status_t status = GetNodeInfoForProtocol(protocol, rights, info);
+  if (status != ZX_OK) {
+    return status;
+  }
+  switch (protocol) {
+    case VnodeProtocol::kConnector:
+      ZX_DEBUG_ASSERT(info->is_connector());
+      break;
+    case VnodeProtocol::kFile:
+      ZX_DEBUG_ASSERT(info->is_file());
+      break;
+    case VnodeProtocol::kDirectory:
+      ZX_DEBUG_ASSERT(info->is_directory());
+      break;
+    case VnodeProtocol::kPipe:
+      ZX_DEBUG_ASSERT(info->is_pipe());
+      break;
+    case VnodeProtocol::kMemory:
+      ZX_DEBUG_ASSERT(info->is_memory());
+      break;
+    case VnodeProtocol::kDevice:
+      ZX_DEBUG_ASSERT(info->is_device());
+      break;
+    case VnodeProtocol::kTty:
+      ZX_DEBUG_ASSERT(info->is_tty());
+      break;
+    case VnodeProtocol::kSocket:
+      ZX_DEBUG_ASSERT(info->is_socket());
+      break;
+  }
+  return ZX_OK;
+}
 #endif
 
 void Vnode::Notify(fbl::StringPiece name, unsigned event) {}
 
-zx_status_t Vnode::ValidateOptions(VnodeConnectionOptions options) { return ZX_OK; }
+bool Vnode::Supports(VnodeProtocolSet protocols) const {
+  return (GetProtocols() & protocols).any();
+}
+
+bool Vnode::ValidateRights([[maybe_unused]] Rights rights) { return true; }
+
+zx_status_t Vnode::ValidateOptions(VnodeConnectionOptions options) {
+  auto protocols = options.protocols();
+  if (!Supports(protocols)) {
+    if (protocols == VnodeProtocol::kDirectory) {
+      return ZX_ERR_NOT_DIR;
+    } else {
+      return ZX_ERR_NOT_FILE;
+    }
+  }
+  if (!ValidateRights(options.rights)) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  return ZX_OK;
+}
+
+VnodeProtocol Vnode::Negotiate(VnodeProtocolSet protocols) const {
+  auto protocol = protocols.first();
+  ZX_DEBUG_ASSERT(protocol.has_value());
+  return *protocol;
+}
 
 zx_status_t Vnode::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) {
   return ZX_OK;

@@ -17,17 +17,16 @@ PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler)
 
 PseudoFile::~PseudoFile() = default;
 
-zx_status_t PseudoFile::ValidateOptions(VnodeConnectionOptions options) {
-  if (options.flags.directory) {
-    return ZX_ERR_NOT_DIR;
+VnodeProtocolSet PseudoFile::GetProtocols() const { return VnodeProtocol::kFile; }
+
+bool PseudoFile::ValidateRights(Rights rights) {
+  if (rights.read && !read_handler_) {
+    return false;
   }
-  if (options.rights.read && !read_handler_) {
-    return ZX_ERR_ACCESS_DENIED;
+  if (rights.write && !write_handler_) {
+    return false;
   }
-  if (options.rights.write && !write_handler_) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-  return ZX_OK;
+  return true;
 }
 
 zx_status_t PseudoFile::GetAttributes(VnodeAttributes* attr) {
@@ -44,7 +43,9 @@ zx_status_t PseudoFile::GetAttributes(VnodeAttributes* attr) {
 
 bool PseudoFile::IsDirectory() const { return false; }
 
-zx_status_t PseudoFile::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
+zx_status_t PseudoFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
+                                               [[maybe_unused]] Rights rights,
+                                               VnodeRepresentation* info) {
   *info = VnodeRepresentation::File();
   return ZX_OK;
 }
@@ -76,9 +77,7 @@ BufferedPseudoFile::Content::Content(fbl::RefPtr<BufferedPseudoFile> file,
 
 BufferedPseudoFile::Content::~Content() { delete[] input_data_; }
 
-zx_status_t BufferedPseudoFile::Content::ValidateOptions(VnodeConnectionOptions options) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+VnodeProtocolSet BufferedPseudoFile::Content::GetProtocols() const { return VnodeProtocol::kFile; }
 
 zx_status_t BufferedPseudoFile::Content::Close() {
   if (options_.rights.write) {
@@ -160,9 +159,10 @@ zx_status_t BufferedPseudoFile::Content::Truncate(size_t length) {
 
 bool BufferedPseudoFile::Content::IsDirectory() const { return false; }
 
-zx_status_t BufferedPseudoFile::Content::GetNodeInfo(fs::Rights rights,
-                                                     fs::VnodeRepresentation* info) {
-  return file_->GetNodeInfo(rights, info);
+zx_status_t BufferedPseudoFile::Content::GetNodeInfoForProtocol(VnodeProtocol protocol,
+                                                                Rights rights,
+                                                                VnodeRepresentation* info) {
+  return file_->GetNodeInfoForProtocol(protocol, rights, info);
 }
 
 void BufferedPseudoFile::Content::SetInputLength(size_t length) {
@@ -178,6 +178,8 @@ UnbufferedPseudoFile::UnbufferedPseudoFile(ReadHandler read_handler, WriteHandle
     : PseudoFile(std::move(read_handler), std::move(write_handler)) {}
 
 UnbufferedPseudoFile::~UnbufferedPseudoFile() = default;
+
+VnodeProtocolSet UnbufferedPseudoFile::Content::GetProtocols() const { return VnodeProtocol::kFile; }
 
 zx_status_t UnbufferedPseudoFile::Open(VnodeConnectionOptions options,
                                        fbl::RefPtr<Vnode>* out_redirect) {
@@ -275,9 +277,9 @@ zx_status_t UnbufferedPseudoFile::Content::Truncate(size_t length) {
 
 bool UnbufferedPseudoFile::Content::IsDirectory() const { return false; }
 
-zx_status_t UnbufferedPseudoFile::Content::GetNodeInfo(Rights rights,
-                                                       fs::VnodeRepresentation* info) {
-  return file_->GetNodeInfo(rights, info);
+zx_status_t UnbufferedPseudoFile::Content::GetNodeInfoForProtocol(
+    VnodeProtocol protocol, Rights rights, VnodeRepresentation* info) {
+  return file_->GetNodeInfoForProtocol(protocol, rights, info);
 }
 
 }  // namespace fs

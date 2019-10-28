@@ -23,6 +23,7 @@ zx_test("fs-vnode") {
     "tracked_remote_dir_tests.cc",
     "vfs_types_tests.cc",
     "vmo_file_tests.cc",
+    "vnode_contract_tests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

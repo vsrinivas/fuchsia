@@ -34,6 +34,8 @@ bool DoDot(vdircookie_t* cookie) {
 LazyDir::LazyDir() {}
 LazyDir::~LazyDir() = default;
 
+VnodeProtocolSet LazyDir::GetProtocols() const { return VnodeProtocol::kDirectory; }
+
 zx_status_t LazyDir::Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) {
   return ZX_OK;
 }
@@ -89,8 +91,10 @@ zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, si
   return ZX_OK;
 }
 
-zx_status_t LazyDir::GetNodeInfo(Rights rights, VnodeRepresentation* representation) {
-  *representation = fs::VnodeRepresentation::Directory();
+zx_status_t LazyDir::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
+                                            [[maybe_unused]] Rights rights,
+                                            VnodeRepresentation* representation) {
+  *representation = VnodeRepresentation::Directory();
   return ZX_OK;
 }
 

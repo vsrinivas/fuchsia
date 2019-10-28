@@ -117,7 +117,7 @@ class Vfs {
   void SetDispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
 
   // Begins serving VFS messages over the specified connection.
-  zx_status_t ServeConnection(fbl::unique_ptr<Connection> connection) FS_TA_EXCLUDES(vfs_lock_);
+  zx_status_t ServeConnection(std::unique_ptr<Connection> connection) FS_TA_EXCLUDES(vfs_lock_);
 
   // Called by a VFS connection when it is closed remotely.
   // The VFS is now responsible for destroying the connection.
@@ -184,9 +184,9 @@ class Vfs {
   fbl::HashTable<zx_koid_t, std::unique_ptr<VnodeToken>> vnode_tokens_;
 
   // Non-intrusive node in linked list of vnodes acting as mount points
-  class MountNode final : public fbl::DoublyLinkedListable<fbl::unique_ptr<MountNode>> {
+  class MountNode final : public fbl::DoublyLinkedListable<std::unique_ptr<MountNode>> {
    public:
-    using ListType = fbl::DoublyLinkedList<fbl::unique_ptr<MountNode>>;
+    using ListType = fbl::DoublyLinkedList<std::unique_ptr<MountNode>>;
     constexpr MountNode();
     ~MountNode();
 
@@ -211,7 +211,7 @@ class Vfs {
   mtx_t vfs_lock_{};
 
   // Starts tracking the lifetime of the connection.
-  virtual void RegisterConnection(fbl::unique_ptr<Connection> connection) = 0;
+  virtual void RegisterConnection(std::unique_ptr<Connection> connection) = 0;
 
   // Stops tracking the lifetime of the connection.
   virtual void UnregisterConnection(Connection* connection) = 0;

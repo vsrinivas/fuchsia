@@ -37,12 +37,7 @@ VnodeDir::VnodeDir(Vfs* vfs) : VnodeMemfs(vfs) {
 
 VnodeDir::~VnodeDir() = default;
 
-zx_status_t VnodeDir::ValidateOptions(fs::VnodeConnectionOptions options) {
-  if (options.flags.not_directory) {
-    return ZX_ERR_NOT_FILE;
-  }
-  return ZX_OK;
-}
+fs::VnodeProtocolSet VnodeDir::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
 void VnodeDir::Notify(fbl::StringPiece name, unsigned event) { watcher_.Notify(name, event); }
 
@@ -114,8 +109,9 @@ zx_status_t VnodeDir::GetAttributes(fs::VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                                  fs::VnodeRepresentation* info) {
+zx_status_t VnodeDir::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                             [[maybe_unused]] fs::Rights rights,
+                                             fs::VnodeRepresentation* info) {
   *info = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }

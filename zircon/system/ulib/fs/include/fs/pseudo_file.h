@@ -49,11 +49,13 @@ class PseudoFile : public Vnode {
   ~PseudoFile() override;
 
   // |Vnode| implementation:
-  zx_status_t ValidateOptions(VnodeConnectionOptions options) override;
+  VnodeProtocolSet GetProtocols() const final;
+  bool ValidateRights(Rights rights) override;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
 
   bool IsDirectory() const final;
-  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) final;
+  zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                     VnodeRepresentation* info) final;
 
  protected:
   PseudoFile(ReadHandler read_handler, WriteHandler write_handler);
@@ -109,7 +111,7 @@ class BufferedPseudoFile : public PseudoFile {
     ~Content() override;
 
     // |Vnode| implementation:
-    zx_status_t ValidateOptions(VnodeConnectionOptions options) final;
+    VnodeProtocolSet GetProtocols() const final;
     zx_status_t Close() final;
     zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
@@ -117,7 +119,8 @@ class BufferedPseudoFile : public PseudoFile {
     zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
     zx_status_t Truncate(size_t length) final;
     bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(Rights rights, fs::VnodeRepresentation* info) final;
+    zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                       VnodeRepresentation* info) final;
 
    private:
     void SetInputLength(size_t length);
@@ -194,6 +197,7 @@ class UnbufferedPseudoFile : public PseudoFile {
     ~Content() override;
 
     // |Vnode| implementation:
+    VnodeProtocolSet GetProtocols() const final;
     zx_status_t Open(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Close() final;
     zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
@@ -202,7 +206,8 @@ class UnbufferedPseudoFile : public PseudoFile {
     zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
     zx_status_t Truncate(size_t length) final;
     bool IsDirectory() const final;
-    zx_status_t GetNodeInfo(Rights rights, fs::VnodeRepresentation* info) final;
+    zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                       VnodeRepresentation* info) final;
 
    private:
     fbl::RefPtr<UnbufferedPseudoFile> const file_;

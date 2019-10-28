@@ -37,7 +37,7 @@ class WatcherContainer {
 
   // A simple structure which holds a channel to a watching client,
   // as well as a mask of signals they are interested in hearing about.
-  struct VnodeWatcher : public fbl::DoublyLinkedListable<fbl::unique_ptr<VnodeWatcher>> {
+  struct VnodeWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<VnodeWatcher>> {
     VnodeWatcher(zx::channel h, uint32_t mask);
     ~VnodeWatcher();
 
@@ -46,7 +46,7 @@ class WatcherContainer {
   };
 
   fbl::Mutex lock_;
-  fbl::DoublyLinkedList<fbl::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
 };
 
 }  // namespace fs

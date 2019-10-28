@@ -17,6 +17,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
+#include <fs/vfs_types.h>
 
 #include "dnode.h"
 
@@ -43,17 +44,13 @@ VnodeVmo::~VnodeVmo() {
   }
 }
 
-zx_status_t VnodeVmo::ValidateOptions(fs::VnodeConnectionOptions options) {
-  if (options.flags.directory) {
-    return ZX_ERR_NOT_DIR;
-  }
-  if (options.rights.write) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-  return ZX_OK;
-}
+fs::VnodeProtocolSet VnodeVmo::GetProtocols() const { return fs::VnodeProtocol::kMemory; }
 
-zx_status_t VnodeVmo::GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* info) {
+bool VnodeVmo::ValidateRights(fs::Rights rights) { return !rights.write; }
+
+zx_status_t VnodeVmo::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                             [[maybe_unused]] fs::Rights rights,
+                                             fs::VnodeRepresentation* info) {
   zx_info_handle_basic_t handle_info;
   zx_status_t status =
       zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), NULL, NULL);

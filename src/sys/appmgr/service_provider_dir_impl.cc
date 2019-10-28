@@ -106,10 +106,15 @@ zx_status_t ServiceProviderDirImpl::Readdir(fs::vdircookie_t* cookie, void* dire
   return root_->Readdir(cookie, dirents, len, out_actual);
 }
 
-zx_status_t ServiceProviderDirImpl::GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                                                fs::VnodeRepresentation* representation) {
+zx_status_t ServiceProviderDirImpl::GetNodeInfoForProtocol(
+    [[maybe_unused]] fs::VnodeProtocol protocol, [[maybe_unused]] fs::Rights rights,
+    fs::VnodeRepresentation* representation) {
   *representation = fs::VnodeRepresentation::Directory();
   return ZX_OK;
+}
+
+fs::VnodeProtocolSet ServiceProviderDirImpl::GetProtocols() const {
+  return fs::VnodeProtocol::kDirectory;
 }
 
 zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {

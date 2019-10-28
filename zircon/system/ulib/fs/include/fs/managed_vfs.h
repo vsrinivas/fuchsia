@@ -61,12 +61,12 @@ class ManagedVfs : public Vfs {
   void OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status)
       __TA_EXCLUDES(lock_);
 
-  void RegisterConnection(fbl::unique_ptr<Connection> connection) final __TA_EXCLUDES(lock_);
+  void RegisterConnection(std::unique_ptr<Connection> connection) final __TA_EXCLUDES(lock_);
   void UnregisterConnection(Connection* connection) final __TA_EXCLUDES(lock_);
   bool IsTerminating() const final;
 
   fbl::Mutex lock_;
-  fbl::DoublyLinkedList<fbl::unique_ptr<Connection>> connections_ __TA_GUARDED(lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<Connection>> connections_ __TA_GUARDED(lock_);
 
   std::atomic_bool is_shutting_down_;
   async::TaskMethod<ManagedVfs, &ManagedVfs::OnShutdownComplete> shutdown_task_ __TA_GUARDED(lock_){

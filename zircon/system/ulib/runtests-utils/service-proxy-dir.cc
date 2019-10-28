@@ -32,11 +32,14 @@ zx_status_t ServiceProxyDir::GetAttributes(fs::VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t ServiceProxyDir::GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                                         fs::VnodeRepresentation* info) {
+zx_status_t ServiceProxyDir::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                                    [[maybe_unused]] fs::Rights rights,
+                                                    fs::VnodeRepresentation* info) {
   *info = fs::VnodeRepresentation::Directory();
   return ZX_OK;
 }
+
+fs::VnodeProtocolSet ServiceProxyDir::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
 bool ServiceProxyDir::IsDirectory() const { return true; }
 

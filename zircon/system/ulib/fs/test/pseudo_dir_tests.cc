@@ -156,8 +156,19 @@ bool TestPseudoDir() {
   END_TEST;
 }
 
+bool TestRejectOpenFlagNotDirectory() {
+  BEGIN_TEST;
+
+  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  EXPECT_EQ(ZX_ERR_NOT_FILE,
+            dir->ValidateOptions(fs::VnodeConnectionOptions::ReadOnly().set_not_directory()));
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(pseudo_dir_tests)
 RUN_TEST(TestPseudoDir)
+RUN_TEST(TestRejectOpenFlagNotDirectory)
 END_TEST_CASE(pseudo_dir_tests)

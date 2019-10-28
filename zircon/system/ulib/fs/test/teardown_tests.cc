@@ -41,9 +41,13 @@ class FdCountVnode : public fs::Vnode {
     return ZX_OK;
   }
 
+  fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
+
   bool IsDirectory() const final { return false; }
 
-  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights, fs::VnodeRepresentation* info) {
+  zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                     [[maybe_unused]] fs::Rights rights,
+                                     fs::VnodeRepresentation* info) {
     *info = fs::VnodeRepresentation::Connector();
     return ZX_OK;
   }
@@ -104,7 +108,7 @@ bool send_sync(const zx::channel& client) {
 //
 // This helps tests get ready to try handling a tricky teardown.
 bool sync_start(sync_completion_t* completions, async::Loop* loop,
-                fbl::unique_ptr<fs::ManagedVfs>* vfs) {
+                std::unique_ptr<fs::ManagedVfs>* vfs) {
   BEGIN_HELPER;
   *vfs = std::make_unique<fs::ManagedVfs>(loop->dispatcher());
   ASSERT_EQ(loop->StartThread(), ZX_OK);
@@ -132,7 +136,7 @@ bool TestUnpostedTeardown() {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
-  fbl::unique_ptr<fs::ManagedVfs> vfs;
+  std::unique_ptr<fs::ManagedVfs> vfs;
 
   ASSERT_TRUE(sync_start(completions, &loop, &vfs));
 
@@ -161,7 +165,7 @@ bool TestPostedTeardown() {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
-  fbl::unique_ptr<fs::ManagedVfs> vfs;
+  std::unique_ptr<fs::ManagedVfs> vfs;
 
   ASSERT_TRUE(sync_start(completions, &loop, &vfs));
 
@@ -194,7 +198,7 @@ bool TestTeardownDeleteThis() {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
-  fbl::unique_ptr<fs::ManagedVfs> vfs;
+  std::unique_ptr<fs::ManagedVfs> vfs;
 
   ASSERT_TRUE(sync_start(completions, &loop, &vfs));
 
@@ -224,7 +228,7 @@ bool TestTeardownSlowAsyncCallback() {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
-  fbl::unique_ptr<fs::ManagedVfs> vfs;
+  std::unique_ptr<fs::ManagedVfs> vfs;
 
   ASSERT_TRUE(sync_start(completions, &loop, &vfs));
 

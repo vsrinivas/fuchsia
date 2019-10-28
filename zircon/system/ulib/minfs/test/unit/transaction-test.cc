@@ -346,7 +346,7 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
   void CancelPendingWriteback() final {}
 
   // fs::Vnode interface.
-  zx_status_t ValidateOptions(fs::VnodeConnectionOptions) final { return ZX_OK; }
+  fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final { return ZX_OK; }
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final {
     return ZX_OK;

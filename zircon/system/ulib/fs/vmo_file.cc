@@ -45,15 +45,9 @@ VmoFile::VmoFile(const zx::vmo& unowned_vmo, size_t offset, size_t length, bool 
 
 VmoFile::~VmoFile() {}
 
-zx_status_t VmoFile::ValidateOptions(fs::VnodeConnectionOptions options) {
-  if (options.flags.directory) {
-    return ZX_ERR_NOT_DIR;
-  }
-  if (options.rights.write && !writable_) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-  return ZX_OK;
-}
+VnodeProtocolSet VmoFile::GetProtocols() const { return VnodeProtocol::kMemory; }
+
+bool VmoFile::ValidateRights(Rights rights) { return !rights.write || writable_; }
 
 zx_status_t VmoFile::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
@@ -108,7 +102,8 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
   return status;
 }
 
-zx_status_t VmoFile::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
+zx_status_t VmoFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol, Rights rights,
+                                            VnodeRepresentation* info) {
   ZX_DEBUG_ASSERT(!rights.write || writable_);  // checked by the VFS
 
   zx::vmo vmo;

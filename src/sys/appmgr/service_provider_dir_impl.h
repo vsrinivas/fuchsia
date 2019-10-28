@@ -15,6 +15,7 @@
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
+#include <fs/vfs_types.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/logging.h"
@@ -45,6 +46,8 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
   // Overridden from |fs::Vnode|:
   //
 
+  fs::VnodeProtocolSet GetProtocols() const final;
+
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
 
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
@@ -52,15 +55,16 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
   zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                       size_t* out_actual) final;
 
-  zx_status_t GetNodeInfo(fs::Rights rights, fs::VnodeRepresentation* representation) final;
+  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
+                                     fs::VnodeRepresentation* representation) final;
+
+  bool IsDirectory() const final;
 
   //
   // Overridden from |fuchsia::sys::ServiceProvider|:
   //
 
   void ConnectToService(std::string service_name, zx::channel channel) override;
-
-  bool IsDirectory() const final;
 
  private:
   bool IsServiceWhitelisted(const std::string& service_name) {

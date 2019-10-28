@@ -2,12 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/llcpp/fidl.h>
+#include <zircon/errors.h>
+
 #include <type_traits>
+#include <utility>
 
 #include <fs/vfs_types.h>
+#include <fs/vnode.h>
 #include <zxtest/zxtest.h>
 
 namespace {
+
+namespace fio = ::llcpp::fuchsia::io;
 
 TEST(Rights, ReadOnly) {
   // clang-format off
@@ -52,6 +59,58 @@ TEST(Rights, All) {
   EXPECT_TRUE (fs::Rights::All().admin,   "Bad value for Rights::All().admin");
   EXPECT_TRUE (fs::Rights::All().execute, "Bad value for Rights::All().execute");
   // clang-format on
+}
+
+class DummyVnode : public fs::Vnode {
+ public:
+  DummyVnode() = default;
+  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol, fs::Rights,
+                                     fs::VnodeRepresentation*) final {
+    ZX_PANIC("Unused");
+  }
+  bool IsDirectory() const final { ZX_PANIC("Unused"); }
+};
+
+TEST(VnodeConnectionOptions, ValidateOptionsForDirectory) {
+  class TestDirectory : public DummyVnode {
+   public:
+    fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kDirectory; }
+  };
+
+  TestDirectory vnode;
+  ASSERT_OK(
+      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)));
+  ASSERT_EQ(vnode.ValidateOptions(
+                fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)),
+            ZX_ERR_NOT_FILE);
+}
+
+TEST(VnodeConnectionOptions, ValidateOptionsForService) {
+  class TestConnector : public DummyVnode {
+   public:
+    fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kConnector; }
+  };
+
+  TestConnector vnode;
+  ASSERT_EQ(
+      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)),
+      ZX_ERR_NOT_DIR);
+  ASSERT_OK(vnode.ValidateOptions(
+      fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)));
+}
+
+TEST(VnodeConnectionOptions, ValidateOptionsForFile) {
+  class TestFile : public DummyVnode {
+   public:
+    fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
+  };
+
+  TestFile vnode;
+  ASSERT_EQ(
+      vnode.ValidateOptions(fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_DIRECTORY)),
+      ZX_ERR_NOT_DIR);
+  ASSERT_OK(vnode.ValidateOptions(
+      fs::VnodeConnectionOptions::FromIoV1Flags(fio::OPEN_FLAG_NOT_DIRECTORY)));
 }
 
 TEST(VnodeProtocolSet, Union) {

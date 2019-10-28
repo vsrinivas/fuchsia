@@ -1276,8 +1276,9 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
 }
 
 #ifdef __Fuchsia__
-zx_status_t VnodeMinfs::GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                                    fs::VnodeRepresentation* info) {
+zx_status_t VnodeMinfs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                               [[maybe_unused]] fs::Rights rights,
+                                               fs::VnodeRepresentation* info) {
   if (IsDirectory()) {
     *info = fs::VnodeRepresentation::Directory();
   } else {

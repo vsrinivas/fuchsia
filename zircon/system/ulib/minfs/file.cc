@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "file.h"
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +18,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 #include <fs/debug.h>
+#include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
@@ -28,7 +31,6 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include "file.h"
 #include "minfs-private.h"
 #include "vnode.h"
 
@@ -226,14 +228,7 @@ void File::CancelPendingWriteback() {
 
 zx_status_t File::CanUnlink() const { return ZX_OK; }
 
-zx_status_t File::ValidateOptions(fs::VnodeConnectionOptions options) {
-  FS_PRETTY_TRACE_DEBUG("File::ValidateOptions(", options, ") ", "vn=", static_cast<void*>(this),
-                        "(#", GetIno(), ")");
-  if (options.flags.directory) {
-    return ZX_ERR_NOT_DIR;
-  }
-  return ZX_OK;
-}
+fs::VnodeProtocolSet File::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
 zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   TRACE_DURATION("minfs", "File::Read", "ino", GetIno(), "len", len, "off", off);

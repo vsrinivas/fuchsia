@@ -21,12 +21,15 @@ class PtyGeneratingVnode : public fs::Vnode {
  public:
   ~PtyGeneratingVnode() override = default;
 
-  zx_status_t GetNodeInfo([[maybe_unused]] fs::Rights rights,
-                          fs::VnodeRepresentation* info) override {
+  zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
+                                     [[maybe_unused]] fs::Rights rights,
+                                     fs::VnodeRepresentation* info) override {
     // This should only actually be seen by something querying with VNODE_REF_ONLY.
     *info = fs::VnodeRepresentation::Connector();
     return ZX_OK;
   }
+
+  fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kConnector; }
 
   bool IsDirectory() const override { return false; }
 

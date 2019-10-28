@@ -15,8 +15,9 @@
 #include <stdint.h>
 #include <zircon/fidl.h>
 
+#include <memory>
+
 #include <fbl/intrusive_double_list.h>
-#include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
@@ -38,7 +39,7 @@ struct OnOpenMsg {
 // received over the channel.
 //
 // This class is thread-safe.
-class Connection : public fbl::DoublyLinkedListable<fbl::unique_ptr<Connection>> {
+class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>> {
  public:
   // Create a connection bound to a particular vnode.
   //

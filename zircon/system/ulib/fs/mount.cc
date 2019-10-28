@@ -51,7 +51,7 @@ zx_status_t Vfs::InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) {
 
   // Allocate a node to track the remote handle
   fbl::AllocChecker ac;
-  fbl::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
+  std::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -74,7 +74,7 @@ zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
 
   // Allocate a node to track the remote handle
   fbl::AllocChecker ac;
-  fbl::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
+  std::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -138,7 +138,7 @@ zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
 // Uninstall the remote filesystem mounted on vn. Removes vn from the
 // remote_list_, and sends its corresponding filesystem an 'unmount' signal.
 zx_status_t Vfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn, zx::channel* h) {
-  fbl::unique_ptr<MountNode> mount_point;
+  std::unique_ptr<MountNode> mount_point;
   {
     mount_point =
         remote_list_.erase_if([&vn](const MountNode& node) { return node.VnodeMatch(vn); });
@@ -153,7 +153,7 @@ zx_status_t Vfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn, zx::channel* h) {
 // Uninstall all remote filesystems. Acts like 'UninstallRemote' for all
 // known remotes.
 zx_status_t Vfs::UninstallAll(zx_time_t deadline) {
-  fbl::unique_ptr<MountNode> mount_point;
+  std::unique_ptr<MountNode> mount_point;
   for (;;) {
     {
       fbl::AutoLock lock(&vfs_lock_);

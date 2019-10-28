@@ -89,7 +89,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
   }
 
   fbl::AllocChecker ac;
-  fbl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(std::move(channel), mask));
+  std::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(std::move(channel), mask));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

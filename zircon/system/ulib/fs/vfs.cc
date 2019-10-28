@@ -392,7 +392,7 @@ zx_status_t Vfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, fbl::String
   return ZX_OK;
 }
 
-zx_status_t Vfs::ServeConnection(fbl::unique_ptr<Connection> connection) {
+zx_status_t Vfs::ServeConnection(std::unique_ptr<Connection> connection) {
   ZX_DEBUG_ASSERT(connection);
 
   zx_status_t status = connection->Serve();

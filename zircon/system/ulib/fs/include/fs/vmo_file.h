@@ -71,11 +71,13 @@ class VmoFile : public Vnode {
   VmoSharing vmo_sharing() const { return vmo_sharing_; }
 
   // |Vnode| implementation:
-  zx_status_t ValidateOptions(VnodeConnectionOptions options) final;
-  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
+  VnodeProtocolSet GetProtocols() const final;
+  bool ValidateRights(Rights rights) final;
+  zx_status_t GetAttributes(VnodeAttributes* a) final;
   zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
-  zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info) final;
+  zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
+                                     VnodeRepresentation* info) final;
   bool IsDirectory() const final;
 
  private:

@@ -95,7 +95,9 @@ union Rights {
 // protocols must be less than 64. When the need arises as to support more than 64
 // protocols, we should change the implementation in |VnodeProtocolSet| accordingly.
 enum class VnodeProtocol : uint32_t {
-  kConnector = 0,
+  // TODO(fxb/39776): change this back to 0 when the referenced compiler bug is resolved.
+  // Setting |kConnector| to 1 appears to workaround the issue.
+  kConnector = 1,
   kFile,
   kDirectory,
   kPipe,
@@ -140,16 +142,22 @@ class VnodeProtocolSet {
     return protocol_bits_ != 0;
   }
 
-  // If the set contains a single element, returns that element. Otherwise, return std::nullopt.
-  constexpr std::optional<VnodeProtocol> which() const {
+  // Returns the first element in the set, if any. The ordering of elements is defined by their
+  // declaration order within |VnodeProtocol|.
+  constexpr std::optional<VnodeProtocol> first() const {
     if (protocol_bits_ == 0) {
       return std::nullopt;
     }
+    return static_cast<VnodeProtocol>(static_cast<uint32_t>(__builtin_ctzl(protocol_bits_)));
+  }
+
+  // If the set contains a single element, returns that element. Otherwise, return std::nullopt.
+  constexpr std::optional<VnodeProtocol> which() const {
     uint64_t is_power_of_two = protocol_bits_ && !(protocol_bits_ & (protocol_bits_ - 1));
     if (!is_power_of_two) {
       return std::nullopt;
     }
-    return static_cast<VnodeProtocol>(static_cast<uint32_t>(__builtin_ctzl(protocol_bits_)));
+    return first();
   }
 
   constexpr bool operator==(const VnodeProtocolSet& rhs) const {
@@ -215,6 +223,11 @@ struct VnodeConnectionOptions {
     return *this;
   }
 
+  constexpr VnodeConnectionOptions set_not_directory() {
+    flags.not_directory = true;
+    return *this;
+  }
+
   constexpr VnodeConnectionOptions set_no_remote() {
     flags.no_remote = true;
     return *this;
@@ -259,6 +272,19 @@ struct VnodeConnectionOptions {
     VnodeConnectionOptions options;
     options.rights = Rights::ReadExec();
     return options;
+  }
+
+  // Translate the flags passed by the client into an equivalent set of acceptable protocols.
+  constexpr VnodeProtocolSet protocols() const {
+    if (flags.directory && flags.not_directory) {
+      return VnodeProtocolSet::Empty();
+    } else if (flags.directory) {
+      return VnodeProtocol::kDirectory;
+    } else if (flags.not_directory) {
+      return VnodeProtocolSet::All().Except(VnodeProtocol::kDirectory);
+    } else {
+      return VnodeProtocolSet::All();
+    }
   }
 
 #ifdef __Fuchsia__
