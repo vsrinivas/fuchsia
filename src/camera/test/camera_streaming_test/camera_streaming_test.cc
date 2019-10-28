@@ -13,6 +13,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <atomic>
 #include <string>
 
@@ -69,8 +70,9 @@ void CameraStreamingTest::BindIspTester(fuchsia::camera::test::IspTesterSyncPtr&
 
 // Validate the contents of the stream coming from the ISP.
 TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
+  // Pick something large enough that it's likely larger than any internal ring buffers, but small
+  // enough that the test completes relatively quickly.
   static const uint32_t kFramesToCheck = 42;
-  static const uint32_t kStreamTimeoutMsec = 200 * kFramesToCheck;
 
   // Connect to the tester.
   fuchsia::camera::test::IspTesterSyncPtr tester;
@@ -92,11 +94,19 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
   // Populate a set of known hashes to constant-value frame data.
   std::map<std::string, uint8_t> known_hashes;
   {
+    // Try known transients 0x00 and 0xFF, as well as other likely transients near values k*2^N.
+    static constexpr const std::array<uint8_t, 10> kValuesToCheck{0x00, 0xFF, 0x01, 0xFE, 0x7F,
+                                                                  0x80, 0x3F, 0x40, 0xBF, 0xC0};
     std::vector<uint8_t> known_frame(buffers.settings.buffer_settings.size_bytes);
-    for (uint32_t value = 0; value <= UINT8_MAX; ++value) {
+    for (size_t i = 0; i < kValuesToCheck.size(); ++i) {
+      auto value = kValuesToCheck[i];
+      std::cout << "\rCalculating hash for fixed value " << static_cast<uint32_t>(value) << " ("
+                << i + 1 << "/" << kValuesToCheck.size() << ")";
+      std::cout.flush();
       memset(known_frame.data(), value, known_frame.size());
       known_hashes[Hash(known_frame.data(), known_frame.size())] = value;
     }
+    std::cout << std::endl;
   }
 
   // Register a frame event handler.
@@ -104,7 +114,11 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
   std::vector<bool> buffer_owned(buffers.buffer_count, false);
   std::atomic_uint32_t frames_received{0};
   stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo event) {
-    ++frames_received;
+    if (++frames_received > kFramesToCheck) {
+      // If we've reached the target number of frames, just release the frame and return.
+      stream->ReleaseFrame(event.buffer_id);
+      return;
+    }
 
     // Check ownership validity of the buffer.
     ASSERT_LT(event.buffer_id, buffers.buffer_count);
@@ -118,6 +132,8 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
                                          buffers.settings.buffer_settings.size_bytes,
                                          ZX_VM_PERM_READ, &mapped_addr),
               ZX_OK);
+    std::cout << "\rCalculating hash for frame " << frames_received << "/" << kFramesToCheck;
+    std::cout.flush();
     auto hash =
         Hash(reinterpret_cast<void*>(mapped_addr), buffers.settings.buffer_settings.size_bytes);
     ASSERT_EQ(
@@ -153,11 +169,8 @@ TEST_F(CameraStreamingTest, CheckStreamFromIsp) {
 
   // Begin the message loop, exiting when a certain number of frames are received, or the stream
   // connection dies.
-  bool condition_met = RunLoopWithTimeoutOrUntil(
-      [&]() { return !stream_alive || frames_received >= kFramesToCheck; },
-      zx::duration(ZX_MSEC(kStreamTimeoutMsec)));
-  ASSERT_TRUE(condition_met) << "Loop timed out. Received " << frames_received << " frames in "
-                             << kStreamTimeoutMsec << "ms but expected at least " << kFramesToCheck;
+  RunLoopUntil([&]() { return !stream_alive || frames_received >= kFramesToCheck; });
+  std::cout << std::endl;
   ASSERT_TRUE(stream_alive);
 
   // Stop the stream.
