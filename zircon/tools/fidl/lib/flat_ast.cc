@@ -156,11 +156,6 @@ const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
     {"fuchsia.device", "Controller_GetPowerStateMapping_Result"},
     {"fuchsia.device", "Controller_Resume_Result"},
     {"fuchsia.device", "Controller_UpdatePowerStateMapping_Result"},
-    {"fuchsia.hardware.cpu.insntrace", "Controller_AllocateBuffer_Result"},
-    {"fuchsia.hardware.cpu.insntrace", "Controller_AssignThreadBuffer_Result"},
-    {"fuchsia.hardware.cpu.insntrace", "Controller_Initialize_Result"},
-    {"fuchsia.hardware.cpu.insntrace", "Controller_ReleaseThreadBuffer_Result"},
-    {"fuchsia.hardware.cpu.insntrace", "Controller_Terminate_Result"},
     {"fuchsia.io", "NodeInfo"},
 }};
 

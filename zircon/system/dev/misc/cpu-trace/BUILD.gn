@@ -42,7 +42,7 @@ zx_driver("cpu-trace") {
   deps = [
     ":perf-mon",
     "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/fidl/fuchsia-hardware-cpu-insntrace:c",
+    "$zx/system/fidl/fuchsia-hardware-cpu-insntrace:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
