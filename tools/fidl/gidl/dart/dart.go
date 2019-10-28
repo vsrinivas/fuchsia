@@ -31,6 +31,7 @@ void main() {
 	group('encode success cases', () {
 		{{ range .EncodeSuccessCases }}
 		EncodeSuccessCase.run(
+			{{.EncoderName}},
 			{{.Name}},
 			{{.Value}},
 			{{.ValueType}},
@@ -41,6 +42,7 @@ void main() {
 	group('decode success cases', () {
 		{{ range .DecodeSuccessCases }}
 		DecodeSuccessCase.run(
+			{{.DecoderName}},
 			{{.Name}},
 			{{.Value}},
 			{{.ValueType}},
@@ -51,6 +53,7 @@ void main() {
 		group('encode failure cases', () {
 	{{ range .EncodeFailureCases }}
 	EncodeFailureCase.run(
+		{{.EncoderName}},
 		{{.Name}},
 		{{.Value}},
 		{{.ValueType}},
@@ -61,6 +64,7 @@ void main() {
 		group('decode failure cases', () {
 	{{ range .DecodeFailureCases }}
 	DecodeFailureCase.run(
+		{{.DecoderName}},
 		{{.Name}},
 		{{.ValueType}},
 		{{.Bytes}},
@@ -81,19 +85,19 @@ type tmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, Value, ValueType, Bytes string
+	EncoderName, Name, Value, ValueType, Bytes string
 }
 
 type decodeSuccessCase struct {
-	Name, Value, ValueType, Bytes string
+	DecoderName, Name, Value, ValueType, Bytes string
 }
 
 type encodeFailureCase struct {
-	Name, Value, ValueType, ErrorCode string
+	EncoderName, Name, Value, ValueType, ErrorCode string
 }
 
 type decodeFailureCase struct {
-	Name, ValueType, Bytes, ErrorCode string
+	DecoderName, Name, ValueType, Bytes, ErrorCode string
 }
 
 // Generate generates dart tests.
@@ -134,10 +138,11 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		}
 		valueStr := visit(encodeSuccess.Value, decl)
 		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-			Name:      fidlcommon.SingleQuote(encodeSuccess.Name),
-			Value:     valueStr,
-			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
-			Bytes:     bytesBuilder(encodeSuccess.Bytes),
+			EncoderName: fmt.Sprintf("Encoders.%s", wireFormatName(encodeSuccess.WireFormat)),
+			Name:        fidlcommon.SingleQuote(encodeSuccess.Name),
+			Value:       valueStr,
+			ValueType:   typeName(decl.(*gidlmixer.StructDecl)),
+			Bytes:       bytesBuilder(encodeSuccess.Bytes),
 		})
 	}
 	return encodeSuccessCases, nil
@@ -155,10 +160,11 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		}
 		valueStr := visit(decodeSuccess.Value, decl)
 		decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-			Name:      fidlcommon.SingleQuote(decodeSuccess.Name),
-			Value:     valueStr,
-			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
-			Bytes:     bytesBuilder(decodeSuccess.Bytes),
+			DecoderName: fmt.Sprintf("Decoders.%s", wireFormatName(decodeSuccess.WireFormat)),
+			Name:        fidlcommon.SingleQuote(decodeSuccess.Name),
+			Value:       valueStr,
+			ValueType:   typeName(decl.(*gidlmixer.StructDecl)),
+			Bytes:       bytesBuilder(decodeSuccess.Bytes),
 		})
 	}
 	return decodeSuccessCases, nil
@@ -180,10 +186,11 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 			return nil, err
 		}
 		encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-			Name:      fidlcommon.SingleQuote(encodeFailure.Name),
-			Value:     valueStr,
-			ValueType: typeName(decl.(*gidlmixer.StructDecl)),
-			ErrorCode: errorCode,
+			EncoderName: fmt.Sprintf("Encoders.%s", wireFormatName(encodeFailure.WireFormat)),
+			Name:        fidlcommon.SingleQuote(encodeFailure.Name),
+			Value:       valueStr,
+			ValueType:   typeName(decl.(*gidlmixer.StructDecl)),
+			ErrorCode:   errorCode,
 		})
 	}
 	return encodeFailureCases, nil
@@ -197,13 +204,18 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure) ([]decodeFail
 			return nil, err
 		}
 		decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-			Name:      fidlcommon.SingleQuote(decodeFailure.Name),
-			ValueType: dartTypeName(decodeFailure.Type),
-			Bytes:     bytesBuilder(decodeFailure.Bytes),
-			ErrorCode: errorCode,
+			DecoderName: fmt.Sprintf("Decoders.%s", wireFormatName(decodeFailure.WireFormat)),
+			Name:        fidlcommon.SingleQuote(decodeFailure.Name),
+			ValueType:   dartTypeName(decodeFailure.Type),
+			Bytes:       bytesBuilder(decodeFailure.Bytes),
+			ErrorCode:   errorCode,
 		})
 	}
 	return decodeFailureCases, nil
+}
+
+func wireFormatName(wf gidlir.WireFormat) string {
+	return wf.String()
 }
 
 func typeName(decl *gidlmixer.StructDecl) string {
