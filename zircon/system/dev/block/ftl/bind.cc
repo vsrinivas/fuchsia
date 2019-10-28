@@ -14,7 +14,7 @@
 namespace {
 
 zx_status_t FtlDriverBind(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "FTL: Binding. Version 1.0.13\n");
+  zxlogf(INFO, "FTL: Binding. Version 1.0.14\n");
   fbl::AllocChecker checker;
   std::unique_ptr<ftl::BlockDevice> device(new (&checker) ftl::BlockDevice(parent));
   if (!checker.check()) {
@@ -39,5 +39,6 @@ static constexpr zx_driver_ops_t ftl_driver_ops = []() {
 }();
 
 ZIRCON_DRIVER_BEGIN(ftl, ftl_driver_ops, "zircon", "0.1", 2)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_FTL) ZIRCON_DRIVER_END(ftl)
+  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
+  BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_FTL)
+ZIRCON_DRIVER_END(ftl)
