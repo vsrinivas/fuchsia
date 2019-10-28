@@ -7,7 +7,6 @@ use {
     failure::format_err,
     wlan_common::{
         appendable::Appendable,
-        big_endian::BigEndianU16,
         data_writer,
         ie::{rsn::rsne, *},
         mac::{self, Aid, Bssid, MacAddr},
@@ -121,23 +120,6 @@ pub fn write_keep_alive_resp_frame<B: Appendable>(
         data_writer::data_hdr_client_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
         mac::OptionalDataHdrFields::none(),
     )?;
-    Ok(())
-}
-
-pub fn write_eth_frame<B: Appendable>(
-    buf: &mut B,
-    dst_addr: MacAddr,
-    src_addr: MacAddr,
-    protocol_id: u16,
-    body: &[u8],
-) -> Result<(), Error> {
-    buf.append_value(&mac::EthernetIIHdr {
-        da: dst_addr,
-        sa: src_addr,
-        ether_type: BigEndianU16::from_native(protocol_id),
-    })?;
-
-    buf.append_bytes(body)?;
     Ok(())
 }
 
@@ -354,46 +336,6 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr2
                 1, 1, 1, 1, 1, 1, // addr3
                 0x10, 0, // Sequence Control
-            ],
-            &buf[..]
-        );
-    }
-
-    #[test]
-    fn eth_frame_ok() {
-        let mut buf = vec![];
-        write_eth_frame(&mut buf, [1; 6], [2; 6], 3333, &[4; 9])
-            .expect("failed writing ethernet frame");
-        assert_eq!(
-            &[
-                1, 1, 1, 1, 1, 1, // dst_addr
-                2, 2, 2, 2, 2, 2, // src_addr
-                0x0d, 0x05, // ether_type
-                4, 4, 4, 4, 4, 4, 4, 4, // payload
-                4, // more payload
-            ],
-            &buf[..]
-        );
-    }
-
-    #[test]
-    fn eth_frame_buffer_too_small() {
-        let mut buf = [7u8; 22];
-        let write_result =
-            write_eth_frame(&mut BufferWriter::new(&mut buf[..]), [1; 6], [2; 6], 3333, &[4; 9]);
-        assert_variant!(write_result, Err(Error::BufferTooSmall));
-    }
-
-    #[test]
-    fn eth_frame_empty_payload() {
-        let mut buf = vec![];
-        write_eth_frame(&mut buf, [1; 6], [2; 6], 3333, &[])
-            .expect("failed writing ethernet frame");
-        assert_eq!(
-            &[
-                1, 1, 1, 1, 1, 1, // dst_addr
-                2, 2, 2, 2, 2, 2, // src_addrfx
-                0x0d, 0x05, // ether_type
             ],
             &buf[..]
         );

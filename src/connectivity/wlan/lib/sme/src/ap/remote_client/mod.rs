@@ -81,6 +81,7 @@ impl RemoteClient {
         self.state = Some(self.state.take().unwrap().handle_timeout(self, ctx, event_id, event))
     }
 
+    /// Sends MLME-AUTHENTICATE.response (IEEE Std 802.11-2016, 6.3.5.5) to the MLME.
     pub fn send_authenticate_resp(
         &mut self,
         ctx: &mut Context,
@@ -92,6 +93,19 @@ impl RemoteClient {
         }))
     }
 
+    /// Sends MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2) to the MLME.
+    pub fn send_deauthenticate_req(
+        &mut self,
+        ctx: &mut Context,
+        reason_code: fidl_mlme::ReasonCode,
+    ) {
+        ctx.mlme_sink.send(MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
+            peer_sta_address: self.addr.clone(),
+            reason_code,
+        }))
+    }
+
+    /// Sends MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5) to the MLME.
     pub fn send_associate_resp(
         &mut self,
         ctx: &mut Context,
@@ -105,17 +119,7 @@ impl RemoteClient {
         }))
     }
 
-    pub fn send_deauthenticate_req(
-        &mut self,
-        ctx: &mut Context,
-        reason_code: fidl_mlme::ReasonCode,
-    ) {
-        ctx.mlme_sink.send(MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
-            peer_sta_address: self.addr.clone(),
-            reason_code,
-        }))
-    }
-
+    /// Sends MLME-EAPOL.request (IEEE Std 802.11-2016, 6.3.22.1) to the MLME.
     pub fn send_eapol_req(&mut self, ctx: &mut Context, frame: eapol::KeyFrameBuf) {
         ctx.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
             src_addr: ctx.device_info.addr.clone(),
@@ -124,6 +128,7 @@ impl RemoteClient {
         }));
     }
 
+    /// Sends SET_CONTROLLED_PORT.request (fuchsia.wlan.mlme.SetControlledPortRequest) to the MLME.
     pub fn send_set_controlled_port_req(
         &mut self,
         ctx: &mut Context,

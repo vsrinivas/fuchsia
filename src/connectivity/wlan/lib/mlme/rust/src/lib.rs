@@ -14,3 +14,6 @@ pub mod timer;
 
 mod rates_writer;
 pub use rates_writer::*;
+
+mod eth_writer;
+pub use eth_writer::*;

@@ -3,21 +3,23 @@
 // found in the LICENSE file.
 
 use {
-    crate::{auth, error::Error},
+    crate::error::Error,
     wlan_common::{
         appendable::Appendable,
-        mac::{self, Bssid, MacAddr, StatusCode},
+        data_writer,
+        mac::{self, Aid, Bssid, MacAddr, StatusCode},
         mgmt_writer,
         sequence::SequenceManager,
     },
 };
 
-#[allow(unused)]
-pub fn write_open_auth_frame<B: Appendable>(
+pub fn write_auth_frame<B: Appendable>(
     buf: &mut B,
     client_addr: MacAddr,
     bssid: Bssid,
     seq_mgr: &mut SequenceManager,
+    auth_alg_num: mac::AuthAlgorithmNumber,
+    auth_txn_seq_num: u16,
     status_code: StatusCode,
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
@@ -29,24 +31,135 @@ pub fn write_open_auth_frame<B: Appendable>(
         mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, client_addr, bssid, seq_ctrl),
         None,
     )?;
+    buf.append_value(&mac::AuthHdr { auth_alg_num, auth_txn_seq_num, status_code })?;
+    Ok(())
+}
 
-    buf.append_value(&auth::make_open_ap_resp(status_code))?;
+pub fn write_assoc_resp_frame<B: Appendable>(
+    buf: &mut B,
+    client_addr: MacAddr,
+    bssid: Bssid,
+    seq_mgr: &mut SequenceManager,
+    capabilities: mac::CapabilityInfo,
+    status_code: StatusCode,
+    aid: Aid,
+    ies: &[u8],
+) -> Result<(), Error> {
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_RESP);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&client_addr) as u16);
+    mgmt_writer::write_mgmt_hdr(
+        buf,
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, client_addr, bssid, seq_ctrl),
+        None,
+    )?;
+    buf.append_value(&mac::AssocRespHdr { capabilities, status_code, aid })?;
+    buf.append_value(ies)?;
+    Ok(())
+}
+
+pub fn write_deauth_frame<B: Appendable>(
+    buf: &mut B,
+    client_addr: MacAddr,
+    bssid: Bssid,
+    seq_mgr: &mut SequenceManager,
+    reason_code: mac::ReasonCode,
+) -> Result<(), Error> {
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::DEAUTH);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&client_addr) as u16);
+    mgmt_writer::write_mgmt_hdr(
+        buf,
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, client_addr, bssid, seq_ctrl),
+        None,
+    )?;
+    buf.append_value(&mac::DeauthHdr { reason_code })?;
+    Ok(())
+}
+
+pub fn write_disassoc_frame<B: Appendable>(
+    buf: &mut B,
+    client_addr: MacAddr,
+    bssid: Bssid,
+    seq_mgr: &mut SequenceManager,
+    reason_code: mac::ReasonCode,
+) -> Result<(), Error> {
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::DISASSOC);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&client_addr) as u16);
+    mgmt_writer::write_mgmt_hdr(
+        buf,
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, client_addr, bssid, seq_ctrl),
+        None,
+    )?;
+    buf.append_value(&mac::DisassocHdr { reason_code })?;
+    Ok(())
+}
+
+pub fn write_data_frame<B: Appendable>(
+    buf: &mut B,
+    seq_mgr: &mut SequenceManager,
+    dst: MacAddr,
+    bssid: Bssid,
+    src: MacAddr,
+    protected: bool,
+    qos_ctrl: bool,
+    ether_type: u16,
+    payload: &[u8],
+) -> Result<(), Error> {
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::DATA)
+        .with_data_subtype(mac::DataSubtype(0).with_qos(qos_ctrl))
+        .with_protected(protected)
+        .with_from_ds(true);
+
+    // QoS is not fully supported. Write default, all zeroed QoS Control field.
+    let qos_ctrl = if qos_ctrl { Some(mac::QosControl(0)) } else { None };
+    let seq_ctrl = match qos_ctrl.as_ref() {
+        None => mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&dst) as u16),
+        Some(qos_ctrl) => {
+            mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns2(&dst, qos_ctrl.tid()) as u16)
+        }
+    };
+    data_writer::write_data_hdr(
+        buf,
+        mac::FixedDataHdrFields {
+            frame_ctrl,
+            duration: 0,
+            addr1: dst,
+            addr2: bssid.0,
+            addr3: src,
+            seq_ctrl,
+        },
+        mac::OptionalDataHdrFields { qos_ctrl, addr4: None, ht_ctrl: None },
+    )?;
+
+    data_writer::write_snap_llc_hdr(buf, ether_type)?;
+    buf.append_bytes(payload)?;
     Ok(())
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
+mod tests {
+    use {
+        super::*,
+        wlan_common::mac::{AuthAlgorithmNumber, Bssid},
+    };
 
     #[test]
-    fn open_auth_frame() {
+    fn auth_frame() {
         let mut buf = vec![];
         let mut seq_mgr = SequenceManager::new();
-        write_open_auth_frame(
+        write_auth_frame(
             &mut buf,
             [1; 6],
             Bssid([2; 6]),
             &mut seq_mgr,
+            AuthAlgorithmNumber::FAST_BSS_TRANSITION,
+            3,
             StatusCode::TRANSACTION_SEQUENCE_ERROR,
         )
         .expect("failed writing frame");
@@ -60,10 +173,107 @@ mod test {
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
                 // Auth body
-                0, 0, // Auth Algorithm Number
-                2, 0, // Auth Txn Seq Number
+                2, 0, // Auth Algorithm Number
+                3, 0, // Auth Txn Seq Number
                 14, 0, // Status code
-            ],
+            ][..],
+            &buf[..]
+        );
+    }
+
+    #[test]
+    fn assoc_resp_frame() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_assoc_resp_frame(
+            &mut buf,
+            [1; 6],
+            Bssid([2; 6]),
+            &mut seq_mgr,
+            mac::CapabilityInfo(0),
+            StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
+            1,
+            &[0, 4, 1, 2, 3, 4],
+        )
+        .expect("failed writing frame");
+        assert_eq!(
+            &[
+                // Mgmt header
+                0b00010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Association response header:
+                0, 0, // Capabilities
+                94, 0, // status code
+                1, 0, // AID
+                0, 4, 1, 2, 3, 4, // SSID
+            ][..],
+            &buf[..]
+        );
+    }
+
+    #[test]
+    fn disassoc_frame() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_disassoc_frame(
+            &mut buf,
+            [1; 6],
+            Bssid([2; 6]),
+            &mut seq_mgr,
+            mac::ReasonCode::LEAVING_NETWORK_DISASSOC,
+        )
+        .expect("failed writing frame");
+        assert_eq!(
+            &[
+                // Mgmt header
+                0b10100000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Disassoc header:
+                8, 0, // reason code
+            ][..],
+            &buf[..]
+        );
+    }
+
+    #[test]
+    fn data_frame() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_data_frame(
+            &mut buf,
+            &mut seq_mgr,
+            [3; 6],
+            Bssid([2; 6]),
+            [1; 6],
+            false,
+            false,
+            0x1234,
+            &[1, 2, 3, 4, 5],
+        )
+        .expect("expected OK");
+        assert_eq!(
+            &[
+                // Mgmt header
+                0b00001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                1, 2, 3, 4, 5,
+            ][..],
             &buf[..]
         );
     }

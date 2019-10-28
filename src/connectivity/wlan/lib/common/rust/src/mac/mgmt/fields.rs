@@ -150,3 +150,10 @@ pub struct AssocRespHdr {
     pub status_code: StatusCode,
     pub aid: Aid,
 }
+
+// IEEE Std 802.11-2016, 9.3.3.5
+#[derive(Default, FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
+#[repr(C, packed)]
+pub struct DisassocHdr {
+    pub reason_code: ReasonCode,
+}

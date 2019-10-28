@@ -11,6 +11,7 @@ use {
         device::{Device, TxFlags},
         error::Error,
         timer::*,
+        write_eth_frame,
     },
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme,

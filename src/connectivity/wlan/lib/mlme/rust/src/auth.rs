@@ -15,16 +15,6 @@ pub fn make_open_client_req() -> mac::AuthHdr {
     }
 }
 
-pub fn make_open_ap_resp(status_code: mac::StatusCode) -> mac::AuthHdr {
-    mac::AuthHdr {
-        auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
-        // IEEE Std 802.11-2016, 12.3.3.2.3 & Table 9-36: Sequence number 2 indicates the response
-        // and final part of Open System authentication.
-        auth_txn_seq_num: 2,
-        status_code,
-    }
-}
-
 /// Validates whether a given authentication header is a valid response to an open authentication
 /// request.
 pub fn is_valid_open_ap_resp(auth: &mac::AuthHdr) -> Result<(), Error> {
