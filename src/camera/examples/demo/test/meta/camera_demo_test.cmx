@@ -16,8 +16,7 @@
       "fuchsia.ui.policy.Presenter",
       "fuchsia.ui.scenic.Scenic",
       "fuchsia.sys.Launcher",
-      "fuchsia.tracing.provider.Registry",
-      "fuchsia.logger.LogSink"
+      "fuchsia.tracing.provider.Registry"
     ]
   }
 }

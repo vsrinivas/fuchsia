@@ -4,24 +4,17 @@
 
 import("//build/package.gni")
 
-source_set("lib") {
+executable("image_writer_bin") {
+  output_name = "image_writer"
+
   sources = [
     "raw12_writer.cc",
   ]
 
-  public_deps = [
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-sysmem",
-  ]
-}
-
-executable("image_writer_bin") {
-  output_name = "image_writer"
-
   deps = [
-    ":lib",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fzl",
   ]
 }
 

@@ -10,7 +10,7 @@
 #include <iostream>
 
 #include "src/camera/test/camera_client_test/camera_client_test.h"
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/logging.h"
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
@@ -32,7 +32,7 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   for (uint32_t i = 0; i < num_buffers; ++i) {
     status = zx::vmo::create(buffer_size, 0, &buffer_collection->vmos[i]);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to allocate Buffer Collection";
+      FXL_LOG(ERROR) << "Failed to allocate Buffer Collection";
       return status;
     }
   }
@@ -59,7 +59,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
     status = client.StartDriver(source);
   }
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to start client";
+    FXL_PLOG(ERROR, status) << "Failed to start client";
     return status;
   }
 
@@ -70,7 +70,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
   fuchsia::sysmem::BufferCollectionInfo buffer_collection;
   status = Gralloc(client.formats()[0], kNumberOfBuffers, &buffer_collection);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't allocate buffers (status " << status;
+    FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
     return status;
   }
 
@@ -81,7 +81,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
   zx::eventpair stream_token;
   status = zx::eventpair::create(0, &stream_token, &driver_token);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't create driver token. status: " << status;
+    FXL_LOG(ERROR) << "Couldn't create driver token. status: " << status;
     return status;
   }
 
@@ -96,7 +96,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
   }
 
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't set camera format. status: " << status;
+    FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
     return status;
   }
 
@@ -108,12 +108,12 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
       stream->ReleaseFrame(frame.buffer_id);
 
       if (frame_counter++ > kFramesToCount) {
-        FX_LOGS(INFO) << "Counted 10 frames, stopping stream and quitting loop";
+        FXL_LOG(INFO) << "Counted 10 frames, stopping stream and quitting loop";
         stream->Stop();
         loop.Quit();
       }
     } else {
-      FX_LOGS(ERROR) << "Error set on incoming frame. Error: "
+      FXL_LOG(ERROR) << "Error set on incoming frame. Error: "
                      << static_cast<int>(frame.frame_status);
     }
   };
@@ -124,7 +124,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
 
   loop.Run();
 
-  FX_LOGS(INFO) << "Camera Test A-OK!";
+  FXL_LOG(INFO) << "Camera Test A-OK!";
   return ZX_OK;
 }
 

@@ -26,7 +26,10 @@ fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cm
 
 #include "src/camera/stream_utils/image_io_util.h"
 #include "src/lib/component/cpp/startup_context.h"
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -46,7 +49,7 @@ static fuchsia::images::PixelFormat convertFormat(fuchsia::sysmem::PixelFormatTy
     case fuchsia::sysmem::PixelFormatType::YV12:
       return fuchsia::images::PixelFormat::YV12;
     default:
-      FX_LOGS(ERROR) << "sysmem pixel format (" << static_cast<uint32_t>(type)
+      FXL_LOG(ERROR) << "sysmem pixel format (" << static_cast<uint32_t>(type)
                      << ") has no corresponding fuchsia::images::PixelFormat";
       return static_cast<fuchsia::images::PixelFormat>(-1);
   }
@@ -81,7 +84,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
 
     view->stream_provider_ = StreamProvider::Create(StreamProvider::Source::CONTROLLER);
     if (!view->stream_provider_) {
-      FX_LOGS(ERROR) << "Failed to get CONTROLLER stream provider";
+      FXL_LOG(ERROR) << "Failed to get CONTROLLER stream provider";
       return nullptr;
     }
 
@@ -90,11 +93,11 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
     zx_status_t status = view->stream_provider_->ConnectToStream(
         view->stream_.NewRequest(loop->dispatcher()), &format, &buffers, &view->should_rotate_);
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to connect to stream";
+      FXL_PLOG(ERROR, status) << "Failed to connect to stream";
       return nullptr;
     }
     view->stream_.set_error_handler([loop](zx_status_t status) {
-      FX_PLOGS(ERROR, status) << "Stream disconnected";
+      FXL_PLOG(ERROR, status) << "Stream disconnected";
       loop->Quit();
     });
     view->stream_.events().OnFrameAvailable =
@@ -102,9 +105,9 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
 
     view->image_io_util_ = camera::ImageIOUtil::Create(&buffers, "/demo");
     if (!view->image_io_util_) {
-      FX_LOGS(ERROR) << "Failed to create ImageIOUtil";
+      FXL_LOG(ERROR) << "Failed to create ImageIOUtil";
     } else {
-      FX_LOGS(INFO) << "ImageIOUtil Created!";
+      FXL_LOG(INFO) << "ImageIOUtil Created!";
     }
 
     uint32_t image_pipe_id = view->session()->AllocResourceId();
@@ -169,7 +172,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
   }
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   // |fuchsia::camera2::Stream|
   void OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) override {
@@ -179,14 +182,14 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
       return;
     }
     if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
-      FX_LOGS(ERROR) << "Received OnFrameAvailable with error event";
+      FXL_LOG(ERROR) << "Received OnFrameAvailable with error event";
       return;
     }
 
     zx::event release_fence;
     zx_status_t status = zx::event::create(0, &release_fence);
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to create fence";
+      FXL_PLOG(ERROR, status) << "Failed to create fence";
       loop_->Quit();
       return;
     }
@@ -194,7 +197,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
     std::vector<zx::event> release_fences(1);
     status = release_fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &release_fences[0]);
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to duplicate fence";
+      FXL_PLOG(ERROR, status) << "Failed to duplicate fence";
       loop_->Quit();
       return;
     }
@@ -203,9 +206,9 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
     if (image_io_util_ && image_io_) {
       status = image_io_util_->WriteImageData(info.buffer_id);
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to write to disk";
+        FXL_LOG(ERROR) << "Failed to write to disk";
       }
-      FX_LOGS(INFO) << "Image written to disk";
+      FXL_LOG(INFO) << "Image written to disk";
       image_io_ = false;
     }
 
@@ -219,7 +222,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
         [this, buffer_id = info.buffer_id](async_dispatcher_t* dispatcher, async::Wait* wait,
                                            zx_status_t status, const zx_packet_signal_t* signal) {
           if (status != ZX_OK) {
-            FX_PLOGS(ERROR, status) << "Wait failed";
+            FXL_PLOG(ERROR, status) << "Wait failed";
             loop_->Quit();
             return;
           }
@@ -229,7 +232,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
     waiters_.emplace(std::move(waiter), std::move(release_fence));
     status = waiters_.back().first->Begin(loop_->dispatcher());
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to start waiter";
+      FXL_PLOG(ERROR, status) << "Failed to start waiter";
       loop_->Quit();
       return;
     }
@@ -271,8 +274,6 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
 };
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"camera_demo"});
-
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   // Chaos mode adds random delays between frame acquisition, presentation, and release.
   bool chaos = false;
@@ -291,10 +292,10 @@ int main(int argc, const char** argv) {
         return DemoView::Create(std::move(context), &loop, chaos, image_io);
       },
       &loop);
-  FX_LOGS(INFO) << argv[0] << " initialized successfully - entering loop";
+  FXL_LOG(INFO) << argv[0] << " initialized successfully - entering loop";
   zx_status_t status = loop.Run();
   if (status != ZX_ERR_CANCELED) {
-    FX_LOGS(WARNING) << "Main thread terminated abnormally";
+    FXL_LOG(WARNING) << "Main thread terminated abnormally";
     return status == ZX_OK ? -1 : status;
   }
   return 0;

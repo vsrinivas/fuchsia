@@ -21,8 +21,7 @@
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.scheduler.ProfileProvider",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.logger.LogSink"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

@@ -7,7 +7,6 @@
 #include <src/camera/simple_camera/simple_camera_lib/frame_scheduler.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/syslog/cpp/logger.h"
 
 namespace simple_camera {
 
@@ -16,13 +15,13 @@ uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
   uint64_t now_ns = zx_clock_get_monotonic();
 
   if (now_ns < capture_time_ns) {
-    FX_LOGS(WARNING) << "Capture time is in the future!"
+    FXL_LOG(WARNING) << "Capture time is in the future!"
                      << " now: " << now_ns << " capture_time_ns " << capture_time_ns;
     capture_time_ns = now_ns;
   }
 
   if (last_capture_time_ns_ > capture_time_ns) {
-    FX_LOGS(ERROR) << "Capture times out of sequence! Previous: " << last_capture_time_ns_
+    FXL_LOG(ERROR) << "Capture times out of sequence! Previous: " << last_capture_time_ns_
                    << " Current capture time: " << capture_time_ns;
     // Just update the capture time. Previous time cannot be in future...
     capture_time_ns = last_capture_time_ns_;
@@ -38,7 +37,7 @@ uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
   // to miss our deadline.  In that case, the best thing we can do is just
   // add the lead delay, and send it out:
   if (now_ns - capture_time_ns > kAcquireDelayNs) {
-    FX_VLOGS(1) << "Unexpected delay between capture and availability!"
+    FXL_VLOG(1) << "Unexpected delay between capture and availability!"
                 << " now_ns - capture_time_ns = " << now_ns - capture_time_ns << " > AcquireDelay ("
                 << kAcquireDelayNs << ")";
     pres_time = now_ns + kLeadDelayNs;
@@ -48,7 +47,7 @@ uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
   // At this point, it should be impossible, since capture_time_ns and
   // now_ns are monotonic.  But we check here incase the logic above
   // changes.
-  FX_DCHECK(last_presentation_time_ns_ <= pres_time)
+  FXL_DCHECK(last_presentation_time_ns_ <= pres_time)
       << "Presentation "
       << "time decreased! Previous: " << last_presentation_time_ns_
       << " Current presentation time: " << pres_time;
@@ -67,7 +66,7 @@ void SimpleFrameScheduler::
   if (pres_time > requested_pres_time + pres_interval) {
     // This means we missed the frame we were targetting.
     // Eventually, we will use this information to update Dlead.
-    FX_LOGS(WARNING) << "Missed rendering deadline!"
+    FXL_LOG(WARNING) << "Missed rendering deadline!"
                      << "\n  Requested   time: " << requested_pres_time
                      << "\n  Actual pres time: " << pres_time
                      << "\n  Difference:       " << pres_time - requested_pres_time

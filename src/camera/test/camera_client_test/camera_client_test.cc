@@ -12,7 +12,8 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace camera {
 
@@ -35,7 +36,7 @@ zx_status_t Client::LoadVideoFormats(
 
     zx_status_t status = get_formats(format_index, &call_formats, &total_format_count);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Couldn't get camera formats (status " << status << ")";
+      FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status << ")";
       return status;
     }
 
@@ -77,7 +78,7 @@ zx_status_t Client::StartManager(int device_id) {
   std::vector<fuchsia::camera::DeviceInfo> devices;
   zx_status_t status = manager()->GetDevices(&devices);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get devices. error: " << status;
+    FXL_LOG(ERROR) << "Failed to get devices. error: " << status;
     return status;
   }
 
@@ -86,7 +87,7 @@ zx_status_t Client::StartManager(int device_id) {
     dump_device_info(device);
   }
   if (static_cast<size_t>(device_id) >= devices.size()) {
-    FX_LOGS(ERROR) << "Device ID " << device_id << " does not exist.";
+    FXL_LOG(ERROR) << "Device ID " << device_id << " does not exist.";
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -102,7 +103,7 @@ zx_status_t Client::StartManager(int device_id) {
 zx_status_t Client::StartDriver(const char *device) {
   zx_status_t status = Open(device);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't open camera client (status " << status << ")";
+    FXL_LOG(ERROR) << "Couldn't open camera client (status " << status << ")";
     return status;
   }
 
@@ -110,7 +111,7 @@ zx_status_t Client::StartDriver(const char *device) {
   status = camera()->GetDeviceInfo(&device_info);
 
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't get device info (status " << status << ")";
+    FXL_LOG(ERROR) << "Couldn't get device info (status " << status << ")";
     return status;
   }
 
@@ -130,19 +131,19 @@ zx_status_t Client::Open(const char *device) {
   std::string dev_path = device;
   fbl::unique_fd dev_node{::open(dev_path.c_str(), O_RDONLY)};
   if (!dev_node.is_valid()) {
-    FX_LOGS(ERROR) << "Client::Open failed to open device node at \"" << dev_path << "\". ("
+    FXL_LOG(ERROR) << "Client::Open failed to open device node at \"" << dev_path << "\". ("
                    << strerror(errno) << " : " << errno << ")";
     return ZX_ERR_IO;
   }
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0u, &local, &remote);
-  FX_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
+  FXL_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
 
   fzl::FdioCaller dev(std::move(dev_node));
   zx_status_t res =
       fuchsia_hardware_camera_DeviceGetChannel(dev.borrow_channel(), remote.release());
   if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to obtain channel (res " << res << ")";
+    FXL_LOG(ERROR) << "Failed to obtain channel (res " << res << ")";
     return res;
   }
 

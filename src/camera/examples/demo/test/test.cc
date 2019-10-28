@@ -15,7 +15,7 @@
 #include <string>
 
 #include "garnet/public/lib/gtest/real_loop_fixture.h"
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/logging.h"
 
 // Maximum number of attempts to take a screenshot and find content.
 static constexpr const uint32_t kMaxAttempts = 500;
@@ -32,7 +32,7 @@ class CameraDemoTest : public gtest::RealLoopFixture {
   ~CameraDemoTest() override {}
   static fit::function<void(zx_status_t)> MakeErrorHandler(std::string name) {
     return [name](zx_status_t status) {
-      FX_PLOGS(ERROR, status) << name << " disconnected";
+      FXL_PLOG(ERROR, status) << name << " disconnected";
       ADD_FAILURE();
     };
   }

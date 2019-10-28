@@ -23,7 +23,6 @@ executable("video_display_bin") {
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

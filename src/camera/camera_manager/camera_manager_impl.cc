@@ -12,8 +12,6 @@
 #include <ddk/driver.h>
 #include <fbl/unique_fd.h>
 
-#include "src/lib/syslog/cpp/logger.h"
-
 namespace camera {
 
 static const char* kCameraDevicePath = "/dev/class/camera";
@@ -30,7 +28,7 @@ CameraManagerImpl::CameraManagerImpl(async::Loop* loop) {
       // because it will only be called while we are in this constructor.
       [&idle_seen] { idle_seen = true; });
   if (device_watcher_ == nullptr) {
-    FX_LOGS(ERROR) << " failed to create DeviceWatcher.";
+    FXL_LOG(ERROR) << " failed to create DeviceWatcher.";
     return;
   }
   // Now we need to wait until:
@@ -74,7 +72,7 @@ CameraManagerImpl::~CameraManagerImpl() {
 void CameraManagerImpl::OnDeviceFound(int dir_fd, const std::string& filename) {
   auto device = VideoDeviceClient::Create(dir_fd, filename);
   if (!device) {
-    FX_LOGS(ERROR) << "Failed to create device " << filename;
+    FXL_LOG(ERROR) << "Failed to create device " << filename;
     return;
   }
 

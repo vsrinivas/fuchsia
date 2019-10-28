@@ -11,6 +11,7 @@
 
 #include "../virtual_camera2_control.h"
 #include "gtest/gtest.h"
+#include "src/lib/fxl/logging.h"
 #include "stream_tester.h"
 
 namespace camera {

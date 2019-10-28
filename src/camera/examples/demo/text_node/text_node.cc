@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/logging.h"
 
 TextNode::TextNode(scenic::Session* session) : scenic::Node(session) {
   session->Enqueue(scenic::NewCreateShapeNodeCmd(id()));
@@ -45,7 +45,7 @@ zx_status_t TextNode::SetText(const std::string s) {
   zx_status_t status =
       mapper.CreateAndMap(image_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
+    FXL_PLOG(ERROR, status);
     return status;
   }
 

@@ -11,7 +11,8 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace camera {
 using fuchsia::camera::VideoFormat;
@@ -37,20 +38,20 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(int dir_fd, const s
   // Open the device node.
   fbl::unique_fd dev_node{openat(dir_fd, name.c_str(), O_RDONLY)};
   if (!dev_node.is_valid()) {
-    FX_LOGS(WARNING) << "VideoDeviceClient failed to open device node at \"" << name << "\". ("
+    FXL_LOG(WARNING) << "VideoDeviceClient failed to open device node at \"" << name << "\". ("
                      << strerror(errno) << " : " << errno << ")";
     return nullptr;
   }
 
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0u, &local, &remote);
-  FX_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
+  FXL_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
 
   fzl::FdioCaller dev(std::move(dev_node));
   zx_status_t res =
       fuchsia_hardware_camera_DeviceGetChannel(dev.borrow_channel(), remote.release());
   if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to obtain channel (res " << res << ")";
+    FXL_LOG(ERROR) << "Failed to obtain channel (res " << res << ")";
     return nullptr;
   }
 
@@ -105,7 +106,7 @@ void VideoDeviceClient::CreateStream(fuchsia::sysmem::BufferCollectionInfo buffe
   // types of streams.
   // TODO(CAM-14): Add more logic around when we can create a stream.
   if (active_streams_.size() >= device_info_.max_stream_count) {
-    FX_LOGS(ERROR) << "Failed to creat stream: active streams (" << active_streams_.size()
+    FXL_LOG(ERROR) << "Failed to creat stream: active streams (" << active_streams_.size()
                    << ") >= max_stream_count (" << device_info_.max_stream_count << ")";
     // If we deny the request, we just return.  That drops the InterfaceRequest
     // on the floor, so no connection is made.
@@ -117,7 +118,7 @@ void VideoDeviceClient::CreateStream(fuchsia::sysmem::BufferCollectionInfo buffe
   auto video_stream = VideoStream::Create(this, &driver_token);
   if (!video_stream) {
     // If VideoStream::Create failed, drop everything
-    FX_LOGS(ERROR) << "Failed to create stream bookeeping structure.";
+    FXL_LOG(ERROR) << "Failed to create stream bookeeping structure.";
     return;
   }
 
@@ -142,7 +143,7 @@ std::unique_ptr<VideoDeviceClient::VideoStream> VideoDeviceClient::VideoStream::
   // since the camera manager does not retain control of the stream channel.
   zx_status_t status = zx::eventpair::create(0, &stream->stream_token_, driver_token);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't create driver token. status: " << status;
+    FXL_LOG(ERROR) << "Couldn't create driver token. status: " << status;
     return nullptr;
   }
   // Create a waiter that waits for the stream_token to be closed.
@@ -155,13 +156,13 @@ std::unique_ptr<VideoDeviceClient::VideoStream> VideoDeviceClient::VideoStream::
   stream->stream_token_waiter_ = std::make_unique<async::Wait>(
       stream->stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED, 0,
       std::bind([owner, stream_ptr = stream.get()]() {
-        FX_LOGS(INFO) << "ZX_EVENTPAIR_PEER_CLOSED received, removing active stream.";
+        FXL_LOG(INFO) << "ZX_EVENTPAIR_PEER_CLOSED received, removing active stream.";
         owner->RemoveActiveStream(stream_ptr);
       }));
 
   status = stream->stream_token_waiter_->Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't begin stream_token_waiter_ wait. status: " << status;
+    FXL_LOG(ERROR) << "Couldn't begin stream_token_waiter_ wait. status: " << status;
     return nullptr;
   }
 

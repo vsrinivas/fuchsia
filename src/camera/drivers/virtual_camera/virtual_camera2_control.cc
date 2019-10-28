@@ -4,7 +4,9 @@
 
 #include "virtual_camera2_control.h"
 
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/log_level.h"
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 
@@ -95,11 +97,11 @@ VirtualCamera2ControllerImpl::VirtualCamera2ControllerImpl(
 void VirtualCamera2ControllerImpl::PostNextCaptureTask() {
   // Set the next frame time to be start + frame_count / frames per second.
   int64_t next_frame_time = frame_to_timestamp_.Apply(frame_count_++);
-  FX_DCHECK(next_frame_time > 0) << "TimelineFunction gave negative result!";
-  FX_DCHECK(next_frame_time != media::TimelineRate::kOverflow)
+  FXL_DCHECK(next_frame_time > 0) << "TimelineFunction gave negative result!";
+  FXL_DCHECK(next_frame_time != media::TimelineRate::kOverflow)
       << "TimelineFunction gave negative result!";
   task_.PostForTime(async_get_default_dispatcher(), zx::time(next_frame_time));
-  FX_VLOGS(4) << "VirtualCameraSource: setting next frame to: " << next_frame_time << "   "
+  FXL_VLOG(4) << "VirtualCameraSource: setting next frame to: " << next_frame_time << "   "
               << next_frame_time - static_cast<int64_t>(zx_clock_get_monotonic())
               << " nsec from now";
 }
@@ -112,15 +114,15 @@ void VirtualCamera2ControllerImpl::ProduceFrame() {
   // For realism, give the frame a timestamp that is kFramesOfDelay frames
   // in the past:
   event.metadata.set_timestamp(frame_to_timestamp_.Apply(frame_count_ - kFramesOfDelay));
-  FX_DCHECK(event.metadata.timestamp()) << "TimelineFunction gave negative result!";
-  FX_DCHECK(event.metadata.timestamp() != media::TimelineRate::kOverflow)
+  FXL_DCHECK(event.metadata.timestamp()) << "TimelineFunction gave negative result!";
+  FXL_DCHECK(event.metadata.timestamp() != media::TimelineRate::kOverflow)
       << "TimelineFunction gave negative result!";
 
   // As per the camera driver spec, we always send an OnFrameAvailable message,
   // even if there is an error.
   auto buffer = buffers_.LockBufferForWrite();
   if (!buffer) {
-    FX_LOGS(ERROR) << "no available frames, dropping frame #" << frame_count_;
+    FXL_LOG(ERROR) << "no available frames, dropping frame #" << frame_count_;
     event.frame_status = fuchsia::camera2::FrameStatus::ERROR_BUFFER_FULL;
   } else {  // Got a buffer.  Fill it with color:
     color_source_.FillARGB(buffer->virtual_address(), buffer->size());
@@ -160,12 +162,12 @@ void VirtualCamera2ControllerImpl::CreateStream(
   // If we fail here we return, which drops the stream request, closing the channel.
   zx_status_t status = buffers_.Init(vmos.data(), buffer_collection.buffer_count);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Init buffers failed!" << status;
+    FXL_LOG(ERROR) << "Init buffers failed!" << status;
     return;
   }
   status = buffers_.MapVmos();
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Map buffers failed!" << status;
+    FXL_LOG(ERROR) << "Map buffers failed!" << status;
     return;
   }
 

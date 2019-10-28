@@ -8,6 +8,7 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <fbl/auto_call.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/camera/drivers/controller/configs/sherlock/monitoring-config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"

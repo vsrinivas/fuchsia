@@ -11,6 +11,7 @@
 
 #include <lib/ui/scenic/cpp/commands.h>
 #include <glm/gtc/type_ptr.hpp>
+#include "src/lib/fxl/log_level.h"
 
 namespace video_display {
 
@@ -31,7 +32,7 @@ static const auto kRectSize = 80;
 
 SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
     : BaseView(std::move(view_context), "Video Display Example"), node_(session()) {
-  FX_VLOGS(4) << "Creating video_display View";
+  FXL_VLOG(4) << "Creating video_display View";
 
   // Create an ImagePipe and pass one end to the Session:
   fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe_handle;
@@ -59,7 +60,7 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   simple_camera_->ConnectToCamera(camera_id, std::move(image_pipe_handle));
   simple_camera_.set_error_handler([](zx_status_t error) {
     if (error) {
-      FX_PLOGS(FATAL, error) << "Camera connection failed";
+      FXL_PLOG(FATAL, error) << "Camera connection failed";
     }
   });
 

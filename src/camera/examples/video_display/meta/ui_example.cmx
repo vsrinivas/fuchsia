@@ -8,8 +8,7 @@
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.logger.LogSink"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

@@ -38,8 +38,7 @@ source_set("button_checker") {
     "button_checker.cc",
   ]
   deps = [
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/fbl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fdio",
   ]
   public_deps = [

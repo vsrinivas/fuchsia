@@ -6,15 +6,17 @@ group("text_node") {
   public_deps = [
     ":text_node_lib",
   ]
-  public_configs = [ ":text_node_config" ]
+  public_configs = [
+    ":text_node_config",
+  ]
 }
 
 source_set("text_node_lib") {
   visibility = [ ":*" ]
 
   sources = [
-    "//zircon/system/ulib/gfx-font-data/9x16.c",
     "text_node.cc",
+    "//zircon/system/ulib/gfx-font-data/9x16.c",
   ]
 
   include_dirs = [
@@ -23,12 +25,14 @@ source_set("text_node_lib") {
   ]
 
   deps = [
-    "//src/lib/syslog/cpp",
+    "//src/lib/fxl",
     "//src/lib/ui/scenic/cpp",
     "//zircon/public/lib/fzl",
   ]
 
-  configs += [ ":text_node_config" ]
+  configs += [
+    ":text_node_config",
+  ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
@@ -39,5 +43,7 @@ source_set("text_node_lib") {
 config("text_node_config") {
   visibility = [ ":*" ]
 
-  include_dirs = [ "//src/camera/examples/demo/text_node/include" ]
+  include_dirs = [
+    "//src/camera/examples/demo/text_node/include",
+  ]
 }

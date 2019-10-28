@@ -11,6 +11,10 @@
 #include <stdint.h>
 #include <zircon/status.h>
 
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+
 namespace simple_camera {
 
 class BufferFence;

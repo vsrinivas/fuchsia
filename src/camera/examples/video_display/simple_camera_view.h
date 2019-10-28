@@ -14,7 +14,8 @@
 
 #include <fbl/vector.h>
 
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace video_display {
 
@@ -31,7 +32,7 @@ class SimpleCameraView : public scenic::BaseView {
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   scenic::ShapeNode node_;
 

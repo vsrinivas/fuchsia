@@ -7,7 +7,7 @@
 #include <ddk/debug.h>
 
 #include "src/camera/drivers/usb_video/usb-video-stream.h"
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 
@@ -134,7 +134,7 @@ ControlImpl::StreamImpl::StreamImpl(ControlImpl& owner,
   zx_status_t status = stream_token_waiter_.Begin(async_get_default_dispatcher());
   // The waiter, dispatcher and token are known to be valid, so this should
   // never fail.
-  FX_CHECK(status == ZX_OK);
+  FXL_CHECK(status == ZX_OK);
   binding_.set_error_handler(
       [this](zx_status_t status) { owner_.usb_video_stream_->DeactivateVideoBuffer(); });
 }

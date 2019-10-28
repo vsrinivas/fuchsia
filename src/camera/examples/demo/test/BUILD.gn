@@ -21,7 +21,6 @@ executable("camera_demo_test") {
     "//sdk/lib/sys/service/cpp",
     "//src/camera/examples/demo",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/lib/ui/scenic/cpp",
     "//zircon/public/lib/fzl",
   ]
@@ -31,6 +30,6 @@ group("test") {
   testonly = true
 
   public_deps = [
-    ":camera_demo_test",
+    ":camera_demo_test"
   ]
 }

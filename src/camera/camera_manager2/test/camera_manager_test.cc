@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 
@@ -111,12 +111,12 @@ TEST_F(CameraManagerTest, CanConnectToStream) {
     if (frame.frame_status == fuchsia::camera2::FrameStatus::OK) {
       stream->ReleaseFrame(frame.buffer_id);
       if (frame_counter++ > 10) {
-        FX_LOGS(INFO) << "Counted 10 frames, stopping stream and quitting loop";
+        FXL_LOG(INFO) << "Counted 10 frames, stopping stream and quitting loop";
         stream->Stop();
         passed = true;
       }
     } else {
-      FX_LOGS(ERROR) << "Error set on incoming frame. Error: "
+      FXL_LOG(ERROR) << "Error set on incoming frame. Error: "
                      << static_cast<int>(frame.frame_status);
     }
   };
