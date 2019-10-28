@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   }
 
   config.mount_path = kMountPath;
-  config.ramdisk_block_count = 1 << 19;  // TODO(33983): Reduce this value.
+  config.ramdisk_block_count = 1 << 16;  // 32 MB.
   config.format_type = DISK_FORMAT_BLOBFS;
 
   auto parent = std::make_unique<fs::Environment>(config);
