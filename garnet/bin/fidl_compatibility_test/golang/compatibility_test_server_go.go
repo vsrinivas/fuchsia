@@ -171,23 +171,6 @@ func (echo *echoImpl) EchoXunions(value []compatibility.AllTypesXunion, forwardU
 
 }
 
-func (echo *echoImpl) EchoSandwiches(value compatibility.Sandwiches, forwardURL string) (compatibility.Sandwiches, error) {
-	if forwardURL == "" {
-		return value, nil
-	}
-	echoInterface, err := echo.getServer(forwardURL)
-	if err != nil {
-		log.Printf("Connecting to %s failed: %s", forwardURL, err)
-		return compatibility.Sandwiches{}, err
-	}
-	response, err := echoInterface.EchoSandwiches(value, "")
-	if err != nil {
-		log.Printf("EchoSandwiches failed: %s", err)
-		return compatibility.Sandwiches{}, err
-	}
-	return response, nil
-}
-
 var echoService compatibility.EchoService
 
 func main() {

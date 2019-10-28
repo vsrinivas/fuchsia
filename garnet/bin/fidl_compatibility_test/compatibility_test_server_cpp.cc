@@ -187,33 +187,6 @@ class EchoServerApp : public Echo {
     }
   }
 
-  void EchoSandwiches(Sandwiches value, std::string forward_to_server,
-                      EchoSandwichesCallback callback) override {
-    if (!forward_to_server.empty()) {
-      EchoClientApp app;
-      bool failed = false;
-      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
-        failed = true;
-        loop_->Quit();
-        FXL_LOG(ERROR) << "error communicating with " << forward_to_server << ": " << status;
-      });
-      app.Start(forward_to_server);
-      bool called_back = false;
-      app.echo()->EchoSandwiches(std::move(value), "",
-                                 [this, &called_back, &callback](Sandwiches resp) {
-                                   called_back = true;
-                                   callback(std::move(resp));
-                                   loop_->Quit();
-                                 });
-      while (!called_back && !failed) {
-        loop_->Run();
-      }
-      loop_->ResetQuit();
-    } else {
-      callback(std::move(value));
-    }
-  }
-
  private:
   void HandleEchoEvent(Struct value) {
     for (const auto& binding : bindings_.bindings()) {

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/compatibility/llcpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -16,8 +17,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-
-#include <fidl/test/compatibility/llcpp/fidl.h>
 
 constexpr const char kEchoInterfaceName[] = "fidl.test.compatibility.Echo";
 
@@ -69,11 +68,6 @@ class EchoClientApp {
   Echo::ResultOf::EchoXunions EchoXunions(::fidl::VectorView<AllTypesXunion> value,
                                           ::fidl::StringView forward_to_server) {
     return client_.EchoXunions(std::move(value), forward_to_server);
-  }
-
-  Echo::ResultOf::EchoSandwiches EchoSandwiches(Sandwiches value,
-                                                ::fidl::StringView forward_to_server) {
-    return client_.EchoSandwiches(std::move(value), forward_to_server);
   }
 
   EchoClientApp(const EchoClientApp&) = delete;
@@ -198,18 +192,6 @@ class EchoConnection final : public Echo::Interface {
     } else {
       EchoClientApp app(forward_to_server);
       auto result = app.EchoXunions(std::move(value), ::fidl::StringView{""});
-      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
-      completer.Reply(std::move(result.Unwrap()->value));
-    }
-  }
-
-  void EchoSandwiches(Sandwiches value, ::fidl::StringView forward_to_server,
-                      EchoSandwichesCompleter::Sync completer) override {
-    if (forward_to_server.empty()) {
-      completer.Reply(std::move(value));
-    } else {
-      EchoClientApp app(forward_to_server);
-      auto result = app.EchoSandwiches(std::move(value), ::fidl::StringView{""});
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }
