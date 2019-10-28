@@ -20,7 +20,8 @@ inline constexpr auto kPixelTypeRaw12 = DmaFormat::RAW12;
 
 class ImageWriter {
  public:
-  ImageWriter(DmaFormat dma_format, size_t vmo_size) : dma_format_(dma_format), vmo_size_(vmo_size) {}
+  ImageWriter(DmaFormat dma_format, size_t vmo_size)
+      : dma_format_(dma_format), vmo_size_(vmo_size) {}
   virtual ~ImageWriter() = default;
 
   // Virtual method to be implemented by derived classes specific to each supported image format.
@@ -36,7 +37,7 @@ class ImageWriter {
   //  Whether vmo creation succeeded.
   virtual zx_status_t Write(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b) = 0;
 
-    // Getter methods
+  // Getter methods
   DmaFormat DmaFormat() const { return dma_format_; }
   size_t VmoSize() const { return vmo_size_; }
 

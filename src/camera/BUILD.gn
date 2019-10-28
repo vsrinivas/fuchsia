@@ -86,7 +86,7 @@ test_package("camera_full_test") {
       manifest = "drivers/test_utils/test/meta/button_checker_test.cmx"
       environments = [
         sherlock_env,
-        astro_env
+        astro_env,
       ]
     },
     {

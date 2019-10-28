@@ -20,14 +20,14 @@ inline constexpr uint32_t kBytesPerDoublePixel = 3;
 //  |second_pixel| A 12-bit value representing either a G or B pixel.
 // Returns:
 //  An array of the bytes that were passed in arranged in RAW12 pixel format.
-std::array<uint8_t, kBytesPerDoublePixel> PixelValuesToDoublePixel(
-    uint16_t first_pixel_val, uint16_t second_pixel_val);
+std::array<uint8_t, kBytesPerDoublePixel> PixelValuesToDoublePixel(uint16_t first_pixel_val,
+                                                                   uint16_t second_pixel_val);
 
 // Helper method that extracts the original pixel values from a RAW12 double-pixel.
-  // Args:
-  //  |double_pixel| An array of bytes arranged in RAW12 pixel format (represents two pixels).
-  // Returns:
-  //  A pair of each of the two 12-bit pixel values that comprised the original double-pixel.
+// Args:
+//  |double_pixel| An array of bytes arranged in RAW12 pixel format (represents two pixels).
+// Returns:
+//  A pair of each of the two 12-bit pixel values that comprised the original double-pixel.
 std::pair<uint16_t, uint16_t> DoublePixelToPixelValues(
     std::array<uint8_t, kBytesPerDoublePixel> double_pixel);
 
