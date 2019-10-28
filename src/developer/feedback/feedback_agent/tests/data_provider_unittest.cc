@@ -61,7 +61,8 @@ const std::set<std::string> kDefaultAnnotations = {
 };
 const std::set<std::string> kDefaultAttachments = {
     kAttachmentBuildSnapshot,
-    kAttachmentInspect,
+    // TODO(fxb/39804): re-enable once using Inspect service.
+    // kAttachmentInspect,
     kAttachmentLogKernel,
     kAttachmentLogSystem,
 };
@@ -194,9 +195,7 @@ class DataProviderTest : public gtest::TestLoopFixture {
     fit::result<Data, zx_status_t> out_result;
     data_provider_->GetData(
         [&out_result](fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
-    // The Inspect data collection happens in a different thread so we need to wait for the
-    // timeout of 10s.
-    RunLoopFor(zx::sec(10));
+    RunLoopUntilIdle();
     return out_result;
   }
 
@@ -705,7 +704,15 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
 // connecting through FIDL.
 class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
  public:
-  void SetUp() override { SetUpDataProvider(kDefaultConfig); }
+  void SetUp() override {
+    SetUpDataProvider(Config{kDefaultAnnotations,
+                             {
+                                 kAttachmentBuildSnapshot,
+                                 kAttachmentLogKernel,
+                                 kAttachmentInspect,
+                                 kAttachmentLogSystem,
+                             }});
+  }
 
   void TearDown() override {
     if (!controller_) {
