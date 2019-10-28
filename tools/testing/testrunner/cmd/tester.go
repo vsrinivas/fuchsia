@@ -38,10 +38,10 @@ type SubprocessTester struct {
 func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
 	command := test.Command
 	if len(test.Command) == 0 {
-		if test.InstallPath == "" {
+		if test.Path == "" {
 			return fmt.Errorf("test %q has no `command` or `path` set", test.Name)
 		}
-		command = []string{test.InstallPath}
+		command = []string{test.Path}
 	}
 
 	runner := &runner.SubprocessRunner{
@@ -135,7 +135,7 @@ func NewFuchsiaTester(nodename string, sshKey []byte) (*FuchsiaTester, error) {
 
 func (t *FuchsiaTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
 	if len(test.Command) == 0 {
-		name := path.Base(test.InstallPath)
+		name := path.Base(test.Path)
 		test.Command = []string{"runtests", "-t", name, "-o", t.remoteOutputDir + "runtests"}
 	}
 	return t.delegate.Test(ctx, test, stdout, stderr)

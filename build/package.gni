@@ -740,16 +740,16 @@ template("package") {
         url_scheme_and_host = "fuchsia-boot://"
         url_pkg_name = ""
         dest = "test/sys/$dest"
-        install_path = "/boot/$dest"
+        path = "/boot/$dest"
       } else {
         url_scheme_and_host = "fuchsia-pkg://fuchsia.com"
         dest = "test/$dest"
         if (pkg.deprecated_system_image) {
           url_pkg_name = "system"
-          install_path = "/system/$dest"
+          path = "/system/$dest"
         } else {
           url_pkg_name = pkg.package_name
-          install_path =
+          path =
               "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
         }
       }
@@ -779,17 +779,19 @@ template("package") {
 
       if (!is_disabled) {
         test_spec_name = "${pkg.package_name}_${dest}_test_spec"
+        main_target_name = target_name
         pkg.deps += [ ":$test_spec_name" ]
 
         test_spec(test_spec_name) {
           name = test.name
-          install_path = install_path
+          target = main_target_name
+          path = path
           package_url = url
           forward_variables_from(test, [ "environments" ])
         }
       } else {
         not_needed([
-                     "install_path",
+                     "path",
                      "url",
                    ])
       }

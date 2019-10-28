@@ -50,37 +50,37 @@ var macEnv = Environment{
 
 var specFoo1 = TestSpec{
 	Test: Test{
-		Name:        "//obsidian/bin/foo:foo_unittests",
-		InstallPath: "/system/test/foo_unittests",
-		OS:          Fuchsia,
-		Command:     []string{"/system/test/foo_unittests", "bar", "baz"},
+		Name:    "//obsidian/bin/foo:foo_unittests",
+		Path:    "/system/test/foo_unittests",
+		OS:      Fuchsia,
+		Command: []string{"/system/test/foo_unittests", "bar", "baz"},
 	},
 	Envs: []Environment{qemuEnv},
 }
 
 var specFoo2 = TestSpec{
 	Test: Test{
-		Name:        "//obsidian/bin/foo:foo_integration_tests",
-		InstallPath: "/system/test/foo_integration_tests",
-		OS:          Fuchsia,
+		Name: "//obsidian/bin/foo:foo_integration_tests",
+		Path: "/system/test/foo_integration_tests",
+		OS:   Fuchsia,
 	},
 	Envs: []Environment{qemuEnv, nucEnv},
 }
 
 var specBar = TestSpec{
 	Test: Test{
-		Name:        "//obsidian/lib/bar:bar_tests",
-		InstallPath: "/system/test/bar_tests",
-		OS:          Fuchsia,
+		Name: "//obsidian/lib/bar:bar_tests",
+		Path: "/system/test/bar_tests",
+		OS:   Fuchsia,
 	},
 	Envs: []Environment{qemuEnv},
 }
 
 var specBaz = TestSpec{
 	Test: Test{
-		Name:        "//obsidian/public/lib/baz:baz_host_tests",
-		InstallPath: "/$root_build_dir/baz_host_tests",
-		OS:          Linux,
+		Name: "//obsidian/public/lib/baz:baz_host_tests",
+		Path: "/$root_build_dir/baz_host_tests",
+		OS:   Linux,
 	},
 	Envs: []Environment{linuxEnv, macEnv},
 }
@@ -148,8 +148,8 @@ func TestLoadTestSpecs(t *testing.T) {
 func TestValidateTestSpecs(t *testing.T) {
 	noTestNameSpec := TestSpec{
 		Test: Test{
-			InstallPath: "/system/test/baz_tests",
-			OS:          Linux,
+			Path: "/system/test/baz_tests",
+			OS:   Linux,
 		},
 		Envs: []Environment{qemuEnv},
 	}
@@ -162,15 +162,15 @@ func TestValidateTestSpecs(t *testing.T) {
 	}
 	noOSSpec := TestSpec{
 		Test: Test{
-			Name:        "//obsidian/bin/foo:foo_unittests",
-			InstallPath: "/system/test/foo_unittests",
+			Name: "//obsidian/bin/foo:foo_unittests",
+			Path: "/system/test/foo_unittests",
 		},
 	}
 	badEnvSpec := TestSpec{
 		Test: Test{
-			Name:        "//obsidian/public/lib/baz:baz_tests",
-			InstallPath: "/system/test/baz_tests",
-			OS:          Linux,
+			Name: "//obsidian/public/lib/baz:baz_tests",
+			Path: "/system/test/baz_tests",
+			OS:   Linux,
 		},
 		Envs: []Environment{
 			{

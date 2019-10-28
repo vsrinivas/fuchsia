@@ -122,7 +122,7 @@ foreach(entry, zircon_test_specs) {
       deps = copy_deps
 
       metadata = {
-        test_spec = [
+        tests = [
           {
             test = {
               forward_variables_from(zircon_test,
@@ -130,16 +130,13 @@ foreach(entry, zircon_test_specs) {
                                      [
                                        "disabled",
                                        "name",
-                                       "path",
                                        "runtime_deps",
                                      ])
               label = string_replace(label, "//", "//zircon/")
 
-              # TODO(fxbug.dev/36436): deprecate name in favour of label,
-              # install_path in favour of path, and deps_file for
-              # runtime_deps.
+              # TODO(fxbug.dev/36436): deprecate name in favour of label
+              # and deps_file in favour of runtime_deps.
               name = get_label_info(label, "label_no_toolchain")
-              install_path = zircon_test.path
               if (defined(runtime_deps_file)) {
                 deps_file = rebase_path(runtime_deps_file, root_build_dir)
               }

@@ -289,7 +289,7 @@ build_api_module("platforms") {
 #
 build_api_module("tests") {
   testonly = true
-  data_keys = [ "test_spec" ]
+  data_keys = [ "tests" ]
   deps = [
     "//build:tests",
     "//build/images:packages",

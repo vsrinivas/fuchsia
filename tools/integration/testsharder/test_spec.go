@@ -40,8 +40,12 @@ type Test struct {
 	// (e.g., //garnet/bin/foo/tests:foo_tests).
 	Name string `json:"name"`
 
-	// InstallPath is the path to the test on the target OS.
-	InstallPath string `json:"install_path"`
+	// PackageURL is the fuchsia package URL for this test. It is only set for
+	// tests targeting Fuchsia.
+	PackageURL string `json:"package_url,omitempty"`
+
+	// Path is the path to the test on the target OS.
+	Path string `json:"path"`
 
 	// OS is the operating system in which this test must be executed.
 	OS OS `json:"os"`
@@ -63,7 +67,7 @@ func (spec TestSpec) validateAgainst(platforms []DimensionSet) error {
 	if spec.Test.Name == "" {
 		return fmt.Errorf("A test spec's test must have a non-empty name")
 	}
-	if len(spec.Command) == 0 && spec.Test.InstallPath == "" {
+	if len(spec.Command) == 0 && spec.Test.Path == "" {
 		return fmt.Errorf("A test spec's test must a non-empty install path or non-empty command")
 	}
 	if spec.Test.OS == "" {

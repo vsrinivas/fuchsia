@@ -77,7 +77,7 @@ def main():
       test = entry['test']
       if test['os'] == 'fuchsia':
         continue
-      path = test['install_path']
+      path = test['path']
       name = os.path.basename(path)
       if name not in args.names:
         continue
@@ -90,11 +90,11 @@ def main():
           '\n'.join(unmatched))
       return 1
 
-    # test['install_path'] gives the path to the test relative build directory,
+    # test['path'] gives the path to the test relative build directory,
     # which is a valid ninja target.
     ret = subprocess.call(
         [args.ninja, '-C', args.build_dir] +
-        [test['install_path'] for test in tests])
+        [test['path'] for test in tests])
     if ret:
       error_print('failed to compile tests')
       return 1
@@ -106,7 +106,7 @@ def main():
       if 'command' in test and len(test['command']) > 1:
         location, extra_args = test['command'][0], test['command'][1:]
       else:
-        location, extra_args = test['install_path'], []
+        location, extra_args = test['path'], []
       ret = subprocess.call(
           [os.path.join(args.build_dir, location)] + extra_args + args.test_args)
       if ret != 0:

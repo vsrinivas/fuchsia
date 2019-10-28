@@ -15,12 +15,16 @@ import("//build/testing/platforms.gni")
 #   name (required)
 #     [string] The test's target name.
 #
-#   install_path (required)
+#   path (required)
 #     [string]: The path on the target OS at which the test will be installed.
 #
+#   target (optional)
+#     [string]: The test's target name.
+#     TODO(olivernewman): make this required and change the form of "name".
+#
 #   command (optional)
-#     [list of strings]: Command to invoke to run the test. If unset, install_path
-#     will be invoked upon execution.
+#     [list of strings]: Command to invoke to run the test. If unset, path will be
+#     invoked upon execution.
 #
 #   package_url (optional)
 #     [string] In the case of a fuchsia test, this describes the packaged test
@@ -48,8 +52,11 @@ import("//build/testing/platforms.gni")
 #
 template("test_spec") {
   assert(defined(invoker.name), "name must be defined.")
-  assert(defined(invoker.install_path) || defined(invoker.command),
-         "install_path or command must be defined.")
+
+  # TODO(olivernewman): Stop accepting install_path
+  assert(defined(invoker.path) || defined(invoker.install_path) ||
+             defined(invoker.command),
+         "path or command must be defined.")
   forward_variables_from(invoker,
                          [
                            "environments",
@@ -233,13 +240,29 @@ template("test_spec") {
       forward_variables_from(invoker,
                              [
                                "command",
-                               "install_path",
+                               "path",
                                "package_url",
                              ])
       name = get_label_info(":${invoker.name}", "label_no_toolchain")
-      if ((defined(install_path) && is_linux) || is_mac) {
-        # Trim leading //.
-        install_path = rebase_path(install_path, root_build_dir)
+
+      # TODO(olivernewman): Make target a required param and always use it
+      # instead of name for setting the label.
+      if (defined(invoker.target)) {
+        label = get_label_info(":${invoker.target}", "label_with_toolchain")
+      } else {
+        label = get_label_info(":${invoker.name}", "label_with_toolchain")
+      }
+
+      # TODO(olivernewman): Get rid of install_path entirely after topaz passes
+      # path instead.
+      if (defined(invoker.install_path)) {
+        path = invoker.install_path
+      }
+      if (defined(path)) {
+        if (is_linux || is_mac) {
+          # Trim leading //.
+          path = rebase_path(path, root_build_dir)
+        }
       }
       os = current_os
       cpu = current_cpu
@@ -253,7 +276,7 @@ template("test_spec") {
 
   group(target_name) {
     metadata = {
-      test_spec = [ test_spec ]
+      tests = [ test_spec ]
     }
     deps = target_name_deps
   }

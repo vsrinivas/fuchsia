@@ -652,8 +652,8 @@ template("library") {
 
       zx_manifest_file = "$target_gen_dir/$target_name.zx_manifest.txt"
       library_file = "$target_out_dir/lib${_library_name}.so"
-      manifest_line = "${install_path}=" +
-          rebase_path(library_file, root_build_dir)
+      manifest_line =
+          "${install_path}=" + rebase_path(library_file, root_build_dir)
       write_file(zx_manifest_file, [ manifest_line ], "list lines")
 
       shared_library("${_library_name}.shared") {
@@ -723,7 +723,8 @@ template("library") {
           # Make the manifest describing this library available to the build
           # API module for unification.
           # The manifest is not published for fuzzer variants.
-          if (string_replace(toolchain_label, "fuzzer", "") == toolchain_label) {
+          if (string_replace(toolchain_label, "fuzzer", "") ==
+              toolchain_label) {
             zx_manifest = [
               {
                 label = get_label_info(":$target_name", "label_with_toolchain")
@@ -735,7 +736,7 @@ template("library") {
                 path = rebase_path(zx_manifest_file, root_build_dir)
                 cpu = current_cpu
                 os = current_os
-              }
+              },
             ]
           }
         }
@@ -1535,7 +1536,7 @@ template("test") {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
         }
-        test_specs = [
+        tests = [
           {
             test = {
               name = get_label_info(":$target_name", "name")

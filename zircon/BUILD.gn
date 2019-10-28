@@ -293,7 +293,7 @@ build_api_module("packages") {
 #
 build_api_module("tests") {
   testonly = true
-  data_keys = [ "test_specs" ]
+  data_keys = [ "tests" ]
   deps = default_deps
 }
 
@@ -611,6 +611,7 @@ foreach(cpu, standard_fuchsia_cpus) {
       ":legacy-$cpu",
       "tools",
     ]
+
     # Add the dependencies of legacy-aux directly, as that target sets a barrier
     # that's not desirable here.
     deps += [

@@ -56,8 +56,9 @@ template("graphics_compute_test_rule") {
     test_spec(_test_spec_target_name) {
       testonly = true
       name = _target_name
-      install_path = "${root_out_dir}/${_target_name}"
-      command = [ rebase_path(install_path, root_build_dir) ]
+      target = _target_name
+      path = "${root_out_dir}/${_target_name}"
+      command = [ rebase_path(path, root_build_dir) ]
     }
 
     _deps += [ ":${_test_spec_target_name}" ]
