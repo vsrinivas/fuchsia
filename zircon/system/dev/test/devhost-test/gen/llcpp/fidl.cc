@@ -77,6 +77,7 @@ constexpr uint64_t kTestDevice_AddChildDevice_Ordinal = 0x1164758100000000lu;
 constexpr uint64_t kTestDevice_AddChildDevice_GenOrdinal = 0x556f822500b898eclu;
 extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
 
 }  // namespace
 template <>
@@ -158,7 +159,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->AddChildDevice(
-        Interface::AddChildDeviceCompleter::Sync(txn));
+          Interface::AddChildDeviceCompleter::Sync(txn));
       return true;
     }
     default: {

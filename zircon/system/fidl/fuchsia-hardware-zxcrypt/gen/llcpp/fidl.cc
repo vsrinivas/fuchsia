@@ -17,12 +17,14 @@ constexpr uint64_t kDeviceManager_Unseal_Ordinal = 0x7fb13b1100000000lu;
 constexpr uint64_t kDeviceManager_Unseal_GenOrdinal = 0x77a38acfb1b33056lu;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDeviceManager_Seal_Ordinal = 0x3ecfec3100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceManager_Seal_GenOrdinal = 0x6b740d57dd46950blu;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
 
 }  // namespace
 template <>
@@ -174,7 +176,7 @@ bool DeviceManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
       }
       auto message = result.message.message();
       impl->Unseal(std::move(message->key), std::move(message->slot),
-        Interface::UnsealCompleter::Sync(txn));
+          Interface::UnsealCompleter::Sync(txn));
       return true;
     }
     case kDeviceManager_Seal_Ordinal:
@@ -186,7 +188,7 @@ bool DeviceManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         return true;
       }
       impl->Seal(
-        Interface::SealCompleter::Sync(txn));
+          Interface::SealCompleter::Sync(txn));
       return true;
     }
     default: {

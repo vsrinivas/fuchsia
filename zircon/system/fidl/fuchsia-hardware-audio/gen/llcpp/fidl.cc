@@ -17,6 +17,7 @@ constexpr uint64_t kDevice_GetChannel_Ordinal = 0x6e14495500000000lu;
 constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x51e1b0efe5849972lu;
 extern "C" const fidl_type_t fuchsia_hardware_audio_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_audio_DeviceGetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_DeviceGetChannelResponseTable;
 
 }  // namespace
 template <>
@@ -98,7 +99,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetChannel(
-        Interface::GetChannelCompleter::Sync(txn));
+          Interface::GetChannelCompleter::Sync(txn));
       return true;
     }
     default: {

@@ -61,13 +61,18 @@ struct Config;
 class Device;
 
 extern "C" const fidl_type_t fuchsia_hardware_serial_ConfigTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_ConfigTable;
 
 struct Config {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_ConfigTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_ConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::hardware::serial::CharacterWidth character_width = {};
 
@@ -81,9 +86,13 @@ struct Config {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceGetClassRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceGetClassResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 class Device final {
   Device() = delete;
@@ -95,9 +104,12 @@ class Device final {
     ::llcpp::fuchsia::hardware::serial::Class device_class;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_DeviceGetClassResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_DeviceGetClassResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -111,9 +123,12 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_DeviceSetConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_DeviceSetConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -125,9 +140,12 @@ class Device final {
     ::llcpp::fuchsia::hardware::serial::Config config;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_DeviceSetConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_DeviceSetConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

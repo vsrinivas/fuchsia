@@ -17,6 +17,7 @@ constexpr uint64_t kDevice_GetChannel_Ordinal = 0x1ff7011500000000lu;
 constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x2add7b2741b2d65dlu;
 extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_virtioconsole_DeviceGetChannelResponseTable;
 
 }  // namespace
 
@@ -101,7 +102,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->GetChannel(std::move(message->req),
-        Interface::GetChannelCompleter::Sync(txn));
+          Interface::GetChannelCompleter::Sync(txn));
       return true;
     }
     default: {

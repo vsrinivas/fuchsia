@@ -17,12 +17,14 @@ constexpr uint64_t kProvider_OpenVirtconController_Ordinal = 0x7522c7b300000000l
 constexpr uint64_t kProvider_OpenVirtconController_GenOrdinal = 0x7163a23d838e6fb6lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenVirtconControllerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProvider_OpenController_Ordinal = 0x69d407d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProvider_OpenController_GenOrdinal = 0x54b5aa00a47ab0b3lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenControllerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenControllerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenControllerResponseTable;
 
 }  // namespace
 template <>
@@ -172,7 +174,7 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       }
       auto message = result.message.message();
       impl->OpenVirtconController(std::move(message->device), std::move(message->controller),
-        Interface::OpenVirtconControllerCompleter::Sync(txn));
+          Interface::OpenVirtconControllerCompleter::Sync(txn));
       return true;
     }
     case kProvider_OpenController_Ordinal:
@@ -185,7 +187,7 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       }
       auto message = result.message.message();
       impl->OpenController(std::move(message->device), std::move(message->controller),
-        Interface::OpenControllerCompleter::Sync(txn));
+          Interface::OpenControllerCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -476,198 +478,231 @@ constexpr uint64_t kController_DisplaysChanged_Ordinal = 0x30f5452200000000lu;
 constexpr uint64_t kController_DisplaysChanged_GenOrdinal = 0x848efe931ddb1c6lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportVmoImage_Ordinal = 0x420a4b7000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportVmoImage_GenOrdinal = 0x7cab4d73f9f1893clu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImage_Ordinal = 0x18d6e53b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImage_GenOrdinal = 0x1be9cd6562de6db5lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseImage_Ordinal = 0x3abc075800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseImage_GenOrdinal = 0x63a7d0a6b107bd11lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportEvent_Ordinal = 0x7d2447aa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportEvent_GenOrdinal = 0x402289f13944e6d7lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseEvent_Ordinal = 0x4379630400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseEvent_GenOrdinal = 0x657e4eab9a8e23a1lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseEventRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_CreateLayer_Ordinal = 0x7f56932400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_CreateLayer_GenOrdinal = 0x468d06aadd139295lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCreateLayerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_DestroyLayer_Ordinal = 0x2abc04b100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_DestroyLayer_GenOrdinal = 0x6b42dce004859fe5lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDestroyLayerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDestroyLayerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayMode_Ordinal = 0x584c92ab00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayMode_GenOrdinal = 0x55a035e7a881c48dlu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayModeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayModeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayColorConversion_Ordinal = 0x71cb370500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayColorConversion_GenOrdinal = 0x3d3548d04caf79b7lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayColorConversionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayLayers_Ordinal = 0x9bebf8600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayLayers_GenOrdinal = 0x47e92da1f9702675lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayLayersResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryConfig_Ordinal = 0x3673de6000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryConfig_GenOrdinal = 0x10bc9fc5d61f5c94lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryPosition_Ordinal = 0x6bd4fbc600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryPosition_GenOrdinal = 0x735faf29ee889cdclu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryPositionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryAlpha_Ordinal = 0x5a79ec9200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryAlpha_GenOrdinal = 0x1b81604b1a9b6576lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorConfig_Ordinal = 0x74020b200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorConfig_GenOrdinal = 0x2fddfd240f9e7764lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorPosition_Ordinal = 0x2f36e7b000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorPosition_GenOrdinal = 0x147c1526ac3ad9c5lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorPositionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorPositionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerColorConfig_Ordinal = 0x21cc7c8800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerColorConfig_GenOrdinal = 0x19cb6da071d515calu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerColorConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerImage_Ordinal = 0x1ecab8800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerImage_GenOrdinal = 0x7c71f66253182fb9lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_CheckConfig_Ordinal = 0x160ce58b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_CheckConfig_GenOrdinal = 0x586ca589eaf66e11lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCheckConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ApplyConfig_Ordinal = 0x572081a200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ApplyConfig_GenOrdinal = 0x65b30a10604984f7lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerApplyConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerApplyConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerApplyConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_EnableVsync_Ordinal = 0x2be2db1300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_EnableVsync_GenOrdinal = 0x5d517bdbc05d434elu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerEnableVsyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Vsync_Ordinal = 0x71fcce9000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Vsync_GenOrdinal = 0x5813c85bf6f9d5f5lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerVsyncEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetVirtconMode_Ordinal = 0x49c4520700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetVirtconMode_GenOrdinal = 0x7c8d1b102e72182clu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetVirtconModeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ClientOwnershipChange_Ordinal = 0x4360b92e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ClientOwnershipChange_GenOrdinal = 0x41b1af32fb2f7362lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ComputeLinearImageStride_Ordinal = 0x6ac90cda00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ComputeLinearImageStride_GenOrdinal = 0x1ed33802ba2d797clu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_AllocateVmo_Ordinal = 0x6fb5bafa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_AllocateVmo_GenOrdinal = 0x589658048f8d398blu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportBufferCollection_Ordinal = 0x605b9d0d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportBufferCollection_GenOrdinal = 0x1cdf9cc2e60832d1lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseBufferCollection_Ordinal = 0x52f8b58400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseBufferCollection_GenOrdinal = 0x4527c480391b6c83lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseBufferCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseBufferCollectionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetBufferCollectionConstraints_Ordinal = 0x78b51dd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetBufferCollectionConstraints_GenOrdinal = 0x3b78d75d2d21b451lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetSingleBufferFramebuffer_Ordinal = 0x2ecce54500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetSingleBufferFramebuffer_GenOrdinal = 0x65cd908c2c03b49dlu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImageForCapture_Ordinal = 0x3150d1a200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImageForCapture_GenOrdinal = 0x2a595fbc2df7f9eblu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_StartCapture_Ordinal = 0x5436d93300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_StartCapture_GenOrdinal = 0x7d4ccf55f0259266lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerStartCaptureResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseCapture_Ordinal = 0x7f1785f000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseCapture_GenOrdinal = 0x3c5dbe1d114a5752lu;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
 
 }  // namespace
 template <>
@@ -2599,8 +2634,7 @@ zx_status_t Controller::SyncClient::HandleEvents(Controller::EventHandlers handl
   return Controller::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Controller::Call::HandleEvents(zx::unowned_channel client_end,
-                                            Controller::EventHandlers handlers) {
+zx_status_t Controller::Call::HandleEvents(zx::unowned_channel client_end, Controller::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -2636,8 +2670,8 @@ zx_status_t Controller::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  std::unique_ptr<uint8_t[]> read_bytes_unique_ptr(new uint8_t[kReadAllocSize]);
-  uint8_t* read_bytes = read_bytes_unique_ptr.get();
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -2659,10 +2693,10 @@ zx_status_t Controller::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -2720,7 +2754,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ImportVmoImage(std::move(message->image_config), std::move(message->vmo), std::move(message->offset),
-        Interface::ImportVmoImageCompleter::Sync(txn));
+          Interface::ImportVmoImageCompleter::Sync(txn));
       return true;
     }
     case kController_ImportImage_Ordinal:
@@ -2733,7 +2767,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ImportImage(std::move(message->image_config), std::move(message->collection_id), std::move(message->index),
-        Interface::ImportImageCompleter::Sync(txn));
+          Interface::ImportImageCompleter::Sync(txn));
       return true;
     }
     case kController_ReleaseImage_Ordinal:
@@ -2746,7 +2780,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ReleaseImage(std::move(message->image_id),
-        Interface::ReleaseImageCompleter::Sync(txn));
+          Interface::ReleaseImageCompleter::Sync(txn));
       return true;
     }
     case kController_ImportEvent_Ordinal:
@@ -2759,7 +2793,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ImportEvent(std::move(message->event), std::move(message->id),
-        Interface::ImportEventCompleter::Sync(txn));
+          Interface::ImportEventCompleter::Sync(txn));
       return true;
     }
     case kController_ReleaseEvent_Ordinal:
@@ -2772,7 +2806,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ReleaseEvent(std::move(message->id),
-        Interface::ReleaseEventCompleter::Sync(txn));
+          Interface::ReleaseEventCompleter::Sync(txn));
       return true;
     }
     case kController_CreateLayer_Ordinal:
@@ -2784,7 +2818,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->CreateLayer(
-        Interface::CreateLayerCompleter::Sync(txn));
+          Interface::CreateLayerCompleter::Sync(txn));
       return true;
     }
     case kController_DestroyLayer_Ordinal:
@@ -2797,7 +2831,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->DestroyLayer(std::move(message->layer_id),
-        Interface::DestroyLayerCompleter::Sync(txn));
+          Interface::DestroyLayerCompleter::Sync(txn));
       return true;
     }
     case kController_SetDisplayMode_Ordinal:
@@ -2810,7 +2844,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetDisplayMode(std::move(message->display_id), std::move(message->mode),
-        Interface::SetDisplayModeCompleter::Sync(txn));
+          Interface::SetDisplayModeCompleter::Sync(txn));
       return true;
     }
     case kController_SetDisplayColorConversion_Ordinal:
@@ -2823,7 +2857,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetDisplayColorConversion(std::move(message->display_id), std::move(message->preoffsets), std::move(message->coefficients), std::move(message->postoffsets),
-        Interface::SetDisplayColorConversionCompleter::Sync(txn));
+          Interface::SetDisplayColorConversionCompleter::Sync(txn));
       return true;
     }
     case kController_SetDisplayLayers_Ordinal:
@@ -2836,7 +2870,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetDisplayLayers(std::move(message->display_id), std::move(message->layer_ids),
-        Interface::SetDisplayLayersCompleter::Sync(txn));
+          Interface::SetDisplayLayersCompleter::Sync(txn));
       return true;
     }
     case kController_SetLayerPrimaryConfig_Ordinal:
@@ -2849,7 +2883,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetLayerPrimaryConfig(std::move(message->layer_id), std::move(message->image_config),
-        Interface::SetLayerPrimaryConfigCompleter::Sync(txn));
+          Interface::SetLayerPrimaryConfigCompleter::Sync(txn));
       return true;
     }
     case kController_SetLayerPrimaryPosition_Ordinal:
@@ -2862,7 +2896,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetLayerPrimaryPosition(std::move(message->layer_id), std::move(message->transform), std::move(message->src_frame), std::move(message->dest_frame),
-        Interface::SetLayerPrimaryPositionCompleter::Sync(txn));
+          Interface::SetLayerPrimaryPositionCompleter::Sync(txn));
       return true;
     }
     case kController_SetLayerPrimaryAlpha_Ordinal:
@@ -2875,7 +2909,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetLayerPrimaryAlpha(std::move(message->layer_id), std::move(message->mode), std::move(message->val),
-        Interface::SetLayerPrimaryAlphaCompleter::Sync(txn));
+          Interface::SetLayerPrimaryAlphaCompleter::Sync(txn));
       return true;
     }
     case kController_SetLayerCursorConfig_Ordinal:
@@ -2888,7 +2922,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetLayerCursorConfig(std::move(message->layer_id), std::move(message->image_config),
-        Interface::SetLayerCursorConfigCompleter::Sync(txn));
+          Interface::SetLayerCursorConfigCompleter::Sync(txn));
       return true;
     }
     case kController_SetLayerCursorPosition_Ordinal:
@@ -2901,7 +2935,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetLayerCursorPosition(std::move(message->layer_id), std::move(message->x), std::move(message->y),
-        Interface::SetLayerCursorPositionCompleter::Sync(txn));
+          Interface::SetLayerCursorPositionCompleter::Sync(txn));
       return true;
     }
     case kController_SetLayerColorConfig_Ordinal:
@@ -2914,7 +2948,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetLayerColorConfig(std::move(message->layer_id), std::move(message->pixel_format), std::move(message->color_bytes),
-        Interface::SetLayerColorConfigCompleter::Sync(txn));
+          Interface::SetLayerColorConfigCompleter::Sync(txn));
       return true;
     }
     case kController_SetLayerImage_Ordinal:
@@ -2927,7 +2961,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetLayerImage(std::move(message->layer_id), std::move(message->image_id), std::move(message->wait_event_id), std::move(message->signal_event_id),
-        Interface::SetLayerImageCompleter::Sync(txn));
+          Interface::SetLayerImageCompleter::Sync(txn));
       return true;
     }
     case kController_CheckConfig_Ordinal:
@@ -2940,7 +2974,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->CheckConfig(std::move(message->discard),
-        Interface::CheckConfigCompleter::Sync(txn));
+          Interface::CheckConfigCompleter::Sync(txn));
       return true;
     }
     case kController_ApplyConfig_Ordinal:
@@ -2952,7 +2986,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->ApplyConfig(
-        Interface::ApplyConfigCompleter::Sync(txn));
+          Interface::ApplyConfigCompleter::Sync(txn));
       return true;
     }
     case kController_EnableVsync_Ordinal:
@@ -2965,7 +2999,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->EnableVsync(std::move(message->enable),
-        Interface::EnableVsyncCompleter::Sync(txn));
+          Interface::EnableVsyncCompleter::Sync(txn));
       return true;
     }
     case kController_SetVirtconMode_Ordinal:
@@ -2978,7 +3012,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetVirtconMode(std::move(message->mode),
-        Interface::SetVirtconModeCompleter::Sync(txn));
+          Interface::SetVirtconModeCompleter::Sync(txn));
       return true;
     }
     case kController_ComputeLinearImageStride_Ordinal:
@@ -2991,7 +3025,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ComputeLinearImageStride(std::move(message->width), std::move(message->pixel_format),
-        Interface::ComputeLinearImageStrideCompleter::Sync(txn));
+          Interface::ComputeLinearImageStrideCompleter::Sync(txn));
       return true;
     }
     case kController_AllocateVmo_Ordinal:
@@ -3004,7 +3038,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->AllocateVmo(std::move(message->size),
-        Interface::AllocateVmoCompleter::Sync(txn));
+          Interface::AllocateVmoCompleter::Sync(txn));
       return true;
     }
     case kController_ImportBufferCollection_Ordinal:
@@ -3017,7 +3051,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ImportBufferCollection(std::move(message->collection_id), std::move(message->collection_token),
-        Interface::ImportBufferCollectionCompleter::Sync(txn));
+          Interface::ImportBufferCollectionCompleter::Sync(txn));
       return true;
     }
     case kController_ReleaseBufferCollection_Ordinal:
@@ -3030,7 +3064,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ReleaseBufferCollection(std::move(message->collection_id),
-        Interface::ReleaseBufferCollectionCompleter::Sync(txn));
+          Interface::ReleaseBufferCollectionCompleter::Sync(txn));
       return true;
     }
     case kController_SetBufferCollectionConstraints_Ordinal:
@@ -3043,7 +3077,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->SetBufferCollectionConstraints(std::move(message->collection_id), std::move(message->config),
-        Interface::SetBufferCollectionConstraintsCompleter::Sync(txn));
+          Interface::SetBufferCollectionConstraintsCompleter::Sync(txn));
       return true;
     }
     case kController_GetSingleBufferFramebuffer_Ordinal:
@@ -3055,7 +3089,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->GetSingleBufferFramebuffer(
-        Interface::GetSingleBufferFramebufferCompleter::Sync(txn));
+          Interface::GetSingleBufferFramebufferCompleter::Sync(txn));
       return true;
     }
     case kController_ImportImageForCapture_Ordinal:
@@ -3068,7 +3102,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ImportImageForCapture(std::move(message->image_config), std::move(message->collection_id), std::move(message->index),
-        Interface::ImportImageForCaptureCompleter::Sync(txn));
+          Interface::ImportImageForCaptureCompleter::Sync(txn));
       return true;
     }
     case kController_StartCapture_Ordinal:
@@ -3081,7 +3115,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->StartCapture(std::move(message->signal_event_id), std::move(message->image_id),
-        Interface::StartCaptureCompleter::Sync(txn));
+          Interface::StartCaptureCompleter::Sync(txn));
       return true;
     }
     case kController_ReleaseCapture_Ordinal:
@@ -3094,7 +3128,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ReleaseCapture(std::move(message->image_id),
-        Interface::ReleaseCaptureCompleter::Sync(txn));
+          Interface::ReleaseCaptureCompleter::Sync(txn));
       return true;
     }
     default: {

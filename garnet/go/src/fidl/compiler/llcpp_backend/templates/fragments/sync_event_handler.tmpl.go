@@ -26,8 +26,7 @@ zx_status_t {{ .Name }}::SyncClient::HandleEvents({{ .Name }}::EventHandlers han
 {{- end }}
 
 {{- define "StaticCallSyncEventHandlerMethodDefinition" }}
-zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end,
-                                            {{ .Name }}::EventHandlers handlers) {
+zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end, {{ .Name }}::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -40,6 +39,11 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end,
     if (::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>();
     }
+      {{- if .ResponseContainsUnion }}
+    if (::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
+    }
+      {{- end }}
     {{- end }}
     return x;
   })();
@@ -55,12 +59,8 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  {{- if .StackAllocEventBuffer }}
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
-  {{- else }}
-  std::unique_ptr<uint8_t[]> read_bytes_unique_ptr(new uint8_t[kReadAllocSize]);
-  uint8_t* read_bytes = read_bytes_unique_ptr.get();
-  {{- end }}
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -82,10 +82,10 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -95,6 +95,26 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end,
     case {{ .Name }}:
       {{- end }}
     {
+      {{- if .ResponseContainsUnion }}
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      {{ .Name }}Response::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg.bytes),
+                                                      msg.num_bytes,
+                                                      transformer_dest,
+                                                      &msg.num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          zx_handle_close_many(msg.handles, msg.num_handles);
+          return ZX_ERR_INVALID_ARGS;
+        }
+        msg.bytes = transformer_dest;
+      }
+      {{- end }}
       auto result = ::fidl::DecodeAs<{{ .Name }}Response>(&msg);
       if (result.status != ZX_OK) {
         return result.status;

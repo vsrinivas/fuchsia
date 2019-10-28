@@ -16,6 +16,7 @@ constexpr uint64_t kDirectoryWatcher_OnEvent_Ordinal = 0x208bcc9d00000000lu;
 constexpr uint64_t kDirectoryWatcher_OnEvent_GenOrdinal = 0x3937a088fe53412alu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryWatcherOnEventResponseTable;
 
 }  // namespace
 
@@ -105,7 +106,7 @@ bool DirectoryWatcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
       }
       auto message = result.message.message();
       impl->OnEvent(std::move(message->events),
-        Interface::OnEventCompleter::Sync(txn));
+          Interface::OnEventCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -295,54 +296,63 @@ constexpr uint64_t kNode_Clone_Ordinal = 0x17fe6a4c00000000lu;
 constexpr uint64_t kNode_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_io_NodeCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
 extern "C" const fidl_type_t fuchsia_io_NodeCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_Describe_GenOrdinal = 0xffcec215078dea0lu;
 extern "C" const fidl_type_t fuchsia_io_NodeDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
 extern "C" const fidl_type_t fuchsia_io_NodeOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_Sync_GenOrdinal = 0x189d88326c18b519lu;
 extern "C" const fidl_type_t fuchsia_io_NodeSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNode_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNode_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeNodeSetFlagsResponseTable;
 
 }  // namespace
 
@@ -845,8 +855,7 @@ zx_status_t Node::SyncClient::HandleEvents(Node::EventHandlers handlers) {
   return Node::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end,
-                                            Node::EventHandlers handlers) {
+zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end, Node::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -857,6 +866,9 @@ zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end,
     uint32_t x = 0;
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+    }
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
     }
     return x;
   })();
@@ -870,7 +882,8 @@ zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -892,16 +905,34 @@ zx_status_t Node::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kNode_OnOpen_Ordinal:
     case kNode_OnOpen_GenOrdinal:
     {
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      OnOpenResponse::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg.bytes),
+                                                      msg.num_bytes,
+                                                      transformer_dest,
+                                                      &msg.num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          zx_handle_close_many(msg.handles, msg.num_handles);
+          return ZX_ERR_INVALID_ARGS;
+        }
+        msg.bytes = transformer_dest;
+      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -933,7 +964,7 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->Clone(std::move(message->flags), std::move(message->object),
-        Interface::CloneCompleter::Sync(txn));
+          Interface::CloneCompleter::Sync(txn));
       return true;
     }
     case kNode_Close_Ordinal:
@@ -945,7 +976,7 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->Close(
-        Interface::CloseCompleter::Sync(txn));
+          Interface::CloseCompleter::Sync(txn));
       return true;
     }
     case kNode_Describe_Ordinal:
@@ -957,7 +988,7 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->Describe(
-        Interface::DescribeCompleter::Sync(txn));
+          Interface::DescribeCompleter::Sync(txn));
       return true;
     }
     case kNode_Sync_Ordinal:
@@ -969,7 +1000,7 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->Sync(
-        Interface::SyncCompleter::Sync(txn));
+          Interface::SyncCompleter::Sync(txn));
       return true;
     }
     case kNode_GetAttr_Ordinal:
@@ -981,7 +1012,7 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->GetAttr(
-        Interface::GetAttrCompleter::Sync(txn));
+          Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
     case kNode_SetAttr_Ordinal:
@@ -994,7 +1025,7 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->SetAttr(std::move(message->flags), std::move(message->attributes),
-        Interface::SetAttrCompleter::Sync(txn));
+          Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
     case kNode_NodeGetFlags_Ordinal:
@@ -1006,7 +1037,7 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->NodeGetFlags(
-        Interface::NodeGetFlagsCompleter::Sync(txn));
+          Interface::NodeGetFlagsCompleter::Sync(txn));
       return true;
     }
     case kNode_NodeSetFlags_Ordinal:
@@ -1019,7 +1050,7 @@ bool Node::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->NodeSetFlags(std::move(message->flags),
-        Interface::NodeSetFlagsCompleter::Sync(txn));
+          Interface::NodeSetFlagsCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -1404,108 +1435,126 @@ constexpr uint64_t kFile_Clone_Ordinal = 0x17fe6a4c00000000lu;
 constexpr uint64_t kFile_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_io_FileCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
 extern "C" const fidl_type_t fuchsia_io_FileCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Describe_GenOrdinal = 0xffcec215078dea0lu;
 extern "C" const fidl_type_t fuchsia_io_FileDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
 extern "C" const fidl_type_t fuchsia_io_FileOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Sync_GenOrdinal = 0x189d88326c18b519lu;
 extern "C" const fidl_type_t fuchsia_io_FileSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
 extern "C" const fidl_type_t fuchsia_io_FileNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
 extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Read_Ordinal = 0x25f7418400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Read_GenOrdinal = 0x29b2b7074c95208clu;
 extern "C" const fidl_type_t fuchsia_io_FileReadRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileReadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_ReadAt_Ordinal = 0x7c724dc400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_ReadAt_GenOrdinal = 0x6527ee3fbc9c5749lu;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileReadAtResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Write_Ordinal = 0x512e7a000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Write_GenOrdinal = 0x3b6432f57914225blu;
 extern "C" const fidl_type_t fuchsia_io_FileWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileWriteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_WriteAt_Ordinal = 0x3e5522e500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_WriteAt_GenOrdinal = 0x4b29e1582ab379e4lu;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileWriteAtResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Seek_Ordinal = 0x782a774500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Seek_GenOrdinal = 0x324968e9b8a0e394lu;
 extern "C" const fidl_type_t fuchsia_io_FileSeekRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSeekResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSeekResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_Truncate_Ordinal = 0x42ab3a3a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_Truncate_GenOrdinal = 0x5ec8f337359a2ddblu;
 extern "C" const fidl_type_t fuchsia_io_FileTruncateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileTruncateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileTruncateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetFlags_Ordinal = 0x6416a3f600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetFlags_GenOrdinal = 0x200be82ca523ab96lu;
 extern "C" const fidl_type_t fuchsia_io_FileGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_SetFlags_Ordinal = 0x3f23cc7600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_SetFlags_GenOrdinal = 0x713f375258671141lu;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetBuffer_Ordinal = 0x74c3097300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFile_GetBuffer_GenOrdinal = 0x4b93b8486666d951lu;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetBufferResponseTable;
 
 }  // namespace
 
@@ -2581,8 +2630,7 @@ zx_status_t File::SyncClient::HandleEvents(File::EventHandlers handlers) {
   return File::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end,
-                                            File::EventHandlers handlers) {
+zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end, File::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -2593,6 +2641,9 @@ zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end,
     uint32_t x = 0;
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+    }
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
     }
     return x;
   })();
@@ -2606,7 +2657,8 @@ zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -2628,16 +2680,34 @@ zx_status_t File::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kFile_OnOpen_Ordinal:
     case kFile_OnOpen_GenOrdinal:
     {
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      OnOpenResponse::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg.bytes),
+                                                      msg.num_bytes,
+                                                      transformer_dest,
+                                                      &msg.num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          zx_handle_close_many(msg.handles, msg.num_handles);
+          return ZX_ERR_INVALID_ARGS;
+        }
+        msg.bytes = transformer_dest;
+      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -2669,7 +2739,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->Clone(std::move(message->flags), std::move(message->object),
-        Interface::CloneCompleter::Sync(txn));
+          Interface::CloneCompleter::Sync(txn));
       return true;
     }
     case kFile_Close_Ordinal:
@@ -2681,7 +2751,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->Close(
-        Interface::CloseCompleter::Sync(txn));
+          Interface::CloseCompleter::Sync(txn));
       return true;
     }
     case kFile_Describe_Ordinal:
@@ -2693,7 +2763,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->Describe(
-        Interface::DescribeCompleter::Sync(txn));
+          Interface::DescribeCompleter::Sync(txn));
       return true;
     }
     case kFile_Sync_Ordinal:
@@ -2705,7 +2775,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->Sync(
-        Interface::SyncCompleter::Sync(txn));
+          Interface::SyncCompleter::Sync(txn));
       return true;
     }
     case kFile_GetAttr_Ordinal:
@@ -2717,7 +2787,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->GetAttr(
-        Interface::GetAttrCompleter::Sync(txn));
+          Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
     case kFile_SetAttr_Ordinal:
@@ -2730,7 +2800,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->SetAttr(std::move(message->flags), std::move(message->attributes),
-        Interface::SetAttrCompleter::Sync(txn));
+          Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
     case kFile_NodeGetFlags_Ordinal:
@@ -2742,7 +2812,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->NodeGetFlags(
-        Interface::NodeGetFlagsCompleter::Sync(txn));
+          Interface::NodeGetFlagsCompleter::Sync(txn));
       return true;
     }
     case kFile_NodeSetFlags_Ordinal:
@@ -2755,7 +2825,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->NodeSetFlags(std::move(message->flags),
-        Interface::NodeSetFlagsCompleter::Sync(txn));
+          Interface::NodeSetFlagsCompleter::Sync(txn));
       return true;
     }
     case kFile_Read_Ordinal:
@@ -2768,7 +2838,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->Read(std::move(message->count),
-        Interface::ReadCompleter::Sync(txn));
+          Interface::ReadCompleter::Sync(txn));
       return true;
     }
     case kFile_ReadAt_Ordinal:
@@ -2781,7 +2851,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->ReadAt(std::move(message->count), std::move(message->offset),
-        Interface::ReadAtCompleter::Sync(txn));
+          Interface::ReadAtCompleter::Sync(txn));
       return true;
     }
     case kFile_Write_Ordinal:
@@ -2794,7 +2864,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->Write(std::move(message->data),
-        Interface::WriteCompleter::Sync(txn));
+          Interface::WriteCompleter::Sync(txn));
       return true;
     }
     case kFile_WriteAt_Ordinal:
@@ -2807,7 +2877,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->WriteAt(std::move(message->data), std::move(message->offset),
-        Interface::WriteAtCompleter::Sync(txn));
+          Interface::WriteAtCompleter::Sync(txn));
       return true;
     }
     case kFile_Seek_Ordinal:
@@ -2820,7 +2890,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->Seek(std::move(message->offset), std::move(message->start),
-        Interface::SeekCompleter::Sync(txn));
+          Interface::SeekCompleter::Sync(txn));
       return true;
     }
     case kFile_Truncate_Ordinal:
@@ -2833,7 +2903,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->Truncate(std::move(message->length),
-        Interface::TruncateCompleter::Sync(txn));
+          Interface::TruncateCompleter::Sync(txn));
       return true;
     }
     case kFile_GetFlags_Ordinal:
@@ -2845,7 +2915,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
         return true;
       }
       impl->GetFlags(
-        Interface::GetFlagsCompleter::Sync(txn));
+          Interface::GetFlagsCompleter::Sync(txn));
       return true;
     }
     case kFile_SetFlags_Ordinal:
@@ -2858,7 +2928,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->SetFlags(std::move(message->flags),
-        Interface::SetFlagsCompleter::Sync(txn));
+          Interface::SetFlagsCompleter::Sync(txn));
       return true;
     }
     case kFile_GetBuffer_Ordinal:
@@ -2871,7 +2941,7 @@ bool File::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->GetBuffer(std::move(message->flags),
-        Interface::GetBufferCompleter::Sync(txn));
+          Interface::GetBufferCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -3686,102 +3756,119 @@ constexpr uint64_t kDirectory_Clone_Ordinal = 0x17fe6a4c00000000lu;
 constexpr uint64_t kDirectory_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Describe_GenOrdinal = 0xffcec215078dea0lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Sync_GenOrdinal = 0x189d88326c18b519lu;
 extern "C" const fidl_type_t fuchsia_io_DirectorySyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectorySyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectorySetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Open_GenOrdinal = 0x2c5044561d685ec0lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryOpenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Unlink_Ordinal = 0x2cbadb1900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Unlink_GenOrdinal = 0x5a0ff90760a8bc23lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryUnlinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_ReadDirents_Ordinal = 0x2ea53c2d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_ReadDirents_GenOrdinal = 0x3582806bf27faa0alu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryReadDirentsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Rewind_Ordinal = 0x7072fd8700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Rewind_GenOrdinal = 0x16b1202af0f34c71lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRewindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryRewindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_GetToken_Ordinal = 0x3217bced00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_GetToken_GenOrdinal = 0x26ae9d18763c8655lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryGetTokenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Rename_Ordinal = 0x4a94b0ac00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Rename_GenOrdinal = 0xa8e00a247f3c905lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryRenameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Link_Ordinal = 0x1b8a5e6400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Link_GenOrdinal = 0x740604c0c7c930e7lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryLinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryLinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryLinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Watch_Ordinal = 0x5ac28f3400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectory_Watch_GenOrdinal = 0x5717193a59d66d91lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatchResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryWatchResponseTable;
 
 }  // namespace
 
@@ -4817,8 +4904,7 @@ zx_status_t Directory::SyncClient::HandleEvents(Directory::EventHandlers handler
   return Directory::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end,
-                                            Directory::EventHandlers handlers) {
+zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end, Directory::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -4829,6 +4915,9 @@ zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end,
     uint32_t x = 0;
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+    }
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
     }
     return x;
   })();
@@ -4842,7 +4931,8 @@ zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -4864,16 +4954,34 @@ zx_status_t Directory::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kDirectory_OnOpen_Ordinal:
     case kDirectory_OnOpen_GenOrdinal:
     {
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      OnOpenResponse::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg.bytes),
+                                                      msg.num_bytes,
+                                                      transformer_dest,
+                                                      &msg.num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          zx_handle_close_many(msg.handles, msg.num_handles);
+          return ZX_ERR_INVALID_ARGS;
+        }
+        msg.bytes = transformer_dest;
+      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -4905,7 +5013,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->Clone(std::move(message->flags), std::move(message->object),
-        Interface::CloneCompleter::Sync(txn));
+          Interface::CloneCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Close_Ordinal:
@@ -4917,7 +5025,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       impl->Close(
-        Interface::CloseCompleter::Sync(txn));
+          Interface::CloseCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Describe_Ordinal:
@@ -4929,7 +5037,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       impl->Describe(
-        Interface::DescribeCompleter::Sync(txn));
+          Interface::DescribeCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Sync_Ordinal:
@@ -4941,7 +5049,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       impl->Sync(
-        Interface::SyncCompleter::Sync(txn));
+          Interface::SyncCompleter::Sync(txn));
       return true;
     }
     case kDirectory_GetAttr_Ordinal:
@@ -4953,7 +5061,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       impl->GetAttr(
-        Interface::GetAttrCompleter::Sync(txn));
+          Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
     case kDirectory_SetAttr_Ordinal:
@@ -4966,7 +5074,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->SetAttr(std::move(message->flags), std::move(message->attributes),
-        Interface::SetAttrCompleter::Sync(txn));
+          Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
     case kDirectory_NodeGetFlags_Ordinal:
@@ -4978,7 +5086,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       impl->NodeGetFlags(
-        Interface::NodeGetFlagsCompleter::Sync(txn));
+          Interface::NodeGetFlagsCompleter::Sync(txn));
       return true;
     }
     case kDirectory_NodeSetFlags_Ordinal:
@@ -4991,7 +5099,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->NodeSetFlags(std::move(message->flags),
-        Interface::NodeSetFlagsCompleter::Sync(txn));
+          Interface::NodeSetFlagsCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Open_Ordinal:
@@ -5004,7 +5112,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->Open(std::move(message->flags), std::move(message->mode), std::move(message->path), std::move(message->object),
-        Interface::OpenCompleter::Sync(txn));
+          Interface::OpenCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Unlink_Ordinal:
@@ -5017,7 +5125,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->Unlink(std::move(message->path),
-        Interface::UnlinkCompleter::Sync(txn));
+          Interface::UnlinkCompleter::Sync(txn));
       return true;
     }
     case kDirectory_ReadDirents_Ordinal:
@@ -5030,7 +5138,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->ReadDirents(std::move(message->max_bytes),
-        Interface::ReadDirentsCompleter::Sync(txn));
+          Interface::ReadDirentsCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Rewind_Ordinal:
@@ -5042,7 +5150,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       impl->Rewind(
-        Interface::RewindCompleter::Sync(txn));
+          Interface::RewindCompleter::Sync(txn));
       return true;
     }
     case kDirectory_GetToken_Ordinal:
@@ -5054,7 +5162,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       impl->GetToken(
-        Interface::GetTokenCompleter::Sync(txn));
+          Interface::GetTokenCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Rename_Ordinal:
@@ -5067,7 +5175,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->Rename(std::move(message->src), std::move(message->dst_parent_token), std::move(message->dst),
-        Interface::RenameCompleter::Sync(txn));
+          Interface::RenameCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Link_Ordinal:
@@ -5080,7 +5188,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->Link(std::move(message->src), std::move(message->dst_parent_token), std::move(message->dst),
-        Interface::LinkCompleter::Sync(txn));
+          Interface::LinkCompleter::Sync(txn));
       return true;
     }
     case kDirectory_Watch_Ordinal:
@@ -5093,7 +5201,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->Watch(std::move(message->mask), std::move(message->options), std::move(message->watcher),
-        Interface::WatchCompleter::Sync(txn));
+          Interface::WatchCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -5797,138 +5905,161 @@ constexpr uint64_t kDirectoryAdmin_Clone_Ordinal = 0x17fe6a4c00000000lu;
 constexpr uint64_t kDirectoryAdmin_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Describe_GenOrdinal = 0xffcec215078dea0lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Sync_GenOrdinal = 0x189d88326c18b519lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Open_GenOrdinal = 0x2c5044561d685ec0lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminOpenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Unlink_Ordinal = 0x2cbadb1900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Unlink_GenOrdinal = 0x5a0ff90760a8bc23lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnlinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_ReadDirents_Ordinal = 0x2ea53c2d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_ReadDirents_GenOrdinal = 0x3582806bf27faa0alu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminReadDirentsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Rewind_Ordinal = 0x7072fd8700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Rewind_GenOrdinal = 0x16b1202af0f34c71lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminRewindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetToken_Ordinal = 0x3217bced00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetToken_GenOrdinal = 0x26ae9d18763c8655lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetTokenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Rename_Ordinal = 0x4a94b0ac00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Rename_GenOrdinal = 0xa8e00a247f3c905lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminRenameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Link_Ordinal = 0x1b8a5e6400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Link_GenOrdinal = 0x740604c0c7c930e7lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminLinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminLinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminLinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Watch_Ordinal = 0x5ac28f3400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Watch_GenOrdinal = 0x5717193a59d66d91lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminWatchResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminWatchResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Mount_Ordinal = 0x7e5f12e600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Mount_GenOrdinal = 0xfa166d1522c27d0lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminMountResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_MountAndCreate_Ordinal = 0x3225f69100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_MountAndCreate_GenOrdinal = 0x7bc782242022b3b3lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Unmount_Ordinal = 0x2502275400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_Unmount_GenOrdinal = 0x7da45d654c35c9a4lu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnmountResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_UnmountNode_Ordinal = 0x16da38a700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_UnmountNode_GenOrdinal = 0x26b9d90ebe5f93dblu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_QueryFilesystem_Ordinal = 0x66298d9200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_QueryFilesystem_GenOrdinal = 0x4a879480f1d7875dlu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetDevicePath_Ordinal = 0x2ef70eb800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirectoryAdmin_GetDevicePath_GenOrdinal = 0x76f2e3c7331f815blu;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
 
 }  // namespace
 
@@ -7341,8 +7472,7 @@ zx_status_t DirectoryAdmin::SyncClient::HandleEvents(DirectoryAdmin::EventHandle
   return DirectoryAdmin::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end,
-                                            DirectoryAdmin::EventHandlers handlers) {
+zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end, DirectoryAdmin::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -7353,6 +7483,9 @@ zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end,
     uint32_t x = 0;
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+    }
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
     }
     return x;
   })();
@@ -7366,7 +7499,8 @@ zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -7388,16 +7522,34 @@ zx_status_t DirectoryAdmin::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kDirectoryAdmin_OnOpen_Ordinal:
     case kDirectoryAdmin_OnOpen_GenOrdinal:
     {
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      OnOpenResponse::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg.bytes),
+                                                      msg.num_bytes,
+                                                      transformer_dest,
+                                                      &msg.num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          zx_handle_close_many(msg.handles, msg.num_handles);
+          return ZX_ERR_INVALID_ARGS;
+        }
+        msg.bytes = transformer_dest;
+      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -7429,7 +7581,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->Clone(std::move(message->flags), std::move(message->object),
-        Interface::CloneCompleter::Sync(txn));
+          Interface::CloneCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Close_Ordinal:
@@ -7441,7 +7593,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->Close(
-        Interface::CloseCompleter::Sync(txn));
+          Interface::CloseCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Describe_Ordinal:
@@ -7453,7 +7605,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->Describe(
-        Interface::DescribeCompleter::Sync(txn));
+          Interface::DescribeCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Sync_Ordinal:
@@ -7465,7 +7617,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->Sync(
-        Interface::SyncCompleter::Sync(txn));
+          Interface::SyncCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_GetAttr_Ordinal:
@@ -7477,7 +7629,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->GetAttr(
-        Interface::GetAttrCompleter::Sync(txn));
+          Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_SetAttr_Ordinal:
@@ -7490,7 +7642,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->SetAttr(std::move(message->flags), std::move(message->attributes),
-        Interface::SetAttrCompleter::Sync(txn));
+          Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_NodeGetFlags_Ordinal:
@@ -7502,7 +7654,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->NodeGetFlags(
-        Interface::NodeGetFlagsCompleter::Sync(txn));
+          Interface::NodeGetFlagsCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_NodeSetFlags_Ordinal:
@@ -7515,7 +7667,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->NodeSetFlags(std::move(message->flags),
-        Interface::NodeSetFlagsCompleter::Sync(txn));
+          Interface::NodeSetFlagsCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Open_Ordinal:
@@ -7528,7 +7680,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->Open(std::move(message->flags), std::move(message->mode), std::move(message->path), std::move(message->object),
-        Interface::OpenCompleter::Sync(txn));
+          Interface::OpenCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Unlink_Ordinal:
@@ -7541,7 +7693,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->Unlink(std::move(message->path),
-        Interface::UnlinkCompleter::Sync(txn));
+          Interface::UnlinkCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_ReadDirents_Ordinal:
@@ -7554,7 +7706,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->ReadDirents(std::move(message->max_bytes),
-        Interface::ReadDirentsCompleter::Sync(txn));
+          Interface::ReadDirentsCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Rewind_Ordinal:
@@ -7566,7 +7718,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->Rewind(
-        Interface::RewindCompleter::Sync(txn));
+          Interface::RewindCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_GetToken_Ordinal:
@@ -7578,7 +7730,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->GetToken(
-        Interface::GetTokenCompleter::Sync(txn));
+          Interface::GetTokenCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Rename_Ordinal:
@@ -7591,7 +7743,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->Rename(std::move(message->src), std::move(message->dst_parent_token), std::move(message->dst),
-        Interface::RenameCompleter::Sync(txn));
+          Interface::RenameCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Link_Ordinal:
@@ -7604,7 +7756,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->Link(std::move(message->src), std::move(message->dst_parent_token), std::move(message->dst),
-        Interface::LinkCompleter::Sync(txn));
+          Interface::LinkCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Watch_Ordinal:
@@ -7617,7 +7769,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->Watch(std::move(message->mask), std::move(message->options), std::move(message->watcher),
-        Interface::WatchCompleter::Sync(txn));
+          Interface::WatchCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Mount_Ordinal:
@@ -7630,7 +7782,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->Mount(std::move(message->remote),
-        Interface::MountCompleter::Sync(txn));
+          Interface::MountCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_MountAndCreate_Ordinal:
@@ -7643,7 +7795,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
       }
       auto message = result.message.message();
       impl->MountAndCreate(std::move(message->remote), std::move(message->name), std::move(message->flags),
-        Interface::MountAndCreateCompleter::Sync(txn));
+          Interface::MountAndCreateCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_Unmount_Ordinal:
@@ -7655,7 +7807,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->Unmount(
-        Interface::UnmountCompleter::Sync(txn));
+          Interface::UnmountCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_UnmountNode_Ordinal:
@@ -7667,7 +7819,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->UnmountNode(
-        Interface::UnmountNodeCompleter::Sync(txn));
+          Interface::UnmountNodeCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_QueryFilesystem_Ordinal:
@@ -7679,7 +7831,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->QueryFilesystem(
-        Interface::QueryFilesystemCompleter::Sync(txn));
+          Interface::QueryFilesystemCompleter::Sync(txn));
       return true;
     }
     case kDirectoryAdmin_GetDevicePath_Ordinal:
@@ -7691,7 +7843,7 @@ bool DirectoryAdmin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->GetDevicePath(
-        Interface::GetDevicePathCompleter::Sync(txn));
+          Interface::GetDevicePathCompleter::Sync(txn));
       return true;
     }
     default: {

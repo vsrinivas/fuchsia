@@ -17,12 +17,14 @@ constexpr uint64_t kSimple_Echo_Ordinal = 0x7d54c5da00000000lu;
 constexpr uint64_t kSimple_Echo_GenOrdinal = 0x6a70325976d7cc68lu;
 extern "C" const fidl_type_t fidl_test_simple_SimpleEchoRequestTable;
 extern "C" const fidl_type_t fidl_test_simple_SimpleEchoResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_simple_SimpleEchoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSimple_Close_Ordinal = 0x48270ef100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSimple_Close_GenOrdinal = 0x49b6e6b3b17ebc97lu;
 extern "C" const fidl_type_t fidl_test_simple_SimpleCloseRequestTable;
 extern "C" const fidl_type_t fidl_test_simple_SimpleCloseResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable;
 
 }  // namespace
 template <>
@@ -167,7 +169,7 @@ bool Simple::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->Echo(std::move(message->request),
-        Interface::EchoCompleter::Sync(txn));
+          Interface::EchoCompleter::Sync(txn));
       return true;
     }
     case kSimple_Close_Ordinal:
@@ -179,7 +181,7 @@ bool Simple::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->Close(
-        Interface::CloseCompleter::Sync(txn));
+          Interface::CloseCompleter::Sync(txn));
       return true;
     }
     default: {

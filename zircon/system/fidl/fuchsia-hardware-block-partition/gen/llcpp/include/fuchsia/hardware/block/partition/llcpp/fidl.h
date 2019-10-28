@@ -32,23 +32,41 @@ class Partition;
 struct GUID;
 
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInfoRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetFifoRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionCloseFifoRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionCloseFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionRebindDeviceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionRebindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetTypeGuidRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetTypeGuidRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInstanceGuidRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetInstanceGuidRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetNameRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetNameRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
 
 class Partition final {
   Partition() = delete;
@@ -61,9 +79,12 @@ class Partition final {
     ::llcpp::fuchsia::hardware::block::BlockInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -78,9 +99,12 @@ class Partition final {
     ::llcpp::fuchsia::hardware::block::BlockStats* stats;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 480;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 480;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -92,9 +116,12 @@ class Partition final {
     bool clear;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -109,9 +136,12 @@ class Partition final {
     ::zx::fifo fifo;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -126,9 +156,12 @@ class Partition final {
     ::llcpp::fuchsia::hardware::block::VmoID* vmoid;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -140,9 +173,12 @@ class Partition final {
     ::zx::vmo vmo;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -156,9 +192,12 @@ class Partition final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -172,9 +211,12 @@ class Partition final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -189,9 +231,12 @@ class Partition final {
     ::llcpp::fuchsia::hardware::block::partition::GUID* guid;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -206,9 +251,12 @@ class Partition final {
     ::llcpp::fuchsia::hardware::block::partition::GUID* guid;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -223,9 +271,12 @@ class Partition final {
     ::fidl::StringView name;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 128;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 128;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -898,13 +949,18 @@ constexpr uint32_t NAME_LENGTH = 128u;
 constexpr uint32_t GUID_LENGTH = 16u;
 
 extern "C" const fidl_type_t fuchsia_hardware_block_partition_GUIDTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_GUIDTable;
 
 struct GUID {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_GUIDTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_GUIDTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<uint8_t, 16> value = {};
 };

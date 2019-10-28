@@ -33,13 +33,18 @@ enum class Capability : uint32_t {
 class Light;
 
 extern "C" const fidl_type_t fuchsia_hardware_light_RgbTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_RgbTable;
 
 struct Rgb {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_RgbTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_RgbTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 3;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 3;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t red = {};
 
@@ -51,19 +56,33 @@ struct Rgb {
 constexpr uint8_t LIGHT_NAME_LEN = 32u;
 
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetNameRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetNameResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetCountRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetCountResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightHasCapabilityRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightHasCapabilityResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetSimpleValueRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetSimpleValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetSimpleValueResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetSimpleValueResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightSetSimpleValueRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetSimpleValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightSetSimpleValueResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetSimpleValueResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetRgbValueRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetRgbValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightGetRgbValueResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetRgbValueResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightSetRgbValueRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetRgbValueRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_light_LightSetRgbValueResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetRgbValueResponseTable;
 
 class Light final {
   Light() = delete;
@@ -76,9 +95,12 @@ class Light final {
     ::fidl::StringView name;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -90,9 +112,12 @@ class Light final {
     uint32_t index;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetNameRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetNameRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -106,9 +131,12 @@ class Light final {
     uint32_t count;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetCountResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetCountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -123,9 +151,12 @@ class Light final {
     bool has;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightHasCapabilityResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightHasCapabilityResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -138,9 +169,12 @@ class Light final {
     ::llcpp::fuchsia::hardware::light::Capability capability;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightHasCapabilityRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightHasCapabilityRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -155,9 +189,12 @@ class Light final {
     uint8_t value;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetSimpleValueResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetSimpleValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -169,9 +206,12 @@ class Light final {
     uint32_t index;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetSimpleValueRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetSimpleValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -185,9 +225,12 @@ class Light final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetSimpleValueResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightSetSimpleValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -200,9 +243,12 @@ class Light final {
     uint8_t value;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetSimpleValueRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightSetSimpleValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -217,9 +263,12 @@ class Light final {
     ::llcpp::fuchsia::hardware::light::Rgb value;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetRgbValueResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetRgbValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -231,9 +280,12 @@ class Light final {
     uint32_t index;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetRgbValueRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetRgbValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -247,9 +299,12 @@ class Light final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetRgbValueResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightSetRgbValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -262,9 +317,12 @@ class Light final {
     ::llcpp::fuchsia::hardware::light::Rgb value;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetRgbValueRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightSetRgbValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

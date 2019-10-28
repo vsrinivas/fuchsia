@@ -6,6 +6,8 @@
 #include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -27,13 +29,18 @@ struct SimpleStruct;
 class TestInterface;
 
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleStructTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_SimpleStructTable;
 
 struct SimpleStruct {
   static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_SimpleStructTable;
+  static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_basictypes_SimpleStructTable;
   static constexpr uint32_t MaxNumHandles = 21;
   static constexpr uint32_t PrimarySize = 88;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 88;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   int32_t field = {};
 
@@ -43,6 +50,9 @@ struct SimpleStruct {
 };
 
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
+extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
 
 // Test interface implemented by both C and LLCPP
 class TestInterface final {
@@ -55,11 +65,15 @@ class TestInterface final {
     int32_t status;
     int32_t field;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -69,10 +83,14 @@ class TestInterface final {
     ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg;
 
     static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
     static constexpr uint32_t MaxNumHandles = 21;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 104;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = ConsumeSimpleStructResponse;

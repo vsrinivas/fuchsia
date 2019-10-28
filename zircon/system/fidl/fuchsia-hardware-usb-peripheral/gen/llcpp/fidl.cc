@@ -18,12 +18,14 @@ constexpr uint64_t kEvents_FunctionRegistered_Ordinal = 0x48ca785200000000lu;
 constexpr uint64_t kEvents_FunctionRegistered_GenOrdinal = 0x191278425c4a96e8lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kEvents_FunctionsCleared_Ordinal = 0x24319fec00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kEvents_FunctionsCleared_GenOrdinal = 0x6feab079055dacf1lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionsClearedResponseTable;
 
 }  // namespace
 template <>
@@ -128,7 +130,7 @@ bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->FunctionRegistered(
-        Interface::FunctionRegisteredCompleter::Sync(txn));
+          Interface::FunctionRegisteredCompleter::Sync(txn));
       return true;
     }
     case kEvents_FunctionsCleared_Ordinal:
@@ -140,7 +142,7 @@ bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->FunctionsCleared(
-        Interface::FunctionsClearedCompleter::Sync(txn));
+          Interface::FunctionsClearedCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -252,18 +254,21 @@ constexpr uint64_t kDevice_SetConfiguration_Ordinal = 0x7969547500000000lu;
 constexpr uint64_t kDevice_SetConfiguration_GenOrdinal = 0x464bafee91a3d6delu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ClearFunctions_Ordinal = 0x4e0ef30000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ClearFunctions_GenOrdinal = 0x67d9d8086dfab0cblu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateChangeListener_Ordinal = 0x4409dd700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateChangeListener_GenOrdinal = 0x5575723c4674d1d9lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerResponseTable;
 
 }  // namespace
 template <>
@@ -459,7 +464,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->SetConfiguration(std::move(message->device_desc), std::move(message->function_descriptors),
-        Interface::SetConfigurationCompleter::Sync(txn));
+          Interface::SetConfigurationCompleter::Sync(txn));
       return true;
     }
     case kDevice_ClearFunctions_Ordinal:
@@ -471,7 +476,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->ClearFunctions(
-        Interface::ClearFunctionsCompleter::Sync(txn));
+          Interface::ClearFunctionsCompleter::Sync(txn));
       return true;
     }
     case kDevice_SetStateChangeListener_Ordinal:
@@ -484,7 +489,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->SetStateChangeListener(std::move(message->listener),
-        Interface::SetStateChangeListenerCompleter::Sync(txn));
+          Interface::SetStateChangeListenerCompleter::Sync(txn));
       return true;
     }
     default: {

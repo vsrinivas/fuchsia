@@ -88,12 +88,14 @@ constexpr uint64_t kPayloadStream_RegisterVmo_Ordinal = 0x1044c8d900000000lu;
 constexpr uint64_t kPayloadStream_RegisterVmo_GenOrdinal = 0x388d7fe44bcb4clu;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_ReadData_Ordinal = 0x2c366e3600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_ReadData_GenOrdinal = 0x2ccde55366318afalu;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 }  // namespace
 template <>
@@ -238,7 +240,7 @@ bool PayloadStream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
       }
       auto message = result.message.message();
       impl->RegisterVmo(std::move(message->vmo),
-        Interface::RegisterVmoCompleter::Sync(txn));
+          Interface::RegisterVmoCompleter::Sync(txn));
       return true;
     }
     case kPayloadStream_ReadData_Ordinal:
@@ -250,7 +252,7 @@ bool PayloadStream::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         return true;
       }
       impl->ReadData(
-        Interface::ReadDataCompleter::Sync(txn));
+          Interface::ReadDataCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -600,84 +602,98 @@ constexpr uint64_t kPaver_InitializeAbr_Ordinal = 0x2233bf3300000000lu;
 constexpr uint64_t kPaver_InitializeAbr_GenOrdinal = 0x715dddabfb08c8e1lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverInitializeAbrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 0x43a5e49300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryActiveConfiguration_GenOrdinal = 0x5517c7c0119ded35lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryConfigurationStatus_Ordinal = 0x6659a95000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_QueryConfigurationStatus_GenOrdinal = 0x63a9170989a1efdflu;
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetConfigurationActive_Ordinal = 0x942de4b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetConfigurationActive_GenOrdinal = 0x66a45688107aa07flu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetConfigurationActiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetConfigurationUnbootable_Ordinal = 0x52cf3c8200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetConfigurationUnbootable_GenOrdinal = 0x623c8fe814130d4alu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetActiveConfigurationHealthy_Ordinal = 0x14c8092400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_SetActiveConfigurationHealthy_GenOrdinal = 0x6b86cae4d01d72c1lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_ReadAsset_Ordinal = 0x4b8e09f500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_ReadAsset_GenOrdinal = 0x30a69bd25198eb0lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverReadAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteAsset_Ordinal = 0x6a1ccf9c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteAsset_GenOrdinal = 0x68008e0190578208lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteVolumes_Ordinal = 0x71b3cf2600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteVolumes_GenOrdinal = 0x1dedf69f6f1f9ba7lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteVolumesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteBootloader_Ordinal = 0x4b6ba17600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteBootloader_GenOrdinal = 0x18099de6007b393lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteBootloaderResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteDataFile_Ordinal = 0x7b8433de00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WriteDataFile_GenOrdinal = 0x55cd644f9291ad5alu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteDataFileResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WipeVolume_Ordinal = 0x4d18bc6b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WipeVolume_GenOrdinal = 0x591bcb70b1ab9e73lu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumeRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverWipeVolumeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_InitializePartitionTables_Ordinal = 0x5b692a5000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_InitializePartitionTables_GenOrdinal = 0xee77c2ceea6edddlu;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverInitializePartitionTablesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WipePartitionTables_Ordinal = 0x5930adfc00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_WipePartitionTables_GenOrdinal = 0x327490536ea29d7clu;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesRequestTable;
 extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverWipePartitionTablesResponseTable;
 
 }  // namespace
 template <>
@@ -1576,7 +1592,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         return true;
       }
       impl->InitializeAbr(
-        Interface::InitializeAbrCompleter::Sync(txn));
+          Interface::InitializeAbrCompleter::Sync(txn));
       return true;
     }
     case kPaver_QueryActiveConfiguration_Ordinal:
@@ -1588,7 +1604,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         return true;
       }
       impl->QueryActiveConfiguration(
-        Interface::QueryActiveConfigurationCompleter::Sync(txn));
+          Interface::QueryActiveConfigurationCompleter::Sync(txn));
       return true;
     }
     case kPaver_QueryConfigurationStatus_Ordinal:
@@ -1601,7 +1617,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->QueryConfigurationStatus(std::move(message->configuration),
-        Interface::QueryConfigurationStatusCompleter::Sync(txn));
+          Interface::QueryConfigurationStatusCompleter::Sync(txn));
       return true;
     }
     case kPaver_SetConfigurationActive_Ordinal:
@@ -1614,7 +1630,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->SetConfigurationActive(std::move(message->configuration),
-        Interface::SetConfigurationActiveCompleter::Sync(txn));
+          Interface::SetConfigurationActiveCompleter::Sync(txn));
       return true;
     }
     case kPaver_SetConfigurationUnbootable_Ordinal:
@@ -1627,7 +1643,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->SetConfigurationUnbootable(std::move(message->configuration),
-        Interface::SetConfigurationUnbootableCompleter::Sync(txn));
+          Interface::SetConfigurationUnbootableCompleter::Sync(txn));
       return true;
     }
     case kPaver_SetActiveConfigurationHealthy_Ordinal:
@@ -1639,7 +1655,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         return true;
       }
       impl->SetActiveConfigurationHealthy(
-        Interface::SetActiveConfigurationHealthyCompleter::Sync(txn));
+          Interface::SetActiveConfigurationHealthyCompleter::Sync(txn));
       return true;
     }
     case kPaver_ReadAsset_Ordinal:
@@ -1652,7 +1668,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->ReadAsset(std::move(message->configuration), std::move(message->asset),
-        Interface::ReadAssetCompleter::Sync(txn));
+          Interface::ReadAssetCompleter::Sync(txn));
       return true;
     }
     case kPaver_WriteAsset_Ordinal:
@@ -1665,7 +1681,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->WriteAsset(std::move(message->configuration), std::move(message->asset), std::move(message->payload),
-        Interface::WriteAssetCompleter::Sync(txn));
+          Interface::WriteAssetCompleter::Sync(txn));
       return true;
     }
     case kPaver_WriteVolumes_Ordinal:
@@ -1678,7 +1694,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->WriteVolumes(std::move(message->payload),
-        Interface::WriteVolumesCompleter::Sync(txn));
+          Interface::WriteVolumesCompleter::Sync(txn));
       return true;
     }
     case kPaver_WriteBootloader_Ordinal:
@@ -1691,7 +1707,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->WriteBootloader(std::move(message->payload),
-        Interface::WriteBootloaderCompleter::Sync(txn));
+          Interface::WriteBootloaderCompleter::Sync(txn));
       return true;
     }
     case kPaver_WriteDataFile_Ordinal:
@@ -1704,7 +1720,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->WriteDataFile(std::move(message->filename), std::move(message->payload),
-        Interface::WriteDataFileCompleter::Sync(txn));
+          Interface::WriteDataFileCompleter::Sync(txn));
       return true;
     }
     case kPaver_WipeVolume_Ordinal:
@@ -1717,7 +1733,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->WipeVolume(std::move(message->block_device),
-        Interface::WipeVolumeCompleter::Sync(txn));
+          Interface::WipeVolumeCompleter::Sync(txn));
       return true;
     }
     case kPaver_InitializePartitionTables_Ordinal:
@@ -1730,7 +1746,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->InitializePartitionTables(std::move(message->gpt_block_device),
-        Interface::InitializePartitionTablesCompleter::Sync(txn));
+          Interface::InitializePartitionTablesCompleter::Sync(txn));
       return true;
     }
     case kPaver_WipePartitionTables_Ordinal:
@@ -1743,7 +1759,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
       }
       auto message = result.message.message();
       impl->WipePartitionTables(std::move(message->block_device),
-        Interface::WipePartitionTablesCompleter::Sync(txn));
+          Interface::WipePartitionTablesCompleter::Sync(txn));
       return true;
     }
     default: {

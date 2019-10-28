@@ -144,11 +144,17 @@ constexpr inline void AddDeviceConfig::operator^=(
 class Coordinator;
 
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DebugDumperDumpTreeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpTreeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DebugDumperDumpTreeResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpDriversRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DebugDumperDumpDriversRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpDriversResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DebugDumperDumpDriversResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpBindingPropertiesRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DebugDumperDumpBindingPropertiesRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DebugDumperDumpBindingPropertiesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DebugDumperDumpBindingPropertiesResponseTable;
 
 // Dumps text debug information.
 //
@@ -168,9 +174,12 @@ class DebugDumper final {
     uint64_t available;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DebugDumperDumpTreeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DebugDumperDumpTreeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -182,9 +191,12 @@ class DebugDumper final {
     ::zx::vmo output;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DebugDumperDumpTreeRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DebugDumperDumpTreeRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -200,9 +212,12 @@ class DebugDumper final {
     uint64_t available;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DebugDumperDumpDriversResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DebugDumperDumpDriversResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -214,9 +229,12 @@ class DebugDumper final {
     ::zx::vmo output;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DebugDumperDumpDriversRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DebugDumperDumpDriversRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -232,9 +250,12 @@ class DebugDumper final {
     uint64_t available;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DebugDumperDumpBindingPropertiesResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DebugDumperDumpBindingPropertiesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -246,9 +267,12 @@ class DebugDumper final {
     ::zx::vmo output;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DebugDumperDumpBindingPropertiesRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DebugDumperDumpBindingPropertiesRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -553,7 +577,9 @@ class DebugDumper final {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_AdministratorSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_AdministratorSuspendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_AdministratorSuspendResponseTable;
 
 // Provides administration services for the device manager service and the device tree it controls.
 class Administrator final {
@@ -567,9 +593,12 @@ class Administrator final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_AdministratorSuspendResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_AdministratorSuspendResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -581,9 +610,12 @@ class Administrator final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_AdministratorSuspendRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_AdministratorSuspendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -771,11 +803,17 @@ constexpr uint32_t METADATA_MAX = 8192u;
 constexpr uint32_t MAX_SYSTEM_POWER_STATES = 7u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DevhostControllerCreateDeviceStubResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DevhostControllerCreateDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable;
 
 // Protocol for controlling a devhost process from the devcoordinator
 class DevhostController final {
@@ -790,9 +828,12 @@ class DevhostController final {
     uint64_t local_device_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -810,9 +851,12 @@ class DevhostController final {
     uint64_t local_device_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 3;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 2048;
+    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltMaxOutOfLine = 2048;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -825,9 +869,12 @@ class DevhostController final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -842,9 +889,12 @@ class DevhostController final {
     uint64_t local_device_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 64;
     static constexpr uint32_t MaxOutOfLine = 160;
+    static constexpr uint32_t AltPrimarySize = 64;
+    static constexpr uint32_t AltMaxOutOfLine = 160;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1212,18 +1262,24 @@ class DevhostController final {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddDevice_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_AddDevice_ResponseTable;
 
 struct Coordinator_AddDevice_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddDevice_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddDevice_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t local_device_id = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddDevice_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_AddDevice_ResultTable;
 
 struct Coordinator_AddDevice_Result {
   enum class Tag : fidl_union_tag_t {
@@ -1302,10 +1358,14 @@ struct Coordinator_AddDevice_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddDevice_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddDevice_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -1319,18 +1379,24 @@ struct Coordinator_AddDevice_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResponseTable;
 
 struct Coordinator_AddDeviceInvisible_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t local_device_id = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResultTable;
 
 struct Coordinator_AddDeviceInvisible_Result {
   enum class Tag : fidl_union_tag_t {
@@ -1409,10 +1475,14 @@ struct Coordinator_AddDeviceInvisible_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -1441,18 +1511,24 @@ constexpr uint32_t DEVICE_COMPONENT_PARTS_MAX = 16u;
 constexpr uint32_t DEVICE_ARGS_MAX = 1024u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
 
 struct Coordinator_UnbindDone_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
 
 struct Coordinator_UnbindDone_Result {
   enum class Tag : fidl_union_tag_t {
@@ -1531,10 +1607,14 @@ struct Coordinator_UnbindDone_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -1548,18 +1628,24 @@ struct Coordinator_UnbindDone_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResponseTable;
 
 struct Coordinator_RunCompatibilityTests_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResultTable;
 
 struct Coordinator_RunCompatibilityTests_Result {
   enum class Tag : fidl_union_tag_t {
@@ -1638,10 +1724,14 @@ struct Coordinator_RunCompatibilityTests_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -1655,18 +1745,24 @@ struct Coordinator_RunCompatibilityTests_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
 
 struct Coordinator_RemoveDone_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
 
 struct Coordinator_RemoveDone_Result {
   enum class Tag : fidl_union_tag_t {
@@ -1745,10 +1841,14 @@ struct Coordinator_RemoveDone_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -1762,18 +1862,24 @@ struct Coordinator_RemoveDone_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_PublishMetadata_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_PublishMetadata_ResponseTable;
 
 struct Coordinator_PublishMetadata_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_PublishMetadata_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_PublishMetadata_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_PublishMetadata_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_PublishMetadata_ResultTable;
 
 struct Coordinator_PublishMetadata_Result {
   enum class Tag : fidl_union_tag_t {
@@ -1852,10 +1958,14 @@ struct Coordinator_PublishMetadata_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_PublishMetadata_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_PublishMetadata_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -1869,18 +1979,24 @@ struct Coordinator_PublishMetadata_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_MakeVisible_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_MakeVisible_ResponseTable;
 
 struct Coordinator_MakeVisible_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_MakeVisible_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_MakeVisible_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_MakeVisible_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_MakeVisible_ResultTable;
 
 struct Coordinator_MakeVisible_Result {
   enum class Tag : fidl_union_tag_t {
@@ -1959,10 +2075,14 @@ struct Coordinator_MakeVisible_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_MakeVisible_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_MakeVisible_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -1976,13 +2096,18 @@ struct Coordinator_MakeVisible_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_LoadFirmware_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_LoadFirmware_ResponseTable;
 
 struct Coordinator_LoadFirmware_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_LoadFirmware_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_LoadFirmware_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::vmo vmo = {};
 
@@ -1990,6 +2115,7 @@ struct Coordinator_LoadFirmware_Response {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_LoadFirmware_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_LoadFirmware_ResultTable;
 
 struct Coordinator_LoadFirmware_Result {
   enum class Tag : fidl_union_tag_t {
@@ -2068,10 +2194,14 @@ struct Coordinator_LoadFirmware_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_LoadFirmware_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_LoadFirmware_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
   void Destroy();
@@ -2085,18 +2215,24 @@ struct Coordinator_LoadFirmware_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_GetTopologicalPath_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_GetTopologicalPath_ResponseTable;
 
 struct Coordinator_GetTopologicalPath_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetTopologicalPath_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetTopologicalPath_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 1024;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 1024;
 
   ::fidl::StringView path = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_GetTopologicalPath_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_GetTopologicalPath_ResultTable;
 
 struct Coordinator_GetTopologicalPath_Result {
   enum class Tag : fidl_union_tag_t {
@@ -2175,10 +2311,14 @@ struct Coordinator_GetTopologicalPath_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetTopologicalPath_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetTopologicalPath_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 1024;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 1040;
 
  private:
   void Destroy();
@@ -2192,18 +2332,24 @@ struct Coordinator_GetTopologicalPath_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_GetMetadata_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_GetMetadata_ResponseTable;
 
 struct Coordinator_GetMetadata_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetMetadata_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetMetadata_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8192;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8192;
 
   ::fidl::VectorView<uint8_t> data = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_GetMetadata_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_GetMetadata_ResultTable;
 
 struct Coordinator_GetMetadata_Result {
   enum class Tag : fidl_union_tag_t {
@@ -2282,10 +2428,14 @@ struct Coordinator_GetMetadata_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetMetadata_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetMetadata_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8192;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8208;
 
  private:
   void Destroy();
@@ -2299,18 +2449,24 @@ struct Coordinator_GetMetadata_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_GetMetadataSize_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_GetMetadataSize_ResponseTable;
 
 struct Coordinator_GetMetadataSize_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetMetadataSize_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetMetadataSize_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t size = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_GetMetadataSize_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_GetMetadataSize_ResultTable;
 
 struct Coordinator_GetMetadataSize_Result {
   enum class Tag : fidl_union_tag_t {
@@ -2389,10 +2545,14 @@ struct Coordinator_GetMetadataSize_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetMetadataSize_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetMetadataSize_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -2406,18 +2566,24 @@ struct Coordinator_GetMetadataSize_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_DirectoryWatch_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_DirectoryWatch_ResponseTable;
 
 struct Coordinator_DirectoryWatch_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_DirectoryWatch_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_DirectoryWatch_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_DirectoryWatch_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_DirectoryWatch_ResultTable;
 
 struct Coordinator_DirectoryWatch_Result {
   enum class Tag : fidl_union_tag_t {
@@ -2496,10 +2662,14 @@ struct Coordinator_DirectoryWatch_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_DirectoryWatch_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_DirectoryWatch_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -2513,18 +2683,24 @@ struct Coordinator_DirectoryWatch_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_BindDevice_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_BindDevice_ResponseTable;
 
 struct Coordinator_BindDevice_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_BindDevice_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_BindDevice_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_BindDevice_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_BindDevice_ResultTable;
 
 struct Coordinator_BindDevice_Result {
   enum class Tag : fidl_union_tag_t {
@@ -2603,10 +2779,14 @@ struct Coordinator_BindDevice_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_BindDevice_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_BindDevice_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -2620,18 +2800,24 @@ struct Coordinator_BindDevice_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddMetadata_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_AddMetadata_ResponseTable;
 
 struct Coordinator_AddMetadata_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddMetadata_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddMetadata_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddMetadata_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_AddMetadata_ResultTable;
 
 struct Coordinator_AddMetadata_Result {
   enum class Tag : fidl_union_tag_t {
@@ -2710,10 +2896,14 @@ struct Coordinator_AddMetadata_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddMetadata_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddMetadata_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -2727,18 +2917,24 @@ struct Coordinator_AddMetadata_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddCompositeDevice_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_AddCompositeDevice_ResponseTable;
 
 struct Coordinator_AddCompositeDevice_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddCompositeDevice_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddCompositeDevice_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_AddCompositeDevice_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_AddCompositeDevice_ResultTable;
 
 struct Coordinator_AddCompositeDevice_Result {
   enum class Tag : fidl_union_tag_t {
@@ -2817,10 +3013,14 @@ struct Coordinator_AddCompositeDevice_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddCompositeDevice_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddCompositeDevice_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -2834,19 +3034,33 @@ struct Coordinator_AddCompositeDevice_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerConnectProxyResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerUnbindRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerUnbindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerUnbindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerUnbindResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteRemovalRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerCompleteRemovalRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerSuspendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerSuspendResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerResumeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerResumeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerResumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerResumeResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsResponseTable;
 
 // Protocol for controlling devices in a devhost process from the devcoordinator
 class DeviceController final {
@@ -2860,9 +3074,12 @@ class DeviceController final {
     ::zx::channel test_output;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerBindDriverResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2875,9 +3092,12 @@ class DeviceController final {
     ::zx::vmo driver;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerBindDriverRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 1024;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2891,9 +3111,12 @@ class DeviceController final {
     ::zx::channel shadow;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2910,9 +3133,12 @@ class DeviceController final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerSuspendResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerSuspendResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2924,9 +3150,12 @@ class DeviceController final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerSuspendRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerSuspendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2940,9 +3169,12 @@ class DeviceController final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerResumeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerResumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2954,9 +3186,12 @@ class DeviceController final {
     uint32_t target_system_state;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerResumeRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerResumeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2970,9 +3205,12 @@ class DeviceController final {
     ::llcpp::fuchsia::device::manager::CompatibilityTestStatus status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerCompleteCompatibilityTestsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3498,13 +3736,18 @@ class DeviceController final {
 constexpr uint32_t COMPONENTS_MAX = 16u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_BindInstructionTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_BindInstructionTable;
 
 struct BindInstruction {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_BindInstructionTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_BindInstructionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // bitfield that encodes the operation and execution conditions
   uint32_t op = {};
@@ -3514,14 +3757,19 @@ struct BindInstruction {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceComponentPartTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceComponentPartTable;
 
 // A part of a description of a DeviceComponent
 struct DeviceComponentPart {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceComponentPartTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceComponentPartTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 260;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 260;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t match_program_count = {};
 
@@ -3529,14 +3777,19 @@ struct DeviceComponentPart {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceComponentTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceComponentTable;
 
 // A piece of a composite device
 struct DeviceComponent {
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceComponentTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceComponentTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4164;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4164;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t parts_count = {};
 
@@ -3544,39 +3797,73 @@ struct DeviceComponent {
 };
 
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleRemoveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorScheduleRemoveResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleUnbindChildrenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorScheduleUnbindChildrenRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleUnbindChildrenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorScheduleUnbindChildrenResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorUnbindDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorRemoveDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorMakeVisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorBindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorBindDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorBindDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetTopologicalPathRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorGetTopologicalPathRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetTopologicalPathResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorGetTopologicalPathResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorLoadFirmwareRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorLoadFirmwareRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorLoadFirmwareResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorLoadFirmwareResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetMetadataRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorGetMetadataRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetMetadataResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorGetMetadataResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetMetadataSizeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorGetMetadataSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorGetMetadataSizeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorGetMetadataSizeResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddMetadataRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddMetadataRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddMetadataResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddMetadataResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorPublishMetadataRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorPublishMetadataRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorPublishMetadataResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorPublishMetadataResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorAddCompositeDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorAddCompositeDeviceResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorDirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorDirectoryWatchResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorDirectoryWatchResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorRunCompatibilityTestsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
 
 // Interface for the devices in devhosts to coordinate with the devcoordinator.
 class Coordinator final {
@@ -3589,9 +3876,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3610,9 +3900,12 @@ class Coordinator final {
     ::zx::channel client_remote;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 4128;
+    static constexpr uint32_t AltPrimarySize = 104;
+    static constexpr uint32_t AltMaxOutOfLine = 4128;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3626,9 +3919,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddDeviceInvisibleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3646,9 +3942,12 @@ class Coordinator final {
     ::zx::channel client_remote;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 4128;
+    static constexpr uint32_t AltPrimarySize = 104;
+    static constexpr uint32_t AltMaxOutOfLine = 4128;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3662,9 +3961,12 @@ class Coordinator final {
     bool unbind_self;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorScheduleRemoveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3679,9 +3981,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3695,9 +4000,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3711,9 +4019,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3727,9 +4038,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorBindDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorBindDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3741,9 +4055,12 @@ class Coordinator final {
     ::fidl::StringView driver_path;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorBindDeviceRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorBindDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 1024;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3757,9 +4074,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorGetTopologicalPathResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorGetTopologicalPathResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 1040;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3773,9 +4093,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorLoadFirmwareResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorLoadFirmwareResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3787,9 +4110,12 @@ class Coordinator final {
     ::fidl::StringView fw_path;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorLoadFirmwareRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorLoadFirmwareRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 1024;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3803,9 +4129,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorGetMetadataResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorGetMetadataResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8208;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3817,9 +4146,12 @@ class Coordinator final {
     uint32_t key;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorGetMetadataRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorGetMetadataRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3833,9 +4165,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorGetMetadataSizeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorGetMetadataSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3847,9 +4182,12 @@ class Coordinator final {
     uint32_t key;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorGetMetadataSizeRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorGetMetadataSizeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3863,9 +4201,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddMetadataResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddMetadataResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3878,9 +4219,12 @@ class Coordinator final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddMetadataRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddMetadataRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3894,9 +4238,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorPublishMetadataResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorPublishMetadataResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3910,9 +4257,12 @@ class Coordinator final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorPublishMetadataRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorPublishMetadataRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 9216;
+    static constexpr uint32_t AltPrimarySize = 56;
+    static constexpr uint32_t AltMaxOutOfLine = 9216;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3926,9 +4276,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddCompositeDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddCompositeDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3943,9 +4296,12 @@ class Coordinator final {
     uint32_t coresident_device_index;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddCompositeDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 68704;
+    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltMaxOutOfLine = 68704;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3959,9 +4315,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorDirectoryWatchResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorDirectoryWatchResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3975,9 +4334,12 @@ class Coordinator final {
     ::zx::channel watcher;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorDirectoryWatchRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorDirectoryWatchRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3991,9 +4353,12 @@ class Coordinator final {
     ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorRunCompatibilityTestsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4005,9 +4370,12 @@ class Coordinator final {
     int64_t hook_wait_time;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorRunCompatibilityTestsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorRunCompatibilityTestsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

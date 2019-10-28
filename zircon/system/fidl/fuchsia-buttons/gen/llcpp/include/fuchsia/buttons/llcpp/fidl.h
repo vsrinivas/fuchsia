@@ -36,18 +36,24 @@ enum class ButtonType : uint8_t {
 class Buttons;
 
 extern "C" const fidl_type_t fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
 
 struct Buttons_RegisterNotify_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
 
 struct Buttons_RegisterNotify_Result {
   enum class Tag : fidl_union_tag_t {
@@ -126,10 +132,14 @@ struct Buttons_RegisterNotify_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -143,11 +153,17 @@ struct Buttons_RegisterNotify_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsGetStateRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsGetStateResponseTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyEventTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsNotifyEventTable;
 
 // Protocol for other devices to get the state of buttons and register for
 // notifications of state change.
@@ -162,9 +178,12 @@ class Buttons final {
     bool pressed;
 
     static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsGetStateResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsGetStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -176,9 +195,12 @@ class Buttons final {
     ::llcpp::fuchsia::buttons::ButtonType type;
 
     static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsGetStateRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsGetStateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -192,9 +214,12 @@ class Buttons final {
     ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -206,9 +231,12 @@ class Buttons final {
     uint8_t types;
 
     static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -223,9 +251,12 @@ class Buttons final {
     bool pressed;
 
     static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsNotifyEventTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsNotifyEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

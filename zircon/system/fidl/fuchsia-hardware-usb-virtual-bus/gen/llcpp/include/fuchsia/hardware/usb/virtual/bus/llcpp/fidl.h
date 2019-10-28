@@ -28,13 +28,21 @@ namespace bus {
 class Bus;
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusEnableRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusEnableRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisableRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisableRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusConnectRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisconnectRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
 
 class Bus final {
   Bus() = delete;
@@ -46,9 +54,12 @@ class Bus final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -62,9 +73,12 @@ class Bus final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -78,9 +92,12 @@ class Bus final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -94,9 +111,12 @@ class Bus final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

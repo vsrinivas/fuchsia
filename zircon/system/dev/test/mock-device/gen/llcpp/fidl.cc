@@ -134,18 +134,21 @@ constexpr uint64_t kMockDeviceThread_PerformActions_Ordinal = 0x4368272e00000000
 constexpr uint64_t kMockDeviceThread_PerformActions_GenOrdinal = 0x1e51d6eb0ce75baclu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadPerformActionsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadPerformActionsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_AddDeviceDone_Ordinal = 0x5a75b43900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_AddDeviceDone_GenOrdinal = 0x5f70f15bcdf559belu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadAddDeviceDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_UnbindReplyDone_Ordinal = 0x6c9ed25d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDeviceThread_UnbindReplyDone_GenOrdinal = 0x7cadbb1dcfd931b3lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
 
 }  // namespace
 
@@ -220,8 +223,7 @@ zx_status_t MockDeviceThread::SyncClient::HandleEvents(MockDeviceThread::EventHa
   return MockDeviceThread::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t MockDeviceThread::Call::HandleEvents(zx::unowned_channel client_end,
-                                            MockDeviceThread::EventHandlers handlers) {
+zx_status_t MockDeviceThread::Call::HandleEvents(zx::unowned_channel client_end, MockDeviceThread::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -251,7 +253,8 @@ zx_status_t MockDeviceThread::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -273,10 +276,10 @@ zx_status_t MockDeviceThread::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -317,6 +320,25 @@ bool MockDeviceThread::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
     case kMockDeviceThread_PerformActions_Ordinal:
     case kMockDeviceThread_PerformActions_GenOrdinal:
     {
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<PerformActionsRequest, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      PerformActionsRequest::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg->bytes),
+                                                      msg->num_bytes,
+                                                      transformer_dest,
+                                                      &msg->num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          txn->Close(ZX_ERR_INVALID_ARGS);
+          zx_handle_close_many(msg->handles, msg->num_handles);
+          return true;
+        }
+        msg->bytes = transformer_dest;
+      }
       auto result = ::fidl::DecodeAs<PerformActionsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -324,7 +346,7 @@ bool MockDeviceThread::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
       }
       auto message = result.message.message();
       impl->PerformActions(std::move(message->actions),
-        Interface::PerformActionsCompleter::Sync(txn));
+          Interface::PerformActionsCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -434,90 +456,105 @@ constexpr uint64_t kMockDevice_Bind_Ordinal = 0x7c80f6ec00000000lu;
 constexpr uint64_t kMockDevice_Bind_GenOrdinal = 0x61f85ea4a79aaf98lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceBindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Release_Ordinal = 0x244f460200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Release_GenOrdinal = 0x3e34cd45b096f7dflu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReleaseRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReleaseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceReleaseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_GetProtocol_Ordinal = 0x2260377000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_GetProtocol_GenOrdinal = 0x4b589335ced5818flu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetProtocolRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetProtocolResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceGetProtocolResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Open_Ordinal = 0x78822f4600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Open_GenOrdinal = 0x667693e248252a7blu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceOpenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceOpenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Close_Ordinal = 0x1cb8023800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Close_GenOrdinal = 0x77d1ae25197af4b4lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Unbind_Ordinal = 0x4184fddd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Unbind_GenOrdinal = 0x5edfb40dac65de1alu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceUnbindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Read_Ordinal = 0x58b86c9100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Read_GenOrdinal = 0x59a0e040f263ce78lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReadRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceReadResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceReadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Write_Ordinal = 0x58d75faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Write_GenOrdinal = 0x4093b59b2ed5bc84lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceWriteResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceWriteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_GetSize_Ordinal = 0xadc36e600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_GetSize_GenOrdinal = 0x2fd05ce2a771bba2lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceGetSizeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceGetSizeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Suspend_Ordinal = 0x3a4dd8cb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Suspend_GenOrdinal = 0x1d086b1540c8badalu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceSuspendRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceSuspendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceSuspendResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Resume_Ordinal = 0x6f537db800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Resume_GenOrdinal = 0x405f391966e368celu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceResumeRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceResumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceResumeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Message_Ordinal = 0x52488df800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Message_GenOrdinal = 0x7a14d769ce9e8b14lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceMessageRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceMessageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceMessageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Rxrpc_Ordinal = 0x2e6fd1b900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_Rxrpc_GenOrdinal = 0x24f0a836490f4a99lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceRxrpcRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceRxrpcResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceRxrpcResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_AddDeviceDone_Ordinal = 0x10d0aadc00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_AddDeviceDone_GenOrdinal = 0x40fd824a0e920396lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceAddDeviceDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceAddDeviceDoneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceAddDeviceDoneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_UnbindReplyDone_Ordinal = 0x4d0946a100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMockDevice_UnbindReplyDone_GenOrdinal = 0x6f057a72a4b6c2e8lu;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceUnbindReplyDoneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneResponseTable;
 
 }  // namespace
 template <>
@@ -1495,7 +1532,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Bind(std::move(message->record),
-        Interface::BindCompleter::Sync(txn));
+          Interface::BindCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Release_Ordinal:
@@ -1508,7 +1545,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Release(std::move(message->record),
-        Interface::ReleaseCompleter::Sync(txn));
+          Interface::ReleaseCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_GetProtocol_Ordinal:
@@ -1521,7 +1558,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->GetProtocol(std::move(message->record), std::move(message->protocol_id),
-        Interface::GetProtocolCompleter::Sync(txn));
+          Interface::GetProtocolCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Open_Ordinal:
@@ -1534,7 +1571,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Open(std::move(message->record), std::move(message->flags),
-        Interface::OpenCompleter::Sync(txn));
+          Interface::OpenCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Close_Ordinal:
@@ -1547,7 +1584,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Close(std::move(message->record), std::move(message->flags),
-        Interface::CloseCompleter::Sync(txn));
+          Interface::CloseCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Unbind_Ordinal:
@@ -1560,7 +1597,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Unbind(std::move(message->record),
-        Interface::UnbindCompleter::Sync(txn));
+          Interface::UnbindCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Read_Ordinal:
@@ -1573,7 +1610,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Read(std::move(message->record), std::move(message->count), std::move(message->off),
-        Interface::ReadCompleter::Sync(txn));
+          Interface::ReadCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Write_Ordinal:
@@ -1586,7 +1623,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Write(std::move(message->record), std::move(message->buffer), std::move(message->off),
-        Interface::WriteCompleter::Sync(txn));
+          Interface::WriteCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_GetSize_Ordinal:
@@ -1599,7 +1636,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->GetSize(std::move(message->record),
-        Interface::GetSizeCompleter::Sync(txn));
+          Interface::GetSizeCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Suspend_Ordinal:
@@ -1612,7 +1649,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Suspend(std::move(message->record), std::move(message->flags),
-        Interface::SuspendCompleter::Sync(txn));
+          Interface::SuspendCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Resume_Ordinal:
@@ -1625,7 +1662,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Resume(std::move(message->record), std::move(message->flags),
-        Interface::ResumeCompleter::Sync(txn));
+          Interface::ResumeCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Message_Ordinal:
@@ -1638,7 +1675,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Message(std::move(message->record),
-        Interface::MessageCompleter::Sync(txn));
+          Interface::MessageCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_Rxrpc_Ordinal:
@@ -1651,7 +1688,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Rxrpc(std::move(message->record),
-        Interface::RxrpcCompleter::Sync(txn));
+          Interface::RxrpcCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_AddDeviceDone_Ordinal:
@@ -1664,7 +1701,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->AddDeviceDone(std::move(message->action_id),
-        Interface::AddDeviceDoneCompleter::Sync(txn));
+          Interface::AddDeviceDoneCompleter::Sync(txn));
       return true;
     }
     case kMockDevice_UnbindReplyDone_Ordinal:
@@ -1677,7 +1714,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->UnbindReplyDone(std::move(message->action_id),
-        Interface::UnbindReplyDoneCompleter::Sync(txn));
+          Interface::UnbindReplyDoneCompleter::Sync(txn));
       return true;
     }
     default: {

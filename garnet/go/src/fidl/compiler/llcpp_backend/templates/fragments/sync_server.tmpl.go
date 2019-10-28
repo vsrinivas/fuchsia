@@ -30,6 +30,27 @@ bool {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} 
     case {{ .Name }}:
       {{- end }}
     {
+      {{- if .RequestContainsUnion }}
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      {{ .Name }}Request::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg->bytes),
+                                                      msg->num_bytes,
+                                                      transformer_dest,
+                                                      &msg->num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          txn->Close(ZX_ERR_INVALID_ARGS);
+          zx_handle_close_many(msg->handles, msg->num_handles);
+          return true;
+        }
+        msg->bytes = transformer_dest;
+      }
+      {{- end }}
       auto result = ::fidl::DecodeAs<{{ .Name }}Request>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -39,7 +60,7 @@ bool {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} 
       auto message = result.message.message();
       {{- end }}
       impl->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .Request }}{{ if .Request }},{{ end }}
-        Interface::{{ .Name }}Completer::Sync(txn));
+          Interface::{{ .Name }}Completer::Sync(txn));
       return true;
     }
     {{- end }}

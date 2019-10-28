@@ -27,14 +27,19 @@ struct Info;
 class Device;
 
 extern "C" const fidl_type_t fuchsia_hardware_midi_InfoTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_midi_InfoTable;
 
 // Describes what type of MIDI device an implementation of Device represents
 struct Info {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_midi_InfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_midi_InfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 2;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Whether or not this device is a MIDI sink
   bool is_sink = {};
@@ -44,7 +49,9 @@ struct Info {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_midi_DeviceGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_midi_DeviceGetInfoResponseTable;
 
 class Device final {
   Device() = delete;
@@ -56,9 +63,12 @@ class Device final {
     ::llcpp::fuchsia::hardware::midi::Info info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_midi_DeviceGetInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_midi_DeviceGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

@@ -16,14 +16,14 @@ constexpr uint64_t kConnectivity_OnNetworkReachable_Ordinal = 0x658708c800000000
 constexpr uint64_t kConnectivity_OnNetworkReachable_GenOrdinal = 0x6f099dcaa3ff5b7lu;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableRequestTable;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
+extern "C" const fidl_type_t v1_fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 
 }  // namespace
 zx_status_t Connectivity::SyncClient::HandleEvents(Connectivity::EventHandlers handlers) {
   return Connectivity::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end,
-                                            Connectivity::EventHandlers handlers) {
+zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end, Connectivity::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -47,7 +47,8 @@ zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -69,10 +70,10 @@ zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -350,12 +351,14 @@ constexpr uint64_t kNameLookup_LookupIp_Ordinal = 0x30c22b4c00000000lu;
 constexpr uint64_t kNameLookup_LookupIp_GenOrdinal = 0x58576c7210cd0f32lu;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_net_NameLookupLookupIpResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNameLookup_LookupHostname_Ordinal = 0x17582c9400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNameLookup_LookupHostname_GenOrdinal = 0x5dfea9b2c92f510alu;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameRequestTable;
 extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_net_NameLookupLookupHostnameResponseTable;
 
 }  // namespace
 template <>
@@ -508,12 +511,31 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->LookupIp(std::move(message->hostname), std::move(message->options),
-        Interface::LookupIpCompleter::Sync(txn));
+          Interface::LookupIpCompleter::Sync(txn));
       return true;
     }
     case kNameLookup_LookupHostname_Ordinal:
     case kNameLookup_LookupHostname_GenOrdinal:
     {
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<LookupHostnameRequest, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      LookupHostnameRequest::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg->bytes),
+                                                      msg->num_bytes,
+                                                      transformer_dest,
+                                                      &msg->num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          txn->Close(ZX_ERR_INVALID_ARGS);
+          zx_handle_close_many(msg->handles, msg->num_handles);
+          return true;
+        }
+        msg->bytes = transformer_dest;
+      }
       auto result = ::fidl::DecodeAs<LookupHostnameRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -521,7 +543,7 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->LookupHostname(std::move(message->addr),
-        Interface::LookupHostnameCompleter::Sync(txn));
+          Interface::LookupHostnameCompleter::Sync(txn));
       return true;
     }
     default: {

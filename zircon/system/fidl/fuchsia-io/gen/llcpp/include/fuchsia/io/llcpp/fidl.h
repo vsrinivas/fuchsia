@@ -55,14 +55,19 @@ class Directory;
 class DirectoryAdmin;
 
 extern "C" const fidl_type_t fuchsia_io_WatchedEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_WatchedEventTable;
 
 // WatchedEvent describes events returned from a DirectoryWatcher.
 struct WatchedEvent {
   static constexpr const fidl_type_t* Type = &fuchsia_io_WatchedEventTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_WatchedEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 256;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 256;
 
   uint8_t event = {};
 
@@ -105,6 +110,7 @@ constexpr uint8_t WATCH_EVENT_DELETED = 0u;
 constexpr uint8_t WATCH_EVENT_ADDED = 1u;
 
 extern "C" const fidl_type_t fuchsia_io_VmofileTable;
+extern "C" const fidl_type_t v1_fuchsia_io_VmofileTable;
 
 // The object is a file which is represented as an immutable VMO.
 // Although a VMO is returned as a part of this structure, this underlying object
@@ -112,10 +118,14 @@ extern "C" const fidl_type_t fuchsia_io_VmofileTable;
 // that represents the single file, an offset and length parameter are also supplied.
 struct Vmofile {
   static constexpr const fidl_type_t* Type = &fuchsia_io_VmofileTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_VmofileTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The VMO which backs this file.
   ::zx::vmo vmo = {};
@@ -147,20 +157,27 @@ constexpr uint32_t VMO_FLAG_EXEC = 4u;
 constexpr uint32_t VMO_FLAG_EXACT = 131072u;
 
 extern "C" const fidl_type_t fuchsia_io_TtyTable;
+extern "C" const fidl_type_t v1_fuchsia_io_TtyTable;
 
 // The object may be cast to interface 'Tty'
 struct Tty {
   static constexpr const fidl_type_t* Type = &fuchsia_io_TtyTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_TtyTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::eventpair event = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryWatcherOnEventRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryWatcherOnEventResponseTable;
 
 // DirectoryWatcher transmits messages from a filesystem server
 // about events happening in the filesystem. Clients can register
@@ -176,9 +193,12 @@ class DirectoryWatcher final {
     ::fidl::VectorView<uint8_t> events;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryWatcherOnEventRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryWatcherOnEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -313,41 +333,56 @@ class DirectoryWatcher final {
 };
 
 extern "C" const fidl_type_t fuchsia_io_SocketTable;
+extern "C" const fidl_type_t v1_fuchsia_io_SocketTable;
 
 // The object is accompanied by a socket.
 struct Socket {
   static constexpr const fidl_type_t* Type = &fuchsia_io_SocketTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_SocketTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::socket socket = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_ServiceTable;
+extern "C" const fidl_type_t v1_fuchsia_io_ServiceTable;
 
 // The default protocol, interface information must be acquired some
 // other way.
 struct Service {
   static constexpr const fidl_type_t* Type = &fuchsia_io_ServiceTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_ServiceTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_PipeTable;
+extern "C" const fidl_type_t v1_fuchsia_io_PipeTable;
 
 // The object is accompanied by a pipe.
 struct Pipe {
   static constexpr const fidl_type_t* Type = &fuchsia_io_PipeTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_PipeTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::socket socket = {};
 };
@@ -427,14 +462,19 @@ constexpr uint32_t OPEN_FLAG_APPEND = 1048576u;
 constexpr uint32_t OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE = 46661632u;
 
 extern "C" const fidl_type_t fuchsia_io_NodeAttributesTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeAttributesTable;
 
 // NodeAttributes defines generic information about a filesystem node.
 struct NodeAttributes {
   static constexpr const fidl_type_t* Type = &fuchsia_io_NodeAttributesTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeAttributesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 56;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Protection bits and node type information describe in 'mode'.
   uint32_t mode = {};
@@ -504,13 +544,18 @@ constexpr uint64_t MAX_BUF = 8192u;
 constexpr uint64_t INO_UNKNOWN = 18446744073709551615u;
 
 extern "C" const fidl_type_t fuchsia_io_FilesystemInfoTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FilesystemInfoTable;
 
 struct FilesystemInfo {
   static constexpr const fidl_type_t* Type = &fuchsia_io_FilesystemInfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FilesystemInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 96;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 96;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The number of data bytes which may be stored in a filesystem.
   uint64_t total_bytes = {};
@@ -547,14 +592,19 @@ struct FilesystemInfo {
 };
 
 extern "C" const fidl_type_t fuchsia_io_FileObjectTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileObjectTable;
 
 // The object may be cast to interface 'File'.
 struct FileObject {
   static constexpr const fidl_type_t* Type = &fuchsia_io_FileObjectTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileObjectTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // An optional event which transmits information about an object's readability
   // or writability. This event relays information about the underlying object, not
@@ -572,27 +622,37 @@ constexpr uint32_t FILE_SIGNAL_WRITABLE = 33554432u;
 constexpr uint32_t FILE_SIGNAL_READABLE = 16777216u;
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryObjectTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryObjectTable;
 
 // The object may be cast to interface 'Directory'.
 struct DirectoryObject {
   static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryObjectTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryObjectTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_DeviceTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DeviceTable;
 
 // The object may be cast to interface 'Device'.
 struct Device {
   static constexpr const fidl_type_t* Type = &fuchsia_io_DeviceTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DeviceTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // An optional event which transmits information about a device's state.
   //
@@ -601,6 +661,7 @@ struct Device {
 };
 
 extern "C" const fidl_type_t fuchsia_io_NodeInfoTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeInfoTable;
 
 // Describes how the connection to an should be handled, as well as
 // how to interpret the optional handle.
@@ -833,10 +894,14 @@ struct NodeInfo {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_io_NodeInfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeInfoTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 24;
 
  private:
   void Destroy();
@@ -856,23 +921,41 @@ struct NodeInfo {
 };
 
 extern "C" const fidl_type_t fuchsia_io_NodeCloneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeCloneResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeCloseRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeCloseResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeDescribeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeDescribeResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeOnOpenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeOnOpenEventTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSyncRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeSetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeNodeSetFlagsResponseTable;
 
 // Node defines the minimal interface for entities which can be accessed in a filesystem.
 class Node final {
@@ -886,9 +969,12 @@ class Node final {
     ::zx::channel object;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -901,9 +987,12 @@ class Node final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -917,9 +1006,12 @@ class Node final {
     ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -934,9 +1026,12 @@ class Node final {
     ::llcpp::fuchsia::io::NodeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 48;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -948,9 +1043,12 @@ class Node final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeSyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeSyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -965,9 +1063,12 @@ class Node final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -981,9 +1082,12 @@ class Node final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeSetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeSetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -996,9 +1100,12 @@ class Node final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeSetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1013,9 +1120,12 @@ class Node final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1029,9 +1139,12 @@ class Node final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1043,9 +1156,12 @@ class Node final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1911,41 +2027,77 @@ class Node final {
 };
 
 extern "C" const fidl_type_t fuchsia_io_FileCloneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileCloneResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileCloseRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileCloseResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileDescribeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileDescribeResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileOnOpenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileOnOpenEventTable;
 extern "C" const fidl_type_t fuchsia_io_FileSyncRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileReadRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileReadResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileReadAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileReadAtResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileWriteResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileWriteAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileWriteAtResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileSeekRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSeekRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSeekResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSeekResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileTruncateRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileTruncateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileTruncateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileTruncateResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_FileGetBufferResponseTable;
 
 // File defines the interface of a node which contains a flat layout of data.
 class File final {
@@ -1959,9 +2111,12 @@ class File final {
     ::zx::channel object;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1974,9 +2129,12 @@ class File final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1990,9 +2148,12 @@ class File final {
     ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2007,9 +2168,12 @@ class File final {
     ::llcpp::fuchsia::io::NodeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 48;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2021,9 +2185,12 @@ class File final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2038,9 +2205,12 @@ class File final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2054,9 +2224,12 @@ class File final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2069,9 +2242,12 @@ class File final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2086,9 +2262,12 @@ class File final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2102,9 +2281,12 @@ class File final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2116,9 +2298,12 @@ class File final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2133,9 +2318,12 @@ class File final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileReadResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2147,9 +2335,12 @@ class File final {
     uint64_t count;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileReadRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2164,9 +2355,12 @@ class File final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadAtResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileReadAtResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2179,9 +2373,12 @@ class File final {
     uint64_t offset;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadAtRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileReadAtRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2196,9 +2393,12 @@ class File final {
     uint64_t actual;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileWriteResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileWriteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2210,9 +2410,12 @@ class File final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileWriteRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileWriteRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2227,9 +2430,12 @@ class File final {
     uint64_t actual;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileWriteAtResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileWriteAtResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2242,9 +2448,12 @@ class File final {
     uint64_t offset;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileWriteAtRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileWriteAtRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2259,9 +2468,12 @@ class File final {
     uint64_t offset;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSeekResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSeekResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2274,9 +2486,12 @@ class File final {
     ::llcpp::fuchsia::io::SeekOrigin start;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSeekRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSeekRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2290,9 +2505,12 @@ class File final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileTruncateResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileTruncateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2304,9 +2522,12 @@ class File final {
     uint64_t length;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileTruncateRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileTruncateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2321,9 +2542,12 @@ class File final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2337,9 +2561,12 @@ class File final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2351,9 +2578,12 @@ class File final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2368,9 +2598,12 @@ class File final {
     ::llcpp::fuchsia::mem::Buffer* buffer;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetBufferResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileGetBufferResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2382,9 +2615,12 @@ class File final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetBufferRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileGetBufferRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4026,39 +4262,73 @@ class File final {
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryCloneResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloseRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryCloseResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryDescribeResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryOnOpenEventTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySyncRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectorySyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectorySyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectorySetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryOpenResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryUnlinkResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryReadDirentsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRewindRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRewindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryRewindResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryGetTokenResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryRenameResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryLinkRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryLinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryLinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryLinkResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatchRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatchResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryWatchResponseTable;
 
 // Directory defines a node which is capable of containing other Objects.
 class Directory final {
@@ -4072,9 +4342,12 @@ class Directory final {
     ::zx::channel object;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4087,9 +4360,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4103,9 +4379,12 @@ class Directory final {
     ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4120,9 +4399,12 @@ class Directory final {
     ::llcpp::fuchsia::io::NodeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 48;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4134,9 +4416,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectorySyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectorySyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4151,9 +4436,12 @@ class Directory final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4167,9 +4455,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectorySetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectorySetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4182,9 +4473,12 @@ class Directory final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectorySetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectorySetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4199,9 +4493,12 @@ class Directory final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4215,9 +4512,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4229,9 +4529,12 @@ class Directory final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4248,9 +4551,12 @@ class Directory final {
     ::zx::channel object;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryOpenRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryOpenRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 4096;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4263,9 +4569,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryUnlinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryUnlinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4277,9 +4586,12 @@ class Directory final {
     ::fidl::StringView path;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryUnlinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryUnlinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 4096;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4294,9 +4606,12 @@ class Directory final {
     ::fidl::VectorView<uint8_t> dirents;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryReadDirentsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryReadDirentsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4308,9 +4623,12 @@ class Directory final {
     uint64_t max_bytes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryReadDirentsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryReadDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4324,9 +4642,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryRewindResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryRewindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4341,9 +4662,12 @@ class Directory final {
     ::zx::handle token;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryGetTokenResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryGetTokenResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4357,9 +4681,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryRenameResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryRenameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4373,9 +4700,12 @@ class Directory final {
     ::fidl::StringView dst;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryRenameRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryRenameRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 56;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4389,9 +4719,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryLinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryLinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4405,9 +4738,12 @@ class Directory final {
     ::fidl::StringView dst;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryLinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryLinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 56;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4421,9 +4757,12 @@ class Directory final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryWatchResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryWatchResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4437,9 +4776,12 @@ class Directory final {
     ::zx::channel watcher;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryWatchRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryWatchRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6371,51 +6713,97 @@ class Directory final {
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminCloneResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminCloseResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminDescribeResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminOnOpenEventTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminSyncResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminSetAttrResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeGetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminOpenResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnlinkResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminReadDirentsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminReadDirentsResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminRewindRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminRewindResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetTokenRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetTokenResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminRenameResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminLinkRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminLinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminLinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminLinkResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminWatchRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminWatchResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminWatchResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminMountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminMountResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnmountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnmountResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnmountNodeRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminQueryFilesystemRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetDevicePathRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
 
 // DirectoryAdmin defines a directory which is capable of handling
 // administrator tasks within the filesystem.
@@ -6430,9 +6818,12 @@ class DirectoryAdmin final {
     ::zx::channel object;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6445,9 +6836,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6461,9 +6855,12 @@ class DirectoryAdmin final {
     ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6478,9 +6875,12 @@ class DirectoryAdmin final {
     ::llcpp::fuchsia::io::NodeInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 48;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6492,9 +6892,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminSyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminSyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6509,9 +6912,12 @@ class DirectoryAdmin final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6525,9 +6931,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminSetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminSetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6540,9 +6949,12 @@ class DirectoryAdmin final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminSetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6557,9 +6969,12 @@ class DirectoryAdmin final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6573,9 +6988,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6587,9 +7005,12 @@ class DirectoryAdmin final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6606,9 +7027,12 @@ class DirectoryAdmin final {
     ::zx::channel object;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminOpenRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminOpenRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 4096;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6621,9 +7045,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminUnlinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminUnlinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6635,9 +7062,12 @@ class DirectoryAdmin final {
     ::fidl::StringView path;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminUnlinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminUnlinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 4096;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6652,9 +7082,12 @@ class DirectoryAdmin final {
     ::fidl::VectorView<uint8_t> dirents;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminReadDirentsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminReadDirentsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6666,9 +7099,12 @@ class DirectoryAdmin final {
     uint64_t max_bytes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminReadDirentsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminReadDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6682,9 +7118,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminRewindResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminRewindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6699,9 +7138,12 @@ class DirectoryAdmin final {
     ::zx::handle token;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminGetTokenResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminGetTokenResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6715,9 +7157,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminRenameResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminRenameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6731,9 +7176,12 @@ class DirectoryAdmin final {
     ::fidl::StringView dst;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminRenameRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminRenameRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 56;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6747,9 +7195,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminLinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminLinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6763,9 +7214,12 @@ class DirectoryAdmin final {
     ::fidl::StringView dst;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminLinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminLinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8192;
+    static constexpr uint32_t AltPrimarySize = 56;
+    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6779,9 +7233,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminWatchResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminWatchResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6795,9 +7252,12 @@ class DirectoryAdmin final {
     ::zx::channel watcher;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminWatchRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminWatchRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6811,9 +7271,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminMountResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminMountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6825,9 +7288,12 @@ class DirectoryAdmin final {
     ::zx::channel remote;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminMountRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminMountRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6841,9 +7307,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6857,9 +7326,12 @@ class DirectoryAdmin final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 256;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 256;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6873,9 +7345,12 @@ class DirectoryAdmin final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminUnmountResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminUnmountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6890,9 +7365,12 @@ class DirectoryAdmin final {
     ::zx::channel remote;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6907,9 +7385,12 @@ class DirectoryAdmin final {
     ::llcpp::fuchsia::io::FilesystemInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 96;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 96;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6924,9 +7405,12 @@ class DirectoryAdmin final {
     ::fidl::StringView path;
 
     static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 4096;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

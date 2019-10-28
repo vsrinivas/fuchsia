@@ -33,18 +33,24 @@ struct TestDevice_AddDeviceWithPowerArgs_Result;
 class TestDevice;
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
 
 struct TestDevice_GetCurrentDevicePowerState_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::device::DevicePowerState cur_state = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
 
 struct TestDevice_GetCurrentDevicePowerState_Result {
   enum class Tag : fidl_union_tag_t {
@@ -123,10 +129,14 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -140,18 +150,24 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
 
 struct TestDevice_AddDeviceWithPowerArgs_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
 
 struct TestDevice_AddDeviceWithPowerArgs_Result {
   enum class Tag : fidl_union_tag_t {
@@ -230,10 +246,14 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -247,9 +267,13 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 
 class TestDevice final {
   TestDevice() = delete;
@@ -261,9 +285,12 @@ class TestDevice final {
     ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -275,9 +302,12 @@ class TestDevice final {
     ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -291,9 +321,12 @@ class TestDevice final {
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

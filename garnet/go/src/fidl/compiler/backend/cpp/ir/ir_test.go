@@ -88,7 +88,6 @@ func TestCompileInterface(t *testing.T) {
 				ResponseEncoderName:   "Test_ResponseEncoder",
 				ResponseDecoderName:   "Test_ResponseDecoder",
 				HasEvents:             false,
-				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
 						Ordinals: types.NewOrdinalsStep5(
@@ -115,11 +114,13 @@ func TestCompileInterface(t *testing.T) {
 						},
 						RequestSize:         18,
 						RequestTypeName:     "_TestFirstRequestTable",
+						V1RequestTypeName:   "v1__TestFirstRequestTable",
 						RequestMaxHandles:   0,
 						HasResponse:         false,
 						Response:            []Parameter{},
 						ResponseSize:        0,
 						ResponseTypeName:    "_TestFirstResponseTable",
+						V1ResponseTypeName:  "v1__TestFirstResponseTable",
 						ResponseMaxHandles:  0,
 						CallbackType:        "",
 						ResponseHandlerType: "Test_First_ResponseHandler",
@@ -167,6 +168,7 @@ func TestCompileInterface(t *testing.T) {
 						},
 						RequestSize:       32,
 						RequestTypeName:   "_TestSecondRequestTable",
+						V1RequestTypeName: "v1__TestSecondRequestTable",
 						RequestMaxHandles: 0,
 						HasResponse:       true,
 						Response: []Parameter{
@@ -182,6 +184,7 @@ func TestCompileInterface(t *testing.T) {
 						},
 						ResponseSize:        20,
 						ResponseTypeName:    "_TestSecondResponseTable",
+						V1ResponseTypeName:  "v1__TestSecondResponseTable",
 						ResponseMaxHandles:  0,
 						CallbackType:        "SecondCallback",
 						ResponseHandlerType: "Test_Second_ResponseHandler",
@@ -251,7 +254,6 @@ func TestCompileInterface(t *testing.T) {
 				ResponseEncoderName:   "EventTest_ResponseEncoder",
 				ResponseDecoderName:   "EventTest_ResponseDecoder",
 				HasEvents:             true,
-				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
 						Ordinals: types.NewOrdinalsStep5(
@@ -267,6 +269,7 @@ func TestCompileInterface(t *testing.T) {
 						Request:              []Parameter{},
 						RequestSize:          0,
 						RequestTypeName:      "_EventTestFirstRequestTable",
+						V1RequestTypeName:    "v1__EventTestFirstRequestTable",
 						RequestMaxHandles:    0,
 						HasResponse:          true,
 						Response: []Parameter{
@@ -282,6 +285,7 @@ func TestCompileInterface(t *testing.T) {
 						},
 						ResponseSize:        18,
 						ResponseTypeName:    "_EventTestFirstEventTable",
+						V1ResponseTypeName:  "v1__EventTestFirstEventTable",
 						ResponseMaxHandles:  0,
 						CallbackType:        "FirstCallback",
 						ResponseHandlerType: "EventTest_First_ResponseHandler",
@@ -358,7 +362,6 @@ func TestCompileInterface(t *testing.T) {
 				ResponseEncoderName:   "EventTest_ResponseEncoder",
 				ResponseDecoderName:   "EventTest_ResponseDecoder",
 				HasEvents:             true,
-				StackAllocEventBuffer: false,
 				Methods: []Method{
 					{
 						Ordinals: types.NewOrdinalsStep5(
@@ -375,6 +378,7 @@ func TestCompileInterface(t *testing.T) {
 						Request:              []Parameter{},
 						RequestSize:          0,
 						RequestTypeName:      "_EventTestSecondRequestTable",
+						V1RequestTypeName:    "v1__EventTestSecondRequestTable",
 						RequestMaxHandles:    0,
 						HasResponse:          true,
 						Response: []Parameter{
@@ -392,6 +396,7 @@ func TestCompileInterface(t *testing.T) {
 						},
 						ResponseSize:        64016,
 						ResponseTypeName:    "_EventTestSecondEventTable",
+						V1ResponseTypeName:  "v1__EventTestSecondEventTable",
 						ResponseMaxHandles:  0,
 						CallbackType:        "SecondCallback",
 						ResponseHandlerType: "EventTest_Second_ResponseHandler",
@@ -512,7 +517,6 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				ResponseEncoderName:   "Test_ResponseEncoder",
 				ResponseDecoderName:   "Test_ResponseDecoder",
 				HasEvents:             false,
-				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
 						Ordinals: types.NewOrdinalsStep5(
@@ -539,11 +543,13 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						},
 						RequestSize:         18,
 						RequestTypeName:     "_TestFirstRequestTable",
+						V1RequestTypeName:   "v1__TestFirstRequestTable",
 						RequestMaxHandles:   0,
 						HasResponse:         false,
 						Response:            []Parameter{},
 						ResponseSize:        0,
 						ResponseTypeName:    "_TestFirstResponseTable",
+						V1ResponseTypeName:  "v1__TestFirstResponseTable",
 						ResponseMaxHandles:  0,
 						CallbackType:        "",
 						ResponseHandlerType: "Test_First_ResponseHandler",
@@ -591,6 +597,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						},
 						RequestSize:       32,
 						RequestTypeName:   "_TestSecondRequestTable",
+						V1RequestTypeName: "v1__TestSecondRequestTable",
 						RequestMaxHandles: 0,
 						HasResponse:       true,
 						Response: []Parameter{
@@ -606,6 +613,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						},
 						ResponseSize:        20,
 						ResponseTypeName:    "_TestSecondResponseTable",
+						V1ResponseTypeName:  "v1__TestSecondResponseTable",
 						ResponseMaxHandles:  0,
 						CallbackType:        "SecondCallback",
 						ResponseHandlerType: "Test_Second_ResponseHandler",
@@ -675,7 +683,6 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				ResponseEncoderName:   "EventTest_ResponseEncoder",
 				ResponseDecoderName:   "EventTest_ResponseDecoder",
 				HasEvents:             true,
-				StackAllocEventBuffer: true,
 				Methods: []Method{
 					{
 						Ordinals: types.NewOrdinalsStep5(
@@ -691,6 +698,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						Request:              []Parameter{},
 						RequestSize:          0,
 						RequestTypeName:      "_EventTestFirstRequestTable",
+						V1RequestTypeName:    "v1__EventTestFirstRequestTable",
 						RequestMaxHandles:    0,
 						HasResponse:          true,
 						Response: []Parameter{
@@ -706,6 +714,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						},
 						ResponseSize:        18,
 						ResponseTypeName:    "_EventTestFirstEventTable",
+						V1ResponseTypeName:  "v1__EventTestFirstEventTable",
 						ResponseMaxHandles:  0,
 						CallbackType:        "FirstCallback",
 						ResponseHandlerType: "EventTest_First_ResponseHandler",
@@ -782,7 +791,6 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				ResponseEncoderName:   "EventTest_ResponseEncoder",
 				ResponseDecoderName:   "EventTest_ResponseDecoder",
 				HasEvents:             true,
-				StackAllocEventBuffer: false,
 				Methods: []Method{
 					{
 						Ordinals: types.NewOrdinalsStep5(
@@ -799,6 +807,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						Request:              []Parameter{},
 						RequestSize:          0,
 						RequestTypeName:      "_EventTestSecondRequestTable",
+						V1RequestTypeName:    "v1__EventTestSecondRequestTable",
 						RequestMaxHandles:    0,
 						HasResponse:          true,
 						Response: []Parameter{
@@ -816,6 +825,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						},
 						ResponseSize:        64016,
 						ResponseTypeName:    "_EventTestSecondEventTable",
+						V1ResponseTypeName:  "v1__EventTestSecondEventTable",
 						ResponseMaxHandles:  0,
 						CallbackType:        "SecondCallback",
 						ResponseHandlerType: "EventTest_Second_ResponseHandler",
@@ -1014,6 +1024,7 @@ func TestCompileTable(t *testing.T) {
 				Namespace:      "::",
 				Name:           "Test",
 				TableType:      "_TestTable",
+				V1TableType:    "v1__TestTable",
 				BiggestOrdinal: 2,
 				MaxHandles:     0,
 				Members: []TableMember{
@@ -1096,6 +1107,7 @@ func TestCompileTableLlcppNamespaceShouldBeRenamed(t *testing.T) {
 				Namespace:      "::llcpp::llcpp_::foo",
 				Name:           "Test",
 				TableType:      "llcpp_foo_TestTable",
+				V1TableType:    "v1_llcpp_foo_TestTable",
 				BiggestOrdinal: 2,
 				MaxHandles:     0,
 				Members: []TableMember{
@@ -1192,10 +1204,11 @@ func TestCompileXUnion(t *testing.T) {
 						},
 					},
 				},
-				Namespace: "::",
-				Name:      "Test",
-				TableType: "_TestTable",
-				Members: []XUnionMember{
+				Namespace:   "::",
+				Name:        "Test",
+				TableType:   "_TestTable",
+				V1TableType: "v1__TestTable",
+				Members:     []XUnionMember{
 					{
 						Attributes: types.Attributes{},
 						Ordinal:    0xdeadbeef,
@@ -1259,10 +1272,11 @@ func TestCompileXUnion(t *testing.T) {
 				Strictness:   types.IsFlexible,
 			},
 			expected: XUnion{
-				Attributes: types.Attributes{},
-				Namespace:  "::",
-				Name:       "Test",
-				TableType:  "_TestTable",
+				Attributes:  types.Attributes{},
+				Namespace:   "::",
+				Name:        "Test",
+				TableType:   "_TestTable",
+				V1TableType: "v1__TestTable",
 				Members: []XUnionMember{
 					{
 						Attributes: types.Attributes{},
@@ -1372,9 +1386,10 @@ func TestCompileUnion(t *testing.T) {
 						},
 					},
 				},
-				Namespace: "::",
-				Name:      "Test",
-				TableType: "_TestTable",
+				Namespace:   "::",
+				Name:        "Test",
+				TableType:   "_TestTable",
+				V1TableType: "v1__TestTable",
 				Members: []UnionMember{
 					{
 						Attributes:    types.Attributes{},

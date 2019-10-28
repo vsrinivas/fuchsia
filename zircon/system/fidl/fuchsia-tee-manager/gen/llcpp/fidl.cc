@@ -17,6 +17,7 @@ constexpr uint64_t kProvider_RequestPersistentStorage_Ordinal = 0x7583eb00000000
 constexpr uint64_t kProvider_RequestPersistentStorage_GenOrdinal = 0x3ef6bac9b6490a0dlu;
 extern "C" const fidl_type_t fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
 extern "C" const fidl_type_t fuchsia_tee_manager_ProviderRequestPersistentStorageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_tee_manager_ProviderRequestPersistentStorageResponseTable;
 
 }  // namespace
 
@@ -101,7 +102,7 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       }
       auto message = result.message.message();
       impl->RequestPersistentStorage(std::move(message->dir),
-        Interface::RequestPersistentStorageCompleter::Sync(txn));
+          Interface::RequestPersistentStorageCompleter::Sync(txn));
       return true;
     }
     default: {

@@ -72,12 +72,14 @@ constexpr uint64_t kInterface_Method_Ordinal = 0x3f43684c00000000lu;
 constexpr uint64_t kInterface_Method_GenOrdinal = 0x60e700e002995ef8lu;
 extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
 extern "C" const fidl_type_t test_name_InterfaceMethodResponseTable;
+extern "C" const fidl_type_t v1_test_name_InterfaceMethodResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kInterface_OnEvent_Ordinal = 0x136d200d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kInterface_OnEvent_GenOrdinal = 0x914c226136244edlu;
 extern "C" const fidl_type_t test_name_InterfaceOnEventRequestTable;
 extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
+extern "C" const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
 
 }  // namespace
 
@@ -126,8 +128,7 @@ zx_status_t Interface::SyncClient::HandleEvents(Interface::EventHandlers handler
   return Interface::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Interface::Call::HandleEvents(zx::unowned_channel client_end,
-                                            Interface::EventHandlers handlers) {
+zx_status_t Interface::Call::HandleEvents(zx::unowned_channel client_end, Interface::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -151,7 +152,8 @@ zx_status_t Interface::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -173,10 +175,10 @@ zx_status_t Interface::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -212,7 +214,7 @@ bool Interface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       impl->Method(
-        Interface::MethodCompleter::Sync(txn));
+          Interface::MethodCompleter::Sync(txn));
       return true;
     }
     default: {

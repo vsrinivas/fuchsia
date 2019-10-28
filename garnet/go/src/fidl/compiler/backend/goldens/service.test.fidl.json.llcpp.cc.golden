@@ -16,6 +16,7 @@ constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal = 0xd09c00f00000000lu;
 constexpr uint64_t kSecondProtocol_MethodOnSecond_GenOrdinal = 0x5785f9c1f2aece21lu;
 extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
 extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondResponseTable;
+extern "C" const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondResponseTable;
 
 }  // namespace
 
@@ -78,7 +79,7 @@ bool SecondProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Trans
         return true;
       }
       impl->MethodOnSecond(
-        Interface::MethodOnSecondCompleter::Sync(txn));
+          Interface::MethodOnSecondCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -110,6 +111,7 @@ constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x2838a83100000000lu;
 constexpr uint64_t kFirstProtocol_MethodOnFirst_GenOrdinal = 0x580cbd0d43ccbe3blu;
 extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
 extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstResponseTable;
+extern "C" const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstResponseTable;
 
 }  // namespace
 
@@ -172,7 +174,7 @@ bool FirstProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         return true;
       }
       impl->MethodOnFirst(
-        Interface::MethodOnFirstCompleter::Sync(txn));
+          Interface::MethodOnFirstCompleter::Sync(txn));
       return true;
     }
     default: {

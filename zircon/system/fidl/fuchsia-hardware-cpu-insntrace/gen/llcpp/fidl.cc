@@ -313,72 +313,84 @@ constexpr uint64_t kController_Initialize_Ordinal = 0x59b0d03400000000lu;
 constexpr uint64_t kController_Initialize_GenOrdinal = 0x1ca155857f30468lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerInitializeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerInitializeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerInitializeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Terminate_Ordinal = 0x720fc32b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Terminate_GenOrdinal = 0x6115092acef4d497lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerTerminateRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerTerminateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerTerminateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetAllocation_Ordinal = 0x1226c5d000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetAllocation_GenOrdinal = 0xabef26cf562354flu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetAllocationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetAllocationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerGetAllocationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_AllocateBuffer_Ordinal = 0x6e2611dd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_AllocateBuffer_GenOrdinal = 0x5a0c3fcdcca20055lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAllocateBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAllocateBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerAllocateBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_AssignThreadBuffer_Ordinal = 0x39f7e62f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_AssignThreadBuffer_GenOrdinal = 0x5d699c2d22aafef2lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAssignThreadBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerAssignThreadBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerAssignThreadBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseThreadBuffer_Ordinal = 0x50b6cf000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseThreadBuffer_GenOrdinal = 0x5dd0a7fe5a69bb8lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerReleaseThreadBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerReleaseThreadBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerReleaseThreadBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetBufferConfig_Ordinal = 0x283603b800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetBufferConfig_GenOrdinal = 0x3e2bb907fc1c195dlu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerGetBufferConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetBufferState_Ordinal = 0x1ae1ae5f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetBufferState_GenOrdinal = 0x6069af45b952f39flu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferStateRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetBufferStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerGetBufferStateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetChunkHandle_Ordinal = 0x27fbff0900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetChunkHandle_GenOrdinal = 0x11b8b37d81869ea4lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandleRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandleResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerGetChunkHandleResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_FreeBuffer_Ordinal = 0x3f86f0d000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_FreeBuffer_GenOrdinal = 0x6909636959de71c7lu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerFreeBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerFreeBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerFreeBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Start_Ordinal = 0x58e0bb6900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Start_GenOrdinal = 0x3c92516dbfd4d43blu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStartRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStartResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerStartResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Stop_Ordinal = 0x1cb723ab00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Stop_GenOrdinal = 0x7e33aef68733c1fclu;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStopRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_cpu_insntrace_ControllerStopResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_ControllerStopResponseTable;
 
 }  // namespace
 template <>
@@ -1108,7 +1120,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->Initialize(std::move(message->allocation),
-        Interface::InitializeCompleter::Sync(txn));
+          Interface::InitializeCompleter::Sync(txn));
       return true;
     }
     case kController_Terminate_Ordinal:
@@ -1120,7 +1132,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->Terminate(
-        Interface::TerminateCompleter::Sync(txn));
+          Interface::TerminateCompleter::Sync(txn));
       return true;
     }
     case kController_GetAllocation_Ordinal:
@@ -1132,7 +1144,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->GetAllocation(
-        Interface::GetAllocationCompleter::Sync(txn));
+          Interface::GetAllocationCompleter::Sync(txn));
       return true;
     }
     case kController_AllocateBuffer_Ordinal:
@@ -1145,7 +1157,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->AllocateBuffer(std::move(message->config),
-        Interface::AllocateBufferCompleter::Sync(txn));
+          Interface::AllocateBufferCompleter::Sync(txn));
       return true;
     }
     case kController_AssignThreadBuffer_Ordinal:
@@ -1158,7 +1170,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->AssignThreadBuffer(std::move(message->descriptor), std::move(message->thread),
-        Interface::AssignThreadBufferCompleter::Sync(txn));
+          Interface::AssignThreadBufferCompleter::Sync(txn));
       return true;
     }
     case kController_ReleaseThreadBuffer_Ordinal:
@@ -1171,7 +1183,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ReleaseThreadBuffer(std::move(message->descriptor), std::move(message->thread),
-        Interface::ReleaseThreadBufferCompleter::Sync(txn));
+          Interface::ReleaseThreadBufferCompleter::Sync(txn));
       return true;
     }
     case kController_GetBufferConfig_Ordinal:
@@ -1184,7 +1196,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->GetBufferConfig(std::move(message->descriptor),
-        Interface::GetBufferConfigCompleter::Sync(txn));
+          Interface::GetBufferConfigCompleter::Sync(txn));
       return true;
     }
     case kController_GetBufferState_Ordinal:
@@ -1197,7 +1209,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->GetBufferState(std::move(message->descriptor),
-        Interface::GetBufferStateCompleter::Sync(txn));
+          Interface::GetBufferStateCompleter::Sync(txn));
       return true;
     }
     case kController_GetChunkHandle_Ordinal:
@@ -1210,7 +1222,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->GetChunkHandle(std::move(message->descriptor), std::move(message->chunk_num),
-        Interface::GetChunkHandleCompleter::Sync(txn));
+          Interface::GetChunkHandleCompleter::Sync(txn));
       return true;
     }
     case kController_FreeBuffer_Ordinal:
@@ -1223,7 +1235,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->FreeBuffer(std::move(message->descriptor),
-        Interface::FreeBufferCompleter::Sync(txn));
+          Interface::FreeBufferCompleter::Sync(txn));
       return true;
     }
     case kController_Start_Ordinal:
@@ -1235,7 +1247,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->Start(
-        Interface::StartCompleter::Sync(txn));
+          Interface::StartCompleter::Sync(txn));
       return true;
     }
     case kController_Stop_Ordinal:
@@ -1247,7 +1259,7 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->Stop(
-        Interface::StopCompleter::Sync(txn));
+          Interface::StopCompleter::Sync(txn));
       return true;
     }
     default: {

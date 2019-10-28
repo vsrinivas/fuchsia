@@ -64,12 +64,14 @@ constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Or
 constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal = 0x2b158c786064d0delu;
 extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+extern "C" const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal = 0x3959ff0900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal = 0x5ecf85aadd137696lu;
 extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+extern "C" const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace
 template <>
@@ -212,7 +214,7 @@ bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
         return true;
       }
       impl->StrictXUnionHenceResponseMayBeStackAllocated(
-        Interface::StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync(txn));
+          Interface::StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync(txn));
       return true;
     }
     case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
@@ -224,7 +226,7 @@ bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
         return true;
       }
       impl->FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        Interface::FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync(txn));
+          Interface::FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync(txn));
       return true;
     }
     default: {

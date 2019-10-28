@@ -17,6 +17,7 @@ constexpr uint64_t kDeviceConnector_ConnectTee_Ordinal = 0x5b2280b900000000lu;
 constexpr uint64_t kDeviceConnector_ConnectTee_GenOrdinal = 0x37d7bf45f48faed6lu;
 extern "C" const fidl_type_t fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_tee_DeviceConnectorConnectTeeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_tee_DeviceConnectorConnectTeeResponseTable;
 
 }  // namespace
 
@@ -103,7 +104,7 @@ bool DeviceConnector::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
       }
       auto message = result.message.message();
       impl->ConnectTee(std::move(message->service_provider), std::move(message->tee_request),
-        Interface::ConnectTeeCompleter::Sync(txn));
+          Interface::ConnectTeeCompleter::Sync(txn));
       return true;
     }
     default: {

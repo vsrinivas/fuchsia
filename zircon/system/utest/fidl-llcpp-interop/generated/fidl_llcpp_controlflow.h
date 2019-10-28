@@ -27,11 +27,17 @@ namespace controlflow {
 class ControlFlow;
 
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowShutdownRequestTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowShutdownRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowShutdownResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowShutdownResponseTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphRequestTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphResponseTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequestTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
 
 // Interface for testing shutdown/epitaphs etc.
 class ControlFlow final {
@@ -48,9 +54,12 @@ class ControlFlow final {
     int32_t reply;
 
     static constexpr const fidl_type_t* Type = &fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

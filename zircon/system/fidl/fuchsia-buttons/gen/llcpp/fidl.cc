@@ -75,18 +75,21 @@ constexpr uint64_t kButtons_GetState_Ordinal = 0x3f5c2ec300000000lu;
 constexpr uint64_t kButtons_GetState_GenOrdinal = 0x10ee35ec461a178alu;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsGetStateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kButtons_RegisterNotify_Ordinal = 0x9a78d6400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kButtons_RegisterNotify_GenOrdinal = 0x1166530aab1f618blu;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kButtons_Notify_Ordinal = 0x551dd30100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kButtons_Notify_GenOrdinal = 0x49f747239d72f910lu;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyEventTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsNotifyEventTable;
 
 }  // namespace
 template <>
@@ -217,8 +220,7 @@ zx_status_t Buttons::SyncClient::HandleEvents(Buttons::EventHandlers handlers) {
   return Buttons::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Buttons::Call::HandleEvents(zx::unowned_channel client_end,
-                                            Buttons::EventHandlers handlers) {
+zx_status_t Buttons::Call::HandleEvents(zx::unowned_channel client_end, Buttons::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -242,7 +244,8 @@ zx_status_t Buttons::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -264,10 +267,10 @@ zx_status_t Buttons::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -305,7 +308,7 @@ bool Buttons::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->GetState(std::move(message->type),
-        Interface::GetStateCompleter::Sync(txn));
+          Interface::GetStateCompleter::Sync(txn));
       return true;
     }
     case kButtons_RegisterNotify_Ordinal:
@@ -318,7 +321,7 @@ bool Buttons::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->RegisterNotify(std::move(message->types),
-        Interface::RegisterNotifyCompleter::Sync(txn));
+          Interface::RegisterNotifyCompleter::Sync(txn));
       return true;
     }
     default: {

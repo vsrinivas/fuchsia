@@ -29,18 +29,24 @@ struct TestDevice_AddChildDevice_Result;
 class TestDevice;
 
 extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResponseTable;
 
 struct TestDevice_AddChildDevice_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResultTable;
 
 struct TestDevice_AddChildDevice_Result {
   enum class Tag : fidl_union_tag_t {
@@ -119,10 +125,14 @@ struct TestDevice_AddChildDevice_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -136,7 +146,9 @@ struct TestDevice_AddChildDevice_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
 
 class TestDevice final {
   TestDevice() = delete;
@@ -148,9 +160,12 @@ class TestDevice final {
     ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

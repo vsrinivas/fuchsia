@@ -18,18 +18,21 @@ constexpr uint64_t kControlFlow_Shutdown_Ordinal = 0x7d0a313700000000lu;
 constexpr uint64_t kControlFlow_Shutdown_GenOrdinal = 0x19770efd3da66572lu;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowShutdownRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowShutdownResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowShutdownResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControlFlow_NoReplyMustSendAccessDeniedEpitaph_Ordinal = 0x2141b1d000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControlFlow_NoReplyMustSendAccessDeniedEpitaph_GenOrdinal = 0x2917c62ca2c9424elu;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaphResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControlFlow_MustSendAccessDeniedEpitaph_Ordinal = 0x531dcb0700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal = 0x206576ae2ffd5305lu;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
 
 }  // namespace
 
@@ -195,7 +198,7 @@ bool ControlFlow::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         return true;
       }
       impl->Shutdown(
-        Interface::ShutdownCompleter::Sync(txn));
+          Interface::ShutdownCompleter::Sync(txn));
       return true;
     }
     case kControlFlow_NoReplyMustSendAccessDeniedEpitaph_Ordinal:
@@ -207,7 +210,7 @@ bool ControlFlow::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         return true;
       }
       impl->NoReplyMustSendAccessDeniedEpitaph(
-        Interface::NoReplyMustSendAccessDeniedEpitaphCompleter::Sync(txn));
+          Interface::NoReplyMustSendAccessDeniedEpitaphCompleter::Sync(txn));
       return true;
     }
     case kControlFlow_MustSendAccessDeniedEpitaph_Ordinal:
@@ -219,7 +222,7 @@ bool ControlFlow::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         return true;
       }
       impl->MustSendAccessDeniedEpitaph(
-        Interface::MustSendAccessDeniedEpitaphCompleter::Sync(txn));
+          Interface::MustSendAccessDeniedEpitaphCompleter::Sync(txn));
       return true;
     }
     default: {

@@ -23,7 +23,7 @@
 #include <utility>
 
 // Interface under test
-#include "generated/fidl_llcpp_basictypes.h"
+#include "generated/fidl_llcpp_basictypes.test.h"
 
 namespace basictypes = llcpp::fidl::test::llcpp::basictypes;
 

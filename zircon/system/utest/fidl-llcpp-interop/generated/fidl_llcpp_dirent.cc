@@ -18,30 +18,35 @@ constexpr uint64_t kDirEntTestInterface_CountNumDirectories_Ordinal = 0x6915d088
 constexpr uint64_t kDirEntTestInterface_CountNumDirectories_GenOrdinal = 0x331f16100bcf01a1lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ReadDir_Ordinal = 0x52407b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ReadDir_GenOrdinal = 0x1b5e15bc80c7cf42lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ConsumeDirectories_Ordinal = 0x19655c0700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ConsumeDirectories_GenOrdinal = 0x5d25ec8ecff39cd9lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OnDirents_Ordinal = 0x4c81d6ba00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OnDirents_GenOrdinal = 0x7a75e26a45782c25lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OneWayDirents_Ordinal = 0x6beae37500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OneWayDirents_GenOrdinal = 0x3b04d61f058a9043lu;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsResponseTable;
 
 }  // namespace
 template <>
@@ -313,8 +318,7 @@ zx_status_t DirEntTestInterface::SyncClient::HandleEvents(DirEntTestInterface::E
   return DirEntTestInterface::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t DirEntTestInterface::Call::HandleEvents(zx::unowned_channel client_end,
-                                            DirEntTestInterface::EventHandlers handlers) {
+zx_status_t DirEntTestInterface::Call::HandleEvents(zx::unowned_channel client_end, DirEntTestInterface::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -338,8 +342,8 @@ zx_status_t DirEntTestInterface::Call::HandleEvents(zx::unowned_channel client_e
     }
     return x;
   })();
-  std::unique_ptr<uint8_t[]> read_bytes_unique_ptr(new uint8_t[kReadAllocSize]);
-  uint8_t* read_bytes = read_bytes_unique_ptr.get();
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -361,10 +365,10 @@ zx_status_t DirEntTestInterface::Call::HandleEvents(zx::unowned_channel client_e
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -402,7 +406,7 @@ bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
       }
       auto message = result.message.message();
       impl->CountNumDirectories(std::move(message->dirents),
-        Interface::CountNumDirectoriesCompleter::Sync(txn));
+          Interface::CountNumDirectoriesCompleter::Sync(txn));
       return true;
     }
     case kDirEntTestInterface_ReadDir_Ordinal:
@@ -414,7 +418,7 @@ bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
         return true;
       }
       impl->ReadDir(
-        Interface::ReadDirCompleter::Sync(txn));
+          Interface::ReadDirCompleter::Sync(txn));
       return true;
     }
     case kDirEntTestInterface_ConsumeDirectories_Ordinal:
@@ -427,7 +431,7 @@ bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
       }
       auto message = result.message.message();
       impl->ConsumeDirectories(std::move(message->dirents),
-        Interface::ConsumeDirectoriesCompleter::Sync(txn));
+          Interface::ConsumeDirectoriesCompleter::Sync(txn));
       return true;
     }
     case kDirEntTestInterface_OneWayDirents_Ordinal:
@@ -440,7 +444,7 @@ bool DirEntTestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
       }
       auto message = result.message.message();
       impl->OneWayDirents(std::move(message->dirents), std::move(message->ep),
-        Interface::OneWayDirentsCompleter::Sync(txn));
+          Interface::OneWayDirentsCompleter::Sync(txn));
       return true;
     }
     default: {

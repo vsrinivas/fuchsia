@@ -255,30 +255,35 @@ constexpr uint64_t kTestDevice_ScheduleWork_Ordinal = 0x4be6132300000000lu;
 constexpr uint64_t kTestDevice_ScheduleWork_GenOrdinal = 0x170d21d7a7c60c39lu;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_ScheduleWorkDifferentThread_Ordinal = 0x6ab14d600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_ScheduleWorkDifferentThread_GenOrdinal = 0x5f561520dc24b81flu;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetDoneEvent_Ordinal = 0x2f1b0e5800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetDoneEvent_GenOrdinal = 0x6c1ddc133dc96d1lu;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_ScheduledWorkRan_Ordinal = 0x686e4e5500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_ScheduledWorkRan_GenOrdinal = 0x1d1b1aabae000a2dlu;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetChannel_Ordinal = 0x1828922200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetChannel_GenOrdinal = 0x3097d0cfd3d89a66lu;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
 
 }  // namespace
 template <>
@@ -609,7 +614,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->ScheduleWork(std::move(message->batch_size), std::move(message->num_work_items),
-        Interface::ScheduleWorkCompleter::Sync(txn));
+          Interface::ScheduleWorkCompleter::Sync(txn));
       return true;
     }
     case kTestDevice_ScheduleWorkDifferentThread_Ordinal:
@@ -621,7 +626,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->ScheduleWorkDifferentThread(
-        Interface::ScheduleWorkDifferentThreadCompleter::Sync(txn));
+          Interface::ScheduleWorkDifferentThreadCompleter::Sync(txn));
       return true;
     }
     case kTestDevice_GetDoneEvent_Ordinal:
@@ -633,7 +638,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->GetDoneEvent(
-        Interface::GetDoneEventCompleter::Sync(txn));
+          Interface::GetDoneEventCompleter::Sync(txn));
       return true;
     }
     case kTestDevice_ScheduledWorkRan_Ordinal:
@@ -645,7 +650,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->ScheduledWorkRan(
-        Interface::ScheduledWorkRanCompleter::Sync(txn));
+          Interface::ScheduledWorkRanCompleter::Sync(txn));
       return true;
     }
     case kTestDevice_GetChannel_Ordinal:
@@ -658,7 +663,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->GetChannel(std::move(message->test),
-        Interface::GetChannelCompleter::Sync(txn));
+          Interface::GetChannelCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -1016,6 +1021,7 @@ constexpr uint64_t kOwnedChannelDevice_ScheduleWork_Ordinal = 0x45d160ce00000000
 constexpr uint64_t kOwnedChannelDevice_ScheduleWork_GenOrdinal = 0x68e8de848728c3a4lu;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
 
 }  // namespace
 template <>
@@ -1101,7 +1107,7 @@ bool OwnedChannelDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::T
       }
       auto message = result.message.message();
       impl->ScheduleWork(std::move(message->batch_size), std::move(message->num_work_items),
-        Interface::ScheduleWorkCompleter::Sync(txn));
+          Interface::ScheduleWorkCompleter::Sync(txn));
       return true;
     }
     default: {

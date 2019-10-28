@@ -155,6 +155,7 @@ constexpr uint64_t kMexecBroker_PerformMexec_Ordinal = 0x2db06f5f00000000lu;
 constexpr uint64_t kMexecBroker_PerformMexec_GenOrdinal = 0x191f56222830486flu;
 extern "C" const fidl_type_t fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_MexecBrokerPerformMexecResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_kernel_MexecBrokerPerformMexecResponseTable;
 
 }  // namespace
 
@@ -241,7 +242,7 @@ bool MexecBroker::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       }
       auto message = result.message.message();
       impl->PerformMexec(std::move(message->kernel), std::move(message->bootdata),
-        Interface::PerformMexecCompleter::Sync(txn));
+          Interface::PerformMexecCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -273,12 +274,14 @@ constexpr uint64_t kDebugBroker_SendDebugCommand_Ordinal = 0x3f05f48400000000lu;
 constexpr uint64_t kDebugBroker_SendDebugCommand_GenOrdinal = 0x1ee270f83b5d6ff6lu;
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDebugBroker_SetTracingEnabled_Ordinal = 0x273cf2d900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDebugBroker_SetTracingEnabled_GenOrdinal = 0x12e368d05329b30elu;
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
 
 }  // namespace
 template <>
@@ -429,7 +432,7 @@ bool DebugBroker::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       }
       auto message = result.message.message();
       impl->SendDebugCommand(std::move(message->command),
-        Interface::SendDebugCommandCompleter::Sync(txn));
+          Interface::SendDebugCommandCompleter::Sync(txn));
       return true;
     }
     case kDebugBroker_SetTracingEnabled_Ordinal:
@@ -442,7 +445,7 @@ bool DebugBroker::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
       }
       auto message = result.message.message();
       impl->SetTracingEnabled(std::move(message->enabled),
-        Interface::SetTracingEnabledCompleter::Sync(txn));
+          Interface::SetTracingEnabledCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -556,12 +559,14 @@ constexpr uint64_t kCounter_GetInspectVmo_Ordinal = 0x1ba5957d00000000lu;
 constexpr uint64_t kCounter_GetInspectVmo_GenOrdinal = 0x6ea9b2e6b2791b81lu;
 extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_kernel_CounterGetInspectVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kCounter_UpdateInspectVmo_Ordinal = 0x4556672400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCounter_UpdateInspectVmo_GenOrdinal = 0x1d25eb7995a0539flu;
 extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
 
 }  // namespace
 template <>
@@ -704,7 +709,7 @@ bool Counter::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->GetInspectVmo(
-        Interface::GetInspectVmoCompleter::Sync(txn));
+          Interface::GetInspectVmoCompleter::Sync(txn));
       return true;
     }
     case kCounter_UpdateInspectVmo_Ordinal:
@@ -716,7 +721,7 @@ bool Counter::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->UpdateInspectVmo(
-        Interface::UpdateInspectVmoCompleter::Sync(txn));
+          Interface::UpdateInspectVmoCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -917,12 +922,14 @@ constexpr uint64_t kStats_GetMemoryStats_Ordinal = 0x3f74d35b00000000lu;
 constexpr uint64_t kStats_GetMemoryStats_GenOrdinal = 0x686677932ae41074lu;
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetMemoryStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetMemoryStatsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_kernel_StatsGetMemoryStatsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStats_GetCpuStats_Ordinal = 0x34c546a700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStats_GetCpuStats_GenOrdinal = 0x470e2684ca1ca19elu;
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetCpuStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_kernel_StatsGetCpuStatsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_kernel_StatsGetCpuStatsResponseTable;
 
 }  // namespace
 template <>
@@ -1065,7 +1072,7 @@ bool Stats::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         return true;
       }
       impl->GetMemoryStats(
-        Interface::GetMemoryStatsCompleter::Sync(txn));
+          Interface::GetMemoryStatsCompleter::Sync(txn));
       return true;
     }
     case kStats_GetCpuStats_Ordinal:
@@ -1077,7 +1084,7 @@ bool Stats::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         return true;
       }
       impl->GetCpuStats(
-        Interface::GetCpuStatsCompleter::Sync(txn));
+          Interface::GetCpuStatsCompleter::Sync(txn));
       return true;
     }
     default: {

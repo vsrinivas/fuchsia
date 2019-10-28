@@ -17,18 +17,21 @@ constexpr uint64_t kDevice_Transmit_Ordinal = 0x589d02df00000000lu;
 constexpr uint64_t kDevice_Transmit_GenOrdinal = 0x5fdb4f4f36a3efd2lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceTransmitRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceTransmitResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceTransmitResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Receive_Ordinal = 0x58529d900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Receive_GenOrdinal = 0x2327a558210150b1lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceReceiveRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceReceiveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceReceiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Exchange_Ordinal = 0x13c3394e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Exchange_GenOrdinal = 0x5661a0cef18dd908lu;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceExchangeResponseTable;
 
 }  // namespace
 template <>
@@ -246,7 +249,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->Transmit(std::move(message->data),
-        Interface::TransmitCompleter::Sync(txn));
+          Interface::TransmitCompleter::Sync(txn));
       return true;
     }
     case kDevice_Receive_Ordinal:
@@ -259,7 +262,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->Receive(std::move(message->size),
-        Interface::ReceiveCompleter::Sync(txn));
+          Interface::ReceiveCompleter::Sync(txn));
       return true;
     }
     case kDevice_Exchange_Ordinal:
@@ -272,7 +275,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->Exchange(std::move(message->txdata),
-        Interface::ExchangeCompleter::Sync(txn));
+          Interface::ExchangeCompleter::Sync(txn));
       return true;
     }
     default: {

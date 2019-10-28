@@ -17,6 +17,7 @@ constexpr uint64_t kLlcpp_Action_Ordinal = 0x46bfc70900000000lu;
 constexpr uint64_t kLlcpp_Action_GenOrdinal = 0x63f4dc1b85d88fc2lu;
 extern "C" const fidl_type_t fidl_test_coding_LlcppActionRequestTable;
 extern "C" const fidl_type_t fidl_test_coding_LlcppActionResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable;
 
 }  // namespace
 template <>
@@ -98,7 +99,7 @@ bool Llcpp::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
         return true;
       }
       impl->Action(
-        Interface::ActionCompleter::Sync(txn));
+          Interface::ActionCompleter::Sync(txn));
       return true;
     }
     default: {

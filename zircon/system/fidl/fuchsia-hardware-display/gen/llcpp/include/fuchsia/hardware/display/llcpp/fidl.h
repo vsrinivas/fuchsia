@@ -99,9 +99,13 @@ constexpr uint64_t invalidId = 0u;
 constexpr uint32_t identifierMaxLen = 128u;
 
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenVirtconControllerRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenVirtconControllerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenControllerRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenControllerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenControllerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenControllerResponseTable;
 
 // Provider for display controllers.
 //
@@ -117,9 +121,12 @@ class Provider final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -132,9 +139,12 @@ class Provider final {
     ::zx::channel controller;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ProviderOpenVirtconControllerRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ProviderOpenVirtconControllerRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -148,9 +158,12 @@ class Provider final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ProviderOpenControllerResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ProviderOpenControllerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -163,9 +176,12 @@ class Provider final {
     ::zx::channel controller;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ProviderOpenControllerRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ProviderOpenControllerRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -456,13 +472,18 @@ class Provider final {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_ModeTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ModeTable;
 
 struct Mode {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ModeTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ModeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t horizontal_resolution = {};
 
@@ -474,13 +495,18 @@ struct Mode {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_ImagePlaneTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ImagePlaneTable;
 
 struct ImagePlane {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ImagePlaneTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ImagePlaneTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t byte_offset = {};
 
@@ -488,13 +514,18 @@ struct ImagePlane {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_ImageConfigTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ImageConfigTable;
 
 struct ImageConfig {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ImageConfigTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ImageConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 48;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t width = {};
 
@@ -508,13 +539,18 @@ struct ImageConfig {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_FrameTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_FrameTable;
 
 struct Frame {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_FrameTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_FrameTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t x_pos = {};
 
@@ -526,13 +562,18 @@ struct Frame {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_CursorInfoTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_CursorInfoTable;
 
 struct CursorInfo {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_CursorInfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_CursorInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 12;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t width = {};
 
@@ -542,13 +583,18 @@ struct CursorInfo {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_InfoTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_InfoTable;
 
 struct Info {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_InfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_InfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 104;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t AltPrimarySize = 104;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
   uint64_t id = {};
 
@@ -566,18 +612,24 @@ struct Info {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_Controller_StartCapture_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_StartCapture_ResponseTable;
 
 struct Controller_StartCapture_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_StartCapture_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_StartCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_Controller_StartCapture_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_StartCapture_ResultTable;
 
 struct Controller_StartCapture_Result {
   enum class Tag : fidl_union_tag_t {
@@ -656,10 +708,14 @@ struct Controller_StartCapture_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_StartCapture_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_StartCapture_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -673,18 +729,24 @@ struct Controller_StartCapture_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_Controller_ReleaseCapture_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_ReleaseCapture_ResponseTable;
 
 struct Controller_ReleaseCapture_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_ReleaseCapture_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_ReleaseCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
 
 struct Controller_ReleaseCapture_Result {
   enum class Tag : fidl_union_tag_t {
@@ -763,10 +825,14 @@ struct Controller_ReleaseCapture_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -780,18 +846,24 @@ struct Controller_ReleaseCapture_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
 
 struct Controller_ImportImageForCapture_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t image_id = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
 
 struct Controller_ImportImageForCapture_Result {
   enum class Tag : fidl_union_tag_t {
@@ -870,10 +942,14 @@ struct Controller_ImportImageForCapture_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -887,13 +963,18 @@ struct Controller_ImportImageForCapture_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_ClientCompositionOpTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ClientCompositionOpTable;
 
 struct ClientCompositionOp {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ClientCompositionOpTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ClientCompositionOpTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t display_id = {};
 
@@ -903,71 +984,137 @@ struct ClientCompositionOp {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDisplaysChangedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseImageRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseImageResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportEventRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportEventResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseEventRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseEventRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseEventResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCreateLayerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCreateLayerResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDestroyLayerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDestroyLayerResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayModeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayModeResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayColorConversionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayLayersResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryPositionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorPositionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorPositionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerColorConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerImageResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCheckConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCheckConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerApplyConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerApplyConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerApplyConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerApplyConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerEnableVsyncResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerVsyncRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerVsyncEventTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetVirtconModeResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerClientOwnershipChangeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseBufferCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseBufferCollectionResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerStartCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerStartCaptureResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
 
 // Interface for accessing the display hardware.
 //
@@ -994,9 +1141,12 @@ class Controller final {
     ::fidl::VectorView<uint64_t> removed;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1009,9 +1159,12 @@ class Controller final {
     uint64_t image_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1025,9 +1178,12 @@ class Controller final {
     int32_t offset;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1042,9 +1198,12 @@ class Controller final {
     uint64_t image_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportImageResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportImageResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1058,9 +1217,12 @@ class Controller final {
     uint32_t index;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportImageRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportImageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1074,9 +1236,12 @@ class Controller final {
     uint64_t image_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseImageRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerReleaseImageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1090,9 +1255,12 @@ class Controller final {
     uint64_t id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportEventRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1105,9 +1273,12 @@ class Controller final {
     uint64_t id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseEventRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerReleaseEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1121,9 +1292,12 @@ class Controller final {
     uint64_t layer_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerCreateLayerResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerCreateLayerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1137,9 +1311,12 @@ class Controller final {
     uint64_t layer_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1153,9 +1330,12 @@ class Controller final {
     ::llcpp::fuchsia::hardware::display::Mode mode;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1171,9 +1351,12 @@ class Controller final {
     ::fidl::Array<float, 3> postoffsets;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 88;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 88;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1187,9 +1370,12 @@ class Controller final {
     ::fidl::VectorView<uint64_t> layer_ids;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1203,9 +1389,12 @@ class Controller final {
     ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1221,9 +1410,12 @@ class Controller final {
     ::llcpp::fuchsia::hardware::display::Frame dest_frame;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 64;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 64;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1238,9 +1430,12 @@ class Controller final {
     float val;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1254,9 +1449,12 @@ class Controller final {
     ::llcpp::fuchsia::hardware::display::ImageConfig image_config;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1271,9 +1469,12 @@ class Controller final {
     int32_t y;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1288,9 +1489,12 @@ class Controller final {
     ::fidl::VectorView<uint8_t> color_bytes;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1306,9 +1510,12 @@ class Controller final {
     uint64_t signal_event_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1322,9 +1529,12 @@ class Controller final {
     ::fidl::VectorView<::llcpp::fuchsia::hardware::display::ClientCompositionOp> ops;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerCheckConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerCheckConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1336,9 +1546,12 @@ class Controller final {
     bool discard;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerCheckConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerCheckConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1354,9 +1567,12 @@ class Controller final {
     bool enable;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1371,9 +1587,12 @@ class Controller final {
     ::fidl::VectorView<uint64_t> images;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerVsyncEventTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerVsyncEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1385,9 +1604,12 @@ class Controller final {
     uint8_t mode;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1400,9 +1622,12 @@ class Controller final {
     bool has_ownership;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1414,9 +1639,12 @@ class Controller final {
     uint32_t stride;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1429,9 +1657,12 @@ class Controller final {
     uint32_t pixel_format;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1446,9 +1677,12 @@ class Controller final {
     ::zx::vmo vmo;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1460,9 +1694,12 @@ class Controller final {
     uint64_t size;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1476,9 +1713,12 @@ class Controller final {
     int32_t res;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1491,9 +1731,12 @@ class Controller final {
     ::zx::channel collection_token;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1507,9 +1750,12 @@ class Controller final {
     uint64_t collection_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1522,9 +1768,12 @@ class Controller final {
     int32_t res;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1537,9 +1786,12 @@ class Controller final {
     ::llcpp::fuchsia::hardware::display::ImageConfig config;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1555,9 +1807,12 @@ class Controller final {
     uint32_t stride;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1571,9 +1826,12 @@ class Controller final {
     ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1587,9 +1845,12 @@ class Controller final {
     uint32_t index;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1603,9 +1864,12 @@ class Controller final {
     ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerStartCaptureResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerStartCaptureResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1618,9 +1882,12 @@ class Controller final {
     uint64_t image_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerStartCaptureRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerStartCaptureRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1634,9 +1901,12 @@ class Controller final {
     ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1648,9 +1918,12 @@ class Controller final {
     uint64_t image_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

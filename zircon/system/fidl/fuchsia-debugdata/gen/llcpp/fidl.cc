@@ -16,12 +16,14 @@ constexpr uint64_t kDebugData_Publish_Ordinal = 0x233ab68f00000000lu;
 constexpr uint64_t kDebugData_Publish_GenOrdinal = 0x32e10c8a45d9312alu;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishRequestTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_debugdata_DebugDataPublishResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDebugData_LoadConfig_Ordinal = 0x934ade500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDebugData_LoadConfig_GenOrdinal = 0x51012dfe3d37bdf6lu;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 
 }  // namespace
 
@@ -180,7 +182,7 @@ bool DebugData::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->Publish(std::move(message->data_sink), std::move(message->data),
-        Interface::PublishCompleter::Sync(txn));
+          Interface::PublishCompleter::Sync(txn));
       return true;
     }
     case kDebugData_LoadConfig_Ordinal:
@@ -193,7 +195,7 @@ bool DebugData::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       }
       auto message = result.message.message();
       impl->LoadConfig(std::move(message->config_name),
-        Interface::LoadConfigCompleter::Sync(txn));
+          Interface::LoadConfigCompleter::Sync(txn));
       return true;
     }
     default: {

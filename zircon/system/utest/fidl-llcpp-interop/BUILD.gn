@@ -13,7 +13,7 @@ if (current_toolchain != default_toolchain) {
       "basictypes_tests.cc",
       "controlflow_tests.cc",
       "dirent_tests.cc",
-      "generated/fidl_llcpp_basictypes.cc",
+      "generated/fidl_llcpp_basictypes.test.cc",
       "generated/fidl_llcpp_controlflow.cc",
       "generated/fidl_llcpp_dirent.cc",
     ]

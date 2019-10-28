@@ -17,6 +17,14 @@ class {{ .Name }};
 &{{ .ResponseTypeName }}
 {{- end }}
 
+{{- define "V1ResponseCodingTable" -}}
+&{{ .V1ResponseTypeName }}
+{{- end }}
+
+{{- define "V1RequestCodingTable" -}}
+&{{ .V1RequestTypeName }}
+{{- end }}
+
 {{- define "ForwardParams" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}} std::move({{ $param.Name }})
@@ -41,7 +49,9 @@ class {{ .Name }};
 {{ "" }}
   {{- range .Methods }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
+extern "C" const fidl_type_t {{ .V1RequestTypeName }};
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
+extern "C" const fidl_type_t {{ .V1ResponseTypeName }};
   {{- end }}
 
   {{- /* Trailing line feed after encoding tables. */}}
@@ -73,9 +83,12 @@ class {{ .Name }} final {
         {{- end }}
 
     static constexpr const fidl_type_t* Type = {{ template "ResponseCodingTable" . }};
+    static constexpr const fidl_type_t* AltType = {{ template "V1ResponseCodingTable" . }};
     static constexpr uint32_t MaxNumHandles = {{ .ResponseMaxHandles }};
     static constexpr uint32_t PrimarySize = {{ .ResponseSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .ResponseMaxOutOfLine }};
+    static constexpr uint32_t AltPrimarySize = {{ .ResponseSizeV1NoEE }};
+    static constexpr uint32_t AltMaxOutOfLine = {{ .ResponseMaxOutOfLineV1NoEE }};
     static constexpr bool HasFlexibleEnvelope = {{ .ResponseFlexible }};
     static constexpr bool ContainsUnion = {{ .ResponseContainsUnion }};
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -97,9 +110,12 @@ class {{ .Name }} final {
         {{- end }}
 
     static constexpr const fidl_type_t* Type = {{ template "RequestCodingTable" . }};
+    static constexpr const fidl_type_t* AltType = {{ template "V1RequestCodingTable" . }};
     static constexpr uint32_t MaxNumHandles = {{ .RequestMaxHandles }};
     static constexpr uint32_t PrimarySize = {{ .RequestSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .RequestMaxOutOfLine }};
+    static constexpr uint32_t AltPrimarySize = {{ .RequestSizeV1NoEE }};
+    static constexpr uint32_t AltMaxOutOfLine = {{ .RequestMaxOutOfLineV1NoEE }};
     static constexpr bool HasFlexibleEnvelope = {{ .RequestFlexible }};
     static constexpr bool ContainsUnion = {{ .RequestContainsUnion }};
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -475,6 +491,7 @@ constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
   {{- end }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
+extern "C" const fidl_type_t {{ .V1ResponseTypeName }};
 {{- end }}
 
 }  // namespace

@@ -26,9 +26,13 @@ namespace debugdata {
 class DebugData;
 
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_debugdata_DebugDataPublishRequestTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataPublishResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_debugdata_DebugDataPublishResponseTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_debugdata_DebugDataLoadConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_debugdata_DebugDataLoadConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_debugdata_DebugDataLoadConfigResponseTable;
 
 // DebugData defines the interface for instrumentation configuration and data publishing.
 class DebugData final {
@@ -43,9 +47,12 @@ class DebugData final {
     ::zx::vmo data;
 
     static constexpr const fidl_type_t* Type = &fuchsia_debugdata_DebugDataPublishRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_debugdata_DebugDataPublishRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 1024;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -58,9 +65,12 @@ class DebugData final {
     ::zx::vmo config;
 
     static constexpr const fidl_type_t* Type = &fuchsia_debugdata_DebugDataLoadConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_debugdata_DebugDataLoadConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -72,9 +82,12 @@ class DebugData final {
     ::fidl::StringView config_name;
 
     static constexpr const fidl_type_t* Type = &fuchsia_debugdata_DebugDataLoadConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_debugdata_DebugDataLoadConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 1024;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

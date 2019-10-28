@@ -115,18 +115,20 @@ type EnumMember struct {
 
 type Union struct {
 	types.Attributes
-	Namespace        string
-	Name             string
-	TableType        string
-	Members          []UnionMember
-	Size             int
-	InlineSizeOld    int
-	InlineSizeV1NoEE int
-	MaxHandles       int
-	MaxOutOfLine     int
-	IsResult         bool
-	Result           *Result
-	Kind             unionKind
+	Namespace          string
+	Name               string
+	TableType          string
+	V1TableType        string
+	Members            []UnionMember
+	Size               int
+	InlineSizeOld      int
+	InlineSizeV1NoEE   int
+	MaxHandles         int
+	MaxOutOfLine       int
+	MaxOutOfLineV1NoEE int
+	IsResult           bool
+	Result             *Result
+	Kind               unionKind
 }
 
 type UnionMember struct {
@@ -145,16 +147,18 @@ func (um UnionMember) UpperCamelCaseName() string {
 
 type XUnion struct {
 	types.Attributes
-	Namespace        string
-	Name             string
-	TableType        string
-	Members          []XUnionMember
-	Size             int
-	InlineSizeOld    int
-	InlineSizeV1NoEE int
-	MaxHandles       int
-	MaxOutOfLine     int
-	Kind             xunionKind
+	Namespace          string
+	Name               string
+	TableType          string
+	V1TableType        string
+	Members            []XUnionMember
+	Size               int
+	InlineSizeOld      int
+	InlineSizeV1NoEE   int
+	MaxHandles         int
+	MaxOutOfLine       int
+	MaxOutOfLineV1NoEE int
+	Kind               xunionKind
 	types.Strictness
 }
 
@@ -174,17 +178,19 @@ func (xum XUnionMember) UpperCamelCaseName() string {
 
 type Table struct {
 	types.Attributes
-	Namespace        string
-	Name             string
-	TableType        string
-	Members          []TableMember
-	Size             int
-	InlineSizeOld    int
-	InlineSizeV1NoEE int
-	BiggestOrdinal   int
-	MaxHandles       int
-	MaxOutOfLine     int
-	Kind             tableKind
+	Namespace          string
+	Name               string
+	TableType          string
+	V1TableType        string
+	Members            []TableMember
+	Size               int
+	InlineSizeOld      int
+	InlineSizeV1NoEE   int
+	BiggestOrdinal     int
+	MaxHandles         int
+	MaxOutOfLine       int
+	MaxOutOfLineV1NoEE int
+	Kind               tableKind
 }
 
 type TableMember struct {
@@ -203,19 +209,21 @@ type TableMember struct {
 
 type Struct struct {
 	types.Attributes
-	Namespace        string
-	Name             string
-	TableType        string
-	Members          []StructMember
-	Size             int
-	InlineSizeOld    int
-	InlineSizeV1NoEE int
-	MaxHandles       int
-	MaxOutOfLine     int
-	HasPadding       bool
-	IsResultValue    bool
-	Result           *Result
-	Kind             structKind
+	Namespace          string
+	Name               string
+	TableType          string
+	V1TableType        string
+	Members            []StructMember
+	Size               int
+	InlineSizeOld      int
+	InlineSizeV1NoEE   int
+	MaxHandles         int
+	MaxOutOfLine       int
+	MaxOutOfLineV1NoEE int
+	HasPadding         bool
+	IsResultValue      bool
+	Result             *Result
+	Kind               structKind
 }
 
 type StructMember struct {
@@ -245,7 +253,6 @@ type Interface struct {
 	ResponseDecoderName   string
 	Methods               []Method
 	HasEvents             bool
-	StackAllocEventBuffer bool
 	Kind                  interfaceKind
 }
 
@@ -265,39 +272,44 @@ type ServiceMember struct {
 	MethodName    string
 }
 
+// TODO: There are common fields between Request and Response; consider factoring them out.
 type Method struct {
 	types.Attributes
 	types.Ordinals
-	Name                 string
-	NameInLowerSnakeCase string
-	HasRequest           bool
-	Request              []Parameter
-	RequestSize          int
-	RequestSizeOld       int
-	RequestSizeV1NoEE    int
-	RequestTypeName      string
-	RequestMaxHandles    int
-	RequestMaxOutOfLine  int
-	RequestPadding       bool
-	RequestFlexible      bool
-	RequestContainsUnion bool
-	HasResponse          bool
-	Response             []Parameter
-	ResponseSize         int
-	ResponseSizeOld      int
-	ResponseSizeV1NoEE   int
-	ResponseTypeName     string
-	ResponseMaxHandles   int
-	ResponseMaxOutOfLine int
-	ResponsePadding      bool
-	ResponseFlexible     bool
-	ResponseContainsUnion bool
-	CallbackType         string
-	ResponseHandlerType  string
-	ResponderType        string
-	Transitional         bool
-	Result               *Result
-	LLProps              LLProps
+	Name                       string
+	NameInLowerSnakeCase       string
+	HasRequest                 bool
+	Request                    []Parameter
+	RequestSize                int
+	RequestSizeOld             int
+	RequestSizeV1NoEE          int
+	RequestTypeName            string
+	V1RequestTypeName          string
+	RequestMaxHandles          int
+	RequestMaxOutOfLine        int
+	RequestMaxOutOfLineV1NoEE  int
+	RequestPadding             bool
+	RequestFlexible            bool
+	RequestContainsUnion       bool
+	HasResponse                bool
+	Response                   []Parameter
+	ResponseSize               int
+	ResponseSizeOld            int
+	ResponseSizeV1NoEE         int
+	ResponseTypeName           string
+	V1ResponseTypeName         string
+	ResponseMaxHandles         int
+	ResponseMaxOutOfLine       int
+	ResponseMaxOutOfLineV1NoEE int
+	ResponsePadding            bool
+	ResponseFlexible           bool
+	ResponseContainsUnion      bool
+	CallbackType               string
+	ResponseHandlerType        string
+	ResponderType              string
+	Transitional               bool
+	Result                     *Result
+	LLProps                    LLProps
 }
 
 // LLContextProps contain context-dependent properties of a method specific to llcpp.
@@ -921,7 +933,6 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	}
 
 	hasEvents := false
-	stackAllocEventBuffer := true
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name, "")
 		callbackType := ""
@@ -946,45 +957,45 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 				fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
 				fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
 			),
-			Name:                 name,
-			NameInLowerSnakeCase: common.ToSnakeCase(name),
-			HasRequest:           v.HasRequest,
-			Request:              c.compileParameterArray(v.Request),
-			RequestSize:          v.RequestSize,
-			RequestSizeOld:       v.RequestTypeShapeOld.InlineSize,
-			RequestSizeV1NoEE:    v.RequestTypeShapeV1NoEE.InlineSize,
-			RequestTypeName:      fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
-			RequestMaxHandles:    c.maxHandlesFromParameterArray(v.Request),
-			RequestMaxOutOfLine:  c.maxOutOfLineFromParameterArray(v.Request),
-			RequestPadding:       v.RequestPadding,
-			RequestFlexible:      v.RequestFlexible,
-			RequestContainsUnion: v.RequestTypeShapeV1NoEE.ContainsUnion,
-			HasResponse:          v.HasResponse,
-			Response:             c.compileParameterArray(v.Response),
-			ResponseSize:         v.ResponseSize,
-			ResponseSizeOld:      v.ResponseTypeShapeOld.InlineSize,
-			ResponseSizeV1NoEE:   v.ResponseTypeShapeV1NoEE.InlineSize,
-			ResponseTypeName:     fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
-			ResponseMaxHandles:   c.maxHandlesFromParameterArray(v.Response),
-			ResponseMaxOutOfLine: c.maxOutOfLineFromParameterArray(v.Response),
-			ResponsePadding:      v.ResponsePadding,
-			ResponseFlexible:     v.ResponseFlexible,
-			ResponseContainsUnion:v.ResponseTypeShapeV1NoEE.ContainsUnion,
-			CallbackType:         callbackType,
-			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
-			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
-			Transitional:         v.IsTransitional(),
-			Result:               result,
+			Name:                       name,
+			NameInLowerSnakeCase:       common.ToSnakeCase(name),
+			HasRequest:                 v.HasRequest,
+			Request:                    c.compileParameterArray(v.Request),
+			RequestSize:                v.RequestSize,
+			RequestSizeOld:             v.RequestTypeShapeOld.InlineSize,
+			RequestSizeV1NoEE:          v.RequestTypeShapeV1NoEE.InlineSize,
+			RequestTypeName:            fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
+			V1RequestTypeName:          fmt.Sprintf("v1_%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
+			RequestMaxHandles:          c.maxHandlesFromParameterArray(v.Request),
+			RequestMaxOutOfLine:        c.maxOutOfLineFromParameterArray(v.Request),
+			RequestMaxOutOfLineV1NoEE:  v.RequestTypeShapeV1NoEE.MaxOutOfLine,
+			RequestPadding:             v.RequestPadding,
+			RequestFlexible:            v.RequestFlexible,
+			RequestContainsUnion:       v.RequestTypeShapeV1NoEE.ContainsUnion,
+			HasResponse:                v.HasResponse,
+			Response:                   c.compileParameterArray(v.Response),
+			ResponseSize:               v.ResponseSize,
+			ResponseSizeOld:            v.ResponseTypeShapeOld.InlineSize,
+			ResponseSizeV1NoEE:         v.ResponseTypeShapeV1NoEE.InlineSize,
+			ResponseTypeName:           fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
+			V1ResponseTypeName:         fmt.Sprintf("v1_%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
+			ResponseMaxHandles:         c.maxHandlesFromParameterArray(v.Response),
+			ResponseMaxOutOfLine:       c.maxOutOfLineFromParameterArray(v.Response),
+			ResponseMaxOutOfLineV1NoEE: v.ResponseTypeShapeV1NoEE.MaxOutOfLine,
+			ResponsePadding:            v.ResponsePadding,
+			ResponseFlexible:           v.ResponseFlexible,
+			ResponseContainsUnion:      v.ResponseTypeShapeV1NoEE.ContainsUnion,
+			CallbackType:               callbackType,
+			ResponseHandlerType:        fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
+			ResponderType:              fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
+			Transitional:               v.IsTransitional(),
+			Result:                     result,
 		}
 
 		m.LLProps = m.NewLLProps(r)
 		r.Methods = append(r.Methods, m)
-		if !v.HasRequest {
-			stackAllocEventBuffer = stackAllocEventBuffer && m.LLProps.ClientContext.StackAllocResponse
-		}
 	}
 	r.HasEvents = hasEvents
-	r.StackAllocEventBuffer = stackAllocEventBuffer
 
 	return r
 }
@@ -1033,18 +1044,21 @@ func (c *compiler) compileStructMember(val types.StructMember, appendNamespace s
 
 func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struct {
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
+	tableType := c.compileTableType(val.Name)
 	r := Struct{
-		Attributes:       val.Attributes,
-		Namespace:        c.namespace,
-		Name:             name,
-		TableType:        c.compileTableType(val.Name),
-		Members:          []StructMember{},
-		Size:             val.Size,
-		InlineSizeOld:    val.TypeShapeOld.InlineSize,
-		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
-		MaxHandles:       val.MaxHandles,
-		MaxOutOfLine:     val.MaxOutOfLine,
-		HasPadding:       val.HasPadding,
+		Attributes:         val.Attributes,
+		Namespace:          c.namespace,
+		Name:               name,
+		TableType:          tableType,
+		V1TableType:        "v1_" + tableType,
+		Members:            []StructMember{},
+		Size:               val.Size,
+		InlineSizeOld:      val.TypeShapeOld.InlineSize,
+		InlineSizeV1NoEE:   val.TypeShapeV1NoEE.InlineSize,
+		MaxHandles:         val.MaxHandles,
+		MaxOutOfLine:       val.MaxOutOfLine,
+		MaxOutOfLineV1NoEE: val.TypeShapeV1NoEE.MaxOutOfLine,
+		HasPadding:         val.HasPadding,
 	}
 
 	for _, v := range val.Members {
@@ -1118,18 +1132,21 @@ func (m byOrdinal) Less(i, j int) bool {
 
 func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
+	tableType := c.compileTableType(val.Name)
 	r := Table{
-		Attributes:       val.Attributes,
-		Namespace:        c.namespace,
-		Name:             name,
-		TableType:        c.compileTableType(val.Name),
-		Members:          nil,
-		Size:             val.Size,
-		InlineSizeOld:    val.TypeShapeOld.InlineSize,
-		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
-		BiggestOrdinal:   0,
-		MaxHandles:       val.MaxHandles,
-		MaxOutOfLine:     val.MaxOutOfLine,
+		Attributes:         val.Attributes,
+		Namespace:          c.namespace,
+		Name:               name,
+		TableType:          tableType,
+		V1TableType:        "v1_" + tableType,
+		Members:            nil,
+		Size:               val.Size,
+		InlineSizeOld:      val.TypeShapeOld.InlineSize,
+		InlineSizeV1NoEE:   val.TypeShapeV1NoEE.InlineSize,
+		BiggestOrdinal:     0,
+		MaxHandles:         val.MaxHandles,
+		MaxOutOfLine:       val.MaxOutOfLine,
+		MaxOutOfLineV1NoEE: val.TypeShapeV1NoEE.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {
@@ -1163,17 +1180,20 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 
 func (c *compiler) compileUnion(val types.Union) *Union {
 	name := c.compileCompoundIdentifier(val.Name, "", "", false)
+	tableType := c.compileTableType(val.Name)
 	r := Union{
-		Attributes:       val.Attributes,
-		Namespace:        c.namespace,
-		Name:             changeIfReserved(types.Identifier(name), ""),
-		TableType:        c.compileTableType(val.Name),
-		Members:          []UnionMember{},
-		Size:             val.Size,
-		InlineSizeOld:    val.TypeShapeOld.InlineSize,
-		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
-		MaxHandles:       val.MaxHandles,
-		MaxOutOfLine:     val.MaxOutOfLine,
+		Attributes:         val.Attributes,
+		Namespace:          c.namespace,
+		Name:               changeIfReserved(types.Identifier(name), ""),
+		TableType:          tableType,
+		V1TableType:        "v1_" + tableType,
+		Members:            []UnionMember{},
+		Size:               val.Size,
+		InlineSizeOld:      val.TypeShapeOld.InlineSize,
+		InlineSizeV1NoEE:   val.TypeShapeV1NoEE.InlineSize,
+		MaxHandles:         val.MaxHandles,
+		MaxOutOfLine:       val.MaxOutOfLine,
+		MaxOutOfLineV1NoEE: val.TypeShapeV1NoEE.MaxOutOfLine,
 	}
 
 	for _, v := range val.Members {
@@ -1225,18 +1245,20 @@ func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 
 func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	name := c.compileCompoundIdentifier(val.Name, "", "", false)
-
+	tableType := c.compileTableType(val.Name)
 	r := XUnion{
-		Attributes:       val.Attributes,
-		Namespace:        c.namespace,
-		Name:             name,
-		TableType:        c.compileTableType(val.Name),
-		Size:             val.Size,
-		InlineSizeOld:    val.TypeShapeOld.InlineSize,
-		InlineSizeV1NoEE: val.TypeShapeV1NoEE.InlineSize,
-		MaxHandles:       val.MaxHandles,
-		MaxOutOfLine:     val.MaxOutOfLine,
-		Strictness:       val.Strictness,
+		Attributes:         val.Attributes,
+		Namespace:          c.namespace,
+		Name:               name,
+		TableType:          tableType,
+		V1TableType:        "v1_" + tableType,
+		Size:               val.Size,
+		InlineSizeOld:      val.TypeShapeOld.InlineSize,
+		InlineSizeV1NoEE:   val.TypeShapeV1NoEE.InlineSize,
+		MaxHandles:         val.MaxHandles,
+		MaxOutOfLine:       val.MaxOutOfLine,
+		MaxOutOfLineV1NoEE: val.TypeShapeV1NoEE.MaxOutOfLine,
+		Strictness:         val.Strictness,
 	}
 
 	for _, v := range val.Members {

@@ -41,18 +41,24 @@ struct OwnedChannelDevice_ScheduleWork_Result;
 class OwnedChannelDevice;
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
 
 struct TestDevice_ScheduleWork_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
 
 struct TestDevice_ScheduleWork_Result {
   enum class Tag : fidl_union_tag_t {
@@ -131,10 +137,14 @@ struct TestDevice_ScheduleWork_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -148,18 +158,24 @@ struct TestDevice_ScheduleWork_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
 
 struct TestDevice_ScheduleWorkDifferentThread_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
 
 struct TestDevice_ScheduleWorkDifferentThread_Result {
   enum class Tag : fidl_union_tag_t {
@@ -238,10 +254,14 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -255,18 +275,24 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
 
 struct TestDevice_GetDoneEvent_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::event event = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
 
 struct TestDevice_GetDoneEvent_Result {
   enum class Tag : fidl_union_tag_t {
@@ -345,10 +371,14 @@ struct TestDevice_GetDoneEvent_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -362,18 +392,24 @@ struct TestDevice_GetDoneEvent_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
 
 struct TestDevice_GetChannel_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
 
 struct TestDevice_GetChannel_Result {
   enum class Tag : fidl_union_tag_t {
@@ -452,10 +488,14 @@ struct TestDevice_GetChannel_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -469,6 +509,7 @@ struct TestDevice_GetChannel_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_LatencyHistogramTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_LatencyHistogramTable;
 
 // Buckets are arranged as following:
 // [0] => [0ns, 100ns]
@@ -483,24 +524,38 @@ extern "C" const fidl_type_t fuchsia_device_schedule_work_test_LatencyHistogramT
 // [9] => [30us, infinity]
 struct LatencyHistogram {
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_LatencyHistogramTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_LatencyHistogramTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 80;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<uint64_t, 10> buckets = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetDoneEventRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
 
 class TestDevice final {
   TestDevice() = delete;
@@ -512,9 +567,12 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -527,9 +585,12 @@ class TestDevice final {
     uint32_t num_work_items;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -543,9 +604,12 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -559,9 +623,12 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -576,9 +643,12 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 104;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -592,9 +662,12 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -606,9 +679,12 @@ class TestDevice final {
     ::zx::channel test;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1068,18 +1144,24 @@ class TestDevice final {
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
 
 struct OwnedChannelDevice_ScheduleWork_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 80;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
 
 struct OwnedChannelDevice_ScheduleWork_Result {
   enum class Tag : fidl_union_tag_t {
@@ -1158,10 +1240,14 @@ struct OwnedChannelDevice_ScheduleWork_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 88;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 80;
 
  private:
   void Destroy();
@@ -1175,7 +1261,9 @@ struct OwnedChannelDevice_ScheduleWork_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
 extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
 
 class OwnedChannelDevice final {
   OwnedChannelDevice() = delete;
@@ -1187,9 +1275,12 @@ class OwnedChannelDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 80;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1202,9 +1293,12 @@ class OwnedChannelDevice final {
     uint32_t num_work_items;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

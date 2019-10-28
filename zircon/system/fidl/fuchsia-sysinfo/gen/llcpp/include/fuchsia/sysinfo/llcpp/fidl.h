@@ -35,11 +35,17 @@ enum class InterruptControllerType : uint32_t {
 struct InterruptControllerInfo;
 
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetHypervisorResourceRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetBoardNameRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetInterruptControllerInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
 
 class Device final {
   Device() = delete;
@@ -52,9 +58,12 @@ class Device final {
     ::zx::resource resource;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -69,9 +78,12 @@ class Device final {
     ::fidl::StringView name;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -86,9 +98,12 @@ class Device final {
     ::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -375,13 +390,18 @@ class Device final {
 constexpr uint8_t SYSINFO_BOARD_NAME_LEN = 32u;
 
 extern "C" const fidl_type_t fuchsia_sysinfo_InterruptControllerInfoTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_InterruptControllerInfoTable;
 
 struct InterruptControllerInfo {
   static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_InterruptControllerInfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_InterruptControllerInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::sysinfo::InterruptControllerType type = {};
 };

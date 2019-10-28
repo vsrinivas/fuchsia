@@ -33,6 +33,7 @@ struct UnionSize24Alignment8;
 struct SandwichUnionSize24Alignment8;
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize8Alignment4Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4Table;
 
 struct UnionSize8Alignment4 {
   enum class Tag : fidl_union_tag_t {
@@ -86,10 +87,14 @@ struct UnionSize8Alignment4 {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize8Alignment4Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_UnionSize8Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -102,13 +107,18 @@ struct UnionSize8Alignment4 {
 };
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
 
 struct SandwichUnionSize8Alignment4 {
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 40;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
   uint32_t before = {};
 
@@ -118,6 +128,7 @@ struct SandwichUnionSize8Alignment4 {
 };
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize36Alignment4Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4Table;
 
 struct UnionSize36Alignment4 {
   enum class Tag : fidl_union_tag_t {
@@ -171,10 +182,14 @@ struct UnionSize36Alignment4 {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize36Alignment4Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_UnionSize36Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 36;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 32;
 
  private:
   void Destroy();
@@ -187,13 +202,18 @@ struct UnionSize36Alignment4 {
 };
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
 
 struct SandwichUnionSize36Alignment4 {
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 44;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 40;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 32;
 
   uint32_t before = {};
 
@@ -203,6 +223,7 @@ struct SandwichUnionSize36Alignment4 {
 };
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize12Alignment4Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4Table;
 
 struct UnionSize12Alignment4 {
   enum class Tag : fidl_union_tag_t {
@@ -256,10 +277,14 @@ struct UnionSize12Alignment4 {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize12Alignment4Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_UnionSize12Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -272,13 +297,18 @@ struct UnionSize12Alignment4 {
 };
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
 
 struct SandwichUnionSize12Alignment4 {
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 20;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 40;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
   uint32_t before = {};
 
@@ -288,13 +318,18 @@ struct SandwichUnionSize12Alignment4 {
 };
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_StructSize16Alignment8Table;
 
 struct StructSize16Alignment8 {
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_StructSize16Alignment8Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_StructSize16Alignment8Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t f1 = {};
 
@@ -302,6 +337,7 @@ struct StructSize16Alignment8 {
 };
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_UnionSize24Alignment8Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8Table;
 
 struct UnionSize24Alignment8 {
   enum class Tag : fidl_union_tag_t {
@@ -355,10 +391,14 @@ struct UnionSize24Alignment8 {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize24Alignment8Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_UnionSize24Alignment8Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
   void Destroy();
@@ -371,13 +411,18 @@ struct UnionSize24Alignment8 {
 };
 
 extern "C" const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
+extern "C" const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
 
 struct SandwichUnionSize24Alignment8 {
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
+  static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 40;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
 
   uint32_t before = {};
 

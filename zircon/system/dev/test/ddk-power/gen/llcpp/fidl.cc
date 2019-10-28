@@ -136,12 +136,14 @@ constexpr uint64_t kTestDevice_AddDeviceWithPowerArgs_Ordinal = 0x5d89a154000000
 constexpr uint64_t kTestDevice_AddDeviceWithPowerArgs_GenOrdinal = 0x6f4b31b6d68abb48lu;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_Ordinal = 0x724b2ef700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_GenOrdinal = 0x15ff1a2b10784103lu;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 
 }  // namespace
 template <>
@@ -291,7 +293,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       auto message = result.message.message();
       impl->AddDeviceWithPowerArgs(std::move(message->info),
-        Interface::AddDeviceWithPowerArgsCompleter::Sync(txn));
+          Interface::AddDeviceWithPowerArgsCompleter::Sync(txn));
       return true;
     }
     case kTestDevice_GetCurrentDevicePowerState_Ordinal:
@@ -303,7 +305,7 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       impl->GetCurrentDevicePowerState(
-        Interface::GetCurrentDevicePowerStateCompleter::Sync(txn));
+          Interface::GetCurrentDevicePowerStateCompleter::Sync(txn));
       return true;
     }
     default: {

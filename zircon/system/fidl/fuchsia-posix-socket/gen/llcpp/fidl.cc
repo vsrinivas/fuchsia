@@ -17,6 +17,7 @@ constexpr uint64_t kProvider_Socket_Ordinal = 0x4d07378200000000lu;
 constexpr uint64_t kProvider_Socket_GenOrdinal = 0x3c53fd7d5afacab8lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ProviderSocketResponseTable;
 
 }  // namespace
 template <>
@@ -104,7 +105,7 @@ bool Provider::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
       }
       auto message = result.message.message();
       impl->Socket(std::move(message->domain), std::move(message->type), std::move(message->protocol),
-        Interface::SocketCompleter::Sync(txn));
+          Interface::SocketCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -177,102 +178,119 @@ constexpr uint64_t kControl_Clone_Ordinal = 0x17fe6a4c00000000lu;
 constexpr uint64_t kControl_Clone_GenOrdinal = 0x5a61678f293ce16flu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Describe_GenOrdinal = 0xffcec215078dea0lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Sync_GenOrdinal = 0x189d88326c18b519lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Bind_Ordinal = 0x147441ed00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Bind_GenOrdinal = 0x369838aa5347aa8flu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Connect_Ordinal = 0x237ed33800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Connect_GenOrdinal = 0x1138f666cb3655b1lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlConnectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Listen_Ordinal = 0x2e63628600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Listen_GenOrdinal = 0xa860257383d5651lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlListenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Accept_Ordinal = 0x11ed297300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Accept_GenOrdinal = 0x17921a9ebebb7ba0lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlAcceptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockName_Ordinal = 0x63c1368200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockName_GenOrdinal = 0x6f68e0f0d72c2d1dlu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetSockNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetPeerName_Ordinal = 0x58787bb600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetPeerName_GenOrdinal = 0x555a019c03d9820dlu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetPeerNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetSockOpt_Ordinal = 0x4ba217a700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetSockOpt_GenOrdinal = 0x24e784a5e281b466lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockOpt_Ordinal = 0x3685367800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockOpt_GenOrdinal = 0x66298180e94aa6b4lu;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptRequestTable;
 extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetSockOptResponseTable;
 
 }  // namespace
 
@@ -1290,8 +1308,7 @@ zx_status_t Control::SyncClient::HandleEvents(Control::EventHandlers handlers) {
   return Control::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Control::Call::HandleEvents(zx::unowned_channel client_end,
-                                            Control::EventHandlers handlers) {
+zx_status_t Control::Call::HandleEvents(zx::unowned_channel client_end, Control::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -1302,6 +1319,9 @@ zx_status_t Control::Call::HandleEvents(zx::unowned_channel client_end,
     uint32_t x = 0;
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+    }
+    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
     }
     return x;
   })();
@@ -1315,7 +1335,8 @@ zx_status_t Control::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -1337,16 +1358,34 @@ zx_status_t Control::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
     case kControl_OnOpen_Ordinal:
     case kControl_OnOpen_GenOrdinal:
     {
+      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
+      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
+      if (fidl_should_decode_union_from_xunion(hdr)) {
+        transformer_dest_storage.Allocate();
+        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                                      OnOpenResponse::AltType,
+                                                      reinterpret_cast<uint8_t*>(msg.bytes),
+                                                      msg.num_bytes,
+                                                      transformer_dest,
+                                                      &msg.num_bytes,
+                                                      nullptr);
+        if (transform_status != ZX_OK) {
+          zx_handle_close_many(msg.handles, msg.num_handles);
+          return ZX_ERR_INVALID_ARGS;
+        }
+        msg.bytes = transformer_dest;
+      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -1378,7 +1417,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->Clone(std::move(message->flags), std::move(message->object),
-        Interface::CloneCompleter::Sync(txn));
+          Interface::CloneCompleter::Sync(txn));
       return true;
     }
     case kControl_Close_Ordinal:
@@ -1390,7 +1429,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->Close(
-        Interface::CloseCompleter::Sync(txn));
+          Interface::CloseCompleter::Sync(txn));
       return true;
     }
     case kControl_Describe_Ordinal:
@@ -1402,7 +1441,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->Describe(
-        Interface::DescribeCompleter::Sync(txn));
+          Interface::DescribeCompleter::Sync(txn));
       return true;
     }
     case kControl_Sync_Ordinal:
@@ -1414,7 +1453,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->Sync(
-        Interface::SyncCompleter::Sync(txn));
+          Interface::SyncCompleter::Sync(txn));
       return true;
     }
     case kControl_GetAttr_Ordinal:
@@ -1426,7 +1465,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->GetAttr(
-        Interface::GetAttrCompleter::Sync(txn));
+          Interface::GetAttrCompleter::Sync(txn));
       return true;
     }
     case kControl_SetAttr_Ordinal:
@@ -1439,7 +1478,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->SetAttr(std::move(message->flags), std::move(message->attributes),
-        Interface::SetAttrCompleter::Sync(txn));
+          Interface::SetAttrCompleter::Sync(txn));
       return true;
     }
     case kControl_NodeGetFlags_Ordinal:
@@ -1451,7 +1490,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->NodeGetFlags(
-        Interface::NodeGetFlagsCompleter::Sync(txn));
+          Interface::NodeGetFlagsCompleter::Sync(txn));
       return true;
     }
     case kControl_NodeSetFlags_Ordinal:
@@ -1464,7 +1503,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->NodeSetFlags(std::move(message->flags),
-        Interface::NodeSetFlagsCompleter::Sync(txn));
+          Interface::NodeSetFlagsCompleter::Sync(txn));
       return true;
     }
     case kControl_Bind_Ordinal:
@@ -1477,7 +1516,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->Bind(std::move(message->addr),
-        Interface::BindCompleter::Sync(txn));
+          Interface::BindCompleter::Sync(txn));
       return true;
     }
     case kControl_Connect_Ordinal:
@@ -1490,7 +1529,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->Connect(std::move(message->addr),
-        Interface::ConnectCompleter::Sync(txn));
+          Interface::ConnectCompleter::Sync(txn));
       return true;
     }
     case kControl_Listen_Ordinal:
@@ -1503,7 +1542,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->Listen(std::move(message->backlog),
-        Interface::ListenCompleter::Sync(txn));
+          Interface::ListenCompleter::Sync(txn));
       return true;
     }
     case kControl_Accept_Ordinal:
@@ -1516,7 +1555,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->Accept(std::move(message->flags),
-        Interface::AcceptCompleter::Sync(txn));
+          Interface::AcceptCompleter::Sync(txn));
       return true;
     }
     case kControl_GetSockName_Ordinal:
@@ -1528,7 +1567,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->GetSockName(
-        Interface::GetSockNameCompleter::Sync(txn));
+          Interface::GetSockNameCompleter::Sync(txn));
       return true;
     }
     case kControl_GetPeerName_Ordinal:
@@ -1540,7 +1579,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
         return true;
       }
       impl->GetPeerName(
-        Interface::GetPeerNameCompleter::Sync(txn));
+          Interface::GetPeerNameCompleter::Sync(txn));
       return true;
     }
     case kControl_SetSockOpt_Ordinal:
@@ -1553,7 +1592,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->SetSockOpt(std::move(message->level), std::move(message->optname), std::move(message->optval),
-        Interface::SetSockOptCompleter::Sync(txn));
+          Interface::SetSockOptCompleter::Sync(txn));
       return true;
     }
     case kControl_GetSockOpt_Ordinal:
@@ -1566,7 +1605,7 @@ bool Control::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->GetSockOpt(std::move(message->level), std::move(message->optname),
-        Interface::GetSockOptCompleter::Sync(txn));
+          Interface::GetSockOptCompleter::Sync(txn));
       return true;
     }
     default: {

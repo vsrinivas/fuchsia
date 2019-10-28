@@ -28,7 +28,9 @@ namespace manager {
 class Provider;
 
 extern "C" const fidl_type_t fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
 extern "C" const fidl_type_t fuchsia_tee_manager_ProviderRequestPersistentStorageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_tee_manager_ProviderRequestPersistentStorageResponseTable;
 
 // Provider provides service access and support to the TEE driver
 // for things like persistent storage, since the TEE may make upward RPC-like
@@ -43,9 +45,12 @@ class Provider final {
     ::zx::channel dir;
 
     static constexpr const fidl_type_t* Type = &fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

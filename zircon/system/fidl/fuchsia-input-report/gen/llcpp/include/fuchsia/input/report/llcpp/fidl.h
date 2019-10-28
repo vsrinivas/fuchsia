@@ -79,6 +79,7 @@ struct InputReport;
 class InputDevice;
 
 extern "C" const fidl_type_t fuchsia_input_report_SensorReportTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_SensorReportTable;
 
 // |SensorReport| gives the values measured by a sensor at a given point in time.
 struct SensorReport final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -110,10 +111,14 @@ struct SensorReport final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_SensorReportTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_SensorReportTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 832;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 832;
 
  private:
   SensorReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -139,6 +144,7 @@ class SensorReport::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_SensorDescriptorTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_SensorDescriptorTable;
 
 // |SensorDescriptor| describes the capabilities of a sensor.
 struct SensorDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -170,10 +176,14 @@ struct SensorDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_SensorDescriptorTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_SensorDescriptorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 3232;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 3232;
 
  private:
   SensorDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -199,6 +209,7 @@ class SensorDescriptor::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_MouseDescriptorTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_MouseDescriptorTable;
 
 // |MouseDescriptor| describes the capabilities of a mouse.
 struct MouseDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -281,10 +292,14 @@ struct MouseDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_MouseDescriptorTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_MouseDescriptorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 224;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 224;
 
  private:
   MouseDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -321,6 +336,7 @@ class MouseDescriptor::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_ContactDescriptorTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_ContactDescriptorTable;
 
 // `ContactDescriptor` describes the fields associated with a touch on a touch device.
 struct ContactDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -403,10 +419,14 @@ struct ContactDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_ContactDescriptorTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_ContactDescriptorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 200;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 200;
 
  private:
   ContactDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -443,6 +463,7 @@ class ContactDescriptor::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_TouchDescriptorTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_TouchDescriptorTable;
 
 // `TouchDescriptor` describes the fields associated with an individual touch device.
 struct TouchDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -499,10 +520,14 @@ struct TouchDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_TouchDescriptorTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_TouchDescriptorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 2240;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 2240;
 
  private:
   TouchDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -533,6 +558,7 @@ class TouchDescriptor::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_MouseReportTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_MouseReportTable;
 
 // |MouseReport| gives the relative movement of the mouse and currently
 // pressed buttons. Relative means the movement seen between the previous
@@ -618,10 +644,14 @@ struct MouseReport final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_MouseReportTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_MouseReportTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 160;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 160;
 
  private:
   MouseReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -658,6 +688,7 @@ class MouseReport::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_DeviceDescriptorTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_DeviceDescriptorTable;
 
 // |DeviceDescriptor| describes a physical input device. Some physical devices may
 // send multiple types of reports (E.g: a physical touchscreen can send touch and
@@ -730,10 +761,14 @@ struct DeviceDescriptor final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_DeviceDescriptorTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_DeviceDescriptorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 6096;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 6096;
 
  private:
   DeviceDescriptor(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -768,6 +803,7 @@ class DeviceDescriptor::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_ContactReportTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_ContactReportTable;
 
 // `Contact` describes one touch on a touch device.
 struct ContactReport final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -869,10 +905,14 @@ struct ContactReport final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_ContactReportTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_ContactReportTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 144;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 144;
 
  private:
   ContactReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -918,6 +958,7 @@ class ContactReport::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_TouchReportTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_TouchReportTable;
 
 // `TouchscreenReport` describes the current contacts recorded by the touchscreen.
 struct TouchReport final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -948,10 +989,14 @@ struct TouchReport final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_TouchReportTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_TouchReportTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 1632;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 1632;
 
  private:
   TouchReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -976,6 +1021,7 @@ class TouchReport::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_InputReportTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_InputReportTable;
 
 // |InputReport| is a single report that is created by an input device.
 struct InputReport final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -1058,10 +1104,14 @@ struct InputReport final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputReportTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_InputReportTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 2768;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 2768;
 
  private:
   InputReport(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -1106,14 +1156,19 @@ constexpr uint32_t TOUCH_MAX_CONTACTS = 10u;
 constexpr uint32_t SENSOR_MAX_VALUES = 100u;
 
 extern "C" const fidl_type_t fuchsia_input_report_RangeTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_RangeTable;
 
 // Describe a |Range| of values.
 struct Range {
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_RangeTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_RangeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   int64_t min = {};
 
@@ -1121,14 +1176,19 @@ struct Range {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_AxisTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_AxisTable;
 
 // An |Axis| is defined as a |range| and a |unit|.
 struct Axis {
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_AxisTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_AxisTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::input::report::Range range = {};
 
@@ -1136,15 +1196,20 @@ struct Axis {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_SensorAxisTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_SensorAxisTable;
 
 // A |SensorAxis| is a normal |Axis| with an additional |SensorType| to describe what the
 // axis is measuring.
 struct SensorAxis {
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_SensorAxisTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_SensorAxisTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 32;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::input::report::Axis axis = {};
 
@@ -1160,6 +1225,7 @@ constexpr uint32_t MAX_DEVICE_REPORT_COUNT = 50u;
 constexpr uint32_t MAX_DEVICE_NAME_LENGTH = 256u;
 
 extern "C" const fidl_type_t fuchsia_input_report_DeviceInfoTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_DeviceInfoTable;
 
 // DeviceInfo provides more information about the device and lets a client
 // distinguish between devices (e.g between two touchscreens that come from
@@ -1169,10 +1235,14 @@ extern "C" const fidl_type_t fuchsia_input_report_DeviceInfoTable;
 // assign sensible ids.
 struct DeviceInfo {
   static constexpr const fidl_type_t* Type = &fuchsia_input_report_DeviceInfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_DeviceInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 256;
+  static constexpr uint32_t AltPrimarySize = 32;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 256;
 
   uint32_t vendor_id = {};
 
@@ -1184,11 +1254,17 @@ struct DeviceInfo {
 };
 
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsEventRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_InputDeviceGetReportsEventRequestTable;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_InputDeviceGetReportsEventResponseTable;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_InputDeviceGetReportsRequestTable;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetReportsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_InputDeviceGetReportsResponseTable;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetDescriptorRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_InputDeviceGetDescriptorRequestTable;
 extern "C" const fidl_type_t fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
 
 // An |InputDevice| driver represents a single physical input device.
 // The InputDevice maintains an internal FIFO of |MAX_DEVICE_REPORT_COUNT|
@@ -1206,9 +1282,12 @@ class InputDevice final {
     ::zx::event event;
 
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetReportsEventResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_InputDeviceGetReportsEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1222,9 +1301,12 @@ class InputDevice final {
     ::fidl::VectorView<::llcpp::fuchsia::input::report::InputReport> reports;
 
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetReportsResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_InputDeviceGetReportsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 139200;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 139200;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1238,9 +1320,12 @@ class InputDevice final {
     ::llcpp::fuchsia::input::report::DeviceDescriptor descriptor;
 
     static constexpr const fidl_type_t* Type = &fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_input_report_InputDeviceGetDescriptorResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 6096;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 6096;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

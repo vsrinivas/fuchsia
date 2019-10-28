@@ -17,78 +17,91 @@ constexpr uint64_t kDevice_GetBootProtocol_Ordinal = 0x47ac8ff500000000lu;
 constexpr uint64_t kDevice_GetBootProtocol_GenOrdinal = 0x54f14ad662c6899flu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetBootProtocolRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceIds_Ordinal = 0x2213b60500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceIds_GenOrdinal = 0x3b2d696caef3c3e0lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetDeviceIdsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportDescSize_Ordinal = 0x312dbbe100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportDescSize_GenOrdinal = 0x2fba99f2b2c6cd2flu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportDesc_Ordinal = 0x6ae0c2f200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportDesc_GenOrdinal = 0x7fe4aff57d9019f8lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportDescResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportDescResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetNumReports_Ordinal = 0x79b0ee200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetNumReports_GenOrdinal = 0x57de20184ed5ba42lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetNumReportsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportIds_Ordinal = 0x74f7d94f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportIds_GenOrdinal = 0x620319ad9bb99853lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportIdsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportIdsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportIdsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportSize_Ordinal = 0x22e76cac00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportSize_GenOrdinal = 0x436d9de68d4e8b14lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportSizeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportSizeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetMaxInputReportSize_Ordinal = 0x4e9ab77400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetMaxInputReportSize_GenOrdinal = 0x1c794da7454e1b4elu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetMaxInputReportSizeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReports_Ordinal = 0x172821a100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReports_GenOrdinal = 0x620f664991c7c95dlu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportsEvent_Ordinal = 0x6682043100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReportsEvent_GenOrdinal = 0x6198970f9308041clu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportsEventRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportsEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportsEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReport_Ordinal = 0x2a267cd000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReport_GenOrdinal = 0x5b2a44555defd970lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceGetReportResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetReport_Ordinal = 0x14ff63cb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetReport_GenOrdinal = 0x51cc85eb4e769eelu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetReportRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetReportResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceSetReportResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetTraceId_Ordinal = 0x67de25bb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetTraceId_GenOrdinal = 0x7fe8815219c66700lu;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetTraceIdRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_input_DeviceSetTraceIdResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceSetTraceIdResponseTable;
 
 }  // namespace
 template <>
@@ -920,7 +933,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetBootProtocol(
-        Interface::GetBootProtocolCompleter::Sync(txn));
+          Interface::GetBootProtocolCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetDeviceIds_Ordinal:
@@ -932,7 +945,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetDeviceIds(
-        Interface::GetDeviceIdsCompleter::Sync(txn));
+          Interface::GetDeviceIdsCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetReportDescSize_Ordinal:
@@ -944,7 +957,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetReportDescSize(
-        Interface::GetReportDescSizeCompleter::Sync(txn));
+          Interface::GetReportDescSizeCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetReportDesc_Ordinal:
@@ -956,7 +969,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetReportDesc(
-        Interface::GetReportDescCompleter::Sync(txn));
+          Interface::GetReportDescCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetNumReports_Ordinal:
@@ -968,7 +981,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetNumReports(
-        Interface::GetNumReportsCompleter::Sync(txn));
+          Interface::GetNumReportsCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetReportIds_Ordinal:
@@ -980,7 +993,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetReportIds(
-        Interface::GetReportIdsCompleter::Sync(txn));
+          Interface::GetReportIdsCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetReportSize_Ordinal:
@@ -993,7 +1006,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->GetReportSize(std::move(message->type), std::move(message->id),
-        Interface::GetReportSizeCompleter::Sync(txn));
+          Interface::GetReportSizeCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetMaxInputReportSize_Ordinal:
@@ -1005,7 +1018,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetMaxInputReportSize(
-        Interface::GetMaxInputReportSizeCompleter::Sync(txn));
+          Interface::GetMaxInputReportSizeCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetReports_Ordinal:
@@ -1017,7 +1030,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetReports(
-        Interface::GetReportsCompleter::Sync(txn));
+          Interface::GetReportsCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetReportsEvent_Ordinal:
@@ -1029,7 +1042,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetReportsEvent(
-        Interface::GetReportsEventCompleter::Sync(txn));
+          Interface::GetReportsEventCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetReport_Ordinal:
@@ -1042,7 +1055,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->GetReport(std::move(message->type), std::move(message->id),
-        Interface::GetReportCompleter::Sync(txn));
+          Interface::GetReportCompleter::Sync(txn));
       return true;
     }
     case kDevice_SetReport_Ordinal:
@@ -1055,7 +1068,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->SetReport(std::move(message->type), std::move(message->id), std::move(message->report),
-        Interface::SetReportCompleter::Sync(txn));
+          Interface::SetReportCompleter::Sync(txn));
       return true;
     }
     case kDevice_SetTraceId_Ordinal:
@@ -1068,7 +1081,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->SetTraceId(std::move(message->id),
-        Interface::SetTraceIdCompleter::Sync(txn));
+          Interface::SetTraceIdCompleter::Sync(txn));
       return true;
     }
     default: {

@@ -134,24 +134,28 @@ constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x556693d200000000lu;
 constexpr uint64_t kChannelProtocol_MethodA_GenOrdinal = 0x1b1e059b3f02bffclu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodAResponseTable;
+extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodAResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x1c78c20200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_EventA_GenOrdinal = 0x2558b206a254d8a0lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolEventARequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
+extern "C" const fidl_type_t v1_test_name_ChannelProtocolEventAEventTable;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0xac6551b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MethodB_GenOrdinal = 0x5db17a61464744a3lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
+extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodBResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x4b02e28600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MutateSocket_GenOrdinal = 0x36caa6fff7569577lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
+extern "C" const fidl_type_t v1_test_name_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace
 
@@ -349,8 +353,7 @@ zx_status_t ChannelProtocol::SyncClient::HandleEvents(ChannelProtocol::EventHand
   return ChannelProtocol::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t ChannelProtocol::Call::HandleEvents(zx::unowned_channel client_end,
-                                            ChannelProtocol::EventHandlers handlers) {
+zx_status_t ChannelProtocol::Call::HandleEvents(zx::unowned_channel client_end, ChannelProtocol::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -374,7 +377,8 @@ zx_status_t ChannelProtocol::Call::HandleEvents(zx::unowned_channel client_end,
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -396,10 +400,10 @@ zx_status_t ChannelProtocol::Call::HandleEvents(zx::unowned_channel client_end,
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -437,7 +441,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
       }
       auto message = result.message.message();
       impl->MethodA(std::move(message->a), std::move(message->b),
-        Interface::MethodACompleter::Sync(txn));
+          Interface::MethodACompleter::Sync(txn));
       return true;
     }
     case kChannelProtocol_MethodB_Ordinal:
@@ -450,7 +454,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
       }
       auto message = result.message.message();
       impl->MethodB(std::move(message->a), std::move(message->b),
-        Interface::MethodBCompleter::Sync(txn));
+          Interface::MethodBCompleter::Sync(txn));
       return true;
     }
     case kChannelProtocol_MutateSocket_Ordinal:
@@ -463,7 +467,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
       }
       auto message = result.message.message();
       impl->MutateSocket(std::move(message->a),
-        Interface::MutateSocketCompleter::Sync(txn));
+          Interface::MutateSocketCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -622,48 +626,56 @@ constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal = 0x3931f96bc77fba8lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 0x4df6dbd500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal = 0x706ec7bd335005f9lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 0x668d7f800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal = 0x4625ad5934067a48lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 0x19c2137100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal = 0x46e5095902913025lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 0x76f2397300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal = 0x180c481d4a15967lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 0x1973292000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal = 0x553860267eceec0lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 0x697fd73200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal = 0x42e90e9a86944b3lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 0x7a47120700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal = 0x2a9767b3ae6c2b09lu;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
 
@@ -1017,8 +1029,7 @@ zx_status_t WithAndWithoutRequestResponse::SyncClient::HandleEvents(WithAndWitho
   return WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channel client_end,
-                                            WithAndWithoutRequestResponse::EventHandlers handlers) {
+zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channel client_end, WithAndWithoutRequestResponse::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -1048,8 +1059,8 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channe
     }
     return x;
   })();
-  std::unique_ptr<uint8_t[]> read_bytes_unique_ptr(new uint8_t[kReadAllocSize]);
-  uint8_t* read_bytes = read_bytes_unique_ptr.get();
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -1071,10 +1082,10 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(zx::unowned_channe
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -1120,7 +1131,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
         return true;
       }
       impl->NoRequestNoResponse(
-        Interface::NoRequestNoResponseCompleter::Sync(txn));
+          Interface::NoRequestNoResponseCompleter::Sync(txn));
       return true;
     }
     case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
@@ -1132,7 +1143,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
         return true;
       }
       impl->NoRequestEmptyResponse(
-        Interface::NoRequestEmptyResponseCompleter::Sync(txn));
+          Interface::NoRequestEmptyResponseCompleter::Sync(txn));
       return true;
     }
     case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
@@ -1144,7 +1155,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
         return true;
       }
       impl->NoRequestWithResponse(
-        Interface::NoRequestWithResponseCompleter::Sync(txn));
+          Interface::NoRequestWithResponseCompleter::Sync(txn));
       return true;
     }
     case kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
@@ -1157,7 +1168,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
       }
       auto message = result.message.message();
       impl->WithRequestNoResponse(std::move(message->arg),
-        Interface::WithRequestNoResponseCompleter::Sync(txn));
+          Interface::WithRequestNoResponseCompleter::Sync(txn));
       return true;
     }
     case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
@@ -1170,7 +1181,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
       }
       auto message = result.message.message();
       impl->WithRequestEmptyResponse(std::move(message->arg),
-        Interface::WithRequestEmptyResponseCompleter::Sync(txn));
+          Interface::WithRequestEmptyResponseCompleter::Sync(txn));
       return true;
     }
     case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
@@ -1183,7 +1194,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl, fidl_msg_t* msg
       }
       auto message = result.message.message();
       impl->WithRequestWithResponse(std::move(message->arg),
-        Interface::WithRequestWithResponseCompleter::Sync(txn));
+          Interface::WithRequestWithResponseCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -1494,18 +1505,21 @@ constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal = 0x4f3c32be0000000
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_GenOrdinal = 0x592157d505db2bcflu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 0x7b58113900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal = 0x20cf80ad7d9b60belu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c95de1f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_GenOrdinal = 0x3fcd36560f812e7flu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace
 template <>
@@ -1709,7 +1723,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         return true;
       }
       impl->ResponseAsStruct(
-        Interface::ResponseAsStructCompleter::Sync(txn));
+          Interface::ResponseAsStructCompleter::Sync(txn));
       return true;
     }
     case kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
@@ -1721,7 +1735,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         return true;
       }
       impl->ErrorAsPrimitive(
-        Interface::ErrorAsPrimitiveCompleter::Sync(txn));
+          Interface::ErrorAsPrimitiveCompleter::Sync(txn));
       return true;
     }
     case kWithErrorSyntax_ErrorAsEnum_Ordinal:
@@ -1733,7 +1747,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
         return true;
       }
       impl->ErrorAsEnum(
-        Interface::ErrorAsEnumCompleter::Sync(txn));
+          Interface::ErrorAsEnumCompleter::Sync(txn));
       return true;
     }
     default: {

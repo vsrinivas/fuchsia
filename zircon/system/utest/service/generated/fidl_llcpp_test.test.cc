@@ -17,6 +17,7 @@ constexpr uint64_t kEcho_EchoString_Ordinal = 0x503b9f2a00000000lu;
 constexpr uint64_t kEcho_EchoString_GenOrdinal = 0xd966a2bafde7462lu;
 extern "C" const fidl_type_t fidl_service_test_EchoEchoStringRequestTable;
 extern "C" const fidl_type_t fidl_service_test_EchoEchoStringResponseTable;
+extern "C" const fidl_type_t v1_fidl_service_test_EchoEchoStringResponseTable;
 
 }  // namespace
 template <>
@@ -105,7 +106,7 @@ bool Echo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
       }
       auto message = result.message.message();
       impl->EchoString(std::move(message->value),
-        Interface::EchoStringCompleter::Sync(txn));
+          Interface::EchoStringCompleter::Sync(txn));
       return true;
     }
     default: {

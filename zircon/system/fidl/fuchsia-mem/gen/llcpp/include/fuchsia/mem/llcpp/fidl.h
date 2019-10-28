@@ -27,6 +27,7 @@ struct Buffer;
 struct Data;
 
 extern "C" const fidl_type_t fuchsia_mem_DataTable;
+extern "C" const fidl_type_t v1_fuchsia_mem_DataTable;
 
 // Binary data that might be stored inline or in a VMO.
 //
@@ -86,10 +87,14 @@ struct Data {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &fuchsia_mem_DataTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_mem_DataTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
   static void SizeAndOffsetAssertionHelper();
@@ -99,14 +104,19 @@ struct Data {
 };
 
 extern "C" const fidl_type_t fuchsia_mem_RangeTable;
+extern "C" const fidl_type_t v1_fuchsia_mem_RangeTable;
 
 // A range of bytes within a VMO.
 struct Range {
   static constexpr const fidl_type_t* Type = &fuchsia_mem_RangeTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_mem_RangeTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The vmo that contains the bytes.
   ::zx::vmo vmo = {};
@@ -129,6 +139,7 @@ struct Range {
 };
 
 extern "C" const fidl_type_t fuchsia_mem_BufferTable;
+extern "C" const fidl_type_t v1_fuchsia_mem_BufferTable;
 
 // A buffer for data whose size is not necessarily a multiple of the page
 // size.
@@ -139,10 +150,14 @@ extern "C" const fidl_type_t fuchsia_mem_BufferTable;
 // and its size.
 struct Buffer {
   static constexpr const fidl_type_t* Type = &fuchsia_mem_BufferTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_mem_BufferTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The vmo that contains the buffer.
   ::zx::vmo vmo = {};

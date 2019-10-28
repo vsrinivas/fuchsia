@@ -75,6 +75,7 @@ constexpr uint64_t kHandler_OnException_Ordinal = 0x7ec50e5a00000000lu;
 constexpr uint64_t kHandler_OnException_GenOrdinal = 0x5de09d36098de59elu;
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_HandlerOnExceptionResponseTable;
 
 }  // namespace
 template <>
@@ -160,7 +161,7 @@ bool Handler::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
       }
       auto message = result.message.message();
       impl->OnException(std::move(message->exception), std::move(message->info),
-        Interface::OnExceptionCompleter::Sync(txn));
+          Interface::OnExceptionCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -339,18 +340,21 @@ constexpr uint64_t kProcessLimbo_ListProcessesWaitingOnException_Ordinal = 0x7bd
 constexpr uint64_t kProcessLimbo_ListProcessesWaitingOnException_GenOrdinal = 0x43e1864bf356ef50lu;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_RetrieveException_Ordinal = 0x47ad466f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_RetrieveException_GenOrdinal = 0x6ee2df26d6e0444blu;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_ReleaseProcess_Ordinal = 0x7adea12100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProcessLimbo_ReleaseProcess_GenOrdinal = 0x76911553fea22b87lu;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 
 }  // namespace
 template <>
@@ -556,7 +560,7 @@ bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
         return true;
       }
       impl->ListProcessesWaitingOnException(
-        Interface::ListProcessesWaitingOnExceptionCompleter::Sync(txn));
+          Interface::ListProcessesWaitingOnExceptionCompleter::Sync(txn));
       return true;
     }
     case kProcessLimbo_RetrieveException_Ordinal:
@@ -569,7 +573,7 @@ bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
       }
       auto message = result.message.message();
       impl->RetrieveException(std::move(message->process_koid),
-        Interface::RetrieveExceptionCompleter::Sync(txn));
+          Interface::RetrieveExceptionCompleter::Sync(txn));
       return true;
     }
     case kProcessLimbo_ReleaseProcess_Ordinal:
@@ -582,7 +586,7 @@ bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
       }
       auto message = result.message.message();
       impl->ReleaseProcess(std::move(message->process_koid),
-        Interface::ReleaseProcessCompleter::Sync(txn));
+          Interface::ReleaseProcessCompleter::Sync(txn));
       return true;
     }
     default: {

@@ -32,9 +32,13 @@ struct DeviceDescriptor;
 class Device;
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionsClearedRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionsClearedResponseTable;
 // Events protocol that is used as a callback to inform the client
 // of the completion of various server-side events.
 // This callback interface can be registered using the SetStateChangeListener
@@ -242,13 +246,18 @@ constexpr uint32_t MAX_STRING_DESCRIPTORS = 255u;
 constexpr uint32_t MAX_FUNCTION_DESCRIPTORS = 32u;
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_FunctionDescriptorTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_FunctionDescriptorTable;
 
 struct FunctionDescriptor {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_FunctionDescriptorTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_peripheral_FunctionDescriptorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 3;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 3;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t interface_class = {};
 
@@ -258,18 +267,24 @@ struct FunctionDescriptor {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResponseTable;
 
 struct Device_SetConfiguration_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResultTable;
 
 struct Device_SetConfiguration_Result {
   enum class Tag : fidl_union_tag_t {
@@ -348,10 +363,14 @@ struct Device_SetConfiguration_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -365,15 +384,20 @@ struct Device_SetConfiguration_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceDescriptorTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceDescriptorTable;
 
 // The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification,
 // except for the string fields.
 struct DeviceDescriptor {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceDescriptorTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_peripheral_DeviceDescriptorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 72;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 384;
+  static constexpr uint32_t AltPrimarySize = 72;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 384;
 
   uint16_t bcdUSB = {};
 
@@ -401,11 +425,17 @@ struct DeviceDescriptor {
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceClearFunctionsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerResponseTable;
 
 class Device final {
   Device() = delete;
@@ -417,9 +447,12 @@ class Device final {
     ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -432,9 +465,12 @@ class Device final {
     ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 480;
+    static constexpr uint32_t AltPrimarySize = 104;
+    static constexpr uint32_t AltMaxOutOfLine = 480;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -451,9 +487,12 @@ class Device final {
     ::zx::channel listener;
 
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

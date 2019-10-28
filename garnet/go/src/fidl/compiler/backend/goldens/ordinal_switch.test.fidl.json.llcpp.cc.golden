@@ -16,24 +16,28 @@ constexpr uint64_t kSwitchingOrdinals_OrdinalFive_Ordinal = 0x7784636700000000lu
 constexpr uint64_t kSwitchingOrdinals_OrdinalFive_GenOrdinal = 0x254f3bdfa9d3dcablu;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveResponseTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 0x27c9581f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal = 0x163a45fcac049f5blu;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalResponseTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 0x577495a100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal = 0x15e4293098574a7lu;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenRequestTable;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 0x7fec464e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal = 0x47107cabe23f6510lu;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalRequestTable;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
 
 }  // namespace
 
@@ -124,8 +128,7 @@ zx_status_t SwitchingOrdinals::SyncClient::HandleEvents(SwitchingOrdinals::Event
   return SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel client_end,
-                                            SwitchingOrdinals::EventHandlers handlers) {
+zx_status_t SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel client_end, SwitchingOrdinals::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             zx::time::infinite(),
                                             nullptr);
@@ -155,7 +158,8 @@ zx_status_t SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel client_end
     }
     return x;
   })();
-  FIDL_ALIGNDECL uint8_t read_bytes[kReadAllocSize];
+  ::fidl::internal::ByteStorage<kReadAllocSize> read_storage;
+  uint8_t* read_bytes = read_storage.buffer().data();
   zx_handle_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -177,10 +181,10 @@ zx_status_t SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel client_end
     return ZX_ERR_INVALID_ARGS;
   }
   auto msg = fidl_msg_t {
-    .bytes = read_bytes,
-    .handles = read_handles,
-    .num_bytes = actual_bytes,
-    .num_handles = actual_handles
+      .bytes = read_bytes,
+      .handles = read_handles,
+      .num_bytes = actual_bytes,
+      .num_handles = actual_handles
   };
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   switch (hdr->ordinal) {
@@ -225,7 +229,7 @@ bool SwitchingOrdinals::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
         return true;
       }
       impl->OrdinalFive(
-        Interface::OrdinalFiveCompleter::Sync(txn));
+          Interface::OrdinalFiveCompleter::Sync(txn));
       return true;
     }
     case kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal:
@@ -237,7 +241,7 @@ bool SwitchingOrdinals::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
         return true;
       }
       impl->OnlyGeneratedOrdinal(
-        Interface::OnlyGeneratedOrdinalCompleter::Sync(txn));
+          Interface::OnlyGeneratedOrdinalCompleter::Sync(txn));
       return true;
     }
     default: {

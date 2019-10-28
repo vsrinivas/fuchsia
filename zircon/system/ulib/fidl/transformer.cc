@@ -866,14 +866,19 @@ zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type
   assert(dst_bytes);
   assert(out_dst_num_bytes);
 
-  SrcDst src_dst(src_bytes, src_num_bytes, dst_bytes, out_dst_num_bytes);
   switch (transformation) {
     case FIDL_TRANSFORMATION_NONE:
+      memcpy(dst_bytes, src_bytes, src_num_bytes);
+      *out_dst_num_bytes = src_num_bytes;
       return ZX_OK;
-    case FIDL_TRANSFORMATION_V1_TO_OLD:
+    case FIDL_TRANSFORMATION_V1_TO_OLD: {
+      SrcDst src_dst(src_bytes, src_num_bytes, dst_bytes, out_dst_num_bytes);
       return V1ToOld(&src_dst, out_error_msg).TransformTopLevelStruct(type);
-    case FIDL_TRANSFORMATION_OLD_TO_V1:
+    }
+    case FIDL_TRANSFORMATION_OLD_TO_V1: {
+      SrcDst src_dst(src_bytes, src_num_bytes, dst_bytes, out_dst_num_bytes);
       return OldToV1(&src_dst, out_error_msg).TransformTopLevelStruct(type);
+    }
     default: {
       if (out_error_msg)
         *out_error_msg = "unsupported transformation";

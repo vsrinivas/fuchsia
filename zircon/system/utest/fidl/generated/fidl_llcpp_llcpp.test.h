@@ -26,7 +26,9 @@ namespace coding {
 class Llcpp;
 
 extern "C" const fidl_type_t fidl_test_coding_LlcppActionRequestTable;
+extern "C" const fidl_type_t v1_fidl_test_coding_LlcppActionRequestTable;
 extern "C" const fidl_type_t fidl_test_coding_LlcppActionResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable;
 
 class Llcpp final {
   Llcpp() = delete;
@@ -38,9 +40,12 @@ class Llcpp final {
     int32_t v;
 
     static constexpr const fidl_type_t* Type = &fidl_test_coding_LlcppActionResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_coding_LlcppActionResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

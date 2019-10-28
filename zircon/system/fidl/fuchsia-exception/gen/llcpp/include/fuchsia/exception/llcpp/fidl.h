@@ -50,6 +50,7 @@ struct ProcessLimbo_RetrieveException_Result;
 class ProcessLimbo;
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessExceptionMetadataTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessExceptionMetadataTable;
 
 // Intended to be read only metadada associated with an exception waiting in
 // limbo. The handles provided will only have read-only access to the resource,
@@ -111,10 +112,14 @@ struct ProcessExceptionMetadata final : private ::fidl::VectorView<fidl_envelope
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessExceptionMetadataTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessExceptionMetadataTable;
   static constexpr uint32_t MaxNumHandles = 2;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 88;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 88;
 
  private:
   ProcessExceptionMetadata(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -146,6 +151,7 @@ class ProcessExceptionMetadata::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessExceptionTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessExceptionTable;
 
 // Generic wrapper over a thread exception. Mirrors closely the information
 // given by an exception channel.
@@ -212,10 +218,14 @@ struct ProcessException final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessExceptionTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessExceptionTable;
   static constexpr uint32_t MaxNumHandles = 3;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 112;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 112;
 
  private:
   ProcessException(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -245,18 +255,24 @@ class ProcessException::Builder {
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
 
 struct ProcessLimbo_ReleaseProcess_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
 
 struct ProcessLimbo_ReleaseProcess_Result {
   enum class Tag : fidl_union_tag_t {
@@ -335,10 +351,14 @@ struct ProcessLimbo_ReleaseProcess_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -356,15 +376,20 @@ struct ProcessLimbo_ReleaseProcess_Result {
 constexpr uint64_t MAX_EXCEPTIONS_PER_CALL = 32u;
 
 extern "C" const fidl_type_t fuchsia_exception_ExceptionInfoTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ExceptionInfoTable;
 
 // Basic exception information associated with a particular exception.
 // Maps to `zx_exception_info_t`.
 struct ExceptionInfo {
   static constexpr const fidl_type_t* Type = &fuchsia_exception_ExceptionInfoTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ExceptionInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t process_koid = {};
 
@@ -374,7 +399,9 @@ struct ExceptionInfo {
 };
 
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_HandlerOnExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_HandlerOnExceptionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_HandlerOnExceptionResponseTable;
 
 // Protocol meant for clients interested in handling exceptions for a
 // particular service.
@@ -391,9 +418,12 @@ class Handler final {
     ::llcpp::fuchsia::exception::ExceptionInfo info;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_HandlerOnExceptionRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_HandlerOnExceptionRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -597,18 +627,24 @@ class Handler final {
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
 
 struct ProcessLimbo_RetrieveException_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 3;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 112;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 112;
 
   ::llcpp::fuchsia::exception::ProcessException process_exception = {};
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
 
 struct ProcessLimbo_RetrieveException_Result {
   enum class Tag : fidl_union_tag_t {
@@ -687,10 +723,14 @@ struct ProcessLimbo_RetrieveException_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
   static constexpr uint32_t MaxNumHandles = 3;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 112;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 128;
 
  private:
   void Destroy();
@@ -704,11 +744,17 @@ struct ProcessLimbo_RetrieveException_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 
 // Protocol meant for clients interested in obtaining processes that are
 // suspended waiting for an exception handler (in limbo). This is the core
@@ -724,9 +770,12 @@ class ProcessLimbo final {
     ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboListProcessesWaitingOnExceptionResponseTable;
     static constexpr uint32_t MaxNumHandles = 64;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 3328;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 3328;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -740,9 +789,12 @@ class ProcessLimbo final {
     ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
     static constexpr uint32_t MaxNumHandles = 3;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 112;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 128;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -754,9 +806,12 @@ class ProcessLimbo final {
     uint64_t process_koid;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -770,9 +825,12 @@ class ProcessLimbo final {
     ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -784,9 +842,12 @@ class ProcessLimbo final {
     uint64_t process_koid;
 
     static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

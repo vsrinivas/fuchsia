@@ -18,84 +18,98 @@ constexpr uint64_t kVolume_GetInfo_Ordinal = 0x7279049800000000lu;
 constexpr uint64_t kVolume_GetInfo_GenOrdinal = 0x79df1a5cdb6cc6a3lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeGetInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetStats_Ordinal = 0x73b9275400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetStats_GenOrdinal = 0x53d9542a778385aelu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetStatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetStatsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeGetStatsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetFifo_Ordinal = 0x63616dbe00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetFifo_GenOrdinal = 0x507ea563fb50747elu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetFifoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeGetFifoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_AttachVmo_Ordinal = 0x72df2e6600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_AttachVmo_GenOrdinal = 0x7e726e5993add9b7lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeAttachVmoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeAttachVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeAttachVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_CloseFifo_Ordinal = 0x6b4a461300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_CloseFifo_GenOrdinal = 0x4dc09acdfa2a2a65lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeCloseFifoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeCloseFifoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeCloseFifoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_RebindDevice_Ordinal = 0x2c1ffdb000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_RebindDevice_GenOrdinal = 0x5d728cbd5312c9aelu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeRebindDeviceRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeRebindDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeRebindDeviceResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetTypeGuid_Ordinal = 0x40d3186c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetTypeGuid_GenOrdinal = 0x111843d737a9b847lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetTypeGuidRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetTypeGuidResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeGetTypeGuidResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetInstanceGuid_Ordinal = 0x69f426600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetInstanceGuid_GenOrdinal = 0x14a5a573b275d435lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetInstanceGuidRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetInstanceGuidResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeGetInstanceGuidResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetName_Ordinal = 0x39b49c4000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_GetName_GenOrdinal = 0x7e3c6f0b0937fc02lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetNameRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeGetNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeGetNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_Query_Ordinal = 0x40fc59f400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_Query_GenOrdinal = 0x5e1ac5124112e9aclu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeQueryRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeQueryResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeQueryResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_QuerySlices_Ordinal = 0x62b0f14900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_QuerySlices_GenOrdinal = 0x589a96828a3e2aa1lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeQuerySlicesRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeQuerySlicesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeQuerySlicesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_Extend_Ordinal = 0xa64d1b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_Extend_GenOrdinal = 0xdddf872f5039d37lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeExtendRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeExtendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeExtendResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_Shrink_Ordinal = 0x761d12600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_Shrink_GenOrdinal = 0x27ab5ed4f6fdcd29lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeShrinkRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeShrinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeShrinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolume_Destroy_Ordinal = 0x196549ea00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolume_Destroy_GenOrdinal = 0x732bf4bea39b5e87lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeDestroyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeDestroyResponseTable;
 
 }  // namespace
 template <>
@@ -984,7 +998,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetInfo(
-        Interface::GetInfoCompleter::Sync(txn));
+          Interface::GetInfoCompleter::Sync(txn));
       return true;
     }
     case kVolume_GetStats_Ordinal:
@@ -997,7 +1011,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->GetStats(std::move(message->clear),
-        Interface::GetStatsCompleter::Sync(txn));
+          Interface::GetStatsCompleter::Sync(txn));
       return true;
     }
     case kVolume_GetFifo_Ordinal:
@@ -1009,7 +1023,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetFifo(
-        Interface::GetFifoCompleter::Sync(txn));
+          Interface::GetFifoCompleter::Sync(txn));
       return true;
     }
     case kVolume_AttachVmo_Ordinal:
@@ -1022,7 +1036,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->AttachVmo(std::move(message->vmo),
-        Interface::AttachVmoCompleter::Sync(txn));
+          Interface::AttachVmoCompleter::Sync(txn));
       return true;
     }
     case kVolume_CloseFifo_Ordinal:
@@ -1034,7 +1048,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->CloseFifo(
-        Interface::CloseFifoCompleter::Sync(txn));
+          Interface::CloseFifoCompleter::Sync(txn));
       return true;
     }
     case kVolume_RebindDevice_Ordinal:
@@ -1046,7 +1060,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->RebindDevice(
-        Interface::RebindDeviceCompleter::Sync(txn));
+          Interface::RebindDeviceCompleter::Sync(txn));
       return true;
     }
     case kVolume_GetTypeGuid_Ordinal:
@@ -1058,7 +1072,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetTypeGuid(
-        Interface::GetTypeGuidCompleter::Sync(txn));
+          Interface::GetTypeGuidCompleter::Sync(txn));
       return true;
     }
     case kVolume_GetInstanceGuid_Ordinal:
@@ -1070,7 +1084,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetInstanceGuid(
-        Interface::GetInstanceGuidCompleter::Sync(txn));
+          Interface::GetInstanceGuidCompleter::Sync(txn));
       return true;
     }
     case kVolume_GetName_Ordinal:
@@ -1082,7 +1096,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetName(
-        Interface::GetNameCompleter::Sync(txn));
+          Interface::GetNameCompleter::Sync(txn));
       return true;
     }
     case kVolume_Query_Ordinal:
@@ -1094,7 +1108,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->Query(
-        Interface::QueryCompleter::Sync(txn));
+          Interface::QueryCompleter::Sync(txn));
       return true;
     }
     case kVolume_QuerySlices_Ordinal:
@@ -1107,7 +1121,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->QuerySlices(std::move(message->start_slices),
-        Interface::QuerySlicesCompleter::Sync(txn));
+          Interface::QuerySlicesCompleter::Sync(txn));
       return true;
     }
     case kVolume_Extend_Ordinal:
@@ -1120,7 +1134,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->Extend(std::move(message->start_slice), std::move(message->slice_count),
-        Interface::ExtendCompleter::Sync(txn));
+          Interface::ExtendCompleter::Sync(txn));
       return true;
     }
     case kVolume_Shrink_Ordinal:
@@ -1133,7 +1147,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->Shrink(std::move(message->start_slice), std::move(message->slice_count),
-        Interface::ShrinkCompleter::Sync(txn));
+          Interface::ShrinkCompleter::Sync(txn));
       return true;
     }
     case kVolume_Destroy_Ordinal:
@@ -1145,7 +1159,7 @@ bool Volume::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->Destroy(
-        Interface::DestroyCompleter::Sync(txn));
+          Interface::DestroyCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -1859,24 +1873,28 @@ constexpr uint64_t kVolumeManager_AllocatePartition_Ordinal = 0x33fab3bd00000000
 constexpr uint64_t kVolumeManager_AllocatePartition_GenOrdinal = 0x4e79f24ed059e394lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolumeManager_Query_Ordinal = 0x4591d72f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolumeManager_Query_GenOrdinal = 0x7604167e7b72904flu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerQueryRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolumeManager_GetInfo_Ordinal = 0x21196e0c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolumeManager_GetInfo_GenOrdinal = 0x735b3548582b2c9lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerGetInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kVolumeManager_Activate_Ordinal = 0x45f8979b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kVolumeManager_Activate_GenOrdinal = 0xc8cef57012874d0lu;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerActivateRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
 
 }  // namespace
 template <>
@@ -2159,7 +2177,7 @@ bool VolumeManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
       }
       auto message = result.message.message();
       impl->AllocatePartition(std::move(message->slice_count), std::move(message->type), std::move(message->instance), std::move(message->name), std::move(message->flags),
-        Interface::AllocatePartitionCompleter::Sync(txn));
+          Interface::AllocatePartitionCompleter::Sync(txn));
       return true;
     }
     case kVolumeManager_Query_Ordinal:
@@ -2171,7 +2189,7 @@ bool VolumeManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         return true;
       }
       impl->Query(
-        Interface::QueryCompleter::Sync(txn));
+          Interface::QueryCompleter::Sync(txn));
       return true;
     }
     case kVolumeManager_GetInfo_Ordinal:
@@ -2183,7 +2201,7 @@ bool VolumeManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
         return true;
       }
       impl->GetInfo(
-        Interface::GetInfoCompleter::Sync(txn));
+          Interface::GetInfoCompleter::Sync(txn));
       return true;
     }
     case kVolumeManager_Activate_Ordinal:
@@ -2196,7 +2214,7 @@ bool VolumeManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
       }
       auto message = result.message.message();
       impl->Activate(std::move(message->old_guid), std::move(message->new_guid),
-        Interface::ActivateCompleter::Sync(txn));
+          Interface::ActivateCompleter::Sync(txn));
       return true;
     }
     default: {

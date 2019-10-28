@@ -27,7 +27,9 @@ class Echo;
 class EchoService;
 
 extern "C" const fidl_type_t fidl_service_test_EchoEchoStringRequestTable;
+extern "C" const fidl_type_t v1_fidl_service_test_EchoEchoStringRequestTable;
 extern "C" const fidl_type_t fidl_service_test_EchoEchoStringResponseTable;
+extern "C" const fidl_type_t v1_fidl_service_test_EchoEchoStringResponseTable;
 
 class Echo final {
   Echo() = delete;
@@ -39,9 +41,12 @@ class Echo final {
     ::fidl::StringView response;
 
     static constexpr const fidl_type_t* Type = &fidl_service_test_EchoEchoStringResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_service_test_EchoEchoStringResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -53,9 +58,12 @@ class Echo final {
     ::fidl::StringView value;
 
     static constexpr const fidl_type_t* Type = &fidl_service_test_EchoEchoStringRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_service_test_EchoEchoStringRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

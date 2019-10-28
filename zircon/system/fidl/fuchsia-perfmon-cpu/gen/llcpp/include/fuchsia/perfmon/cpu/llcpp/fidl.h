@@ -159,14 +159,19 @@ struct Allocation;
 class Controller;
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_PropertiesTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_PropertiesTable;
 
 // The properties of this system.
 struct Properties {
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_PropertiesTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_PropertiesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 32;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // S/W API version = `API_VERSION`.
   uint16_t api_version = {};
@@ -210,13 +215,18 @@ struct Properties {
 constexpr uint16_t MAX_NUM_EVENTS = 32u;
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_EventConfigTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_EventConfigTable;
 
 struct EventConfig {
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_EventConfigTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_EventConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 12;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Event to collect data for.
   // The values are architecture specific ids.
@@ -238,32 +248,43 @@ struct EventConfig {
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ConfigTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ConfigTable;
 
 // Passed to `StageConfig()` to select the data to be collected.
 struct Config {
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ConfigTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 384;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 384;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Events to collect data for.
   ::fidl::Array<::llcpp::fuchsia::perfmon::cpu::EventConfig, 32> events = {};
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
 
 struct Controller_Start_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Start_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Start_ResultTable;
 
 struct Controller_Start_Result {
   enum class Tag : fidl_union_tag_t {
@@ -342,10 +363,14 @@ struct Controller_Start_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Start_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_Start_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -359,18 +384,24 @@ struct Controller_Start_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
 
 struct Controller_StageConfig_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
 
 struct Controller_StageConfig_Result {
   enum class Tag : fidl_union_tag_t {
@@ -449,10 +480,14 @@ struct Controller_StageConfig_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -466,18 +501,24 @@ struct Controller_StageConfig_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
 
 struct Controller_Initialize_Response {
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
 
 struct Controller_Initialize_Result {
   enum class Tag : fidl_union_tag_t {
@@ -556,10 +597,14 @@ struct Controller_Initialize_Result {
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   void Destroy();
@@ -573,16 +618,21 @@ struct Controller_Initialize_Result {
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_AllocationTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_AllocationTable;
 
 // The allocation configuration for a data collection run.
 // This is generally the first call to allocate resources for a trace,
 // "trace" is used generically here: == "data collection run".
 struct Allocation {
   static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_AllocationTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_AllocationTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The number of buffers to allocate for trace data.
   // This must be #cpus for now.
@@ -594,23 +644,41 @@ struct Allocation {
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetPropertiesRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetPropertiesRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerTerminateRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerTerminateRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerTerminateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerTerminateResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetAllocationRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetAllocationRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetConfigRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStartRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStartRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStartResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStartResponseTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStopRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStopRequestTable;
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStopResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStopResponseTable;
 
 class Controller final {
   Controller() = delete;
@@ -622,9 +690,12 @@ class Controller final {
     ::llcpp::fuchsia::perfmon::cpu::Properties properties;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -638,9 +709,12 @@ class Controller final {
     ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -652,9 +726,12 @@ class Controller final {
     ::llcpp::fuchsia::perfmon::cpu::Allocation allocation;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -671,9 +748,12 @@ class Controller final {
     ::llcpp::fuchsia::perfmon::cpu::Allocation* allocation;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -687,9 +767,12 @@ class Controller final {
     ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -701,9 +784,12 @@ class Controller final {
     ::llcpp::fuchsia::perfmon::cpu::Config config;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 400;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 400;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -717,9 +803,12 @@ class Controller final {
     ::llcpp::fuchsia::perfmon::cpu::Config* config;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 384;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 384;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -733,9 +822,12 @@ class Controller final {
     ::zx::vmo vmo;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -747,9 +839,12 @@ class Controller final {
     uint32_t descriptor;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -763,9 +858,12 @@ class Controller final {
     ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerStartResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerStartResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

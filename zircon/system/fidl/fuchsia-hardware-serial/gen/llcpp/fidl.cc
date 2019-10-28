@@ -17,12 +17,14 @@ constexpr uint64_t kDevice_GetClass_Ordinal = 0x6549990f00000000lu;
 constexpr uint64_t kDevice_GetClass_GenOrdinal = 0x3d48bbcee248ab8blu;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceGetClassResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfig_Ordinal = 0x10bcc68c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfig_GenOrdinal = 0x771a0946f6f87173lu;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 }  // namespace
 template <>
@@ -166,7 +168,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         return true;
       }
       impl->GetClass(
-        Interface::GetClassCompleter::Sync(txn));
+          Interface::GetClassCompleter::Sync(txn));
       return true;
     }
     case kDevice_SetConfig_Ordinal:
@@ -179,7 +181,7 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       auto message = result.message.message();
       impl->SetConfig(std::move(message->config),
-        Interface::SetConfigCompleter::Sync(txn));
+          Interface::SetConfigCompleter::Sync(txn));
       return true;
     }
     default: {

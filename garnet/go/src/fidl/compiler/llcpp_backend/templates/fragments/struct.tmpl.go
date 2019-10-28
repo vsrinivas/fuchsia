@@ -12,15 +12,20 @@ struct {{ .Name }};
 {{- define "StructDeclaration" }}
 
 extern "C" const fidl_type_t {{ .TableType }};
+extern "C" const fidl_type_t {{ .V1TableType }};
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
 struct {{ .Name }} {
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
+  static constexpr const fidl_type_t* AltType = &{{ .V1TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .Size }};
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
+  static constexpr uint32_t AltPrimarySize = {{ .InlineSizeV1NoEE }};
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
 
   {{- range .Members }}
 {{ "" }}

@@ -28,6 +28,7 @@ struct NewerSimpleTable;
 struct EmptyTable;
 
 extern "C" const fidl_type_t test_name_SimpleTableTable;
+extern "C" const fidl_type_t v1_test_name_SimpleTableTable;
 
 struct SimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
@@ -68,10 +69,14 @@ struct SimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &test_name_SimpleTableTable;
+  static constexpr const fidl_type_t* AltType = &v1_test_name_SimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 48;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 48;
 
  private:
   SimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -97,6 +102,7 @@ class SimpleTable::Builder {
 };
 
 extern "C" const fidl_type_t test_name_ReverseOrdinalTableTable;
+extern "C" const fidl_type_t v1_test_name_ReverseOrdinalTableTable;
 
 struct ReverseOrdinalTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
@@ -149,10 +155,14 @@ struct ReverseOrdinalTable final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &test_name_ReverseOrdinalTableTable;
+  static constexpr const fidl_type_t* AltType = &v1_test_name_ReverseOrdinalTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 72;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 72;
 
  private:
   ReverseOrdinalTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -180,6 +190,7 @@ class ReverseOrdinalTable::Builder {
 };
 
 extern "C" const fidl_type_t test_name_OlderSimpleTableTable;
+extern "C" const fidl_type_t v1_test_name_OlderSimpleTableTable;
 
 struct OlderSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
@@ -208,10 +219,14 @@ struct OlderSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &test_name_OlderSimpleTableTable;
+  static constexpr const fidl_type_t* AltType = &v1_test_name_OlderSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 24;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 24;
 
  private:
   OlderSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -235,6 +250,7 @@ class OlderSimpleTable::Builder {
 };
 
 extern "C" const fidl_type_t test_name_NewerSimpleTableTable;
+extern "C" const fidl_type_t v1_test_name_NewerSimpleTableTable;
 
 struct NewerSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
@@ -287,10 +303,14 @@ struct NewerSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &test_name_NewerSimpleTableTable;
+  static constexpr const fidl_type_t* AltType = &v1_test_name_NewerSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 72;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 72;
 
  private:
   NewerSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -318,6 +338,7 @@ class NewerSimpleTable::Builder {
 };
 
 extern "C" const fidl_type_t test_name_EmptyTableTable;
+extern "C" const fidl_type_t v1_test_name_EmptyTableTable;
 
 struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
@@ -334,10 +355,14 @@ struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &test_name_EmptyTableTable;
+  static constexpr const fidl_type_t* AltType = &v1_test_name_EmptyTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
  private:
   EmptyTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}

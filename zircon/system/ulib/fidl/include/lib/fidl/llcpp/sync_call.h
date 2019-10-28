@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/decoded_message.h>
 #include <lib/fidl/llcpp/encoded_message.h>
+#include <lib/fidl/llcpp/response_storage.h>
 #include <lib/fidl/llcpp/traits.h>
 
 #include <cstddef>
@@ -17,84 +18,6 @@
 
 namespace fidl {
 namespace internal {
-
-// An uninitialized array of |kSize| bytes, guaranteed to follow FIDL alignment.
-template <uint32_t kSize>
-struct AlignedBuffer {
-  AlignedBuffer() {}
-
-  fidl::BytePart view() { return fidl::BytePart(data, kSize); }
-
- private:
-  FIDL_ALIGNDECL uint8_t data[kSize];
-};
-
-static_assert(alignof(std::max_align_t) % FIDL_ALIGNMENT == 0,
-              "AlignedBuffer should follow FIDL alignment when allocated on the heap.");
-
-// The largest acceptable size for a stack-allocated buffer.
-// Messages which are smaller than/equal to this threshold are stack-allocated,
-// whereas messages greater than this threshold are heap allocated.
-// This constant has therefore a potentially large impact on the behavior of programs built
-// on top of the LLCPP bindings, and modification should be done with great care.
-//
-// July 2019: initial value set at 512 due to Chrome's restriction that the largest stack object
-// tolerated is 512 bytes. For reference, the default stack size on Fuchsia is 256kb.
-constexpr uint32_t kMaxStackAllocSize = 512;
-
-// |ResponseStorage| allocates a buffer either inline or on the heap, depending on the
-// maximum wire-format size of that particular FidlType.
-template <typename FidlType, typename Enabled = void>
-struct ResponseStorage;
-
-// This definition is selected when the size is larger than |kMaxStackAllocSize|.
-template <typename FidlType>
-struct ResponseStorage<
-    FidlType, std::enable_if_t<(ClampedMessageSize<FidlType, MessageDirection::kReceiving>() >
-                                kMaxStackAllocSize)>> {
-  constexpr static bool kWillCopyBufferDuringMove = false;
-  constexpr static uint32_t kBufferSize =
-      ClampedMessageSize<FidlType, MessageDirection::kReceiving>();
-
-  fidl::BytePart buffer() { return storage->view(); }
-
-  ResponseStorage() = default;
-  ~ResponseStorage() = default;
-
-  ResponseStorage(const ResponseStorage&) = delete;
-  ResponseStorage& operator=(const ResponseStorage&) = delete;
-
-  ResponseStorage(ResponseStorage&&) = default;
-  ResponseStorage& operator=(ResponseStorage&&) = default;
-
- private:
-  std::unique_ptr<AlignedBuffer<kBufferSize>> storage =
-      std::make_unique<AlignedBuffer<kBufferSize>>();
-};
-
-// This definition is selected when the size is less than or equal to |kMaxStackAllocSize|.
-template <typename FidlType>
-struct ResponseStorage<
-    FidlType, std::enable_if_t<(ClampedMessageSize<FidlType, MessageDirection::kReceiving>() <=
-                                kMaxStackAllocSize)>> {
-  constexpr static bool kWillCopyBufferDuringMove = true;
-  constexpr static uint32_t kBufferSize =
-      ClampedMessageSize<FidlType, MessageDirection::kReceiving>();
-
-  fidl::BytePart buffer() { return storage.view(); }
-
-  ResponseStorage() = default;
-  ~ResponseStorage() = default;
-
-  ResponseStorage(const ResponseStorage&) = delete;
-  ResponseStorage& operator=(const ResponseStorage&) = delete;
-
-  ResponseStorage(ResponseStorage&&) = default;
-  ResponseStorage& operator=(ResponseStorage&&) = default;
-
- private:
-  AlignedBuffer<kBufferSize> storage;
-};
 
 // Class representing the result of a one-way FIDL call.
 // status() returns the encoding and transport level status.
