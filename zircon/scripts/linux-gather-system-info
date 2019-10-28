@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# Dump information about this host that may help with development efforts.
+
+set -u -e
+
+LSPCI_FILE_PREFIX="lspci"
+LSUSB_FILE_PREFIX="lsusb"
+CPUID_FILE_PREFIX="cpuid"
+CPUINFO_FILE="cpuinfo.txt"
+ACPI_FILE="acpidump"
+MSR_FILE="msr.txt"
+
+# If this is non-zero, unload the msr kmod when exiting
+UNLOAD_MSR_MOD=0
+
+function print_usage() {
+  echo "Usage: $0 <machine_name>"
+  echo "machine_name: A string identifying the hardware"
+  echo
+  echo "This will output a file named 'system_info.<machine_name>.tar.bz2'"
+}
+
+function check_utility() {
+  if ! which "$1" &> /dev/null; then
+    echo "Please install '$1' (Ubuntu package '$2')"
+    exit
+  fi
+}
+
+function dump_pci() {
+  echo "Dumping PCI..."
+  sudo lspci -v > "$DIR/${LSPCI_FILE_PREFIX}-v.txt"
+  sudo lspci -vv > "$DIR/${LSPCI_FILE_PREFIX}-vv.txt"
+  sudo lspci -n > "$DIR/${LSPCI_FILE_PREFIX}-n.txt"
+}
+
+function dump_usb() {
+  echo "Dumping USB..."
+  sudo lsusb -t > "$DIR/${LSUSB_FILE_PREFIX}-t.txt"
+  sudo lsusb -v > "$DIR/${LSUSB_FILE_PREFIX}-v.txt"
+}
+
+function dump_acpi() {
+  echo "Dumping ACPI..."
+  sudo acpidump -o "$DIR/${ACPI_FILE}"
+}
+
+function dump_cpuinfo() {
+  echo "Dumping CPU info..."
+  cat /proc/cpuinfo > "$DIR/${CPUINFO_FILE}"
+}
+
+function dump_cpuid() {
+  echo "Dumping CPUID tables..."
+  cpuid > "$DIR/${CPUID_FILE_PREFIX}.txt"
+  cpuid -r > "$DIR/${CPUID_FILE_PREFIX}.raw"
+}
+
+function dump_msrs() {
+  if ! lsmod | grep "^msr " &> /dev/null; then
+    UNLOAD_MSR_MOD=1
+    echo "Loading MSR kmod..."
+    sudo modprobe msr
+  fi
+  echo "Dumping useful MSRs..."
+  for msr in 480 481 482 483 484 485 486 487 488 489 \
+             48a 48b 48c 48d 48e 48f 490 491; do
+    (echo -n "$msr: "; sudo rdmsr -0 "0x$msr" 2>/dev/null || echo unavailable) >> "$DIR/$MSR_FILE"
+  done
+}
+
+if [ $# -lt 1 ]; then
+  print_usage
+  exit 1
+fi
+
+MACHINE_NAME="$1"
+BUNDLE_DIR="system_info.${MACHINE_NAME}"
+BUNDLE_TAR="${BUNDLE_DIR}.tar.bz2"
+
+if [ -e "$BUNDLE_TAR" ]; then
+  echo "$BUNDLE_TAR already exists.  Please delete before running."
+  exit 1
+fi
+
+check_utility lspci pciutils
+check_utility lsusb usbutils
+check_utility acpidump acpica-tools
+check_utility cpuid cpuid
+check_utility rdmsr msr-tools
+
+TMPDIR="$(mktemp -d)"
+function on_exit() {
+  rm -rf "$TMPDIR"
+  if [ "$UNLOAD_MSR_MOD" -ne 0 ]; then
+    echo "Unloading MSR kmod..."
+    sudo modprobe -r msr || echo "Failed to unload msr kmod!"
+  fi
+}
+trap on_exit EXIT
+
+DIR="$TMPDIR/${BUNDLE_DIR}"
+mkdir "$DIR"
+
+dump_pci
+dump_usb
+dump_acpi
+dump_cpuinfo
+dump_cpuid
+dump_msrs
+tar -C "$TMPDIR" -cjf "$BUNDLE_TAR" "$BUNDLE_DIR"
+echo "Finished building $BUNDLE_TAR"
