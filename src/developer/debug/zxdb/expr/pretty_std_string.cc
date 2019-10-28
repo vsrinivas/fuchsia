@@ -36,7 +36,7 @@ namespace {
 // THE DEFINITION
 // --------------
 //
-// Our lic++'s std::string implementation has two modes, a "short" mode where the string is stored
+// Our libc++'s std::string implementation has two modes, a "short" mode where the string is stored
 // inline in the string object, and a "long" mode where it stores a pointer to a heap-allocated
 // buffer. These modes are differentiated with a bit on the last byte of the storage.
 //

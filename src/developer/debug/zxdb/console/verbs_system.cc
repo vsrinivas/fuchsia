@@ -19,7 +19,7 @@ namespace zxdb {
 
 namespace {
 
-// List Processes --------------------------------------------------------------
+// List Processes ----------------------------------------------------------------------------------
 
 void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec, int indent,
                              OutputBuffer* output) {
@@ -64,7 +64,7 @@ Err DoListProcesses(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// System Info -----------------------------------------------------------------
+// System Info -------------------------------------------------------------------------------------
 
 const char kSysInfoShortHelp[] = "sys-info: Get general information about the target system.";
 
@@ -84,8 +84,8 @@ void OnSysInfo(const Err& err, debug_ipc::SysInfoReply sys_info) {
   out.Append(fxl::StringPrintf("Version: %s\n", sys_info.version.c_str()));
   out.Append(fxl::StringPrintf("Num CPUs: %u\n", sys_info.num_cpus));
 
-  // We don't have total ram for minidumps. We can assume a 0 value is always
-  // invalid and just not print it.
+  // We don't have total ram for minidumps. We can assume a 0 value is always invalid and just not
+  // print it.
   out.Append("Memory (MiB): ");
   if (sys_info.memory_mb) {
     out.Append(fxl::StringPrintf("%u\n", sys_info.memory_mb));
@@ -105,84 +105,6 @@ Err DoSysInfo(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-#ifdef REMOVE_ME
-
-namespace {
-
-void PrintOptions(Console* console, const std::string& prompt,
-                  const std::vector<std::string>& options) {
-  OutputBuffer out;
-  out.Append(OutputBuffer{Syntax::kHeading, prompt});
-  out.Append("\n");
-
-  for (uint32_t i = 0; i < options.size(); i++) {
-    out.Append(fxl::StringPrintf("%u: %s\n", i + 1, options[i].c_str()));
-  }
-  console->Output(std::move(out));
-}
-
-}  // namespace
-
-struct OptionsContext {
-  std::string prompt;
-  std::vector<std::string> options;
-};
-
-void HandleOptionsPrompt(OptionsContext opt_context, fit::result<void, std::string> result,
-                         const std::vector<int>& chosen_options) {
-  Console* console = Console::get();
-  if (result.is_error()) {
-    // If the result is empty, it means that the option querying was canceled.
-    // If so, the console already reverted to the normal state, so there is nothing else to do.
-    if (result.error().empty())
-      return;
-
-    console->Output({Syntax::kError, result.error()});
-    PrintOptions(console, opt_context.prompt, opt_context.options);
-
-    // We copy them because the move in the lambda can occur before.
-    auto opts = opt_context.options;
-    console->PromptOptions(std::move(opts), [opt_context = std::move(opt_context)](
-                                                fit::result<void, std::string> result,
-                                                std::vector<int> chosen_options) {
-      HandleOptionsPrompt(std::move(opt_context), std::move(result), std::move(chosen_options));
-    });
-    return;
-  }
-
-  OutputBuffer buffer;
-  buffer.Append(OutputBuffer{Syntax::kHeading, "Chose: "});
-  int count = 0;
-  for (int i : chosen_options) {
-    if (count > 0)
-      buffer.Append(", ");
-    buffer.Append(fxl::StringPrintf("%d (%s)", i, opt_context.options[i].c_str()));
-    count++;
-  }
-
-  console->Output(std::move(buffer));
-}
-
-Err DoOptions(ConsoleContext* context, const Command& cmd) {
-  Console* console = Console::get();
-
-  OptionsContext opt_context = {};
-  opt_context.prompt = "These are the options:";
-  opt_context.options = {"A", "B", "C"};
-  PrintOptions(console, opt_context.prompt, opt_context.options);
-
-  // We copy them because the move in the lambda can occur before.
-  auto opts = opt_context.options;
-  console->PromptOptions(
-      std::move(opts), [opt_context = std::move(opt_context)](fit::result<void, std::string> result,
-                                                              std::vector<int> chosen_options) {
-        HandleOptionsPrompt(std::move(opt_context), std::move(result), std::move(chosen_options));
-      });
-  return Err();
-}
-
-#endif
-
 }  // namespace
 
 void AppendSystemVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -190,11 +112,6 @@ void AppendSystemVerbs(std::map<Verb, VerbRecord>* verbs) {
                                               kListProcessesHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kSysInfo] =
       VerbRecord(&DoSysInfo, {"sys-info"}, kSysInfoShortHelp, kSysInfoHelp, CommandGroup::kGeneral);
-
-#ifdef REMOVE_ME
-  (*verbs)[Verb::kOptions] =
-      VerbRecord(&DoOptions, {"options"}, "options", "options", CommandGroup::kGeneral);
-#endif
 }
 
 }  // namespace zxdb

@@ -117,8 +117,8 @@ const char kStackHelp[] =
 
   An explicit address can optionally be provided to begin dumping to dump at
   somewhere other than the current frame's stack pointer (this address can be
-  any expression that evaluates to an address, see "help print"), or you can
-  provide an --offset from the current stack position.
+  any expression that evaluates to an address, see "help expressions"), or you
+  can provide an --offset from the current stack position.
 
 Arguments
 
@@ -212,8 +212,8 @@ const char kMemAnalyzeHelp[] =
   Prints a memory analysis. A memory analysis attempts to find pointers to
   code in pointer-aligned locations and annotates those values.
 
-  The address can be an explicit number or any expression ("help print") that
-  evaluates to a memory address.
+  The address can be an explicit number or any expression ("help expressions")
+  that evaluates to a memory address.
 
   When no size is given, the size will be the object size if a typed expression
   is given, otherwise 20 lines will be output.
@@ -328,8 +328,8 @@ const char kMemReadHelp[] =
   Reads memory from the process at the given address and prints it to the
   screen. Currently, only a byte-oriented hex dump format is supported.
 
-  The address can be an explicit number or any expression ("help print") that
-  evaluates to a memory address.
+  The address can be an explicit number or any expression ("help expressions")
+  that evaluates to a memory address.
 
   When no size is given, the size will be the object size if a typed expression
   is given, otherwise 20 lines will be output.

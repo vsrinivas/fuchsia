@@ -840,25 +840,12 @@ const char kPrintHelp[] =
   The expression is evaluated by default in the currently selected thread and
   stack frame. You can override this with "frame <x> print ...".
 
+  👉 See "help expressions" for how to write expressions.
+
 Arguments
 
 )" FORMAT_VALUE_SWITCHES
     R"(
-Expressions
-
-  The expression evaluator understands the following C/C++ things:
-
-    - Identifiers
-
-    - Struct and class member access: . ->
-
-    - Array access (for native arrays): [ <expression> ]
-
-    - Create or dereference pointers: & *
-
-    - Precedence: ( <expression> )
-
-  Not supported: function calls, overloaded operators.
 
 Examples
 
