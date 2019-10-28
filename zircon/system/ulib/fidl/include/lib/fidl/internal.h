@@ -268,6 +268,21 @@ struct FidlCodedArray {
       : element(element), array_size(array_size), element_size(element_size), alt_type(alt_type) {}
 };
 
+// TODO(fxb/39388): Switch to using this more ergonomic coding table for arrays.
+struct FidlCodedArrayNew {
+  const fidl_type* const element;
+  const uint64_t element_count;
+  const uint32_t element_size;
+  const uint32_t element_padding;
+  const FidlCodedArrayNew* alt_type;
+
+  constexpr FidlCodedArrayNew(const fidl_type* element, uint64_t element_count,
+                              uint32_t element_size, uint32_t element_padding,
+                              const FidlCodedArrayNew* alt_type)
+      : element(element), element_count(element_count), element_size(element_size),
+        element_padding(element_padding), alt_type(alt_type) {}
+};
+
 // Note: must keep in sync with fidlc types.h HandleSubtype.
 enum FidlHandleSubtype : zx_obj_type_t {
   // special case to indicate subtype is not specified.

@@ -15,7 +15,7 @@ The command to generate the contents of generated is:
 
 ```bash
 fx build
-fx exec ./gen.sh
+fx exec zircon/system/utest/fidl/gen.sh
 ```
 
 The manual generation/checking-in should go away once we have a more flexible build process that

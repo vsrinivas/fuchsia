@@ -30,6 +30,10 @@ ${FIDLC} \
   --tables ${TEST_DIR}/generated/extra_messages.cc \
   --files ${TEST_DIR}/extra_messages.test.fidl
 
+${FIDLC} \
+  --tables ${TEST_DIR}/generated/transformer_tables.test.h \
+  --files ${TEST_DIR}/transformer.test.fidl
+
 for src_path in llcpp.test.fidl; do
   src_name="$( basename "${src_path}" .fidl )"
   json_name=${src_name}.json
