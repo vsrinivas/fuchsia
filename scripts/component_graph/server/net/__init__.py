@@ -9,3 +9,4 @@ The net module provides:
 """
 
 from server.net.api_handler import ApiHandler
+from server.net.static_handler import StaticHandler

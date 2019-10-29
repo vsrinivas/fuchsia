@@ -13,7 +13,7 @@ system.
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from server.fpm import PackageManager
-from server.net import ApiHandler
+from server.net import ApiHandler, StaticHandler
 import server.util
 import argparse
 
@@ -33,6 +33,7 @@ def RootRequestHandlerFactory(package_server_url):
         api_handler = ApiHandler(
             PackageManager(
                 package_server_url, server.util.env.get_fuchsia_root()))
+        static_handler = StaticHandler(server.util.env.get_fuchsia_root())
 
         def handle_api_request(self):
             """ Responds to JSON API requests """
@@ -45,10 +46,23 @@ def RootRequestHandlerFactory(package_server_url):
             else:
                 self.send_response(404)
 
+        def handle_static_request(self):
+          """ Responds to static file requests """
+          response = self.static_handler.respond(self.path)
+          if response:
+            self.send_response(200)
+            self.send_header("Content-type", response["type"])
+            self.end_headers()
+            self.wfile.write(response["data"])
+          else:
+            self.send_response(404)
+
         def do_GET(self):
             """ Root handler that forwards requests to sub handlers """
             if self.path.startswith("/api/"):
                 return self.handle_api_request()
+            if self.path.startswith("/static/") or self.path == "/":
+                return self.handle_static_request()
             return self.send_response(404)
 
     return RootRequestHandler

@@ -1,0 +1,101 @@
+/**
+ * Fuchsia Component Mapper tool styling. This is just some very basic styling to
+ * improve usability of the application.
+ */
+
+html, body, .wrapper {
+  background-color: #121212;
+  color: #FFFFFF;
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  height: 100%;
+}
+
+.header-text {
+  color: #e8eaee;
+  font-size: 1.5em;
+  padding-right: 1em;
+}
+
+.header-logo {
+  max-width: 1.5em;
+  max-height: 1.5em;
+}
+
+.header-search-wrapper {
+  overflow: hidden;
+}
+
+.header-search {
+  background-color: #121213;
+  border: 1px solid #5f6369;
+  color: #e8eaed;
+  font-size:1em;
+  transition: width 0.5s ease-in-out;
+  width: 30%;
+  padding: 0.5em;
+}
+
+.header-search:focus {
+  width: 80%;
+}
+
+.sidebar {
+  background: #3c4045;
+  border-right: 1px solid #5f6369;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0;
+  position: fixed;
+  width: 20.75em;
+  z-index: 1;
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.component-list {
+  background: #3c4043;
+  list-style-type:none;
+  margin: 0;
+  padding: 0;
+}
+
+.component-list li {
+  margin: 0;
+  padding: 1em;
+  border-bottom: 1px solid #5f6369;
+}
+
+.graph {
+  position: fixed;
+  margin-left: 20.75em;
+  width:100%;
+  height:100%;
+}
+
+.map {
+  height:100%;
+  width:100%;
+}
+
+.nav {
+  background: #3c4045;
+  border-bottom: 1px solid #5f6369;
+  border-left: 0px;
+  border-right: 0px;
+  border-top: 0px;
+  color: #e8eaee;
+  margin: 0;
+  padding: 10px;
+  overflow: hidden;
+  h2 {
+    display: inline;
+  }
+}
+
