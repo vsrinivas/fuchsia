@@ -28,18 +28,20 @@ import (
 import "C"
 
 // Functions below are adapted from
-// github.com/google/gvisor/pkg/sentry/socket/epsocket/epsocket.go.
+// https://github.com/google/gvisor/blob/master/pkg/sentry/socket/netstack/netstack.go
 //
 // At the time of writing, this command produces a reasonable diff:
 //
-// curl -sfSL https://raw.githubusercontent.com/google/gvisor/master/pkg/sentry/socket/netstack/netstack.go |
-//   sed s/linux/C/g | \
-//   sed 's/, outLen)/)/g' | \
-//   sed 's/(t, /(/g' | \
-//   sed 's/(s, /(/g' | \
-//   sed 's/, family,/,/g' | \
-//   sed 's/, skType,/, transProto,/g' | \
-//   diff --color --ignore-all-space --unified - src/connectivity/network/netstack/socket_conv.go
+/*
+   curl -sfSL https://raw.githubusercontent.com/google/gvisor/master/pkg/sentry/socket/netstack/netstack.go |
+   sed s/linux/C/g | \
+   sed 's/, outLen)/)/g' | \
+   sed 's/(t, /(/g' | \
+   sed 's/(s, /(/g' | \
+   sed 's/, family,/,/g' | \
+   sed 's/, skType,/, transProto,/g' | \
+   diff --color --ignore-all-space --unified - src/connectivity/network/netstack/socket_conv.go
+*/
 
 const sizeOfInt32 int = 4
 
@@ -560,20 +562,28 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 	return tcpip.ErrUnknownProtocolOption
 }
 
+// parseIntOrChar copies either a 32-bit int or an 8-bit uint out of buf.
+//
+// net/ipv4/ip_sockglue.c:do_ip_setsockopt does this for its socket options.
+func parseIntOrChar(buf []byte) (int32, *tcpip.Error) {
+	if len(buf) == 0 {
+		return 0, tcpip.ErrInvalidOptionValue
+	}
+
+	if len(buf) >= sizeOfInt32 {
+		return int32(binary.LittleEndian.Uint32(buf)), nil
+	}
+
+	return int32(buf[0]), nil
+}
+
 // setSockOptIP implements SetSockOpt when level is SOL_IP.
 func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 	switch name {
 	case C.IP_MULTICAST_TTL:
-		if len(optVal) == 0 {
-			return tcpip.ErrInvalidOptionValue
-		}
-
-		if len(optVal) > sizeOfInt32 {
-			optVal = optVal[:sizeOfInt32]
-		}
-		var v int32
-		for i, b := range optVal {
-			v += int32(b) << uint(i*8)
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return err
 		}
 
 		if v == -1 {
@@ -648,16 +658,9 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 
 	case C.IP_MULTICAST_LOOP:
-		if len(optVal) == 0 {
-			return tcpip.ErrInvalidOptionValue
-		}
-
-		if len(optVal) > sizeOfInt32 {
-			optVal = optVal[:sizeOfInt32]
-		}
-		var v int32
-		for i, b := range optVal {
-			v += int32(b) << uint(i*8)
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return err
 		}
 
 		return ep.SetSockOpt(tcpip.MulticastLoopOption(v != 0))
