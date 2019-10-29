@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{channel::ChannelConfigs, inspect::AppsNode};
+use crate::{
+    channel::ChannelConfigs,
+    inspect::{AppsNode, StateNode},
+};
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_update::{
     CheckStartedResult, Initiator, ManagerRequest, ManagerRequestStream, ManagerState,
@@ -64,6 +67,8 @@ where
 
     apps_node: AppsNode,
 
+    state_node: StateNode,
+
     channel_configs: Option<ChannelConfigs>,
 
     // The current State table, defined in fuchsia.update.fidl.
@@ -96,15 +101,19 @@ where
         storage_ref: Rc<Mutex<ST>>,
         app_set: AppSet,
         apps_node: AppsNode,
+        state_node: StateNode,
         channel_configs: Option<ChannelConfigs>,
     ) -> Self {
+        let state = State { state: Some(ManagerState::Idle), version_available: None };
+        state_node.set(&state);
         FidlServer {
             state_machine_ref,
             storage_ref,
             app_set,
             apps_node,
+            state_node,
             channel_configs,
-            state: State { state: Some(ManagerState::Idle), version_available: None },
+            state,
             monitor_handles: vec![],
             current_monitor_handles: vec![],
         }
@@ -333,6 +342,8 @@ where
             self.current_monitor_handles.clear();
         }
 
+        self.state_node.set(&self.state);
+
         // The state machine might make changes to apps only when state changes to `Idle` or
         // `WaitingForReboot`, update the apps node in inspect.
         if self.state.state == Some(ManagerState::Idle)
@@ -375,11 +386,12 @@ mod tests {
         apps: Vec<App>,
         channel_configs: Option<ChannelConfigs>,
         apps_node: Option<AppsNode>,
+        state_node: Option<StateNode>,
     }
 
     impl FidlServerBuilder {
         fn new() -> Self {
-            Self { apps: Vec::new(), channel_configs: None, apps_node: None }
+            Self { apps: Vec::new(), channel_configs: None, apps_node: None, state_node: None }
         }
 
         fn with_apps(mut self, mut apps: Vec<App>) -> Self {
@@ -389,6 +401,11 @@ mod tests {
 
         fn with_apps_node(mut self, apps_node: AppsNode) -> Self {
             self.apps_node = Some(apps_node);
+            self
+        }
+
+        fn with_state_node(mut self, state_node: StateNode) -> Self {
+            self.state_node = Some(state_node);
             self
         }
 
@@ -416,14 +433,16 @@ mod tests {
                 app_set.clone(),
             )
             .await;
-            let apps_node = self
-                .apps_node
-                .unwrap_or(AppsNode::new(Inspector::new().root().create_child("apps")));
+            let inspector = Inspector::new();
+            let root = inspector.root();
+            let apps_node = self.apps_node.unwrap_or(AppsNode::new(root.create_child("apps")));
+            let state_node = self.state_node.unwrap_or(StateNode::new(root.create_child("state")));
             FidlServer::new(
                 Rc::new(RefCell::new(state_machine)),
                 storage_ref,
                 app_set,
                 apps_node,
+                state_node,
                 self.channel_configs,
             )
         }
@@ -668,6 +687,33 @@ mod tests {
             root: {
                 apps: {
                     apps: format!("{:?}", fidl.app_set.to_vec().await),
+                }
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_state() {
+        let inspector = Inspector::new();
+        let state_node = StateNode::new(inspector.root().create_child("state"));
+        let mut fidl = FidlServerBuilder::new().with_state_node(state_node).build().await;
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                state: {
+                    state: format!("{:?}", fidl.state),
+                }
+            }
+        );
+
+        fidl.on_state_change(state_machine::State::PerformingUpdate).await;
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                state: {
+                    state: format!("{:?}", fidl.state),
                 }
             }
         );

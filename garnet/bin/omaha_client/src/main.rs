@@ -72,12 +72,14 @@ fn main() -> Result<(), Error> {
         configuration_node.set(&config);
         let apps_node = inspect::AppsNode::new(root.create_child("apps"));
         apps_node.set(&app_set.to_vec().await);
+        let state_node = inspect::StateNode::new(root.create_child("state"));
 
         let fidl = fidl::FidlServer::new(
             state_machine_ref.clone(),
             stash_ref,
             app_set,
             apps_node,
+            state_node,
             channel_configs,
         );
 

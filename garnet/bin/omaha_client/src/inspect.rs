@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_update::State;
 use fuchsia_inspect::{Node, Property, StringProperty};
 use omaha_client::{
     common::App,
@@ -111,10 +112,26 @@ impl AppsNode {
     }
 }
 
+pub struct StateNode {
+    _node: Node,
+    state: StringProperty,
+}
+
+impl StateNode {
+    pub fn new(state_node: Node) -> Self {
+        StateNode { state: state_node.create_string("state", ""), _node: state_node }
+    }
+
+    pub fn set(&self, state: &State) {
+        self.state.set(&format!("{:?}", state));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::configuration::get_config;
+    use fidl_fuchsia_update::ManagerState;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use omaha_client::protocol::Cohort;
 
@@ -161,6 +178,26 @@ mod tests {
             root: {
                 apps: {
                     apps: format!("{:?}", apps),
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_state_node() {
+        let inspector = Inspector::new();
+        let node = StateNode::new(inspector.root().create_child("state"));
+        let state = State {
+            state: Some(ManagerState::CheckingForUpdates),
+            version_available: Some("1.2.3.4".to_string()),
+        };
+        node.set(&state);
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                state: {
+                    state: format!("{:?}", state),
                 }
             }
         );
