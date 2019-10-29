@@ -721,10 +721,6 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
       args[argc++] = "--advertise";
     }
 
-    if (coordinator->boot_args().GetBool("netsvc.all-features", false)) {
-      args[argc++] = "--all-features";
-    }
-
     if (interface != nullptr) {
       args[argc++] = "--interface";
       args[argc++] = interface;

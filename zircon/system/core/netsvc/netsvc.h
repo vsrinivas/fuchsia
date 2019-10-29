@@ -8,4 +8,3 @@ void update_timeouts();
 
 bool netbootloader();
 const char* nodename();
-bool all_features();

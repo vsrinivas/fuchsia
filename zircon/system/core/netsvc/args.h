@@ -10,7 +10,6 @@
 // --netboot
 // --nodename
 // --advertise
-// --all-features
 //
 // and the value of the char* flag
 //
@@ -20,7 +19,7 @@
 //
 // If parse_netsvc_args returns < 0, an error string will be returned in |error|.
 int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, bool* nodename,
-                      bool* advertise, bool* all_features, const char** interface);
+                      bool* advertise, const char** interface);
 
 // Parse the command line arguments in |argv|, returning the value of char* flags
 //

@@ -31,27 +31,14 @@
 
 static bool g_netbootloader = false;
 
-// When false (default), will only respond to a limited number of commands.
-// Currently, NB_QUERY (to support netls and netaddr), as well as responding to
-// ICMP as usual.
-static bool g_all_features = false;
-
 static char g_nodename[HOST_NAME_MAX];
 
 bool netbootloader() { return g_netbootloader; }
-bool all_features() { return g_all_features; }
 const char* nodename() { return g_nodename; }
 
 void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport) {
   bool mcast = (memcmp(daddr, &ip6_ll_all_nodes, sizeof(ip6_addr_t)) == 0);
-
-  if (!all_features()) {
-    if (dport != NB_SERVER_PORT) {
-      // Only some netboot commands allowed in limited mode.
-      return;
-    }
-  }
 
   switch (dport) {
     case NB_SERVER_PORT:
@@ -109,17 +96,10 @@ int main(int argc, char** argv) {
 
   const char* error;
   if (parse_netsvc_args(argc, argv, &error, &g_netbootloader, &print_nodename_and_exit,
-                        &should_advertise, &g_all_features, &interface) < 0) {
+                        &should_advertise, &interface) < 0) {
     printf("netsvc: fatal error: %s\n", error);
     return -1;
   };
-
-  if (g_netbootloader && !g_all_features) {
-    printf("netsvc: fatal: --netboot requires --all-features\n");
-    return -1;
-  }
-
-  printf("netsvc: running in %s mode\n", g_all_features ? "full" : "limited");
 
   gethostname(g_nodename, sizeof(g_nodename));
 
@@ -160,14 +140,11 @@ int main(int argc, char** argv) {
         break;
       }
       zx_time_t now = zx_clock_get_monotonic();
-
-      if (g_all_features) {
-        if (now > debuglog_next_timeout()) {
-          debuglog_timeout_expired();
-        }
-        if (now > tftp_next_timeout()) {
-          tftp_timeout_expired();
-        }
+      if (now > debuglog_next_timeout()) {
+        debuglog_timeout_expired();
+      }
+      if (now > tftp_next_timeout()) {
+        tftp_timeout_expired();
       }
     }
     netifc_close();

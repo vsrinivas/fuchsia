@@ -111,11 +111,7 @@ action("devmgr_config.txt") {
   ]
 
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  entries = [
-              "netsvc.netboot=true",
-              "netsvc.all-features=true",
-            ] + zedboot_devmgr_config
-  foreach(entry, entries) {
+  foreach(entry, [ "netsvc.netboot=true" ] + zedboot_devmgr_config) {
     args += [ "--entry=$entry" ]
   }
 }

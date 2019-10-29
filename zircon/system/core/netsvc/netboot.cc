@@ -464,14 +464,6 @@ void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr
     msg->data[len - 1] = '\0';
   }
 
-  if (!all_features()) {
-    assert(!netbootloader());  // This is checked in netsvc's main().
-    if (msg->cmd != NB_QUERY) {
-      // Only QUERY is allowed in minimal mode.
-      return;
-    }
-  }
-
   switch (msg->cmd) {
     case NB_QUERY: {
       if (strcmp(reinterpret_cast<char*>(msg->data), "*") &&
