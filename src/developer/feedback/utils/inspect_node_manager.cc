@@ -11,10 +11,10 @@
 
 namespace feedback {
 
-using fxl::kKeepWhitespace;
 using fxl::kSplitWantNonEmpty;
+using fxl::kTrimWhitespace;
+using fxl::SplitStringCopy;
 using inspect::Node;
-using internal::SplitPathOrDie;
 
 bool InspectNodeManager::ManagedNodeBase::HasChild(const std::string& child) const {
   return children_.find(child) != children_.end();
@@ -28,25 +28,14 @@ InspectNodeManager::ManagedNode& InspectNodeManager::ManagedNodeBase::GetChild(
   return children_.at(child);
 }
 
-Node* InspectNodeManager::GetOrDie(const std::string& path) {
+Node* InspectNodeManager::Get(const std::string& path) {
   ManagedNodeBase* parent = &root_;
-  for (const auto& child : SplitPathOrDie(path)) {
+  for (const auto& child : SplitStringCopy(path, "/", kTrimWhitespace, kSplitWantNonEmpty)) {
     // Create the child if it doesn't exist, then get the child.
-    parent = &parent->GetChild(child.ToString());
+    parent = &parent->GetChild(child);
   }
 
   return parent->GetNode();
 }
 
-namespace internal {
-
-std::vector<fxl::StringView> SplitPathOrDie(const std::string& path) {
-  FXL_CHECK(!path.empty()) << "path cannot be empty";
-  FXL_CHECK(path[0] == '/') << "path must start with '\'";
-  FXL_CHECK(path.find(' ') == std::string::npos) << "path cannot contain whitespace";
-
-  return fxl::SplitString(path, "/", kKeepWhitespace, kSplitWantNonEmpty);
-}
-
-}  // namespace internal
 }  // namespace feedback

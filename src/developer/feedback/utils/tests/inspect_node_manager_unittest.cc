@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include "src/developer/feedback/utils/inspect_node_manager.h"
 
 #include <lib/inspect/cpp/hierarchy.h>
@@ -26,7 +27,6 @@ using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::StringIs;
 using inspect::testing::UintIs;
-using internal::SplitPathOrDie;
 using testing::AllOf;
 using testing::Contains;
 using testing::ElementsAreArray;
@@ -48,75 +48,22 @@ class InspectNodeManagerTest : public testing::Test {
     return result.take_value();
   }
 
-  void CheckSplitPathOrDie(const std::string& path, const std::vector<std::string>& expected) {
-    std::vector<fxl::StringView> split_path = SplitPathOrDie(path);
-    EXPECT_THAT(split_path, ElementsAreArray(expected));
-  }
   std::unique_ptr<InspectNodeManager> inspect_node_manager_;
 
  private:
   std::unique_ptr<inspect::Inspector> inspector_;
 };
 
-TEST_F(InspectNodeManagerTest, Attempt_SplitPathOrDie_EmptyString) {
-  ASSERT_DEATH(SplitPathOrDie(""), HasSubstr("path cannot be empty"));
+TEST_F(InspectNodeManagerTest, Check_Get_RootNode) {
+  EXPECT_TRUE(inspect_node_manager_->Get(""));
+  EXPECT_TRUE(inspect_node_manager_->Get("/"));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(IsEmpty()));
 }
 
-TEST_F(InspectNodeManagerTest, Attempt_SplitPathOrDie_WrongFirstCharacter) {
-  ASSERT_DEATH(SplitPathOrDie("a"), HasSubstr("path must start with '\'"));
-}
-
-TEST_F(InspectNodeManagerTest, Attempt_SplitPathOrDie_ContainsWhiteSpace) {
-  ASSERT_DEATH(SplitPathOrDie("/path/ whitespace"), HasSubstr("path cannot contain whitespace"));
-}
-
-TEST_F(InspectNodeManagerTest, Check_SplitPathOrDie_JustRoot) { CheckSplitPathOrDie("/", {}); }
-
-TEST_F(InspectNodeManagerTest, Check_SplitPathOrDie_AllBackslashes) {
-  CheckSplitPathOrDie("/////////", {});
-}
-
-TEST_F(InspectNodeManagerTest, Check_SplitPathOrDie_NormalPath) {
-  CheckSplitPathOrDie("/simple/path", {"simple", "path"});
-}
-
-TEST_F(InspectNodeManagerTest, Check_SplitPathOrDie_NormalPath_EndsWithBackslash) {
-  CheckSplitPathOrDie("/simple/path/", {"simple", "path"});
-}
-
-TEST_F(InspectNodeManagerTest, Check_SplitPathOrDie_Path_StartsWithManyBackslashes) {
-  CheckSplitPathOrDie("/////simple/path", {"simple", "path"});
-}
-
-TEST_F(InspectNodeManagerTest, Check_SplitPathOrDie_Path_EndsWithManyBackslashes) {
-  CheckSplitPathOrDie("/simple/path//////", {"simple", "path"});
-}
-
-TEST_F(InspectNodeManagerTest, Check_SplitPathOrDie_Path_MiddleHasManyBackslashes) {
-  CheckSplitPathOrDie("/simple///////path", {"simple", "path"});
-}
-
-TEST_F(InspectNodeManagerTest, Check_SplitPathOrDie_Path_HasBackslashesEverywhere) {
-  CheckSplitPathOrDie("//////simple///////path//////////", {"simple", "path"});
-}
-
-TEST_F(InspectNodeManagerTest, Attempt_GetOrDie_BadPaths) {
-  ASSERT_DEATH(inspect_node_manager_->GetOrDie(""), HasSubstr("path cannot be empty"));
-  ASSERT_DEATH(inspect_node_manager_->GetOrDie("a"), HasSubstr("path must start with '\'"));
-  ASSERT_DEATH(inspect_node_manager_->GetOrDie("/path "),
-               HasSubstr("path cannot contain whitespace"));
-  ASSERT_DEATH(inspect_node_manager_->GetOrDie("/path/white space"),
-               HasSubstr("path cannot contain whitespace"));
-}
-
-TEST_F(InspectNodeManagerTest, Check_GetOrDie_RootNode) {
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/"));
-}
-
-TEST_F(InspectNodeManagerTest, Check_GetOrDie_MultipleLevelOneNodes) {
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child1"));
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child2"));
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child3"));
+TEST_F(InspectNodeManagerTest, Check_Get_MultipleLevelOneNodes) {
+  EXPECT_TRUE(inspect_node_manager_->Get("/child1"));
+  EXPECT_TRUE(inspect_node_manager_->Get("/child2"));
+  EXPECT_TRUE(inspect_node_manager_->Get("/child3"));
 
   EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAreArray({
                                  NodeMatches(NameMatches("child1")),
@@ -125,17 +72,17 @@ TEST_F(InspectNodeManagerTest, Check_GetOrDie_MultipleLevelOneNodes) {
                              })));
 }
 
-TEST_F(InspectNodeManagerTest, Check_GetOrDie_NodeAlreadyExists) {
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child1"));
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child1"));
+TEST_F(InspectNodeManagerTest, Check_Get_NodeAlreadyExists) {
+  EXPECT_TRUE(inspect_node_manager_->Get("/child1"));
+  EXPECT_TRUE(inspect_node_manager_->Get("/child1"));
 
   EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAreArray({
                                  NodeMatches(NameMatches("child1")),
                              })));
 }
 
-TEST_F(InspectNodeManagerTest, Check_GetOrDie_OneLevelTwoNode) {
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child1/grandchild1.1"));
+TEST_F(InspectNodeManagerTest, Check_Get_OneLevelTwoNode) {
+  EXPECT_TRUE(inspect_node_manager_->Get("/child1/grandchild1.1"));
 
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(ElementsAre(
@@ -143,10 +90,10 @@ TEST_F(InspectNodeManagerTest, Check_GetOrDie_OneLevelTwoNode) {
                         ChildrenMatch(ElementsAre(NodeMatches(NameMatches("grandchild1.1"))))))));
 }
 
-TEST_F(InspectNodeManagerTest, Check_GetOrDie_MultipleLevelTwoNodes) {
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child1"));
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child1/grandchild1.1"));
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child1/grandchild1.2"));
+TEST_F(InspectNodeManagerTest, Check_Get_MultipleLevelTwoNodes) {
+  EXPECT_TRUE(inspect_node_manager_->Get("/child1"));
+  EXPECT_TRUE(inspect_node_manager_->Get("/child1/grandchild1.1"));
+  EXPECT_TRUE(inspect_node_manager_->Get("/child1/grandchild1.2"));
 
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("child1")),
@@ -156,8 +103,8 @@ TEST_F(InspectNodeManagerTest, Check_GetOrDie_MultipleLevelTwoNodes) {
                                               }))))));
 }
 
-TEST_F(InspectNodeManagerTest, Check_GetOrDie_OneLevelThreeNode) {
-  EXPECT_TRUE(inspect_node_manager_->GetOrDie("/child1/grandchild1.1/greatgrandchild1.1.1"));
+TEST_F(InspectNodeManagerTest, Check_Get_OneLevelThreeNode) {
+  EXPECT_TRUE(inspect_node_manager_->Get("/child1/grandchild1.1/greatgrandchild1.1.1"));
 
   EXPECT_THAT(
       InspectTree(),
@@ -170,8 +117,7 @@ TEST_F(InspectNodeManagerTest, Check_GetOrDie_OneLevelThreeNode) {
 }
 
 TEST_F(InspectNodeManagerTest, Check_Update_OneLevelThreeNode) {
-  inspect::Node* node =
-      inspect_node_manager_->GetOrDie("/child1/grandchild1.1/greatgrandchild1.1.1");
+  inspect::Node* node = inspect_node_manager_->Get("/child1/grandchild1.1/greatgrandchild1.1.1");
   ASSERT_TRUE(node);
 
   inspect::StringProperty s = node->CreateString("string", "value");
@@ -185,7 +131,7 @@ TEST_F(InspectNodeManagerTest, Check_Update_OneLevelThreeNode) {
                                       PropertyList(ElementsAre(StringIs("string", "value")))))))),
                         }))))));
 
-  node = inspect_node_manager_->GetOrDie("/child1/grandchild1.1/greatgrandchild1.1.1");
+  node = inspect_node_manager_->Get("/child1/grandchild1.1/greatgrandchild1.1.1");
   ASSERT_TRUE(node);
 
   inspect::UintProperty u = node->CreateUint("uint", 10u);
@@ -200,7 +146,7 @@ TEST_F(InspectNodeManagerTest, Check_Update_OneLevelThreeNode) {
                                                                 UintIs("uint", 10u),
                                                             }))))))),
                                               }))))));
-}  // namespace
+}
 
 }  // namespace
 }  // namespace feedback

@@ -18,20 +18,12 @@ namespace feedback {
 
 // Manage Inspect nodes, allowing access using paths relative to the inspect root. Nodes are
 // created lazily upon request to get a node or one of its children.
-//
-// NOTE: Paths are incredilby strict and a malformed path will cause a CHECK-FAIL. A malformed
-// path is defined as:
-// * being empty
-// * not starting with '/'
-// * contains whitespace
 class InspectNodeManager {
  public:
   InspectNodeManager(inspect::Node* root_node) : root_(root_node) {}
 
   // Get the Inspect node at the provided path, creating nodes along the way if need be.
-  //
-  // The process dies if the path is malformed.
-  inspect::Node* GetOrDie(const std::string& path);
+  inspect::Node* Get(const std::string& path);
 
  private:
   class ManagedNode;
@@ -82,17 +74,6 @@ class InspectNodeManager {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectNodeManager);
 };
-
-namespace internal {
-
-// Splits a path on '/'.
-//
-// E.g., SplitPathOfDie("/foo/bar/baz") -> {"foo", "bar", "baz"}
-//
-// The process dies if the path is malformed (as defined above).
-std::vector<fxl::StringView> SplitPathOrDie(const std::string& path);
-
-}  // namespace internal
 
 }  // namespace feedback
 
