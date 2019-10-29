@@ -47,6 +47,8 @@ class CameraProcessNode {
         callback_{OnFrameAvailable, this},
         enabled_(false) {}
 
+  explicit CameraProcessNode(NodeType type) : type_(type), enabled_(false) {}
+
   ~CameraProcessNode() {
     // TODO(braval) : Remove this once we use buffercollectioninfo_2 where the buffer collections
     // will be part of camera processing nodes, and they will get destructed and handles will be
@@ -72,6 +74,10 @@ class CameraProcessNode {
   void OnStartStreaming();
   void OnStopStreaming();
 
+  // Helper APIs
+  void set_parent_node(const std::shared_ptr<CameraProcessNode> parent_node) {
+    parent_node_ = parent_node;
+  }
   void set_isp_stream_protocol(std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol) {
     isp_stream_protocol_ = std::move(isp_stream_protocol);
   }
@@ -85,6 +91,9 @@ class CameraProcessNode {
 
   // Returns this instance's callback parameter for use with the ISP Stream banjo interface.
   const output_stream_callback_t* callback() { return &callback_; }
+
+  // Adds a child info in the vector
+  void AddChildNodeInfo(ChildNodeInfo info) { child_nodes_info_.push_back(std::move(info)); }
   // Curent state of the node
   bool enabled() { return enabled_; }
 

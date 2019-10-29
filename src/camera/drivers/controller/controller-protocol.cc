@@ -58,6 +58,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   zx_status_t status = ZX_OK;
   auto cleanup = fbl::MakeAutoCall([&stream, &status]() { stream.Close(status); });
 
+  // Input Validations
   if (config_index >= configs_.size()) {
     FX_LOGS(ERROR) << "Invalid config index " << config_index;
     status = ZX_ERR_INVALID_ARGS;
@@ -92,12 +93,6 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
     return;
   }
 
-  auto isp_stream_impl = std::make_unique<camera::IspStreamProtocol>();
-  if (!isp_stream_impl) {
-    FX_LOGS(ERROR) << "Failed to create IspStreamProtocol";
-    status = ZX_ERR_INVALID_ARGS;
-    return;
-  }
   // Check the Input Stream Type and see if it is already created
   auto stream_config_node =
       GetStreamConfigNode(internal_config, stream_config.properties.stream_type());
@@ -111,14 +106,12 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   info.image_format_index = image_format_index;
   info.node = *stream_config_node;
   info.stream_config = &stream_config;
+
   // We now have the stream_config_node which needs to be configured
   // Configure the stream pipeline
   status = camera_pipeline_manager_.ConfigureStreamPipeline(&info, stream);
   if (status != ZX_OK) {
-    if (status == ZX_ERR_ALREADY_BOUND) {
-      stream.Close(ZX_ERR_ALREADY_BOUND);
-    }
-    FX_PLOGS(ERROR, status) << "Unable to create Stream Pipeline";
+    FX_LOGS(ERROR) << "Unable to create Stream Pipeline" << status;
     return;
   }
 

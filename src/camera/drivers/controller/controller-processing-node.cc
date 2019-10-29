@@ -14,19 +14,62 @@
 namespace camera {
 
 void CameraProcessNode::OnReadyToProcess(uint32_t buffer_index) {
-  ZX_ASSERT_MSG(false, "Unknown NodeType\n");
+  // If it's the output stream node, we have to notify the client about
+  // the frame being available
+  if (type_ == NodeType::kOutputStream) {
+    ZX_ASSERT(client_stream_ != nullptr);
+    client_stream_->FrameReady(buffer_index);
+    return;
+  }
+  // TODO(braval): Add support for other types of nodes
 }
 
 void CameraProcessNode::OnFrameAvailable(uint32_t buffer_index) {
-  client_stream_->FrameReady(buffer_index);
+  // This API is not in use for |kOutputStream|
+  ZX_ASSERT(type_ != NodeType::kOutputStream);
+
+  // TODO(braval): Free up the frame for the parent
+  // We will be modifying the signature of this API which would also have
+  // information of which frame to free for the producer (parent)
+
+  // Loop through all the child nodes and call their |OnFrameAvailable|
+  for (auto& i : child_nodes_info_) {
+    auto& child_node = i.child_node;
+    // TODO(braval): Regulate frame rate here
+    if (child_node->enabled()) {
+      child_node->OnReadyToProcess(buffer_index);
+    }
+  }
 }
 
 void CameraProcessNode::OnReleaseFrame(uint32_t buffer_index) {
-  if (type_ == NodeType::kInputStream) {
-    isp_stream_protocol_->ReleaseFrame(buffer_index);
-    return;
+  // First release this nodes Frames (GDC, GE2D)
+  switch (type_) {
+    case NodeType::kGdc: {
+      // TODO(braval): Inform the HW accelerator for freeing up the frames
+      break;
+    }
+    case NodeType::kGe2d: {
+      // TODO(braval): Inform the HW accelerator for freeing up the frames
+      break;
+    }
+    case NodeType::kInputStream: {
+      isp_stream_protocol_->ReleaseFrame(buffer_index);
+      return;
+    }
+    case NodeType::kOutputStream: {
+      // Need to just call parent's Release Frame which is done below
+      break;
+    }
+    default: {
+      ZX_ASSERT_MSG(false, "Unknown NodeType\n");
+      return;
+    }
   }
-  ZX_ASSERT_MSG(false, "Unknown NodeType\n");
+  // Call parents ReleaseFrame()
+  // TODO(braval): Handle the case where we need to ensure that all
+  // children have freed up the buffers.
+  parent_node_->OnReleaseFrame(buffer_index);
 }
 
 void CameraProcessNode::OnStartStreaming() {
@@ -35,15 +78,28 @@ void CameraProcessNode::OnStartStreaming() {
     isp_stream_protocol_->Start();
     return;
   }
-  ZX_ASSERT_MSG(false, "Unknown NodeType\n");
+  parent_node_->OnStartStreaming();
+}
+
+bool CameraProcessNode::AllChildNodesDisabled() {
+  for (auto& i : child_nodes_info_) {
+    auto& child_node = i.child_node;
+    if (child_node->enabled()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void CameraProcessNode::OnStopStreaming() {
-  if (type_ == NodeType::kInputStream) {
-    isp_stream_protocol_->Stop();
-    return;
+  if (AllChildNodesDisabled()) {
+    enabled_ = false;
+    if (type_ == NodeType::kInputStream) {
+      isp_stream_protocol_->Stop();
+    } else {
+      parent_node_->OnStopStreaming();
+    }
   }
-  ZX_ASSERT_MSG(false, "Unknown NodeType\n");
 }
 
 }  // namespace camera

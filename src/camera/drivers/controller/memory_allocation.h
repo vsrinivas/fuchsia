@@ -13,8 +13,6 @@ namespace camera {
 
 class ControllerMemoryAllocator {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerMemoryAllocator);
-
   explicit ControllerMemoryAllocator(fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
       : sysmem_allocator_(std::move(sysmem_allocator)){};
 

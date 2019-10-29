@@ -27,13 +27,13 @@ class StreamImpl : public fuchsia::camera2::Stream {
                       std::shared_ptr<CameraProcessNode> output_node);
   ~StreamImpl() override;
 
-  void FrameReady(uint32_t buffer_index);
-
   // Binds a channel to the stream.
   // Args:
   //   |channel|: the channel to bind
   //   |disconnect_handler|: called when the client on |channel| disconnects
   zx_status_t Attach(zx::channel channel, fit::function<void(void)> disconnect_handler);
+
+  void FrameReady(uint32_t buffer_index);
 
   // | fuchsia::camera2::Stream |
   void Start() override;
@@ -46,10 +46,6 @@ class StreamImpl : public fuchsia::camera2::Stream {
   void GetImageFormats(GetImageFormatsCallback callback) override;
 
  private:
-  static void FrameReady(void* ctx, uint32_t buffer_id) {
-    static_cast<StreamImpl*>(ctx)->FrameReady(buffer_id);
-  }
-
   // Closes the Stream connection, sending the given |status| to the client, and cleans up
   // outstanding state with the ISP.
   void Shutdown(zx_status_t status);

@@ -72,8 +72,6 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
 
   std::vector<fuchsia::camera2::hal::Config> SherlockConfigs();
 
-  async_dispatcher_t* dispatcher_;
-
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   InternalConfigs internal_configs_;

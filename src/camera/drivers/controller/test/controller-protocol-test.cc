@@ -120,7 +120,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
     auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
         internal_info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-    EXPECT_NE(nullptr, stream_config_node);
+    ASSERT_NE(nullptr, stream_config_node);
 
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
     fuchsia::camera2::hal::StreamConfig stream_config;
@@ -137,6 +137,41 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     EXPECT_NE(nullptr, out_processing_node->isp_stream_protocol());
     EXPECT_EQ(NodeType::kInputStream, out_processing_node->type());
+  }
+
+  void TestConfigureOutputNode_DebugConfig() {
+    controller_protocol_device_->PopulateConfigurations();
+    InternalConfigInfo* internal_info = nullptr;
+    // Get internal configuration for debug config
+    EXPECT_EQ(ZX_OK,
+              controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &internal_info));
+    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
+    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
+        internal_info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    ASSERT_NE(nullptr, stream_config_node);
+
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+
+    CameraPipelineInfo info;
+    info.output_buffers = std::move(buffer_collection);
+    info.image_format_index = 0;
+    info.node = *stream_config_node;
+    info.stream_config = &stream_config;
+
+    std::shared_ptr<CameraProcessNode> input_processing_node;
+    EXPECT_EQ(ZX_OK, camera_pipeline_manager_->ConfigureInputNode(&info, &input_processing_node));
+
+    EXPECT_NE(nullptr, input_processing_node->isp_stream_protocol());
+    EXPECT_EQ(NodeType::kInputStream, input_processing_node->type());
+
+    std::shared_ptr<CameraProcessNode> output_processing_node;
+    EXPECT_EQ(ZX_OK, camera_pipeline_manager_->CreateGraph(&info, input_processing_node,
+                                                           &output_processing_node));
+
+    EXPECT_NE(nullptr, output_processing_node->client_stream());
+    EXPECT_EQ(NodeType::kOutputStream, output_processing_node->type());
   }
 
   FakeIsp fake_isp_;
@@ -156,6 +191,10 @@ TEST_F(ControllerProtocolTest, GetDebugStreamConfig) { TestDebugStreamConfigNode
 
 TEST_F(ControllerProtocolTest, ConfigureInputNodeDebugConfig) {
   TestConfigureInputNode_DebugConfig();
+}
+
+TEST_F(ControllerProtocolTest, ConfigureOutputNodeDebugConfig) {
+  TestConfigureOutputNode_DebugConfig();
 }
 
 }  // namespace camera

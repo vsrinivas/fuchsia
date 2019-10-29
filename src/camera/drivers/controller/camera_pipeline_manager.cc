@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include "camera_pipeline_manager.h"
 
 #include <zircon/errors.h>
@@ -10,7 +11,9 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "stream_protocol.h"
+
 namespace camera {
+
 const InternalConfigNode* CameraPipelineManager::GetNextNodeInPipeline(
     CameraPipelineInfo* info, const InternalConfigNode& node) {
   for (const auto& child_node : node.child_nodes) {
@@ -44,6 +47,7 @@ static void ConvertToBufferCollectionInfo(
     old_buffer_collection->vmos[i] = buffer_collection->buffers[i].vmo.release();
   }
   old_buffer_collection->vmo_size = buffer_collection->settings.buffer_settings.size_bytes;
+
   // End of temporary code
 }
 
@@ -111,19 +115,81 @@ zx_status_t CameraPipelineManager::ConfigureInputNode(
     return ZX_ERR_INTERNAL;
   }
 
-  auto client_stream = std::make_unique<camera::StreamImpl>(dispatcher_, processing_node);
+  // Update the input node with the ISP stream protocol
+  processing_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
+
+  *out_processing_node = std::move(processing_node);
+  return ZX_OK;
+}
+
+zx_status_t CameraPipelineManager::ConfigureOutputNode(
+    const std::shared_ptr<CameraProcessNode>& parent_node, const InternalConfigNode* node,
+    std::shared_ptr<CameraProcessNode>* output_processing_node) {
+  // Create Output Node
+  auto output_node = std::make_shared<camera::CameraProcessNode>(node->type);
+  if (!output_node) {
+    FX_LOGS(ERROR) << "Failed to create output CameraProcessNode";
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  auto client_stream = std::make_unique<camera::StreamImpl>(dispatcher_, output_node);
   if (!client_stream) {
     FX_LOGS(ERROR) << "Failed to create StreamImpl";
     return ZX_ERR_INTERNAL;
-    ;
   }
 
-  // Update the input node with the ISP stream protocol
-  processing_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
-  // Set the client stream
-  processing_node->set_client_stream(std::move(client_stream));
+  // Set the parent node
+  output_node->set_parent_node(parent_node);
 
-  *out_processing_node = std::move(processing_node);
+  // Set the client stream
+  output_node->set_client_stream(std::move(client_stream));
+
+  *output_processing_node = output_node;
+
+  // Add child node info.
+  ChildNodeInfo child_info;
+  child_info.child_node = std::move(output_node);
+  child_info.stream_type = node->output_stream_type;
+  child_info.output_frame_rate = node->output_frame_rate;
+  parent_node->AddChildNodeInfo(std::move(child_info));
+  return ZX_OK;
+}
+
+zx_status_t CameraPipelineManager::CreateGraph(
+    CameraPipelineInfo* info, const std::shared_ptr<CameraProcessNode>& parent_node,
+    std::shared_ptr<CameraProcessNode>* output_processing_node) {
+  auto next_node = GetNextNodeInPipeline(info, info->node);
+  if (!next_node) {
+    FX_LOGS(ERROR) << "Failed to get next node";
+    return ZX_ERR_INTERNAL;
+  }
+
+  switch (next_node->type) {
+    // Input Node
+    case NodeType::kInputStream: {
+      FX_LOGS(ERROR) << "Child node cannot be input node";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    // GDC
+    case NodeType::kGdc: {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    // GE2D
+    case NodeType::kGe2d: {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    // Output Node
+    case NodeType::kOutputStream: {
+      auto status = ConfigureOutputNode(parent_node, next_node, output_processing_node);
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to configure Output Node";
+        // TODO(braval): Handle already configured nodes
+        return status;
+      }
+      break;
+    }
+    default: { return ZX_ERR_NOT_SUPPORTED; }
+  }
   return ZX_OK;
 }
 
@@ -150,9 +216,15 @@ zx_status_t CameraPipelineManager::ConfigureStreamPipeline(
       return status;
     }
 
-    status = full_resolution_stream_->client_stream()->Attach(stream.TakeChannel(), []() {
+    std::shared_ptr<CameraProcessNode> output_processing_node;
+    status = CreateGraph(info, full_resolution_stream_, &output_processing_node);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to CreateGraph";
+      return status;
+    }
+
+    status = output_processing_node->client_stream()->Attach(stream.TakeChannel(), []() {
       FX_LOGS(INFO) << "Stream client disconnected";
-      // TODO(fxb/37296): allow shutting down the stream
       // stream_ = nullptr;
     });
     if (status != ZX_OK) {
@@ -167,4 +239,5 @@ zx_status_t CameraPipelineManager::ConfigureStreamPipeline(
   }
   return ZX_OK;
 }
+
 }  // namespace camera
