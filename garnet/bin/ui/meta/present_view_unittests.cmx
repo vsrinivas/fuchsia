@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/present_view_unittests"
+    },
+    "sandbox": {
+        "services": []
+    }
+}
