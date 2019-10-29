@@ -30,14 +30,17 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
   CollectInspectDataTest()
       : executor_(dispatcher()),
         collection_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        collection_executor_(collection_loop_.dispatcher()) {
-    FXL_CHECK(collection_loop_.StartThread("collection-thread") == ZX_OK);
-  }
+        collection_executor_(collection_loop_.dispatcher()) {}
+
+  void SetUp() override { ASSERT_EQ(collection_loop_.StartThread("collection-thread"), ZX_OK); }
 
   void TearDown() override {
     if (inspect_test_app_controller_) {
       TerminateInspectTestApp();
     }
+    // To make sure there are no more running tasks on |collection_executor_| when it gets
+    // destroyed, cf. fxb/39880.
+    collection_loop_.Shutdown();
   }
 
  protected:
