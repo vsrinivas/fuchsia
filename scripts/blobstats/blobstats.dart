@@ -390,10 +390,10 @@ class BlobStats {
     sink.write(json.encode(rootTree));
     await sink.close();
 
-    await new Directory(pathJoin(outputDir.path, "d3")).create(recursive: true);
-    var d3Dir = pathJoin(buildDir.path, "../../scripts/third_party/d3/");
+    await new Directory(pathJoin(outputDir.path, "d3_v3")).create(recursive: true);
+    var d3Dir = pathJoin(buildDir.path, "../../scripts/third_party/d3_v3/");
     for (var file in ["LICENSE", "d3.js"]) {
-      await new File(d3Dir + file).copy(pathJoin(outputDir.path, "d3", file));
+      await new File(d3Dir + file).copy(pathJoin(outputDir.path, "d3_v3", file));
     }
     var templateDir =
         pathJoin(buildDir.path, "../../scripts/blobstats/template/");
