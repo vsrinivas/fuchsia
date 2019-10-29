@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
 
 #include <memory>
@@ -12,6 +15,30 @@
 #include <zxtest/zxtest.h>
 
 #include "blobfs_fixtures.h"
+
+namespace {
+
+// Filters out platforms where there's very little upside in running this test.
+// TODO(39752): This should be controlled with build options.
+bool RunInThisPlatform() {
+  fbl::unique_fd sysinfo(open("/dev/misc/sysinfo", O_RDONLY));
+  fzl::FdioCaller caller(std::move(sysinfo));
+  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(caller.channel());
+  if (result.status() != ZX_OK || result->status != ZX_OK) {
+    return false;
+  }
+
+  if (strncmp(result->name.data(), "astro", result->name.size()) == 0) {
+    return false;
+  }
+
+  if (strncmp(result->name.data(), "sherlock", result->name.size()) == 0) {
+    return false;
+  }
+  return true;
+}
+
+}
 
 // The test can operate over either a ramdisk, or a real device. Initialization
 // of that device happens at the test environment level, but the test fixtures
@@ -29,8 +56,13 @@ int main(int argc, char** argv) {
     printf("%s\n%s\n", kHelp, config.HelpMessage());
   }
 
+  if (!RunInThisPlatform()) {
+    printf("Not running on this platform\n");
+    return 0;
+  }
+
   config.mount_path = kMountPath;
-  config.ramdisk_block_count = 1 << 19;  // TODO(33983): Reduce this value.
+  config.ramdisk_block_count = 1 << 18;  // 128 MB.
   config.format_type = DISK_FORMAT_BLOBFS;
 
   auto parent = std::make_unique<fs::Environment>(config);

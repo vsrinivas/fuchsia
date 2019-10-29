@@ -113,6 +113,7 @@ zx_test("blobfs-large-integration") {
   ]
   deps = [
     ":integration-fixtures",
+    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/blobfs",
