@@ -15,8 +15,8 @@ namespace utils {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-using clearcut::HTTPRequest;
-using clearcut::HTTPResponse;
+using lib::clearcut::HTTPRequest;
+using lib::clearcut::HTTPResponse;
 using network_wrapper::FakeNetworkWrapper;
 using network_wrapper::NetworkWrapper;
 using statusor::StatusOr;

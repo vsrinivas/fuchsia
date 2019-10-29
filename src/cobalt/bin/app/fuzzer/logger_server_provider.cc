@@ -14,6 +14,7 @@
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
+#include "third_party/cobalt/src/lib/clearcut/uploader.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/logger/event_aggregator.h"
 #include "third_party/cobalt/src/logger/observation_writer.h"
@@ -23,7 +24,6 @@
 #include "third_party/cobalt/src/system_data/client_secret.h"
 #include "third_party/cobalt/src/uploader/shipping_manager.h"
 #include "third_party/cobalt/src/uploader/upload_scheduler.h"
-#include "third_party/cobalt/src/lib/clearcut/uploader.h"
 
 // Source of cobalt::logger::kConfig
 #include "third_party/cobalt/src/logger/internal_metrics_config.cb.h"
@@ -37,11 +37,12 @@ cobalt::logger::Encoder encoder(cobalt::encoder::ClientSecret::GenerateNewSecret
 auto observation_store =
     std::make_unique<cobalt::observation_store::MemoryObservationStore>(100, 100, 1000);
 
-class NoOpHTTPClient : public clearcut::HTTPClient {
-  std::future<statusor::StatusOr<clearcut::HTTPResponse>> Post(
-      clearcut::HTTPRequest request, std::chrono::steady_clock::time_point deadline) override {
+class NoOpHTTPClient : public cobalt::lib::clearcut::HTTPClient {
+  std::future<statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse>> Post(
+      cobalt::lib::clearcut::HTTPRequest request,
+      std::chrono::steady_clock::time_point deadline) override {
     return std::async(std::launch::async,
-                      []() mutable -> statusor::StatusOr<clearcut::HTTPResponse> {
+                      []() mutable -> statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse> {
                         return cobalt::util::Status::CANCELLED;
                       });
   }
@@ -50,8 +51,8 @@ class NoOpHTTPClient : public clearcut::HTTPClient {
 cobalt::encoder::ClearcutV1ShippingManager clearcut_shipping_manager(
     cobalt::encoder::UploadScheduler(std::chrono::seconds(10), std::chrono::seconds(10)),
     observation_store.get(),
-    std::make_unique<clearcut::ClearcutUploader>("http://test.com",
-                                                 std::make_unique<NoOpHTTPClient>()));
+    std::make_unique<cobalt::lib::clearcut::ClearcutUploader>("http://test.com",
+                                                              std::make_unique<NoOpHTTPClient>()));
 
 std::unique_ptr<cobalt::util::EncryptedMessageMaker> encrypt_to_analyzer =
     cobalt::util::EncryptedMessageMaker::MakeUnencrypted();

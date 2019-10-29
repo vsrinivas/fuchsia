@@ -16,9 +16,9 @@ namespace utils {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-using clearcut::HTTPClient;
-using clearcut::HTTPRequest;
-using clearcut::HTTPResponse;
+using lib::clearcut::HTTPClient;
+using lib::clearcut::HTTPRequest;
+using lib::clearcut::HTTPResponse;
 using statusor::StatusOr;
 
 namespace {

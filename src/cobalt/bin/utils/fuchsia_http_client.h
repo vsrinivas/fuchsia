@@ -11,7 +11,7 @@
 #include "garnet/public/lib/network_wrapper/network_wrapper.h"
 #include "src/lib/fsl/socket/socket_drainer.h"
 #include "src/lib/fxl/memory/ref_counted.h"
-#include "third_party/cobalt/third_party/clearcut/http_client.h"
+#include "third_party/cobalt/src/lib/clearcut/http_client.h"
 #include "third_party/cobalt/third_party/statusor/statusor.h"
 
 namespace cobalt {
@@ -19,12 +19,12 @@ namespace utils {
 
 class NetworkRequest;
 
-// FuchsiaHTTPClient implements clearcut::HTTPClient using fuchsia's
+// FuchsiaHTTPClient implements lib::clearcut::HTTPClient using fuchsia's
 // NetworkWrapper library. Since this class uses the async_t supplied to the
 // constructor to run all of the tasks on a single thread, this class is thread
 // safe. However, the response from Post should not be waited on from that
 // thread or a deadlock will occur.
-class FuchsiaHTTPClient : public ::clearcut::HTTPClient {
+class FuchsiaHTTPClient : public lib::clearcut::HTTPClient {
  public:
   FuchsiaHTTPClient(network_wrapper::NetworkWrapper* network_wrapper,
                     async_dispatcher_t* dispatcher);
@@ -33,8 +33,8 @@ class FuchsiaHTTPClient : public ::clearcut::HTTPClient {
   //
   // Note: Do not invoke this method from |dispatcher_|'s thread.
   // Note: Do not wait on the returned future from |dispatcher_|'s thread.
-  std::future<statusor::StatusOr<clearcut::HTTPResponse>> Post(
-      clearcut::HTTPRequest request, std::chrono::steady_clock::time_point deadline);
+  std::future<statusor::StatusOr<lib::clearcut::HTTPResponse>> Post(
+      lib::clearcut::HTTPRequest request, std::chrono::steady_clock::time_point deadline);
 
  protected:
   // These are internal only functions that are intended to make
@@ -57,7 +57,7 @@ class FuchsiaHTTPClient : public ::clearcut::HTTPClient {
 class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
                        public fsl::SocketDrainer::Client {
  public:
-  NetworkRequest(clearcut::HTTPRequest req) : request_(std::move(req)) {}
+  NetworkRequest(lib::clearcut::HTTPRequest req) : request_(std::move(req)) {}
 
   void ReadResponse(async_dispatcher_t* dispatcher, fxl::RefPtr<NetworkRequest> self,
                     uint32_t http_code, zx::socket source);
@@ -66,13 +66,13 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
 
   void CancelCallbacks();
 
-  std::future<statusor::StatusOr<clearcut::HTTPResponse>> get_future() {
+  std::future<statusor::StatusOr<lib::clearcut::HTTPResponse>> get_future() {
     return promise_.get_future();
   }
 
-  void SetValueAndCleanUp(statusor::StatusOr<clearcut::HTTPResponse> value);
+  void SetValueAndCleanUp(statusor::StatusOr<lib::clearcut::HTTPResponse> value);
 
-  const clearcut::HTTPRequest& request() { return request_; }
+  const lib::clearcut::HTTPRequest& request() { return request_; }
 
   void SetNetworkWrapperCancel(fxl::RefPtr<callback::Cancellable> network_wrapper_cancel) {
     network_wrapper_cancel_ = network_wrapper_cancel;
@@ -91,12 +91,12 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
   ~NetworkRequest() {}
 
   // The request object.
-  clearcut::HTTPRequest request_;
+  lib::clearcut::HTTPRequest request_;
   // Response information to be sent to the promise.
   std::string response_;
   uint32_t http_code_;
   // The promise used for returning a value.
-  std::promise<statusor::StatusOr<clearcut::HTTPResponse>> promise_;
+  std::promise<statusor::StatusOr<lib::clearcut::HTTPResponse>> promise_;
   // A reference to itself that will be set when ReadResponse is used.
   fxl::RefPtr<NetworkRequest> self_;
   // Task which will cancel the network request if triggered.

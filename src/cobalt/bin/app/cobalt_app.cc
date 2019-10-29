@@ -21,11 +21,11 @@ namespace cobalt {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-using clearcut::ClearcutUploader;
 using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::ShippingManager;
 using encoder::UploadScheduler;
+using lib::clearcut::ClearcutUploader;
 using logger::ProjectContextFactory;
 using observation_store::FileObservationStore;
 using observation_store::MemoryObservationStore;
@@ -122,9 +122,9 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                                .ValueOrDie();
     clearcut_shipping_manager = new encoder::ClearcutV1ShippingManager(
         UploadScheduler(target_interval, min_interval, initial_interval), observation_store_.get(),
-        std::make_unique<clearcut::ClearcutUploader>(
+        std::make_unique<ClearcutUploader>(
             kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher)),
-            nullptr, kClearcutMaxRetries, ReadApiKeyOrDefault());
+        nullptr, kClearcutMaxRetries, ReadApiKeyOrDefault());
     shipping_manager_ = std::unique_ptr<encoder::ShippingManager>(clearcut_shipping_manager);
     // TODO(camrdale): remove this once the log source transition is complete.
     for (const auto& backend_environment : configuration_data_.GetBackendEnvironments()) {
