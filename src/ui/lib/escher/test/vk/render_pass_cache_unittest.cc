@@ -115,12 +115,12 @@ static void InitRenderPassInfo(RenderPassInfo* rp, const TexturePtr& depth_tex,
 
     rp->color_attachments[kRenderTargetAttachmentIndex] = color_tex;
     rp->subpasses.push_back(RenderPassInfo::Subpass{
-        .num_color_attachments = 1,
         .color_attachments = {kRenderTargetAttachmentIndex},
-        .num_input_attachments = 0,
         .input_attachments = {},
-        .num_resolve_attachments = 0,
         .resolve_attachments = {},
+        .num_color_attachments = 1,
+        .num_input_attachments = 0,
+        .num_resolve_attachments = 0,
     });
   } else {
     FXL_DCHECK(resolve_tex);
@@ -131,12 +131,12 @@ static void InitRenderPassInfo(RenderPassInfo* rp, const TexturePtr& depth_tex,
     rp->color_attachments[kResolveTargetAttachmentIndex] = resolve_tex;
     rp->num_color_attachments++;
     rp->subpasses.push_back(RenderPassInfo::Subpass{
-        .num_color_attachments = 1,
         .color_attachments = {kRenderTargetAttachmentIndex},
-        .num_input_attachments = 0,
         .input_attachments = {},
-        .num_resolve_attachments = 1,
         .resolve_attachments = {kResolveTargetAttachmentIndex},
+        .num_color_attachments = 1,
+        .num_input_attachments = 0,
+        .num_resolve_attachments = 1,
     });
   }
 }

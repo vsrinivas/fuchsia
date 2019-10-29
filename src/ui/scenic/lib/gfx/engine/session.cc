@@ -234,9 +234,9 @@ void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
 
 fuchsia::scenic::scheduling::FuturePresentationTimes Session::GetFuturePresentationTimes(
     zx::duration requested_prediction_span) {
-  return {.remaining_presents_in_flight_allowed = kMaxPresentsInFlight - presents_in_flight_,
-          .future_presentations = session_context_.frame_scheduler->GetFuturePresentationTimes(
-              requested_prediction_span)};
+  return {.future_presentations = session_context_.frame_scheduler->GetFuturePresentationTimes(
+              requested_prediction_span),
+          .remaining_presents_in_flight_allowed = kMaxPresentsInFlight - presents_in_flight_};
 }
 
 bool Session::SetRootView(fxl::WeakPtr<View> view) {
