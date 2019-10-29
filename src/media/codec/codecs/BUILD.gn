@@ -19,7 +19,6 @@ group("tests") {
     "test",
     "//garnet/examples/media:use_h264_decoder_test",
     "//garnet/examples/media:use_h264_decoder_secure_output_test",
-    "//garnet/examples/media:use_h264_decoder_secure_input_test",
   ]
 }
 
