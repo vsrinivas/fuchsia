@@ -105,11 +105,17 @@ int main(int argc, const char** argv) {
   launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
   launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
 
+  // Quit the loop when basemgr's out directory has been mounted.
+  fidl::InterfacePtr<fuchsia::sys::ComponentController> controller;
+  controller.events().OnDirectoryReady = [&controller, &loop] {
+    controller->Detach();
+    loop.Quit();
+  };
+
   // Launch a basemgr instance with the custom namespace we created above.
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
-  fidl::InterfacePtr<fuchsia::sys::ComponentController> controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
   loop.Run();
