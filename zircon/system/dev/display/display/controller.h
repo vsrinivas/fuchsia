@@ -32,6 +32,7 @@ namespace display {
 
 class ClientProxy;
 class Controller;
+class ControllerTest;
 class DisplayConfig;
 
 class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
@@ -127,6 +128,7 @@ class Controller : public ControllerParent,
   mtx_t* mtx() { return &mtx_; }
 
  private:
+  friend ControllerTest;
   void HandleClientOwnershipChanges() __TA_REQUIRES(mtx_);
   void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx_);
   void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);

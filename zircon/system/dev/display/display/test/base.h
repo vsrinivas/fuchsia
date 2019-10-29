@@ -17,19 +17,15 @@
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
-
 #include "../../fake/fake-display.h"
-#include "../controller.h"
 
 namespace display {
 
+class Controller;
+
 class Binder : public fake_ddk::Bind {
  public:
-  ~Binder() {
-    if (display_ != nullptr) {
-      display_->DdkRelease();
-    }
-  }
+  ~Binder() {}
 
   zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                 void* protocol) override {
@@ -51,9 +47,6 @@ class Binder : public fake_ddk::Bind {
   }
 
   void SetDisplay(fake_display::FakeDisplay* display) {
-    if (display_ && display == nullptr) {
-      display_->DdkRelease();
-    }
     display_ = display;
   }
 
@@ -153,40 +146,22 @@ class TestBase : public zxtest::Test {
  public:
   TestBase() : composite_(parent()) {}
 
-  void SetUp() override {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[3], 3);
-    protocols[0] = {ZX_PROTOCOL_COMPOSITE,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
-    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
-    protocols[2] = {ZX_PROTOCOL_SYSMEM,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
-    auto display = new fake_display::FakeDisplay(fake_ddk::kFakeParent);
-    ASSERT_OK(display->Bind());
-    ddk_.SetDisplay(display);
-
-    fbl::unique_ptr<display::Controller> c(new Controller(dc_parent()));
-    // Save a copy for test cases.
-    controller_ = c.get();
-    ASSERT_OK(c->Bind(&c));
-  }
-
-  void TearDown() override {
-    ddk_.DeviceAsyncRemove(fake_ddk::kFakeDevice);
-    ddk_.WaitUntilRemove();
-    EXPECT_TRUE(ddk_.Ok());
-  }
+  void SetUp() override;
+  void TearDown() override;
 
   Binder& ddk() { return ddk_; }
   zx_device_t* parent() { return fake_ddk::kFakeParent; }
   zx_device_t* dc_parent() { return fake_ddk::kFakeParent; }
   Controller* controller() { return controller_; }
+  fake_display::FakeDisplay* display() { return display_; }
 
  private:
   Binder ddk_;
   FakeComposite composite_;
   FakePDev pdev_;
   FakeSysmem sysmem_;
+  // Not owned, FakeDisplay will delete itself on shutdown.
+  fake_display::FakeDisplay* display_;
 
   // Valid until test case destruction
   Controller* controller_;

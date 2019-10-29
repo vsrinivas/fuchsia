@@ -31,11 +31,12 @@ using DeviceType = ddk::Device<FakeDisplay, ddk::UnbindableNew>;
 class FakeDisplay : public DeviceType,
                     public ddk::DisplayControllerImplProtocol<FakeDisplay, ddk::base_protocol> {
  public:
-  FakeDisplay(zx_device_t* parent)
+  explicit FakeDisplay(zx_device_t* parent)
       : DeviceType(parent), dcimpl_proto_({&display_controller_impl_protocol_ops_, this}) {}
 
-  // This function is called from the c-bind function upon driver matching
-  zx_status_t Bind();
+  // This function is called from the c-bind function upon driver matching. If start_vsync is true,
+  // a background thread will be started to issue vsync events.
+  zx_status_t Bind(bool start_vsync);
 
   // Required functions needed to implement Display Controller Protocol
   void DisplayControllerImplSetDisplayControllerInterface(
@@ -65,7 +66,7 @@ class FakeDisplay : public DeviceType,
   void DdkRelease();
 
   const display_controller_impl_protocol_t* dcimpl_proto() const { return &dcimpl_proto_; }
-
+  void SendVsync();
  private:
   enum {
     COMPONENT_PDEV,

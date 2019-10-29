@@ -17,7 +17,6 @@
 
 #include <map>
 
-#include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>

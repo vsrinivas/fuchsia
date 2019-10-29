@@ -214,7 +214,10 @@ void FakeDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void FakeDisplay::DdkRelease() {
   vsync_shutdown_flag_.store(true);
-  thrd_join(vsync_thread_, NULL);
+  if (vsync_thread_ != 0) {
+    // Ignore return value here in case the vsync_thread_ isn't running.
+    thrd_join(vsync_thread_, NULL);
+  }
   delete this;
 }
 
@@ -233,24 +236,25 @@ zx_status_t FakeDisplay::SetupDisplayInterface() {
 }
 
 int FakeDisplay::VSyncThread() {
-  zx_status_t status = ZX_OK;
   while (1) {
     zx::nanosleep(zx::deadline_after(zx::sec(1) / kRefreshRateFps));
     if (vsync_shutdown_flag_.load()) {
       break;
     }
-    fbl::AutoLock lock(&display_lock_);
-    uint64_t live[] = {current_image_};
-    bool current_image_valid = current_image_valid_;
-    if (dc_intf_.is_valid()) {
-      dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), live, current_image_valid);
-    }
+    SendVsync();
   }
-
-  return status;
+  return ZX_OK;
 }
 
-zx_status_t FakeDisplay::Bind() {
+void FakeDisplay::SendVsync() {
+  fbl::AutoLock lock(&display_lock_);
+  if (dc_intf_.is_valid()) {
+    const uint64_t live[] = {current_image_};
+    dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), live, current_image_valid_);
+  }
+}
+
+zx_status_t FakeDisplay::Bind(bool start_vsync) {
   composite_protocol_t composite;
   auto status = device_get_protocol(parent_, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
@@ -282,11 +286,13 @@ zx_status_t FakeDisplay::Bind() {
     return status;
   }
 
-  auto start_thread = [](void* arg) { return static_cast<FakeDisplay*>(arg)->VSyncThread(); };
-  status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not create vsync_thread\n");
-    return status;
+  if (start_vsync) {
+    auto start_thread = [](void* arg) { return static_cast<FakeDisplay*>(arg)->VSyncThread(); };
+    status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not create vsync_thread\n");
+      return status;
+    }
   }
 
   status = DdkAdd("fake-display");

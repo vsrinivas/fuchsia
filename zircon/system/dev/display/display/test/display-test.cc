@@ -56,31 +56,4 @@ TEST(DispTest, ClientVSyncNotSupported) {
   clientproxy.CloseTest();
 }
 
-// FLK-366 These tests appear to be flaking on the fuchsia roller.
-TEST(DispTest, DISABLED_ClientVSyncWrongContext1) {
-  zx::channel server_chl, client_chl;
-  zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
-  EXPECT_OK(status);
-  Controller controller(nullptr);
-  ClientProxy clientproxy(&controller, false, 0, std::move(server_chl));
-  ASSERT_DEATH([&clientproxy] { clientproxy.EnableVsync(true); },
-               "controller_->mtx() not held! \n");
-  clientproxy.CloseTest();
-}
-
-TEST(DispTest, DISABLED_ClientVSyncWrongContext2) {
-  zx::channel server_chl, client_chl;
-  zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
-  EXPECT_OK(status);
-  Controller controller(nullptr);
-  ClientProxy clientproxy(&controller, false, 0, std::move(server_chl));
-  {
-    fbl::AutoLock lock(controller.mtx());
-    clientproxy.EnableVsync(true);
-  }
-  ASSERT_DEATH([&clientproxy] { clientproxy.OnDisplayVsync(0, 0, nullptr, 0); },
-               "controller_->mtx() not held! \n");
-  clientproxy.CloseTest();
-}
-
 }  // namespace display
