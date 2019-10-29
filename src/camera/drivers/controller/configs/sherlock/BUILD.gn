@@ -11,6 +11,7 @@ source_set("controller-configs") {
     "sherlock-configs.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.ge2d",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//zircon/public/lib/async-loop-cpp",
