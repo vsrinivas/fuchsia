@@ -4,6 +4,7 @@
 
 use fuchsia_inspect::{Node, Property, StringProperty};
 use omaha_client::{
+    common::App,
     configuration::{Config, Updater},
     protocol::request::OS,
 };
@@ -95,11 +96,27 @@ impl OmahaNode {
     }
 }
 
+pub struct AppsNode {
+    _node: Node,
+    apps: StringProperty,
+}
+
+impl AppsNode {
+    pub fn new(apps_node: Node) -> Self {
+        AppsNode { apps: apps_node.create_string("apps", ""), _node: apps_node }
+    }
+
+    pub fn set(&self, apps: &[App]) {
+        self.apps.set(&format!("{:?}", apps));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::configuration::get_config;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use omaha_client::protocol::Cohort;
 
     #[test]
     fn test_configuration_node() {
@@ -124,6 +141,26 @@ mod tests {
                     omaha: {
                         service_url: "https://clients2.google.com/service/update2/fuchsia/json",
                     },
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_apps_node() {
+        let inspector = Inspector::new();
+        let node = AppsNode::new(inspector.root().create_child("apps"));
+        let apps = vec![
+            App::new("id", [1, 0], Cohort::default()),
+            App::new("id_2", [1, 2, 4], Cohort::new("cohort")),
+        ];
+        node.set(&apps);
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                apps: {
+                    apps: format!("{:?}", apps),
                 }
             }
         );

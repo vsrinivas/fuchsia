@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::channel::ChannelConfigs;
+use crate::{channel::ChannelConfigs, inspect::AppsNode};
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_update::{
     CheckStartedResult, Initiator, ManagerRequest, ManagerRequestStream, ManagerState,
@@ -62,6 +62,8 @@ where
 
     app_set: AppSet,
 
+    apps_node: AppsNode,
+
     channel_configs: Option<ChannelConfigs>,
 
     // The current State table, defined in fuchsia.update.fidl.
@@ -93,12 +95,14 @@ where
         state_machine_ref: Rc<RefCell<StateMachine<PE, HR, IN, TM, MR, ST>>>,
         storage_ref: Rc<Mutex<ST>>,
         app_set: AppSet,
+        apps_node: AppsNode,
         channel_configs: Option<ChannelConfigs>,
     ) -> Self {
         FidlServer {
             state_machine_ref,
             storage_ref,
             app_set,
+            apps_node,
             channel_configs,
             state: State { state: Some(ManagerState::Idle), version_available: None },
             monitor_handles: vec![],
@@ -126,8 +130,12 @@ where
         let state_machine_ref = server.borrow().state_machine_ref.clone();
         let mut state_machine = state_machine_ref.borrow_mut();
         state_machine.set_state_callback(move |state| {
-            let mut server = server.borrow_mut();
-            server.on_state_change(state);
+            let server = server.clone();
+            async move {
+                let mut server = server.borrow_mut();
+                server.on_state_change(state).await;
+            }
+                .boxed_local()
         });
     }
 
@@ -266,6 +274,7 @@ where
                         error!("Unable to commit target channel change: {}", e);
                     }
                 }
+                server.apps_node.set(&server.app_set.to_vec().await);
                 responder.send().context("error sending response")?;
             }
             ChannelControlRequest::GetTarget { responder } => {
@@ -292,7 +301,7 @@ where
     }
 
     /// The state change callback from StateMachine.
-    fn on_state_change(&mut self, state: state_machine::State) {
+    async fn on_state_change(&mut self, state: state_machine::State) {
         self.state.state = Some(match state {
             state_machine::State::Idle => ManagerState::Idle,
             state_machine::State::CheckingForUpdates => ManagerState::CheckingForUpdates,
@@ -323,6 +332,14 @@ where
         if self.state.state == Some(ManagerState::Idle) {
             self.current_monitor_handles.clear();
         }
+
+        // The state machine might make changes to apps only when state changes to `Idle` or
+        // `WaitingForReboot`, update the apps node in inspect.
+        if self.state.state == Some(ManagerState::Idle)
+            || self.state.state == Some(ManagerState::WaitingForReboot)
+        {
+            self.apps_node.set(&self.app_set.to_vec().await);
+        }
     }
 }
 
@@ -338,6 +355,7 @@ mod tests {
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_update::{ManagerMarker, MonitorEvent, MonitorMarker, Options};
     use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use omaha_client::{
         common::App, http_request::StubHttpRequest, installer::stub::StubInstaller,
         metrics::StubMetricsReporter, policy::StubPolicyEngine, protocol::Cohort,
@@ -356,15 +374,21 @@ mod tests {
     struct FidlServerBuilder {
         apps: Vec<App>,
         channel_configs: Option<ChannelConfigs>,
+        apps_node: Option<AppsNode>,
     }
 
     impl FidlServerBuilder {
         fn new() -> Self {
-            Self { apps: Vec::new(), channel_configs: None }
+            Self { apps: Vec::new(), channel_configs: None, apps_node: None }
         }
 
         fn with_apps(mut self, mut apps: Vec<App>) -> Self {
             self.apps.append(&mut apps);
+            self
+        }
+
+        fn with_apps_node(mut self, apps_node: AppsNode) -> Self {
+            self.apps_node = Some(apps_node);
             self
         }
 
@@ -392,10 +416,14 @@ mod tests {
                 app_set.clone(),
             )
             .await;
+            let apps_node = self
+                .apps_node
+                .unwrap_or(AppsNode::new(Inspector::new().root().create_child("apps")));
             FidlServer::new(
                 Rc::new(RefCell::new(state_machine)),
                 storage_ref,
                 app_set,
+                apps_node,
                 self.channel_configs,
             )
         }
@@ -415,7 +443,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_on_state_change() {
         let mut fidl = FidlServerBuilder::new().build().await;
-        fidl.on_state_change(state_machine::State::CheckingForUpdates);
+        fidl.on_state_change(state_machine::State::CheckingForUpdates).await;
         assert_eq!(Some(ManagerState::CheckingForUpdates), fidl.state.state);
     }
 
@@ -593,5 +621,55 @@ mod tests {
         let response = proxy.get_target_list().await.unwrap();
 
         assert!(response.is_empty());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_apps_on_state_change() {
+        let inspector = Inspector::new();
+        let apps_node = AppsNode::new(inspector.root().create_child("apps"));
+        let mut fidl = FidlServerBuilder::new().with_apps_node(apps_node).build().await;
+
+        fidl.on_state_change(state_machine::State::Idle).await;
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                apps: {
+                    apps: format!("{:?}", fidl.app_set.to_vec().await),
+                }
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_apps_on_channel_change() {
+        let inspector = Inspector::new();
+        let apps_node = AppsNode::new(inspector.root().create_child("apps"));
+        let fidl = Rc::new(RefCell::new(
+            FidlServerBuilder::new()
+                .with_apps_node(apps_node)
+                .with_channel_configs(ChannelConfigs {
+                    default_channel: None,
+                    known_channels: vec![ChannelConfig::new("target-channel")],
+                })
+                .build()
+                .await,
+        ));
+
+        let proxy = spawn_fidl_server::<ChannelControlMarker>(
+            fidl.clone(),
+            IncomingServices::ChannelControl,
+        );
+        proxy.set_target("target-channel").await.unwrap();
+        let fidl = fidl.borrow();
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                apps: {
+                    apps: format!("{:?}", fidl.app_set.to_vec().await),
+                }
+            }
+        );
     }
 }

@@ -61,17 +61,25 @@ fn main() -> Result<(), Error> {
         )
         .await;
         let state_machine_ref = Rc::new(RefCell::new(state_machine));
-        let fidl =
-            fidl::FidlServer::new(state_machine_ref.clone(), stash_ref, app_set, channel_configs);
+
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
-
         let inspector = fuchsia_inspect::Inspector::new();
         inspector.export(&mut fs);
         let root = inspector.root();
         let configuration_node =
             inspect::ConfigurationNode::new(root.create_child("configuration"));
         configuration_node.set(&config);
+        let apps_node = inspect::AppsNode::new(root.create_child("apps"));
+        apps_node.set(&app_set.to_vec().await);
+
+        let fidl = fidl::FidlServer::new(
+            state_machine_ref.clone(),
+            stash_ref,
+            app_set,
+            apps_node,
+            channel_configs,
+        );
 
         // `.boxed_local()` was added to workaround stack overflow when we have too many levels of
         // nested async functions. Remove them when the generator optimization lands.

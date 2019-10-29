@@ -25,6 +25,7 @@ use http::response::Parts;
 use log::{error, info, warn};
 use std::cell::RefCell;
 use std::fmt;
+use std::pin::Pin;
 use std::rc::Rc;
 use std::str::Utf8Error;
 use std::time::{Instant, SystemTime};
@@ -94,8 +95,14 @@ pub enum State {
 }
 
 // We need to define our own trait because we need Debug trait but FnMut doesn't implement it.
-pub trait StateCallback: FnMut(State) + 'static {}
-impl<T: FnMut(State) + 'static> StateCallback for T {}
+pub trait StateCallback:
+    (FnMut(State) -> Pin<Box<dyn Future<Output = ()> + 'static>>) + 'static
+{
+}
+impl<T: (FnMut(State) -> Pin<Box<dyn Future<Output = ()> + 'static>>) + 'static> StateCallback
+    for T
+{
+}
 
 impl fmt::Debug for dyn StateCallback {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -355,7 +362,7 @@ where
         self.persist_data().await;
 
         if self.state != State::WaitingForReboot {
-            self.set_state(State::Idle);
+            self.set_state(State::Idle).await;
         }
     }
 
@@ -410,7 +417,7 @@ where
             }
         };
 
-        self.set_state(State::CheckingForUpdates);
+        self.set_state(State::CheckingForUpdates).await;
 
         self.report_check_interval().await;
 
@@ -425,23 +432,23 @@ where
             Ok(res) => res,
             Err(OmahaRequestError::Json(e)) => {
                 error!("Unable to construct request body! {:?}", e);
-                self.set_state(State::EncounteredError);
+                self.set_state(State::EncounteredError).await;
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::HttpBuilder(e)) => {
                 error!("Unable to construct HTTP request! {:?}", e);
-                self.set_state(State::EncounteredError);
+                self.set_state(State::EncounteredError).await;
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::Hyper(e)) => {
                 warn!("Unable to contact Omaha: {:?}", e);
-                self.set_state(State::EncounteredError);
+                self.set_state(State::EncounteredError).await;
                 // TODO:  Parse for proper retry behavior
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::HttpStatus(e)) => {
                 warn!("Unable to contact Omaha: {:?}", e);
-                self.set_state(State::EncounteredError);
+                self.set_state(State::EncounteredError).await;
                 // TODO:  Parse for proper retry behavior
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
@@ -476,7 +483,7 @@ where
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
             );
-            self.set_state(State::UpdateAvailable);
+            self.set_state(State::UpdateAvailable).await;
 
             let install_plan = match IN::InstallPlan::try_create_from(&request_params, &response) {
                 Ok(plan) => plan,
@@ -518,7 +525,7 @@ where
                 }
             }
 
-            self.set_state(State::PerformingUpdate);
+            self.set_state(State::PerformingUpdate).await;
             self.report_success_event(&request_params, EventType::UpdateDownloadStarted, &apps)
                 .await;
 
@@ -544,7 +551,7 @@ where
 
             self.report_success_event(&request_params, EventType::UpdateDownloadFinished, &apps)
                 .await;
-            self.set_state(State::FinalizingUpdate);
+            self.set_state(State::FinalizingUpdate).await;
 
             // TODO: Verify downloaded update if needed.
 
@@ -562,7 +569,7 @@ where
                 Err(e) => warn!("Update first seen time is in the future: {}", e),
             }
 
-            self.set_state(State::WaitingForReboot);
+            self.set_state(State::WaitingForReboot).await;
             Ok(Self::make_response(response, update_check::Action::Updated))
         }
     }
@@ -574,7 +581,7 @@ where
         errorcode: EventErrorCode,
         apps: &'a Vec<App>,
     ) {
-        self.set_state(State::EncounteredError);
+        self.set_state(State::EncounteredError).await;
 
         let event = Event {
             event_type: EventType::UpdateComplete,
@@ -702,10 +709,10 @@ where
     }
 
     /// Update the state internally and send it to the callback.
-    fn set_state(&mut self, state: State) {
+    async fn set_state(&mut self, state: State) {
         self.state = state.clone();
         if let Some(callback) = &mut self.state_callback {
-            callback(state);
+            callback(state).await;
         }
     }
 
@@ -1323,8 +1330,12 @@ mod tests {
             {
                 let actual_states = actual_states.clone();
                 state_machine.set_state_callback(move |state| {
-                    let mut actual_states = actual_states.borrow_mut();
-                    actual_states.push(state);
+                    let actual_states = actual_states.clone();
+                    async move {
+                        let mut actual_states = actual_states.borrow_mut();
+                        actual_states.push(state);
+                    }
+                        .boxed_local()
                 });
             }
             state_machine.start_update_check(CheckOptions::default()).await;
@@ -1621,9 +1632,12 @@ mod tests {
                 storage.commit().await.unwrap();
             }
             state_machine.set_state_callback(|state| {
-                if state == State::FinalizingUpdate {
-                    clock::mock::set(time::i64_to_time(222222222))
+                async move {
+                    if state == State::FinalizingUpdate {
+                        clock::mock::set(time::i64_to_time(222222222))
+                    }
                 }
+                    .boxed_local()
             });
             state_machine.start_update_check(CheckOptions::default()).await;
 
