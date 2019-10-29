@@ -49,6 +49,18 @@ void FilesystemTest::Remount() {
   Mount();
 }
 
+void FilesystemTest::Unmount() {
+  if (!mounted_) {
+    return;
+  }
+
+  // Unmount will propagate the result of sync; for cases where the filesystem is disconnected
+  // from the underlying device, ZX_ERR_IO_REFUSED is expected.
+  zx_status_t status = umount(mount_path());
+  ASSERT_TRUE(status == ZX_OK || status == ZX_ERR_IO_REFUSED);
+  mounted_ = false;
+}
+
 void FilesystemTest::GetFsInfo(fuchsia_io_FilesystemInfo* info) {
   fbl::unique_fd fd(open(mount_path(), O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
@@ -77,18 +89,6 @@ void FilesystemTest::Mount() {
   // ready to accept commands.
   ASSERT_OK(mount(fd.release(), mount_path(), format_type(), &options, launch_stdio_async));
   mounted_ = true;
-}
-
-void FilesystemTest::Unmount() {
-  if (!mounted_) {
-    return;
-  }
-
-  // Unmount will propagate the result of sync; for cases where the filesystem is disconnected
-  // from the underlying device, ZX_ERR_IO_REFUSED is expected.
-  zx_status_t status = umount(mount_path());
-  ASSERT_TRUE(status == ZX_OK || status == ZX_ERR_IO_REFUSED);
-  mounted_ = false;
 }
 
 zx_status_t FilesystemTest::CheckFs() {

@@ -40,6 +40,9 @@ class FilesystemTest : public zxtest::Test {
   // Unmounts and remounts the filesystem, verifying integrity in between.
   void Remount();
 
+  // Unmounts the filesystem, without performing any additional test.
+  void Unmount();
+
   // Queries the filesystem for generic info.
   void GetFsInfo(fuchsia_io_FilesystemInfo* info);
 
@@ -50,9 +53,9 @@ class FilesystemTest : public zxtest::Test {
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(FilesystemTest);
 
+
  protected:
   void Mount();
-  void Unmount();
   zx_status_t CheckFs();
   virtual void CheckInfo() {}
 
