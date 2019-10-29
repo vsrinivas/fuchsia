@@ -18,29 +18,29 @@ static const ::fidl::FidlTableField Fields21test_name_SimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u)
 };
-const fidl_type_t test_name_SimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields21test_name_SimpleTable, 2u, "test.name/SimpleTable"));
+const fidl_type_t test_name_SimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields21test_name_SimpleTable, 2u, nullptr));
 
 static const ::fidl::FidlTableField Fields29test_name_ReverseOrdinalTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,2u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,3u)
 };
-const fidl_type_t test_name_ReverseOrdinalTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29test_name_ReverseOrdinalTable, 3u, "test.name/ReverseOrdinalTable"));
+const fidl_type_t test_name_ReverseOrdinalTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29test_name_ReverseOrdinalTable, 3u, nullptr));
 
 static const ::fidl::FidlTableField Fields26test_name_OlderSimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u)
 };
-const fidl_type_t test_name_OlderSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields26test_name_OlderSimpleTable, 1u, "test.name/OlderSimpleTable"));
+const fidl_type_t test_name_OlderSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields26test_name_OlderSimpleTable, 1u, nullptr));
 
 static const ::fidl::FidlTableField Fields26test_name_NewerSimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,6u)
 };
-const fidl_type_t test_name_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields26test_name_NewerSimpleTable, 3u, "test.name/NewerSimpleTable"));
+const fidl_type_t test_name_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields26test_name_NewerSimpleTable, 3u, nullptr));
 
 static const ::fidl::FidlTableField Fields20test_name_EmptyTable[] = {};
-const fidl_type_t test_name_EmptyTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields20test_name_EmptyTable, 0u, "test.name/EmptyTable"));
+const fidl_type_t test_name_EmptyTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields20test_name_EmptyTable, 0u, nullptr));
 
 // Coding tables for v1 wire format.
 
@@ -56,29 +56,29 @@ static const ::fidl::FidlTableField Fields24v1_test_name_SimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u)
 };
-const fidl_type_t v1_test_name_SimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields24v1_test_name_SimpleTable, 2u, "test.name/SimpleTable"));
+const fidl_type_t v1_test_name_SimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields24v1_test_name_SimpleTable, 2u, nullptr));
 
 static const ::fidl::FidlTableField Fields32v1_test_name_ReverseOrdinalTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,2u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,3u)
 };
-const fidl_type_t v1_test_name_ReverseOrdinalTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields32v1_test_name_ReverseOrdinalTable, 3u, "test.name/ReverseOrdinalTable"));
+const fidl_type_t v1_test_name_ReverseOrdinalTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields32v1_test_name_ReverseOrdinalTable, 3u, nullptr));
 
 static const ::fidl::FidlTableField Fields29v1_test_name_OlderSimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u)
 };
-const fidl_type_t v1_test_name_OlderSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29v1_test_name_OlderSimpleTable, 1u, "test.name/OlderSimpleTable"));
+const fidl_type_t v1_test_name_OlderSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29v1_test_name_OlderSimpleTable, 1u, nullptr));
 
 static const ::fidl::FidlTableField Fields29v1_test_name_NewerSimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u),
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table,6u)
 };
-const fidl_type_t v1_test_name_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29v1_test_name_NewerSimpleTable, 3u, "test.name/NewerSimpleTable"));
+const fidl_type_t v1_test_name_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29v1_test_name_NewerSimpleTable, 3u, nullptr));
 
 static const ::fidl::FidlTableField Fields23v1_test_name_EmptyTable[] = {};
-const fidl_type_t v1_test_name_EmptyTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields23v1_test_name_EmptyTable, 0u, "test.name/EmptyTable"));
+const fidl_type_t v1_test_name_EmptyTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields23v1_test_name_EmptyTable, 0u, nullptr));
 
 // Old <-> V1 map.
 

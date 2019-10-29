@@ -65,15 +65,26 @@ CodingNeeded WhichCodingNeeded(CodingContext context, CodingNeeded coding_needed
 }  // namespace
 
 struct Type;
+struct StructType;
 
 struct StructField {
-  StructField(const Type* type, uint32_t size, uint32_t offset, uint32_t padding)
-      : type(type), size(size), offset(offset), padding(padding) {}
+  StructField(const Type* type, uint32_t size, uint32_t offset, uint32_t padding,
+              const Type* struct_type, uint32_t field_num)
+      : type(type), size(size), offset(offset), padding(padding),
+        struct_type(struct_type), field_num(field_num) {}
 
   const Type* type;
   const uint32_t size;
   const uint32_t offset;
   const uint32_t padding;
+  // TODO(fxb/7704): When we remove special handling of requests/responses, this
+  // needs to be a StructType (we'll remove MessageType).
+  const Type* struct_type;
+  // The field number in the FIDL struct, first field is numbered 0. Since we
+  // omit generation for certain types of fields (e.g. primitives), this number
+  // does not correspond to the field index in the coded struct table, and these
+  // must be manually mapped.
+  const uint32_t field_num;
 };
 
 struct UnionField {
@@ -261,11 +272,18 @@ struct MessageType : public Type {
 };
 
 struct ProtocolType : public Type {
-  explicit ProtocolType(std::vector<std::unique_ptr<MessageType>> messages)
+  explicit ProtocolType(std::vector<std::unique_ptr<MessageType>> messages_during_compile)
       // N.B. ProtocolTypes are never used in the eventual coding table generation.
-      : Type(Kind::kProtocol, "", 0, CodingNeeded::kEnvelopeOnly), messages(std::move(messages)) {}
+      : Type(Kind::kProtocol, "", 0, CodingNeeded::kEnvelopeOnly),
+        messages_during_compile(std::move(messages_during_compile)) {}
 
-  std::vector<std::unique_ptr<MessageType>> messages;
+  // Note: the messages are moved from the protocol type into the
+  // CodedTypesGenerator coded_types_ vector during assembly.
+  std::vector<std::unique_ptr<MessageType>> messages_during_compile;
+
+  // Back pointers to fully compiled message types, owned by the
+  // CodedTypesGenerator coded_types_ vector.
+  std::vector<const MessageType*> messages_after_compile;
 };
 
 struct ArrayType : public Type {

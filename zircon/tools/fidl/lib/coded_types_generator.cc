@@ -219,8 +219,10 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
         assert(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
         auto CompileMessage = [&](const flat::Struct& message) -> void {
-          std::unique_ptr<coded::MessageType>& coded_message = coded_protocol->messages[i++];
+          std::unique_ptr<coded::MessageType>& coded_message =
+              coded_protocol->messages_during_compile[i++];
           std::vector<coded::StructField>& request_fields = coded_message->fields;
+          uint32_t field_num = 0;
           for (const auto& parameter : message.members) {
             std::string parameter_name =
                 coded_message->coded_name + "_" + std::string(parameter.name.data());
@@ -230,11 +232,18 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
               request_fields.emplace_back(coded_parameter_type,
                                           parameter.typeshape(wire_format).InlineSize(),
                                           parameter.fieldshape(wire_format).Offset(),
-                                          parameter.fieldshape(wire_format).Padding());
+                                          parameter.fieldshape(wire_format).Padding(),
+                                          coded_message.get(),
+                                          field_num);
+            field_num++;
           }
           // We move the coded_message to coded_types_ so that we'll generate tables for the
           // message in the proper order.
           coded_types_.push_back(std::move(coded_message));
+          // We also keep back pointers to reference to these messages via the
+          // coded_protocol.
+          coded_protocol->messages_after_compile.push_back(
+              static_cast<const coded::MessageType*>(coded_types_.back().get()));
         };
         if (method.maybe_request) {
           CompileMessage(*method.maybe_request);
@@ -252,6 +261,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
       coded::StructType* coded_struct =
           static_cast<coded::StructType*>(named_coded_types_[&decl->name].get());
       std::vector<coded::StructField>& struct_fields = coded_struct->fields;
+      uint32_t field_num = 0;
       for (const auto& member : struct_decl->members) {
         std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
         auto coded_member_type = CompileType(member.type_ctor->type,
@@ -262,13 +272,19 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
           assert(!is_primitive && "No primitive in struct coding table!");
           struct_fields.emplace_back(coded_member_type, member.typeshape(wire_format).InlineSize(),
                                      member.fieldshape(wire_format).Offset(),
-                                     member.fieldshape(wire_format).Padding());
+                                     member.fieldshape(wire_format).Padding(),
+                                     coded_struct,
+                                     field_num);
         } else if (member.fieldshape(wire_format).Padding() > 0) {
           // The type does not need coding, but the field needs padding zeroing.
-          struct_fields.emplace_back(nullptr, member.typeshape(wire_format).InlineSize(),
+          struct_fields.emplace_back(nullptr,
+                                     member.typeshape(wire_format).InlineSize(),
                                      member.fieldshape(wire_format).Offset(),
-                                     member.fieldshape(wire_format).Padding());
+                                     member.fieldshape(wire_format).Padding(),
+                                     coded_struct,
+                                     field_num);
         }
+        field_num++;
       }
       break;
     }

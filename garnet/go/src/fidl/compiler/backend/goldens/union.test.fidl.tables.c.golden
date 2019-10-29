@@ -23,18 +23,26 @@ static const ::fidl::FidlUnionField Fields15test_name_Union[] = {
     ::fidl::FidlUnionField(&Vector4294967295nonnullable27String4294967295nonnullableTable, 0u, 1452916587u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* test_name_UnionAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_UnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields15test_name_Union, 3u, 8u, 24u, "test.name/Union", test_name_UnionAltTypePointerTable()));
+const fidl_type_t test_name_UnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields15test_name_Union, 3u, 8u, 24u, nullptr, test_name_UnionAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields24test_name_FieldCollision[] = {
     ::fidl::FidlUnionField(nullptr, 0u, 1574011787u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* test_name_FieldCollisionAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_FieldCollisionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields24test_name_FieldCollision, 1u, 4u, 8u, "test.name/FieldCollision", test_name_FieldCollisionAltTypePointerTable()));
+const fidl_type_t test_name_FieldCollisionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields24test_name_FieldCollision, 1u, 4u, 8u, nullptr, test_name_FieldCollisionAltTypePointerTable()));
+
+static const ::fidl::FidlUnionField Fields23test_name_ExplicitUnion[] = {
+    ::fidl::FidlUnionField(nullptr, 12u, 1u),
+    ::fidl::FidlUnionField(&String4294967295nonnullableTable, 0u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* test_name_ExplicitUnionAltTypePointerTable() __attribute__((unused));
+const fidl_type_t test_name_ExplicitUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields23test_name_ExplicitUnion, 2u, 8u, 24u, nullptr, test_name_ExplicitUnionAltTypePointerTable()));
 
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_test_name_UnionTable;
 extern const fidl_type_t v1_test_name_FieldCollisionTable;
+extern const fidl_type_t v1_test_name_ExplicitUnionTable;
 
 
 static const fidl_type_t v1_String4294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedString(4294967295u, ::fidl::kNonnullable));
@@ -49,13 +57,20 @@ static const ::fidl::FidlUnionField Fields18v1_test_name_Union[] = {
     ::fidl::FidlUnionField(&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, 0u, 1452916587u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_UnionAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_UnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields18v1_test_name_Union, 3u, 8u, 24u, "test.name/Union", v1_test_name_UnionAltTypePointerTable()));
+const fidl_type_t v1_test_name_UnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields18v1_test_name_Union, 3u, 8u, 24u, nullptr, v1_test_name_UnionAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields27v1_test_name_FieldCollision[] = {
     ::fidl::FidlUnionField(nullptr, 4u, 1574011787u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_FieldCollisionAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_FieldCollisionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields27v1_test_name_FieldCollision, 1u, 8u, 24u, "test.name/FieldCollision", v1_test_name_FieldCollisionAltTypePointerTable()));
+const fidl_type_t v1_test_name_FieldCollisionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields27v1_test_name_FieldCollision, 1u, 8u, 24u, nullptr, v1_test_name_FieldCollisionAltTypePointerTable()));
+
+static const ::fidl::FidlUnionField Fields26v1_test_name_ExplicitUnion[] = {
+    ::fidl::FidlUnionField(nullptr, 4u, 1u),
+    ::fidl::FidlUnionField(&v1_String4294967295nonnullableTable, 0u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_ExplicitUnionAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_test_name_ExplicitUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields26v1_test_name_ExplicitUnion, 2u, 8u, 24u, nullptr, v1_test_name_ExplicitUnionAltTypePointerTable()));
 
 // Old <-> V1 map.
 
@@ -67,6 +82,17 @@ constexpr static inline const ::fidl::FidlCodedVector* Vector4294967295nonnullab
 constexpr static inline const ::fidl::FidlCodedVector* v1_Vector4294967295nonnullable30v1_String4294967295nonnullableAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedVector* v1_Vector4294967295nonnullable30v1_String4294967295nonnullableAltTypePointerTable() {
   return &Vector4294967295nonnullable27String4294967295nonnullableTable.coded_vector;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedUnion* test_name_ExplicitUnionAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* test_name_ExplicitUnionAltTypePointerTable() {
+  return &v1_test_name_ExplicitUnionTable.coded_union;
+}
+
+constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_ExplicitUnionAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_ExplicitUnionAltTypePointerTable() {
+  return &test_name_ExplicitUnionTable.coded_union;
 }
 
 
@@ -91,11 +117,5 @@ constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_UnionAltTypeP
   return &test_name_UnionTable.coded_union;
 }
 
-
-static const ::fidl::FidlUnionField Fields23test_name_ExplicitUnion[] = {
-    ::fidl::FidlUnionField(nullptr, 12u),
-    ::fidl::FidlUnionField(&String4294967295nonnullableTable, 0u)
-};
-const fidl_type_t test_name_ExplicitUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields23test_name_ExplicitUnion, 2u, 8u, 24u, "test.name/ExplicitUnion"));
 
 } // extern "C"

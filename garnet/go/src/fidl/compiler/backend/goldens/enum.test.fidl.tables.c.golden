@@ -12,10 +12,10 @@ extern const fidl_type_t test_name_MyEnumTable;
 
 
 static constexpr bool EnumValidatorFor_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t test_name_MyStrictEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_test_name_MyStrictEnum, "test.name/MyStrictEnum"));
+const fidl_type_t test_name_MyStrictEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_test_name_MyStrictEnum, nullptr));
 
 static constexpr bool EnumValidatorFor_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t test_name_MyEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_test_name_MyEnum, "test.name/MyEnum"));
+const fidl_type_t test_name_MyEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_test_name_MyEnum, nullptr));
 
 // Coding tables for v1 wire format.
 
@@ -25,10 +25,10 @@ extern const fidl_type_t v1_test_name_MyEnumTable;
 
 
 static constexpr bool EnumValidatorFor_v1_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t v1_test_name_MyStrictEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_v1_test_name_MyStrictEnum, "test.name/MyStrictEnum"));
+const fidl_type_t v1_test_name_MyStrictEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_v1_test_name_MyStrictEnum, nullptr));
 
 static constexpr bool EnumValidatorFor_v1_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t v1_test_name_MyEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_v1_test_name_MyEnum, "test.name/MyEnum"));
+const fidl_type_t v1_test_name_MyEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_v1_test_name_MyEnum, nullptr));
 
 // Old <-> V1 map.
 

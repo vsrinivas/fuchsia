@@ -69,8 +69,17 @@ struct FidlStructField {
   uint32_t offset;
   uint8_t padding;
 
-  constexpr FidlStructField(const fidl_type* type, uint32_t offset, uint8_t padding)
-      : type(type), offset(offset), padding(padding) {}
+  // Pointer to the alternate ("alt") version of this FidlStructField, which is
+  // the v1 version of the struct field if this is the old struct field; or the
+  // old version of the struct field if this is the v1 version.
+  const FidlStructField* alt_field;
+
+  // TODO(fxb/39680): Update this constructor, so that a variant is available where not supplying
+  // the |alt_field| parameter forces the constructor caller to acknowledge it's for the old wire
+  // format only.
+  constexpr FidlStructField(const fidl_type* type, uint32_t offset, uint8_t padding,
+                            const FidlStructField* alt_field = nullptr)
+      : type(type), offset(offset), padding(padding), alt_field(alt_field) {}
 };
 
 struct FidlUnionField {

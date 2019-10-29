@@ -12,7 +12,8 @@ TEST(SomeStruct, CodingTable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingSomeStructRequest", request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& some_struct_field = request_struct.fields[0];
   // Transaction message header is 16 bytes.
   ASSERT_EQ(16, some_struct_field.offset);
@@ -20,7 +21,8 @@ TEST(SomeStruct, CodingTable) {
   const fidl_type& some_struct_type = *some_struct_field.type;
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, some_struct_type.type_tag);
   const fidl::FidlCodedStruct& some_struct_table = some_struct_type.coded_struct;
-  ASSERT_STR_EQ("fidl.test.example.codingtables/SomeStruct", some_struct_table.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == some_struct_table.name);
   // The struct only had primitives; the only field |foo| is to provide padding information.
   ASSERT_EQ(1, some_struct_table.field_count);
   ASSERT_EQ(nullptr, some_struct_table.fields[0].type);
@@ -34,7 +36,8 @@ TEST(MyXUnion, CodingTableWhenNullable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyXUnionRequest", request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& my_xunion_field = request_struct.fields[0];
   ASSERT_EQ(16, my_xunion_field.offset);
 
@@ -52,7 +55,8 @@ TEST(MyXUnion, CodingTableWhenNullable) {
 
   ASSERT_EQ(fidl::kNullable, my_xunion_table.nullable);
 
-  ASSERT_STR_EQ("fidl.test.example.codingtables/MyXUnion", my_xunion_table.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == my_xunion_table.name);
 
   ASSERT_EQ(fidl::kFlexible, my_xunion_type.coded_xunion.strictness);
 }
@@ -62,7 +66,8 @@ TEST(MyStrictXUnion, CodingTableWhenNullable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyStrictXUnionRequest", request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& my_strict_xunion_field = request_struct.fields[0];
   ASSERT_EQ(16, my_strict_xunion_field.offset);
 
@@ -80,7 +85,8 @@ TEST(MyStrictXUnion, CodingTableWhenNullable) {
 
   ASSERT_EQ(fidl::kNullable, my_strict_xunion_table.nullable);
 
-  ASSERT_STR_EQ("fidl.test.example.codingtables/MyStrictXUnion", my_strict_xunion_table.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == my_strict_xunion_table.name);
 
   ASSERT_EQ(fidl::kStrict, my_strict_xunion_type.coded_xunion.strictness);
 }
@@ -90,7 +96,8 @@ TEST(MyTable, CodingTable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingVectorOfMyTableRequest", request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& vector_of_my_table_field = request_struct.fields[0];
   ASSERT_EQ(16, vector_of_my_table_field.offset);
   const fidl_type& vector_of_my_table_type = *vector_of_my_table_field.type;
@@ -126,8 +133,8 @@ TEST(MyXUnion, CodingTableWhenNonnullable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingVectorOfMyXUnionRequest",
-                request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& vector_of_my_xunion_field = request_struct.fields[0];
   ASSERT_EQ(16, vector_of_my_xunion_field.offset);
   const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.type;
@@ -148,8 +155,8 @@ TEST(MyStrictXUnion, CodingTableWhenNonnullable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingVectorOfMyStrictXUnionRequest",
-                request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& vector_of_my_xunion_field = request_struct.fields[0];
   ASSERT_EQ(16, vector_of_my_xunion_field.offset);
   const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.type;
@@ -170,7 +177,8 @@ TEST(MyBits, CodingTable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyBitsRequest", request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& my_bits_field = request_struct.fields[0];
   ASSERT_EQ(16, my_bits_field.offset);
   const fidl_type& my_bits_type = *my_bits_field.type;
@@ -185,7 +193,9 @@ TEST(MyEnum, CodingTable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyEnumRequest", request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
+  // ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyEnumRequest", request_struct.name);
   const fidl::FidlStructField& my_enum_field = request_struct.fields[0];
   ASSERT_EQ(16, my_enum_field.offset);
   const fidl_type& my_enum_type = *my_enum_field.type;
@@ -203,7 +213,8 @@ TEST(NumberCollision, CodingTable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
   const fidl::FidlCodedStruct& request_struct = type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingNumberCollisionRequest", request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& number_collision_field = request_struct.fields[0];
   // Transaction message header is 16 bytes.
   ASSERT_EQ(16, number_collision_field.offset);
@@ -211,7 +222,8 @@ TEST(NumberCollision, CodingTable) {
   const fidl_type& number_collision_type = *number_collision_field.type;
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, number_collision_type.type_tag);
   const fidl::FidlCodedStruct& number_collision_table = number_collision_type.coded_struct;
-  ASSERT_STR_EQ("fidl.test.example.codingtables/NumberCollision", number_collision_table.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == number_collision_table.name);
   ASSERT_EQ(6, number_collision_table.field_count);
 }
 
@@ -220,12 +232,14 @@ TEST(ForeignXUnions, CodingTable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, req_type.type_tag);
   const fidl::FidlCodedStruct& request_struct = req_type.coded_struct;
   ASSERT_EQ(1, request_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingForeignXUnionsRequest", request_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
   const fidl::FidlStructField& tx_field = request_struct.fields[0];
   const fidl_type& tx_type = *tx_field.type;
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeXUnion, tx_type.type_tag);
   const fidl::FidlCodedXUnion& tx_table = tx_type.coded_xunion;
-  ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", tx_table.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == tx_table.name);
   ASSERT_EQ(fidl::FidlNullability::kNonnullable, tx_table.nullable);
   ASSERT_EQ(2, tx_table.field_count);
 
@@ -233,13 +247,15 @@ TEST(ForeignXUnions, CodingTable) {
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, resp_type.type_tag);
   const fidl::FidlCodedStruct& response_struct = resp_type.coded_struct;
   ASSERT_EQ(1, response_struct.field_count);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingForeignXUnionsResponse",
-                response_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == response_struct.name);
   const fidl::FidlStructField& rx_field = response_struct.fields[0];
   const fidl_type& rx_type = *rx_field.type;
   ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeXUnion, rx_type.type_tag);
   const fidl::FidlCodedXUnion& rx_table = rx_type.coded_xunion;
-  ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", rx_table.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == request_struct.name);
+  // ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", rx_table.name);
   ASSERT_EQ(fidl::FidlNullability::kNullable, rx_table.nullable);
   ASSERT_EQ(2, rx_table.field_count);
 }
@@ -254,7 +270,8 @@ TEST(AltTypes, CodingTable) {
 
   const fidl::FidlCodedStruct& old_struct =
       fidl_test_example_codingtables_MyUnionContainerTable.coded_struct;
-  ASSERT_STR_EQ("fidl.test.example.codingtables/MyUnionContainer", old_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == old_struct.name);
   ASSERT_EQ(3, old_struct.field_count);
   ASSERT_EQ(0, old_struct.fields[0].offset);
   ASSERT_EQ(8, old_struct.fields[1].offset);
@@ -263,7 +280,8 @@ TEST(AltTypes, CodingTable) {
   ASSERT_EQ(&v1_fidl_test_example_codingtables_MyUnionContainerTable.coded_struct,
             old_struct.alt_type);
   const fidl::FidlCodedStruct& v1_struct = *(old_struct.alt_type);
-  ASSERT_STR_EQ("fidl.test.example.codingtables/MyUnionContainer", v1_struct.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == v1_struct.name);
   ASSERT_EQ(&fidl_test_example_codingtables_MyUnionContainerTable.coded_struct, v1_struct.alt_type);
   ASSERT_EQ(3, v1_struct.field_count);
   ASSERT_EQ(0, v1_struct.fields[0].offset);
@@ -272,13 +290,15 @@ TEST(AltTypes, CodingTable) {
 
   ASSERT_EQ(&fidl_test_example_codingtables_MyUnionTable, old_struct.fields[0].type);
   const fidl::FidlCodedUnion& old_union = old_struct.fields[0].type->coded_union;
-  ASSERT_STR_EQ("fidl.test.example.codingtables/MyUnion", old_union.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == old_union.name);
   ASSERT_EQ(4, old_union.data_offset);
   ASSERT_EQ(8, old_union.size);
 
   ASSERT_EQ(&v1_fidl_test_example_codingtables_MyUnionTable.coded_union, old_union.alt_type);
   const fidl::FidlCodedUnion& v1_union = *old_union.alt_type;
-  ASSERT_STR_EQ("fidl.test.example.codingtables/MyUnion", v1_union.name);
+  // TODO(fxb/39791): Temporarily avoid generating names.
+  ASSERT_TRUE(nullptr == v1_union.name);
   ASSERT_EQ(&fidl_test_example_codingtables_MyUnionTable.coded_union, v1_union.alt_type);
   ASSERT_EQ(8, v1_union.data_offset);
   ASSERT_EQ(24, v1_union.size);
