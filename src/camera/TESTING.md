@@ -1,12 +1,14 @@
 # Running Camera Tests
 
-## To test the on-device functionality:
+All camera tests should be run on all current targets before submitting code!
+
+## To test the camera stack:
 
 1. `fx set [product].[board] --with //bundles:tests`
 2. You may have to re-flash zedboot if you flashed with a different fx set command
 3. `fx serve`
 4. Restart the target device in the netboot cable configuration
-5. Run `fx run-test camera_full_on_device_test`
+5. Run `fx run-test camera_tests`
 
 Note: most on-device tests require the camera to be physically enabled (i.e. the device must not be
 muted). If a test determines that the device may be muted, a warning will be displayed and the test
@@ -20,20 +22,10 @@ will be skipped.
 3. Run `fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cmx`
 
 
-## To test camera libraries off-device:
-You can follow the directions above to test on the device, and run:
-`fx run-test camera_full_test`
-
-Or:
-
-1. `fx set workstation.x64 --with //bundles:tests`
-2. `fx build`
-3. `fx serve`
-4. In another terminal: `fx emu -N`
-5. In another terminal: `fx run-test camera_full_test`
-
 ## To run single tests:
 Single components can be tested by following the instructions above, and
 adding a ```-t test_name``` to the end.  For example:
 
-    fx run-test camera_full_test -t gdc-task
+    fx run-test camera_tests -t gdc-task
+
+

@@ -21,17 +21,21 @@ group("camera") {
 group("tests") {
   testonly = true
 
+  # Unit test dependencies should be caught in the camera_test package, below.
+  # Some integration tests, such as the camera_manager2, need to explicitly
+  # depend on the service they need to test. In that case, a group should be
+  # created that includes the test and the
+  #
   deps = [
-    ":camera_full_on_device_test",
-    ":camera_full_test",
+    ":camera_tests",
     "camera_manager2:tests",
     "examples/demo",
-    "simple_camera/simple_camera_lib:camera_tests",
+    "simple_camera/simple_camera_lib:simple_camera_lib_tests",
     "test/camera_client_test",
   ]
 }
 
-test_package("camera_full_test") {
+test_package("camera_tests") {
   deps = [
     "//src/camera/calibration/blc/test:blc_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
@@ -40,6 +44,7 @@ test_package("camera_full_test") {
     "//src/camera/drivers/controller/test:controller-test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
     "//src/camera/drivers/hw_accel/ge2d/test:ge2d-task",
+    "//src/camera/drivers/isp/mali-009/test:mali_009_test",
     "//src/camera/drivers/isp/modules:gamma-rgb-registers",
     "//src/camera/drivers/isp/modules:isp-mem-array",
     "//src/camera/drivers/isp/modules/test:modules_bin",
@@ -47,7 +52,11 @@ test_package("camera_full_test") {
     "//src/camera/drivers/sensors/mock-sensor:mock-sensor-integration-test",
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
+    "//src/camera/drivers/virtual_camera/test:virtual_camera_test",
+    "//src/camera/examples/demo/test",
     "//src/camera/image_writer/test:image_writer_test",
+    "//src/camera/stream_utils/test:stream_utils_test",
+    "//src/camera/test/camera_streaming_test",
   ]
 
   tests = [
@@ -116,6 +125,12 @@ test_package("camera_full_test") {
       environments = basic_envs
     },
     {
+      name = "virtual_camera_test"
+      manifest = "drivers/virtual_camera/test/meta/virtual_camera_test.cmx"
+      environments = basic_envs
+    },
+
+    {
       name = "image_writer_test"
       manifest = "image_writer/test/meta/image_writer_test.cmx"
       environments = basic_envs
@@ -130,20 +145,6 @@ test_package("camera_full_test") {
       manifest = "camera_manager2/test/meta/camera_manager_test.cmx"
       environments = basic_envs
     },
-
-    # Put additional tests that can run on Qemu here.
-  ]
-}
-
-test_package("camera_full_on_device_test") {
-  deps = [
-    "//src/camera/drivers/isp/mali-009/test:mali_009_test",
-    "//src/camera/examples/demo/test",
-    "//src/camera/stream_utils/test:stream_utils_test",
-    "//src/camera/test/camera_streaming_test",
-  ]
-
-  tests = [
     {
       name = "mali_009_test"
       manifest = "drivers/isp/mali-009/test/meta/mali_009_test.cmx"
@@ -165,6 +166,6 @@ test_package("camera_full_on_device_test") {
       environments = basic_envs
     },
 
-    # Put additional tests that can run on the device here.
+    # Put additional camera tests here
   ]
 }

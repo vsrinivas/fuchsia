@@ -62,7 +62,7 @@ executable("simple_camera_unittests") {
   ]
 }
 
-test_package("camera_tests") {
+test_package("simple_camera_lib_tests") {
   deps = [
     "//src/camera/simple_camera/simple_camera_lib:tests",
   ]
