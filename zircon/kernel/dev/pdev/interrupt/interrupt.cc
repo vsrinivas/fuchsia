@@ -64,9 +64,9 @@ static void default_init_percpu_early() {}
 
 static void default_init_percpu() {}
 
-static void default_handle_irq(iframe_short_t* frame) {}
+static void default_handle_irq(iframe_t* frame) {}
 
-static void default_handle_fiq(iframe_short_t* frame) {}
+static void default_handle_fiq(iframe_t* frame) {}
 
 static void default_shutdown() {}
 
@@ -151,9 +151,9 @@ zx_status_t interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
 
 void interrupt_init_percpu() { intr_ops->init_percpu(); }
 
-void platform_irq(iframe_short_t* frame) { intr_ops->handle_irq(frame); }
+void platform_irq(iframe_t* frame) { intr_ops->handle_irq(frame); }
 
-void platform_fiq(iframe_short_t* frame) { intr_ops->handle_fiq(frame); }
+void platform_fiq(iframe_t* frame) { intr_ops->handle_fiq(frame); }
 
 void pdev_register_interrupts(const struct pdev_interrupt_ops* ops) {
   intr_ops = ops;

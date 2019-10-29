@@ -320,7 +320,7 @@ static unsigned int gic_remap_interrupt(unsigned int vector) {
 }
 
 // called from assembly
-static void gic_handle_irq(iframe_short_t* frame) {
+static void gic_handle_irq(iframe_t* frame) {
   // get the current vector
   uint32_t iar = gic_read_iar();
   unsigned vector = iar & 0x3ff;
@@ -361,7 +361,7 @@ static void gic_handle_irq(iframe_short_t* frame) {
   ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
 }
 
-static void gic_handle_fiq(iframe_short_t* frame) { PANIC_UNIMPLEMENTED; }
+static void gic_handle_fiq(iframe_t* frame) { PANIC_UNIMPLEMENTED; }
 
 static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
   uint gic_ipi_num = ipi + ipi_base;

@@ -24,8 +24,6 @@
 #include <vm/fault.h>
 #include <vm/vm.h>
 
-#include "arch/arm64/exceptions.h"
-
 #define LOCAL_TRACE 0
 
 #define DFSC_ALIGNMENT_FAULT 0b100001
@@ -277,6 +275,7 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
 static inline void fix_exception_percpu_pointer(uint32_t exception_flags, uint64_t* regs) {
   // If we're returning to kernel space, make sure we restore the correct
   // per-CPU pointer to the fixed register.
+  // TODO: move this fixup to the assembly glue that wraps the C irq/exception code
   if ((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0) {
     regs[15] = (uint64_t)arm64_read_percpu_ptr();
   }
@@ -343,7 +342,7 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
   }
 
   /* if we came from user space, check to see if we have any signals to handle */
-  if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
+  if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
     /* in the case of receiving a kill signal, this function may not return,
      * but the scheduler would have been invoked so it's fine.
      */
@@ -354,7 +353,7 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
 }
 
 /* called from assembly */
-extern "C" uint32_t arm64_irq(iframe_short_t* iframe, uint exception_flags) {
+extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
   LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
   int_handler_saved_state_t state;
@@ -366,15 +365,11 @@ extern "C" uint32_t arm64_irq(iframe_short_t* iframe, uint exception_flags) {
   bool do_preempt = int_handler_finish(&state);
 
   /* if we came from user space, check to see if we have any signals to handle */
-  if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
-    uint32_t exit_flags = 0;
-    if (thread_is_signaled(get_current_thread())) {
-      exit_flags |= ARM64_IRQ_EXIT_THREAD_SIGNALED;
-    }
-    if (do_preempt) {
-      exit_flags |= ARM64_IRQ_EXIT_RESCHEDULE;
-    }
-    return exit_flags;
+  if (exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) {
+    /* in the case of receiving a kill signal, this function may not return,
+     * but the scheduler would have been invoked so it's fine.
+     */
+    arch_iframe_process_pending_signals(iframe);
   }
 
   /* preempt the thread if the interrupt has signaled it */
@@ -383,24 +378,6 @@ extern "C" uint32_t arm64_irq(iframe_short_t* iframe, uint exception_flags) {
   }
 
   fix_exception_percpu_pointer(exception_flags, iframe->r);
-
-  return 0;
-}
-
-/* called from assembly */
-extern "C" void arm64_finish_user_irq(uint32_t exit_flags, arm64_iframe_t* iframe) {
-  /* in the case of receiving a kill signal, this function may not return,
-   * but the scheduler would have been invoked so it's fine.
-   */
-  if (unlikely(exit_flags & ARM64_IRQ_EXIT_THREAD_SIGNALED)) {
-    DEBUG_ASSERT(iframe != nullptr);
-    arch_iframe_process_pending_signals(iframe);
-  }
-
-  /* preempt the thread if the interrupt has signaled it */
-  if (exit_flags & ARM64_IRQ_EXIT_RESCHEDULE) {
-    thread_preempt();
-  }
 }
 
 /* called from assembly */

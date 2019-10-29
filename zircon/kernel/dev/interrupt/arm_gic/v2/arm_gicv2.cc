@@ -256,7 +256,7 @@ static zx_status_t gic_get_interrupt_config(unsigned int vector, enum interrupt_
 
 static unsigned int gic_remap_interrupt(unsigned int vector) { return vector; }
 
-static void gic_handle_irq(iframe_short_t* frame) {
+static void gic_handle_irq(iframe_t* frame) {
   // get the current vector
   uint32_t iar = GICREG(0, GICC_IAR);
   unsigned int vector = iar & 0x3ff;
@@ -293,7 +293,7 @@ static void gic_handle_irq(iframe_short_t* frame) {
   ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
 }
 
-static void gic_handle_fiq(iframe_short_t* frame) { PANIC_UNIMPLEMENTED; }
+static void gic_handle_fiq(iframe_t* frame) { PANIC_UNIMPLEMENTED; }
 
 static zx_status_t gic_send_ipi(cpu_mask_t logical_target, mp_ipi_t ipi) {
   const cpu_mask_t target = mask_translator.LogicalMaskToGic(logical_target);

@@ -827,7 +827,7 @@ void arch_perfmon_fini() {
 // interrupts (our caller).
 // Returns true if success, false if buffer is full.
 
-static bool pmi_interrupt_handler(const iframe_short_t* frame, PerfmonState* state) {
+static bool pmi_interrupt_handler(const iframe_t* frame, PerfmonState* state) {
   uint cpu = arch_curr_cpu_num();
   auto data = &state->cpu_data[cpu];
 
@@ -951,7 +951,7 @@ static bool pmi_interrupt_handler(const iframe_short_t* frame, PerfmonState* sta
   return true;
 }
 
-void arm64_pmi_interrupt_handler(const iframe_short_t* frame) TA_NO_THREAD_SAFETY_ANALYSIS {
+void arm64_pmi_interrupt_handler(const iframe_t* frame) TA_NO_THREAD_SAFETY_ANALYSIS {
   if (!atomic_load(&perfmon_active)) {
     return;
   }

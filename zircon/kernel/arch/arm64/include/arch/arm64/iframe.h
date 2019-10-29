@@ -27,22 +27,10 @@ struct iframe_t {
   uint64_t pad2[1];  // Keep structure multiple of 16-bytes for stack alignment.
 };
 
-// This is an arm-specific iframe for IRQs.
-struct iframe_short_t {
-  uint64_t r[20];
-  // pad the short frame out so that it has the same general shape and size as a long
-  uint64_t pad[10];
-  uint64_t lr;
-  uint64_t usp;
-  uint64_t elr;
-  uint64_t spsr;
-  uint64_t pad2[2];
-};
-
-static_assert(sizeof(iframe_t) == sizeof(iframe_short_t), "");
+static_assert(sizeof(iframe_t) % 16u == 0u);
 
 // Lots of the code uses this name.
-typedef struct iframe_t arm64_iframe_t;
+using arm64_iframe_t = iframe_t;
 
 #endif  // !__ASSEMBLER__
 

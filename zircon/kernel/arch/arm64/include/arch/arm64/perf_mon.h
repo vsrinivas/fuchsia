@@ -12,6 +12,6 @@
 
 #include <arch/arm64.h>
 
-void arm64_pmi_interrupt_handler(const iframe_short_t* frame);
+void arm64_pmi_interrupt_handler(const iframe_t* frame);
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_PERF_MON_H_

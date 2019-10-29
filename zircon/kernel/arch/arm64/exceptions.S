@@ -8,7 +8,6 @@
 #include <arch/arch_thread.h>
 #include <arch/arm64.h>
 #include <arch/arm64/asm.h>
-#include <arch/arm64/exceptions.h>
 #include <arch/asm_macros.h>
 #include <zircon/zx-syscall-numbers.h>
 
@@ -30,10 +29,7 @@
 // offset where sp,elr,spsr,lr,mdscr goes in the iframe
 #define regsave_special_reg_offset (30 * 8)
 
-// offset where x20-x29 goes in the iframe
-#define regsave_high_reg_offset (20 * 8)
-
-.macro regsave_long
+.macro regsave
 // There are 5 regs @ regsave_special_reg_offset, plus one unused space = 6 to
 // maintain 16-byte padding.
 sub_from_sp (6*8)
@@ -66,42 +62,6 @@ stp  x10, x11, [sp, #regsave_special_reg_offset + 16]
 str x12, [sp, #regsave_special_reg_offset + 32]
 .endm
 
-.macro regsave_short
-// Align the same as the long version above. The 10 extra words correspond to
-// x20 through x29 which are not saved here.
-sub_from_sp ((6*8) + (10*8))
-push_regs x18, x19
-push_regs x16, x17
-push_regs x14, x15
-push_regs x12, x13
-push_regs x10, x11
-push_regs x8, x9
-push_regs x6, x7
-push_regs x4, x5
-push_regs x2, x3
-push_regs x0, x1
-// Preserve x0-x7 to mirror regsave_long
-mrs  x9, sp_el0
-mrs  x10, elr_el1
-mrs  x11, spsr_el1
-stp  lr, x9, [sp, #regsave_special_reg_offset]
-.cfi_rel_offset lr, (regsave_special_reg_offset)
-.cfi_rel_offset sp, (regsave_special_reg_offset + 8)
-stp  x10, x11, [sp, #regsave_special_reg_offset + 16]
-.cfi_rel_offset elr1, (regsave_special_reg_offset + 16)
-.endm
-
-// convert a short iframe to a long one by patching in the additional 10 words to save
-.macro regsave_short_to_long
-stp  x20, x21, [sp, #regsave_high_reg_offset]
-stp  x22, x23, [sp, #regsave_high_reg_offset + 0x10]
-stp  x24, x25, [sp, #regsave_high_reg_offset + 0x20]
-stp  x26, x27, [sp, #regsave_high_reg_offset + 0x30]
-stp  x28, x29, [sp, #regsave_high_reg_offset + 0x40]
-mrs  x12, mdscr_el1
-str  x12, [sp, #regsave_special_reg_offset + 32]
-.endm
-
 // Once we pop the stack past the saved sp_el0, elr_el1 the userspace values
 // are inaccessible.
 .macro mark_lr_sp_inaccessible
@@ -112,7 +72,7 @@ cfi_register_is_zero DW_REG_sp
 cfi_register_is_zero DW_REG_ELR_mode
 .endm
 
-.macro regrestore_long
+.macro regrestore
 // Preserve x0-x1 for syscall returns (eventually x0-x7)
 ldp  lr, x9, [sp, #regsave_special_reg_offset]
 .cfi_same_value lr
@@ -141,28 +101,6 @@ add_to_sp (6*8)
 mark_lr_sp_inaccessible
 .endm
 
-.macro regrestore_short
-// Preserve x0-x7 to mirror regrestore_long
-ldp  lr, x9, [sp, #regsave_special_reg_offset]
-.cfi_same_value lr
-ldp  x10, x11, [sp, #regsave_special_reg_offset + 16]
-msr  sp_el0, x9
-msr  elr_el1, x10
-msr  spsr_el1, x11
-pop_regs x0, x1
-pop_regs x2, x3
-pop_regs x4, x5
-pop_regs x6, x7
-pop_regs x8, x9
-pop_regs x10, x11
-pop_regs x12, x13
-pop_regs x14, x15
-pop_regs x16, x17
-pop_regs x18, x19
-add_to_sp ((6*8) + (10*8))
-mark_lr_sp_inaccessible
-.endm
-
 .macro start_isr_cfi
     .cfi_startproc simple
     .cfi_signal_frame
@@ -171,7 +109,7 @@ mark_lr_sp_inaccessible
     .cfi_def_cfa sp, 0
 .endm
 
-.macro start_isr_func
+.macro start_isr_func_cfi
     start_isr_cfi
     ALL_CFI_SAME_VALUE
     .cfi_undefined elr1
@@ -188,7 +126,7 @@ mark_lr_sp_inaccessible
 
 // Mark the locations of the registers based on the CFA so that the
 // location doesn't change as the regs are popped.
-.macro setup_short_helper_cfi
+.macro setup_helper_cfi
     REG_CFA_OFFSET(0)
     REG_CFA_OFFSET(1)
     REG_CFA_OFFSET(2)
@@ -209,12 +147,6 @@ mark_lr_sp_inaccessible
     REG_CFA_OFFSET(17)
     REG_CFA_OFFSET(18)
     REG_CFA_OFFSET(19)
-    .cfi_offset sp, -(3 * 8)
-    .cfi_offset lr, -(4 * 8)
-.endm
-
-.macro setup_long_helper_cfi
-    setup_short_helper_cfi
     REG_CFA_OFFSET(20)
     REG_CFA_OFFSET(21)
     REG_CFA_OFFSET(22)
@@ -225,16 +157,13 @@ mark_lr_sp_inaccessible
     REG_CFA_OFFSET(27)
     REG_CFA_OFFSET(28)
     REG_CFA_OFFSET(29)
+    .cfi_offset sp, -(3 * 8)
+    .cfi_offset lr, -(4 * 8)
 .endm
 
-.macro start_short_helper
+.macro start_helper
     start_helper_cfi
-    setup_short_helper_cfi
-.endm
-
-.macro start_long_helper
-    start_helper_cfi
-    setup_long_helper_cfi
+    setup_helper_cfi
 .endm
 
 // All normal C code in the kernel expects the invariants that the fixed
@@ -273,8 +202,8 @@ mark_lr_sp_inaccessible
 .endm
 
 .macro invalid_exception, which
-    start_isr_func
-    regsave_long
+    start_isr_func_cfi
+    regsave
     restore_fixed_regs x9
     mov x1, #\which
     mov x0, sp
@@ -283,8 +212,8 @@ mark_lr_sp_inaccessible
 .endm
 
 .macro irq_exception, exception_flags
-    start_isr_func
-    regsave_short
+    start_isr_func_cfi
+    regsave
     msr daifclr, #1 /* reenable fiqs once elr and spsr have been saved */
     mov x0, sp
     mov x1, #\exception_flags
@@ -292,18 +221,17 @@ mark_lr_sp_inaccessible
     restore_fixed_regs x9
 .endif
     bl  arm64_irq
-    cbnz x0, arm64_finish_user_irq_wrapper /* anything extra to do? */
     msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
 .if (\exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)
-    b   arm64_exc_shared_restore_short_lower_el
+    b   arm64_exc_shared_restore_lower_el
 .else
-    b   arm64_exc_shared_restore_short
+    b   arm64_exc_shared_restore
 .endif
 .endm
 
 .macro sync_exception, exception_flags, from_lower_el_64=0
-    start_isr_func
-    regsave_long
+    start_isr_func_cfi
+    regsave
     mrs x9, esr_el1
 .if \from_lower_el_64
     // If this is a syscall, x0-x7 contain args and x16 contains syscall num.
@@ -320,7 +248,7 @@ mark_lr_sp_inaccessible
 .else
     mov x0, sp
     bl arm64_sync_exception
-    b  arm64_exc_shared_restore_long
+    b  arm64_exc_shared_restore
 .endif
 .endm
 
@@ -360,11 +288,11 @@ END_FUNCTION(arm64_el1_irq_current_el_SPx)
 
 .org 0x300
 LOCAL_FUNCTION_LABEL(arm64_el1_fiq_current_el_SPx)
-    start_isr_func
-    regsave_short
+    start_isr_func_cfi
+    regsave
     mov x0, sp
     bl  platform_fiq
-    b  arm64_exc_shared_restore_short
+    b  arm64_exc_shared_restore
 END_FUNCTION(arm64_el1_fiq_current_el_SPx)
 
 .org 0x380
@@ -385,12 +313,12 @@ END_FUNCTION(arm64_el1_irq_lower_el_64)
 
 .org 0x500
 LOCAL_FUNCTION_LABEL(arm64_el1_fiq_lower_el_64)
-    start_isr_func
-    regsave_short
+    start_isr_func_cfi
+    regsave
     restore_fixed_regs x9
     mov x0, sp
     bl  platform_fiq
-    b  arm64_exc_shared_restore_short_lower_el
+    b  arm64_exc_shared_restore_lower_el
 END_FUNCTION(arm64_el1_fiq_lower_el_64)
 
 .org 0x580
@@ -419,66 +347,27 @@ LOCAL_FUNCTION_LABEL(arm64_el1_err_exc_lower_el_32)
     invalid_exception 0x33
 END_FUNCTION(arm64_el1_err_exc_lower_el_32)
 
-/* If an IRQ happened in userspace, and either the thread was signaled or
-   needs to be rescheduled, then we end up here after arm64_irq returns.
-   Suspending the thread requires constructing a long iframe in order to
-   provide the values of all regs to any debugger that wishes to access
-   them, but we can't do that until arm64_irq returns as we rely on the
-   compiler to save/restore callee-saved regs. */
-LOCAL_FUNCTION_LABEL(arm64_finish_user_irq_wrapper)
-    start_short_helper
-    /* if we're only here because of a need to reschedule then we don't
-       need to construct a long iframe */
-    cmp x0, #ARM64_IRQ_EXIT_RESCHEDULE
-    bne 1f
-    mov x1, #0 /* don't need an iframe, just pass NULL */
-    bl  arm64_finish_user_irq
-    msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
-    b   arm64_exc_shared_restore_short_lower_el
-1:
-    /* convert the short to a long frame */
-    regsave_short_to_long
-    mov x1, sp
-    bl  arm64_finish_user_irq
-    msr daifset, #1 /* disable fiqs to protect elr and spsr restore */
-    b   arm64_exc_shared_restore_long_lower_el
-END_FUNCTION(arm64_finish_user_irq_wrapper)
-
 LOCAL_FUNCTION_LABEL(arm64_sync_exception_lower_el)
-    start_isr_func
+    start_isr_func_cfi
     mov x0, sp
     restore_fixed_regs x9
     bl  arm64_sync_exception
-    b arm64_exc_shared_restore_long_lower_el
+    b arm64_exc_shared_restore_lower_el
 END_FUNCTION(arm64_sync_exception_lower_el)
 
 // CFI is independent of any other concept of function boundary.
-// Everything in start_long_helper applies the same whether entering at
+// Everything in start_helper applies the same whether entering at
 // the first or the second entry point.  The first entry point is used
 // when returning to user mode, the second when returning to kernel.
-LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_long_lower_el)
-    start_long_helper
+LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_lower_el)
+    start_helper
     save_shadow_call_sp x9
     // Fall through to join the same-EL case.
-LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_long)
-    regrestore_long
+LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore)
+    regrestore
     eret
-END_FUNCTION(arm64_exc_shared_restore_long)
-END_DATA(arm64_exc_shared_restore_long_lower_el)
-
-// CFI is independent of any other concept of function boundary.
-// Everything in start_short_helper applies the same whether entering at
-// the first or the second entry point.  The first entry point is used
-// when returning to user mode, the second when returning to kernel.
-LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_short_lower_el)
-    start_short_helper
-    save_shadow_call_sp x9
-    // Fall through to join the same-EL case.
-LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_short)
-    regrestore_short
-    eret
-END_FUNCTION(arm64_exc_shared_restore_short)
-END_DATA(arm64_exc_shared_restore_short_lower_el)
+END_FUNCTION(arm64_exc_shared_restore)
+END_DATA(arm64_exc_shared_restore_lower_el)
 
 //
 // Syscall args are in x0-x7 already.
@@ -515,7 +404,7 @@ END_DATA(arm64_exc_shared_restore_short_lower_el)
 // x10    - contains userspace pc
 //
 LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
-    start_isr_func
+    start_isr_func_cfi
     restore_fixed_regs x11
     // Verify syscall number and call the unknown handler if bad.
     cmp  x16, #ZX_SYS_COUNT
@@ -535,10 +424,10 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     // Move the status to frame->r[0] for return to userspace.
     str  x0, [sp]
     // Check for pending signals. If none, just return.
-    cbz  x1, arm64_exc_shared_restore_long_lower_el
+    cbz  x1, arm64_exc_shared_restore_lower_el
     mov  x0, sp
     bl   arch_iframe_process_pending_signals
-    b    arm64_exc_shared_restore_long_lower_el
+    b    arm64_exc_shared_restore_lower_el
 END_FUNCTION(arm64_syscall_dispatcher)
 
 // Adds a label for making the syscall and adds it to the jump table.
