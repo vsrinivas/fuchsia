@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    breakpoints::*,
+    breakpoints_capability::*,
     component_manager_lib::{
-        model::{self, hooks::*, testing::test_helpers, AbsoluteMoniker, Hub, Model},
+        model::{
+            self, hooks::*, testing::breakpoints::*, testing::test_helpers, AbsoluteMoniker, Hub,
+            Model,
+        },
         startup,
     },
     failure::{self, Error},
@@ -24,8 +27,8 @@ struct TestRunner {
     pub model: Model,
     pub hub: Hub,
     hub_test_hook: Arc<HubTestHook>,
-    _breakpoint_hook: Arc<BreakpointHook>,
-    _breakpoint_capability_hook: Arc<BreakpointCapabilityHook>,
+    _breakpoint_hook: BreakpointHook,
+    _breakpoint_capability_hook: BreakpointCapabilityHook,
     breakpoint_receiver: BreakpointInvocationReceiver,
     hub_proxy: DirectoryProxy,
 }
@@ -69,14 +72,13 @@ async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
 async fn register_breakpoints(
     model: &Model,
     event_types: Vec<EventType>,
-) -> (Arc<BreakpointHook>, Arc<BreakpointCapabilityHook>, BreakpointInvocationReceiver) {
+) -> (BreakpointHook, BreakpointCapabilityHook, BreakpointInvocationReceiver) {
     let breakpoint_registry = Arc::new(BreakpointRegistry::new());
     let breakpoint_receiver = breakpoint_registry.register(event_types).await;
-    let breakpoint_hook = Arc::new(BreakpointHook::new(breakpoint_registry.clone()));
-    let breakpoint_capability_hook =
-        Arc::new(BreakpointCapabilityHook::new(breakpoint_registry.clone()));
-    model.root_realm.hooks.install(breakpoint_hook.clone().hooks()).await;
-    model.root_realm.hooks.install(breakpoint_capability_hook.clone().hooks()).await;
+    let breakpoint_hook = BreakpointHook::new(breakpoint_registry.clone());
+    let breakpoint_capability_hook = BreakpointCapabilityHook::new(breakpoint_registry.clone());
+    model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
+    model.root_realm.hooks.install(breakpoint_capability_hook.hooks()).await;
     (breakpoint_hook, breakpoint_capability_hook, breakpoint_receiver)
 }
 

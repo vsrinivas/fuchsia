@@ -12,14 +12,23 @@ fidl("components") {
   ]
 }
 
-fidl("fuchsia.test.hub") {
+fidl("hub") {
+  name = "fuchsia.test.hub"
   sdk_category = "internal"
 
   sources = [
-    "fuchsia.test.hub.fidl",
+    "hub.fidl",
   ]
 
   public_deps = [
     "//zircon/system/fidl/fuchsia-io",
+  ]
+}
+
+fidl("breakpoints") {
+  name = "fuchsia.test.breakpoints"
+
+  sources = [
+    "breakpoints.fidl",
   ]
 }

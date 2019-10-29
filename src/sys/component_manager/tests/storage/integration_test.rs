@@ -8,10 +8,7 @@ use {
         model::{
             hooks::*,
             moniker::AbsoluteMoniker,
-            testing::{
-                test_helpers::{self, DestroyHook},
-                test_hook::TestHook,
-            },
+            testing::{breakpoints::*, test_helpers, test_hook::TestHook},
             Model,
         },
         startup,
@@ -20,10 +17,10 @@ use {
     fidl::endpoints,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
-    futures::prelude::*,
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
     std::path::PathBuf,
+    std::sync::Arc,
 };
 
 lazy_static! {
@@ -88,16 +85,14 @@ async fn storage_from_collection() -> Result<(), Error> {
     };
     let model = startup::model_setup(&args).await?;
     let test_hook = TestHook::new();
-    let (destroy_hook, _, mut destroy_recv) = DestroyHook::new(vec!["coll:storage_user:1"].into());
+
+    let breakpoint_registry = Arc::new(BreakpointRegistry::new());
+    let breakpoint_receiver =
+        breakpoint_registry.register(vec![EventType::PostDestroyInstance]).await;
+    let breakpoint_hook = BreakpointHook::new(breakpoint_registry.clone());
+
     model.root_realm.hooks.install(test_hook.hooks()).await;
-    model
-        .root_realm
-        .hooks
-        .install(vec![HookRegistration {
-            event_type: EventType::PostDestroyInstance,
-            callback: destroy_hook.clone(),
-        }])
-        .await;
+    model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
     model
         .look_up_and_bind_instance(AbsoluteMoniker::root())
         .await
@@ -155,7 +150,10 @@ async fn storage_from_collection() -> Result<(), Error> {
         .await
         .context("failed to destroy child")?
         .expect("failed to destroy child");
-    destroy_recv.next().await.expect("failed to receive destroy notification");
+
+    breakpoint_receiver
+        .wait_until(EventType::PostDestroyInstance, vec!["coll:storage_user:1"].into())
+        .await;
 
     println!("checking that storage was destroyed");
     assert_eq!(test_helpers::list_directory(&memfs_proxy).await, Vec::<String>::new());

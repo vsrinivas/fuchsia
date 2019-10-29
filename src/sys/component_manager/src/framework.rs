@@ -619,20 +619,17 @@ mod tests {
         mock_resolver.add_component("b", default_component_decl());
 
         let hook = Arc::new(TestHook::new());
-        let (destroy_hook, mut stop_send, mut destroy_recv) =
-            DestroyHook::new(vec!["system:0", "coll:a:1"].into());
+
+        let breakpoint_registry = Arc::new(testing::breakpoints::BreakpointRegistry::new());
+        let breakpoint_receiver = breakpoint_registry
+            .register(vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance])
+            .await;
+        let breakpoint_hook =
+            testing::breakpoints::BreakpointHook::new(breakpoint_registry.clone());
+
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
-        hooks.append(&mut vec![
-            HookRegistration {
-                event_type: EventType::StopInstance,
-                callback: destroy_hook.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::PostDestroyInstance,
-                callback: destroy_hook.clone(),
-            },
-        ]);
+        hooks.append(&mut breakpoint_hook.hooks());
         let test =
             RealmServiceTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks).await;
 
@@ -665,11 +662,30 @@ mod tests {
         let res = test.realm_proxy.destroy_child(&mut child_ref).await;
         let _ = res.expect("failed to destroy child a").expect("failed to destroy child a");
 
+        let invocation = breakpoint_receiver
+            .wait_until(EventType::PreDestroyInstance, vec!["system:0", "coll:a:1"].into())
+            .await;
+
         let actual_children = get_live_children(&test.realm).await;
         let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
         expected_children.insert("coll:b".into());
         assert_eq!(actual_children, expected_children);
         assert_eq!("(system(coll:b))", hook.print());
+
+        // The destruction of "a" was arrested during `PreDestroy`. The old "a" should still exist,
+        // although it's not live.
+        assert!(has_child(&test.realm, "coll:a:1").await);
+
+        // Move past the 'PreDestroy' event for "a"
+        invocation.resume();
+
+        // Wait until 'PostDestroy' event for "a"
+        breakpoint_receiver
+            .wait_until(EventType::PostDestroyInstance, vec!["system:0", "coll:a:1"].into())
+            .await
+            .resume();
+
+        assert!(!has_child(&test.realm, "coll:a:1").await);
 
         // Recreate "a" and verify "a" is back (but it's a different "a"). The old "a" is gone
         // from the client's point of view, but it hasn't been cleaned up yet.
@@ -687,17 +703,6 @@ mod tests {
         let instance_id = get_instance_id(&test.realm, "coll:a").await;
         assert_eq!(child_realm.component_url, "test:///a_alt".to_string());
         assert_eq!(instance_id, 3);
-
-        // The destruction of "a" was arrested during `Stop`. The old "a" should still exist,
-        // although it's not live.
-        assert!(has_child(&test.realm, "coll:a:1").await);
-        assert!(has_child(&test.realm, "coll:a:3").await);
-
-        // Finally, let destruction proceed. The old instance of "a" should be cleaned up.
-        stop_send.send(()).await.expect("failed to send");
-        destroy_recv.next().await.expect("failed to receive");
-        assert!(!has_child(&test.realm, "coll:a:1").await);
-        assert!(has_child(&test.realm, "coll:a:3").await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

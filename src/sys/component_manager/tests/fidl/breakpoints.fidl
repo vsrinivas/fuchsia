@@ -2,13 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.test.hub;
+library fuchsia.test.breakpoints;
 
-using fuchsia.io;
+/// The maximum number of event types to register breakpoints for.
+/// This capacity should match the actual number of event types.
+const uint64 MAX_NUM_EVENT_TYPES = 3;
 
-/// The maximum number of entries to report within a directory in tests.
+/// The maximum depth of the component that we can expect a breakpoint on.
 /// This capacity is currently set somewhat arbitrarily.
-const uint64 MAX_NUM_ENTRIES = 100;
+const uint64 MAX_COMPONENT_DEPTH = 10;
+
+/// The maximum string length of a component moniker that we can expect
+/// a breakpoint on. This capacity is currently set somewhat arbitrarily.
+const uint64 MAX_COMPONENT_MONIKER_LENGTH = 50;
+
 
 /// These EventTypes are used for the Breakpoints protocol.
 /// They are FIDL versions of the EventType enum in hooks.rs and have
@@ -16,31 +23,17 @@ const uint64 MAX_NUM_ENTRIES = 100;
 enum EventType {
     /// An instance was stopped successfully.
     /// This event must occur before PostDestroyInstance.
-    StopInstance = 0;
+    STOP_INSTANCE = 0;
 
     /// The component subtree rooted at this instance is about to be destroyed.
     /// The instance may have been stopped by this point.
     /// This event must occur before PostDestroyInstance.
     //TODO(fxb/39417): Ensure the instance is stopped before this event.
-    PreDestroyInstance = 1;
+    PRE_DESTROY_INSTANCE = 1;
 
     /// The component subtree rooted at this instance has been destroyed.
     /// All instances under this subtree have been stopped by this point.
-    PostDestroyInstance = 2;
-};
-
-/// A protocol used in testing by a component instance to propagate its view of
-/// hub directory to the integration test.
-[Discoverable]
-protocol HubReport {
-  /// Returns a list of the entiries within the directories specified by the
-  /// provided path.
-  ListDirectory(string:fuchsia.io.MAX_PATH path,
-                vector<string:fuchsia.io.MAX_FILENAME>:MAX_NUM_ENTRIES entries) -> ();
-
-  /// Returns the content of the file specified by the provided path.
-  ReportFileContent(string:fuchsia.io.MAX_PATH path,
-                    string:fuchsia.io.MAX_BUF content) -> ();
+    POST_DESTROY_INSTANCE = 2;
 };
 
 /// A protocol used in testing by a component instance to block the
@@ -49,14 +42,14 @@ protocol HubReport {
 protocol Breakpoints {
   /// Register breakpoints for the given EventTypes.
   /// Must be called exactly once before Expect or Resume.
-  Register(vector<EventType> event_types) -> ();
+  Register(vector<EventType>:MAX_NUM_EVENT_TYPES event_types) -> ();
 
   /// Blocks until the next invocation of a breakpoint occurs and verifies
   /// that the EventType and component list are as expected.
   ///
   /// Note: The component manager is blocked after this call and will not be
   /// allowed to proceed until resumed explicitly.
-  Expect(EventType event_type, vector<string> components) -> ();
+  Expect(EventType event_type, vector<string:MAX_COMPONENT_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH components) -> ();
 
   /// Resume the component manager from the last expected invocation.
   Resume() -> ();

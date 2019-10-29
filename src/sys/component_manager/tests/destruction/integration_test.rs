@@ -7,16 +7,14 @@ use {
         model::{
             self,
             hooks::*,
-            testing::{
-                test_helpers::DestroyHook,
-                test_hook::{Lifecycle, TestHook},
-            },
+            testing::breakpoints::*,
+            testing::test_hook::{Lifecycle, TestHook},
         },
         startup,
     },
     failure::{Error, ResultExt},
     fuchsia_async as fasync, fuchsia_syslog as syslog,
-    futures::prelude::*,
+    std::sync::Arc,
 };
 
 // TODO: This is a white box test so that we can use hooks. Really this should be a black box test,
@@ -36,21 +34,21 @@ async fn destruction() -> Result<(), Error> {
     };
     let model = startup::model_setup(&args).await?;
     let test_hook = TestHook::new();
-    let (destroy_hook, _, mut destroy_recv) = DestroyHook::new(vec!["coll:root:1"].into());
+
+    let breakpoint_registry = Arc::new(BreakpointRegistry::new());
+    let breakpoint_receiver =
+        breakpoint_registry.register(vec![EventType::PostDestroyInstance]).await;
+    let breakpoint_hook = BreakpointHook::new(breakpoint_registry.clone());
+
     model.root_realm.hooks.install(test_hook.hooks()).await;
-    model
-        .root_realm
-        .hooks
-        .install(vec![HookRegistration {
-            event_type: EventType::PostDestroyInstance,
-            callback: destroy_hook.clone(),
-        }])
-        .await;
+    model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
 
     model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await?;
 
     // Wait for `coll:root` to be destroyed.
-    destroy_recv.next().await.expect("failed to destroy notification");
+    breakpoint_receiver
+        .wait_until(EventType::PostDestroyInstance, vec!["coll:root:1"].into())
+        .await;
 
     // Assert that root component has no children.
     let children: Vec<_> = model

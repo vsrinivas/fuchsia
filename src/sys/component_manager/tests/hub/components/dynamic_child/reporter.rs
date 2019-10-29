@@ -6,7 +6,8 @@ use {
     failure::{Error, ResultExt},
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_breakpoints as fbreak,
+    fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
 };
 
@@ -18,14 +19,14 @@ macro_rules! get_names_from_listing {
 
 struct Testing {
     hub_report: fhub::HubReportProxy,
-    breakpoints: fhub::BreakpointsProxy,
+    breakpoints: fbreak::BreakpointsProxy,
 }
 
 impl Testing {
     fn new() -> Result<Self, Error> {
         let hub_report = connect_to_service::<fhub::HubReportMarker>()
             .context("error connecting to HubReport")?;
-        let breakpoints = connect_to_service::<fhub::BreakpointsMarker>()
+        let breakpoints = connect_to_service::<fbreak::BreakpointsMarker>()
             .context("error connecting to Breakpoints")?;
         Ok(Self { hub_report, breakpoints })
     }
@@ -42,7 +43,7 @@ impl Testing {
         Ok(())
     }
 
-    async fn register_breakpoints(&self, event_types: Vec<fhub::EventType>) -> Result<(), Error> {
+    async fn register_breakpoints(&self, event_types: Vec<fbreak::EventType>) -> Result<(), Error> {
         self.breakpoints
             .register(&mut event_types.into_iter())
             .await
@@ -64,7 +65,7 @@ impl Testing {
 
     async fn expect_breakpoint(
         &self,
-        event_type: fhub::EventType,
+        event_type: fbreak::EventType,
         components: Vec<&str>,
     ) -> Result<(), Error> {
         self.breakpoints
@@ -101,9 +102,9 @@ async fn main() -> Result<(), Error> {
     // Register breakpoints for relevant events
     testing
         .register_breakpoints(vec![
-            fhub::EventType::StopInstance,
-            fhub::EventType::PreDestroyInstance,
-            fhub::EventType::PostDestroyInstance,
+            fbreak::EventType::StopInstance,
+            fbreak::EventType::PreDestroyInstance,
+            fbreak::EventType::PostDestroyInstance,
         ])
         .await?;
 
@@ -156,7 +157,7 @@ async fn main() -> Result<(), Error> {
 
     // Wait for the dynamic child to begin deletion
     testing
-        .expect_breakpoint(fhub::EventType::PreDestroyInstance, vec!["coll:simple_instance:1"])
+        .expect_breakpoint(fbreak::EventType::PreDestroyInstance, vec!["coll:simple_instance:1"])
         .await?;
     testing.report_directory_contents("/hub/children").await?;
     testing.report_directory_contents("/hub/deleting").await?;
@@ -165,7 +166,7 @@ async fn main() -> Result<(), Error> {
 
     // Wait for the dynamic child to stop
     testing
-        .expect_breakpoint(fhub::EventType::StopInstance, vec!["coll:simple_instance:1"])
+        .expect_breakpoint(fbreak::EventType::StopInstance, vec!["coll:simple_instance:1"])
         .await?;
     testing.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
     testing.resume_breakpoint().await?;
@@ -173,7 +174,7 @@ async fn main() -> Result<(), Error> {
     // Wait for the dynamic child's static child to begin deletion
     testing
         .expect_breakpoint(
-            fhub::EventType::PreDestroyInstance,
+            fbreak::EventType::PreDestroyInstance,
             vec!["coll:simple_instance:1", "child:0"],
         )
         .await?;
@@ -187,7 +188,7 @@ async fn main() -> Result<(), Error> {
     // Wait for the dynamic child's static child to be destroyed
     testing
         .expect_breakpoint(
-            fhub::EventType::PostDestroyInstance,
+            fbreak::EventType::PostDestroyInstance,
             vec!["coll:simple_instance:1", "child:0"],
         )
         .await?;
@@ -196,7 +197,7 @@ async fn main() -> Result<(), Error> {
 
     // Wait for the dynamic child to be destroyed
     testing
-        .expect_breakpoint(fhub::EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
+        .expect_breakpoint(fbreak::EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
         .await?;
     testing.report_directory_contents("/hub/deleting").await?;
     testing.resume_breakpoint().await?;

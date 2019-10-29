@@ -4,13 +4,8 @@
 
 use {
     crate::{
-        directory_broker,
-        framework::RealmServiceHost,
-        klog,
-        model::testing::mocks::*,
-        model::testing::test_helpers::{self, DestroyHook},
-        model::*,
-        startup,
+        directory_broker, framework::RealmServiceHost, klog, model::testing::breakpoints::*,
+        model::testing::mocks::*, model::testing::test_helpers, model::*, startup,
     },
     cm_rust::*,
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
@@ -208,15 +203,11 @@ impl RoutingTest {
             Some(collection.to_string()),
             instance.clone(),
         ));
-        let (destroy_hook, _, mut destroy_recv) = DestroyHook::new(instance_moniker.clone());
-        self.model
-            .root_realm
-            .hooks
-            .install(vec![HookRegistration {
-                event_type: EventType::PostDestroyInstance,
-                callback: destroy_hook.clone(),
-            }])
-            .await;
+        let breakpoint_registry = Arc::new(BreakpointRegistry::new());
+        let breakpoint_receiver =
+            breakpoint_registry.register(vec![EventType::PostDestroyInstance]).await;
+        let breakpoint_hook = Arc::new(BreakpointHook::new(breakpoint_registry.clone()));
+        self.model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
         capability_util::call_destroy_child(
             component_resolved_url,
             self.namespaces.clone(),
@@ -224,10 +215,10 @@ impl RoutingTest {
             name,
         )
         .await;
-        destroy_recv
-            .next()
+        breakpoint_receiver
+            .wait_until(EventType::PostDestroyInstance, instance_moniker)
             .await
-            .expect(&format!("failed to receive destroy signal for {}", instance_moniker));
+            .resume();
     }
 
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.

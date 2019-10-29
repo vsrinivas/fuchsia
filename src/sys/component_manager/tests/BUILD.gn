@@ -37,6 +37,28 @@ rustc_library("test_utils") {
   ]
 }
 
+rustc_library("breakpoints_capability") {
+  name = "breakpoints_capability"
+  edition = "2018"
+  source_root = "breakpoints_capability.rs"
+  deps = [
+    "//garnet/lib/rust/cm_rust",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests/fidl:hub-rustc",
+    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:lazy_static",
+  ]
+}
+
 rustc_test("shutdown_integration_test_bin") {
   name = "shutdown_integration_test"
   edition = "2018"
