@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("console") {
+  sources = [
+    "command_line_options.cc",
+    "command_line_options.h",
+    "console.cc",
+    "console.h",
+  ]
+
+  public_deps = [
+    "//third_party/quickjs:qjs-lib",
+    "//third_party/quickjs:repl",
+    "//zircon/public/lib/cmdline",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "console_test.cc",
+  ]
+  deps = [
+    ":console",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/zx",
+  ]
+}

@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+test("shell_tests_bin") {
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//tools/shell/console:tests",
+  ]
+}
+
+unittest_package("shell_tests") {
+  deps = [
+    ":shell_tests_bin",
+  ]
+  tests = [
+    {
+      name = "shell_tests_bin"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "josh"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//tools/shell/console",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+# "josh" is Javascript Object SHell.  We can change the name later.
+package("josh") {
+  deps = [
+    ":bin",
+  ]
+  binaries = [
+    {
+      name = "josh"
+      shell = true
+    },
+  ]
+}
