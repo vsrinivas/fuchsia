@@ -15,7 +15,7 @@ TEST(PositionManagerTest, FirstSourceFrame) {
   mixer::PositionManager pos_mgr(src_chans, 2u, 0, 0);
 
   auto src_frames = 5;
-  int32_t frac_source_frames = src_frames << media::audio::kPtsFractionalBits;
+  int32_t frac_source_frames = src_frames * Mixer::FRAC_ONE;
 
   // Setting this to any non-nullptr value
   void* src_void = &src_frames;
@@ -41,13 +41,13 @@ TEST(PositionManagerTest, LastSourceFrame) {
   mixer::PositionManager pos_mgr(src_chans, 2u, 0, 0);
 
   constexpr auto src_frames = 5;
-  int32_t frac_source_frames = src_frames << media::audio::kPtsFractionalBits;
+  int32_t frac_source_frames = src_frames * Mixer::FRAC_ONE;
 
   float src[src_chans * src_frames];
   const auto src_void = static_cast<void*>(src);
 
-  auto src_offset = -130;
-  int32_t frac_src_off = src_offset << media::audio::kPtsFractionalBits;
+  constexpr auto src_offset = -130;
+  int32_t frac_src_off = src_offset * Mixer::FRAC_ONE;
 
   pos_mgr.SetSourceValues(src_void, frac_source_frames, &frac_src_off);
 
@@ -71,13 +71,13 @@ TEST(PositionManagerTest, CurrentSourceFrame) {
   mixer::PositionManager pos_mgr(src_chans, dest_chans, 0, Mixer::FRAC_ONE - 1);
 
   constexpr auto src_frames = 2;
-  constexpr int32_t frac_source_frames = src_frames << media::audio::kPtsFractionalBits;
+  constexpr int32_t frac_source_frames = src_frames * Mixer::FRAC_ONE;
 
   int16_t src[src_frames * src_chans];
   auto src_void = static_cast<void*>(src);
 
   auto src_offset = 1;
-  int32_t frac_src_off = src_offset << media::audio::kPtsFractionalBits;
+  int32_t frac_src_off = src_offset * Mixer::FRAC_ONE;
 
   pos_mgr.SetSourceValues(src_void, frac_source_frames, &frac_src_off);
 
@@ -95,7 +95,7 @@ TEST(PositionManagerTest, CurrentSourceFrame) {
   EXPECT_EQ(pos_mgr.CurrentSourceFrame<float>(), expected_source_frame_float);
 
   src_offset = 0;
-  frac_src_off = src_offset << media::audio::kPtsFractionalBits;
+  frac_src_off = src_offset * Mixer::FRAC_ONE;
   pos_mgr.SetSourceValues(src_void, frac_source_frames, &frac_src_off);
 
   expected_source_frame = src + (src_offset * src_chans);
@@ -163,9 +163,9 @@ TEST(PositionManagerTest, FrameCanBeMixed) {
   mixer::PositionManager pos_mgr(src_chans, dest_chans, Mixer::FRAC_ONE >> 1, Mixer::FRAC_ONE >> 1);
 
   int16_t src[2 * src_chans];
-  const auto frac_src_frames = 2 << media::audio::kPtsFractionalBits;
+  const auto frac_src_frames = 2 * Mixer::FRAC_ONE;
   const auto src_void = static_cast<void*>(src);
-  int32_t frac_src_off = (3 << (media::audio::kPtsFractionalBits - 1)) - 1;
+  int32_t frac_src_off = (3 * (Mixer::FRAC_ONE >> 1)) - 1;
   pos_mgr.SetSourceValues(src_void, frac_src_frames, &frac_src_off);
 
   float dest[2u * dest_chans];
@@ -184,9 +184,8 @@ TEST(PositionManagerTest, AdvanceFrame_Basic) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   uint8_t src[3];
-  int32_t frac_src_off = 1 << media::audio::kPtsFractionalBits;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  int32_t frac_src_off = Mixer::FRAC_ONE;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[3];
   auto dest_offset = 1u;
@@ -206,9 +205,8 @@ TEST(PositionManagerTest, AdvanceFrame_SourceReachesEnd) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   int32_t src[2];
-  int32_t frac_src_off = 1 << media::audio::kPtsFractionalBits;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 2 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  int32_t frac_src_off = Mixer::FRAC_ONE;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 2 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[3u];
   auto dest_offset = 1u;
@@ -228,9 +226,8 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   int16_t src[3];
-  int32_t frac_src_off = (2 << media::audio::kPtsFractionalBits) - 1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  int32_t frac_src_off = (2 * Mixer::FRAC_ONE) - 1;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[3];
   auto dest_offset = 1u;
@@ -245,25 +242,24 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
   EXPECT_FALSE(pos_mgr.SourceIsConsumed());
   EXPECT_EQ(pos_mgr.CurrentSourceFrame<int16_t>(), &src[1]);
-  EXPECT_EQ(pos_mgr.frac_src_offset(), (2 << media::audio::kPtsFractionalBits) - 1);
+  EXPECT_TRUE(pos_mgr.frac_src_offset() == (2 * Mixer::FRAC_ONE) - 1);
 
-  int32_t expected_frac_src_off = 3 << media::audio::kPtsFractionalBits;
+  int32_t expected_frac_src_off = 3 * Mixer::FRAC_ONE;
   auto received_frac_src_off = pos_mgr.AdvanceFrame();
   EXPECT_EQ(received_frac_src_off, expected_frac_src_off);
   EXPECT_EQ(pos_mgr.frac_src_offset(), received_frac_src_off);
 
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
-  EXPECT_EQ(received_frac_src_off, 3 << media::audio::kPtsFractionalBits);
+  EXPECT_TRUE(received_frac_src_off == 3 * Mixer::FRAC_ONE);
 }
 
 TEST(PositionManagerTest, AdvanceFrame_SourceModuloAlmostReachesEnd) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   float src[3];
-  int32_t frac_src_off = (2 << media::audio::kPtsFractionalBits) - 1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  int32_t frac_src_off = (2 * Mixer::FRAC_ONE) - 1;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[3];
   auto dest_offset = 1u;
@@ -277,7 +273,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloAlmostReachesEnd) {
 
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
   EXPECT_EQ(pos_mgr.CurrentSourceFrame<float>(), &src[1]);
-  EXPECT_EQ(pos_mgr.frac_src_offset(), (2 << media::audio::kPtsFractionalBits) - 1);
+  EXPECT_TRUE(pos_mgr.frac_src_offset() == (2 * Mixer::FRAC_ONE) - 1);
 
   int32_t expected_frac_src_off = frac_src_off + Mixer::FRAC_ONE;
   auto received_frac_src_off = pos_mgr.AdvanceFrame();
@@ -287,15 +283,15 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloAlmostReachesEnd) {
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
   EXPECT_FALSE(pos_mgr.SourceIsConsumed());
   EXPECT_EQ(pos_mgr.CurrentSourceFrame<float>(), &src[2]);
-  EXPECT_EQ(received_frac_src_off, (3 << media::audio::kPtsFractionalBits) - 1);
+  EXPECT_TRUE(received_frac_src_off == (3 * Mixer::FRAC_ONE) - 1);
 }
 
 TEST(PositionManagerTest, AdvanceFrame_DestReachesEnd) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   int16_t src[3];
-  const uint32_t frac_src_frames = fbl::count_of(src) << media::audio::kPtsFractionalBits;
-  int32_t frac_src_off = 1 << media::audio::kPtsFractionalBits;
+  const uint32_t frac_src_frames = fbl::count_of(src) * Mixer::FRAC_ONE;
+  int32_t frac_src_off = Mixer::FRAC_ONE;
   const int32_t expected_frac_src_off = frac_src_off + Mixer::FRAC_ONE;
 
   pos_mgr.SetSourceValues(static_cast<void*>(src), frac_src_frames, &frac_src_off);
@@ -321,9 +317,8 @@ TEST(PositionManagerTest, AdvanceFrame_TemplateNoModulo) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   int16_t src[3];
-  int32_t frac_src_off = (2 << media::audio::kPtsFractionalBits) - 1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  int32_t frac_src_off = (2 * Mixer::FRAC_ONE) - 1;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[3];
   auto dest_offset = 1u;
@@ -338,9 +333,9 @@ TEST(PositionManagerTest, AdvanceFrame_TemplateNoModulo) {
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
   EXPECT_FALSE(pos_mgr.SourceIsConsumed());
   EXPECT_EQ(pos_mgr.CurrentSourceFrame<int16_t>(), &src[1]);
-  EXPECT_EQ(pos_mgr.frac_src_offset(), (2 << media::audio::kPtsFractionalBits) - 1);
+  EXPECT_TRUE(pos_mgr.frac_src_offset() == (2 * Mixer::FRAC_ONE) - 1);
 
-  int32_t expected_frac_src_off = (3 << media::audio::kPtsFractionalBits) - 1;
+  int32_t expected_frac_src_off = (3 * Mixer::FRAC_ONE) - 1;
   auto received_frac_src_off = pos_mgr.AdvanceFrame<false>();
 
   EXPECT_EQ(received_frac_src_off, expected_frac_src_off);
@@ -354,9 +349,8 @@ TEST(PositionManagerTest, AdvanceFrame_NoRateValues) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   int16_t src[3];
-  int32_t frac_src_off = (2 << media::audio::kPtsFractionalBits) - 1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  int32_t frac_src_off = (2 * Mixer::FRAC_ONE) - 1;
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 3 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[3];
   auto dest_offset = 1u;
@@ -365,9 +359,9 @@ TEST(PositionManagerTest, AdvanceFrame_NoRateValues) {
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
   EXPECT_FALSE(pos_mgr.SourceIsConsumed());
   EXPECT_EQ(pos_mgr.CurrentSourceFrame<int16_t>(), &src[1]);
-  EXPECT_EQ(pos_mgr.frac_src_offset(), (2 << media::audio::kPtsFractionalBits) - 1);
+  EXPECT_TRUE(pos_mgr.frac_src_offset() == (2 * Mixer::FRAC_ONE) - 1);
 
-  int32_t expected_frac_src_off = (3 << media::audio::kPtsFractionalBits) - 1;
+  int32_t expected_frac_src_off = (3 * Mixer::FRAC_ONE) - 1;
   auto received_frac_src_off = pos_mgr.AdvanceFrame<false>();
   pos_mgr.UpdateOffsets();
 
@@ -382,7 +376,7 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   int16_t src[11];
-  const uint32_t frac_src_frames = fbl::count_of(src) << media::audio::kPtsFractionalBits;
+  const uint32_t frac_src_frames = fbl::count_of(src) * Mixer::FRAC_ONE;
   int32_t frac_src_off = -1;
   pos_mgr.SetSourceValues(static_cast<void*>(src), frac_src_frames, &frac_src_off);
 
@@ -399,7 +393,7 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
 
   pos_mgr.UpdateOffsets();
 
-  EXPECT_EQ(frac_src_off, (10 << media::audio::kPtsFractionalBits) - 6);
+  EXPECT_TRUE(frac_src_off == (10 * Mixer::FRAC_ONE) - 6);
   EXPECT_EQ(dest_offset, 5u);
   EXPECT_EQ(src_position_modulo, 1u);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
@@ -411,8 +405,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceBasic) {
 
   int16_t src[5];
   auto frac_src_off = 0;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 5 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 5 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[10];
   auto dest_offset = 0u;
@@ -426,7 +419,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceBasic) {
 
   pos_mgr.UpdateOffsets();
 
-  EXPECT_EQ(frac_src_off, 9 << (media::audio::kPtsFractionalBits - 1));
+  EXPECT_TRUE(frac_src_off == 9 * (Mixer::FRAC_ONE >> 1));
   EXPECT_EQ(dest_offset, 9u);
   EXPECT_EQ(src_position_modulo, 0u);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
@@ -438,8 +431,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
 
   int16_t src[10];
   int32_t frac_src_off = -1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[6];
   auto dest_offset = 0u;
@@ -455,7 +447,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
 
   pos_mgr.UpdateOffsets();
 
-  EXPECT_EQ(frac_src_off, 10 << media::audio::kPtsFractionalBits);
+  EXPECT_TRUE(frac_src_off == 10 * Mixer::FRAC_ONE);
   EXPECT_EQ(dest_offset, 5u);
   EXPECT_EQ(src_position_modulo, 0u);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
@@ -467,8 +459,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
 
   int16_t src[10];
   int32_t frac_src_off = -1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[6];
   auto dest_offset = 0u;
@@ -484,7 +475,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
 
   pos_mgr.UpdateOffsets();
 
-  EXPECT_EQ(frac_src_off, 10 << media::audio::kPtsFractionalBits);
+  EXPECT_TRUE(frac_src_off == 10 * Mixer::FRAC_ONE);
   EXPECT_EQ(dest_offset, 5u);
   EXPECT_EQ(src_position_modulo, 4u);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
@@ -496,8 +487,7 @@ TEST(PositionManagerTest, AdvanceToEnd_TemplateNoModulo) {
 
   int16_t src[10];
   int32_t frac_src_off = -1;
-  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 << media::audio::kPtsFractionalBits,
-                          &frac_src_off);
+  pos_mgr.SetSourceValues(static_cast<void*>(src), 10 * Mixer::FRAC_ONE, &frac_src_off);
 
   float dest[7];
   auto dest_offset = 0u;
@@ -514,7 +504,7 @@ TEST(PositionManagerTest, AdvanceToEnd_TemplateNoModulo) {
   src_position_modulo = 42u;
   pos_mgr.UpdateOffsets();
 
-  EXPECT_EQ(frac_src_off, (12 << media::audio::kPtsFractionalBits) - 1);
+  EXPECT_TRUE(frac_src_off == (12 * Mixer::FRAC_ONE) - 1);
   EXPECT_EQ(dest_offset, 6u);
   EXPECT_EQ(src_position_modulo, 20u);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
