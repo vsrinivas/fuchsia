@@ -30,8 +30,7 @@ use {
         lock::Mutex,
     },
     library_loader,
-    rand::Rng,
-    std::{collections::HashMap, iter, path::Path, sync::Arc},
+    std::{iter, path::Path, sync::Arc},
 };
 
 // TODO(fsamuel): We might want to store other things in this struct in the
@@ -95,11 +94,9 @@ impl From<ElfRunnerError> for RunnerError {
 }
 
 /// Runs components with ELF binaries.
-type ExecId = u32;
 pub struct ElfRunner {
     launcher_connector: ProcessLauncherConnector,
-    /// Each RuntimeDirectory is keyed by a unique execution Id.
-    instances: Mutex<HashMap<ExecId, RuntimeDirectory>>,
+    instances: Mutex<Vec<RuntimeDirectory>>,
 }
 
 fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
@@ -163,7 +160,7 @@ fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
 
 impl ElfRunner {
     pub fn new(launcher_connector: ProcessLauncherConnector) -> ElfRunner {
-        ElfRunner { launcher_connector, instances: Mutex::new(HashMap::new()) }
+        ElfRunner { launcher_connector, instances: Mutex::new(Vec::new()) }
     }
 
     async fn create_runtime_directory<'a>(
@@ -377,14 +374,8 @@ impl ElfRunner {
 
         if let Some(runtime_dir) = runtime_dir {
             self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
-            // TODO(fsamuel): This should be keyed off the to-be-implemented
-            // ComponentController interface, and not some random number.
-            let exec_id = {
-                let mut rand_num_generator = rand::thread_rng();
-                rand_num_generator.gen::<u32>()
-            };
             let mut instances = self.instances.lock().await;
-            instances.insert(exec_id, runtime_dir);
+            instances.push(runtime_dir);
         }
 
         Ok(())
