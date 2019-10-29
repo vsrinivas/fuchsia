@@ -26,59 +26,44 @@ import 'user_manager.dart';
 export 'package:lib.widgets/model.dart'
     show ScopedModel, ScopedModelDescendant, ModelFinder;
 
-/// Function signature for GetPresentationMode callback
-typedef GetPresentationModeCallback = void Function(PresentationMode mode);
-
 const Duration _kCobaltTimerTimeout = Duration(seconds: 20);
 const int _kSessionShellLoginTimeMetricId = 14;
 
-// This class is extends the Presentation protocol and implements and PresentationModeListener.
+// This class extends the Presentation protocol.
 // It delegates the methods to the Presentation received by the CommonBaseShellModel that owns it.
-class CommonBaseShellPresentationImpl extends Presentation
-    implements PresentationModeListener {
+class CommonBaseShellPresentationImpl extends Presentation {
   final CommonBaseShellModel _model;
 
   CommonBaseShellPresentationImpl(this._model);
 
   /// |Presentation|.
   @override
-  // ignore: avoid_positional_boolean_parameters
-  Future<void> enableClipping(bool enabled) async {
-    await _model.presentation.enableClipping(enabled);
-  }
+  // ignore: override_on_non_overriding_method, avoid_positional_boolean_parameters
+  Future<void> enableClipping(bool enabled) async {}
 
   @override
-  Future<void> useOrthographicView() async {
-    await _model.presentation.useOrthographicView();
-  }
+  // ignore: override_on_non_overriding_method
+  Future<void> useOrthographicView() async {}
 
   @override
-  Future<void> usePerspectiveView() async {
-    await _model.presentation.usePerspectiveView();
-  }
+  // ignore: override_on_non_overriding_method
+  Future<void> usePerspectiveView() async {}
 
   @override
-  Future<void> setRendererParams(List<RendererParam> params) async {
-    await _model.presentation.setRendererParams(params);
-  }
+  // ignore: override_on_non_overriding_method
+  Future<void> setRendererParams(List<RendererParam> params) async {}
 
   @override
-  Future<void> setDisplayUsage(DisplayUsage usage) async {
-    await _model.presentation.setDisplayUsage(usage);
-  }
+  // ignore: override_on_non_overriding_method
+  Future<void> setDisplayUsage(DisplayUsage usage) async {}
 
   @override
-  // ignore: avoid_positional_boolean_parameters
-  Future<void> setDisplayRotation(
-      double displayRotationDegrees, bool animate) async {
-    await _model.presentation
-        .setDisplayRotation(displayRotationDegrees, animate);
-  }
+  // ignore: override_on_non_overriding_method, avoid_positional_boolean_parameters
+  Future<void> setDisplayRotation(double displayRotationDegrees, bool animate) async {}
 
   @override
-  Future<void> setDisplaySizeInMm(num widthInMm, num heightInMm) async {
-    await _model.presentation.setDisplaySizeInMm(widthInMm, heightInMm);
-  }
+  // ignore: override_on_non_overriding_method
+  Future<void> setDisplaySizeInMm(num widthInMm, num heightInMm) async {}
 
   @override
   Future<void> captureKeyboardEventHack(input.KeyboardEvent eventToCapture,
@@ -94,40 +79,18 @@ class CommonBaseShellPresentationImpl extends Presentation
   }
 
   @override
-  Future<PresentationMode> getPresentationMode() async {
-    return await _model.presentation.getPresentationMode();
-  }
+  // ignore: override_on_non_overriding_method
+  Future<PresentationMode> getPresentationMode() async { return PresentationMode.closed; }
 
   @override
+  // ignore: override_on_non_overriding_method
   Future<void> setPresentationModeListener(
-      InterfaceHandle<PresentationModeListener> listener) async {
-    await _model.presentation.setPresentationModeListener(listener);
-  }
+      InterfaceHandle<PresentationModeListener> listener) async {}
 
   @override
   Future<void> registerMediaButtonsListener(
       InterfaceHandle<MediaButtonsListener> listener) async {
     await _model.presentation.registerMediaButtonsListener(listener);
-  }
-
-  /// |PresentationModeListener|.
-  @override
-  Future<void> onModeChanged() async {
-    PresentationMode mode = await getPresentationMode();
-    log.info('Presentation mode changed to: $mode');
-    switch (mode) {
-      case PresentationMode.tent:
-        await setDisplayRotation(180.0, true);
-        break;
-      case PresentationMode.tablet:
-        // TODO(sanjayc): Figure out up/down orientation.
-        await setDisplayRotation(90.0, true);
-        break;
-      case PresentationMode.laptop:
-      default:
-        await setDisplayRotation(0.0, true);
-        break;
-    }
   }
 }
 
@@ -157,8 +120,6 @@ class CommonBaseShellModel extends BaseShellModel
 
   final List<KeyboardCaptureListenerHackBinding> _keyBindings = [];
 
-  final PresentationModeListenerBinding _presentationModeListenerBinding =
-      PresentationModeListenerBinding();
   final PointerCaptureListenerHackBinding _pointerCaptureListenerBinding =
       PointerCaptureListenerHackBinding();
 
@@ -307,8 +268,6 @@ class CommonBaseShellModel extends BaseShellModel
 
     await presentation
         .capturePointerEventsHack(_pointerCaptureListenerBinding.wrap(this));
-    await presentation.setPresentationModeListener(
-        _presentationModeListenerBinding.wrap(_presentationImpl));
 
     _userManager = BaseShellUserManager(userProvider);
 
@@ -342,7 +301,6 @@ class CommonBaseShellModel extends BaseShellModel
     for (final binding in _keyBindings) {
       binding.close();
     }
-    _presentationModeListenerBinding.close();
     _netstackModel.dispose();
     super.onStop();
   }
