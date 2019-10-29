@@ -24,18 +24,14 @@
 #include <variant>
 #include <vector>
 
+#include <safemath/checked_math.h>
+
 #include "attributes.h"
 #include "error_reporter.h"
 #include "raw_ast.h"
 #include "type_shape.h"
 #include "types.h"
 #include "virtual_source_file.h"
-
-// TODO(FIDL-487, ZX-3415): Decide if all cases of NumericConstantValue::Convert() are safe.
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsign-compare"
-#endif
 
 namespace fidl {
 namespace flat {
@@ -166,7 +162,6 @@ struct ConstantValue {
 
 template <typename ValueType>
 struct NumericConstantValue final : ConstantValue {
-  // TODO(fxb/7811): Try replacing this with saturated_cast<> from safemath.
   static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
                 "NumericConstantValue can only be used with a numeric ValueType!");
 
@@ -216,91 +211,88 @@ struct NumericConstantValue final : ConstantValue {
 
   virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
     assert(out_value != nullptr);
+
+    auto checked_value = safemath::CheckedNumeric<ValueType>(value);
+
     switch (kind) {
       case Kind::kInt8: {
-        if (std::is_floating_point<ValueType>::value ||
-            value < std::numeric_limits<int8_t>::lowest() ||
-            value > std::numeric_limits<int8_t>::max()) {
+        int8_t casted_value;
+        if (!checked_value.template Cast<int8_t>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<int8_t>>(static_cast<int8_t>(value));
+        *out_value = std::make_unique<NumericConstantValue<int8_t>>(casted_value);
         return true;
       }
       case Kind::kInt16: {
-        if (std::is_floating_point<ValueType>::value ||
-            value < std::numeric_limits<int16_t>::lowest() ||
-            value > std::numeric_limits<int16_t>::max()) {
+        int16_t casted_value;
+        if (!checked_value.template Cast<int16_t>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<int16_t>>(static_cast<int16_t>(value));
+        *out_value = std::make_unique<NumericConstantValue<int16_t>>(casted_value);
         return true;
       }
       case Kind::kInt32: {
-        if (std::is_floating_point<ValueType>::value ||
-            value < std::numeric_limits<int32_t>::lowest() ||
-            value > std::numeric_limits<int32_t>::max()) {
+        int32_t casted_value;
+        if (!checked_value.template Cast<int32_t>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<int32_t>>(static_cast<int32_t>(value));
+        *out_value = std::make_unique<NumericConstantValue<int32_t>>(casted_value);
         return true;
       }
       case Kind::kInt64: {
-        if (std::is_floating_point<ValueType>::value ||
-            value < std::numeric_limits<int64_t>::lowest() ||
-            value > std::numeric_limits<int64_t>::max()) {
+        int64_t casted_value;
+        if (!checked_value.template Cast<int64_t>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<int64_t>>(static_cast<int64_t>(value));
+        *out_value = std::make_unique<NumericConstantValue<int64_t>>(casted_value);
         return true;
       }
       case Kind::kUint8: {
-        if (std::is_floating_point<ValueType>::value || value < 0 ||
-            value > std::numeric_limits<uint8_t>::max()) {
+        uint8_t casted_value;
+        if (!checked_value.template Cast<uint8_t>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<uint8_t>>(static_cast<uint8_t>(value));
+        *out_value = std::make_unique<NumericConstantValue<uint8_t>>(casted_value);
         return true;
       }
       case Kind::kUint16: {
-        if (std::is_floating_point<ValueType>::value || value < 0 ||
-            value > std::numeric_limits<uint16_t>::max()) {
+        uint16_t casted_value;
+        if (!checked_value.template Cast<uint16_t>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<uint16_t>>(static_cast<uint16_t>(value));
+        *out_value = std::make_unique<NumericConstantValue<uint16_t>>(casted_value);
         return true;
       }
       case Kind::kUint32: {
-        if (std::is_floating_point<ValueType>::value || value < 0 ||
-            value > std::numeric_limits<uint32_t>::max()) {
+        uint32_t casted_value;
+        if (!checked_value.template Cast<uint32_t>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<uint32_t>>(static_cast<uint32_t>(value));
+        *out_value = std::make_unique<NumericConstantValue<uint32_t>>(casted_value);
         return true;
       }
       case Kind::kUint64: {
-        if (std::is_floating_point<ValueType>::value || value < 0 ||
-            value > std::numeric_limits<uint64_t>::max()) {
+        uint64_t casted_value;
+        if (!checked_value.template Cast<uint64_t>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<uint64_t>>(static_cast<uint64_t>(value));
+        *out_value = std::make_unique<NumericConstantValue<uint64_t>>(casted_value);
         return true;
       }
       case Kind::kFloat32: {
-        if (!std::is_floating_point<ValueType>::value ||
-            static_cast<float>(value) < std::numeric_limits<float>::lowest() ||
-            static_cast<float>(value) > std::numeric_limits<float>::max()) {
+        float casted_value;
+        if (!checked_value.template Cast<float>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<float>>(static_cast<float>(value));
+        *out_value = std::make_unique<NumericConstantValue<float>>(casted_value);
         return true;
       }
       case Kind::kFloat64: {
-        if (!std::is_floating_point<ValueType>::value ||
-            static_cast<double>(value) < std::numeric_limits<double>::lowest() ||
-            static_cast<double>(value) > std::numeric_limits<double>::max()) {
+        double casted_value;
+        if (!checked_value.template Cast<double>().AssignIfValid(&casted_value)) {
           return false;
         }
-        *out_value = std::make_unique<NumericConstantValue<double>>(static_cast<double>(value));
+        *out_value = std::make_unique<NumericConstantValue<double>>(casted_value);
         return true;
       }
       case Kind::kString:
@@ -1640,10 +1632,5 @@ inline std::any Protocol::AcceptAny(VisitorAny* visitor) const { return visitor-
 
 }  // namespace flat
 }  // namespace fidl
-
-// TODO(FIDL-487, ZX-3415): Decide if all cases of NumericConstantValue::Convert() are safe.
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 #endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FLAT_AST_H_
