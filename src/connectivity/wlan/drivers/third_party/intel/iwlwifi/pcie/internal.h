@@ -561,7 +561,7 @@ struct iwl_trans_pcie {
 
   bool ucode_write_complete;
   sync_completion_t ucode_write_waitq;
-  sync_condition_t wait_command_queue;
+  sync_completion_t wait_command_queue;
 #if 0   // NEEDS_PORTING
     wait_queue_head_t d0i3_waitq;
 #endif  // NEEDS_PORTING
