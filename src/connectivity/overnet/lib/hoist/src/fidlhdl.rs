@@ -76,6 +76,7 @@ pub extern "C" fn fidlhdl_close(hdl: u32) {
     if hdl == INVALID_HANDLE {
         return;
     }
+    log::info!("close: {}", hdl);
     let wakeup = match HANDLES.lock().remove(hdl as usize) {
         FidlHandle::LeftChannel(cs, peer) => {
             let st = &mut *cs.lock();
@@ -148,7 +149,7 @@ pub extern "C" fn fidlhdl_channel_create() -> FidlHdlPairCreateResult {
     } else {
         unreachable!();
     }
-    FidlHdlPairCreateResult { left, right }
+    FidlHdlPairCreateResult::new(left, right)
 }
 
 fn complete_channel_read(
@@ -360,7 +361,7 @@ pub unsafe extern "C" fn fidlhdl_socket_create(sock_opts: SocketOpts) -> FidlHdl
     } else {
         unreachable!();
     }
-    FidlHdlPairCreateResult { left, right }
+    FidlHdlPairCreateResult::new(left, right)
 }
 
 /// Signal that a read is required

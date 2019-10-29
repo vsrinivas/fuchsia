@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
     futures::prelude::*,
     overnet_core::{
-        LinkId, Node, NodeId, NodeRuntime, RouterOptions, RouterTime, SendHandle, StreamDeframer,
+        LinkId, Node, NodeId, NodeOptions, NodeRuntime, RouterTime, SendHandle, StreamDeframer,
         StreamFramer,
     },
     parking_lot::Mutex,
@@ -113,6 +113,8 @@ fn spawn_local(future: impl Future<Output = ()> + 'static) {
 impl NodeRuntime for OvernetRuntime {
     type Time = Time;
     type LinkId = ();
+    const IMPLEMENTATION: fidl_fuchsia_overnet_protocol::Implementation =
+        fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate;
 
     fn handle_type(hdl: &Handle) -> Result<SendHandle, Error> {
         Ok(match hdl.handle_type() {
@@ -344,15 +346,18 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
             })),
             router_link_id: LinkId::invalid(),
         },
-        RouterOptions::new()
+        NodeOptions::new()
             .set_node_id(node_id)
             .set_quic_server_key_file(hard_coded_server_key()?)
             .set_quic_server_cert_file(hard_coded_server_cert()?),
-    );
+    )?;
     let ascendd_link_id = node.new_link(ascendd_node_id.into(), ())?;
     node.with_runtime_mut(|rt| rt.router_link_id = ascendd_link_id);
 
     spawn_local(process_incoming(node.clone(), rx_frames, ascendd_link_id));
+
+    // Tooling behaves much more as expected if we await a connection to ascendd
+    node.clone().require_connection(ascendd_node_id.into()).await?;
 
     Ok(node)
 }

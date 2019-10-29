@@ -7,7 +7,7 @@ use fidl::Handle;
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
 use futures::prelude::*;
 use overnet_core::{
-    LinkId, Node, NodeRuntime, RouterOptions, RouterTime, SendHandle, StreamDeframer, StreamFramer,
+    LinkId, Node, NodeOptions, NodeRuntime, RouterTime, SendHandle, StreamDeframer, StreamFramer,
 };
 use salt_slab::{SaltSlab, SaltedID};
 use std::cell::RefCell;
@@ -62,6 +62,8 @@ impl RouterTime for Time {
 impl NodeRuntime for AscenddRuntime {
     type Time = Time;
     type LinkId = PhysLinkId;
+    const IMPLEMENTATION: fidl_fuchsia_overnet_protocol::Implementation =
+        fidl_fuchsia_overnet_protocol::Implementation::Ascendd;
 
     fn handle_type(_hdl: &Handle) -> Result<SendHandle, Error> {
         unimplemented!();
@@ -141,10 +143,11 @@ impl App {
         App {
             node: Node::new(
                 AscenddRuntime,
-                RouterOptions::new()
+                NodeOptions::new()
                     .set_quic_server_key_file(hoist::hard_coded_server_key().unwrap())
                     .set_quic_server_cert_file(hoist::hard_coded_server_cert().unwrap()),
-            ),
+            )
+            .unwrap(),
             unix_links: SaltSlab::new(),
         }
     }

@@ -8,7 +8,7 @@ use failure::Error;
 use rand::Rng;
 
 /// Labels a node with a mesh-unique address
-#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug, Hash)]
 pub struct NodeId(pub u64);
 
 impl From<u64> for NodeId {

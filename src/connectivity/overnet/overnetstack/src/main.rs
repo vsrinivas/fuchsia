@@ -19,7 +19,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::future::{abortable, AbortHandle};
 use futures::prelude::*;
-use overnet_core::{LinkId, Node, NodeId, NodeRuntime, RouterOptions, RouterTime, SendHandle};
+use overnet_core::{LinkId, Node, NodeId, NodeOptions, NodeRuntime, RouterTime, SendHandle};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::net::{SocketAddr, SocketAddrV6};
@@ -54,6 +54,8 @@ struct AppRuntime;
 impl NodeRuntime for AppRuntime {
     type Time = Time;
     type LinkId = AppLinkId;
+    const IMPLEMENTATION: fidl_fuchsia_overnet_protocol::Implementation =
+        fidl_fuchsia_overnet_protocol::Implementation::OvernetStack;
 
     fn handle_type(handle: &zx::Handle) -> Result<SendHandle, Error> {
         match handle.basic_info()?.object_type {
@@ -170,10 +172,11 @@ impl App {
     fn new() -> App {
         let node = Node::new(
             AppRuntime,
-            RouterOptions::new()
+            NodeOptions::new()
                 .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()))
                 .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string())),
-        );
+        )
+        .unwrap();
         App { node_id: node.id(), node, udp_link_ids: HashMap::new(), udp_socket: None }
     }
 }

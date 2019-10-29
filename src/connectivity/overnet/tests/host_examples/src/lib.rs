@@ -118,6 +118,13 @@ mod tests {
             self.daemons.push(Daemon::new_from_child(name, child));
             (input, output)
         }
+
+        fn onet_client(&self, cmd: &str) -> Command {
+            let mut c = self.labelled_cmd("onet", cmd);
+            c.arg(cmd);
+            c.arg("--exclude_self");
+            c
+        }
     }
 
     fn bridge(a: &mut Ascendd, b: &mut Ascendd) {
@@ -139,6 +146,7 @@ mod tests {
         let mut ascendd = Ascendd::new();
         ascendd.add_echo_server();
         run_client(ascendd.echo_client());
+        run_client(ascendd.onet_client("full-map"));
     }
 
     #[test]
@@ -148,6 +156,7 @@ mod tests {
         bridge(&mut ascendd1, &mut ascendd2);
         ascendd1.add_echo_server();
         run_client(ascendd1.echo_client());
+        run_client(ascendd1.onet_client("full-map"));
     }
 
     #[test]
@@ -155,5 +164,6 @@ mod tests {
         let mut ascendd = Ascendd::new();
         ascendd.add_interface_passing_server();
         run_client(ascendd.interface_passing_client());
+        run_client(ascendd.onet_client("full-map"));
     }
 }

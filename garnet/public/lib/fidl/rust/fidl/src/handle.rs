@@ -80,12 +80,36 @@ pub mod non_fuchsia_handles {
     }
 
     /// Return type for fidlhdl_channel_create
+    // Upon success, left=first handle, right=second handle
+    // Upon failure, left=INVALID_HANDLE, right=reason
     #[repr(C)]
     pub struct FidlHdlPairCreateResult {
-        /// "Left" channel handle
-        pub left: u32,
-        /// "Right" channel handle
-        pub right: u32,
+        left: u32,
+        right: u32,
+    }
+
+    impl FidlHdlPairCreateResult {
+        unsafe fn into_handles<T: HandleBased>(&self) -> Result<(T, T), zx_status::Status> {
+            match self.left {
+                INVALID_HANDLE => Err(zx_status::Status::from_raw(self.right as i32)),
+                _ => Ok((
+                    T::from_handle(Handle::from_raw(self.left)),
+                    T::from_handle(Handle::from_raw(self.right)),
+                )),
+            }
+        }
+
+        /// Create a new (successful) result
+        pub fn new(left: u32, right: u32) -> Self {
+            assert_ne!(left, INVALID_HANDLE);
+            assert_ne!(right, INVALID_HANDLE);
+            Self { left, right }
+        }
+
+        /// Create a new (failed) result
+        pub fn new_err(status: zx_status::Status) -> Self {
+            Self { left: INVALID_HANDLE, right: status.into_raw() as u32 }
+        }
     }
 
     /// The type of a handle
@@ -170,6 +194,7 @@ pub mod non_fuchsia_handles {
     }
 
     fn get_or_create_arc_waker(hdl: u32) -> Arc<HdlWaker> {
+        assert_ne!(hdl, INVALID_HANDLE);
         let mut wakers = HANDLE_WAKEUPS.lock();
         while wakers.len() <= (hdl as usize) {
             let index = wakers.len();
@@ -336,8 +361,7 @@ pub mod non_fuchsia_handles {
         /// Create a channel, resulting in a pair of `Channel` objects representing both
         /// sides of the channel. Messages written into one maybe read from the opposite.
         pub fn create() -> Result<(Channel, Channel), zx_status::Status> {
-            let cs = unsafe { fidlhdl_channel_create() };
-            Ok((Channel(cs.left), Channel(cs.right)))
+            unsafe { fidlhdl_channel_create().into_handles() }
         }
 
         /// Read a message from a channel.
@@ -521,8 +545,7 @@ pub mod non_fuchsia_handles {
     impl Socket {
         /// Create a pair of sockets
         pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), zx_status::Status> {
-            let cs = unsafe { fidlhdl_socket_create(sock_opts) };
-            Ok((Socket(cs.left), Socket(cs.right)))
+            unsafe { fidlhdl_socket_create(sock_opts).into_handles() }
         }
 
         /// Write the given bytes into the socket.

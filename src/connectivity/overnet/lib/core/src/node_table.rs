@@ -109,7 +109,7 @@ impl NodeTable {
     pub fn new(root_node: NodeId) -> NodeTable {
         let mut table =
             NodeTable { root_node, nodes: BTreeMap::new(), version_tracker: VersionTracker::new() };
-        table.get_or_create_node_mut(root_node);
+        table.get_or_create_node_mut(root_node).established = true;
         table
     }
 

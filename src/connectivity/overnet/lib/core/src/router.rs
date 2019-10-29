@@ -18,21 +18,27 @@
 // that node (said link may be a third node that will be requested to forward datagrams
 // on our behalf).
 
-use crate::coding::decode_fidl;
-use crate::labels::{NodeId, NodeLinkId, RoutingLabel, MAX_ROUTING_LABEL_LENGTH};
-use crate::node_table::{LinkDescription, NodeDescription};
-use crate::ping_tracker::{PingTracker, PingTrackerResult, PongTracker};
+use crate::{
+    coding::decode_fidl,
+    labels::{NodeId, NodeLinkId, RoutingLabel, MAX_ROUTING_LABEL_LENGTH},
+    node_table::{LinkDescription, NodeDescription},
+    ping_tracker::{PingTracker, PingTrackerResult, PongTracker},
+};
 use failure::{Error, ResultExt};
 use fidl_fuchsia_overnet_protocol::{
-    ChannelHandle, ConnectToService, ConnectToServiceOptions, LinkMetrics, LinkStatus,
-    PeerDescription, PeerMessage, PeerReply, UpdateLinkStatus, ZirconChannelMessage, ZirconHandle,
+    ChannelHandle, ConnectToService, ConnectToServiceOptions, LinkDiagnosticInfo, LinkMetrics,
+    LinkStatus, PeerConnectionDiagnosticInfo, PeerDescription, PeerMessage, PeerReply,
+    UpdateLinkStatus, ZirconChannelMessage, ZirconHandle,
 };
 use rand::Rng;
 use salt_slab::{SaltSlab, SaltedID};
-use std::collections::{btree_map, BTreeMap, BTreeSet, BinaryHeap};
-use std::fmt::Debug;
-use std::path::Path;
-use std::time::Instant;
+use std::{
+    collections::{btree_map, BTreeMap, BTreeSet, BinaryHeap},
+    convert::TryInto,
+    fmt::Debug,
+    path::Path,
+    time::Instant,
+};
 
 /// Designates one peer in the router
 pub type PeerId = SaltedID;
@@ -134,6 +140,17 @@ struct Peer {
     current_link: Option<LinkId>,
     /// State of link status updates for this peer (only for client)
     link_status_update_state: Option<PeerLinkStatusUpdateState>,
+    // Stats, per PeerConnectionDiagnosticsInfo
+    messages_sent: u64,
+    bytes_sent: u64,
+    connect_to_service_sends: u64,
+    connect_to_service_send_bytes: u64,
+    update_node_description_sends: u64,
+    update_node_description_send_bytes: u64,
+    update_link_status_sends: u64,
+    update_link_status_send_bytes: u64,
+    update_link_status_ack_sends: u64,
+    update_link_status_ack_send_bytes: u64,
 }
 
 /// Was a given stream index initiated by this end of a quic connection?
@@ -392,6 +409,12 @@ struct Link<LinkData: Copy + Debug> {
     link_data: LinkData,
     /// Timeout generation for ping_tracker
     timeout_generation: u64,
+    sent_packets: u64,
+    sent_bytes: u64,
+    received_packets: u64,
+    received_bytes: u64,
+    pings_sent: u64,
+    packets_forwarded: u64,
 }
 
 impl<LinkData: Copy + Debug> Link<LinkData> {
@@ -534,7 +557,15 @@ impl<Time: RouterTime> Endpoints<Time> {
                 if handles.len() > 0 {
                     failure::bail!("Expected no handles");
                 }
-                self.queue_send_raw_datagram(connection_stream_id, Some(&mut bytes), false)
+                self.queue_send_raw_datagram(
+                    connection_stream_id,
+                    Some(&mut bytes),
+                    false,
+                    |peer, messages, bytes| {
+                        peer.connect_to_service_sends += messages;
+                        peer.connect_to_service_send_bytes += bytes;
+                    },
+                )
             },
         );
         match err {
@@ -561,7 +592,15 @@ impl<Time: RouterTime> Endpoints<Time> {
             .collect();
         for stream_id in stream_ids {
             let mut desc = self.node_desc_packet.clone();
-            if let Err(e) = self.queue_send_raw_datagram(stream_id, Some(&mut desc), false) {
+            if let Err(e) = self.queue_send_raw_datagram(
+                stream_id,
+                Some(&mut desc),
+                false,
+                |peer, messages, bytes| {
+                    peer.update_node_description_sends += messages;
+                    peer.update_node_description_send_bytes += bytes;
+                },
+            ) {
                 log::warn!("Failed to send datagram: {:?}", e);
             }
         }
@@ -574,6 +613,7 @@ impl<Time: RouterTime> Endpoints<Time> {
         stream_id: StreamId,
         bytes: Vec<u8>,
         handles: Vec<SendHandle>,
+        update_stats: impl FnOnce(&mut Peer, u64, u64),
     ) -> Result<Vec<StreamId>, Error> {
         let stream = self
             .streams
@@ -611,7 +651,7 @@ impl<Time: RouterTime> Endpoints<Time> {
                 if handles.len() != 0 {
                     failure::bail!("Unexpected handles in encoding");
                 }
-                self.queue_send_raw_datagram(stream_id, Some(bytes), false)
+                self.queue_send_raw_datagram(stream_id, Some(bytes), false, update_stats)
             },
         )?;
         Ok(stream_ids)
@@ -623,6 +663,7 @@ impl<Time: RouterTime> Endpoints<Time> {
         stream_id: StreamId,
         frame: Option<&mut [u8]>,
         fin: bool,
+        update_stats: impl FnOnce(&mut Peer, u64, u64),
     ) -> Result<(), Error> {
         log::trace!(
             "{:?} queue_send: stream_id={:?} frame={:?} fin={:?}",
@@ -659,11 +700,13 @@ impl<Time: RouterTime> Endpoints<Time> {
                 .0
                 .stream_send(stream.id, frame, fin)
                 .with_context(|_| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
+            update_stats(peer, 1u64, (header.len() + frame.len()) as u64);
         } else {
             peer.conn
                 .0
                 .stream_send(stream.id, &mut [], fin)
                 .with_context(|_| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
+            update_stats(peer, 0u64, 0u64);
         }
         if !peer.pending_writes {
             log::trace!("Mark writable: {:?}", stream.peer_id);
@@ -782,6 +825,16 @@ impl<Time: RouterTime> Endpoints<Time> {
                         streams,
                         connection_stream_id,
                         link_status_update_state: None,
+                        messages_sent: 0,
+                        bytes_sent: 0,
+                        connect_to_service_sends: 0,
+                        connect_to_service_send_bytes: 0,
+                        update_node_description_sends: 0,
+                        update_node_description_send_bytes: 0,
+                        update_link_status_sends: 0,
+                        update_link_status_send_bytes: 0,
+                        update_link_status_ack_sends: 0,
+                        update_link_status_ack_send_bytes: 0,
                     });
                     self.streams.get_mut(connection_stream_id).unwrap().peer_id = peer_id;
                     self.node_to_server_peer.insert(routing_label.src, peer_id);
@@ -1002,6 +1055,16 @@ impl<Time: RouterTime> Endpoints<Time> {
             streams,
             connection_stream_id,
             link_status_update_state: Some(PeerLinkStatusUpdateState::Sent),
+            messages_sent: 0,
+            bytes_sent: 0,
+            connect_to_service_sends: 0,
+            connect_to_service_send_bytes: 0,
+            update_node_description_sends: 0,
+            update_node_description_send_bytes: 0,
+            update_link_status_sends: 0,
+            update_link_status_send_bytes: 0,
+            update_link_status_ack_sends: 0,
+            update_link_status_ack_send_bytes: 0,
         });
         self.streams.get_mut(connection_stream_id).unwrap().peer_id = peer_id;
         self.node_to_client_peer.insert(node_id, peer_id);
@@ -1343,6 +1406,8 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
             link.id,
             link.link_data
         );
+        link.received_packets += 1;
+        link.received_bytes += packet.len() as u64;
         let (routing_label, packet_length) = RoutingLabel::decode(link.peer, self.node_id, packet)?;
         log::trace!(
             "{:?} routing_label={:?} packet_length={} src_len={}",
@@ -1404,6 +1469,9 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
         if let Some(id) = link.pong_tracker.maybe_send_pong() {
             let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), false);
             self.queues.handle_ping_tracker_result(link_id, link, r);
+            if ping.is_some() {
+                link.pings_sent += 1;
+            }
             let len = RoutingLabel {
                 src,
                 dst,
@@ -1413,6 +1481,8 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
                 debug_token: crate::labels::new_debug_token(),
             }
             .encode_for_link(src, dst, &mut buf[..])?;
+            link.sent_packets += 1;
+            link.sent_bytes += len as u64;
             send_to(&link.link_data, &mut buf[..len])?;
         }
         Ok(())
@@ -1446,6 +1516,9 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
                 debug_token: crate::labels::new_debug_token(),
             }
             .encode_for_link(src, dst, &mut buf[..])?;
+            link.sent_packets += 1;
+            link.sent_bytes += len as u64;
+            link.pings_sent += 1;
             send_to(&link.link_data, &mut buf[..len])?;
         }
         Ok(())
@@ -1579,6 +1652,12 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             ping_tracker,
             pong_tracker: PongTracker::new(),
             timeout_generation: 1,
+            sent_packets: 0,
+            sent_bytes: 0,
+            received_bytes: 0,
+            received_packets: 0,
+            pings_sent: 0,
+            packets_forwarded: 0,
         });
         log::trace!(
             "new_link: id={:?} peer={:?} node_link_id={:?} link_data={:?}",
@@ -1657,7 +1736,15 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         bytes: Vec<u8>,
         handles: Vec<SendHandle>,
     ) -> Result<Vec<StreamId>, Error> {
-        self.endpoints.queue_send_channel_message(stream_id, bytes, handles)
+        self.endpoints.queue_send_channel_message(
+            stream_id,
+            bytes,
+            handles,
+            |peer, messages, bytes| {
+                peer.messages_sent += messages;
+                peer.bytes_sent += bytes;
+            },
+        )
     }
 
     /// Send a datagram on a stream.
@@ -1667,7 +1754,10 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         frame: Option<&mut [u8]>,
         fin: bool,
     ) -> Result<(), Error> {
-        self.endpoints.queue_send_raw_datagram(stream_id, frame, fin)
+        self.endpoints.queue_send_raw_datagram(stream_id, frame, fin, |peer, messages, bytes| {
+            peer.messages_sent += messages;
+            peer.bytes_sent += bytes;
+        })
     }
 
     /// Receive a packet from some link.
@@ -1727,12 +1817,18 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         for forward in peer.forward.drain(..) {
             let mut packet = forward.1;
             forward.0.encode_for_link(src_node_id, link_dst_id, &mut packet)?;
+            link.sent_packets += 1;
+            link.sent_bytes += packet.len() as u64;
+            link.packets_forwarded += 1;
             send_to(&link.link_data, packet.as_mut_slice())?;
         }
         loop {
             match peer.conn.0.send(&mut buf[..buf_len - MAX_ROUTING_LABEL_LENGTH]) {
                 Ok(n) => {
                     let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), false);
+                    if ping.is_some() {
+                        link.pings_sent += 1;
+                    }
                     self.links.queues.handle_ping_tracker_result(current_link, link, r);
                     let rl = RoutingLabel {
                         src: src_node_id,
@@ -1764,7 +1860,10 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                         link.id,
                         link.link_data
                     );
-                    send_to(&link.link_data, &mut buf[..n + suffix_len])?;
+                    let packet_len = n + suffix_len;
+                    link.sent_packets += 1;
+                    link.sent_bytes += packet_len as u64;
+                    send_to(&link.link_data, &mut buf[..packet_len])?;
                 }
                 Err(quiche::Error::Done) => {
                     if peer.establishing && peer.conn.0.is_established() {
@@ -1818,10 +1917,10 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
 
         if self.links.queues.send_link_updates {
             self.links.queues.send_link_updates = false;
-            for (peer_id, peer) in self.endpoints.peers.iter_mut() {
+            for (_peer_id, peer) in self.endpoints.peers.iter_mut() {
                 let new_status = match peer.link_status_update_state {
                     Some(PeerLinkStatusUpdateState::Unscheduled) => {
-                        self.endpoints.link_status_updates.push(peer_id);
+                        self.endpoints.link_status_updates.push(peer.connection_stream_id);
                         Some(PeerLinkStatusUpdateState::Sent)
                     }
                     Some(PeerLinkStatusUpdateState::Sent) => {
@@ -1837,10 +1936,14 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         }
 
         while let Some(stream_id) = self.endpoints.need_to_send_node_description_clients.pop() {
-            if let Err(e) = self.queue_send_raw_datagram(
+            if let Err(e) = self.endpoints.queue_send_raw_datagram(
                 stream_id,
                 Some(&mut self.endpoints.node_desc_packet.clone()),
                 false,
+                |peer, messages, bytes| {
+                    peer.update_node_description_sends += messages;
+                    peer.update_node_description_send_bytes += bytes;
+                },
             ) {
                 log::warn!("Failed to send initial update to {:?}: {:?}", stream_id, e);
             }
@@ -1848,10 +1951,14 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         }
 
         while let Some(stream_id) = self.endpoints.ack_link_status_updates.pop() {
-            if let Err(e) = self.queue_send_raw_datagram(
+            if let Err(e) = self.endpoints.queue_send_raw_datagram(
                 stream_id,
                 Some(&mut self.ack_link_status_frame.clone()),
                 false,
+                |peer, messages, bytes| {
+                    peer.update_link_status_ack_sends += messages;
+                    peer.update_link_status_ack_send_bytes += bytes;
+                },
             ) {
                 log::warn!("Failed to ack link state update from {:?}: {:?}", stream_id, e);
             }
@@ -1872,9 +1979,15 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                     return;
                 }
                 while let Some(stream_id) = self.endpoints.link_status_updates.pop() {
-                    if let Err(e) =
-                        self.queue_send_raw_datagram(stream_id, Some(&mut bytes.clone()), false)
-                    {
+                    if let Err(e) = self.endpoints.queue_send_raw_datagram(
+                        stream_id,
+                        Some(&mut bytes.clone()),
+                        false,
+                        |peer, messages, bytes| {
+                            peer.update_link_status_sends += messages;
+                            peer.update_link_status_send_bytes += bytes;
+                        },
+                    ) {
                         log::warn!("Failed to send link status update to {:?}: {:?}", stream_id, e);
                     }
                 }
@@ -1908,6 +2021,66 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     /// Calculate when the next timeout should be triggered.
     pub fn next_timeout(&mut self) -> Option<Time> {
         self.endpoints.next_timeout()
+    }
+
+    /// Diagnostic information for links
+    pub fn link_diagnostics(&self) -> Vec<LinkDiagnosticInfo> {
+        self.links
+            .links
+            .iter()
+            .map(|(_, link)| LinkDiagnosticInfo {
+                source: Some(self.node_id.into()),
+                destination: Some(link.peer.into()),
+                source_local_id: Some(link.id.0),
+                sent_packets: Some(link.sent_packets),
+                received_packets: Some(link.received_packets),
+                sent_bytes: Some(link.sent_bytes),
+                received_bytes: Some(link.received_bytes),
+                pings_sent: Some(link.pings_sent),
+                packets_forwarded: Some(link.packets_forwarded),
+                round_trip_time_microseconds: link
+                    .ping_tracker
+                    .round_trip_time()
+                    .map(|rtt| rtt.as_micros().try_into().unwrap_or(std::u64::MAX)),
+            })
+            .collect()
+    }
+
+    /// Diagnostic information for peer connections
+    pub fn peer_diagnostics(&self) -> Vec<PeerConnectionDiagnosticInfo> {
+        self.endpoints
+            .peers
+            .iter()
+            .map(|(_, peer)| {
+                let conn = &peer.conn.0;
+                let stats = conn.stats();
+                PeerConnectionDiagnosticInfo {
+                    source: Some(self.node_id.into()),
+                    destination: Some(peer.node_id.into()),
+                    is_client: Some(peer.is_client),
+                    is_established: Some(conn.is_established()),
+                    received_packets: Some(stats.recv as u64),
+                    sent_packets: Some(stats.sent as u64),
+                    lost_packets: Some(stats.lost as u64),
+                    messages_sent: Some(peer.messages_sent),
+                    bytes_sent: Some(peer.bytes_sent),
+                    connect_to_service_sends: Some(peer.connect_to_service_sends),
+                    connect_to_service_send_bytes: Some(peer.connect_to_service_send_bytes),
+                    update_node_description_sends: Some(peer.update_node_description_sends),
+                    update_node_description_send_bytes: Some(
+                        peer.update_node_description_send_bytes,
+                    ),
+                    update_link_status_sends: Some(peer.update_link_status_sends),
+                    update_link_status_send_bytes: Some(peer.update_link_status_send_bytes),
+                    update_link_status_ack_sends: Some(peer.update_link_status_ack_sends),
+                    update_link_status_ack_send_bytes: Some(peer.update_link_status_ack_send_bytes),
+                    round_trip_time_microseconds: Some(
+                        stats.rtt.as_micros().try_into().unwrap_or(std::u64::MAX),
+                    ),
+                    congestion_window_bytes: Some(stats.cwnd as u64),
+                }
+            })
+            .collect()
     }
 }
 

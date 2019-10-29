@@ -13,6 +13,7 @@ rustc_library("core") {
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-status",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/salt_slab",

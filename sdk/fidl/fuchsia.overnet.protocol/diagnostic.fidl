@@ -1,0 +1,130 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.overnet.protocol;
+
+/// Diagnostic data on a single peer connection.
+table PeerConnectionDiagnosticInfo {
+    /// Source address.
+    1: NodeId source;
+    /// Destination address.
+    2: NodeId destination;
+    /// Whether this connection is a client.
+    3: bool is_client;
+    /// True if the connection established and ready to send traffic.
+    4: bool is_established;
+    /// Number of packets received.
+    5: uint64 received_packets;
+    /// Number of packets sent.
+    6: uint64 sent_packets;
+    /// Number of packets lost.
+    7: uint64 lost_packets;
+    /// Round trip time for the connection in microseconds.
+    8: uint64 round_trip_time_microseconds;
+    /// Current congestion window in bytes.
+    9: uint64 congestion_window_bytes;
+    /// Number of overnet messages sent.
+    10: uint64 messages_sent;
+    /// Number of bytes sent due to overnet messages.
+    11: uint64 bytes_sent;
+    /// Number of connect to service requests.
+    12: uint64 connect_to_service_sends;
+    /// Number of bytes sent due to connect to service requests.
+    13: uint64 connect_to_service_send_bytes;
+    /// Number of node description updates.
+    14: uint64 update_node_description_sends;
+    /// Number of bytes sent due to node description updates.
+    15: uint64 update_node_description_send_bytes;
+    /// Number of link status updates.
+    16: uint64 update_link_status_sends;
+    /// Number of bytes sent due to link status updates.
+    17: uint64 update_link_status_send_bytes;
+    /// Number of link status update acknowledgements sent.
+    18: uint64 update_link_status_ack_sends;
+    /// Number of bytes sent due to link status update acknowledgements.
+    19: uint64 update_link_status_ack_send_bytes;
+};
+
+/// Diagnostic data on a single link.
+table LinkDiagnosticInfo {
+    /// Source address.
+    1: NodeId source;
+    /// Destination address.
+    2: NodeId destination;
+    /// Source identifier for this link.
+    3: uint64 source_local_id;
+    /// Number of packets received.
+    4: uint64 received_packets;
+    /// Number of packets sent.
+    5: uint64 sent_packets;
+    /// Number of bytes received.
+    6: uint64 received_bytes;
+    /// Number of bytes sent.
+    7: uint64 sent_bytes;
+    /// Round trip time for the connection in microseconds.
+    8: uint64 round_trip_time_microseconds;
+    /// Number of ping requests sent.
+    9: uint64 pings_sent;
+    /// Number of packets forwarded.
+    10: uint64 packets_forwarded;
+};
+
+/// The operating system running a node.
+enum OperatingSystem {
+    /// Fuchsia
+    FUCHSIA = 0;
+    /// Linux
+    LINUX = 1;
+    /// MacOS
+    MAC = 2;
+};
+
+/// The implementation of a node that's running.
+enum Implementation {
+    /// Some unit test... shouldn't be seen in the wild.
+    UNIT_TEST = 0;
+    /// The overnetstack daemon on Fuchsia.
+    OVERNET_STACK = 1;
+    /// The non-Fuchsia routing daemon Ascendd.
+    ASCENDD = 2;
+    /// The `hoist` Rust crate embedding Overnet.
+    HOIST_RUST_CRATE = 3;
+};
+
+/// Diagnostic data on a single node.
+table NodeDescription {
+    /// A string saying something about what operating system this node is running on
+    /// Currently used: 'fuchsia', 'linux', 'mac'
+    1: OperatingSystem operating_system;
+    /// A string saying something about the runtime environment of a node
+    2: Implementation implementation;
+};
+
+/// Composition of results from Diagnostic/Probe.
+table ProbeResult {
+    /// Node description, obtained by probing ProbeSelector.NODE_DESCRIPTION
+    1: NodeDescription node_description;
+    /// Peer connections list, obtained by probing ProbeSelector.PEER_CONNECTIONS
+    2: vector<PeerConnectionDiagnosticInfo>:MAX peer_connections;
+    /// Link list, obtained by probing ProbeSelector.LINKS
+    3: vector<LinkDiagnosticInfo>:MAX links;
+};
+
+/// Selector bits for what to probe during Diagnostic/Probe.
+bits ProbeSelector : uint64 {
+    /// Request ProbeResult.node_description is present in the result
+    NODE_DESCRIPTION = 0x01;
+    /// Request ProbeResult.peer_connections is present in the result
+    PEER_CONNECTIONS = 0x02;
+    /// Request ProbeResult.links is present in the result
+    LINKS = 0x04;
+};
+
+/// Diagnostic information exported by Overnet peers.
+/// This interface is additionally exported to the Overnet mesh.
+[Discoverable]
+protocol Diagnostic {
+    /// Probe some basic statistics from this node
+    Probe(ProbeSelector selector) -> (ProbeResult result);
+};

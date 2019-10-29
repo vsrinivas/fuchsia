@@ -13,10 +13,19 @@ use {
         },
         stream_framer::{StreamDeframer, StreamFramer},
     },
-    failure::Error,
-    fidl::{AsyncChannel, Channel, Handle, HandleBased},
-    fidl_fuchsia_overnet::{Peer, ServiceProviderMarker, ServiceProviderProxy},
-    fidl_fuchsia_overnet_protocol::{PeerDescription, StreamSocketGreeting},
+    failure::{Error, ResultExt},
+    fidl::{
+        endpoints::{ClientEnd, RequestStream, ServiceMarker},
+        AsyncChannel, Channel, Handle, HandleBased,
+    },
+    fidl_fuchsia_overnet::{
+        Peer, ServiceProviderMarker, ServiceProviderProxy, ServiceProviderRequest,
+        ServiceProviderRequestStream,
+    },
+    fidl_fuchsia_overnet_protocol::{
+        DiagnosticMarker, DiagnosticRequest, DiagnosticRequestStream, PeerDescription, ProbeResult,
+        ProbeSelector, StreamSocketGreeting,
+    },
     futures::prelude::*,
     rand::seq::SliceRandom,
     salt_slab::{SaltSlab, SaltedID, ShadowSlab},
@@ -24,6 +33,7 @@ use {
         cell::RefCell,
         collections::{BTreeMap, HashMap},
         fmt::Debug,
+        path::Path,
         rc::Rc,
     },
 };
@@ -35,6 +45,8 @@ pub trait NodeRuntime {
     type Time: RouterTime + std::fmt::Debug;
     /// Application local identifier for a link
     type LinkId: Copy + Debug;
+    /// The implementation tag for this runtime.
+    const IMPLEMENTATION: fidl_fuchsia_overnet_protocol::Implementation;
 
     /// Determine the type of a handle
     fn handle_type(hdl: &Handle) -> Result<SendHandle, Error>;
@@ -57,7 +69,7 @@ enum StreamBinding {
 
 /// Implementation of core::MessageReceiver for overnetstack.
 /// Maintains a small list of borrows from the App instance that creates it.
-struct Receiver<'a, Runtime: NodeRuntime> {
+struct Receiver<'a, Runtime: NodeRuntime + 'static> {
     service_map: &'a HashMap<String, ServiceProviderProxy>,
     streams: &'a mut ShadowSlab<StreamBinding>,
     node_table: &'a mut NodeTable,
@@ -206,6 +218,61 @@ enum PhysLinkId<UpLinkID: Copy> {
     UpLink(UpLinkID),
 }
 
+// Helper: if a bit is set in a probe selector, return Some(make()), else return None
+fn if_probe_has_bit<R>(
+    probe: ProbeSelector,
+    bit: ProbeSelector,
+    make: impl FnOnce() -> R,
+) -> Option<R> {
+    if probe & bit == bit {
+        Some(make())
+    } else {
+        None
+    }
+}
+
+/// Configuration options for a new Node
+pub struct NodeOptions {
+    router_options: RouterOptions,
+    diagnostics: bool,
+}
+
+impl NodeOptions {
+    /// Create with defaults.
+    pub fn new() -> Self {
+        Self::from_router_options(RouterOptions::new())
+    }
+
+    /// Create with defaults from router options.
+    pub fn from_router_options(router_options: RouterOptions) -> Self {
+        Self { router_options, diagnostics: true }
+    }
+
+    /// Set whether to enable diagnostics services
+    pub fn export_diagnostics(mut self, diagnostics: bool) -> Self {
+        self.diagnostics = diagnostics;
+        self
+    }
+
+    /// Request a specific node id (if unset, one will be generated).
+    pub fn set_node_id(mut self, node_id: NodeId) -> Self {
+        self.router_options = self.router_options.set_node_id(node_id);
+        self
+    }
+
+    /// Set which file to load the server private key from.
+    pub fn set_quic_server_key_file(mut self, key_file: Box<dyn AsRef<Path>>) -> Self {
+        self.router_options = self.router_options.set_quic_server_key_file(key_file);
+        self
+    }
+
+    /// Set which file to load the server cert from.
+    pub fn set_quic_server_cert_file(mut self, pem_file: Box<dyn AsRef<Path>>) -> Self {
+        self.router_options = self.router_options.set_quic_server_cert_file(pem_file);
+        self
+    }
+}
+
 struct NodeInner<Runtime: NodeRuntime> {
     /// Map of service name to provider.
     service_map: HashMap<String, ServiceProviderProxy>,
@@ -235,16 +302,16 @@ struct NodeInner<Runtime: NodeRuntime> {
 }
 
 /// Represents an Overnet node managed by this process
-pub struct Node<Runtime: NodeRuntime> {
+pub struct Node<Runtime: NodeRuntime + 'static> {
     inner: Rc<RefCell<NodeInner<Runtime>>>,
 }
 
 impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     /// Create a new instance of App
-    pub fn new(runtime: Runtime, router_options: RouterOptions) -> Self {
-        let router = Router::new_with_options(router_options);
+    pub fn new(runtime: Runtime, options: NodeOptions) -> Result<Self, Error> {
+        let router = Router::new_with_options(options.router_options);
         let streams_key = router.streams_key();
-        Self {
+        let mut node = Self {
             inner: Rc::new(RefCell::new(NodeInner {
                 service_map: HashMap::new(),
                 node_table: NodeTable::new(router.node_id()),
@@ -262,7 +329,21 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
                 })),
                 runtime,
             })),
+        };
+        // Spawn a future to service diagnostic requests
+        if options.diagnostics {
+            let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
+            let chan =
+                fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
+            node.register_service(DiagnosticMarker::NAME.to_string(), ClientEnd::new(p))?;
+            let node_clone = node.clone();
+            node.with_runtime_mut(move |runtime| {
+                runtime.spawn_local(node_clone.handle_diagnostic_service_requests(
+                    ServiceProviderRequestStream::from_channel(chan),
+                ));
+            });
         }
+        Ok(node)
     }
 
     /// Clone this node
@@ -278,6 +359,111 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     /// Access the runtime
     pub fn with_runtime_mut<R>(&mut self, f: impl FnOnce(&mut Runtime) -> R) -> R {
         f(&mut self.inner.borrow_mut().runtime)
+    }
+
+    async fn handle_diagnostic_service_requests(self, stream: ServiceProviderRequestStream) {
+        if let Err(e) = self.handle_diagnostic_service_requests_inner(stream).await {
+            log::warn!("Failed handling diagnostics requests: {:?}", e);
+        }
+    }
+
+    async fn handle_diagnostic_service_requests_inner(
+        self,
+        mut stream: ServiceProviderRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(ServiceProviderRequest::ConnectToService {
+            chan,
+            info: _,
+            control_handle: _,
+        }) = stream.try_next().await.context("awaiting next diagnostic stream request")?
+        {
+            let node = self.clone();
+            let stream =
+                DiagnosticRequestStream::from_channel(fidl::AsyncChannel::from_channel(chan)?);
+            self.inner.borrow_mut().runtime.spawn_local(node.handle_diagnostic_requests(stream));
+        }
+        Ok(())
+    }
+
+    async fn handle_diagnostic_requests(self, stream: DiagnosticRequestStream) {
+        if let Err(e) = self.handle_diagnostic_requests_inner(stream).await {
+            log::warn!("Failed handling diagnostics requests: {:?}", e);
+        }
+    }
+
+    async fn handle_diagnostic_requests_inner(
+        self,
+        mut stream: DiagnosticRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(req) = stream.try_next().await.context("awaiting next diagnostic request")? {
+            match req {
+                DiagnosticRequest::Probe { selector, responder } => {
+                    let this = &*self.inner.borrow();
+                    let res = responder.send(ProbeResult {
+                        node_description: if_probe_has_bit(
+                            selector,
+                            ProbeSelector::NodeDescription,
+                            || fidl_fuchsia_overnet_protocol::NodeDescription {
+                                #[cfg(target_os = "fuchsia")]
+                                operating_system: Some(
+                                    fidl_fuchsia_overnet_protocol::OperatingSystem::Fuchsia,
+                                ),
+                                #[cfg(target_os = "linux")]
+                                operating_system: Some(
+                                    fidl_fuchsia_overnet_protocol::OperatingSystem::Linux,
+                                ),
+                                #[cfg(target_os = "macos")]
+                                operating_system: Some(
+                                    fidl_fuchsia_overnet_protocol::OperatingSystem::Mac,
+                                ),
+                                implementation: Some(Runtime::IMPLEMENTATION),
+                            },
+                        ),
+                        links: if_probe_has_bit(selector, ProbeSelector::Links, || {
+                            this.router.link_diagnostics()
+                        }),
+                        peer_connections: if_probe_has_bit(
+                            selector,
+                            ProbeSelector::PeerConnections,
+                            || this.router.peer_diagnostics(),
+                        ),
+                    });
+                    if let Err(e) = res {
+                        log::warn!("Failed handling probe: {:?}", e);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Await connection to a specific node id
+    pub async fn require_connection(self, node: NodeId) -> Result<(), Error> {
+        struct AwaitConnectionCallback(
+            Option<futures::channel::oneshot::Sender<(bool, u64)>>,
+            NodeId,
+        );
+        impl NodeStateCallback for AwaitConnectionCallback {
+            fn trigger(&mut self, new_version: u64, node_table: &NodeTable) -> Result<(), Error> {
+                let _ =
+                    self.0.take().unwrap().send((node_table.is_established(self.1), new_version));
+                Ok(())
+            }
+        }
+
+        let mut version = 0;
+        loop {
+            let (tx, rx) = futures::channel::oneshot::channel();
+            self.inner
+                .borrow_mut()
+                .node_table
+                .post_query(version, Box::new(AwaitConnectionCallback(Some(tx), node)));
+            let (done, new_version) = rx.await?;
+            if done {
+                return Ok(());
+            }
+            version = new_version;
+        }
     }
 
     /// Implementation of ListPeers fidl method.
@@ -307,7 +493,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     pub fn register_service(
         &self,
         service_name: String,
-        provider: fidl::endpoints::ClientEnd<ServiceProviderMarker>,
+        provider: ClientEnd<ServiceProviderMarker>,
     ) -> Result<(), Error> {
         let this = &mut *self.inner.borrow_mut();
         log::info!("Request register_service '{}'", service_name);
@@ -333,8 +519,14 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         chan: Channel,
     ) -> Result<(), Error> {
         let this = &mut *self.inner.borrow_mut();
-        log::info!("Request connect_to_service '{}' on {:?}", service_name, node_id);
-        if node_id == this.router.node_id() {
+        let is_local = node_id == this.router.node_id();
+        log::info!(
+            "Request connect_to_service '{}' on {:?}{}",
+            service_name,
+            node_id,
+            if is_local { " [local]" } else { " [remote]" }
+        );
+        if is_local {
             this.service_map
                 .get(service_name)
                 .ok_or_else(|| failure::format_err!("Unknown service {}", service_name))?
@@ -738,6 +930,8 @@ mod test {
     impl NodeRuntime for TestRuntime {
         type Time = Time;
         type LinkId = ();
+        const IMPLEMENTATION: fidl_fuchsia_overnet_protocol::Implementation =
+            fidl_fuchsia_overnet_protocol::Implementation::UnitTest;
 
         fn handle_type(_hdl: &Handle) -> Result<SendHandle, Error> {
             unimplemented!();
@@ -781,15 +975,20 @@ mod test {
         init();
         Node::new(
             TestRuntime(futures::executor::LocalPool::new().spawner()),
-            test_router_options(),
-        );
+            NodeOptions::from_router_options(test_router_options()).export_diagnostics(false),
+        )
+        .unwrap();
     }
 
     #[test]
     fn concurrent_list_peer_calls_will_error() {
         init();
         let mut pool = futures::executor::LocalPool::new();
-        let n = Node::new(TestRuntime(pool.spawner()), test_router_options());
+        let n = Node::new(
+            TestRuntime(pool.spawner()),
+            NodeOptions::from_router_options(test_router_options()).export_diagnostics(false),
+        )
+        .unwrap();
         pool.run_until(try_join(n.clone().list_peers(), n.clone().list_peers()))
             .expect_err("Concurrent list peers should fail");
     }
