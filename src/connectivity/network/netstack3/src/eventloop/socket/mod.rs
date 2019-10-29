@@ -245,7 +245,7 @@ impl SockAddr for SockAddr4 {
 /// Extension trait that associates a [`SockAddr`] implementation to an IP
 /// version. We provide implementations for [`Ipv4`] and [`Ipv6`].
 pub(crate) trait IpSockAddrExt: Ip {
-    type SocketAddress: SockAddr;
+    type SocketAddress: SockAddr<AddrType = Self::Addr>;
 }
 
 impl IpSockAddrExt for Ipv4 {
@@ -281,6 +281,8 @@ mod testutil {
         const LOCAL_ADDR: Self::AddrType;
         /// The remote address used for tests.
         const REMOTE_ADDR: Self::AddrType;
+        /// An alternate remote address used for tests.
+        const REMOTE_ADDR_2: Self::AddrType;
         /// The default subnet prefix used for tests.
         const DEFAULT_PREFIX: u8;
 
@@ -291,6 +293,18 @@ mod testutil {
             v.resize(std::mem::size_of::<Self>(), 0);
             let mut sockaddr = LayoutVerified::<_, Self>::new(&mut v[..]).unwrap();
             sockaddr.set_options(&options);
+            v
+        }
+
+        /// Creates a [`SockAddr`] with the appropriate family with the given
+        /// `addr` and `port`.
+        fn create(addr: Self::AddrType, port: u16) -> Vec<u8> {
+            let mut v = Vec::new();
+            v.resize(std::mem::size_of::<Self>(), 0);
+            let mut sockaddr = LayoutVerified::<_, Self>::new(&mut v[..]).unwrap();
+            sockaddr.set_family(Self::FAMILY);
+            sockaddr.set_port(port);
+            sockaddr.set_addr(addr.bytes());
             v
         }
 
@@ -337,6 +351,8 @@ mod testutil {
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1]);
         const REMOTE_ADDR: Ipv6Addr =
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2]);
+        const REMOTE_ADDR_2: Ipv6Addr =
+            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3]);
         const DEFAULT_PREFIX: u8 = 64;
         fn set_family(&mut self, family: u16) {
             self.family.set(family)
@@ -354,6 +370,7 @@ mod testutil {
     impl TestSockAddr for SockAddr4 {
         const LOCAL_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 1]);
         const REMOTE_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 2]);
+        const REMOTE_ADDR_2: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 3]);
         const DEFAULT_PREFIX: u8 = 24;
         fn set_family(&mut self, family: u16) {
             self.family.set(family)

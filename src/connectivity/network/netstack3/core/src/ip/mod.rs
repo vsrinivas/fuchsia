@@ -147,7 +147,9 @@ impl<A: IpAddress, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacke
 
 impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Context<D> {
     fn is_local_addr(&self, addr: I::Addr) -> bool {
-        is_local_addr(self, addr)
+        SpecifiedAddr::new(addr)
+            .map(|addr| crate::device::is_local_addr(self, &addr))
+            .unwrap_or(false)
     }
 
     fn local_address_for_remote(
@@ -1362,14 +1364,6 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
 ) -> std::slice::Iter<Entry<A, DeviceId>> {
     get_state_inner::<A::Version, _>(ctx.state()).table.iter_installed()
-}
-
-/// Is this one of our local addresses?
-///
-/// `is_local_addr` returns whether `addr` is the address associated with one of
-/// our local interfaces.
-pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(_ctx: &Context<D>, _addr: A) -> bool {
-    log_unimplemented!(false, "ip::is_local_addr: not implemented")
 }
 
 /// Send an IPv4 packet to a remote host.

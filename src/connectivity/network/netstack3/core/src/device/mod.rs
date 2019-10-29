@@ -766,6 +766,21 @@ pub(crate) fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
     }
 }
 
+/// Checks if `addr` is a local address
+pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(
+    ctx: &Context<D>,
+    addr: &SpecifiedAddr<A>,
+) -> bool {
+    // TODO(brunodalbo) this is a total hack just to enable UDP sockets in
+    // bindings.
+    let device_ids: Vec<_> = ctx.state.device.ethernet.iter().map(|(k, _)| k).collect();
+    device_ids.into_iter().any(|id| {
+        self::ethernet::get_ip_addr_state(ctx, id.into(), addr)
+            .map(|s| s.is_assigned())
+            .unwrap_or(false)
+    })
+}
+
 /// Adds an IP address and associated subnet to this device.
 ///
 /// # Panics

@@ -13,7 +13,9 @@ use fuchsia_zircon::{self as zx, prelude::HandleBased};
 use futures::{channel::mpsc, TryFutureExt, TryStreamExt};
 use log::{debug, error, trace};
 use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
-use netstack3_core::connect_udp;
+use netstack3_core::{
+    connect_udp, listen_udp, remove_udp_conn, remove_udp_listener, UdpConnId, UdpListenerId,
+};
 
 use super::{IpSockAddrExt, SockAddr, SocketEventInner, SocketWorkerProperties};
 use crate::{eventloop::Event, EventLoop};
@@ -78,9 +80,17 @@ pub struct SocketControlInfo<I: Ip> {
 #[derive(Debug)]
 enum SocketState<I: Ip> {
     Unbound,
-    // NOTE(brunodalbo) this variant is just here so we can have the Ip type
-    // parameter, it'll go away as soon as we add more socket states
-    _UnusedMarker(std::marker::PhantomData<I>),
+    BoundListen { listener_id: UdpListenerId<I> },
+    BoundConnect { conn_id: UdpConnId<I> },
+}
+
+impl<I: Ip> SocketState<I> {
+    fn is_bound(&self) -> bool {
+        match self {
+            SocketState::Unbound => false,
+            SocketState::BoundListen { .. } | SocketState::BoundConnect { .. } => true,
+        }
+    }
 }
 
 impl UdpSocketWorker {
@@ -156,17 +166,60 @@ impl<I: IpSockAddrExt> SocketWorkerInner<I> {
     /// [POSIX socket connect request]: psocket::ControlRequest::Connect
     fn connect(&mut self, event_loop: &mut EventLoop, addr: Vec<u8>) -> Result<(), libc::c_int> {
         let sockaddr = I::SocketAddress::parse(addr.as_slice()).ok_or(libc::EFAULT)?;
-        trace!("connect sockaddr: {:?}", sockaddr);
+        trace!("connect UDP sockaddr: {:?}", sockaddr);
         if sockaddr.family() != I::SocketAddress::FAMILY {
             return Err(libc::EAFNOSUPPORT);
         }
         let remote_port = sockaddr.get_specified_port().ok_or(libc::ECONNREFUSED)?;
         let remote_addr = sockaddr.get_specified_addr().ok_or(libc::EINVAL)?;
 
-        trace!(
-            "connect_udp: {:?}",
-            connect_udp(&mut event_loop.ctx, None, None, remote_addr, remote_port)
-        );
+        let (local_addr, local_port) = match self.info.state {
+            SocketState::Unbound => {
+                // do nothing, we're already unbound.
+                // return None for local_addr and local_port.
+                (None, None)
+            }
+            SocketState::BoundListen { listener_id } => {
+                // if we're bound to a listen mode, we need to remove the
+                // listener, and retrieve the bound local addr and port.
+                let list_info = remove_udp_listener(&mut event_loop.ctx, listener_id);
+
+                (list_info.local_addr, Some(list_info.local_port))
+            }
+            SocketState::BoundConnect { conn_id } => {
+                // if we're bound to a connect mode, we need to remove the
+                // connection, and retrieve the bound local addr and port.
+                let conn_info = remove_udp_conn(&mut event_loop.ctx, conn_id);
+                (Some(conn_info.local_addr), Some(conn_info.local_port))
+            }
+        };
+
+        let conn_id =
+            connect_udp(&mut event_loop.ctx, local_addr, local_port, remote_addr, remote_port);
+        self.info.state = SocketState::BoundConnect { conn_id };
+
+        Ok(())
+    }
+
+    /// Handles a [POSIX socket bind request]
+    ///
+    /// [POSIX socket bind request]: psocket::ControlRequest::Bind
+    fn bind(&mut self, event_loop: &mut EventLoop, addr: Vec<u8>) -> Result<(), libc::c_int> {
+        let sockaddr = I::SocketAddress::parse(addr.as_slice()).ok_or(libc::EFAULT)?;
+        trace!("bind UDP sockaddr: {:?}", sockaddr);
+        if sockaddr.family() != I::SocketAddress::FAMILY {
+            return Err(libc::EAFNOSUPPORT);
+        }
+        if self.info.state.is_bound() {
+            return Err(libc::EALREADY);
+        }
+        let local_addr = sockaddr.get_specified_addr();
+        let local_port = sockaddr.get_specified_port();
+
+        let listener_id = listen_udp(&mut event_loop.ctx, local_addr, local_port);
+
+        self.info.state = SocketState::BoundListen { listener_id };
+
         Ok(())
     }
 
@@ -198,7 +251,9 @@ impl<I: IpSockAddrExt> SocketWorkerInner<I> {
             psocket::ControlRequest::Sync { .. } => {}
             psocket::ControlRequest::GetAttr { .. } => {}
             psocket::ControlRequest::SetAttr { .. } => {}
-            psocket::ControlRequest::Bind { .. } => {}
+            psocket::ControlRequest::Bind { addr, responder } => {
+                responder_send!(responder, self.bind(event_loop, addr).err().unwrap_or(0) as i16)
+            }
             psocket::ControlRequest::Listen { .. } => {}
             psocket::ControlRequest::Accept { .. } => {}
             psocket::ControlRequest::GetSockName { .. } => {}
@@ -217,12 +272,13 @@ mod tests {
     use fuchsia_async as fasync;
 
     use crate::eventloop::integration_tests::{
-        test_ep_name, StackSetupBuilder, TestSetup, TestSetupBuilder,
+        test_ep_name, StackSetupBuilder, TestSetup, TestSetupBuilder, TestStack,
     };
     use crate::eventloop::socket::{
         testutil::{SockAddrTestOptions, TestSockAddr},
         SockAddr4, SockAddr6,
     };
+    use net_types::ip::{Ip, IpAddress};
 
     async fn udp_prepare_test<A: TestSockAddr>() -> (TestSetup, psocket::ControlProxy) {
         let mut t = TestSetupBuilder::new()
@@ -234,15 +290,18 @@ mod tests {
             .build()
             .await
             .unwrap();
-        let test_stack = t.get(0);
+        let proxy = get_socket::<A>(t.get(0)).await;
+        (t, proxy)
+    }
+
+    async fn get_socket<A: TestSockAddr>(test_stack: &mut TestStack) -> psocket::ControlProxy {
         let socket_provider = test_stack.connect_socket_provider().unwrap();
         let socket_response = test_stack
             .run_future(socket_provider.socket(A::FAMILY as i16, libc::SOCK_DGRAM as i16, 0))
             .await
             .expect("Socket call succeeds");
         assert_eq!(socket_response.0, 0);
-        let proxy = socket_response.1.expect("Socket returns a channel").into_proxy().unwrap();
-        (t, proxy)
+        socket_response.1.expect("Socket returns a channel").into_proxy().unwrap()
     }
 
     async fn test_udp_connect_failure<A: TestSockAddr>() {
@@ -289,5 +348,87 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_udp_connect_failure_v6() {
         test_udp_connect_failure::<SockAddr6>().await;
+    }
+
+    async fn test_udp_connect<A: TestSockAddr>() {
+        let (mut t, proxy) = udp_prepare_test::<A>().await;
+        let stack = t.get(0);
+        let remote = A::create(A::REMOTE_ADDR, 200);
+        let res = stack.run_future(proxy.connect(&mut remote.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, 0);
+
+        // can connect again to a different remote should succeed.
+        let remote = A::create(A::REMOTE_ADDR_2, 200);
+        let res = stack.run_future(proxy.connect(&mut remote.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, 0);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_connect_v4() {
+        test_udp_connect::<SockAddr4>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_connect_v6() {
+        test_udp_connect::<SockAddr6>().await;
+    }
+
+    async fn test_udp_bind<A: TestSockAddr>() {
+        let (mut t, socket) = udp_prepare_test::<A>().await;
+        let stack = t.get(0);
+        // can bind to local address
+        let addr = A::create(A::LOCAL_ADDR, 200);
+        let res = stack.run_future(socket.bind(&mut addr.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, 0);
+
+        // can't bind again (to another port)
+        let addr = A::create(A::LOCAL_ADDR, 201);
+        let res = stack.run_future(socket.bind(&mut addr.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, libc::EALREADY);
+
+        // can bind another socket to a different port:
+        let socket = get_socket::<A>(stack).await;
+        let addr = A::create(A::LOCAL_ADDR, 201);
+        let res = stack.run_future(socket.bind(&mut addr.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, 0);
+
+        // can bind to unspecified address in a different port:
+        let socket = get_socket::<A>(stack).await;
+        let addr = A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 202);
+        let res = stack.run_future(socket.bind(&mut addr.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, 0);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_bind_v4() {
+        test_udp_bind::<SockAddr4>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_bind_v6() {
+        test_udp_bind::<SockAddr6>().await;
+    }
+
+    async fn test_udp_bind_then_connect<A: TestSockAddr>() {
+        let (mut t, socket) = udp_prepare_test::<A>().await;
+        let stack = t.get(0);
+        // can bind to local address
+        let bind_addr = A::create(A::LOCAL_ADDR, 200);
+        let res = stack.run_future(socket.bind(&mut bind_addr.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, 0);
+        let remote_addr = A::create(A::REMOTE_ADDR, 1010);
+        let res =
+            stack.run_future(socket.connect(&mut remote_addr.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, 0);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_bind_then_connect_v4() {
+        test_udp_bind_then_connect::<SockAddr4>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_udp_bind_then_connect_v6() {
+        test_udp_bind_then_connect::<SockAddr6>().await;
     }
 }
