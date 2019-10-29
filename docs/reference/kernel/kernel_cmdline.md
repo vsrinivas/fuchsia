@@ -508,6 +508,11 @@ topological path for a device can be determined from the shell by running the
 This is useful for configuring network booting for a device with multiple
 ethernet ports which may be enumerated in a non-deterministic order.
 
+## netsvc.all-features=\<bool>
+
+This option makes `netsvc` work normally and support all features. By default,
+`netsvc` starts in a minimal mode where only device discovery is supported.
+
 ## userboot=\<path>
 
 This option instructs the userboot process (the first userspace process) to

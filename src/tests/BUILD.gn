@@ -14,6 +14,7 @@ group("tests") {
   # Cf. //products/terminal.gni for an example of the screen_is_not_black test.
   deps = [
     "disable_syscalls:tests",
+    "limited_netsvc:tests",
     "oom:tests",
     "reboot:tests",
   ]

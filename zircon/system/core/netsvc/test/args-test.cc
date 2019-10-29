@@ -42,34 +42,39 @@ TEST(ArgsTest, NetsvcNoneProvided) {
   bool netboot = false;
   bool nodename = false;
   bool advertise = false;
+  bool all_features = false;
   const char* interface = nullptr;
   const char* error = nullptr;
   ASSERT_EQ(parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &nodename,
-                              &advertise, &interface),
+                              &advertise, &all_features, &interface),
             0, "%s", error);
   ASSERT_FALSE(netboot);
   ASSERT_FALSE(nodename);
   ASSERT_FALSE(advertise);
+  ASSERT_FALSE(all_features);
   ASSERT_EQ(interface, nullptr);
   ASSERT_EQ(error, nullptr);
 }
 
 TEST(ArgsTest, NetsvcAllProvided) {
-  int argc = 6;
+  int argc = 7;
   const char* argv[] = {
-      "netsvc", "--netboot", "--nodename", "--advertise", "--interface", kInterface,
+      "netsvc",         "--netboot",   "--nodename", "--advertise",
+      "--all-features", "--interface", kInterface,
   };
   bool netboot = false;
   bool nodename = false;
   bool advertise = false;
+  bool all_features = false;
   const char* interface = nullptr;
   const char* error = nullptr;
   ASSERT_EQ(parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &nodename,
-                              &advertise, &interface),
+                              &advertise, &all_features, &interface),
             0, "%s", error);
   ASSERT_TRUE(netboot);
   ASSERT_TRUE(nodename);
   ASSERT_TRUE(advertise);
+  ASSERT_TRUE(all_features);
   ASSERT_EQ(interface, kInterface);
   ASSERT_EQ(error, nullptr);
 }
@@ -83,10 +88,11 @@ TEST(ArgsTest, NetsvcValidation) {
   bool netboot = false;
   bool nodename = false;
   bool advertise = false;
+  bool all_features = false;
   const char* interface = nullptr;
   const char* error = nullptr;
   ASSERT_LT(parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &nodename,
-                              &advertise, &interface),
+                              &advertise, &all_features, &interface),
             0);
   ASSERT_EQ(interface, nullptr);
   ASSERT_TRUE(strstr(error, "interface"));
