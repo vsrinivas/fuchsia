@@ -79,21 +79,17 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
 }
 
 // Offer a stream as served through the controller service provided by the driver.
-zx_status_t ControllerStreamProvider::ConnectToStream(
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-    fuchsia::sysmem::ImageFormat_2* format_out,
-    fuchsia::sysmem::BufferCollectionInfo_2* buffers_out, bool* should_rotate_out) {
-  if (!format_out || !buffers_out || !should_rotate_out) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2,
+           bool>
+ControllerStreamProvider::ConnectToStream(
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> request) {
   static constexpr const uint32_t kConfigIndex = 0;
   static constexpr const uint32_t kStreamConfigIndex = 0;
   static constexpr const uint32_t kImageFormatIndex = 0;
 
   if (buffer_collection_.is_bound()) {
     FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound by caller.";
-    return ZX_ERR_ALREADY_BOUND;
+    return MakeErrorReturn(ZX_ERR_ALREADY_BOUND);
   }
 
   // Get the list of valid configs as reported by the controller.
@@ -102,25 +98,25 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
   zx_status_t status = controller_->GetConfigs(&configs, &status_return);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to call GetConfigs";
-    return status;
+    return MakeErrorReturn(status);
   }
   if (status_return != ZX_OK) {
     FX_PLOGS(ERROR, status_return) << "Failed to get configs";
-    return status_return;
+    return MakeErrorReturn(status_return);
   }
   if (configs->size() <= kConfigIndex) {
     FX_LOGS(ERROR) << "Invalid config index " << kConfigIndex;
-    return ZX_ERR_BAD_STATE;
+    return MakeErrorReturn(ZX_ERR_BAD_STATE);
   }
   auto& config = configs->at(kConfigIndex);
   if (config.stream_configs.size() <= kStreamConfigIndex) {
     FX_LOGS(ERROR) << "Invalid stream config index " << kStreamConfigIndex;
-    return ZX_ERR_BAD_STATE;
+    return MakeErrorReturn(ZX_ERR_BAD_STATE);
   }
   auto& stream_config = config.stream_configs[kStreamConfigIndex];
   if (stream_config.image_formats.size() <= kImageFormatIndex) {
     FX_LOGS(ERROR) << "Invalid image format index " << kImageFormatIndex;
-    return ZX_ERR_BAD_STATE;
+    return MakeErrorReturn(ZX_ERR_BAD_STATE);
   }
   auto& image_format = stream_config.image_formats[kImageFormatIndex];
 
@@ -131,23 +127,23 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
   status = allocator_->AllocateNonSharedCollection(buffer_collection_.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to allocate new collection";
-    return status;
+    return MakeErrorReturn(status);
   }
   status = buffer_collection_->SetConstraints(true, stream_config.constraints);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to set constraints to those reported by the controller";
-    return status;
+    return MakeErrorReturn(status);
   }
   status_return = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   status = buffer_collection_->WaitForBuffersAllocated(&status_return, &buffers);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to call WaitForBuffersAllocated";
-    return status;
+    return MakeErrorReturn(status);
   }
   if (status_return != ZX_OK) {
     FX_PLOGS(ERROR, status_return) << "Failed to allocate buffers";
-    return status_return;
+    return MakeErrorReturn(status_return);
   }
 
   // TODO(fxb/37296): remove ISP workarounds
@@ -159,7 +155,7 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Error mapping vmo";
-      return status;
+      return MakeErrorReturn(status);
     }
     memset(mapper.start(), 128, mapper.size());
     mapper.Unmap();
@@ -170,7 +166,7 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
   status = buffers.Clone(&buffers_for_caller);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to clone buffer collection";
-    return status;
+    return MakeErrorReturn(status);
   }
 
   // Create the stream using the created buffer collection.
@@ -178,15 +174,10 @@ zx_status_t ControllerStreamProvider::ConnectToStream(
                                      std::move(buffers), std::move(request));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create stream";
-    return status;
+    return MakeErrorReturn(status);
   }
 
   // The stream from controller is currently unrotated.
   // TODO: once GDC is hooked up to do the rotation within the controller, set this to 'false'
-  *should_rotate_out = true;
-
-  *format_out = std::move(image_format);
-  *buffers_out = std::move(buffers_for_caller);
-
-  return ZX_OK;
+  return {ZX_OK, std::move(image_format), std::move(buffers_for_caller), true};
 }

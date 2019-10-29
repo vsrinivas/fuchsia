@@ -79,20 +79,19 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
                                           bool chaos, bool image_io) {
     auto view = std::make_unique<DemoView>(std::move(context), loop, chaos, image_io);
 
-    view->stream_provider_ = StreamProvider::Create(StreamProvider::Source::CONTROLLER);
+    view->stream_provider_ = StreamProvider::Create(StreamProvider::Source::MANAGER);
     if (!view->stream_provider_) {
-      FX_LOGS(ERROR) << "Failed to get CONTROLLER stream provider";
+      FX_LOGS(ERROR) << "Failed to get MANAGER stream provider";
       return nullptr;
     }
 
-    fuchsia::sysmem::ImageFormat_2 format;
-    fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-    zx_status_t status = view->stream_provider_->ConnectToStream(
-        view->stream_.NewRequest(loop->dispatcher()), &format, &buffers, &view->should_rotate_);
+    auto [status, format, buffers, should_rotate] =
+        view->stream_provider_->ConnectToStream(view->stream_.NewRequest(loop->dispatcher()));
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect to stream";
       return nullptr;
     }
+    view->should_rotate_ = should_rotate;
     view->stream_.set_error_handler([loop](zx_status_t status) {
       FX_PLOGS(ERROR, status) << "Stream disconnected";
       loop->Quit();
@@ -238,6 +237,7 @@ class DemoView : public scenic::BaseView, public fuchsia::camera2::Stream::Event
     zx_signals_t signals{};
     while (waiters_.size() > 0 && zx_object_wait_one(waiters_.front().second.get(),
                                                      ZX_EVENT_SIGNALED, 0, &signals) == ZX_OK) {
+      waiters_.front().first = nullptr;
       waiters_.pop();
     }
 
@@ -291,7 +291,6 @@ int main(int argc, const char** argv) {
         return DemoView::Create(std::move(context), &loop, chaos, image_io);
       },
       &loop);
-  FX_LOGS(INFO) << argv[0] << " initialized successfully - entering loop";
   zx_status_t status = loop.Run();
   if (status != ZX_ERR_CANCELED) {
     FX_LOGS(WARNING) << "Main thread terminated abnormally";

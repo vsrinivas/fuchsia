@@ -11,13 +11,14 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.camera2.Manager",
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.logger.LogSink"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

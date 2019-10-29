@@ -12,10 +12,9 @@
 class IspStreamProvider : public StreamProvider {
  public:
   static std::unique_ptr<StreamProvider> Create();
-  virtual zx_status_t ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-                                      fuchsia::sysmem::ImageFormat_2* format_out,
-                                      fuchsia::sysmem::BufferCollectionInfo_2* buffers_out,
-                                      bool* should_rotate_out) override;
+  virtual std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2,
+                     fuchsia::sysmem::BufferCollectionInfo_2, bool>
+  ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request) override;
   virtual std::string GetName() override { return "Image Signal Processor (ISP)"; }
 
  private:

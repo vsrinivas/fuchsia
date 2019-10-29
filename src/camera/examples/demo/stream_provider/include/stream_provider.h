@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 
 // The StreamProvider class allows the caller to connect to a fuchsia::camera2::Stream client
 // endpoint from a variety of sources.
@@ -19,6 +20,7 @@ class StreamProvider {
   enum class Source {
     ISP,
     CONTROLLER,
+    MANAGER,
     NUM_SOURCES,
   };
   virtual ~StreamProvider() = default;
@@ -40,14 +42,24 @@ class StreamProvider {
   // able to participate in buffer format negotiation.
   // Args:
   //   |request|: a request for a Stream interface
-  //   |format_out|: output parameter that describes the format of the created stream
-  //   |buffers_out|: output parameter that describes the buffers backing the created stream
-  //   |should_rotate_out|: output parameter that indicates whether the stream should be rotated in
-  //                        order to appear correct
-  virtual zx_status_t ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-                                      fuchsia::sysmem::ImageFormat_2* format_out,
-                                      fuchsia::sysmem::BufferCollectionInfo_2* buffers_out,
-                                      bool* should_rotate_out) = 0;
+  // Returns:
+  //   A tuple containing the following values:
+  //   [0]: ZX_OK if connection succeeded, otherwise an error code
+  //   [1]: the format of the created stream
+  //   [2]: the buffers backing the created stream
+  //   [3]: true iff the consumer should rotate the stream in order to appear correct
+  virtual std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2,
+                     fuchsia::sysmem::BufferCollectionInfo_2, bool>
+  ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request) = 0;
+
+ protected:
+  static std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2,
+                    fuchsia::sysmem::BufferCollectionInfo_2, bool>
+  MakeErrorReturn(zx_status_t status) {
+    fuchsia::sysmem::ImageFormat_2 format{};
+    fuchsia::sysmem::BufferCollectionInfo_2 buffers{};
+    return {status, std::move(format), std::move(buffers), false};
+  }
 };
 
 #endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_INCLUDE_STREAM_PROVIDER_H_
