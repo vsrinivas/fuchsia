@@ -147,10 +147,13 @@ class DebuggedThread {
                                 const zx_thread_state_general_regs* optional_regs,
                                 debug_ipc::ThreadRecord* record) const;
 
-  // Register reading and writing.
+  // Register reading and writing. The "write" command also has an output parameter which includes a
+  // validated version of all registers re-read (and possibly others if they're known) from the
+  // kernel after the write.
   void ReadRegisters(const std::vector<debug_ipc::RegisterCategory>& cats_to_get,
                      std::vector<debug_ipc::Register>* out) const;
-  zx_status_t WriteRegisters(const std::vector<debug_ipc::Register>& regs);
+  zx_status_t WriteRegisters(const std::vector<debug_ipc::Register>& regs,
+                             std::vector<debug_ipc::Register>* written);
 
   // Sends a notification to the client about the state of this thread.
   void SendThreadNotification() const;

@@ -48,6 +48,18 @@ bool FindRegister(const std::vector<Register>& regs, RegisterID id) {
   return false;
 }
 
+// Sets the given register in the vector, overwriting an existing one of the same ID, or adding a
+// new one othewise.
+void SetRegister(const Register& reg, std::vector<Register>* regs) {
+  for (auto& cur : *regs) {
+    if (cur.id == reg.id) {
+      cur = reg;
+      return;
+    }
+  }
+  regs->push_back(reg);
+}
+
 class FakeArchProvider : public arch::ArchProvider {
  public:
   zx_status_t ReadRegisters(const debug_ipc::RegisterCategory& type, const zx::thread&,
@@ -60,12 +72,15 @@ class FakeArchProvider : public arch::ArchProvider {
     return ZX_OK;
   }
 
+  // This also updates the "to_read" so the value will be updated next time it is read.
   zx_status_t WriteRegisters(const debug_ipc::RegisterCategory& cat,
                              const std::vector<debug_ipc::Register>& registers,
                              zx::thread*) override {
     auto& written_cat = regs_written_[cat];
-    for (const Register& reg : registers)
+    for (const Register& reg : registers) {
       written_cat.push_back(reg);
+      SetRegister(reg, &to_read_[cat]);
+    }
 
     return ZX_OK;
   }
@@ -169,11 +184,20 @@ TEST(DebuggedThread, WriteRegisters) {
   regs_to_write.push_back(CreateRegister(RegisterID::kX64_dr1, 16));
   regs_to_write.push_back(CreateRegister(RegisterID::kX64_dr7, 16));
 
-  thread->WriteRegisters(regs_to_write);
+  // The registers retrieved from the "system" after writing.
+  std::vector<debug_ipc::Register> reported_written;
 
+  thread->WriteRegisters(regs_to_write, &reported_written);
+
+  // The registers the mock told us it wrote.
   const auto& regs_written = arch_provider->regs_written();
   ASSERT_EQ(regs_written.size(), 4u);
   EXPECT_EQ(regs_written.count(RegisterCategory::kNone), 0u);
+
+  // Make sure the API echoed back the registers we asked it to write.
+  EXPECT_TRUE(FindRegister(reported_written, RegisterID::kX64_rax));
+  EXPECT_TRUE(FindRegister(reported_written, RegisterID::kX64_rip));
+  EXPECT_TRUE(FindRegister(reported_written, RegisterID::kX64_rsp));
 
   auto it = regs_written.find(RegisterCategory::kGeneral);
   ASSERT_NE(it, regs_written.end());

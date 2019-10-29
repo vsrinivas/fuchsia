@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 18;
+constexpr uint32_t kProtocolVersion = 19;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -359,6 +359,12 @@ struct WriteRegistersRequest {
 
 struct WriteRegistersReply {
   zx_status_t status = 0;
+
+  // The latest registers from all affected categories after the write.
+  //
+  // This allows clients to validate that the change actually took effect. All known registers
+  // from all categories changed by the write request will be sent.
+  std::vector<Register> registers;
 };
 
 // Agent Config ----------------------------------------------------------------

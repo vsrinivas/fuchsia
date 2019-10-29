@@ -325,7 +325,7 @@ void DebugAgent::OnWriteRegisters(const debug_ipc::WriteRegistersRequest& reques
                                   debug_ipc::WriteRegistersReply* reply) {
   DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
-    reply->status = thread->WriteRegisters(request.registers);
+    reply->status = thread->WriteRegisters(request.registers, &reply->registers);
   } else {
     reply->status = ZX_ERR_NOT_FOUND;
     FXL_LOG(ERROR) << "Cannot find thread with koid: " << request.thread_koid;

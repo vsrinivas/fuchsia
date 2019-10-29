@@ -466,7 +466,8 @@ void DebuggedThread::ReadRegisters(const std::vector<debug_ipc::RegisterCategory
   }
 }
 
-zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register>& regs) {
+zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register>& regs,
+                                           std::vector<debug_ipc::Register>* written) {
   bool rip_change = false;
   debug_ipc::RegisterID rip_id =
       GetSpecialRegisterID(arch_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP);
@@ -493,6 +494,13 @@ zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register
     zx_status_t res = arch_provider_->WriteRegisters(cat_type, cat_regs, &handle_);
     if (res != ZX_OK) {
       FXL_LOG(WARNING) << "Could not write category "
+                       << debug_ipc::RegisterCategoryToString(cat_type) << ": "
+                       << debug_ipc::ZxStatusToString(res);
+    }
+
+    res = arch_provider_->ReadRegisters(cat_type, handle_, written);
+    if (res != ZX_OK) {
+      FXL_LOG(WARNING) << "Could not read category "
                        << debug_ipc::RegisterCategoryToString(cat_type) << ": "
                        << debug_ipc::ZxStatusToString(res);
     }
