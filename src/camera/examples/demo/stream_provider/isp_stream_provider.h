@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_DEMO_ISP_STREAM_PROVIDER_H_
-#define SRC_CAMERA_EXAMPLES_DEMO_ISP_STREAM_PROVIDER_H_
+#ifndef SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_ISP_STREAM_PROVIDER_H_
+#define SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_ISP_STREAM_PROVIDER_H_
 
 #include <fbl/unique_fd.h>
 
@@ -22,4 +22,4 @@ class IspStreamProvider : public StreamProvider {
   fbl::unique_fd isp_fd_;
 };
 
-#endif  // SRC_CAMERA_EXAMPLES_DEMO_ISP_STREAM_PROVIDER_H_
+#endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_ISP_STREAM_PROVIDER_H_
