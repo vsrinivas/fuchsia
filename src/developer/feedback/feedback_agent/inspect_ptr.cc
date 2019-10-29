@@ -5,26 +5,30 @@
 #include "src/developer/feedback/feedback_agent/inspect_ptr.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
+#include <lib/fit/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <string>
-#include <thread>
+#include <vector>
 
+#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
 #include "src/lib/inspect_deprecated/query/json_formatter.h"
+#include "src/lib/inspect_deprecated/query/location.h"
 #include "src/lib/inspect_deprecated/query/read.h"
 #include "src/lib/inspect_deprecated/query/source.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispatcher,
-                                                      zx::duration timeout) {
-  std::unique_ptr<Inspect> inspect = std::make_unique<Inspect>(dispatcher);
+fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* timeout_dispatcher,
+                                                      zx::duration timeout,
+                                                      async::Executor* collection_executor) {
+  std::unique_ptr<Inspect> inspect =
+      std::make_unique<Inspect>(timeout_dispatcher, collection_executor);
 
   // We move |inspect| in a subsequent chained promise to guarantee its lifetime.
   return inspect->Collect(timeout).then(
@@ -33,113 +37,121 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
       });
 }
 
-Inspect::Inspect(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+Inspect::Inspect(async_dispatcher_t* timeout_dispatcher, async::Executor* collection_executor)
+    : timeout_dispatcher_(timeout_dispatcher), collection_executor_(collection_executor) {}
 
 fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_) << "Collect() is not intended to be called twice";
   has_called_collect_ = true;
 
-  using Locations = std::vector<inspect_deprecated::Location>;
-  // First, we discover all the Inspect entrypoints under the realm of the calling component.
-
-  // We use a fit::bridge to create a fit::promise that will be completed when the discovery is
-  // done, returning the discovered locations.
+  // We use a fit::bridge to create a fit::promise that will be completed when the Inspect data
+  // collection is done, returning the Inspect data.
   //
-  // We use a shared_ptr to share the bridge between this function, the async loop on which we post
-  // the delayed task to timeout and the second thread on which we run the discovery.
-  discovery_done_ = std::make_shared<fit::bridge<Locations>>();
-  discovery_done_lock_ = std::make_shared<std::mutex>();
+  // We use a shared_ptr to share the bridge between this, the dispatcher on which we post the
+  // delayed task to timeout and the executor on which we run the Inspect data collection.
+  collection_done_ = std::make_shared<fit::bridge<fuchsia::mem::Buffer>>();
+  collection_done_lock_ = std::make_shared<std::mutex>();
 
   // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
   // the completer after the timeout and return an error.
-  if (const zx_status_t status =
-          async::PostDelayedTask(
-              dispatcher_,
-              [discovery_done = discovery_done_, discovery_done_lock = discovery_done_lock_] {
-                {  // We keep the lock_guard's scope to a minimum.
-                  std::lock_guard<std::mutex> lock(*discovery_done_lock);
-                  if (!discovery_done->completer) {
-                    return;
-                  }
-                  discovery_done->completer.complete_error();
-                }
+  if (const zx_status_t status = async::PostDelayedTask(
+          timeout_dispatcher_,
+          [collection_done = collection_done_, collection_done_lock = collection_done_lock_] {
+            {  // We keep the lock_guard's scope to a minimum.
+              std::lock_guard<std::mutex> lock(*collection_done_lock);
+              if (!collection_done->completer) {
+                return;
+              }
+              collection_done->completer.complete_error();
+            }
 
-                FX_LOGS(ERROR) << "Inspect data discovery timed out";
-              },
-              timeout) != ZX_OK) {
+            FX_LOGS(ERROR) << "Inspect data collection timed out";
+          },
+          timeout);
+      status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to post delayed task";
-    FX_LOGS(ERROR)
-        << "Skipping Inspect data collection as Inspect discovery is not safe without a timeout";
+    FX_LOGS(ERROR) << "Skipping Inspect data collection as it is not safe without a timeout";
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
 
-  // We run the discovery in a separate thread as the calling component will itself be discovered
-  // and we don't want to deadlock it, cf. CF-756.
-  //
-  // Note that this thread could be left dangling if it hangs forever trying to opendir() a
-  // currently serving out/ directory from one of the discovered components. It is okay to have
-  // potentially dangling threads as we run each fuchsia.feedback.DataProvider request in a separate
-  // process that exits when the connection with the client is closed.
-  std::thread([discovery_done = discovery_done_,
-               discovery_done_lock = discovery_done_lock_]() mutable {
-    Locations locations = inspect_deprecated::SyncFindPaths("/hub");
+  // The Inspect data collection has two steps:
+  //   * synchronous discovery of all the Inspect entrypoints under the realm of the calling
+  //     component.
+  //   * asynchronous connection to each entrypoint and read of its Inspect data.
+  collection_executor_->schedule_task(
+      // We wrap the synchronous discovery in a fit::promise to guarantee that it is executed on the
+      // executor and not on this thread.
+      fit::make_promise(
+          []() -> fit::result<std::vector<fit::promise<inspect_deprecated::Source, std::string>>> {
+            auto locations = inspect_deprecated::SyncFindPaths("/hub");
 
-    std::lock_guard<std::mutex> lock(*discovery_done_lock);
-    if (!discovery_done->completer) {
-      return;
-    }
-
-    if (locations.empty()) {
-      FX_LOGS(ERROR) << "Failed to find any Inspect location";
-      discovery_done->completer.complete_error();
-    } else {
-      discovery_done->completer.complete_ok(std::move(locations));
-    }
-  }).detach();
-
-  // Then, we connect to each entrypoint and read asynchronously its Inspect data.
-  return discovery_done_->consumer.promise_or(fit::error()).and_then([](Locations& locations) {
-    std::vector<fit::promise<inspect_deprecated::Source, std::string>> sources;
-    for (auto location : locations) {
-      if (location.directory_path.find("system_objects") == std::string::npos) {
-        sources.push_back(inspect_deprecated::ReadLocation(std::move(location)));
-      }
-    }
-
-    return fit::join_promise_vector(std::move(sources))
-        .and_then([](std::vector<fit::result<inspect_deprecated::Source, std::string>>& sources)
-                      -> fit::result<fuchsia::mem::Buffer> {
-          std::vector<inspect_deprecated::Source> ok_sources;
-          for (auto& source : sources) {
-            if (source.is_ok()) {
-              inspect_deprecated::Source ok_source = source.take_value();
-              ok_source.SortHierarchy();
-              ok_sources.push_back(std::move(ok_source));
-            } else {
-              FX_LOGS(ERROR) << "Failed to read one Inspect source: " << source.take_error();
+            if (locations.empty()) {
+              FX_LOGS(ERROR) << "Failed to find any Inspect location";
+              return fit::error();
             }
-          }
 
-          if (ok_sources.empty()) {
-            FX_LOGS(WARNING) << "No valid Inspect sources found";
-            return fit::error();
-          }
+            std::vector<fit::promise<inspect_deprecated::Source, std::string>> sources;
+            for (auto location : locations) {
+              if (location.directory_path.find("system_objects") == std::string::npos) {
+                sources.push_back(inspect_deprecated::ReadLocation(std::move(location)));
+              }
+            }
+            return fit::ok(std::move(sources));
+          })
+          .and_then(
+              [](std::vector<fit::promise<inspect_deprecated::Source, std::string>>& sources) {
+                return fit::join_promise_vector(std::move(sources));
+              })
+          .and_then([](std::vector<fit::result<inspect_deprecated::Source, std::string>>& sources)
+                        -> fit::result<fuchsia::mem::Buffer> {
+            if (sources.empty()) {
+              return fit::error();
+            }
 
-          fsl::SizedVmo vmo;
-          if (!fsl::VmoFromString(inspect_deprecated::JsonFormatter(
-                                      inspect_deprecated::JsonFormatter::Options{},
-                                      inspect_deprecated::Formatter::PathFormat::ABSOLUTE)
-                                      .FormatSourcesRecursive(ok_sources),
-                                  &vmo)) {
-            FX_LOGS(ERROR) << "Failed to convert Inspect data JSON string to vmo";
-            return fit::error();
-          }
-          return fit::ok(std::move(vmo).ToTransport());
-        })
-        .or_else([]() {
-          FX_LOGS(ERROR) << "Failed to get Inspect data";
-          return fit::error();
-        });
+            std::vector<inspect_deprecated::Source> ok_sources;
+            for (auto& source : sources) {
+              if (source.is_ok()) {
+                inspect_deprecated::Source ok_source = source.take_value();
+                ok_source.SortHierarchy();
+                ok_sources.push_back(std::move(ok_source));
+              } else {
+                FX_LOGS(ERROR) << "Failed to read one Inspect source: " << source.take_error();
+              }
+            }
+
+            if (ok_sources.empty()) {
+              FX_LOGS(WARNING) << "No valid Inspect sources found";
+              return fit::error();
+            }
+
+            fsl::SizedVmo vmo;
+            if (!fsl::VmoFromString(inspect_deprecated::JsonFormatter(
+                                        inspect_deprecated::JsonFormatter::Options{},
+                                        inspect_deprecated::Formatter::PathFormat::ABSOLUTE)
+                                        .FormatSourcesRecursive(ok_sources),
+                                    &vmo)) {
+              FX_LOGS(ERROR) << "Failed to convert Inspect data JSON string to vmo";
+              return fit::error();
+            }
+            return fit::ok(std::move(vmo).ToTransport());
+          })
+          .then([collection_done = collection_done_, collection_done_lock = collection_done_lock_](
+                    fit::result<fuchsia::mem::Buffer>& result) {
+            std::lock_guard<std::mutex> lock(*collection_done_lock);
+            if (!collection_done->completer) {
+              return;
+            }
+
+            if (result.is_error()) {
+              collection_done->completer.complete_error();
+            } else {
+              collection_done->completer.complete_ok(result.take_value());
+            }
+          }));
+
+  return collection_done_->consumer.promise_or(fit::error()).or_else([]() {
+    FX_LOGS(ERROR) << "Failed to get Inspect data";
+    return fit::error();
   });
 }
 

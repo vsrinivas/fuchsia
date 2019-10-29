@@ -5,6 +5,7 @@
 #include "src/developer/feedback/feedback_agent/inspect_ptr.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -26,7 +27,12 @@ namespace {
 
 class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
  public:
-  CollectInspectDataTest() : executor_(dispatcher()) {}
+  CollectInspectDataTest()
+      : executor_(dispatcher()),
+        collection_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        collection_executor_(collection_loop_.dispatcher()) {
+    FXL_CHECK(collection_loop_.StartThread("collection-thread") == ZX_OK);
+  }
 
   void TearDown() override {
     if (!controller_) {
@@ -63,7 +69,7 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
     fit::result<fuchsia::mem::Buffer> result;
     bool has_result = false;
     executor_.schedule_task(
-        feedback::CollectInspectData(dispatcher(), timeout)
+        feedback::CollectInspectData(dispatcher(), timeout, &collection_executor_)
             .then([&result, &has_result](fit::result<fuchsia::mem::Buffer>& res) {
               result = std::move(res);
               has_result = true;
@@ -77,6 +83,10 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
  private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::sys::ComponentControllerPtr controller_;
+  async::Loop collection_loop_;
+
+ protected:
+  async::Executor collection_executor_;
 };
 
 constexpr char kInspectJsonSchema[] = R"({
@@ -167,7 +177,7 @@ TEST_F(CollectInspectDataTest, Fail_InspectDiscoveryTimeout) {
 
 TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {
   const zx::duration unused_timeout = zx::sec(1);
-  Inspect inspect(dispatcher());
+  Inspect inspect(dispatcher(), &collection_executor_);
   executor_.schedule_task(inspect.Collect(unused_timeout));
   ASSERT_DEATH(inspect.Collect(unused_timeout),
                testing::HasSubstr("Collect() is not intended to be called twice"));

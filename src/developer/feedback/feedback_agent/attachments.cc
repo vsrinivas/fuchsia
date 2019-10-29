@@ -45,7 +45,8 @@ fit::promise<fuchsia::mem::Buffer> VmoFromFilename(const std::string& filename) 
 fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
                                               async_dispatcher_t* dispatcher,
                                               std::shared_ptr<sys::ServiceDirectory> services,
-                                              const zx::duration timeout) {
+                                              const zx::duration timeout,
+                                              async::Executor* inspect_executor) {
   if (key == kAttachmentBuildSnapshot) {
     return VmoFromFilename("/config/build-info/snapshot");
   } else if (key == kAttachmentLogKernel) {
@@ -53,7 +54,7 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
   } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher, services, timeout);
   } else if (key == kAttachmentInspect) {
-    return CollectInspectData(dispatcher, timeout);
+    return CollectInspectData(dispatcher, timeout, inspect_executor);
   } else {
     FX_LOGS(WARNING) << "Unknown attachment " << key;
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
@@ -62,8 +63,9 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
 
 fit::promise<Attachment> BuildAttachment(const std::string& key, async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services,
-                                         const zx::duration timeout) {
-  return BuildValue(key, dispatcher, services, timeout)
+                                         const zx::duration timeout,
+                                         async::Executor* inspect_executor) {
+  return BuildValue(key, dispatcher, services, timeout, inspect_executor)
       .and_then([key](fuchsia::mem::Buffer& vmo) -> fit::result<Attachment> {
         Attachment attachment;
         attachment.key = key;
@@ -80,7 +82,8 @@ fit::promise<Attachment> BuildAttachment(const std::string& key, async_dispatche
 
 std::vector<fit::promise<Attachment>> GetAttachments(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const std::set<std::string>& allowlist, const zx::duration timeout) {
+    const std::set<std::string>& allowlist, const zx::duration timeout,
+    async::Executor* inspect_executor) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Attachment allowlist is empty, nothing to retrieve";
     return {};
@@ -88,7 +91,7 @@ std::vector<fit::promise<Attachment>> GetAttachments(
 
   std::vector<fit::promise<Attachment>> attachments;
   for (const auto& key : allowlist) {
-    attachments.push_back(BuildAttachment(key, dispatcher, services, timeout));
+    attachments.push_back(BuildAttachment(key, dispatcher, services, timeout, inspect_executor));
   }
   return attachments;
 }

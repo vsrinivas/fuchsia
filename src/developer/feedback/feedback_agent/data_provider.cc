@@ -6,6 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
 #include <lib/zx/time.h>
@@ -77,10 +78,16 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services, const Config& config,
                            std::function<void()> after_timeout, zx::duration timeout)
     : dispatcher_(dispatcher),
-      executor_(dispatcher),
       services_(services),
       config_(config),
-      after_timeout_(dispatcher, after_timeout, timeout) {}
+      after_timeout_(dispatcher, after_timeout, timeout),
+      executor_(dispatcher),
+      inspect_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      inspect_executor_(inspect_loop_.dispatcher()) {
+  if (const zx_status_t status = inspect_loop_.StartThread("inspect-thread"); status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Unable to start new thread for Inspect data collection";
+  }
+}
 
 void DataProvider::GetData(GetDataCallback callback) {
   after_timeout_.Acquire();
@@ -104,8 +111,8 @@ void DataProvider::GetData(GetDataCallback callback) {
           });
 
   auto attachments =
-      fit::join_promise_vector(
-          GetAttachments(dispatcher_, services_, config_.attachment_allowlist, kDataTimeout))
+      fit::join_promise_vector(GetAttachments(dispatcher_, services_, config_.attachment_allowlist,
+                                              kDataTimeout, &inspect_executor_))
           .and_then([](std::vector<fit::result<Attachment>>& attachments)
                         -> fit::result<std::vector<Attachment>> {
             std::vector<Attachment> ok_attachments;
