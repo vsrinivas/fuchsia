@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/lib/fxl/strings/split_string.h"
+
 #include "gtest/gtest.h"
 #include "src/lib/fxl/strings/string_view.h"
 
@@ -10,11 +11,11 @@ namespace fxl {
 namespace {
 
 TEST(StringUtil, SplitString) {
-  StringView sw = "First,\tSecond,Third\t ,, ";
-  std::vector<std::string> r1 = {"First", "\tSecond", "Third\t ", "", " "};
-  std::vector<std::string> r2 = {"First", "Second", "Third", "", ""};
-  std::vector<std::string> r3 = {"First", "Second", "Third"};
-  std::vector<std::string> r4 = {"First", "\tSecond", "Third\t ", " "};
+  StringView sw = ",First,\tSecond,Third\t ,, Fou rth,\t";
+  std::vector<std::string> r1 = {"", "First", "\tSecond", "Third\t ", "", " Fou rth", "\t"};
+  std::vector<std::string> r2 = {"", "First", "Second", "Third", "", "Fou rth", ""};
+  std::vector<std::string> r3 = {"First", "Second", "Third", "Fou rth"};
+  std::vector<std::string> r4 = {"First", "\tSecond", "Third\t ", " Fou rth", "\t"};
 
   EXPECT_EQ(r1, SplitStringCopy(sw, ",", kKeepWhitespace, kSplitWantAll));
   EXPECT_EQ(r2, SplitStringCopy(sw, ",", kTrimWhitespace, kSplitWantAll));
