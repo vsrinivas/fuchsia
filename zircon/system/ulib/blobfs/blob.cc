@@ -251,6 +251,8 @@ zx_status_t Blob::InitUncompressed() {
   const uint64_t blob_data_blocks = BlobDataBlocks(inode_);
   const uint64_t merkle_blocks = MerkleTreeBlocks(inode_);
   if (blob_data_blocks + merkle_blocks > std::numeric_limits<uint32_t>::max()) {
+    FS_TRACE_ERROR("data blocks %lu + merkle blocks %lu overflows", blob_data_blocks,
+                   merkle_blocks);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   const uint32_t length = static_cast<uint32_t>(blob_data_blocks + merkle_blocks);
@@ -357,7 +359,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   }
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
-  if (inode_.blob_size >= kCompressionMinBytesSaved) {
+  if (inode_.blob_size >= kCompressionSizeThresholdBytes) {
     write_info->compressor = BlobCompressor::Create(CompressionAlgorithm::ZSTD, inode_.blob_size);
     if (!write_info->compressor) {
       FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
@@ -545,6 +547,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       Digest expected(GetKey());
       Digest actual(root);
       if (expected != actual) {
+        FS_TRACE_ERROR("blob digest %s did not match key %s", actual.ToString().c_str(),
+                       expected.ToString().c_str());
         // Downloaded blob did not match provided digest.
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
@@ -599,8 +603,9 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
         return status;
       }
       blocks += MerkleTreeBlocks(inode_);
-      // By compressing, we used less blocks than we originally reserved.
-      ZX_DEBUG_ASSERT(inode_.block_count > blocks);
+      // By compressing, we may have used less blocks than we originally
+      // reserved.  We should not use more.
+      ZX_DEBUG_ASSERT(inode_.block_count >= blocks);
 
       inode_.block_count = blocks;
       inode_.header.flags |= kBlobFlagZSTDCompressed;
@@ -644,7 +649,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 
 void Blob::ConsiderCompressionAbort() {
   ZX_DEBUG_ASSERT(write_info_->compressor);
-  if (inode_.blob_size - kCompressionMinBytesSaved < write_info_->compressor->Size()) {
+  if (inode_.blob_size < write_info_->compressor->Size()) {
     write_info_->compressor.reset();
   }
 }
@@ -985,7 +990,7 @@ zx_status_t Blob::Purge() {
 
     auto task = fs::wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),
                                    fbl::RefPtr(this))
-        .and_then(blobfs_->journal()->TrimData(std::move(trim_data)));
+                    .and_then(blobfs_->journal()->TrimData(std::move(trim_data)));
     blobfs_->journal()->schedule_task(std::move(task));
   }
   ZX_ASSERT(Cache().Evict(fbl::RefPtr(this)) == ZX_OK);
