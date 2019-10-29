@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../fake-buffer-collection.h"
-
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/vmo.h>
@@ -12,6 +10,8 @@
 
 #include <ddk/debug.h>
 #include <gtest/gtest.h>
+
+#include "../fake-buffer-collection.h"
 
 namespace camera {
 namespace {
@@ -26,7 +26,8 @@ TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
 
   fuchsia_sysmem_BufferCollectionInfo buffer_collection;
   ASSERT_EQ(CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
-                                                 kNumberOfBuffers), ZX_OK);
+                                                 kNumberOfBuffers),
+            ZX_OK);
 
   // Check it made the buffer collection like we want:
   EXPECT_EQ(buffer_collection.buffer_count, kNumberOfBuffers);
@@ -44,10 +45,9 @@ TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
 TEST(CreateContiguousBufferCollectionInfo, FailsOnBadHandle) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
   fuchsia_sysmem_BufferCollectionInfo buffer_collection;
-  ASSERT_DEATH(
-    camera::CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
-                                                 kNumberOfBuffers),
-    "fake bti_pin: Bad handle 0");
+  ASSERT_DEATH(camera::CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth,
+                                                            kHeight, kNumberOfBuffers),
+               "fake bti_pin: Bad handle 0");
 }
 
 }  // namespace

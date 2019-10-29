@@ -1,14 +1,14 @@
 {
-  "program": {
-    "binary": "test/test_utils_test"
-  },
-  "sandbox": {
-    "features": [
-      "deprecated-ambient-replace-as-executable"
-    ],
-    "services": [
-      "fuchsia.logger.LogSink",
-      "fuchsia.process.Launcher"
-    ]
-  }
+    "program": {
+        "binary": "test/test_utils_test"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
 }
