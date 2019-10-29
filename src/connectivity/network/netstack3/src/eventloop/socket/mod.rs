@@ -4,8 +4,9 @@
 
 //! Socket features exposed by netstack3.
 
-mod udp;
+pub(crate) mod udp;
 
+use std::convert::TryFrom;
 use std::num::NonZeroU16;
 
 use byteorder::{NativeEndian, NetworkEndian};
@@ -92,6 +93,17 @@ fn spawn_worker(
     }
 }
 
+fn get_domain_ip_version<T>(v: T) -> Option<IpVersion>
+where
+    i32: TryFrom<T>,
+{
+    match i32::try_from(v) {
+        Ok(libc::AF_INET) => Some(IpVersion::V4),
+        Ok(libc::AF_INET6) => Some(IpVersion::V6),
+        _ => None,
+    }
+}
+
 /// Handles a `fuchsia.posix.socket.Provider` FIDL request in `req`.
 pub(crate) fn handle_fidl_socket_provider_request(
     event_loop: &mut EventLoop,
@@ -99,18 +111,11 @@ pub(crate) fn handle_fidl_socket_provider_request(
 ) {
     match req {
         psocket::ProviderRequest::Socket { domain, type_, protocol: _, responder } => {
-            let domain = i32::from(domain);
             let nonblock = i32::from(type_) & libc::SOCK_NONBLOCK != 0;
             let type_ = i32::from(type_) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
 
             let result = (|| {
-                let net_proto = match domain {
-                    libc::AF_INET => IpVersion::V4,
-                    libc::AF_INET6 => IpVersion::V6,
-                    _ => {
-                        return Err(libc::EAFNOSUPPORT);
-                    }
-                };
+                let net_proto = get_domain_ip_version(domain).ok_or(libc::EAFNOSUPPORT)?;
                 let trans_proto = match i32::from(type_) {
                     libc::SOCK_DGRAM => TransProto::Udp,
                     libc::SOCK_STREAM => TransProto::Tcp,
@@ -161,11 +166,25 @@ pub(crate) trait SockAddr:
     /// Gets this `SockAddr`'s address.
     fn addr(&self) -> Self::AddrType;
 
+    /// Set this [`SockAddr`]'s address.
+    ///
+    /// # Panics
+    ///
+    /// Panics id `addr` does not have the correct length for this
+    /// [`SockAddr`] implementation.
+    fn set_addr(&mut self, addr: &[u8]);
+
     /// Gets this `SockAddr`'s port.
     fn port(&self) -> u16;
 
+    /// Set this [`SockAddr`]'s port.
+    fn set_port(&mut self, port: u16);
+
     /// Gets this `SockAddr`'s family.
     fn family(&self) -> u16;
+
+    /// Set this [`SockAddr`]'s family.
+    fn set_family(&mut self, family: u16);
 
     /// Gets a `SpecifiedAddr` witness type for this `SockAddr`'s address.
     fn get_specified_addr(&self) -> Option<SpecifiedAddr<Self::AddrType>> {
@@ -205,12 +224,24 @@ impl SockAddr for SockAddr6 {
         Ipv6Addr::new(self.addr)
     }
 
+    fn set_addr(&mut self, addr: &[u8]) {
+        self.addr.copy_from_slice(addr)
+    }
+
     fn port(&self) -> u16 {
         self.port.get()
     }
 
+    fn set_port(&mut self, port: u16) {
+        self.port.set(port)
+    }
+
     fn family(&self) -> u16 {
         self.family.get()
+    }
+
+    fn set_family(&mut self, family: u16) {
+        self.family.set(family)
     }
 }
 
@@ -233,13 +264,59 @@ impl SockAddr for SockAddr4 {
         Ipv4Addr::new(self.addr)
     }
 
+    fn set_addr(&mut self, addr: &[u8]) {
+        self.addr.copy_from_slice(addr)
+    }
+
     fn port(&self) -> u16 {
         self.port.get()
+    }
+
+    fn set_port(&mut self, port: u16) {
+        self.port.set(port)
     }
 
     fn family(&self) -> u16 {
         self.family.get()
     }
+
+    fn set_family(&mut self, family: u16) {
+        self.family.set(family)
+    }
+}
+
+/// Backing storage for `SockAddr` when used in headers for datagram POSIX
+/// sockets.
+///
+/// Defined in C code in `sys/socket.h`.
+// NOTE(brunodalbo) this struct is expected to be short-lived. Upcoming changes
+// to the POSIX FIDL API will render this obsolete.
+#[derive(AsBytes, FromBytes, Unaligned)]
+#[repr(C)]
+struct SockAddrStorage {
+    family: U16<NativeEndian>,
+    storage: [u8; 128 - 2],
+}
+
+// We need to implement Default manually because [u8; 128-2] does not provide a
+// `Default` impl
+impl Default for SockAddrStorage {
+    fn default() -> Self {
+        Self { family: Default::default(), storage: [0u8; 128 - 2] }
+    }
+}
+
+/// Header of messages transmitted over POSIX datagram sockets.
+///
+/// Defined in C code in `zxs/protocol.h`.
+// NOTE(brunodalbo) this struct is expected to be short-lived. Upcoming changes
+// to the POSIX FIDL API will render this obsolete.
+#[derive(AsBytes, FromBytes, Unaligned, Default)]
+#[repr(C)]
+struct FdioSocketMsg {
+    addr: SockAddrStorage,
+    addrlen: U32<NativeEndian>,
+    flags: U32<NativeEndian>,
 }
 
 /// Extension trait that associates a [`SockAddr`] implementation to an IP
@@ -308,18 +385,6 @@ mod testutil {
             v
         }
 
-        /// Set this [`SockAddr`]'s family.
-        fn set_family(&mut self, family: u16);
-        /// Set this [`SockAddr`]'s port.
-        fn set_port(&mut self, port: u16);
-        /// Set this [`SockAddr`]'s address.
-        ///
-        /// # Panics
-        ///
-        /// Panics id `addr` does not have the correct length for this
-        /// [`SockAddr`] implementation.
-        fn set_addr(&mut self, addr: &[u8]);
-
         /// Sets the options in `options` to this [`SockAddr`].
         fn set_options(&mut self, options: &SockAddrTestOptions) {
             self.set_family(if options.bad_family { Self::bad_family() } else { Self::FAMILY });
@@ -333,6 +398,11 @@ mod testutil {
         /// [`SockAddr`].
         fn config_addr_subnet() -> AddrSubnetEither {
             AddrSubnetEither::new(IpAddr::from(Self::LOCAL_ADDR), Self::DEFAULT_PREFIX).unwrap()
+        }
+
+        /// Gets the remote address and prefix to use for the test [`SockAddr`].
+        fn config_addr_subnet_remote() -> AddrSubnetEither {
+            AddrSubnetEither::new(IpAddr::from(Self::REMOTE_ADDR), Self::DEFAULT_PREFIX).unwrap()
         }
 
         /// Returns a bad socket family value (one that will cause errors when
@@ -354,17 +424,6 @@ mod testutil {
         const REMOTE_ADDR_2: Ipv6Addr =
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3]);
         const DEFAULT_PREFIX: u8 = 64;
-        fn set_family(&mut self, family: u16) {
-            self.family.set(family)
-        }
-
-        fn set_port(&mut self, port: u16) {
-            self.port.set(port)
-        }
-
-        fn set_addr(&mut self, addr: &[u8]) {
-            self.addr.copy_from_slice(addr)
-        }
     }
 
     impl TestSockAddr for SockAddr4 {
@@ -372,16 +431,5 @@ mod testutil {
         const REMOTE_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 2]);
         const REMOTE_ADDR_2: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 3]);
         const DEFAULT_PREFIX: u8 = 24;
-        fn set_family(&mut self, family: u16) {
-            self.family.set(family)
-        }
-
-        fn set_port(&mut self, port: u16) {
-            self.port.set(port)
-        }
-
-        fn set_addr(&mut self, addr: &[u8]) {
-            self.addr.copy_from_slice(addr)
-        }
     }
 }

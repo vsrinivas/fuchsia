@@ -17,6 +17,7 @@ use zerocopy::ByteSlice;
 
 use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
 use crate::context::{RngContext, RngContextExt, StateContext};
+use crate::data_structures::IdMapCollectionKey;
 use crate::ip::{
     BufferTransportIpContext, IpPacketFromArgs, IpProto, IpVersionMarker, TransportIpContext,
 };
@@ -286,6 +287,18 @@ impl<I: Ip> From<UdpConnId<I>> for usize {
     }
 }
 
+impl<I: Ip> IdMapCollectionKey for UdpConnId<I> {
+    const VARIANT_COUNT: usize = 1;
+
+    fn get_variant(&self) -> usize {
+        0
+    }
+
+    fn get_id(&self) -> usize {
+        self.0
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 enum ListenerType {
     Specified,
@@ -324,6 +337,19 @@ impl<I: Ip> UdpListenerId<I> {
     }
 }
 
+impl<I: Ip> IdMapCollectionKey for UdpListenerId<I> {
+    const VARIANT_COUNT: usize = 2;
+    fn get_variant(&self) -> usize {
+        match self.listener_type {
+            ListenerType::Specified => 0,
+            ListenerType::Wildcard => 1,
+        }
+    }
+    fn get_id(&self) -> usize {
+        self.id
+    }
+}
+
 /// An execution context for the UDP protocol.
 pub trait UdpContext<I: Ip>:
     TransportIpContext<I> + StateContext<UdpState<I>> + RngContext
@@ -342,7 +368,13 @@ pub trait BufferUdpContext<I: Ip, B: BufferMut>:
     UdpContext<I> + BufferTransportIpContext<I, B>
 {
     /// Receive a UDP packet for a connection.
-    fn receive_udp_from_conn(&mut self, _conn: UdpConnId<I>, _body: &[u8]) {
+    fn receive_udp_from_conn(
+        &mut self,
+        _conn: UdpConnId<I>,
+        _src_ip: I::Addr,
+        _src_port: NonZeroU16,
+        _body: &[u8],
+    ) {
         log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_conn: not implemented");
     }
 
@@ -390,8 +422,14 @@ impl<I: Ip, D: EventDispatcher> UdpContext<I> for Context<D> {}
 impl<I: Ip, B: BufferMut, D: BufferDispatcher<B> + UdpEventDispatcher<I>> BufferUdpContext<I, B>
     for Context<D>
 {
-    fn receive_udp_from_conn(&mut self, conn: UdpConnId<I>, body: &[u8]) {
-        self.dispatcher_mut().receive_udp_from_conn(conn, body);
+    fn receive_udp_from_conn(
+        &mut self,
+        conn: UdpConnId<I>,
+        src_ip: I::Addr,
+        src_port: NonZeroU16,
+        body: &[u8],
+    ) {
+        self.dispatcher_mut().receive_udp_from_conn(conn, src_ip, src_port, body);
     }
 
     fn receive_udp_from_listen(
@@ -411,7 +449,13 @@ impl<I: Ip, B: BufferMut, D: BufferDispatcher<B> + UdpEventDispatcher<I>> Buffer
 /// See the `EventDispatcher` trait in the crate root for more details.
 pub trait UdpEventDispatcher<I: Ip> {
     /// Receive a UDP packet for a connection.
-    fn receive_udp_from_conn(&mut self, _conn: UdpConnId<I>, _body: &[u8]) {
+    fn receive_udp_from_conn(
+        &mut self,
+        _conn: UdpConnId<I>,
+        _src_ip: I::Addr,
+        _src_port: NonZeroU16,
+        _body: &[u8],
+    ) {
         log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_conn: not implemented");
     }
 
@@ -450,11 +494,16 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 
     let state = ctx.get_state();
 
-    if let Some(conn) = SpecifiedAddr::new(src_ip)
+    if let Some((conn_id, conn)) = SpecifiedAddr::new(src_ip)
         .and_then(|src_ip| Conn::from_packet(src_ip, dst_ip, &packet))
-        .and_then(|conn| state.conn_state.conns.get_id_by_addr(&conn))
+        .and_then(|conn| state.conn_state.conns.get_id_by_addr(&conn).map(|id| (id, conn)))
     {
-        ctx.receive_udp_from_conn(UdpConnId::new(conn), packet.body());
+        ctx.receive_udp_from_conn(
+            UdpConnId::new(conn_id),
+            conn.remote_addr.get(),
+            conn.remote_port,
+            packet.body(),
+        );
         Ok(())
     } else if let Some(listener) = state
         .conn_state
@@ -932,7 +981,13 @@ mod tests {
 
     impl<I: Ip> UdpContext<I> for DummyContext<I> {}
     impl<I: Ip, B: BufferMut> BufferUdpContext<I, B> for DummyContext<I> {
-        fn receive_udp_from_conn(&mut self, conn: UdpConnId<I>, body: &[u8]) {
+        fn receive_udp_from_conn(
+            &mut self,
+            conn: UdpConnId<I>,
+            _src_ip: <I as Ip>::Addr,
+            _src_port: NonZeroU16,
+            body: &[u8],
+        ) {
             self.get_mut().conn_data.push(ConnData { conn, body: body.to_owned() })
         }
 

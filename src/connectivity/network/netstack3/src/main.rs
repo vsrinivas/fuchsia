@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //! A networking stack.
-
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 #![recursion_limit = "256"]

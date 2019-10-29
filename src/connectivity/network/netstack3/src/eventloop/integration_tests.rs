@@ -191,6 +191,7 @@ impl TestStack {
         let mut builder = StackStateBuilder::default();
         let mut config = NdpConfigurations::default();
         config.set_dup_addr_detect_transmits(None);
+        config.set_max_router_solicitations(None);
         builder.device_builder().set_default_ndp_configs(config);
 
         let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();

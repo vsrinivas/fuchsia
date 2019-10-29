@@ -110,7 +110,7 @@ use futures::prelude::*;
 use integration_tests::TestEvent;
 use log::{debug, error, info, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::Ip;
+use net_types::ip::{Ipv4, Ipv6};
 use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, Serializer};
 use rand::rngs::OsRng;
@@ -123,7 +123,7 @@ use netstack3_core::{
     add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_ip_addr_subnets,
     get_all_routes, handle_timeout, initialize_device, receive_frame, remove_device, Context,
     DeviceId, DeviceLayerEventDispatcher, EntryEither, EventDispatcher, IpLayerEventDispatcher,
-    StackStateBuilder, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
+    StackStateBuilder, TimerId, TransportLayerEventDispatcher,
 };
 
 /// The message that is sent to the main event loop to indicate that an
@@ -267,6 +267,7 @@ impl EventLoop {
                     event_send: event_send.clone(),
                     #[cfg(test)]
                     test_events: None,
+                    udp_sockets: Default::default(),
                 },
             ),
             event_recv,
@@ -727,6 +728,7 @@ struct EventLoopInner {
     event_send: mpsc::UnboundedSender<Event>,
     #[cfg(test)]
     test_events: Option<mpsc::UnboundedSender<TestEvent>>,
+    udp_sockets: socket::udp::UdpSocketCollection,
 }
 
 struct EchoSocket {
@@ -834,9 +836,8 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for EventLoopInner {
     }
 }
 
-impl<I: Ip> UdpEventDispatcher<I> for EventLoopInner {}
-
-impl<I: Ip> TransportLayerEventDispatcher<I> for EventLoopInner {}
+impl TransportLayerEventDispatcher<Ipv4> for EventLoopInner {}
+impl TransportLayerEventDispatcher<Ipv6> for EventLoopInner {}
 
 impl Icmpv4EventDispatcher for EventLoopInner {}
 

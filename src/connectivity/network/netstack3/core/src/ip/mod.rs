@@ -138,10 +138,26 @@ impl<A: IpAddress, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacke
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        _meta: IpPacketFromArgs<A>,
-        _body: S,
+        meta: IpPacketFromArgs<A>,
+        body: S,
     ) -> Result<(), S> {
-        log_unimplemented!(Ok(()), "FrameContext<IpPacketFromArgs>::send_frame: not implemented")
+        // TODO(brunodalbo) this lookup is not considering the source ip in
+        // `meta`, doesn't look totally correct.
+        let route = if let Some(r) = lookup_route(self, meta.dst_ip) {
+            r
+        } else {
+            return Err(body);
+        };
+        send_ip_packet_from_device(
+            self,
+            route.device,
+            meta.src_ip.get(),
+            meta.dst_ip.get(),
+            route.next_hop,
+            meta.proto,
+            body,
+            None,
+        )
     }
 }
 
