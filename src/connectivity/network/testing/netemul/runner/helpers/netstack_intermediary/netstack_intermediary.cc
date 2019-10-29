@@ -13,7 +13,7 @@
 
 #include "src/lib/fxl/logging.h"
 
-static constexpr netemul::EthernetConfig eth_config = {.buff_size = 2048, .nbufs = 256};
+static constexpr netemul::EthernetConfig eth_config = {.nbufs = 256, .buff_size = 2048};
 
 NetstackIntermediary::NetstackIntermediary(std::string network_name)
     : NetstackIntermediary(std::move(network_name), sys::ComponentContext::Create()) {}

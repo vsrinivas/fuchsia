@@ -6,13 +6,14 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/clock.h>
+
+#include <unordered_set>
+
 #include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
 #include <src/connectivity/network/testing/netemul/lib/network/fake_endpoint.h>
 #include <src/connectivity/network/testing/netemul/lib/network/netdump.h>
 #include <src/connectivity/network/testing/netemul/lib/network/netdump_parser.h>
 #include <src/connectivity/network/testing/netemul/lib/network/network_context.h>
-
-#include <unordered_set>
 
 #define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
 #define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
@@ -26,7 +27,7 @@
 namespace netemul {
 namespace testing {
 
-static const EthernetConfig TestEthBuffConfig = {.buff_size = 512, .nbufs = 10};
+static const EthernetConfig TestEthBuffConfig = {.nbufs = 10, .buff_size = 512};
 
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;

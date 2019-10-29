@@ -187,8 +187,10 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
     }
   }
 
-  fuchsia::sys::EnvironmentOptions sub_options = {
-      .kill_on_oom = true, .use_parent_runners = false, .inherit_parent_services = false};
+  fuchsia::sys::EnvironmentOptions sub_options = {.inherit_parent_services = false,
+                                                  .use_parent_runners = false,
+                                                  .kill_on_oom = true,
+                                                  .delete_storage_on_death = true};
 
   env_ = EnclosingEnvironment::Create(options.name(), parent, std::move(services), sub_options);
 

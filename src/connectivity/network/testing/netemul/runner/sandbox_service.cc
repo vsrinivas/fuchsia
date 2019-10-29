@@ -141,10 +141,10 @@ fidl::InterfaceRequestHandler<fuchsia::netemul::sandbox::Sandbox> SandboxService
         env.NewRequest(loop->dispatcher()), env_ctlr.NewRequest(loop->dispatcher()),
         fxl::StringPrintf("netemul-%08X-%08X", random_, counter_++), nullptr,
         fuchsia::sys::EnvironmentOptions{
-            .delete_storage_on_death = false,
-            .kill_on_oom = true,
             .inherit_parent_services = true,
             .use_parent_runners = true,
+            .kill_on_oom = true,
+            .delete_storage_on_death = true,
         });
 
     bindings_.push_back(std::make_unique<SandboxBinding>(std::move(req), std::move(env_ctlr),
