@@ -69,7 +69,7 @@ class StrictSimpleXUnion final {
   static StrictSimpleXUnion WithF(float&&);
   static StrictSimpleXUnion WithS(::std::string&&);
 
-  enum : fidl_xunion_tag_t {
+  enum class InternalTag : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
 
@@ -138,7 +138,7 @@ class StrictSimpleXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = kEmpty;
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     int32_t i_;
     float f_;
@@ -166,7 +166,7 @@ class StrictBoundedXUnion final {
   
   static StrictBoundedXUnion WithV(::std::vector<uint8_t>&&);
 
-  enum : fidl_xunion_tag_t {
+  enum class InternalTag : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
 
@@ -213,7 +213,7 @@ class StrictBoundedXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = kEmpty;
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     ::std::vector<uint8_t> v_;
   };
@@ -240,7 +240,7 @@ class OlderSimpleUnion final {
   static OlderSimpleUnion WithI(int64_t&&);
   static OlderSimpleUnion WithF(float&&);
 
-  enum : fidl_xunion_tag_t {
+  enum class InternalTag : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
 
@@ -310,7 +310,7 @@ class OlderSimpleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = kEmpty;
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     int64_t i_;
     float f_;
@@ -539,7 +539,7 @@ class NewerSimpleUnion final {
   static NewerSimpleUnion WithS(::std::string&&);
   static NewerSimpleUnion WithV(::std::vector<::std::string>&&);
 
-  enum : fidl_xunion_tag_t {
+  enum class InternalTag : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
 
@@ -621,7 +621,7 @@ class NewerSimpleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = kEmpty;
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     int64_t i_;
     ::std::string s_;
@@ -651,7 +651,7 @@ class ExplicitXUnion final {
   static ExplicitXUnion WithI(int64_t&&);
   static ExplicitXUnion WithF(float&&);
 
-  enum : fidl_xunion_tag_t {
+  enum class InternalTag : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
 
@@ -721,7 +721,7 @@ class ExplicitXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = kEmpty;
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     int64_t i_;
     float f_;
@@ -769,7 +769,7 @@ class XUnionContainingEmptyStruct final {
   
   static XUnionContainingEmptyStruct WithEmpty(class Empty&&);
 
-  enum : fidl_xunion_tag_t {
+  enum class InternalTag : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
 
@@ -827,7 +827,7 @@ class XUnionContainingEmptyStruct final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = kEmpty;
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     class Empty empty_;
     std::vector<uint8_t> unknown_data_;
@@ -904,7 +904,7 @@ struct Equality<::test::name::StrictSimpleXUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case ::test::name::StrictSimpleXUnion::kEmpty:
+      case static_cast<fidl_xunion_tag_t>(::test::name::StrictSimpleXUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::StrictSimpleXUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
@@ -960,7 +960,7 @@ struct Equality<::test::name::StrictBoundedXUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case ::test::name::StrictBoundedXUnion::kEmpty:
+      case static_cast<fidl_xunion_tag_t>(::test::name::StrictBoundedXUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::StrictBoundedXUnion::Tag::kV:
         return ::fidl::Equals(_lhs.v_, _rhs.v_);
@@ -1012,7 +1012,7 @@ struct Equality<::test::name::OlderSimpleUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case ::test::name::OlderSimpleUnion::kEmpty:
+      case static_cast<fidl_xunion_tag_t>(::test::name::OlderSimpleUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::OlderSimpleUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
@@ -1065,7 +1065,7 @@ struct Equality<::test::name::NewerSimpleUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case ::test::name::NewerSimpleUnion::kEmpty:
+      case static_cast<fidl_xunion_tag_t>(::test::name::NewerSimpleUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::NewerSimpleUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
@@ -1120,7 +1120,7 @@ struct Equality<::test::name::ExplicitXUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case ::test::name::ExplicitXUnion::kEmpty:
+      case static_cast<fidl_xunion_tag_t>(::test::name::ExplicitXUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::ExplicitXUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
@@ -1191,7 +1191,7 @@ struct Equality<::test::name::XUnionContainingEmptyStruct> {
     }
 
     switch (_lhs.Ordinal()) {
-      case ::test::name::XUnionContainingEmptyStruct::kEmpty:
+      case static_cast<fidl_xunion_tag_t>(::test::name::XUnionContainingEmptyStruct::InternalTag::kEmpty):
         return true;
       case ::test::name::XUnionContainingEmptyStruct::Tag::kEmpty:
         return ::fidl::Equals(_lhs.empty_, _rhs.empty_);

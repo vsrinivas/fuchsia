@@ -138,5 +138,22 @@ TEST(XUnion, XUnionFactoryFunctions) {
   EXPECT_EQ(tbl_xu.UnknownData(), nullptr);
 }
 
+// Confirms that an xunion can have a variant with both type and name identifiers as "empty" and not
+// collide with any tags, internal or otherwise, indicating the xunion is in its unknown monostate.
+TEST(XUnion, XUnionContainingEmptyStruct) {
+  using test::misc::Empty;
+  using test::misc::XUnionContainingEmptyStruct;
+
+  XUnionContainingEmptyStruct xu;
+
+  EXPECT_EQ(xu.Which(), XUnionContainingEmptyStruct::Tag::kUnknown);
+  EXPECT_FALSE(xu.is_empty());
+
+  Empty empty;
+  xu.set_empty(std::move(empty));
+  EXPECT_EQ(xu.Which(), XUnionContainingEmptyStruct::Tag::kEmpty);
+  EXPECT_TRUE(xu.is_empty());
+}
+
 }  // namespace
 }  // namespace fidl

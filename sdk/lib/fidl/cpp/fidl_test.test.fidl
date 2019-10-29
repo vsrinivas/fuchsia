@@ -31,6 +31,10 @@ struct Has2OptionalFieldStruct {
 struct Empty {
 };
 
+xunion XUnionContainingEmptyStruct {
+    Empty empty;
+};
+
 struct EmptyStructSandwich {
     string before;
     Empty e;

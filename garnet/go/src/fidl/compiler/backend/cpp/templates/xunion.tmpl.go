@@ -52,7 +52,7 @@ class {{ .Name }} final {
 
     */ -}}
 
-  enum : fidl_xunion_tag_t {
+  enum class InternalTag : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
 
@@ -129,7 +129,7 @@ class {{ .Name }} final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = kEmpty;
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
   {{- range .Members }}
     {{ .Type.Identifier }} {{ .StorageName }};
@@ -168,7 +168,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
       {{ .StorageName }} = std::move(other.{{ .StorageName }});
       break;
   {{- end }}
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
   {{- if .IsFlexible }}
     default:
@@ -192,7 +192,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
         {{ .StorageName }} = std::move(other.{{ .StorageName }});
         break;
     {{- end }}
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
     {{- if .IsFlexible }}
       default:
@@ -253,7 +253,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(kEmpty);
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty));
     return;
   }
 
@@ -317,7 +317,7 @@ void {{ .Name }}::Destroy() {
       break;
   {{- end }}
   {{ if .IsFlexible }}
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       unknown_data_.~vector();
@@ -327,7 +327,7 @@ void {{ .Name }}::Destroy() {
       break;
   {{ end }}
   }
-  tag_ = kEmpty;
+  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
 }
 
 void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -335,7 +335,7 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       {{- range .Members }}
       {{- if .Type.Dtor }}
@@ -402,7 +402,7 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
 
     {{ with $xunion := . -}}
     switch (_lhs.Ordinal()) {
-      case {{ $xunion.Namespace }}::{{ $xunion.Name }}::kEmpty:
+      case static_cast<fidl_xunion_tag_t>({{ $xunion.Namespace }}::{{ $xunion.Name }}::InternalTag::kEmpty):
         return true;
     {{- range .Members }}
       case {{ $xunion.Namespace }}::{{ $xunion.Name }}::Tag::{{ .TagName }}:

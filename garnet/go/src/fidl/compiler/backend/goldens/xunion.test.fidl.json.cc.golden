@@ -52,7 +52,7 @@ StrictSimpleXUnion::StrictSimpleXUnion(StrictSimpleXUnion&& other) : tag_(other.
       new (&s_) ::std::string();
       s_ = std::move(other.s_);
       break;
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
   }
 }
@@ -72,7 +72,7 @@ StrictSimpleXUnion& StrictSimpleXUnion::operator=(StrictSimpleXUnion&& other) {
         new (&s_) ::std::string();
         s_ = std::move(other.s_);
         break;
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
     }
   }
@@ -137,7 +137,7 @@ void StrictSimpleXUnion::Decode(::fidl::Decoder* decoder, StrictSimpleXUnion* va
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(kEmpty);
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty));
     return;
   }
 
@@ -209,7 +209,7 @@ void StrictSimpleXUnion::Destroy() {
       break;
   
   }
-  tag_ = kEmpty;
+  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
 }
 
 void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -217,7 +217,7 @@ void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       case Tag::kS:
         new (&s_) ::std::string();
@@ -242,7 +242,7 @@ StrictBoundedXUnion::StrictBoundedXUnion(StrictBoundedXUnion&& other) : tag_(oth
       new (&v_) ::std::vector<uint8_t>();
       v_ = std::move(other.v_);
       break;
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
   }
 }
@@ -256,7 +256,7 @@ StrictBoundedXUnion& StrictBoundedXUnion::operator=(StrictBoundedXUnion&& other)
         new (&v_) ::std::vector<uint8_t>();
         v_ = std::move(other.v_);
         break;
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
     }
   }
@@ -301,7 +301,7 @@ void StrictBoundedXUnion::Decode(::fidl::Decoder* decoder, StrictBoundedXUnion* 
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(kEmpty);
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty));
     return;
   }
 
@@ -347,7 +347,7 @@ void StrictBoundedXUnion::Destroy() {
       break;
   
   }
-  tag_ = kEmpty;
+  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
 }
 
 void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -355,7 +355,7 @@ void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       case Tag::kV:
         new (&v_) ::std::vector<uint8_t>();
@@ -382,7 +382,7 @@ OlderSimpleUnion::OlderSimpleUnion(OlderSimpleUnion&& other) : tag_(other.tag_) 
     case Tag::kF:
       f_ = std::move(other.f_);
       break;
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -402,7 +402,7 @@ OlderSimpleUnion& OlderSimpleUnion::operator=(OlderSimpleUnion&& other) {
       case Tag::kF:
         f_ = std::move(other.f_);
         break;
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -462,7 +462,7 @@ void OlderSimpleUnion::Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(kEmpty);
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty));
     return;
   }
 
@@ -518,14 +518,14 @@ void OlderSimpleUnion::Destroy() {
     case Tag::kF:
       break;
   
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       unknown_data_.~vector();
       break;
   
   }
-  tag_ = kEmpty;
+  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
 }
 
 void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -533,7 +533,7 @@ void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -812,7 +812,7 @@ NewerSimpleUnion::NewerSimpleUnion(NewerSimpleUnion&& other) : tag_(other.tag_) 
       new (&v_) ::std::vector<::std::string>();
       v_ = std::move(other.v_);
       break;
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -837,7 +837,7 @@ NewerSimpleUnion& NewerSimpleUnion::operator=(NewerSimpleUnion&& other) {
         new (&v_) ::std::vector<::std::string>();
         v_ = std::move(other.v_);
         break;
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -907,7 +907,7 @@ void NewerSimpleUnion::Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(kEmpty);
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty));
     return;
   }
 
@@ -982,14 +982,14 @@ void NewerSimpleUnion::Destroy() {
       v_.~vector();
       break;
   
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       unknown_data_.~vector();
       break;
   
   }
-  tag_ = kEmpty;
+  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
 }
 
 void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -997,7 +997,7 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       case Tag::kS:
         new (&s_) ::std::string();
@@ -1028,7 +1028,7 @@ ExplicitXUnion::ExplicitXUnion(ExplicitXUnion&& other) : tag_(other.tag_) {
     case Tag::kF:
       f_ = std::move(other.f_);
       break;
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -1048,7 +1048,7 @@ ExplicitXUnion& ExplicitXUnion::operator=(ExplicitXUnion&& other) {
       case Tag::kF:
         f_ = std::move(other.f_);
         break;
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -1108,7 +1108,7 @@ void ExplicitXUnion::Decode(::fidl::Decoder* decoder, ExplicitXUnion* value, siz
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(kEmpty);
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty));
     return;
   }
 
@@ -1164,14 +1164,14 @@ void ExplicitXUnion::Destroy() {
     case Tag::kF:
       break;
   
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       unknown_data_.~vector();
       break;
   
   }
-  tag_ = kEmpty;
+  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
 }
 
 void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -1179,7 +1179,7 @@ void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -1227,7 +1227,7 @@ XUnionContainingEmptyStruct::XUnionContainingEmptyStruct(XUnionContainingEmptySt
       new (&empty_) class Empty();
       empty_ = std::move(other.empty_);
       break;
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -1245,7 +1245,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(XUnionContai
         new (&empty_) class Empty();
         empty_ = std::move(other.empty_);
         break;
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -1295,7 +1295,7 @@ void XUnionContainingEmptyStruct::Decode(::fidl::Decoder* decoder, XUnionContain
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(kEmpty);
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty));
     return;
   }
 
@@ -1341,14 +1341,14 @@ void XUnionContainingEmptyStruct::Destroy() {
       empty_.~Empty();
       break;
   
-    case kEmpty:
+    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
       break;
     default:
       unknown_data_.~vector();
       break;
   
   }
-  tag_ = kEmpty;
+  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
 }
 
 void XUnionContainingEmptyStruct::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -1356,7 +1356,7 @@ void XUnionContainingEmptyStruct::EnsureStorageInitialized(::fidl_xunion_tag_t t
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case kEmpty:
+      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty):
         break;
       case Tag::kEmpty:
         new (&empty_) class Empty();
