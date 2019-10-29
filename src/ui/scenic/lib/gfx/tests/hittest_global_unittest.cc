@@ -305,10 +305,10 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
   }
 
   ASSERT_EQ(hits.size(), 4u);
-  EXPECT_EQ(hits[0].node->global_id(), GlobalId(0, kViewNodeId));
-  EXPECT_EQ(hits[1].node->id(), kViewHolderId);
-  EXPECT_EQ(hits[2].node->id(), kSceneId);
-  EXPECT_EQ(hits[3].node->id(), kHittableShapeNodeId);
+  EXPECT_EQ(hits[0].node->id(), kHittableShapeNodeId);
+  EXPECT_EQ(hits[1].node->global_id(), GlobalId(0, kViewNodeId));
+  EXPECT_EQ(hits[2].node->id(), kViewHolderId);
+  EXPECT_EQ(hits[3].node->id(), kSceneId);
 }
 
 // Test to ensure the collision debug messages are correct.
@@ -590,6 +590,8 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
 //  ViewHolder
 //      |
 //    View2
+//      |
+//  ShapeNode
 //
 // TODO(37785): Remove this entire test as soon as we can stop caring about ordering and hits on
 // views.
@@ -648,10 +650,16 @@ TEST_F(MultiSessionHitTestTest, HitTestOrderingTest) {
 
   // Setup the child view.
   const uint32_t kSessionId2 = 2;
+  const uint32_t kShapeNodeId = 80;
   CustomSession sess2 = CreateSession(kSessionId2);
   {
     const uint32_t kViewId2 = 16;
     sess2.Apply(scenic::NewCreateViewCmd(kViewId2, std::move(view_token2), "MyView2"));
+    sess2.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
+    sess2.Apply(scenic::NewAddChildCmd(kViewId2, kShapeNodeId));
+    const uint32_t kRectId = 81;
+    sess2.Apply(scenic::NewCreateRectangleCmd(kRectId, layer_width(), layer_height()));
+    sess2.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kRectId));
   }
 
   // Perform hit test in the middle of the display and check ordering.
@@ -660,14 +668,15 @@ TEST_F(MultiSessionHitTestTest, HitTestOrderingTest) {
     GlobalHitTester hit_tester;
     hits = layer_stack()->HitTest(HitRay(layer_width() / 2, layer_height() / 2), &hit_tester);
 
-    ASSERT_EQ(hits.size(), 7u);
-    EXPECT_EQ(hits[0].node->global_id(), GlobalId(kSessionId2, kViewNodeId));
-    EXPECT_EQ(hits[1].node->id(), kViewHolderId2);
-    EXPECT_EQ(hits[2].node->id(), kEntityNodeId);
-    EXPECT_EQ(hits[3].node->global_id(), GlobalId(kSessionId1, kViewNodeId));
-    EXPECT_EQ(hits[4].node->id(), kViewHolderId1);
-    EXPECT_EQ(hits[5].node->id(), kRootNodeId);
-    EXPECT_EQ(hits[6].node->id(), kSceneId);
+    ASSERT_EQ(hits.size(), 8u);
+    EXPECT_EQ(hits[0].node->id(), kShapeNodeId);
+    EXPECT_EQ(hits[1].node->global_id(), GlobalId(kSessionId2, kViewNodeId));
+    EXPECT_EQ(hits[2].node->id(), kViewHolderId2);
+    EXPECT_EQ(hits[3].node->id(), kEntityNodeId);
+    EXPECT_EQ(hits[4].node->global_id(), GlobalId(kSessionId1, kViewNodeId));
+    EXPECT_EQ(hits[5].node->id(), kViewHolderId1);
+    EXPECT_EQ(hits[6].node->id(), kRootNodeId);
+    EXPECT_EQ(hits[7].node->id(), kSceneId);
   }
 }
 

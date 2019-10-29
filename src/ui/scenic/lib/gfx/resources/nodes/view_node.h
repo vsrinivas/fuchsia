@@ -15,7 +15,7 @@ namespace gfx {
 // used to connect a View to the scene graph. It can only be parented
 // by the |ViewHolder|, and serves as the local root to the View's
 // subtree.
-class ViewNode final : public Node {
+class ViewNode : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
@@ -32,10 +32,16 @@ class ViewNode final : public Node {
   IntersectionInfo GetIntersection(const escher::ray4& ray,
                                    const IntersectionInfo& parent_intersection) const override;
 
- private:
+  // Protected for testing.
+ protected:
   friend class View;
   ViewNode(Session* session, SessionId session_id, fxl::WeakPtr<View> view);
 
+  // Returns the bounding box supplied by the owning ViewHolder. Returns an empty bounding box if no
+  // ViewHolder is available. Virtual for testing.
+  virtual escher::BoundingBox GetBoundingBox() const;
+
+ private:
   // The ID of the View owning this ViewNode.
   fxl::WeakPtr<View> view_;
 };

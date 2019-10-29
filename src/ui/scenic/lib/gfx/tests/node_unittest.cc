@@ -6,6 +6,7 @@
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/view_node.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
 namespace scenic_impl {
@@ -13,6 +14,18 @@ namespace gfx {
 namespace test {
 
 using NodeTest = SessionTest;
+
+// Testing class to avoid having to setup a proper View and all the state that comes with it just to
+// inject a bounding box.
+class ViewNodeForTest : public ViewNode {
+ public:
+  ViewNodeForTest() : ViewNode(/*session=*/nullptr, /*session_id=*/1, fxl::WeakPtr<View>()) {}
+  void SetBoundingBox(escher::vec3 min, escher::vec3 max) { bbox_ = escher::BoundingBox(min, max); }
+
+ private:
+  escher::BoundingBox GetBoundingBox() const override { return bbox_; }
+  escher::BoundingBox bbox_;
+};
 
 TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   const ResourceId kNodeId = 1;
@@ -114,6 +127,54 @@ TEST_F(NodeTest, SettingClipPlanes) {
   // Clear clip planes by setting empty vector of planes.
   EXPECT_TRUE(Apply(scenic::NewSetClipPlanesCmd(kNodeId, {})));
   EXPECT_EQ(0U, node->clip_planes().size());
+}
+
+TEST(ViewNodeTest, GetIntersection_MissOnBoundingBoxByRay) {
+  auto view_node = fxl::MakeRefCounted<ViewNodeForTest>();
+  view_node->SetBoundingBox({0, 0, 20}, {100, 100, 100});
+
+  // Ray outside bounding box, interval has Z-dimension overlap with box.
+  escher::ray4 ray{.origin = {1000, 0, 0, 1}, .direction = {0, 0, 1, 0}};
+  Node::IntersectionInfo parent_intersection;
+  parent_intersection.interval = {0.f, 1000000.0f};
+
+  Node::IntersectionInfo result = view_node->GetIntersection(ray, parent_intersection);
+  EXPECT_FALSE(result.did_hit);
+  EXPECT_FALSE(result.continue_with_children);
+  EXPECT_TRUE(result.interval.is_empty());
+}
+
+TEST(ViewNodeTest, GetIntersection_MissOnBoundingBoxByInterval) {
+  auto view_node = fxl::MakeRefCounted<ViewNodeForTest>();
+  view_node->SetBoundingBox({0, 0, 20}, {100, 100, 100});
+
+  // Ray outside bounding box, interval does not overlap with box.
+  escher::ray4 ray{.origin = {50, 50, 0, 1}, .direction = {0, 0, 1, 0}};
+  Node::IntersectionInfo parent_intersection;
+  parent_intersection.interval = {1000, 5000};
+
+  Node::IntersectionInfo result = view_node->GetIntersection(ray, parent_intersection);
+  EXPECT_FALSE(result.did_hit);
+  EXPECT_FALSE(result.continue_with_children);
+  EXPECT_TRUE(result.interval.is_empty());
+}
+
+TEST(ViewNodeTest, GetIntersection_HitOnBoundingBox) {
+  auto view_node = fxl::MakeRefCounted<ViewNodeForTest>();
+  view_node->SetBoundingBox({0, 0, 20}, {100, 100, 100});
+
+  // Ray intersects bounding box, interval has Z-dimension overlap with box.
+  escher::ray4 ray{.origin = {50, 50, 0, 1}, .direction = {0, 0, 1, 0}};
+  Node::IntersectionInfo parent_intersection;
+  parent_intersection.interval = {0.f, 1000000.0f};
+
+  Node::IntersectionInfo result = view_node->GetIntersection(ray, parent_intersection);
+
+  // Should still not register as a hit, but should tell us to continue with its children.
+  EXPECT_FALSE(result.did_hit);
+  EXPECT_TRUE(result.continue_with_children);
+  EXPECT_EQ(result.interval.min(), 20.0f);
+  EXPECT_EQ(result.interval.max(), 100.0f);
 }
 
 }  // namespace test

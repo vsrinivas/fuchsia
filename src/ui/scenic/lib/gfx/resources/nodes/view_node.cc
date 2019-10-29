@@ -23,41 +23,34 @@ ViewPtr ViewNode::FindOwningView() const { return ViewPtr(view_.get()); }
 Node::IntersectionInfo ViewNode::GetIntersection(
     const escher::ray4& ray, const IntersectionInfo& parent_intersection) const {
   FXL_DCHECK(parent_intersection.continue_with_children);
-  IntersectionInfo result;
-  View* view = GetView();
-  if (view) {
-    ViewHolder* holder = view->view_holder();
-    if (holder) {
-      escher::BoundingBox bbox = holder->GetLocalBoundingBox();
 
-      // Intersect the ray with the view's bounding box.
-      escher::Interval hit_interval;
-      bool hit_result = IntersectRayBox(ray, bbox, &hit_interval);
+  // Should never register a hit. Views have geometry but are invisible.
+  // Ignoring distance, since no hit means no sensible distance value.
+  IntersectionInfo result{
+      .did_hit = false, .continue_with_children = false, .interval = escher::Interval()};
 
-      escher::Interval result_interval;
-      if (hit_result) {
-        result_interval = parent_intersection.interval.Intersect(hit_interval);
-
-        // Only hit if the ray intersects the bounding box AND if the intersection
-        // interval is not completely clipped by the parent.
-        result.did_hit = !result_interval.is_empty();
-      }
-
-      // If there's a hit, intersect the parent's interval with the current hit interval,
-      // and use that as the new interval going forward. Otherwise just use the existing
-      // interval from the parent.
-      result.interval = result.did_hit ? result_interval : parent_intersection.interval;
-
+  const escher::BoundingBox bbox = GetBoundingBox();
+  if (!bbox.is_empty()) {
+    // Intersect the ray with the view's bounding box.
+    escher::Interval hit_interval;
+    if (IntersectRayBox(ray, bbox, &hit_interval)) {
+      result.interval = parent_intersection.interval.Intersect(hit_interval);
       // Traversal should only continue if the current bounding box is hit and if the
       // interval is non-empty.
-      result.continue_with_children = result.did_hit && !result.interval.is_empty();
-
-      // Hit distance is the same as the minimum interval.
-      result.distance = result.interval.min();
+      result.continue_with_children = !result.interval.is_empty();
     }
   }
 
   return result;
+}
+
+escher::BoundingBox ViewNode::GetBoundingBox() const {
+  View* view = GetView();
+  if (!view || !view->view_holder()) {
+    return {};
+  }
+
+  return view->view_holder()->GetLocalBoundingBox();
 }
 
 }  // namespace gfx
