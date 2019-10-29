@@ -703,8 +703,8 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
     }
     *header = {
         .src_cid = i->local_cid,
-        .src_port = i->local_port,
         .dst_cid = guest_cid(),
+        .src_port = i->local_port,
         .dst_port = i->remote_port,
         .type = VIRTIO_VSOCK_TYPE_STREAM,
         .op = conn->op(),

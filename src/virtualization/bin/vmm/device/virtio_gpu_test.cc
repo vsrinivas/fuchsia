@@ -48,8 +48,8 @@ class VirtioGpuTest : public TestWithDevice {
   void ResourceCreate2d() {
     virtio_gpu_resource_create_2d_t request = {
         .hdr = {.type = VIRTIO_GPU_CMD_RESOURCE_CREATE_2D},
-        .format = kPixelFormat,
         .resource_id = kResourceId,
+        .format = kPixelFormat,
         .width = kGpuStartupWidth,
         .height = kGpuStartupHeight,
     };
@@ -92,9 +92,9 @@ class VirtioGpuTest : public TestWithDevice {
   void SetScanout(uint32_t resource_id, uint32_t response_type) {
     virtio_gpu_set_scanout_t request = {
         .hdr = {.type = VIRTIO_GPU_CMD_SET_SCANOUT},
-        .resource_id = resource_id,
-        .scanout_id = kScanoutId,
         .r = {.x = 0, .y = 0, .width = kGpuStartupWidth, .height = kGpuStartupHeight},
+        .scanout_id = kScanoutId,
+        .resource_id = resource_id,
     };
     virtio_gpu_ctrl_hdr_t* response;
     zx_status_t status = DescriptorChainBuilder(control_queue_)

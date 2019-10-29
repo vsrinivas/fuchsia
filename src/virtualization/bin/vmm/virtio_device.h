@@ -55,9 +55,9 @@ class VirtioDevice {
             .config_size = sizeof(ConfigType),
             .queue_configs = queue_configs_,
             .num_queues = NumQueues,
-            .config_device = std::move(config_device),
-            .notify_queue = std::move(notify_queue),
             .config_queue = std::move(config_queue),
+            .notify_queue = std::move(notify_queue),
+            .config_device = std::move(config_device),
             .ready_device = std::move(ready_device),
         },
         pci_(&device_config_) {}
