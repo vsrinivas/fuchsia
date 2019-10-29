@@ -58,144 +58,125 @@ FBL_BITFIELD_MEMBER(ambient_mark_vmo_exec_override, 55, 1);
 FBL_BITFIELD_MEMBER(unused_bits, 56, 8);
 FBL_BITFIELD_DEF_END();
 
-#define SET_POL_ENTRY(policy_member, policy, override)                         \
-  do {                                                                         \
-    if (bits->policy_member##_override == ZX_POL_OVERRIDE_ALLOW) {             \
-      bits->policy_member = policy;                                            \
-      bits->policy_member##_override = override;                               \
-      return ZX_OK;                                                            \
-    }                                                                          \
-    if ((bits->policy_member == policy) && (override == ZX_POL_OVERRIDE_DENY)) \
-      return ZX_OK;                                                            \
-    return (mode == ZX_JOB_POL_ABSOLUTE) ? ZX_ERR_ALREADY_EXISTS : ZX_OK;      \
-  } while (0)
+template <uint32_t condition>
+struct FieldSelector {};
 
-zx_status_t AddPartial(uint32_t mode, uint32_t condition, uint32_t policy, uint32_t override,
+#define FIELD_SELECTOR_DEF(id, name)                                           \
+  template <>                                                                  \
+  struct FieldSelector<id> {                                                   \
+    static auto& Action(JobPolicyBits* jpb) { return jpb->name; }              \
+    static auto& Override(JobPolicyBits* jpb) { return jpb->name##_override; } \
+  }
+
+FIELD_SELECTOR_DEF(ZX_POL_BAD_HANDLE, bad_handle);
+FIELD_SELECTOR_DEF(ZX_POL_WRONG_OBJECT, wrong_object);
+FIELD_SELECTOR_DEF(ZX_POL_VMAR_WX, vmar_wx);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_VMO, new_vmo);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_CHANNEL, new_channel);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_EVENT, new_event);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_EVENTPAIR, new_eventpair);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_PORT, new_port);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_SOCKET, new_socket);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_FIFO, new_fifo);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_TIMER, new_timer);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_PROCESS, new_profile);
+FIELD_SELECTOR_DEF(ZX_POL_NEW_PROFILE, new_profile);
+FIELD_SELECTOR_DEF(ZX_POL_AMBIENT_MARK_VMO_EXEC, ambient_mark_vmo_exec);
+
+#define CASE_RETURN_ACTION(id, bits) \
+  case id:                           \
+    return FieldSelector<id>::Action(bits)
+
+#define CASE_RETURN_OVERRIDE(id, bits) \
+  case id:                             \
+    return FieldSelector<id>::Override(bits)
+
+#define CASE_SET_OVERRIDE(id, bits, override)     \
+  case id:                                        \
+    FieldSelector<id>::Override(bits) = override; \
+    break
+
+#define CASE_SET_ENTRY(id, bits, action, override)                                         \
+  case id: {                                                                               \
+    if (FieldSelector<id>::Override(bits) == ZX_POL_OVERRIDE_ALLOW) {                      \
+      FieldSelector<id>::Action(bits) = action;                                            \
+      FieldSelector<id>::Override(bits) = override;                                        \
+      return ZX_OK;                                                                        \
+    }                                                                                      \
+    if ((FieldSelector<id>::Action(bits) == action) && (override == ZX_POL_OVERRIDE_DENY)) \
+      return ZX_OK;                                                                        \
+    break;                                                                                 \
+  }
+
+zx_status_t AddPartial(uint32_t mode, uint32_t condition, uint32_t action, uint32_t override,
                        JobPolicyBits* bits) {
-  if (policy >= ZX_POL_ACTION_MAX)
+  if (action >= ZX_POL_ACTION_MAX)
     return ZX_ERR_NOT_SUPPORTED;
 
   if (override > ZX_POL_OVERRIDE_DENY)
     return ZX_ERR_INVALID_ARGS;
 
   switch (condition) {
-    case ZX_POL_BAD_HANDLE:
-      SET_POL_ENTRY(bad_handle, policy, override);
-    case ZX_POL_WRONG_OBJECT:
-      SET_POL_ENTRY(wrong_object, policy, override);
-    case ZX_POL_VMAR_WX:
-      SET_POL_ENTRY(vmar_wx, policy, override);
-    case ZX_POL_NEW_VMO:
-      SET_POL_ENTRY(new_vmo, policy, override);
-    case ZX_POL_NEW_CHANNEL:
-      SET_POL_ENTRY(new_channel, policy, override);
-    case ZX_POL_NEW_EVENT:
-      SET_POL_ENTRY(new_event, policy, override);
-    case ZX_POL_NEW_EVENTPAIR:
-      SET_POL_ENTRY(new_eventpair, policy, override);
-    case ZX_POL_NEW_PORT:
-      SET_POL_ENTRY(new_port, policy, override);
-    case ZX_POL_NEW_SOCKET:
-      SET_POL_ENTRY(new_socket, policy, override);
-    case ZX_POL_NEW_FIFO:
-      SET_POL_ENTRY(new_fifo, policy, override);
-    case ZX_POL_NEW_TIMER:
-      SET_POL_ENTRY(new_timer, policy, override);
-    case ZX_POL_NEW_PROCESS:
-      SET_POL_ENTRY(new_process, policy, override);
-    case ZX_POL_NEW_PROFILE:
-      SET_POL_ENTRY(new_profile, policy, override);
-    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
-      SET_POL_ENTRY(ambient_mark_vmo_exec, policy, override);
+    CASE_SET_ENTRY(ZX_POL_BAD_HANDLE, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_WRONG_OBJECT, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_VMAR_WX, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_VMO, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_CHANNEL, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_EVENT, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_EVENTPAIR, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_PORT, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_SOCKET, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_FIFO, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_TIMER, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_PROCESS, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_NEW_PROFILE, bits, action, override);
+    CASE_SET_ENTRY(ZX_POL_AMBIENT_MARK_VMO_EXEC, bits, action, override);
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_OK;
+  // If we are here setting policy failed, which migth not matter
+  // if it is a relative (best effort) mode.
+  return (mode == ZX_JOB_POL_ABSOLUTE) ? ZX_ERR_ALREADY_EXISTS : ZX_OK;
 }
-
-#undef SET_POL_ENTRY
 
 zx_status_t SetOverride(JobPolicyBits* policy, uint32_t condition, uint32_t override) {
   switch (condition) {
-    case ZX_POL_BAD_HANDLE:
-      policy->bad_handle_override = override;
-      break;
-    case ZX_POL_WRONG_OBJECT:
-      policy->wrong_object_override = override;
-      break;
-    case ZX_POL_VMAR_WX:
-      policy->vmar_wx_override = override;
-      break;
-    case ZX_POL_NEW_VMO:
-      policy->new_vmo_override = override;
-      break;
-    case ZX_POL_NEW_CHANNEL:
-      policy->new_channel_override = override;
-      break;
-    case ZX_POL_NEW_EVENT:
-      policy->new_event_override = override;
-      break;
-    case ZX_POL_NEW_EVENTPAIR:
-      policy->new_eventpair_override = override;
-      break;
-    case ZX_POL_NEW_PORT:
-      policy->new_port_override = override;
-      break;
-    case ZX_POL_NEW_SOCKET:
-      policy->new_socket_override = override;
-      break;
-    case ZX_POL_NEW_FIFO:
-      policy->new_fifo_override = override;
-      break;
-    case ZX_POL_NEW_TIMER:
-      policy->new_timer_override = override;
-      break;
-    case ZX_POL_NEW_PROCESS:
-      policy->new_process_override = override;
-      break;
-    case ZX_POL_NEW_PROFILE:
-      policy->new_profile_override = override;
-      break;
-    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
-      policy->ambient_mark_vmo_exec_override = override;
-      break;
+    CASE_SET_OVERRIDE(ZX_POL_BAD_HANDLE, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_WRONG_OBJECT, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_VMAR_WX, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_VMO, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_CHANNEL, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_EVENT, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_EVENTPAIR, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_PORT, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_SOCKET, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_FIFO, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_TIMER, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_PROCESS, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_NEW_PROFILE, policy, override);
+    CASE_SET_OVERRIDE(ZX_POL_AMBIENT_MARK_VMO_EXEC, policy, override);
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-
   return ZX_OK;
 }
 
 uint64_t GetAction(JobPolicyBits policy, uint32_t condition) {
   switch (condition) {
-    case ZX_POL_BAD_HANDLE:
-      return policy.bad_handle;
-    case ZX_POL_WRONG_OBJECT:
-      return policy.wrong_object;
-    case ZX_POL_VMAR_WX:
-      return policy.vmar_wx;
-    case ZX_POL_NEW_VMO:
-      return policy.new_vmo;
-    case ZX_POL_NEW_CHANNEL:
-      return policy.new_channel;
-    case ZX_POL_NEW_EVENT:
-      return policy.new_event;
-    case ZX_POL_NEW_EVENTPAIR:
-      return policy.new_eventpair;
-    case ZX_POL_NEW_PORT:
-      return policy.new_port;
-    case ZX_POL_NEW_SOCKET:
-      return policy.new_socket;
-    case ZX_POL_NEW_FIFO:
-      return policy.new_fifo;
-    case ZX_POL_NEW_TIMER:
-      return policy.new_timer;
-    case ZX_POL_NEW_PROCESS:
-      return policy.new_process;
-    case ZX_POL_NEW_PROFILE:
-      return policy.new_profile;
-    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
-      return policy.ambient_mark_vmo_exec;
+    CASE_RETURN_ACTION(ZX_POL_BAD_HANDLE, &policy);
+    CASE_RETURN_ACTION(ZX_POL_WRONG_OBJECT, &policy);
+    CASE_RETURN_ACTION(ZX_POL_VMAR_WX, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_VMO, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_CHANNEL, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_EVENT, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_EVENTPAIR, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_PORT, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_SOCKET, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_FIFO, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_TIMER, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_PROCESS, &policy);
+    CASE_RETURN_ACTION(ZX_POL_NEW_PROFILE, &policy);
+    CASE_RETURN_ACTION(ZX_POL_AMBIENT_MARK_VMO_EXEC, &policy);
     default:
       return ZX_POL_ACTION_DENY;
   }
@@ -203,45 +184,29 @@ uint64_t GetAction(JobPolicyBits policy, uint32_t condition) {
 
 uint64_t GetOverride(JobPolicyBits policy, uint32_t condition) {
   switch (condition) {
-    case ZX_POL_BAD_HANDLE:
-      return policy.bad_handle_override;
-    case ZX_POL_WRONG_OBJECT:
-      return policy.wrong_object_override;
-    case ZX_POL_VMAR_WX:
-      return policy.vmar_wx_override;
-    case ZX_POL_NEW_VMO:
-      return policy.new_vmo_override;
-    case ZX_POL_NEW_CHANNEL:
-      return policy.new_channel_override;
-    case ZX_POL_NEW_EVENT:
-      return policy.new_event_override;
-    case ZX_POL_NEW_EVENTPAIR:
-      return policy.new_eventpair_override;
-    case ZX_POL_NEW_PORT:
-      return policy.new_port_override;
-    case ZX_POL_NEW_SOCKET:
-      return policy.new_socket_override;
-    case ZX_POL_NEW_FIFO:
-      return policy.new_fifo_override;
-    case ZX_POL_NEW_TIMER:
-      return policy.new_timer_override;
-    case ZX_POL_NEW_PROCESS:
-      return policy.new_process_override;
-    case ZX_POL_NEW_PROFILE:
-      return policy.new_profile_override;
-    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
-      return policy.ambient_mark_vmo_exec_override;
+    CASE_RETURN_OVERRIDE(ZX_POL_BAD_HANDLE, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_WRONG_OBJECT, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_VMAR_WX, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_VMO, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_CHANNEL, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_EVENT, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_EVENTPAIR, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_PORT, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_SOCKET, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_FIFO, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_TIMER, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_PROCESS, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_NEW_PROFILE, &policy);
+    CASE_RETURN_OVERRIDE(ZX_POL_AMBIENT_MARK_VMO_EXEC, &policy);
     default:
-      return ZX_POL_ACTION_DENY;
+      return ZX_POL_OVERRIDE_DENY;
   }
 }
 
-// The policy applied to the root job allows everything and can override anything.
-constexpr uint64_t GetRootJobBitsPolicy() {
-  static_assert((ZX_POL_ACTION_ALLOW == 0u) && (ZX_POL_OVERRIDE_ALLOW == 0u));
-  constexpr JobPolicyBits policy(0u);
-  return policy;
-}
+#undef CASE_RETURN_ACTION
+#undef CASE_RETURN_OVERRIDE
+#undef CASE_SET_OVERRIDE
+#undef CASE_SET_ENTRY
 
 }  // namespace
 
@@ -251,7 +216,9 @@ JobPolicy::JobPolicy(pol_cookie_t cookie, const TimerSlack& slack)
 
 // static
 JobPolicy JobPolicy::CreateRootPolicy() {
-  return JobPolicy(GetRootJobBitsPolicy(), TimerSlack::none());
+  static_assert((ZX_POL_ACTION_ALLOW == 0u) && (ZX_POL_OVERRIDE_ALLOW == 0u));
+  constexpr JobPolicyBits policy(0u);
+  return JobPolicy(policy.value, TimerSlack::none());
 }
 
 zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_t* policy_input,
