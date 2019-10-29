@@ -62,10 +62,6 @@ test_package("amberctl-tests") {
 
   resources = [
     {
-      path = rebase_path("//garnet/go/src/amber/keys/root_sig.json")
-      dest = "keys"
-    },
-    {
       path = rebase_path("data/test.json")
       dest = "sources/test.json"
     },

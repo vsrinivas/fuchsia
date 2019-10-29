@@ -120,10 +120,6 @@ package("amber") {
 
   resources = [
     {
-      path = rebase_path("keys/root_sig.json")
-      dest = "keys"
-    },
-    {
       path = rebase_path("system_updater/images")
       dest = "images"
     },
