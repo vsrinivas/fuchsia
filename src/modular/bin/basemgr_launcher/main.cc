@@ -16,24 +16,26 @@
 #include <vector>
 
 #include <src/lib/files/glob.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/modular/lib/modular_config/modular_config.h>
+#include <src/modular/lib/modular_config/modular_config_constants.h>
 
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/strings/string_printf.h"
-
-constexpr char kConfigFilename[] = "startup.config";
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 constexpr char kBasemgrHubGlob[] = "/hub/c/basemgr.cmx/*";
+constexpr char kGetUsage[] = "GetUsage";
 
-std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir() {
+std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
   // Read the configuration file in from stdin.
-  std::string config_str;
-  std::string line;
-  while (getline(std::cin, line)) {
-    config_str += line;
+  if (config_str.empty()) {
+    std::string line;
+    while (getline(std::cin, line)) {
+      config_str += line;
+    }
   }
 
   auto dir = std::make_unique<vfs::PseudoDir>();
-  dir->AddEntry(kConfigFilename,
+  dir->AddEntry(modular_config::kStartupConfigFilePath,
                 std::make_unique<vfs::PseudoFile>(
                     config_str.length(), [config_str = std::move(config_str)](
                                              std::vector<uint8_t>* out, size_t /*unused*/) {
@@ -52,13 +54,24 @@ std::string GetUsage() {
 cat myconfig.json | fx shell basemgr_launcher)";
 }
 
+std::string GetConfigFromArgs(fxl::CommandLine command_line) {
+  auto config_reader = modular::ModularConfigReader(/*config=*/"{}");
+  auto basemgr_config = config_reader.GetBasemgrConfig();
+  auto sessionmgr_config = config_reader.GetSessionmgrConfig();
+
+  for (auto opt : command_line.options()) {
+    if (opt.name == modular_config::kBaseShell) {
+      basemgr_config.mutable_base_shell()->mutable_app_config()->set_url(opt.value);
+    } else {
+      return kGetUsage;
+    }
+  }
+
+  return modular::ModularConfigReader::GetConfigAsString(&basemgr_config, &sessionmgr_config);
+}
+
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  if (argc > 1) {
-    std::cout << GetUsage() << std::endl;
-    return 1;
-  }
 
   // Check if basemgr already exists, if so suggest killing it.
   bool exists = files::Glob(kBasemgrHubGlob).size() != 0;
@@ -68,9 +81,19 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
+  std::string config_str = "";
+  if (argc > 1) {
+    const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+    config_str = GetConfigFromArgs(std::move(command_line));
+    if (config_str == kGetUsage) {
+      std::cout << GetUsage() << std::endl;
+      return 1;
+    }
+  }
+
   // Create the pseudo directory with our config "file" mapped to
   // kConfigFilename.
-  auto config_dir = CreateConfigPseudoDir();
+  auto config_dir = CreateConfigPseudoDir(config_str);
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
   config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, dir_handle.NewRequest().TakeChannel());
 
@@ -79,7 +102,7 @@ int main(int argc, const char** argv) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kBasemgrUrl;
   launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
-  launch_info.flat_namespace->paths.push_back("/config_override/data");
+  launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
   launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
 
   // Launch a basemgr instance with the custom namespace we created above.

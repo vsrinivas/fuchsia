@@ -37,7 +37,6 @@ fuchsia::ui::policy::DisplayUsage GetDisplayUsageFromString(std::string usage) {
     return fuchsia::ui::policy::DisplayUsage::kFar;
   }
 
-  FXL_LOG(WARNING) << "Unknown display usage string: " << usage;
   return fuchsia::ui::policy::DisplayUsage::kUnknown;
 }
 

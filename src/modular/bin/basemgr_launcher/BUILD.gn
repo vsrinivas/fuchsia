@@ -4,6 +4,7 @@
 
 import("//build/testing/environments.gni")
 import("//src/modular/build/executable_package.gni")
+import("//src/modular/build/tests_package.gni")
 
 executable("basemgr_launcher_bin") {
   output_name = "basemgr_launcher"
@@ -12,16 +13,20 @@ executable("basemgr_launcher_bin") {
   ]
 
   deps = [
+    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
     "//src/lib/fxl",
+    "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/modular_config",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -46,5 +51,34 @@ package("basemgr_launcher") {
       path = "meta/basemgr_launcher.cmx"
       dest = "basemgr_launcher.cmx"
     },
+  ]
+}
+
+executable("basemgr_launcher_test") {
+  testonly = true
+
+  sources = [
+    "basemgr_launcher_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/test_runner/cpp",
+    "//sdk/fidl/fuchsia.devicesettings",
+    "//sdk/fidl/fuchsia.identity.account",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+hermetic_tests_package("basemgr_launcher_tests") {
+  deps = [
+    ":basemgr_launcher_test",
   ]
 }
