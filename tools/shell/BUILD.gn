@@ -14,6 +14,47 @@ test("shell_tests_bin") {
   ]
 }
 
+# Generate a manifest providing all of the .fidl.json files exported by the
+# core SDK (and any other FIDL files we might want).
+action("generate_fidl_json") {
+  script = "generate_fidl_json.sh"
+  generated_output = "$target_gen_dir/sdk_fidl_json.manifest"
+  outputs = [
+    "$generated_output",
+  ]
+  testonly = true
+  deps = [
+    "//garnet/examples/fidl/services:echo",
+    "//sdk:core",
+    "//sdk:core_fidl_json",
+    "//sdk/fidl/fuchsia.power:fuchsia.power",
+    "//third_party/quickjs:qjs($host_toolchain)",
+    "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-kernel",
+  ]
+  args = [
+    "--qjc=" + rebase_path("$root_build_dir/host_$host_cpu/qjsh"),
+    "--fidl-json-file=" +
+        rebase_path("$root_gen_dir/sdk/core.fidl_json.txt", root_build_dir),
+    "--out-file=" + rebase_path("$generated_output", root_build_dir),
+    rebase_path(
+        "$root_build_dir/fidling/gen/garnet/examples/fidl/services/echo.fidl.json",
+        root_build_dir),
+    rebase_path(
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.power/fuchsia.power.fidl.json",
+        root_build_dir),
+    rebase_path(
+        "$root_build_dir/fidling/gen/zircon/system/fidl/fuchsia-kernel/fuchsia-kernel.fidl.json",
+        root_build_dir),
+    rebase_path(
+        "$root_build_dir/fidling/gen/zircon/system/fidl/fuchsia-device-manager/fuchsia-device-manager.fidl.json",
+        root_build_dir),
+    rebase_path(
+        "$root_build_dir/fidling/gen/zircon/system/fidl/fuchsia-boot/fuchsia-boot.fidl.json",
+        root_build_dir),
+  ]
+}
+
 unittest_package("shell_tests") {
   deps = [
     ":shell_tests_bin",
@@ -42,8 +83,11 @@ executable("bin") {
 
 # "josh" is Javascript Object SHell.  We can change the name later.
 package("josh") {
+  # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
+  testonly = true
   deps = [
     ":bin",
+    ":generate_fidl_json",
   ]
   binaries = [
     {
@@ -51,4 +95,5 @@ package("josh") {
       shell = true
     },
   ]
+  extra = get_target_outputs(":generate_fidl_json")
 }
