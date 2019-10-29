@@ -106,7 +106,7 @@ bool vector_types() {
 bool enum_types() {
   BEGIN_TEST;
 
-  EXPECT_NAME_EQ("fidl.test.coding/Int32Enum", &fidl_test_coding_Int32EnumTable, 1024);
+  EXPECT_NAME_EQ("enum", &fidl_test_coding_Int32EnumTable, 1024);
 
   END_TEST;
 }
@@ -114,7 +114,7 @@ bool enum_types() {
 bool bits_types() {
   BEGIN_TEST;
 
-  EXPECT_NAME_EQ("fidl.test.coding/Int32Bits", &fidl_test_coding_Int32BitsTable, 1024);
+  EXPECT_NAME_EQ("bits", &fidl_test_coding_Int32BitsTable, 1024);
 
   END_TEST;
 }
@@ -123,7 +123,7 @@ bool union_types() {
   BEGIN_TEST;
 
   EXPECT_NAME_EQ("nonnullable_handle_union", &nonnullable_handle_union_type, 1024);
-  EXPECT_NAME_EQ("fidl.test.coding/SampleUnion", &fidl_test_coding_SampleUnionTable, 1024);
+  EXPECT_NAME_EQ("union", &fidl_test_coding_SampleUnionTable, 1024);
 
   END_TEST;
 }
@@ -140,8 +140,7 @@ bool struct_types() {
   BEGIN_TEST;
 
   EXPECT_NAME_EQ("struct_level_0", &struct_level_0_struct, 1024);
-  EXPECT_NAME_EQ("fidl.test.coding/StructWithManyHandles",
-                 &fidl_test_coding_StructWithManyHandlesTable, 1024);
+  EXPECT_NAME_EQ("struct", &fidl_test_coding_StructWithManyHandlesTable, 1024);
 
   END_TEST;
 }
@@ -157,7 +156,7 @@ bool struct_ptr_types() {
 bool xunion_types() {
   BEGIN_TEST;
 
-  EXPECT_NAME_EQ("fidl.test.coding/SampleXUnion", &fidl_test_coding_SampleXUnionTable, 1024);
+  EXPECT_NAME_EQ("xunion", &fidl_test_coding_SampleXUnionTable, 1024);
 
   END_TEST;
 }
@@ -165,7 +164,7 @@ bool xunion_types() {
 bool table_types() {
   BEGIN_TEST;
 
-  EXPECT_NAME_EQ("fidl.test.coding/SimpleTable", &fidl_test_coding_SimpleTableTable, 1024);
+  EXPECT_NAME_EQ("table", &fidl_test_coding_SimpleTableTable, 1024);
 
   END_TEST;
 }

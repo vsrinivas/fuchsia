@@ -6,6 +6,7 @@ source_set("common") {
   testonly = true
   visibility = [ ":*" ]
   sources = [
+    "fidl_align_tests.cc",
     "fidl_coded_types.cc",
     "handle_closing_tests.cc",
     "linearizing_tests.cc",
@@ -54,6 +55,7 @@ zx_test("fidl") {
     "formatting_tests.cc",
     "message_tests.cc",
     "run_with_handle_policy_tests.cc",
+    "transformer_tests.cc",
     "validating_tests.cc",
   ]
   deps = [

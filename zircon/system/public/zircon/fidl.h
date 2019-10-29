@@ -58,6 +58,18 @@ __BEGIN_CDECLS
 #define FIDL_ALIGN(a) (((a) + 7) & ~7)
 #define FIDL_ALIGNDECL alignas(FIDL_ALIGNMENT)
 
+// Aligns elements within an array or vector. Similar to FIDL_ALIGN except that
+// alignment is 1 for elements of size 1,
+//              2 for those of size 2
+//              4 for elements smaller than 4,
+//              FIDL_ALIGN otherwise.
+// clang-format off
+#define FIDL_ELEM_ALIGN(a)        \
+  (((a) < 3) ? (a) :              \
+  ((a) <= 4) ? (((a) + 3) & ~3)   \
+             : (((a) + 7) & ~7))
+// clang-format on
+
 // An opaque struct representing the encoding of a particular fidl
 // type.
 typedef struct fidl_type fidl_type_t;
