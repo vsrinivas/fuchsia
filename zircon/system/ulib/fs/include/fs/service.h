@@ -35,7 +35,6 @@ class Service : public Vnode {
   VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, VnodeConnectionOptions options) final;
-  bool IsDirectory() const final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 

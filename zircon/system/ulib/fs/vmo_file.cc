@@ -118,8 +118,6 @@ zx_status_t VmoFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol proto
   return ZX_OK;
 }
 
-bool VmoFile::IsDirectory() const { return false; }
-
 zx_status_t VmoFile::AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
   ZX_DEBUG_ASSERT(!(rights & ZX_RIGHT_WRITE) || writable_);  // checked by the VFS
 

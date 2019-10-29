@@ -68,7 +68,6 @@ class DummyVnode : public fs::Vnode {
                                      fs::VnodeRepresentation*) final {
     ZX_PANIC("Unused");
   }
-  bool IsDirectory() const final { ZX_PANIC("Unused"); }
 };
 
 TEST(VnodeConnectionOptions, ValidateOptionsForDirectory) {

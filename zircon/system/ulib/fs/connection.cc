@@ -227,7 +227,7 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl
     return;
   }
 
-  if (vnode->IsDirectory() && options.flags.posix) {
+  if (vnode->Supports(fs::VnodeProtocol::kDirectory) && options.flags.posix) {
     // Save this before modifying |options| below.
     bool admin = options.rights.admin;
 

@@ -52,8 +52,6 @@ class Service : public fs::Vnode {
                                                              std::move(svc_request), options));
   }
 
-  [[nodiscard]] bool IsDirectory() const override { return false; }
-
   zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                      [[maybe_unused]] fs::Rights rights,
                                      fs::VnodeRepresentation* info) override {

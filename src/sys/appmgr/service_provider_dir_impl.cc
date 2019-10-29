@@ -95,8 +95,6 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::chan
   }
 }
 
-bool ServiceProviderDirImpl::IsDirectory() const { return true; }
-
 zx_status_t ServiceProviderDirImpl::GetAttributes(fs::VnodeAttributes* a) {
   return root_->GetAttributes(a);
 }

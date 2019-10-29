@@ -73,7 +73,6 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
     fs::VnodeProtocolSet GetProtocols() const final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
     zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-    bool IsDirectory() const final;
     zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                        fs::VnodeRepresentation* representation) final;
 

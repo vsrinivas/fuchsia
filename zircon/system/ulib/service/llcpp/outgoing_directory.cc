@@ -21,7 +21,7 @@ namespace {
 fbl::RefPtr<fs::PseudoDir> FindDir(fbl::RefPtr<fs::PseudoDir> root, fit::string_view name) {
   fbl::RefPtr<fs::Vnode> node;
   zx_status_t result = root->Lookup(&node, name);
-  if (result != ZX_OK || !node->IsDirectory()) {
+  if (result != ZX_OK || !node->Supports(fs::VnodeProtocol::kDirectory)) {
     return {};
   }
   return fbl::RefPtr<fs::PseudoDir>::Downcast(node);

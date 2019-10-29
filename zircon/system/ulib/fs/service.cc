@@ -33,8 +33,6 @@ zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, fs::VnodeConnectionOpt
   return connector_(std::move(channel));
 }
 
-bool Service::IsDirectory() const { return false; }
-
 zx_status_t Service::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
                                             [[maybe_unused]] Rights rights,
                                             VnodeRepresentation* info) {

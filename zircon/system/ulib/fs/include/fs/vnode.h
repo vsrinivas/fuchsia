@@ -256,10 +256,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual void SetRemote(zx::channel remote);
 #endif
 
-  // Return if the Vnode is a directory; as a guideline, a directory Vnode should
-  // support |Lookup| and opening a child Vnode.
-  virtual bool IsDirectory() const = 0;
-
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
   Vnode();

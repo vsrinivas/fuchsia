@@ -110,6 +110,11 @@ class VnodeMinfs : public fs::Vnode,
   // Returns the total size of the vnode.
   virtual uint64_t GetSize() const = 0;
 
+  // Returns if the node is a directory.
+  // TODO(fxb/39864): This function is used only within minfs to implement unlinking and renaming.
+  // Consider replacing this with the more general |Vnode::GetProtocols|.
+  virtual bool IsDirectory() const = 0;
+
   // Sets the new size of the vnode.
   // Should update the in-memory representation of the Vnode, but not necessarily
   // write it out to persistent storage.

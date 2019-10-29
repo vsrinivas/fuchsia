@@ -31,7 +31,6 @@ class ServiceProxyDir : public fs::Vnode {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
-  bool IsDirectory() const final;
 
  private:
   zx::channel proxy_dir_;

@@ -36,7 +36,6 @@ class RemoteDir : public Vnode {
   zx_status_t GetAttributes(VnodeAttributes* a) final;
   bool IsRemote() const final;
   zx_handle_t GetRemote() const final;
-  bool IsDirectory() const final { return true; }
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 

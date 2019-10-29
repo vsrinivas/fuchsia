@@ -43,7 +43,6 @@ class LazyDir : public Vnode {
   // if the "." entry has been returned. All IDs other than 0 are valid.
   zx_status_t Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out_vnode, fbl::StringPiece name) final;
-  bool IsDirectory() const final { return true; }
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 

@@ -36,8 +36,6 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
 
   void SetHighMemory() { using_memory_ = true; }
 
-  bool IsDirectory() const final { return false; }
-
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
 
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,

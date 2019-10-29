@@ -31,8 +31,6 @@ class PtyGeneratingVnode : public fs::Vnode {
 
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kConnector; }
 
-  bool IsDirectory() const override { return false; }
-
   zx_status_t Open(fs::VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect) override {
     fbl::RefPtr<PtyServer> server;
     zx_status_t status = PtyServer::Create(&server);

@@ -43,8 +43,6 @@ class FdCountVnode : public fs::Vnode {
 
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
 
-  bool IsDirectory() const final { return false; }
-
   zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                      [[maybe_unused]] fs::Rights rights,
                                      fs::VnodeRepresentation* info) {

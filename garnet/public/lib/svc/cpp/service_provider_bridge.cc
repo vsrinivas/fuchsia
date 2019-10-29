@@ -104,8 +104,6 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::GetAttributes(fs::VnodeAt
   return ZX_OK;
 }
 
-bool ServiceProviderBridge::ServiceProviderDir::IsDirectory() const { return true; }
-
 zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfoForProtocol(
     [[maybe_unused]] fs::VnodeProtocol protocol, [[maybe_unused]] fs::Rights rights,
     fs::VnodeRepresentation* representation) {

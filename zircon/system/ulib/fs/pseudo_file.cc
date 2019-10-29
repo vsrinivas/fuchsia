@@ -41,8 +41,6 @@ zx_status_t PseudoFile::GetAttributes(VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-bool PseudoFile::IsDirectory() const { return false; }
-
 zx_status_t PseudoFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol,
                                                [[maybe_unused]] Rights rights,
                                                VnodeRepresentation* info) {
@@ -156,8 +154,6 @@ zx_status_t BufferedPseudoFile::Content::Truncate(size_t length) {
   }
   return ZX_OK;
 }
-
-bool BufferedPseudoFile::Content::IsDirectory() const { return false; }
 
 zx_status_t BufferedPseudoFile::Content::GetNodeInfoForProtocol(VnodeProtocol protocol,
                                                                 Rights rights,
@@ -274,8 +270,6 @@ zx_status_t UnbufferedPseudoFile::Content::Truncate(size_t length) {
   truncated_since_last_successful_write_ = true;
   return ZX_OK;
 }
-
-bool UnbufferedPseudoFile::Content::IsDirectory() const { return false; }
 
 zx_status_t UnbufferedPseudoFile::Content::GetNodeInfoForProtocol(
     VnodeProtocol protocol, Rights rights, VnodeRepresentation* info) {

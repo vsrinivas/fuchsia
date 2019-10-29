@@ -40,7 +40,6 @@ bool TestConnectionRights() {
       *info = fs::VnodeRepresentation::File();
       return ZX_OK;
     }
-    bool IsDirectory() const override { return false; }
     fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
     zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) override {
       zx::vmo vmo;

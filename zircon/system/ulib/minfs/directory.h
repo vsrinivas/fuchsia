@@ -51,6 +51,7 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   void AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno,
                             blk_t* out_bno) final;
   void DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno) final;
+  bool IsDirectory() const final { return true; }
 
 #ifdef __Fuchsia__
   void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
@@ -60,7 +61,6 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
 #endif
 
   // fs::Vnode interface.
-  bool IsDirectory() const final { return true; }
   fs::VnodeProtocolSet GetProtocols() const final;
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;

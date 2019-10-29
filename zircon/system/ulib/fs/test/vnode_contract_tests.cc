@@ -27,7 +27,6 @@ class ErraticVnode : public fs::Vnode {
     *info = fs::VnodeRepresentation::Directory();
     return ZX_OK;
   }
-  bool IsDirectory() const final { ZX_PANIC("Unused"); }
 };
 
 TEST(Vnode, ProtocolShouldAgreeWithNodeInfo) {

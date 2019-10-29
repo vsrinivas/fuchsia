@@ -58,8 +58,6 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* representation) final;
 
-  bool IsDirectory() const final;
-
   //
   // Overridden from |fuchsia::sys::ServiceProvider|:
   //

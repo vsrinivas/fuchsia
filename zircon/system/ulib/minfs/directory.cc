@@ -717,11 +717,13 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(oldname));
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(newname));
 
+  auto newdir_minfs = fbl::RefPtr<VnodeMinfs>::Downcast(_newdir);
+
   // ensure that the vnodes containing oldname and newname are directories
-  if (!(_newdir->IsDirectory())) {
+  if (!(newdir_minfs->IsDirectory())) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto newdir = fbl::RefPtr<Directory>::Downcast(_newdir);
+  auto newdir = fbl::RefPtr<Directory>::Downcast(newdir_minfs);
 
   zx_status_t status;
   fbl::RefPtr<VnodeMinfs> oldvn = nullptr;

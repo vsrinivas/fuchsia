@@ -53,7 +53,6 @@ class PseudoFile : public Vnode {
   bool ValidateRights(Rights rights) override;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
 
-  bool IsDirectory() const final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 
@@ -118,7 +117,6 @@ class BufferedPseudoFile : public PseudoFile {
     zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
     zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
     zx_status_t Truncate(size_t length) final;
-    bool IsDirectory() const final;
     zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                        VnodeRepresentation* info) final;
 
@@ -205,7 +203,6 @@ class UnbufferedPseudoFile : public PseudoFile {
     zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
     zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
     zx_status_t Truncate(size_t length) final;
-    bool IsDirectory() const final;
     zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                        VnodeRepresentation* info) final;
 

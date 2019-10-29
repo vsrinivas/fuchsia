@@ -41,8 +41,6 @@ zx_status_t ServiceProxyDir::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodePr
 
 fs::VnodeProtocolSet ServiceProxyDir::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
-bool ServiceProxyDir::IsDirectory() const { return true; }
-
 zx_status_t ServiceProxyDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
   std::unique_lock lock(lock_);
   auto entry_name = std::string(name.data(), name.length());
