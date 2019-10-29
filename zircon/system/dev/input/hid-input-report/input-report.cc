@@ -22,6 +22,7 @@
 #include <hid-input-report/device.h>
 #include <hid-input-report/mouse.h>
 #include <hid-input-report/sensor.h>
+#include <hid-input-report/touch.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
@@ -104,6 +105,9 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
     parse_device = std::make_unique<hid_input_report::Mouse>();
   } else if (collection->usage.page == ::hid::usage::Page::kSensor) {
     parse_device = std::make_unique<hid_input_report::Sensor>();
+  } else if (collection->usage.page == ::hid::usage::Page::kDigitizer &&
+             (collection->usage.usage == ::hid::usage::Digitizer::kTouchScreen)) {
+    parse_device = std::make_unique<hid_input_report::Touch>();
   }
 
   if (!parse_device) {

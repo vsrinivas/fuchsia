@@ -13,6 +13,7 @@
 #include <ddktl/protocol/hiddevice.h>
 #include <hid-input-report/descriptors.h>
 #include <hid/ambient-light.h>
+#include <hid/paradise.h>
 #include <zxtest/zxtest.h>
 
 #include "input-report.h"
@@ -329,6 +330,61 @@ TEST_F(HidDevTest, SensorTest) {
   EXPECT_EQ(kRedTestVal * kLightUnitConversion, sensor_report.values()[1]);
   EXPECT_EQ(kBlueTestVal * kLightUnitConversion, sensor_report.values()[2]);
   EXPECT_EQ(kGreenTestVal * kLightUnitConversion, sensor_report.values()[3]);
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDevTest, GetTouchReportTest) {
+  size_t desc_len;
+  const uint8_t* report_desc = get_paradise_touch_report_desc(&desc_len);
+  std::vector<uint8_t> desc(report_desc, report_desc + desc_len);
+  fake_hid_.SetReportDesc(desc);
+
+  device_->Bind();
+
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client = llcpp_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+
+  // Spoof send a report.
+  paradise_touch_t touch_report = {};
+  touch_report.rpt_id = PARADISE_RPT_ID_TOUCH;
+  touch_report.contact_count = 1;
+  touch_report.fingers[0].flags = 0xFF;
+  touch_report.fingers[0].x = 100;
+  touch_report.fingers[0].y = 200;
+  touch_report.fingers[0].finger_id = 1;
+
+  std::vector<uint8_t> sent_report =
+      std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&touch_report),
+                           reinterpret_cast<uint8_t*>(&touch_report) + sizeof(touch_report));
+  fake_hid_.SetReport(sent_report);
+  fake_hid_.SendReport();
+
+  // Get the report.
+  llcpp_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
+  ASSERT_OK(result.status());
+  auto& reports = result.Unwrap()->reports;
+
+  ASSERT_EQ(1, reports.count());
+
+  auto& report = reports[0];
+  auto& touch = report.touch();
+  ASSERT_TRUE(touch.has_contacts());
+  ASSERT_EQ(1, touch.contacts().count());
+  auto& contact = touch.contacts()[0];
+
+  ASSERT_TRUE(contact.has_position_x());
+  ASSERT_EQ(2500, contact.position_x());
+
+  ASSERT_TRUE(contact.has_position_y());
+  ASSERT_EQ(5000, contact.position_y());
 
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);
