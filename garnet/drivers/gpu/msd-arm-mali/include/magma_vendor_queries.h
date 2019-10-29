@@ -6,6 +6,8 @@
 
 #include "magma_common_defs.h"
 
+#define MAGMA_VENDOR_ID_MALI 0x13B5
+
 enum MsdArmVendorQuery {
   kMsdArmVendorQueryL2Present = MAGMA_QUERY_VENDOR_PARAM_0,
   kMsdArmVendorQueryMaxThreads = MAGMA_QUERY_VENDOR_PARAM_0 + 1,

@@ -13,12 +13,15 @@
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/macros.h"
+#include "magma_vendor_queries.h"
 
 namespace {
 
 class TestConnection : public magma::TestDeviceBase {
  public:
-  TestConnection() { magma_create_connection2(device(), &connection_); }
+  TestConnection() : magma::TestDeviceBase(MAGMA_VENDOR_ID_MALI) {
+    magma_create_connection2(device(), &connection_);
+  }
 
   ~TestConnection() {
     if (connection_)
@@ -68,7 +71,7 @@ static void test_shutdown(uint32_t iters) {
   for (uint32_t i = 0; i < iters; i++) {
     complete_count = 0;
 
-    magma::TestDeviceBase test_base;
+    magma::TestDeviceBase test_base(MAGMA_VENDOR_ID_MALI);
 
     {
       uint64_t is_supported = 0;

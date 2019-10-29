@@ -928,7 +928,7 @@ void MsdArmDevice::ReleaseMappingsForAtom(MsdArmAtom* atom) {
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out) {
   switch (id) {
     case MAGMA_QUERY_VENDOR_ID:
-      *value_out = 0x13B5;
+      *value_out = MAGMA_VENDOR_ID_MALI;
       return MAGMA_STATUS_OK;
 
     case MAGMA_QUERY_DEVICE_ID:

@@ -7,6 +7,8 @@
 
 #include "magma_common_defs.h"
 
+#define MAGMA_VENDOR_ID_INTEL 0x8086
+
 enum MsdIntelGenQuery {
   kMsdIntelGenQuerySubsliceAndEuTotal = MAGMA_QUERY_VENDOR_PARAM_0,
   kMsdIntelGenQueryGttSize = MAGMA_QUERY_VENDOR_PARAM_0 + 1,

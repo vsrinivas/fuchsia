@@ -642,7 +642,7 @@ void msd_device_destroy(msd_device_t* dev) { delete MsdIntelDevice::cast(dev); }
 magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
   switch (id) {
     case MAGMA_QUERY_VENDOR_ID:
-      *value_out = 0x8086;
+      *value_out = MAGMA_VENDOR_ID_INTEL;
       return MAGMA_STATUS_OK;
 
     case MAGMA_QUERY_DEVICE_ID:

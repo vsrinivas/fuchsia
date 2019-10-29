@@ -18,13 +18,15 @@ namespace {
 
 #if defined(NO_HARDWARE)
 constexpr const char* kDevicePath = "/dev/test/msd-img-rgx-no-hardware";
-#else
-constexpr const char* kDevicePath = "/dev/class/gpu/000";
 #endif
 
 class TestBase : public magma::TestDeviceBase {
  public:
+#if defined(NO_HARDWARE)
   TestBase() : magma::TestDeviceBase(kDevicePath) {}
+#else
+  TestBase() : magma::TestDeviceBase(0x1010) {}
+#endif
 };
 
 class TestConnection : public TestBase {

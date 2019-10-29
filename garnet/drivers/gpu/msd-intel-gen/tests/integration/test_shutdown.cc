@@ -20,7 +20,7 @@ namespace {
 
 class TestConnection : public magma::TestDeviceBase {
  public:
-  TestConnection() {
+  TestConnection() : magma::TestDeviceBase(MAGMA_VENDOR_ID_INTEL) {
     magma_create_connection2(device(), &connection_);
 
     magma_status_t status =
@@ -138,7 +138,7 @@ static void test_shutdown(uint32_t iters) {
   for (uint32_t i = 0; i < iters; i++) {
     complete_count = 0;
 
-    magma::TestDeviceBase test_base;
+    magma::TestDeviceBase test_base(MAGMA_VENDOR_ID_INTEL);
 
     {
       uint64_t is_supported = 0;

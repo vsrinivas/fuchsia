@@ -37,7 +37,7 @@ struct JobDescriptorHeader {
 
 class TestConnection : public magma::TestDeviceBase {
  public:
-  TestConnection() {
+  TestConnection() : magma::TestDeviceBase(MAGMA_VENDOR_ID_MALI) {
     magma_create_connection2(device(), &connection_);
     DASSERT(connection_);
 
