@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod byte_fraction;
+mod color;
+mod segments;
+
+use byte_fraction::ByteFraction;
+use color::Color;
+use segments::TileSegments;
+
 use std::mem;
 
 #[cfg(feature = "tracing")]
@@ -9,7 +17,6 @@ use fuchsia_trace::duration;
 
 use crate::{
     point::Point,
-    raster::{RasterSegments, RasterSegmentsIter},
     segment::Segment,
     tile::{LayerNode, Layers, Tile, TileOp, TILE_SIZE},
     PIXEL_SHIFT, PIXEL_WIDTH,
@@ -55,68 +62,26 @@ pub struct Cell {
     pub cover: i8,
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Color {
-    pub blue: u8,
-    pub green: u8,
-    pub red: u8,
-    pub alpha: u8,
-}
-
-const ZERO: Color = Color { red: 0, green: 0, blue: 0, alpha: 0 };
-const BLACK: Color = Color { red: 0, green: 0, blue: 0, alpha: 255 };
-
 #[derive(Debug)]
 pub struct Painter {
     cells: Vec<Cell>,
-    cover_wip: Vec<u8>,
-    cover_acc: Vec<u8>,
-    cover_mask: Vec<u8>,
+    cover_wip: Vec<ByteFraction>,
+    cover_acc: Vec<ByteFraction>,
+    cover_mask: Vec<ByteFraction>,
     color_wip: Vec<Color>,
     color_acc: Vec<Color>,
     layer_index: usize,
-}
-
-#[derive(Clone, Debug)]
-struct Segments<'t> {
-    tile: &'t Tile,
-    segments: &'t RasterSegments,
-    index: usize,
-    inner_segments: Option<RasterSegmentsIter<'t>>,
-    pub translation: Point<i32>,
-}
-
-impl<'t> Iterator for Segments<'t> {
-    type Item = Segment<i32>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(segments) = self.inner_segments.as_mut() {
-            if let Some(segment) = segments.next() {
-                return Some(segment);
-            }
-        }
-
-        if let Some(LayerNode::Segments(start_point, range)) = self.tile.layers.get(self.index) {
-            self.index += 1;
-            self.inner_segments = Some(self.segments.from(*start_point, range.clone()));
-
-            return self.next();
-        }
-
-        None
-    }
 }
 
 impl Painter {
     pub fn new() -> Self {
         Self {
             cells: vec![Cell::default(); (TILE_SIZE + 1) * TILE_SIZE],
-            cover_wip: vec![0; TILE_SIZE * TILE_SIZE],
-            cover_acc: vec![0; TILE_SIZE * TILE_SIZE],
-            cover_mask: vec![0; TILE_SIZE * TILE_SIZE],
-            color_wip: vec![ZERO; TILE_SIZE * TILE_SIZE],
-            color_acc: vec![BLACK; TILE_SIZE * TILE_SIZE],
+            cover_wip: vec![ByteFraction::zero(); TILE_SIZE * TILE_SIZE],
+            cover_acc: vec![ByteFraction::zero(); TILE_SIZE * TILE_SIZE],
+            cover_mask: vec![ByteFraction::zero(); TILE_SIZE * TILE_SIZE],
+            color_wip: vec![color::ZERO; TILE_SIZE * TILE_SIZE],
+            color_acc: vec![color::BLACK; TILE_SIZE * TILE_SIZE],
             layer_index: 0,
         }
     }
@@ -125,34 +90,9 @@ impl Painter {
         i + j * TILE_SIZE
     }
 
-    fn add(a: u8, b: u8) -> u8 {
-        let sum = u16::from(a) + u16::from(b);
-
-        if sum > 255 {
-            255
-        } else {
-            sum as u8
-        }
-    }
-
-    fn sub(a: u8, b: u8) -> u8 {
-        let difference = i16::from(a) - i16::from(b);
-
-        if difference < 0 {
-            0
-        } else {
-            difference as u8
-        }
-    }
-
-    fn mul(a: u8, b: u8) -> u8 {
-        let product = u16::from(a) * u16::from(b);
-        ((product + 128 + (product >> 8)) >> 8) as u8
-    }
-
     fn cover_wip_zero(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            self.cover_wip[i] = 0;
+            self.cover_wip[i] = ByteFraction::zero();
         }
     }
 
@@ -184,33 +124,6 @@ impl Painter {
         }
     }
 
-    fn get_area(mut full_area: i32, fill_rule: FillRule) -> u8 {
-        match fill_rule {
-            FillRule::NonZero => {
-                if full_area < 0 {
-                    Self::get_area(-full_area, fill_rule)
-                } else if full_area >= 256 {
-                    255
-                } else {
-                    full_area as u8
-                }
-            }
-            FillRule::EvenOdd => {
-                let mut number = full_area / 256;
-
-                if full_area < 0 {
-                    full_area -= 1;
-                    number -= 1;
-                }
-
-                let capped = (full_area % 256 + 256) % 256;
-
-                let area = if number % 2 == 0 { capped } else { 255 - capped };
-                area as u8
-            }
-        }
-    }
-
     fn accumulate(&mut self, fill_rule: FillRule) {
         for j in 0..TILE_SIZE {
             let mut cover = 0;
@@ -225,9 +138,7 @@ impl Painter {
                     let area = PIXEL_WIDTH * i32::from(old_cover) + i32::from(cell.area) / 2;
                     let index = Self::index(i - 1, j);
 
-                    let area =
-                        self.cover_wip[index].saturating_add(Self::get_area(area, fill_rule));
-                    self.cover_wip[index] = area;
+                    self.cover_wip[index] += ByteFraction::from_area(area, fill_rule);
                 }
             }
         }
@@ -235,7 +146,7 @@ impl Painter {
 
     fn cover_wip(
         &mut self,
-        segments: impl Iterator<Item = Segment<i32>> + Clone,
+        segments: impl Iterator<Item = Segment<i32>>,
         translation: Point<i32>,
         tile_i: usize,
         tile_j: usize,
@@ -261,32 +172,32 @@ impl Painter {
 
     fn cover_wip_mask(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            self.cover_wip[i] = Self::mul(self.cover_wip[i], self.cover_mask[i]);
+            self.cover_wip[i] *= self.cover_mask[i];
         }
     }
 
     fn cover_acc_zero(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            self.cover_acc[i] = 0;
+            self.cover_acc[i] = ByteFraction::zero();
         }
     }
 
     fn cover_acc_accumulate(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            let contrib = Self::mul(Self::sub(255, self.cover_acc[i]), self.cover_wip[i]);
-            self.cover_acc[i] = Self::add(self.cover_acc[i], contrib);
+            let inverted = ByteFraction::one() - self.cover_acc[i];
+            self.cover_acc[i] += inverted * self.cover_wip[i];
         }
     }
 
     fn cover_mask_zero(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            self.cover_mask[i] = 0;
+            self.cover_mask[i] = ByteFraction::zero();
         }
     }
 
     fn cover_mask_one(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            self.cover_mask[i] = 255;
+            self.cover_mask[i] = ByteFraction::one();
         }
     }
 
@@ -300,19 +211,24 @@ impl Painter {
 
     fn cover_mask_invert(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            self.cover_mask[i] = Self::sub(255, self.cover_mask[i]);
+            self.cover_mask[i] = ByteFraction::one() - self.cover_mask[i];
         }
     }
 
     fn color_wip_zero(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            self.color_wip[i] = ZERO;
+            self.color_wip[i] = color::ZERO;
         }
     }
 
     fn color_wip_fill_solid(&mut self, color: u32) {
         let [red, green, blue, alpha] = color.to_be_bytes();
-        let color = Color { red, green, blue, alpha };
+        let color = Color {
+            red: ByteFraction::new(red),
+            green: ByteFraction::new(green),
+            blue: ByteFraction::new(blue),
+            alpha: ByteFraction::new(alpha),
+        };
 
         for i in 0..TILE_SIZE * TILE_SIZE {
             self.color_wip[i] = color;
@@ -321,86 +237,76 @@ impl Painter {
 
     fn color_acc_zero(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            self.color_acc[i] = BLACK;
+            self.color_acc[i] = color::BLACK;
         }
     }
 
     fn color_acc_blend_over(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            let wip = self.color_wip[i];
-            let acc = self.color_acc[i];
-            let cover = Self::mul(self.cover_wip[i], acc.alpha);
+            let cover = self.cover_wip[i] * self.color_acc[i].alpha;
 
-            let red = Self::add(Self::mul(cover, wip.red), acc.red);
-            let green = Self::add(Self::mul(cover, wip.green), acc.green);
-            let blue = Self::add(Self::mul(cover, wip.blue), acc.blue);
-            let alpha = Self::sub(acc.alpha, Self::mul(cover, wip.alpha));
-
-            self.color_acc[i] = Color { red, green, blue, alpha };
+            self.color_acc[i].red += cover * self.color_wip[i].red;
+            self.color_acc[i].green += cover * self.color_wip[i].green;
+            self.color_acc[i].blue += cover * self.color_wip[i].blue;
+            self.color_acc[i].alpha = self.color_acc[i].alpha - cover * self.color_wip[i].alpha;
         }
     }
 
     fn color_acc_blend_add(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            let wip = self.color_wip[i];
-            let acc = self.color_acc[i];
-            let cover_min = self.cover_wip[i].min(acc.alpha);
+            let cover_min = self.cover_wip[i].min(self.color_acc[i].alpha);
 
-            let red = Self::add(Self::mul(cover_min, wip.red), acc.red);
-            let green = Self::add(Self::mul(cover_min, wip.green), acc.green);
-            let blue = Self::add(Self::mul(cover_min, wip.blue), acc.blue);
-            let alpha = Self::sub(acc.alpha, Self::mul(cover_min, wip.alpha));
-
-            self.color_acc[i] = Color { red, green, blue, alpha };
+            self.color_acc[i].red += cover_min * self.color_wip[i].red;
+            self.color_acc[i].green += cover_min * self.color_wip[i].green;
+            self.color_acc[i].blue += cover_min * self.color_wip[i].blue;
+            self.color_acc[i].alpha = self.color_acc[i].alpha - cover_min * self.color_wip[i].alpha;
         }
     }
 
     fn color_acc_blend_multiply(&mut self) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            let wip = self.color_wip[i];
-            let acc = self.color_acc[i];
-
-            let red = Self::mul(Self::mul(self.cover_wip[i], wip.red), acc.red);
-            let green = Self::mul(Self::mul(self.cover_wip[i], wip.green), acc.green);
-            let blue = Self::mul(Self::mul(self.cover_wip[i], wip.blue), acc.blue);
-            let alpha =
-                Self::mul(Self::mul(self.cover_wip[i], wip.alpha), Self::sub(255, acc.alpha));
-
-            self.color_acc[i] = Color { red, green, blue, alpha };
+            self.color_acc[i].red *= self.cover_wip[i] * self.color_wip[i].red;
+            self.color_acc[i].green *= self.cover_wip[i] * self.color_wip[i].green;
+            self.color_acc[i].blue *= self.cover_wip[i] * self.color_wip[i].blue;
+            self.color_acc[i].alpha = self.cover_wip[i]
+                * self.color_wip[i].alpha
+                * (ByteFraction::one() - self.color_acc[i].alpha);
         }
     }
 
     fn color_acc_background(&mut self, color: u32) {
         for i in 0..TILE_SIZE * TILE_SIZE {
-            let acc = self.color_acc[i];
+            let alpha = self.color_acc[i].alpha;
             let [red, green, blue, _] = color.to_be_bytes();
 
-            let red = Self::add(Self::mul(acc.alpha, red), acc.red);
-            let green = Self::add(Self::mul(acc.alpha, green), acc.green);
-            let blue = Self::add(Self::mul(acc.alpha, blue), acc.blue);
-
-            self.color_acc[i] = Color { red, green, blue, alpha: acc.alpha };
+            self.color_acc[i].red += alpha * ByteFraction::new(red);
+            self.color_acc[i].green += alpha * ByteFraction::new(green);
+            self.color_acc[i].blue += alpha * ByteFraction::new(blue);
         }
+    }
+
+    fn next_index_delta(&mut self, tile: &Tile) -> usize {
+        tile.layers[self.layer_index..]
+            .iter()
+            .enumerate()
+            .find(|(_, layer)| match layer {
+                LayerNode::Layer(..) => true,
+                _ => false,
+            })
+            .map(|(i, _)| i)
+            // Skip to end if no `LayerNode::Layer` found.
+            .unwrap_or_else(|| tile.layers.len() - self.layer_index)
     }
 
     fn process_layer<'a, 'b, B: ColorBuffer>(
         &'a mut self,
         context: &'b Context<B>,
-    ) -> Option<(Segments<'b>, &'b [TileOp])> {
-        let tile = &context.tile;
+    ) -> Option<(TileSegments<'b>, &'b [TileOp])> {
+        let tile = context.tile;
 
         if let Some(layer) = tile.layers.get(self.layer_index) {
             self.layer_index += 1;
-
-            let next_index = tile.layers[self.layer_index..]
-                .iter()
-                .enumerate()
-                .find(|(_, layer)| match layer {
-                    LayerNode::Layer(..) => true,
-                    _ => false,
-                })
-                .map(|(i, _)| i)
-                .unwrap_or_else(|| tile.layers.len() - self.layer_index);
+            let next_index_delta = self.next_index_delta(tile);
 
             let (segments, translation, ops) = match layer {
                 LayerNode::Layer(id, translation) => {
@@ -409,25 +315,19 @@ impl Painter {
                         (segments, *translation, ops)
                     } else {
                         // Skip Layers that are not present in the Map anymore.
-                        self.layer_index += next_index;
+                        self.layer_index += next_index_delta;
                         return self.process_layer(context);
                     }
                 }
                 _ => panic!(
                     "self.layer_index must not point at a Layer::Segments before \
-                     Painter::process_layer"
+                     calling Painter::process_layer"
                 ),
             };
 
-            let segments = Segments {
-                tile,
-                segments,
-                index: self.layer_index,
-                inner_segments: None,
-                translation,
-            };
+            let segments = TileSegments::new(tile, segments, self.layer_index, translation);
 
-            self.layer_index += next_index;
+            self.layer_index += next_index_delta;
             return Some((segments, &ops));
         }
 
@@ -437,14 +337,9 @@ impl Painter {
     unsafe fn write_row<B: ColorBuffer>(buffer: &mut B, index: usize, row: &[Color]) {
         match buffer.pixel_format() {
             PixelFormat::RGBA8888 => {
-                let mut new_row = [ZERO; TILE_SIZE];
+                let mut new_row = [color::ZERO; TILE_SIZE];
                 for (i, color) in row.iter().enumerate() {
-                    new_row[i] = Color {
-                        blue: color.red,
-                        green: color.green,
-                        red: color.blue,
-                        alpha: color.alpha,
-                    }
+                    new_row[i] = color.swap_rb();
                 }
 
                 buffer.write_color_at(index, &new_row[0..row.len()]);
@@ -453,15 +348,7 @@ impl Painter {
             PixelFormat::RGB565 => {
                 let mut new_row = [0u16; TILE_SIZE];
                 for (i, color) in row.iter().enumerate() {
-                    let red = u16::from(Self::mul(color.alpha, color.red));
-                    let green = u16::from(Self::mul(color.alpha, color.green));
-                    let blue = u16::from(Self::mul(color.alpha, color.blue));
-
-                    let red = ((red >> 3) & 0x1F) << 11;
-                    let green = ((green >> 2) & 0x3F) << 5;
-                    let blue = (blue >> 3) & 0x1F;
-
-                    new_row[i] = red | green | blue;
+                    new_row[i] = color.to_rgb565();
                 }
 
                 buffer.write_color_at(index, &new_row[0..row.len()]);
@@ -524,9 +411,9 @@ impl Painter {
             if y < context.height {
                 let buffer_index = x + y * context.buffer.stride();
                 let tile_index = tile_j * TILE_SIZE;
-                let d = (context.width - x).min(TILE_SIZE);
+                let delta = (context.width - x).min(TILE_SIZE);
 
-                let tile_range = tile_index..tile_index + d;
+                let tile_range = tile_index..tile_index + delta;
 
                 unsafe {
                     Self::write_row(&mut context.buffer, buffer_index, &self.color_acc[tile_range]);
@@ -568,7 +455,7 @@ mod tests {
 
         for j in 0..height {
             for i in 0..width {
-                cover.push(painter.cover_wip[i + j * TILE_SIZE]);
+                cover.push(painter.cover_wip[i + j * TILE_SIZE].value());
             }
         }
 
@@ -800,34 +687,17 @@ mod tests {
 
     #[test]
     fn pixel_formats() {
-        assert_eq!(
-            DebugBuffer::new(PixelFormat::RGBA8888).write(Color {
-                red: 10,
-                green: 20,
-                blue: 30,
-                alpha: 255,
-            }),
-            [10, 20, 30, 255]
-        );
+        let color = Color {
+            red: ByteFraction::new(10),
+            green: ByteFraction::new(20),
+            blue: ByteFraction::new(30),
+            alpha: ByteFraction::new(255),
+        };
 
-        assert_eq!(
-            DebugBuffer::new(PixelFormat::BGRA8888).write(Color {
-                red: 10,
-                green: 20,
-                blue: 30,
-                alpha: 255,
-            }),
-            [30, 20, 10, 255]
-        );
+        assert_eq!(DebugBuffer::new(PixelFormat::RGBA8888).write(color), [10, 20, 30, 255]);
 
-        assert_eq!(
-            DebugBuffer::new(PixelFormat::RGB565).write(Color {
-                red: 10,
-                green: 20,
-                blue: 30,
-                alpha: 255,
-            }),
-            [163, 8, 0, 0]
-        );
+        assert_eq!(DebugBuffer::new(PixelFormat::BGRA8888).write(color), [30, 20, 10, 255]);
+
+        assert_eq!(DebugBuffer::new(PixelFormat::RGB565).write(color), [163, 8, 0, 0]);
     }
 }
