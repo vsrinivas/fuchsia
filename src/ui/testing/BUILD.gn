@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("mocks") {
+source_set("mock_input_device") {
   testonly = true
 
   sources = [
@@ -17,6 +17,4 @@ source_set("mocks") {
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
-#define LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
+#ifndef SRC_UI_TESTING_MOCK_INPUT_DEVICE_H_
+#define SRC_UI_TESTING_MOCK_INPUT_DEVICE_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
-#include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ui_input {
@@ -41,4 +41,4 @@ class MockInputDevice : public fuchsia::ui::input::InputDevice {
 }  // namespace test
 }  // namespace ui_input
 
-#endif  // LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
+#endif  // SRC_UI_TESTING_MOCK_INPUT_DEVICE_H_

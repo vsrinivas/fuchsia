@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+
 #include <hid/usages.h>
 
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "lib/ui/tests/mocks/mock_input_device.h"
-#include "lib/ui/tests/mocks/mock_input_device_registry.h"
 #include "src/lib/fxl/time/time_point.h"
+#include "src/ui/testing/mock_input_device.h"
+#include "src/ui/testing/mock_input_device_registry.h"
 
 namespace input {
 namespace test {

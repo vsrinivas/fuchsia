@@ -16,8 +16,8 @@
 #include "garnet/bin/ui/input_reader/tests/sensor_test_data.h"
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "lib/ui/tests/mocks/mock_input_device.h"
-#include "lib/ui/tests/mocks/mock_input_device_registry.h"
+#include "src/ui/testing/mock_input_device.h"
+#include "src/ui/testing/mock_input_device_registry.h"
 
 namespace ui_input {
 

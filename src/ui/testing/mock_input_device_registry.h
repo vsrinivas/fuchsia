@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
-#define LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
+#ifndef SRC_UI_TESTING_MOCK_INPUT_DEVICE_REGISTRY_H_
+#define SRC_UI_TESTING_MOCK_INPUT_DEVICE_REGISTRY_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -11,8 +11,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "lib/ui/tests/mocks/mock_input_device.h"
 #include "src/lib/fxl/macros.h"
+#include "src/ui/testing/mock_input_device.h"
 
 namespace ui_input {
 namespace test {
@@ -42,4 +42,4 @@ class MockInputDeviceRegistry : public fuchsia::ui::input::InputDeviceRegistry {
 }  // namespace test
 }  // namespace ui_input
 
-#endif  // LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_REGISTRY_H_
+#endif  // SRC_UI_TESTING_MOCK_INPUT_DEVICE_REGISTRY_H_

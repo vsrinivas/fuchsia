@@ -36,8 +36,8 @@ source_set("end_to_end_tests") {
     ":mock_hid_decoder",
     "//garnet/bin/ui/input_reader",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/ui/tests/mocks",
     "//sdk/fidl/fuchsia.ui.input",
+    "//src/ui/testing:mock_input_device",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
   ]
@@ -53,8 +53,8 @@ source_set("interface_tests") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/ui/tests/mocks",
     "//sdk/fidl/fuchsia.ui.input",
+    "//src/ui/testing:mock_input_device",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
   ]
