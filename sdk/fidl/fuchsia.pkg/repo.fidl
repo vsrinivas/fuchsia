@@ -19,6 +19,7 @@ protocol RepositoryManager {
     ///
     /// Return Values:
     /// * `ZX_OK` if the repository was added.
+    /// * `ZX_ERR_ACCESS_DENIED` if editing repositories is permanently disabled.
     /// * `ZX_ERR_ALREADY_EXISTS` if the repository already exists.
     /// * `ZX_ERR_INVALID_ARGS` if the repository is malformed.
     Add(RepositoryConfig repo) -> (zx.status status);
@@ -32,9 +33,11 @@ protocol RepositoryManager {
     /// * `repo_url` is the URL of the repository we want to remove.
     ///
     /// Return Values:
-    /// * Returns `ZX_OK` if the repository was removed.
-    /// * Returns `ZX_ERR_INVALID_ARGS` if the `repo_url` is malformed.
-    /// * Returns `ZX_ERR_NOT_FOUND` if the repository does not exist.
+    /// * `ZX_OK` if the repository was removed.
+    /// * `ZX_ERR_ACCESS_DENIED` if editing repositories is permanently disabled or the
+    ///   `repo_url` matches a static repository.
+    /// * `ZX_ERR_INVALID_ARGS` if the `repo_url` is malformed.
+    /// * `ZX_ERR_NOT_FOUND` if the repository does not exist.
     Remove(string repo_url) -> (zx.status status);
 
     /// Add a mirror to a repository. This will overwrite the mirror if it already exists.

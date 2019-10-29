@@ -5,43 +5,20 @@
 /// This module tests pkg_resolver's RewriteManager when
 /// dynamic rewrite rules have been disabled.
 use {
-    crate::{DirOrProxy, Mounts, TestEnv},
-    fidl::endpoints::RequestStream,
-    fidl_fuchsia_io::{
-        DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
-        OPEN_FLAG_DESCRIBE,
-    },
+    super::*,
+    crate::mock_filesystem::spawn_directory_handler,
     fidl_fuchsia_pkg_rewrite::EngineProxy as RewriteEngineProxy,
     fuchsia_async as fasync,
     fuchsia_url_rewrite::{Rule, RuleConfig},
     fuchsia_zircon::Status,
-    futures::{
-        future::{BoxFuture, FutureExt},
-        stream::StreamExt,
-    },
-    parking_lot::Mutex,
-    serde_derive::Serialize,
-    std::{collections::HashMap, convert::TryInto, fs::File, io::BufWriter, sync::Arc},
+    std::{convert::TryInto, fs::File},
 };
-
-#[derive(Serialize)]
-struct Config {
-    disable_dynamic_configuration: bool,
-}
 
 impl Mounts {
     fn add_dynamic_rewrite_rules(&self, rule_config: &RuleConfig) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
             let f = File::create(d.path().join("rewrites.json")).unwrap();
             serde_json::to_writer(BufWriter::new(f), rule_config).unwrap();
-        } else {
-            panic!("not supported");
-        }
-    }
-    fn add_config(&self, config: &Config) {
-        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
-            let f = File::create(d.path().join("config.json")).unwrap();
-            serde_json::to_writer(BufWriter::new(f), &config).unwrap();
         } else {
             panic!("not supported");
         }
@@ -124,59 +101,6 @@ async fn commit_transaction_fails_if_disabled() {
     assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![]);
 
     env.stop().await;
-}
-
-type OpenCounter = Arc<Mutex<HashMap<String, u64>>>;
-
-fn handle_directory_request_stream(
-    mut stream: DirectoryRequestStream,
-    open_counts: OpenCounter,
-) -> BoxFuture<'static, ()> {
-    async move {
-        while let Some(req) = stream.next().await {
-            handle_directory_request(req.unwrap(), Arc::clone(&open_counts)).await;
-        }
-    }
-        .boxed()
-}
-
-async fn handle_directory_request(req: DirectoryRequest, open_counts: OpenCounter) {
-    match req {
-        DirectoryRequest::Clone { flags, object, control_handle: _control_handle } => {
-            let stream = DirectoryRequestStream::from_channel(
-                fasync::Channel::from_channel(object.into_channel()).unwrap(),
-            );
-            describe_dir(flags, &stream);
-            fasync::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts)));
-        }
-        DirectoryRequest::Open {
-            flags: _flags,
-            mode: _mode,
-            path,
-            object: _object,
-            control_handle: _control_handle,
-        } => {
-            *open_counts.lock().entry(path).or_insert(0) += 1;
-        }
-        other => panic!("unhandled request type: {:?}", other),
-    }
-}
-
-fn describe_dir(flags: u32, stream: &DirectoryRequestStream) {
-    let ch = stream.control_handle();
-    if flags & OPEN_FLAG_DESCRIBE != 0 {
-        let mut ni = fidl_fuchsia_io::NodeInfo::Directory(DirectoryObject);
-        ch.send_on_open_(Status::OK.into_raw(), Some(fidl::encoding::OutOfLine(&mut ni)))
-            .expect("send_on_open");
-    }
-}
-
-fn spawn_directory_handler() -> (DirectoryProxy, OpenCounter) {
-    let (proxy, stream) =
-        fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-    let open_counts = Arc::new(Mutex::new(HashMap::<String, u64>::new()));
-    fasync::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts)));
-    (proxy, open_counts)
 }
 
 #[fasync::run_singlethreaded(test)]

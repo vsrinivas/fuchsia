@@ -22,6 +22,7 @@ mod cache;
 mod config;
 mod experiment;
 mod font_package_manager;
+mod queue;
 mod repository_manager;
 mod repository_service;
 mod resolver_service;
@@ -31,16 +32,17 @@ mod rewrite_service;
 #[cfg(test)]
 mod test_util;
 
-mod queue;
-
-use crate::amber_connector::AmberConnector;
-use crate::cache::PackageCache;
-use crate::experiment::Experiments;
-use crate::font_package_manager::{FontPackageManager, FontPackageManagerBuilder};
-use crate::repository_manager::{RepositoryManager, RepositoryManagerBuilder};
-use crate::repository_service::RepositoryService;
-use crate::rewrite_manager::{RewriteManager, RewriteManagerBuilder};
-use crate::rewrite_service::RewriteService;
+use crate::{
+    amber_connector::AmberConnector,
+    cache::PackageCache,
+    config::Config,
+    experiment::Experiments,
+    font_package_manager::{FontPackageManager, FontPackageManagerBuilder},
+    repository_manager::{RepositoryManager, RepositoryManagerBuilder},
+    repository_service::RepositoryService,
+    rewrite_manager::{RewriteManager, RewriteManagerBuilder},
+    rewrite_service::RewriteService,
+};
 
 const SERVER_THREADS: usize = 2;
 const MAX_CONCURRENT_BLOB_FETCHES: usize = 5;
@@ -59,7 +61,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
-    let config = config::Config::load_from_config_data_or_default();
+    let config = Config::load_from_config_data_or_default();
 
     let pkg_cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
@@ -77,11 +79,12 @@ fn main() -> Result<(), Error> {
     let experiments = Arc::clone(&experiment_state).into();
 
     let font_package_manager = Arc::new(load_font_package_manager());
-    let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector, experiments)));
+    let repo_manager =
+        Arc::new(RwLock::new(load_repo_manager(amber_connector, experiments, &config)));
     let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(
         rewrite_inspect_node,
         &repo_manager.read(),
-        config.disable_dynamic_configuration(),
+        &config,
     )));
 
     let mut futures = FuturesUnordered::new();
@@ -189,10 +192,13 @@ fn connect_to_pkgfs(subdir: &str) -> Result<DirectoryProxy, Error> {
 fn load_repo_manager(
     amber_connector: AmberConnector,
     experiments: Experiments,
+    config: &Config,
 ) -> RepositoryManager<AmberConnector> {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
-    RepositoryManagerBuilder::new(DYNAMIC_REPO_PATH, amber_connector, experiments)
+    let dynamic_repo_path =
+        if config.disable_dynamic_configuration() { None } else { Some(DYNAMIC_REPO_PATH) };
+    RepositoryManagerBuilder::new(dynamic_repo_path, amber_connector, experiments)
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {}", err);
             builder
@@ -217,10 +223,10 @@ fn load_repo_manager(
 fn load_rewrite_manager(
     node: inspect::Node,
     repo_manager: &RepositoryManager<AmberConnector>,
-    disable_dynamic_configuration: bool,
+    config: &Config,
 ) -> RewriteManager {
     let dynamic_rules_path =
-        if disable_dynamic_configuration { None } else { Some(DYNAMIC_RULES_PATH) };
+        if config.disable_dynamic_configuration() { None } else { Some(DYNAMIC_RULES_PATH) };
     let builder = RewriteManagerBuilder::new(dynamic_rules_path)
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {

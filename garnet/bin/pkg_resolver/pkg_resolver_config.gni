@@ -8,7 +8,7 @@ import("//build/config.gni")
 # config-data package.
 #
 #   disable_dynamic_configuration
-#     [bool] Disable editing package URL rewrite rules.
+#     [bool] Disable editing package URL rewrite rules and repository configs.
 #
 template("pkg_resolver_config") {
   cfg = {

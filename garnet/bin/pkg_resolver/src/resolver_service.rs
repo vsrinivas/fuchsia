@@ -493,7 +493,7 @@ mod tests {
 
             let dynamic_configs_path = dynamic_repo_dir.path().join("config");
             let repo_manager = RepositoryManagerBuilder::new(
-                dynamic_configs_path,
+                Some(dynamic_configs_path),
                 amber_connector.clone(),
                 self.experiments.unwrap_or_else(Experiments::none),
             )
@@ -786,7 +786,7 @@ mod tests {
 
         // Change the config for example.com, which will cause the resolver's connection to close.
         // The next request should connect to our new amber, which contains the new package.
-        test.repo_manager.write().insert(config);
+        test.repo_manager.write().insert(config).unwrap();
 
         test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('b')])).await;
     }

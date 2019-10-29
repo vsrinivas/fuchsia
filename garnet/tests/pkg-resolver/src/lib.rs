@@ -27,11 +27,14 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::{compat::Stream01CompatExt, prelude::*},
     hyper::Body,
-    std::fs::File,
+    serde_derive::Serialize,
+    std::{fs::File, io::BufWriter},
     tempfile::TempDir,
 };
 
+mod dynamic_repositories_disabled;
 mod dynamic_rewrite_disabled;
+mod mock_filesystem;
 mod resolve_propagates_pkgfs_failure;
 mod resolve_recovers_from_http_errors;
 mod resolve_succeeds;
@@ -87,11 +90,24 @@ fn clone_directory_proxy(proxy: &DirectoryProxy) -> zx::Handle {
     client.into()
 }
 
+#[derive(Serialize)]
+struct Config {
+    disable_dynamic_configuration: bool,
+}
+
 impl Mounts {
     fn new() -> Self {
         Self {
             pkg_resolver_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
             pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
+        }
+    }
+    fn add_config(&self, config: &Config) {
+        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
+            let f = File::create(d.path().join("config.json")).unwrap();
+            serde_json::to_writer(BufWriter::new(f), &config).unwrap();
+        } else {
+            panic!("not supported");
         }
     }
 }
