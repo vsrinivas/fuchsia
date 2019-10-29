@@ -62,10 +62,6 @@ protocol SessionControl {
     SetRepeatMode(RepeatMode repeat_mode);
     /// Sets shuffle mode.
     SetShuffleMode(bool shuffle_on);
-    /// Binds to the session's gain control for control and notifications.
-    [Deprecated]
-    BindGainControl(
-        request<fuchsia.media.audio.GainControl> gain_control_request);
     /// Binds to the session's volume control for control and notifications.
     BindVolumeControl(
         request<fuchsia.media.audio.VolumeControl> volume_control_request);

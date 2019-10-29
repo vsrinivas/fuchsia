@@ -208,9 +208,6 @@ impl Player {
                             SessionControlRequest::SetShuffleMode { shuffle_on, .. } => {
                                 proxy.set_shuffle_mode(shuffle_on)
                             }
-                            SessionControlRequest::BindGainControl {
-                                gain_control_request, ..
-                            } => proxy.bind_gain_control(gain_control_request),
                             SessionControlRequest::BindVolumeControl {
                                 volume_control_request,
                                 ..

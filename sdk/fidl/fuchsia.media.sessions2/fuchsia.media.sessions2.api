@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.media.sessions2/discovery.fidl": "cdf82a2390d6b38fdd19b5cf7bd7584f",
+  "fidl/fuchsia.media.sessions2/discovery.fidl": "1ec1b60df3511c46b207d44950811cc4",
   "fidl/fuchsia.media.sessions2/images.fidl": "1f6803a1a1570999d2037e5ffdbd1de1",
   "fidl/fuchsia.media.sessions2/player.fidl": "b3ccf9286bfc3d3c47e51bbec7742834",
   "fidl/fuchsia.media.sessions2/publisher.fidl": "124ea5fb9f113208fe58648a7d251ec9"
