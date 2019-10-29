@@ -43,6 +43,13 @@ static constexpr zx_driver_ops_t brcmfmac_driver_ops = {
 #endif  // CONFIG_BRCMFMAC_SDIO
           return status;
         },
+#if CONFIG_BRCMFMAC_DRIVER_TEST
+    .run_unit_tests =
+        [](void* ctx, zx_device_t* parent, zx_handle_t channel) {
+          bool retval = true;
+          return retval;
+        },
+#endif  // CONFIG_BRCMFMAC_DRIVER_TESTS
 };
 
 // clang-format off

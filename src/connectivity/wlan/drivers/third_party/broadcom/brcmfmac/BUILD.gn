@@ -267,6 +267,22 @@ driver_module("driver_module") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
+# Driver module for the test version of the brcmfmac driver, which includes run_unit_tests() DDK
+# tests.
+driver_module("test_driver_module") {
+  output_name = "brcmfmac-test"
+  sources = [
+    "binding.cc",
+  ]
+  deps = [
+    ":core",
+    ":driver_sources",
+  ]
+  defines = [ "CONFIG_BRCMFMAC_DRIVER_TEST=1" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
 # Firmware file copying below.  There are three targets:
 #
 # * brcmfmac-firmware-copy
@@ -383,7 +399,8 @@ if (internal_access) {
   }
 }
 
-# Driver packages.
+# Driver packages.  Depend on one or the other, depending on whether the board definition would like
+# runtime tests in the driver or not.
 
 # Driver package for the brcmfmac driver.
 package("brcmfmac") {
@@ -400,6 +417,34 @@ package("brcmfmac") {
   drivers = [
     {
       name = "brcmfmac.so"
+    },
+  ]
+  libraries = []
+  foreach(file, driver_library_files) {
+    libraries += [
+      {
+        name = "firmware/brcmfmac/$file"
+      },
+    ]
+  }
+  visibility += [ "*" ]
+}
+
+# Driver package for the test version of the brcmfmac driver.
+package("brcmfmac_test_driver") {
+  deprecated_system_image = true
+  deps = [
+    # The copy step has to be in the shared-library toolchain to use the
+    # expected output directory, since we treat firmware blobs as if they
+    # were libraries which always use the shared-library toolchain to build.
+    ":brcmfmac-clm-copy($shlib_toolchain)",
+    ":brcmfmac-firmware-copy($shlib_toolchain)",
+    ":brcmfmac-nvram-copy($shlib_toolchain)",
+    ":test_driver_module",
+  ]
+  drivers = [
+    {
+      name = "brcmfmac-test.so"
     },
   ]
   libraries = []
