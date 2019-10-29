@@ -6,29 +6,11 @@ source_set("cpp") {
   sources = [
     "formatting.cc",
     "formatting.h",
-    "geometry_util.cc",
-    "geometry_util.h",
   ]
 
   public_configs = [ "//garnet/public:config" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.math",
-  ]
-}
-
-executable("tests") {
-  output_name = "geometry_util_unittests"
-
-  testonly = true
-
-  sources = [
-    "tests/geometry_util_unittests.cc",
-  ]
-
-  deps = [
-    ":cpp",
-    "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main",
   ]
 }
