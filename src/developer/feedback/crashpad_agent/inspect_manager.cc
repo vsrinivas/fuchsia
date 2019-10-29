@@ -14,29 +14,24 @@
 
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
+#include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace {
 
-InspectManager::Report::Report(inspect::Node* parent_node, const std::string& local_report_id,
-                               const std::string& creation_time) {
-  node_ = parent_node->CreateChild(local_report_id);
-  creation_time_ = node_.CreateString("creation_time", creation_time);
-}
+using files::JoinPath;
+using inspect::Node;
 
-void InspectManager::Report::MarkAsUploaded(const std::string& server_report_id,
-                                            const std::string& creation_time) {
-  server_node_ = node_.CreateChild("crash_server");
-  server_id_ = server_node_.CreateString("id", server_report_id);
-  server_creation_time_ = server_node_.CreateString("creation_time", creation_time);
-}
+}  // namespace
 
 InspectManager::InspectManager(inspect::Node* root_node, timekeeper::Clock* clock)
-    : root_node_(root_node), clock_(clock) {
-  config_.node = root_node->CreateChild(kInspectConfigName);
-  settings_.node = root_node_->CreateChild(kInspectSettingsName);
-  reports_.node = root_node_->CreateChild(kInspectReportsName);
+    : node_manager_(root_node), clock_(clock) {
+  node_manager_.GetOrDie("/settings");
+  node_manager_.GetOrDie("/reports");
+  node_manager_.GetOrDie("/config/crashpad_database");
+  node_manager_.GetOrDie("/config/crash_server");
 }
 
 bool InspectManager::AddReport(const std::string& program_name,
@@ -47,40 +42,47 @@ bool InspectManager::AddReport(const std::string& program_name,
     return false;
   }
 
-  if (reports_.program_nodes.find(program_name) == reports_.program_nodes.end()) {
-    reports_.program_nodes[program_name] = reports_.node.CreateChild(program_name);
-  }
+  const std::string report_path = JoinPath("/reports", JoinPath(program_name, local_report_id));
 
-  reports_.reports.emplace(local_report_id, Report(&reports_.program_nodes[program_name],
-                                                   local_report_id, CurrentTime()));
+  reports_.emplace(local_report_id, report_path);
+  reports_.at(local_report_id).creation_time_ =
+      node_manager_.GetOrDie(report_path)->CreateString("creation_time", CurrentTime());
+
   return true;
 }
 
 bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
-                                          const std::string& server_report_id) {
-  if (Contains(local_report_id)) {
-    reports_.reports.at(local_report_id).MarkAsUploaded(server_report_id, CurrentTime());
-    return true;
+                                          const std::string& server_properties_report_id) {
+  if (!Contains(local_report_id)) {
+    FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
+    return false;
   }
-  FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
-  return false;
+
+  Report& report = reports_.at(local_report_id);
+  const std::string server_path = JoinPath(report.Path(), "crash_server");
+
+  inspect::Node* server = node_manager_.GetOrDie(server_path);
+
+  report.server_id_ = server->CreateString("id", server_properties_report_id);
+  report.server_creation_time_ = server->CreateString("creation_time", CurrentTime());
+
+  return true;
 }
 
 void InspectManager::ExposeConfig(const feedback::Config& config) {
   auto* crashpad_database = &config_.crashpad_database;
   auto* crash_server = &config_.crash_server;
 
-  crashpad_database->node = config_.node.CreateChild(kCrashpadDatabaseKey);
-  crashpad_database->max_size_in_kb = crashpad_database->node.CreateUint(
-      kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
+  inspect::Node* server = node_manager_.GetOrDie("/config/crash_server");
 
-  crash_server->node = config_.node.CreateChild(kCrashServerKey);
-  crash_server->upload_policy = crash_server->node.CreateString(
-      kCrashServerUploadPolicyKey, ToString(config.crash_server.upload_policy));
+  crashpad_database->max_size_in_kb =
+      node_manager_.GetOrDie("/config/crashpad_database")
+          ->CreateUint(kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
 
+  crash_server->upload_policy = server->CreateString(kCrashServerUploadPolicyKey,
+                                                     ToString(config.crash_server.upload_policy));
   if (config.crash_server.url) {
-    crash_server->url =
-        crash_server->node.CreateString(kCrashServerUrlKey, *config.crash_server.url.get());
+    crash_server->url = server->CreateString(kCrashServerUrlKey, *config.crash_server.url.get());
   }
 }
 
@@ -92,10 +94,18 @@ void InspectManager::ExposeSettings(feedback::Settings* settings) {
 }
 
 bool InspectManager::Contains(const std::string& local_report_id) {
-  return reports_.reports.find(local_report_id) != reports_.reports.end();
+  return reports_.find(local_report_id) != reports_.end();
 }
+
 void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy) {
-  settings_.upload_policy = settings_.node.CreateString("upload_policy", ToString(upload_policy));
+  // |settings_.upload_policy| will change so we only create a StringProperty the first time it is
+  // needed.
+  if (!settings_.upload_policy) {
+    settings_.upload_policy =
+        node_manager_.GetOrDie("/settings")->CreateString("upload_policy", ToString(upload_policy));
+  } else {
+    settings_.upload_policy.Set(ToString(upload_policy));
+  }
 }
 
 std::string InspectManager::CurrentTime() {

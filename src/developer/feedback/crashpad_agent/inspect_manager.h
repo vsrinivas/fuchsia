@@ -14,6 +14,7 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
+#include "src/developer/feedback/utils/inspect_node_manager.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -54,19 +55,15 @@ class InspectManager {
   struct Config {
     // Inspect node containing the database configuration.
     struct CrashpadDatabaseConfig {
-      inspect::Node node;
       inspect::StringProperty path;
       inspect::UintProperty max_size_in_kb;
     };
 
     // Inspect node containing the crash server configuration.
     struct CrashServerConfig {
-      inspect::Node node;
       inspect::StringProperty upload_policy;
       inspect::StringProperty url;
     };
-
-    inspect::Node node;
 
     CrashpadDatabaseConfig crashpad_database;
     CrashServerConfig crash_server;
@@ -74,49 +71,33 @@ class InspectManager {
 
   // Inspect node containing the mutable settings.
   struct Settings {
-    inspect::Node node;
-
     inspect::StringProperty upload_policy;
   };
 
   // Inspect node for a single report.
   struct Report {
-    Report(inspect::Node* parent_node, const std::string& local_report_id,
-           const std::string& creation_time);
+    Report(const std::string& path) : path_(path) {}
 
-    // Allow moving, disallow copying.
-    Report(Report&& other) = default;
-    Report& operator=(Report&& other) noexcept;
-    Report(const Report& other) = delete;
-    Report& operator=(const Report& other) = delete;
+    const std::string& Path() { return path_; }
 
-    // Adds the crash server entries after receiving a server response.
-    void MarkAsUploaded(const std::string& server_report_id, const std::string& creation_time);
-
-   private:
-    inspect::Node node_;
     inspect::StringProperty creation_time_;
 
-    inspect::Node server_node_;
     inspect::StringProperty server_id_;
     inspect::StringProperty server_creation_time_;
+
+   private:
+    // A |Report|'s path is its location relative to the root Inspect node in the Inspect tree.
+    //
+    // E.g., "/reports/$program_id/$local_report_id"
+    const std::string path_;
   };
 
-  // Inspect node pointing to the list of reports.
-  struct Reports {
-    inspect::Node node;
-
-    // Maps a program name to the node that manages the report nodes for that program.
-    std::map<std::string, inspect::Node> program_nodes;
-    // Maps a local report ID to a |Report|.
-    std::map<std::string, Report> reports;
-  };
-
-  inspect::Node* root_node_ = nullptr;
+  InspectNodeManager node_manager_;
   timekeeper::Clock* clock_;
   Config config_;
   Settings settings_;
-  Reports reports_;
+  // Maps a local report ID to a |Report|.
+  std::map<std::string, Report> reports_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);
 };
